@@ -140,19 +140,19 @@
 .endm
 
 // Adds a label for making the syscall and adds it to the jump table.
-.macro syscall_dispatch nargs, syscall
+.macro syscall_dispatch nargs, name
     .pushsection .text.syscall-dispatch,"ax",%progbits
     .balign 16
-    LOCAL_FUNCTION(x86_syscall_call_\syscall\())
+    LOCAL_FUNCTION(x86_syscall_call_\name)
         // See x86_syscall for why this is here.
         cfi_outermost_frame
         pre_args \nargs
-        call wrapper_\syscall
+        call wrapper_\name
         post_args \nargs
-    END_FUNCTION(x86_syscall_call_\syscall\())
+    END_FUNCTION(x86_syscall_call_\name)
     .popsection
     .pushsection .rodata.syscall-table,"a",%progbits
-        .quad x86_syscall_call_\syscall
+        .quad x86_syscall_call_\name
     .popsection
 .endm
 
