@@ -17,7 +17,6 @@
 #include <cstdlib>
 #include <map>
 #include <random>
-#include <regex>
 #include <vector>
 
 #include <gtest/gtest.h>
