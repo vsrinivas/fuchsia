@@ -355,6 +355,10 @@ case "$ARCH" in
 x64)
   ARGS+=("-machine" "q35")
   ARGS+=("-device" "isa-debug-exit,iobase=0xf4,iosize=0x04")
+
+  # Override the SeaBIOS serial port to keep it from outputting
+  # a terminal reset on start.
+  ARGS+=("-fw_cfg" "name=etc/sercon-port,string=0")
 ;;
 arm64)
   ARGS+=("-machine" "virt")

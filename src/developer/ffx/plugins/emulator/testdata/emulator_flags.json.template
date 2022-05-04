@@ -51,6 +51,10 @@
             "q35",
             "-device",
             "isa-debug-exit,iobase=0xf4,iosize=0x04",
+            {{! Override the SeaBIOS serial port to keep it from outputting
+                a terminal reset on start. }}
+            "-fw_cfg",
+            "name=etc/sercon-port,string=0",
         {{/if}}
         {{#if (eq host.acceleration "none")}}
             "-cpu",

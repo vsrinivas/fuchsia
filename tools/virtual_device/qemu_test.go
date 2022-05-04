@@ -60,6 +60,8 @@ func TestQEMUCommand(t *testing.T) {
 			"1048576",
 			"-machine",
 			"q35",
+			"-fw_cfg",
+			"name=etc/sercon-port,string=0",
 			"-cpu",
 			"Haswell,+smap,-check,-fsgsbase",
 			"-net",

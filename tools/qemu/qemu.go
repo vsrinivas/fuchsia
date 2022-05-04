@@ -176,6 +176,11 @@ func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) {
 	case TargetEnum.X86_64:
 		q.AddKernelArg("kernel.serial=legacy")
 		q.SetFlag("-machine", "q35")
+
+		// Override the SeaBIOS serial port to keep it from outputting
+		// a terminal reset on start.
+		q.SetFlag("-fw_cfg", "name=etc/sercon-port,string=0")
+
 		if kvm {
 			q.SetFlag("-cpu", "host,migratable=no,+invtsc")
 			q.SetFlag("-enable-kvm")
