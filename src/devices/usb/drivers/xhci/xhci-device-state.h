@@ -87,7 +87,7 @@ class DeviceState {
                                    std::unique_ptr<dma_buffer::PagedBuffer>* out);
 
   zx_status_t InitializeEndpointContext(const UsbXhci& hci, uint8_t slot_id, uint8_t port_id,
-                                        const std::optional<HubInfo>& hub_info,
+                                        std::optional<HubInfo>& hub_info,
                                         dma_buffer::PagedBuffer* slot_context_buffer)
       __TA_REQUIRES(transaction_lock_);
   zx_status_t InitializeOutputContextBuffer(const UsbXhci& hci, uint8_t slot_id, uint8_t port_id,

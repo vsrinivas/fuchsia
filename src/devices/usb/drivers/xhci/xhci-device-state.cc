@@ -47,7 +47,7 @@ zx_status_t DeviceState::InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_i
 
 zx_status_t DeviceState::InitializeEndpointContext(const UsbXhci& hci, uint8_t slot_id,
                                                    uint8_t port_id,
-                                                   const std::optional<HubInfo>& hub_info,
+                                                   std::optional<HubInfo>& hub_info,
                                                    dma_buffer::PagedBuffer* slot_context_buffer) {
   CRCR trb_phys = tr_.phys(hci.CapLength());
   auto* control = static_cast<uint32_t*>(slot_context_buffer->virt());
@@ -65,8 +65,12 @@ zx_status_t DeviceState::InitializeEndpointContext(const UsbXhci& hci, uint8_t s
     // TODO (fxbug.dev/34355): USB 3.1 support. Section 6.2.2
     if (((speed == USB_SPEED_LOW) || (speed == USB_SPEED_FULL)) &&
         (hub_info->hub_speed == USB_SPEED_HIGH)) {
-      slot_context->set_PARENT_HUB_SLOT_ID(hci.DeviceIdToSlotId(hub_info->hub_id))
-          .set_PARENT_PORT_NUMBER(port_id);
+      hub_info->tt_info.emplace(tt_info_t{.tt_slot_id = hci.DeviceIdToSlotId(hub_info->hub_id),
+                                          .tt_port_number = port_id});
+    }
+    if (hub_info->tt_info) {
+      slot_context->set_PARENT_HUB_SLOT_ID(hub_info->tt_info->tt_slot_id)
+          .set_PARENT_PORT_NUMBER(hub_info->tt_info->tt_port_number);
     }
   } else {
     speed = hci.GetPortSpeed(port_id);

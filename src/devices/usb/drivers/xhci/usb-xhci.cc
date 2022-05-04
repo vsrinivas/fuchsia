@@ -447,13 +447,16 @@ TRBPromise UsbXhci::UsbHciHubDeviceAddedAsync(uint32_t device_id, uint32_t port,
     fbl::AutoLock _(&state->transaction_lock());
     hub.hub_id = static_cast<uint8_t>(device_id);
     hub.speed = speed;
-    hub.multi_tt = state->GetHubLocked()->multi_tt;
-    hub.route_string =
-        (state->GetHubLocked()->route_string) | ((port) << (state->GetHubLocked()->hub_depth * 4));
     hub.parent_port_number = static_cast<uint8_t>(port);
-    hub.hub_depth = static_cast<uint8_t>(state->GetHubLocked()->hub_depth);
-    hub.hub_speed = static_cast<uint8_t>(state->GetHubLocked()->speed);
-    hub.rh_port = state->GetHubLocked()->rh_port;
+    if (state->GetHubLocked()) {
+      hub.multi_tt = state->GetHubLocked()->multi_tt;
+      hub.route_string = (state->GetHubLocked()->route_string) |
+                         ((port) << (state->GetHubLocked()->hub_depth * 4));
+      hub.hub_depth = static_cast<uint8_t>(state->GetHubLocked()->hub_depth);
+      hub.hub_speed = static_cast<uint8_t>(state->GetHubLocked()->speed);
+      hub.rh_port = state->GetHubLocked()->rh_port;
+      hub.tt_info = state->GetHubLocked()->tt_info;
+    }
   }
   return EnumerateDevice(this, static_cast<uint8_t>(port), std::make_optional(hub));
 }
@@ -479,6 +482,7 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
       hub.route_string = state->GetHubLocked()->route_string;
       hub.hub_depth = static_cast<uint8_t>(state->GetHubLocked()->hub_depth + 1);
       hub.rh_port = state->GetHubLocked()->rh_port;
+      hub.tt_info = state->GetHubLocked()->tt_info;
     }
     state->GetHubLocked() = hub;
     uint8_t slot = state->GetSlot();
@@ -495,7 +499,8 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
         .set_HUB(1)
         .set_PORT_COUNT(desc->b_nbr_ports)
         .set_TTT((speed == USB_SPEED_HIGH) ? ((desc->w_hub_characteristics >> 5) & 3) : 0);
-    Control::Get().FromValue(0).set_Type(Control::EvaluateContextCommand).ToTrb(&cmd);
+    // Use ConfigureEndpointCommand according to sections 6.2.2.2 and 6.2.2.3.
+    Control::Get().FromValue(0).set_Type(Control::ConfigureEndpointCommand).ToTrb(&cmd);
     cmd.set_SlotID(slot).set_BSR(0);
     cmd.ptr = state->GetInputContext()->phys()[0];
     hw_mb();
@@ -504,7 +509,7 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
   return SubmitCommand(cmd, std::move(context))
       .then([=](fpromise::result<TRB*, zx_status_t>& result) -> TRBPromise {
         if (result.is_error()) {
-          return fpromise::make_result_promise(result);
+          return fpromise::make_error_promise(result.error());
         }
         auto completion = reinterpret_cast<CommandCompletionEvent*>(result.value());
         if (completion->CompletionCode() != CommandCompletionEvent::Success) {
@@ -1364,7 +1369,7 @@ zx_status_t UsbXhci::UsbHciHubDeviceAdded(uint32_t device_id, uint32_t port, usb
                                         })
                                         .box());
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
-  return ZX_OK;
+  return out_status;
 }
 
 zx_status_t UsbXhci::UsbHciHubDeviceRemoved(uint32_t hub_id, uint32_t port) {
