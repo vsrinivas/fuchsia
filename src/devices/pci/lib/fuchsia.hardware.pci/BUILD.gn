@@ -1,0 +1,31 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("include") {
+  include_dirs = [ "include" ]
+}
+
+source_set("fuchsia.hardware.pci_banjo_c") {
+  sources = [ "include/fuchsia/hardware/pci/c/banjo.h" ]
+  public_configs = [ ":include" ]
+  public_deps = [ "//src/lib/ddk" ]
+}
+
+source_set("fuchsia.hardware.pci_banjo_cpp") {
+  sources = [
+    "include/fuchsia/hardware/pci/cpp/banjo-internal.h",
+    "include/fuchsia/hardware/pci/cpp/banjo.h",
+  ]
+  public_configs = [ ":include" ]
+  public_deps = [
+    ":fuchsia.hardware.pci_banjo_c",
+    "//src/lib/ddktl",
+  ]
+}
+
+source_set("fuchsia.hardware.pci_banjo_cpp_mock") {
+  sources = [ "include/fuchsia/hardware/pci/cpp/banjo-mock.h" ]
+  public_configs = [ ":include" ]
+  public_deps = [ ":fuchsia.hardware.pci_banjo_cpp" ]
+}
