@@ -7,7 +7,6 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
-
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
@@ -25,13 +24,14 @@ bool CompareRecords(const fbl::Vector<trace::Record>& records, size_t start_reco
                     size_t max_num_records, const char* expected) {
   // Strip out timestamps and other varying data that is not controlled by
   // the tests.
-  std::unique_ptr<Squelcher> squelcher = Squelcher::Create(
-      "([0-9]+/[0-9]+)"
-      "|koid\\(([0-9]+)\\)"
-      "|koid: ([0-9]+)"
-      "|ts: ([0-9]+)"
-      "|end_ts: ([0-9]+)"
-      "|(0x[0-9a-f]+)");
+  std::unique_ptr<Squelcher> squelcher = Squelcher::Create({
+      {"[0-9]+/[0-9]+", "<>"},
+      {"koid\\([0-9]+\\)", "koid(<>)"},
+      {"koid: [0-9]+", "koid: <>"},
+      {"ts: [0-9]+", "ts: <>"},
+      {"end_ts: (0-9]+", "end_ts: <>"},
+      {"0x[0-9a-f]+", "<>"},
+  });
   ZX_DEBUG_ASSERT(squelcher);
 
   fbl::StringBuffer<16384u> buf;

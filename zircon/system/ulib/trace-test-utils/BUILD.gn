@@ -22,6 +22,8 @@ zx_library("trace-test-utils") {
     "squelch.cc",
   ]
   public_deps = [
+    "//third_party/re2",
+
     # <trace-test-utils/fixture.h> needs these
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/fbl",

@@ -8,43 +8,25 @@
 
 namespace trace_testing {
 
-std::unique_ptr<Squelcher> Squelcher::Create(const char* regex_str) {
-  // We don't make any assumptions about the copyability of |regex_t|.
-  // Therefore we construct it in place.
-  auto squelcher = new Squelcher;
-  if (regcomp(&squelcher->regex_, regex_str, REG_EXTENDED | REG_NEWLINE) != 0) {
-    return nullptr;
-  }
-  return std::unique_ptr<Squelcher>(squelcher);
+std::unique_ptr<Squelcher> Squelcher::Create(
+    const std::vector<std::pair<std::string_view, std::string_view>>& replacements) {
+  return std::unique_ptr<Squelcher>(new Squelcher(replacements));
 }
 
-Squelcher::~Squelcher() { regfree(&regex_); }
-
-fbl::String Squelcher::Squelch(const char* str) {
-  fbl::StringBuffer<1024u> buf;
-  const char* cur = str;
-  const char* end = str + strlen(str);
-
-  while (*cur) {
-    // size must be 1 + number of parenthesized subexpressions
-    size_t match_count = regex_.re_nsub + 1;
-    regmatch_t match[match_count];
-    if (regexec(&regex_, cur, match_count, match, 0) != 0) {
-      buf.Append(cur, end - cur);
-      break;
-    }
-    size_t offset = 0u;
-    for (size_t i = 1; i < match_count; i++) {
-      if (match[i].rm_so == -1)
-        continue;
-      buf.Append(cur, match[i].rm_so - offset);
-      buf.Append("<>");
-      cur += match[i].rm_eo - offset;
-      offset = match[i].rm_eo;
-    }
+Squelcher::Squelcher(
+    const std::vector<std::pair<std::string_view, std::string_view>>& replacements) {
+  for (auto& r : replacements) {
+    compiled_replacements_.emplace_back(
+        std::make_pair(std::make_unique<re2::RE2>(r.first), r.second));
   }
+}
 
-  return buf.ToString();
+fbl::String Squelcher::Squelch(const char* raw_str) {
+  std::string str(raw_str);
+  for (auto& r : compiled_replacements_) {
+    re2::RE2::GlobalReplace(&str, *r.first, r.second);
+  }
+  return fbl::String(str);
 }
 
 }  // namespace trace_testing

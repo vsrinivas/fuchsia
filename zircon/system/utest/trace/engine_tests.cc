@@ -565,7 +565,7 @@ TEST(EngineTests, TestCircularMode) {
 
   // Prepare a squelcher to remove timestamps.
   std::unique_ptr<trace_testing::Squelcher> ts_squelcher =
-      trace_testing::Squelcher::Create("ts: ([0-9]+)");
+      trace_testing::Squelcher::Create({{"ts: [0-9]+", "ts: <>"}});
 
   // These records come from the durable buffer.
   const char expected_initial_records[] =
@@ -696,7 +696,7 @@ TEST(EngineTests, TestStreamingMode) {
 
   // Prepare a squelcher to remove timestamps.
   std::unique_ptr<trace_testing::Squelcher> ts_squelcher =
-      trace_testing::Squelcher::Create("ts: ([0-9]+)");
+      trace_testing::Squelcher::Create({{"ts: [0-9]+", "ts: <>"}});
 
   const char expected_initial_records[] =
       // These records come from the durable buffer.

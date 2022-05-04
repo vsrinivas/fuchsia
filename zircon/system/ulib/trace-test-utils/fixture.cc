@@ -8,7 +8,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/trace-provider/handler.h>
 #include <lib/zx/event.h>
-#include <regex.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
