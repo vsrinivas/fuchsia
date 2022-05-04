@@ -444,11 +444,14 @@ async fn run_driver_registrar_server(
                         }
                         Some(resolver) => {
                             let mut result = indexer.register_driver(package_url, resolver).await;
-                            let handles = control_handles.borrow();
-                            for handle in handles.iter() {
-                                // Best effort send. Ignore failures since user can just retry.
-                                let _ = handle.send_on_new_driver_available();
+                            if result.is_ok() {
+                                let handles = control_handles.borrow();
+                                for handle in handles.iter() {
+                                    // Best effort send. Ignore failures since user can just retry.
+                                    let _ = handle.send_on_new_driver_available();
+                                }
                             }
+
                             responder
                                 .send(&mut result)
                                 .or_else(ignore_peer_closed)
