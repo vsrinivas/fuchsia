@@ -24,6 +24,9 @@ fn new_socket_address_conversion_error() -> std::io::Error {
 }
 
 /// An I/O object representing a UDP socket.
+///
+/// Like [`std::net::UdpSocket`], a `UdpSocket` represents a socket that is
+/// bound to a local address, and optionally is connected to a remote address.
 #[derive(Debug)]
 pub struct UdpSocket(DatagramSocket);
 
@@ -51,6 +54,20 @@ impl UdpSocket {
         let socket = socket.into();
         let evented_fd = unsafe { EventedFd::new(socket)? };
         Ok(UdpSocket(DatagramSocket(evented_fd)))
+    }
+
+    /// Create a new UDP socket from an existing bound socket.
+    pub fn from_datagram(socket: DatagramSocket) -> io::Result<Self> {
+        let sock: &socket2::Socket = socket.as_ref();
+        if sock.r#type()? != socket2::Type::DGRAM {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "socket type is not datagram"));
+        }
+        if sock.protocol()? != Some(socket2::Protocol::UDP) {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "socket protocol is not UDP"));
+        }
+        // Maintain the invariant that the socket is bound (or connected).
+        let _: socket2::SockAddr = socket.local_addr()?;
+        Ok(Self(socket))
     }
 
     /// Returns the socket address that this socket was created from.

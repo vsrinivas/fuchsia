@@ -1138,6 +1138,20 @@ impl<'a> TestInterface<'a> {
         Ok(addresses)
     }
 
+    /// Gets the interface's device name.
+    pub async fn get_interface_name(&self) -> Result<String> {
+        let fnet_interfaces_ext::Properties {
+            name,
+            addresses: _,
+            id: _,
+            device_class: _,
+            online: _,
+            has_default_ipv4_route: _,
+            has_default_ipv6_route: _,
+        } = self.get_properties().await?;
+        Ok(name)
+    }
+
     /// Gets a fuchsia.net.interfaces/Watcher proxy.
     pub fn get_interfaces_watcher(&self) -> Result<fnet_interfaces::WatcherProxy> {
         let (watcher, server_end) =
