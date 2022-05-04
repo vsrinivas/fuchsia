@@ -75,7 +75,13 @@ Similar as with the client, the debug agent is programmed to log many debug stat
 the `--debug-mode` flag:
 
 ```posix-terminal
-run fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx --debug-mode
+run fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx --debug-mode --port=2345
+```
+
+The log statements are written to the system log. To view these on the host:
+
+```posix-terminal
+ffx log --severity info --filter debug_agent
 ```
 
 If connecting to the agent via `ffx debug`, add `--debug-mode` to the `args` array in `//src/developer/debug/debug_agent/meta/debug_agent_channel.cmx`.
