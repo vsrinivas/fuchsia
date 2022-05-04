@@ -156,6 +156,121 @@ success("VectorOfHandles") {
     },
 }
 
+success("BoxOfSingleHandlePresentBox") {
+    handle_defs = {
+        #0 = event(),
+    },
+    value = BoxOfSingleHandle{
+        b: SingleHandle{
+            h: #0,
+        },
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):8,
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+        ],
+    },
+}
+
+success("BoxOfSingleHandleAbsentBox") {
+    value = BoxOfSingleHandle{},
+    bytes = {
+        v1, v2 = [
+            repeat(0x00):8,
+        ],
+    },
+}
+
+success("BoxOfSingleOptionalHandlePresentBoxPresentHandle") {
+    handle_defs = {
+        #0 = event(),
+    },
+    value = BoxOfSingleOptionalHandle{
+        b: SingleOptionalHandle{
+            h: #0,
+        },
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):8,
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+        ],
+    },
+}
+
+success("BoxOfSingleOptionalHandlePresentBoxAbsentHandle") {
+    value = BoxOfSingleOptionalHandle{
+        b: SingleOptionalHandle{},
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):8,
+            repeat(0x00):4, padding:4,
+        ],
+    },
+}
+
+success("BoxOfSingleOptionalHandleAbsentBox") {
+    value = BoxOfSingleOptionalHandle{},
+    bytes = {
+        v1, v2 = [
+            repeat(0x00):8,
+        ],
+    },
+}
+
+success("StructOfOptionalUnionOfHandlePresent") {
+    handle_defs = {
+        #0 = event(),
+    },
+    value = StructOfOptionalUnionOfHandle{
+        u: UnionOfHandle{
+            h: #0,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(1):8,
+            num(8):4, num(1):4, repeat(0xff):8, // present envelope
+            repeat(0xff):4, padding:4,
+        ],
+        v2 = [
+            num(1):8,
+            repeat(0xff):4, num(1):2, num(1):2, // inlined envelope
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+        ],
+    },
+}
+
+success("StructOfOptionalUnionOfHandleAbsent") {
+    value = StructOfOptionalUnionOfHandle{},
+    bytes = {
+        v1 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):4, repeat(0x00):8, // empty envelope
+        ],
+        v2 = [
+            num(0):8, // zero ordinal
+            num(0):4, num(0):2, num(0):2, // empty envelope
+        ],
+    },
+}
+
 // Handles inside the vector should be closed even if the vector itself
 // has a constraint error.
 encode_failure("TooManyHandlesInVector") {

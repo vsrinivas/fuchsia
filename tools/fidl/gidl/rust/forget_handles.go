@@ -30,18 +30,12 @@ func (b *forgetHandleBuilder) write(format string, args ...interface{}) {
 }
 
 func (b *forgetHandleBuilder) visit(expr string, value gidlir.Value, decl gidlmixer.Declaration) {
+	if decl.IsNullable() {
+		expr = fmt.Sprintf("%s.as_mut().unwrap()", expr)
+	}
 	switch value := value.(type) {
 	case gidlir.Handle, gidlir.HandleWithRights:
-		switch decl.(type) {
-		case *gidlmixer.ClientEndDecl, *gidlmixer.ServerEndDecl:
-			if decl.IsNullable() {
-				b.write("std::mem::forget(std::mem::take(%s));\n", expr)
-			} else {
-				b.write("std::mem::forget(std::mem::replace(%s, Handle::invalid().into()));\n", expr)
-			}
-		case *gidlmixer.HandleDecl:
-			b.write("std::mem::forget(std::mem::replace(%s, Handle::invalid().into()));\n", expr)
-		}
+		b.write("std::mem::forget(std::mem::replace(%s, Handle::invalid().into()));\n", expr)
 	case gidlir.Record:
 		decl := decl.(gidlmixer.RecordDeclaration)
 		switch decl.(type) {

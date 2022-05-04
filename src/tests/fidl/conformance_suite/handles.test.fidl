@@ -38,6 +38,22 @@ type VectorOfOptionalHandles = resource struct {
     v vector<handle:optional>;
 };
 
+type BoxOfSingleHandle = resource struct {
+    b box<SingleHandle>;
+};
+
+type BoxOfSingleOptionalHandle = resource struct {
+    b box<SingleOptionalHandle>;
+};
+
+type UnionOfHandle = strict resource union {
+    1: h handle;
+};
+
+type StructOfOptionalUnionOfHandle = resource struct {
+    u UnionOfHandle:optional;
+};
+
 // This is not a reference to library zx to avoid complexity in the test data.
 // A local handle is defined here that contains subtypes that this test cares
 // about.

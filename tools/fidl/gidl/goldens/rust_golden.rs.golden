@@ -1823,7 +1823,7 @@ HandleDef{
 	impl std::ops::Drop for ForgetHandles {
 		#[allow(unused_parens)]
 		fn drop(&mut self) {
-			std::mem::forget(std::mem::replace((&mut self.0.v), Handle::invalid().into()));
+			std::mem::forget(std::mem::replace((&mut self.0.v).as_mut().unwrap(), Handle::invalid().into()));
 		}
 	}
 	let expected_value = ForgetHandles(test_conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) });
@@ -1864,7 +1864,7 @@ HandleDef{
 	impl std::ops::Drop for ForgetHandles {
 		#[allow(unused_parens)]
 		fn drop(&mut self) {
-			std::mem::forget(std::mem::replace((&mut self.0.v), Handle::invalid().into()));
+			std::mem::forget(std::mem::replace((&mut self.0.v).as_mut().unwrap(), Handle::invalid().into()));
 		}
 	}
 	let expected_value = ForgetHandles(test_conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) });
