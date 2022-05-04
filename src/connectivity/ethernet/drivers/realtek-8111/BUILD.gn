@@ -23,10 +23,10 @@ if (current_cpu == "x64") {
     deps = [
       ":realtek_rtl8111_bind",
       "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
-      "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
       "//src/devices/lib/driver",
       "//src/devices/lib/mmio",
       "//src/devices/pci/lib/device-protocol-pci",
+      "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
       "//src/lib/ddk",
       "//zircon/system/ulib/zircon-internal",
     ]

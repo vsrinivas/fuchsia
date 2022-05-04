@@ -28,8 +28,8 @@ fuchsia_driver("realtek-audio-codec-driver") {
   ]
   deps = [
     ":ihda_codecs_realtek_bind",
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/lib/driver",
+    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/lib/ddk",
     "//src/media/audio/drivers/lib/audio-driver-proto",
     "//src/media/audio/drivers/lib/audio-proto-utils",

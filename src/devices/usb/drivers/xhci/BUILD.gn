@@ -38,7 +38,6 @@ fuchsia_driver("xhci-driver") {
   ]
   deps = [
     ":usb_xhci_bind_header",
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.bus:fuchsia.hardware.usb.bus_banjo_cpp",
@@ -54,6 +53,7 @@ fuchsia_driver("xhci-driver") {
     "//src/devices/lib/mmio",
     "//src/devices/lib/synchronous-executor",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",

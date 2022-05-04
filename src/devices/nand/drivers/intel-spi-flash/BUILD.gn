@@ -29,10 +29,10 @@ group("tests") {
 common_deps = [
   ":intel_spi_flash_bind",
   "//sdk/banjo/fuchsia.hardware.nand:fuchsia.hardware.nand_banjo_cpp",
-  "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
   "//src/devices/lib/driver",
   "//src/devices/lib/mmio",
   "//src/devices/pci/lib/device-protocol-pci",
+  "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
   "//src/devices/pci/lib/pci",
   "//src/lib/ddktl",
   "//zircon/system/ulib/hwreg",
@@ -72,15 +72,14 @@ test("intel-spi-flash-test-bin") {
     "intel-spi-flash.cc",
   ]
 
-  deps =
-      common_deps + [
-        "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp_mock",
-        "//src/devices/testing/mock-ddk",
-        "//src/devices/testing/fake-mmio-reg",
-        "//zircon/system/ulib/async-loop:async-loop-cpp",
-        "//zircon/system/ulib/mock-function",
-        "//zircon/system/ulib/zxtest",
-      ]
+  deps = common_deps + [
+           "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp_mock",
+           "//src/devices/testing/mock-ddk",
+           "//src/devices/testing/fake-mmio-reg",
+           "//zircon/system/ulib/async-loop:async-loop-cpp",
+           "//zircon/system/ulib/mock-function",
+           "//zircon/system/ulib/zxtest",
+         ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

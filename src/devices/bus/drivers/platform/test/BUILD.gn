@@ -408,10 +408,10 @@ fuchsia_driver("test-pci-driver") {
   sources = [ "test/pci.cc" ]
   deps = [
     ":test-pci-bind",
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//src/devices/lib/driver",
+    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -474,7 +474,6 @@ fuchsia_driver("test-composite-driver") {
     "//sdk/banjo/fuchsia.hardware.goldfish.sync:fuchsia.hardware.goldfish.sync_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.power:fuchsia.hardware.power_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_banjo_cpp",
@@ -483,6 +482,7 @@ fuchsia_driver("test-composite-driver") {
     "//sdk/banjo/fuchsia.hardware.vreg:fuchsia.hardware.vreg_banjo_cpp",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",
+    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/lib/ddk",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below

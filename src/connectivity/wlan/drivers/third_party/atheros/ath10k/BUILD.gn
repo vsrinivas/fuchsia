@@ -84,7 +84,6 @@ fuchsia_driver("ath10k_driver-driver") {
 
   deps = [
     ":ath10k_bind",
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlan.phyinfo:fuchsia.hardware.wlan.phyinfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
@@ -93,6 +92,7 @@ fuchsia_driver("ath10k_driver-driver") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/lib/ddk",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",

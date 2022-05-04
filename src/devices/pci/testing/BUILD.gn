@@ -15,7 +15,7 @@ source_set("pci-protocol-fake") {
   sources = [ "protocol/internal.cc" ]
   public_deps = [
     ":pci-protocol-fake-headers",
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
+    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/testing/fake-bti",
     "//zircon/system/ulib/fbl",
   ]

@@ -15,10 +15,10 @@ source_set("pcie") {
   ]
   public = [ "entry.h" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_c",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_c",
     "//src/lib/ddk",
     "//zircon/system/ulib/backtrace-request",
     "//zircon/system/ulib/sync",

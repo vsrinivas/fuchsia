@@ -135,11 +135,11 @@ source_set("lib") {
 
   public_deps = [
     ":bits",
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_c",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
+    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
     "//src/virtualization/bin/vmm/device:lib",

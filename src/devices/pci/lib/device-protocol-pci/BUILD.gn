@@ -11,7 +11,7 @@ zx_library("device-protocol-pci") {
   deps = [ "//src/lib/ddk" ]
   public_deps = [
     # <lib/device-protocol/pci.h> has #include <fuchsia/hardware/pci/c/banjo.h>
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
+    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
 
     # <lib/device-protocol/pci.h> has #include <lib/mmio/mmio-buffer.h>
     "//src/devices/lib/mmio",

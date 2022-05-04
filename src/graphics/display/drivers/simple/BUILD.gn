@@ -10,13 +10,13 @@ source_set("shared") {
   sources = [ "simple-display.cc" ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -68,8 +68,8 @@ template("simple_fuchsia_driver") {
       ":shared",
       ":simple-${driver_name}-bind",
       "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
-      "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
       "//src/devices/pci/lib/device-protocol-pci",
+      "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
       "//src/devices/pci/lib/pci",
       "//src/lib/ddk",
     ]
