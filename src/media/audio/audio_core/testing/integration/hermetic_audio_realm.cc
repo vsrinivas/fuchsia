@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/vfs/cpp/remote_dir.h>
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
@@ -46,11 +47,10 @@ void ConnectToVirtualAudio(component_testing::RealmRoot& root,
   ASSERT_EQ(ZX_OK, fdio_fd_clone(file_fd.get(), &handle));
   out.Bind(zx::channel(handle));
 }
-}  // namespace
 
 // Implements a simple component that serves fuchsia.audio.effects.ProcessorCreator
 // using a TestEffectsV2.
-class HermeticAudioRealm::LocalProcessorCreator : public component_testing::LocalComponent {
+class LocalProcessorCreator : public component_testing::LocalComponent {
  public:
   explicit LocalProcessorCreator(std::vector<TestEffectsV2::Effect> effects) : effects_(effects) {}
 
@@ -78,10 +78,40 @@ class HermeticAudioRealm::LocalProcessorCreator : public component_testing::Loca
   std::unique_ptr<component_testing::LocalComponentHandles> handles_;
 };
 
+// Implements a simple component that exports the given local directory as a capability named "dir".
+class LocalDirectoryExporter : public component_testing::LocalComponent {
+ public:
+  static inline const char kCapability[] = "exported-dir";
+  static inline const char kPath[] = "/exported-dir";
+
+  explicit LocalDirectoryExporter(const std::string& local_dir_name) {
+    // Open a handle to the directory.
+    zx::channel local, remote;
+    auto status = zx::channel::create(0, &local, &remote);
+    FX_CHECK(status == ZX_OK) << status;
+    status = fdio_open(local_dir_name.c_str(),
+                       static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable |
+                                             fuchsia_io::wire::OpenFlags::kDirectory),
+                       remote.release());
+    FX_CHECK(status == ZX_OK) << status;
+    local_dir_ = std::move(local);
+  }
+
+  void Start(std::unique_ptr<component_testing::LocalComponentHandles> mock_handles) override {
+    handles_ = std::move(mock_handles);
+    ASSERT_EQ(ZX_OK, handles_->outgoing()->root_dir()->AddEntry(
+                         kCapability, std::make_unique<vfs::RemoteDir>(std::move(local_dir_))));
+  }
+
+ private:
+  zx::channel local_dir_;
+  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
+};
+}  // namespace
+
 // Cannot define these until LocalProcessorCreator is defined.
 HermeticAudioRealm::HermeticAudioRealm(CtorArgs&& args)
-    : root_(std::move(args.root)),
-      local_processor_creator_(std::move(args.local_processor_creator)) {}
+    : root_(std::move(args.root)), local_components_(std::move(args.local_components)) {}
 HermeticAudioRealm::~HermeticAudioRealm() = default;
 
 // This returns `void` so we can ASSERT from within Create.
@@ -113,8 +143,10 @@ HermeticAudioRealm::CtorArgs HermeticAudioRealm::BuildRealm(Options options,
   using component_testing::ChildRef;
   using component_testing::Directory;
   using component_testing::DirectoryContents;
+  using component_testing::LocalComponent;
   using component_testing::ParentRef;
   using component_testing::Protocol;
+  std::vector<std::unique_ptr<LocalComponent>> local_components;
 
   builder.AddChild(kAudioCore, "#meta/audio_core.cm");
 
@@ -154,15 +186,23 @@ HermeticAudioRealm::CtorArgs HermeticAudioRealm::BuildRealm(Options options,
       builder.RouteReadOnlyDirectory("config-data", {ChildRef{kAudioCore}}, DirectoryContents());
       break;
     case 1: {  // route from parent
-      auto dir = std::get<1>(options.audio_core_config_data);
+      // Export the given local directory as AudioCore's config-data. To export a directory,
+      // we need to publish it in a component's outgoing directory. The simplest way to do that
+      // is to export the directory from a local component.
+      auto dir = std::get<1>(options.audio_core_config_data).directory_name;
+      auto exporter = std::make_unique<LocalDirectoryExporter>(dir);
+      builder.AddLocalChild("local_config_data_exporter", exporter.get());
       builder.AddRoute({
-          .capabilities = {Directory{.name = dir.root_cabability_name,
-                                     .as = "config-data",
-                                     .subdir = dir.subdir,
-                                     .rights = fuchsia::io::RW_STAR_DIR}},
-          .source = ParentRef(),
+          .capabilities = {Directory{
+              .name = LocalDirectoryExporter::kCapability,
+              .as = "config-data",
+              .rights = fuchsia::io::R_STAR_DIR,
+              .path = LocalDirectoryExporter::kPath,
+          }},
+          .source = ChildRef{"local_config_data_exporter"},
           .targets = {ChildRef{kAudioCore}},
       });
+      local_components.push_back(std::move(exporter));
       break;
     }
     case 2:  // use specified files
@@ -174,9 +214,8 @@ HermeticAudioRealm::CtorArgs HermeticAudioRealm::BuildRealm(Options options,
   }
 
   // If needed, add a local component to host effects-over-FIDL.
-  std::unique_ptr<LocalProcessorCreator> local_processor_creator;
   if (!options.test_effects_v2.empty()) {
-    local_processor_creator =
+    auto local_processor_creator =
         std::make_unique<LocalProcessorCreator>(std::move(options.test_effects_v2));
     builder.AddLocalChild("local_processor_creator", local_processor_creator.get());
     builder.AddRoute({
@@ -184,6 +223,7 @@ HermeticAudioRealm::CtorArgs HermeticAudioRealm::BuildRealm(Options options,
         .source = ChildRef{"local_processor_creator"},
         .targets = {ChildRef{kAudioCore}},
     });
+    local_components.push_back(std::move(local_processor_creator));
   }
 
   // Add a hermetic driver realm and route "/dev" to audio_core.
@@ -267,7 +307,7 @@ HermeticAudioRealm::CtorArgs HermeticAudioRealm::BuildRealm(Options options,
     FX_CHECK(status == ZX_OK) << "customize_realm failed with status=" << status;
   }
 
-  return {builder.Build(dispatcher), std::move(local_processor_creator)};
+  return {builder.Build(dispatcher), std::move(local_components)};
 }
 
 const inspect::Hierarchy HermeticAudioRealm::ReadInspect(std::string_view component_name) {

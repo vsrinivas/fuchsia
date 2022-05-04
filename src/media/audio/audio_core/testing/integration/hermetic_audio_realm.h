@@ -26,11 +26,8 @@ class HermeticAudioRealm {
   ~HermeticAudioRealm();
 
   struct LocalDirectory {
-    // These fields combine to describe a directory `{root}/{subdir}`, where
-    // `{root}` is capability in the test component's manifest and `{subdir}`
-    // is a relative subdirectory (does not start with `/`).
-    std::string root_cabability_name;
-    std::string subdir;
+    // A fully-qualified local directory name (must start with '/').
+    std::string directory_name;
   };
 
   struct Options {
@@ -74,11 +71,9 @@ class HermeticAudioRealm {
   const inspect::Hierarchy ReadInspect(std::string_view component_name);
 
  private:
-  class LocalProcessorCreator;
-
   struct CtorArgs {
     component_testing::RealmRoot root;
-    std::unique_ptr<LocalProcessorCreator> local_processor_creator;
+    std::vector<std::unique_ptr<component_testing::LocalComponent>> local_components;
   };
   static CtorArgs BuildRealm(Options options, async_dispatcher* dispatcher);
 
@@ -86,7 +81,7 @@ class HermeticAudioRealm {
 
   component_testing::RealmRoot root_;
   fidl::SynchronousInterfacePtr<fuchsia::virtualaudio::Control> virtual_audio_control_;
-  std::unique_ptr<LocalProcessorCreator> local_processor_creator_;
+  std::vector<std::unique_ptr<component_testing::LocalComponent>> local_components_;
 };
 
 }  // namespace media::audio::test
