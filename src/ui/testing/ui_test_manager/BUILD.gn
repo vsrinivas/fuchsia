@@ -27,6 +27,7 @@ source_set("ui_test_manager") {
   public_deps = [
     ":a11y_deps",
     ":test_realms",
+    "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.input.injection",
     "//sdk/fidl/fuchsia.logger",
@@ -50,6 +51,7 @@ source_set("ui_test_manager") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/ui/input-synthesis:test.inputsynthesis",
+    "//src/ui/a11y/testing/fidl:test.accessibility",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

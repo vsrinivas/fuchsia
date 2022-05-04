@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("util") {
+  testonly = true
+  public_deps = [ ":test_view" ]
+}
+
+source_set("test_view") {
+  testonly = true
+  sources = [
+    "test_view.cc",
+    "test_view.h",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/syslog/cpp:cpp-macros",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fsl",
+  ]
+}

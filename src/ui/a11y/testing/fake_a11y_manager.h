@@ -5,12 +5,15 @@
 #ifndef SRC_UI_A11Y_TESTING_FAKE_A11Y_MANAGER_H_
 #define SRC_UI_A11Y_TESTING_FAKE_A11Y_MANAGER_H_
 
+#include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 
 #include <memory>
 #include <vector>
+
+#include <test/accessibility/cpp/fidl.h>
 
 namespace a11y_testing {
 
@@ -43,6 +46,37 @@ class FakeSemanticTree : public fuchsia::accessibility::semantics::SemanticTree 
   // from receiving ZX_ERR_PEER_CLOSED.
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener_;
   fidl::Binding<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_binding_;
+};
+
+class FakeMagnifier : public fuchsia::accessibility::Magnifier, test::accessibility::Magnifier {
+ public:
+  FakeMagnifier() = default;
+  ~FakeMagnifier() override = default;
+
+  // |fuchsia::accessibility::Magnifier|
+  void RegisterHandler(
+      fidl::InterfaceHandle<fuchsia::accessibility::MagnificationHandler> handler) override;
+
+  // |test::accessibility::Magnifier|
+  void SetMagnification(float scale, float translation_x, float translation_y,
+                        SetMagnificationCallback callback) override;
+
+  fidl::InterfaceRequestHandler<fuchsia::accessibility::Magnifier> GetMagnifierHandler();
+  fidl::InterfaceRequestHandler<test::accessibility::Magnifier> GetTestMagnifierHandler();
+
+ private:
+  // Helper method to set the clip space transform.
+  void MaybeSetClipSpaceTransform();
+
+  fidl::BindingSet<fuchsia::accessibility::Magnifier> magnifier_bindings_;
+  fidl::BindingSet<test::accessibility::Magnifier> test_magnifier_bindings_;
+  fuchsia::accessibility::MagnificationHandlerPtr handler_;
+
+  SetMagnificationCallback callback_ = {};
+
+  float scale_ = 1.f;
+  float translation_x_ = 0.f;
+  float translation_y_ = 0.f;
 };
 
 // Trivial accessibility manager implementation.

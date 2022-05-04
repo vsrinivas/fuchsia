@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -23,11 +22,10 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <gtest/gtest.h>
+#include <test/accessibility/cpp/fidl.h>
 
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnifier.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
-
-constexpr auto kMockMagnifier = "mock_magnifier";
 
 // Types imported for the realm_builder library.
 using component_testing::ChildRef;
@@ -51,41 +49,6 @@ zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
   return info.koid;
 }
 
-class MockMagnifierImpl : public accessibility_test::MockMagnifier, public LocalComponent {
- public:
-  explicit MockMagnifierImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
-
-  // |fuchsia::accessibility::Magnifier|
-  void RegisterHandler(
-      fidl::InterfaceHandle<fuchsia::accessibility::MagnificationHandler> handler) override {
-    handler_ = handler.Bind();
-  }
-
-  // |MockComponent::Start|
-  // When the component framework requests for this component to start, this
-  // method will be invoked by the realm_builder library.
-  void Start(std::unique_ptr<LocalComponentHandles> mock_handles) override {
-    // When this component starts, add a binding to the fuchsia.accessibility.Magnifier
-    // protocol to this component's outgoing directory.
-    FX_CHECK(
-        mock_handles->outgoing()->AddPublicService(
-            fidl::InterfaceRequestHandler<fuchsia::accessibility::Magnifier>([this](auto request) {
-              bindings_.AddBinding(this, std::move(request), dispatcher_);
-            })) == ZX_OK);
-    mock_handles_ = std::move(mock_handles);
-  }
-
-  fuchsia::accessibility::MagnificationHandler* handler() { return handler_.get(); }
-
-  bool IsBound() { return handler_.is_bound(); }
-
- private:
-  async_dispatcher_t* dispatcher_ = nullptr;
-  std::unique_ptr<LocalComponentHandles> mock_handles_;
-  fidl::BindingSet<fuchsia::accessibility::Magnifier> bindings_;
-  fuchsia::accessibility::MagnificationHandlerPtr handler_;
-};
-
 class PointerInjectorConfigTest : public gtest::RealLoopFixture {
  protected:
   PointerInjectorConfigTest() = default;
@@ -101,18 +64,9 @@ class PointerInjectorConfigTest : public gtest::RealLoopFixture {
     // Initialize ui test manager.
     ui_testing::UITestManager::Config config;
     config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
     config.use_input = true;
-    config.client_to_ui_services = {fuchsia::accessibility::Magnifier::Name_};
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(config);
-
-    realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
-
-    // Setup MockMagnifier for Root Presenter to connect to.
-    mock_magnifier_ = std::make_unique<MockMagnifierImpl>(dispatcher());
-    realm_->AddLocalChild(kMockMagnifier, mock_magnifier());
-    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::accessibility::Magnifier::Name_}},
-                           .source = ChildRef{kMockMagnifier},
-                           .targets = {ParentRef()}});
 
     ui_test_manager_->BuildRealm();
     realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
@@ -120,13 +74,11 @@ class PointerInjectorConfigTest : public gtest::RealLoopFixture {
 
   Realm* realm() { return realm_.get(); }
   sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
-  MockMagnifierImpl* mock_magnifier() { return mock_magnifier_.get(); }
 
  private:
   std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
   std::unique_ptr<Realm> realm_;
   std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
-  std::unique_ptr<MockMagnifierImpl> mock_magnifier_;
 };
 
 // Checks that GetViewRefs() returns the same ViewRefs after a11y registers a view.
@@ -181,9 +133,7 @@ TEST_F(PointerInjectorConfigTest, WatchViewport) {
     watch_viewport_returned = true;
   });
 
-  RunLoopUntil([this, &watch_viewport_returned] {
-    return mock_magnifier()->IsBound() && watch_viewport_returned;
-  });
+  RunLoopUntil([&watch_viewport_returned] { return watch_viewport_returned; });
 
   // Queue another call to WatchViewport().
   bool viewport_updated = false;
@@ -193,7 +143,8 @@ TEST_F(PointerInjectorConfigTest, WatchViewport) {
   });
 
   // Trigger a viewport update and assert that the queued WatchViewport() returns.
-  mock_magnifier()->handler()->SetClipSpaceTransform(100, 100, 100, []() {});
+  auto magnifier = realm_exposed_services()->Connect<test::accessibility::Magnifier>();
+  magnifier->SetMagnification(100, 100, 100, []() {});
   RunLoopUntil([&] { return viewport_updated; });
 
   EXPECT_NE(updated_viewport.viewport_to_context_transform(),

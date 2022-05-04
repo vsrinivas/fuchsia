@@ -17,9 +17,13 @@ int run_a11y_manager(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  a11y_testing::FakeA11yManager fake_a11y_manager;
 
+  a11y_testing::FakeA11yManager fake_a11y_manager;
   context->outgoing()->AddPublicService(fake_a11y_manager.GetHandler());
+
+  a11y_testing::FakeMagnifier fake_magnifier;
+  context->outgoing()->AddPublicService(fake_magnifier.GetTestMagnifierHandler());
+  context->outgoing()->AddPublicService(fake_magnifier.GetMagnifierHandler());
 
   loop.Run();
   return 0;

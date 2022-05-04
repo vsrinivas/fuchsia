@@ -4,6 +4,7 @@
 
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
+#include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/input/injection/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
@@ -25,6 +26,7 @@
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 
+#include <test/accessibility/cpp/fidl.h>
 #include <test/inputsynthesis/cpp/fidl.h>
 
 #include "sdk/lib/syslog/cpp/macros.h"
@@ -179,9 +181,16 @@ void UITestManager::ConfigureAccessibility() {
       << "Real a11y manager not currently supported";
 
   realm_builder_.AddChild(kA11yManagerName, kFakeA11yManagerUrl);
-  RouteServices({fuchsia::accessibility::semantics::SemanticsManager::Name_},
+  RouteServices({fuchsia::accessibility::semantics::SemanticsManager::Name_,
+                 test::accessibility::Magnifier::Name_},
                 /* source = */ ChildRef{kA11yManagerName},
                 /* target = */ {ParentRef()});
+
+  if (config_.scene_owner && !config_.use_flatland) {
+    RouteServices({fuchsia::accessibility::Magnifier::Name_},
+                  /* source = */ ChildRef{kA11yManagerName},
+                  /* target = */ {ChildRef{kTestRealmName}});
+  }
 }
 
 void UITestManager::ConfigureInput() {
@@ -232,7 +241,8 @@ void UITestManager::RouteConfigData() {
   // Supply a default display rotation.
   if (config_.scene_owner) {
     directory_has_contents = true;
-    config_directory_contents.AddFile("data/display_rotation", "90");
+    config_directory_contents.AddFile("data/display_rotation",
+                                      std::to_string(config_.display_rotation));
   }
 
   if (directory_has_contents) {

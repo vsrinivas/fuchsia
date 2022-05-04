@@ -212,6 +212,7 @@ class TouchInputBase
 
     ui_testing::UITestManager::Config config;
     config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    config.display_rotation = 90;
     config.use_input = true;
     config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
     config.exposed_client_services = {test::touch::TestAppLauncher::Name_};

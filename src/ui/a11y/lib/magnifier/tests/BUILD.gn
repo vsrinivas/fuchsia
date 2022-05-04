@@ -2,9 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 group("tests") {
   testonly = true
   public_deps = [ ":magnifier_tests" ]
+}
+
+group("integration-tests") {
+  testonly = true
+  public_deps = [ ":magnification-pixeltest" ]
 }
 
 executable("magnifier_tests") {
@@ -34,4 +41,43 @@ executable("magnifier_tests") {
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+executable("magnification_pixeltest_bin") {
+  testonly = true
+  sources = [ "magnification_pixeltest.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.ui.accessibility.view",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/testing/ui_test_manager",
+    "//src/ui/testing/util",
+    "//src/ui/testing/views",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_test_component("magnification-pixeltest-component") {
+  component_name = "magnification-pixeltest-component"
+  manifest = "meta/magnification_pixel_test.cml"
+  deps = [ ":magnification_pixeltest_bin" ]
+}
+
+fuchsia_test_package("magnification-pixeltest") {
+  test_components = [ ":magnification-pixeltest-component" ]
+  test_specs = {
+    log_settings = {
+      # TODO(fxbug.dev/93081): Investigate flakes and remove allowing ERROR severity.
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          # Ensure the device has Vulkan.
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
 }

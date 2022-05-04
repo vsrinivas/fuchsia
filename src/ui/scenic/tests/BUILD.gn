@@ -239,27 +239,6 @@ fuchsia_test_component("gfx_viewstate_apptest") {
   ]
 }
 
-executable("magnification_pixeltest_bin") {
-  testonly = true
-  sources = [ "gfx_integration_tests/magnification_pixeltest.cc" ]
-  deps = [
-    ":common_deps",
-    ":gfx_pixel_test",
-    ":scenic_realm_builder",
-    "//sdk/fidl/fuchsia.ui.accessibility.view",
-    "//src/ui/a11y/lib/magnifier/tests/mocks:mock_magnifier",
-  ]
-}
-
-fuchsia_test_component("magnification_pixeltest") {
-  component_name = "magnification_pixeltest"
-  manifest = "meta/magnification_pixel_test.cml"
-  deps = [
-    ":magnification_pixeltest_bin",
-    ":wrapper_root_presenter",
-  ]
-}
-
 executable("scenic_pixeltest_bin") {
   testonly = true
   sources = [ "gfx_integration_tests/scenic_pixeltest.cc" ]
@@ -400,7 +379,6 @@ fuchsia_test_package("gfx_integration_tests") {
     ":gfx_touch_integration_test",
     ":gfx_view_ref_installed_integration_test",
     ":gfx_viewstate_apptest",
-    ":magnification_pixeltest",
     ":scenic_pixeltest",
   ]
 

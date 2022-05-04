@@ -221,6 +221,9 @@ class UITestManager {
     // *** This optoin will NOT be available to OOT clients.
     std::vector<std::string> client_to_ui_services;
 
+    // Clockwise display rotation, in degrees.
+    int display_rotation = 0;
+
     bool use_flatland = false;
   };
 

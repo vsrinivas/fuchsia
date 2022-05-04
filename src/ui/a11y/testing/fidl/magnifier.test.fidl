@@ -1,0 +1,23 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.accessibility;
+
+// A test protocol that enables clients to control magnification directly.
+//
+// For use with GFX only.
+@discoverable
+protocol Magnifier {
+    // Sets the new magnification transform using the scale and translation provided.
+    SetMagnification(struct {
+        // The new mangification scale.
+        scale float32;
+
+        // The new magnification x translation.
+        translation_x float32;
+
+        // THe new magnification y translation.
+        translation_y float32;
+    }) -> ();
+};
