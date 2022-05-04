@@ -11,10 +11,10 @@ pub async fn handle_list(manager: ManagerProxy) -> Result<String, Error> {
     }
     let mut result_string = Vec::new();
     for env in environments {
-        result_string.push(format!("env:{} {}", env.id, env.label));
+        result_string.push(format!("env:{:<4}          {}", env.id, env.label));
         if env.instances.len() != 0 {
             for instance in env.instances {
-                result_string.push(format!("guest:{} {}", instance.cid, instance.label));
+                result_string.push(format!(" guest:{:<4}       {}", instance.cid, instance.label));
             }
         } else {
             result_string.push(String::from("no guest instances in environment"));
@@ -58,7 +58,9 @@ mod test {
 
         let client = handle_list(proxy);
         let (_, client_res) = join(server, client).await;
-        assert_eq!(client_res.unwrap(), "env:0 testenv\nno guest instances in environment");
+        let result_string: String =
+            client_res.unwrap().chars().filter(|c| !c.is_whitespace()).collect();
+        assert_eq!(result_string, "env:0testenvnoguestinstancesinenvironment");
     }
 
     #[fasync::run_until_stalled(test)]
@@ -75,7 +77,10 @@ mod test {
 
         let client = handle_list(proxy);
         let (_, client_res) = join(server, client).await;
-        assert_eq!(client_res.unwrap(), "env:0 testenv\nguest:0 testinst\nguest:1 testinst2");
+        // Remove all whitespace to prevent failures in future if we change the formatting
+        let result_string: String =
+            client_res.unwrap().chars().filter(|c| !c.is_whitespace()).collect();
+        assert_eq!(result_string, "env:0testenvguest:0testinstguest:1testinst2");
     }
 
     async fn create_mock_manager_server(
