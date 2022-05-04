@@ -93,8 +93,8 @@ mod tests {
     #[test]
     fn test_appsetext_update_from_omaha() {
         let mut app_set = VecAppSet::new(vec![
-            App::builder("some_id", [0, 1]).build(),
-            App::builder("not_updated_id", [2]).build(),
+            App::builder().id("some_id").version([0, 1]).build(),
+            App::builder().id("not_updated_id").version([2]).build(),
         ]);
         let cohort = Cohort { name: Some("some-channel".to_string()), ..Cohort::default() };
         let user_counting = UserCounting::ClientRegulatedByDate(Some(42));
@@ -118,16 +118,16 @@ mod tests {
         assert_eq!(cohort, apps[0].cohort);
         assert_eq!(user_counting, apps[0].user_counting);
 
-        assert_eq!(apps[1], App::builder("not_updated_id", [2]).build());
+        assert_eq!(apps[1], App::builder().id("not_updated_id").version([2]).build());
     }
 
     #[test]
     fn test_appsetext_valid() {
-        let app_set = VecAppSet::new(vec![App::builder("some_id", [0, 1]).build()]);
+        let app_set = VecAppSet::new(vec![App::builder().id("some_id").version([0, 1]).build()]);
         assert!(app_set.all_valid());
         let app_set = VecAppSet::new(vec![
-            App::builder("some_id", [0, 1]).build(),
-            App::builder("some_id_2", [1]).build(),
+            App::builder().id("some_id").version([0, 1]).build(),
+            App::builder().id("some_id_2").version([1]).build(),
         ]);
         assert!(app_set.all_valid());
     }
@@ -135,32 +135,35 @@ mod tests {
     #[test]
     fn test_appsetext_not_valid() {
         let app_set = VecAppSet::new(vec![
-            App::builder("some_id", [0, 1]).build(),
-            App::builder("", [0, 1]).build(),
+            App::builder().id("some_id").version([0, 1]).build(),
+            App::builder().id("").version([0, 1]).build(),
         ]);
         assert!(!app_set.all_valid());
         let app_set = VecAppSet::new(vec![
-            App::builder("some_id", [0]).build(),
-            App::builder("some_id_2", [0, 1]).build(),
+            App::builder().id("some_id").version([0]).build(),
+            App::builder().id("some_id_2").version([0, 1]).build(),
         ]);
         assert!(!app_set.all_valid());
         let app_set = VecAppSet::new(vec![
-            App::builder("some_id", [0]).build(),
-            App::builder("", [0, 1]).build(),
+            App::builder().id("some_id").version([0]).build(),
+            App::builder().id("").version([0, 1]).build(),
         ]);
         assert!(!app_set.all_valid());
     }
 
     #[test]
     fn test_get_apps() {
-        let apps = vec![App::builder("some_id", [0, 1]).build()];
+        let apps = vec![App::builder().id("some_id").version([0, 1]).build()];
         let app_set = VecAppSet::new(apps.clone());
         assert_eq!(app_set.get_apps(), apps);
     }
 
     #[test]
     fn test_iter_mut_apps() {
-        let apps = vec![App::builder("id1", [1]).build(), App::builder("id2", [2]).build()];
+        let apps = vec![
+            App::builder().id("id1").version([1]).build(),
+            App::builder().id("id2").version([2]).build(),
+        ];
         let mut app_set = VecAppSet::new(apps);
         for app in app_set.iter_mut_apps() {
             app.id += "_mutated";
@@ -168,15 +171,18 @@ mod tests {
         assert_eq!(
             app_set.get_apps(),
             vec![
-                App::builder("id1_mutated", [1]).build(),
-                App::builder("id2_mutated", [2]).build()
+                App::builder().id("id1_mutated").version([1]).build(),
+                App::builder().id("id2_mutated").version([2]).build()
             ]
         );
     }
 
     #[test]
     fn test_get_system_app_id() {
-        let apps = vec![App::builder("id1", [1]).build(), App::builder("id2", [2]).build()];
+        let apps = vec![
+            App::builder().id("id1").version([1]).build(),
+            App::builder().id("id2").version([2]).build(),
+        ];
         let app_set = VecAppSet::new(apps);
         assert_eq!(app_set.get_system_app_id(), "id1");
     }

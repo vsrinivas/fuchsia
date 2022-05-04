@@ -30,9 +30,11 @@ fn test_simple_request() {
         &RequestParams { source: InstallSource::OnDemand, ..RequestParams::default() },
     )
     .add_update_check(
-        &App::builder("app id", [5, 6, 7, 8])
-            .with_fingerprint("fp")
-            .with_cohort(Cohort::new("some-channel"))
+        &App::builder()
+            .id("app id")
+            .version([5, 6, 7, 8])
+            .fingerprint("fp")
+            .cohort(Cohort::new("some-channel"))
             .build(),
     )
     .session_id(GUID::from_u128(1))
@@ -94,13 +96,19 @@ fn test_updates_disabled_request() {
         },
     )
     .add_update_check(
-        &App::builder("app id 1", [1, 2, 3, 4])
-            .with_fingerprint("fp")
-            .with_cohort(Cohort::new("some-channel"))
+        &App::builder()
+            .id("app id 1")
+            .version([1, 2, 3, 4])
+            .fingerprint("fp")
+            .cohort(Cohort::new("some-channel"))
             .build(),
     )
     .add_update_check(
-        &App::builder("app id 2", [5, 6, 7, 8]).with_cohort(Cohort::new("some-channel")).build(),
+        &App::builder()
+            .id("app id 2")
+            .version([5, 6, 7, 8])
+            .cohort(Cohort::new("some-channel"))
+            .build(),
     )
     .session_id(GUID::from_u128(1))
     .request_id(GUID::from_u128(2))
@@ -146,7 +154,13 @@ fn test_app_includes_extras() {
         &config,
         &RequestParams { source: InstallSource::OnDemand, ..RequestParams::default() },
     )
-    .add_update_check(&App::builder("app id", [5, 6, 7, 8]).with_extra("key", "value").build())
+    .add_update_check(
+        &App::builder()
+            .id("app id")
+            .version([5, 6, 7, 8])
+            .extra_fields([("key".to_string(), "value".to_string())])
+            .build(),
+    )
     .build_intermediate(None::<&StandardCupv2Handler>)
     .unwrap();
     let request = intermediate.body.request;
@@ -172,7 +186,11 @@ fn test_single_request() {
         &RequestParams { source: InstallSource::OnDemand, ..RequestParams::default() },
     )
     .add_update_check(
-        &App::builder("app id", [5, 6, 7, 8]).with_cohort(Cohort::new("some-channel")).build(),
+        &App::builder()
+            .id("app id")
+            .version([5, 6, 7, 8])
+            .cohort(Cohort::new("some-channel"))
+            .build(),
     )
     .build(Some(&cup_handler))
     .unwrap();
@@ -237,9 +255,11 @@ fn test_simple_ping() {
         &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
     .add_ping(
-        &App::builder("ping app id", [6, 7, 8, 9])
-            .with_cohort(Cohort::new("ping-channel"))
-            .with_user_counting(UserCounting::ClientRegulatedByDate(Some(34)))
+        &App::builder()
+            .id("ping app id")
+            .version([6, 7, 8, 9])
+            .cohort(Cohort::new("ping-channel"))
+            .user_counting(UserCounting::ClientRegulatedByDate(Some(34)))
             .build(),
     )
     .build_intermediate(None::<&StandardCupv2Handler>)
@@ -276,8 +296,10 @@ fn test_simple_event() {
         &RequestParams { source: InstallSource::ScheduledTask, ..RequestParams::default() },
     )
     .add_event(
-        &App::builder("event app id", [6, 7, 8, 9])
-            .with_cohort(Cohort::new("event-channel"))
+        &App::builder()
+            .id("event app id")
+            .version([6, 7, 8, 9])
+            .cohort(Cohort::new("event-channel"))
             .build(),
         &Event {
             event_type: EventType::UpdateDownloadStarted,
@@ -308,8 +330,10 @@ fn test_multiple_events() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::builder("event app id", [6, 7, 8, 9])
-        .with_cohort(Cohort::new("event-channel"))
+    let app_1 = App::builder()
+        .id("event app id")
+        .version([6, 7, 8, 9])
+        .cohort(Cohort::new("event-channel"))
         .build();
 
     // Make the call to the RequestBuilder that is being tested.
@@ -369,14 +393,18 @@ fn test_ping_added_to_first_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::builder("first app id", [1, 2, 3, 4])
-        .with_cohort(Cohort::new("some-channel"))
-        .with_user_counting(UserCounting::ClientRegulatedByDate(Some(34)))
+    let app_1 = App::builder()
+        .id("first app id")
+        .version([1, 2, 3, 4])
+        .cohort(Cohort::new("some-channel"))
+        .user_counting(UserCounting::ClientRegulatedByDate(Some(34)))
         .build();
 
     // Setup the second app and its cohort
-    let app_2 = App::builder("second app id", [5, 6, 7, 8])
-        .with_cohort(Cohort::new("some-other-channel"))
+    let app_2 = App::builder()
+        .id("second app id")
+        .version([5, 6, 7, 8])
+        .cohort(Cohort::new("some-other-channel"))
         .build();
 
     // Now make the call to the RequestBuilder that is being tested.
@@ -420,13 +448,18 @@ fn test_ping_added_to_second_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 =
-        App::builder("first app id", [1, 2, 3, 4]).with_cohort(Cohort::new("some-channel")).build();
+    let app_1 = App::builder()
+        .id("first app id")
+        .version([1, 2, 3, 4])
+        .cohort(Cohort::new("some-channel"))
+        .build();
 
     // Setup the second app and its cohort
-    let app_2 = App::builder("second app id", [5, 6, 7, 8])
-        .with_cohort(Cohort::new("some-other-channel"))
-        .with_user_counting(UserCounting::ClientRegulatedByDate(Some(34)))
+    let app_2 = App::builder()
+        .id("second app id")
+        .version([5, 6, 7, 8])
+        .cohort(Cohort::new("some-other-channel"))
+        .user_counting(UserCounting::ClientRegulatedByDate(Some(34)))
         .build();
 
     // Now make the call to the RequestBuilder that is being tested.
@@ -471,12 +504,17 @@ fn test_event_added_to_first_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 =
-        App::builder("first app id", [1, 2, 3, 4]).with_cohort(Cohort::new("some-channel")).build();
+    let app_1 = App::builder()
+        .id("first app id")
+        .version([1, 2, 3, 4])
+        .cohort(Cohort::new("some-channel"))
+        .build();
 
     // Setup the second app and its cohort
-    let app_2 = App::builder("second app id", [5, 6, 7, 8])
-        .with_cohort(Cohort::new("some-other-channel"))
+    let app_2 = App::builder()
+        .id("second app id")
+        .version([5, 6, 7, 8])
+        .cohort(Cohort::new("some-other-channel"))
         .build();
 
     // Now make the call to the RequestBuilder that is being tested.
@@ -528,12 +566,17 @@ fn test_event_added_to_second_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 =
-        App::builder("first app id", [1, 2, 3, 4]).with_cohort(Cohort::new("some-channel")).build();
+    let app_1 = App::builder()
+        .id("first app id")
+        .version([1, 2, 3, 4])
+        .cohort(Cohort::new("some-channel"))
+        .build();
 
     // Setup the second app and its cohort
-    let app_2 = App::builder("second app id", [5, 6, 7, 8])
-        .with_cohort(Cohort::new("some-other-channel"))
+    let app_2 = App::builder()
+        .id("second app id")
+        .version([5, 6, 7, 8])
+        .cohort(Cohort::new("some-other-channel"))
         .build();
 
     // Now make the call to the RequestBuilder that is being tested.

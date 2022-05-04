@@ -827,9 +827,9 @@ mod stub {
             let cup_handler: Option<StandardCupv2Handler> =
                 config.omaha_public_keys.as_ref().map(StandardCupv2Handler::new);
 
-            let app_set = self
-                .app_set
-                .unwrap_or_else(|| FuchsiaAppSet::new(App::builder("id", [1, 0]).build()));
+            let app_set = self.app_set.unwrap_or_else(|| {
+                FuchsiaAppSet::new(App::builder().id("id").version([1, 0]).build())
+            });
             let app_set = Rc::new(Mutex::new(app_set));
             let time_source = self.time_source.unwrap_or(MockTimeSource::new_from_now());
             // A state machine with only stub implementations never yields from a poll.
@@ -1254,11 +1254,10 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_get_channel_from_app() {
         let app_set = FuchsiaAppSet::new(
-            App::builder("id", [1, 0])
-                .with_cohort(Cohort {
-                    name: "current-channel".to_string().into(),
-                    ..Cohort::default()
-                })
+            App::builder()
+                .id("id")
+                .version([1, 0])
+                .cohort(Cohort { name: "current-channel".to_string().into(), ..Cohort::default() })
                 .build(),
         );
         let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
@@ -1317,11 +1316,10 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_provider_get_current_channel_from_app() {
         let app_set = FuchsiaAppSet::new(
-            App::builder("id", [1, 0])
-                .with_cohort(Cohort {
-                    name: "current-channel".to_string().into(),
-                    ..Cohort::default()
-                })
+            App::builder()
+                .id("id")
+                .version([1, 0])
+                .cohort(Cohort { name: "current-channel".to_string().into(), ..Cohort::default() })
                 .build(),
         );
         let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
@@ -1354,7 +1352,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_get_target() {
         let app_set = FuchsiaAppSet::new(
-            App::builder("id", [1, 0]).with_cohort(Cohort::from_hint("target-channel")).build(),
+            App::builder()
+                .id("id")
+                .version([1, 0])
+                .cohort(Cohort::from_hint("target-channel"))
+                .build(),
         );
         let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
 
@@ -1421,7 +1423,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_target_no_op() {
         let app_set = FuchsiaAppSet::new(
-            App::builder("id", [1, 0]).with_cohort(Cohort::from_hint("target-channel")).build(),
+            App::builder()
+                .id("id")
+                .version([1, 0])
+                .cohort(Cohort::from_hint("target-channel"))
+                .build(),
         );
         let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
 

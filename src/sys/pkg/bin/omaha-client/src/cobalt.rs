@@ -59,11 +59,10 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_notify_cobalt() {
         let app_set = Rc::new(Mutex::new(FuchsiaAppSet::new(
-            App::builder("id", [1, 2])
-                .with_cohort(Cohort {
-                    name: Some("current-channel".to_string()),
-                    ..Cohort::default()
-                })
+            App::builder()
+                .id("id")
+                .version([1, 2])
+                .cohort(Cohort { name: Some("current-channel".to_string()), ..Cohort::default() })
                 .build(),
         )));
 

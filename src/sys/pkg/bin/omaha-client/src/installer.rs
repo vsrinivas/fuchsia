@@ -504,7 +504,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<InstallerMarker>().unwrap();
         let (cup_proxy, cup_stream) =
             fidl::endpoints::create_proxy_and_stream::<CupMarker>().unwrap();
-        let app = omaha_client::common::App::builder("system_id", [1]).build();
+        let app = omaha_client::common::App::builder().id("system_id").version([1]).build();
         let app_set = Rc::new(AsyncMutex::new(FuchsiaAppSet::new(app)));
         let installer = FuchsiaInstaller {
             installer_connector: MockConnector::new(installer_proxy),
@@ -516,7 +516,7 @@ mod tests {
     }
 
     fn new_installer() -> FuchsiaInstaller<ServiceReconnector<InstallerMarker>> {
-        let app = omaha_client::common::App::builder("system_id", [1]).build();
+        let app = omaha_client::common::App::builder().id("system_id").version([1]).build();
         let app_set = Rc::new(AsyncMutex::new(FuchsiaAppSet::new(app)));
         FuchsiaInstaller::new(app_set)
     }

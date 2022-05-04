@@ -16,8 +16,10 @@ use omaha_client::{
     configuration::{Config, Updater},
     protocol::{request::OS, Cohort},
 };
+use std::collections::HashMap;
 use std::fs;
 use std::io;
+use std::iter::FromIterator;
 use version::Version;
 
 // TODO: This is not 0.0.0.0 because that would cause state machine to not start. We should find a
@@ -106,20 +108,24 @@ impl ClientConfiguration {
             });
 
         // Construct the Fuchsia system app.
-        let mut app_builder = App::builder(appid.clone(), Self::parse_version(version))
-            .with_cohort(Cohort {
+        let mut extra_fields: Vec<(String, String)> =
+            vec![("channel".to_string(), channel_name.clone().unwrap_or_default())];
+        if let Some(product_id) = product_id {
+            extra_fields.push(("product_id".to_string(), product_id));
+        }
+        if let Some(realm_id) = realm_id {
+            extra_fields.push(("realm_id".to_string(), realm_id));
+        }
+        let app = App::builder()
+            .id(appid.clone())
+            .version(Self::parse_version(version))
+            .cohort(Cohort {
                 hint: channel_name.clone(),
                 name: channel_name.clone(),
                 ..Cohort::default()
             })
-            .with_extra("channel", channel_name.clone().unwrap_or_default());
-        if let Some(product_id) = product_id {
-            app_builder = app_builder.with_extra("product_id", product_id);
-        }
-        if let Some(realm_id) = realm_id {
-            app_builder = app_builder.with_extra("realm_id", realm_id);
-        }
-        let app = app_builder.build();
+            .extra_fields(HashMap::from_iter(extra_fields.into_iter()))
+            .build();
         let mut app_set = FuchsiaAppSet::new(app);
 
         let mut platform_config = get_config(&version, service_url);
@@ -186,17 +192,19 @@ impl ClientConfiguration {
                 }
             };
 
-            let mut app_builder = App::builder(appid, version);
-            if let Some(channel_config) = channel_config {
-                app_builder = app_builder
-                    .with_cohort(Cohort {
+            let app_builder = App::builder().id(appid).version(version);
+            let app = if let Some(channel_config) = channel_config {
+                app_builder
+                    .cohort(Cohort {
                         hint: Some(channel_config.name.clone()),
                         name: Some(channel_config.name.clone()),
                         ..Cohort::default()
                     })
-                    .with_extra("channel", channel_config.name);
-            }
-            let app = app_builder.build();
+                    .extra_fields([("channel".to_string(), channel_config.name.clone())])
+                    .build()
+            } else {
+                app_builder.build()
+            };
 
             app_set.add_eager_package(EagerPackage::new(app, Some(package.channel_config)));
         }
@@ -548,7 +556,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_add_eager_packages() {
         let mut platform_config = get_config("1.0.0.0", None);
-        let system_app = App::builder("system_app_id", [1]).build();
+        let system_app = App::builder().id("system_app_id").version([1]).build();
         let mut app_set = FuchsiaAppSet::new(system_app.clone());
 
         let public_keys = PublicKeys {
@@ -631,15 +639,17 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
 
         assert_eq!(platform_config.omaha_public_keys, Some(public_keys));
 
-        let package_app = App::builder("1a2b3c4d", MINIMUM_VALID_VERSION)
-            .with_cohort(Cohort {
+        let package_app = App::builder()
+            .id("1a2b3c4d")
+            .version(MINIMUM_VALID_VERSION)
+            .cohort(Cohort {
                 hint: Some("stable".into()),
                 name: Some("stable".into()),
                 ..Cohort::default()
             })
-            .with_extra("channel", "stable")
+            .extra_fields([("channel".to_string(), "stable".to_string())])
             .build();
-        let package2_app = App::builder("", MINIMUM_VALID_VERSION).build();
+        let package2_app = App::builder().id("").version(MINIMUM_VALID_VERSION).build();
         assert_eq!(app_set.get_apps(), vec![system_app.clone(), package_app, package2_app]);
 
         // now with CUP
@@ -669,21 +679,25 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             Some(proxy),
         );
         future::join(fut, stream_fut).await;
-        let package_app = App::builder("1a2b3c4d", [1, 2, 3, 0])
-            .with_cohort(Cohort {
+        let package_app = App::builder()
+            .id("1a2b3c4d")
+            .version([1, 2, 3, 0])
+            .cohort(Cohort {
                 hint: Some("beta".into()),
                 name: Some("beta".into()),
                 ..Cohort::default()
             })
-            .with_extra("channel", "beta")
+            .extra_fields([("channel".to_string(), "beta".to_string())])
             .build();
-        let package2_app = App::builder("3c4d5e6f", [4, 5, 6, 0])
-            .with_cohort(Cohort {
+        let package2_app = App::builder()
+            .id("3c4d5e6f")
+            .version([4, 5, 6, 0])
+            .cohort(Cohort {
                 hint: Some("stable".into()),
                 name: Some("stable".into()),
                 ..Cohort::default()
             })
-            .with_extra("channel", "stable")
+            .extra_fields([("channel".to_string(), "stable".to_string())])
             .build();
         assert_eq!(app_set.get_apps(), vec![system_app, package_app, package2_app]);
     }

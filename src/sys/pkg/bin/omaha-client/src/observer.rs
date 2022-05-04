@@ -285,7 +285,9 @@ mod tests {
             ProtocolStateNode::new(inspector.root().create_child("protocol_state"));
         let last_results_node = LastResultsNode::new(inspector.root().create_child("last_results"));
         let platform_metrics_node = inspector.root().create_child("platform_metrics");
-        let app_set = Rc::new(Mutex::new(FuchsiaAppSet::new(App::builder("id", [1, 2]).build())));
+        let app_set = Rc::new(Mutex::new(FuchsiaAppSet::new(
+            App::builder().id("id").version([1, 2]).build(),
+        )));
         FuchsiaObserver::new(
             fidl,
             schedule_node,

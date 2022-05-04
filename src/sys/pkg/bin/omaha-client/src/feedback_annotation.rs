@@ -65,7 +65,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_publish_ids_to_feedback() {
         let app_set = Rc::new(Mutex::new(FuchsiaAppSet::new(
-            App::builder("some-app-id", [1, 2]).with_extra("product_id", "some-prod-id").build(),
+            App::builder()
+                .id("some-app-id")
+                .version([1, 2])
+                .extra_fields([("product_id".to_string(), "some-prod-id".to_string())])
+                .build(),
         )));
 
         let (proxy, mut stream) = create_proxy_and_stream::<ComponentDataRegisterMarker>().unwrap();

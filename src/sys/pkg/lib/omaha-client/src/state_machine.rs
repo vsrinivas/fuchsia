@@ -1482,12 +1482,11 @@ mod tests {
     use version::Version;
 
     fn make_test_app_set() -> Rc<Mutex<VecAppSet>> {
-        Rc::new(Mutex::new(VecAppSet::new(vec![App::builder(
-            "{00000000-0000-0000-0000-000000000001}",
-            [1, 2, 3, 4],
-        )
-        .with_cohort(Cohort::new("stable-channel"))
-        .build()])))
+        Rc::new(Mutex::new(VecAppSet::new(vec![App::builder()
+            .id("{00000000-0000-0000-0000-000000000001}")
+            .version([1, 2, 3, 4])
+            .cohort(Cohort::new("stable-channel"))
+            .build()])))
     }
 
     fn make_update_available_response() -> HttpResponse<Vec<u8>> {
@@ -1779,9 +1778,9 @@ mod tests {
             let mut http = MockHttpRequest::new(HttpResponse::new(response));
             http.add_response(HttpResponse::new(vec![]));
             let app_set = VecAppSet::new(vec![
-                App::builder("appid_1", [1, 2, 3, 3]).build(),
-                App::builder("appid_2", [9, 9, 9, 9]).build(),
-                App::builder("appid_3", [5, 6, 7, 7]).build(),
+                App::builder().id("appid_1").version([1, 2, 3, 3]).build(),
+                App::builder().id("appid_2").version([9, 9, 9, 9]).build(),
+                App::builder().id("appid_3").version([5, 6, 7, 7]).build(),
             ]);
             let app_set = Rc::new(Mutex::new(app_set));
             let (send_install, mut recv_install) = mpsc::channel(0);
@@ -2657,11 +2656,10 @@ mod tests {
     #[test]
     fn test_load_app() {
         block_on(async {
-            let app_set = VecAppSet::new(vec![App::builder(
-                "{00000000-0000-0000-0000-000000000001}",
-                [1, 2, 3, 4],
-            )
-            .build()]);
+            let app_set = VecAppSet::new(vec![App::builder()
+                .id("{00000000-0000-0000-0000-000000000001}")
+                .version([1, 2, 3, 4])
+                .build()]);
             let mut storage = MemStorage::new();
             let persisted_app = PersistedApp {
                 cohort: Cohort {

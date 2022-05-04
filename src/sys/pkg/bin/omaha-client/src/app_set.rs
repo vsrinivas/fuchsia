@@ -80,11 +80,11 @@ mod tests {
 
     #[test]
     fn test_get_apps() {
-        let app = App::builder("some_id", [0, 1]).build();
+        let app = App::builder().id("some_id").version([0, 1]).build();
         let mut app_set = FuchsiaAppSet::new(app.clone());
         assert_eq!(app_set.get_apps(), vec![app.clone()]);
 
-        let eager_package_app = App::builder("package_id", [5]).build();
+        let eager_package_app = App::builder().id("package_id").version([5]).build();
         let eager_package = EagerPackage { app: eager_package_app.clone(), channel_configs: None };
         app_set.add_eager_package(eager_package);
         assert_eq!(app_set.get_apps(), vec![app, eager_package_app]);
@@ -92,10 +92,12 @@ mod tests {
 
     #[test]
     fn test_iter_mut_apps() {
-        let app = App::builder("id1", [1]).build();
+        let app = App::builder().id("id1").version([1]).build();
         let mut app_set = FuchsiaAppSet::new(app);
-        let eager_package =
-            EagerPackage { app: App::builder("package_id", [5]).build(), channel_configs: None };
+        let eager_package = EagerPackage {
+            app: App::builder().id("package_id").version([5]).build(),
+            channel_configs: None,
+        };
         app_set.add_eager_package(eager_package);
 
         for app in app_set.iter_mut_apps() {
@@ -104,8 +106,8 @@ mod tests {
         assert_eq!(
             app_set.get_apps(),
             vec![
-                App::builder("id1_mutated", [1]).build(),
-                App::builder("package_id_mutated", [5]).build()
+                App::builder().id("id1_mutated").version([1]).build(),
+                App::builder().id("package_id_mutated").version([5]).build()
             ]
         );
     }

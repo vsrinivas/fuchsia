@@ -30,6 +30,7 @@ rustc_library("omaha-client") {
     "//third_party/rust_crates:sha2",
     "//third_party/rust_crates:signature",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:typed-builder",
     "//third_party/rust_crates:url",
     "//third_party/rust_crates:uuid",
   ]
