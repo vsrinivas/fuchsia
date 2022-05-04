@@ -57,6 +57,14 @@ class WireAsyncEventHandler;
 template <typename FidlProtocol>
 class WireServer;
 
+// This is a temporary forward declaration to allow the //sdk/lib/sys/component
+// service library to conditionally support natural servers when it is available.
+// Intentional empty line to avoid language servers picking up this doc comment.
+// TODO(fxbug.dev/92356): Remove this after the unified bindings are in the SDK.
+
+template <typename FidlProtocol>
+class Server;
+
 template <typename FidlMethod>
 class WireResponseContext;
 

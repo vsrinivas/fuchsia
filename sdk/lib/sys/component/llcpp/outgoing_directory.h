@@ -135,6 +135,24 @@ class OutgoingDirectory final {
         name);
   }
 
+  // Same as above but overloaded to support servers implementations speaking
+  // FIDL C++ natural types: |fidl::Server<P>|, part of the unified bindings.
+  template <typename Protocol>
+  zx::status<> AddProtocol(fidl::Server<Protocol>* impl,
+                           cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
+    if (impl == nullptr || dispatcher_ == nullptr) {
+      return zx::make_status(ZX_ERR_INVALID_ARGS);
+    }
+
+    return AddProtocol<Protocol>(
+        [=](fidl::ServerEnd<Protocol> request) {
+          // This object is safe to drop. Server will still begin to operate
+          // past its lifetime.
+          auto _server = fidl::BindServer(dispatcher_, std::move(request), impl);
+        },
+        name);
+  }
+
   // Adds a FIDL Protocol instance.
   //
   // A |handler| is added to handle connection requests for the this particular
