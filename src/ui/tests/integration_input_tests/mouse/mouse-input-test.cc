@@ -18,11 +18,6 @@
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/ui/scenic/cpp/resources.h>
-#include <lib/ui/scenic/cpp/session.h>
-#include <lib/ui/scenic/cpp/view_creation_tokens.h>
-#include <lib/ui/scenic/cpp/view_identity.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
@@ -41,21 +36,9 @@
 #include <test/inputsynthesis/cpp/fidl.h>
 #include <test/mouse/cpp/fidl.h>
 
-namespace {
+#include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
-using fuchsia::ui::app::CreateView2Args;
-using fuchsia::ui::app::ViewProvider;
-using fuchsia::ui::composition::ChildViewStatus;
-using fuchsia::ui::composition::ChildViewWatcher;
-using fuchsia::ui::composition::ContentId;
-using fuchsia::ui::composition::LayoutInfo;
-using fuchsia::ui::composition::ParentViewportStatus;
-using fuchsia::ui::composition::ParentViewportWatcher;
-using fuchsia::ui::composition::PresentArgs;
-using fuchsia::ui::composition::TransformId;
-using fuchsia::ui::composition::ViewportProperties;
-using fuchsia::ui::views::ViewRef;
-using fuchsia::ui::views::ViewRefControl;
+namespace {
 
 // Types imported for the realm_builder library.
 using component_testing::ChildRef;
@@ -63,9 +46,8 @@ using component_testing::LocalComponent;
 using component_testing::LocalComponentHandles;
 using component_testing::ParentRef;
 using component_testing::Protocol;
-using component_testing::RealmRoot;
+using component_testing::Realm;
 using component_testing::Route;
-using RealmBuilder = component_testing::RealmBuilder;
 
 // Alias for Component child name as provided to Realm Builder.
 using ChildName = std::string;
@@ -86,66 +68,6 @@ std::vector<T> merge(std::initializer_list<std::vector<T>> vecs) {
   }
   return result;
 }
-
-// This is an in-process server for the `fuchsia.ui.app.ViewProvider` API for this
-// test.  It is required for this test to be able to define and set up its view
-// as the root view in Scenic's scene graph.  The implementation does little more
-// than to provide correct wiring of the FIDL API.  The test that uses it is
-// expected to provide a closure via SetCreateView2Callback, which will get invoked
-// when a message is received.
-//
-// Only Flatland methods are implemented, others will cause the server to crash
-// the test deliberately.
-class ViewProviderServer : public ViewProvider, public LocalComponent {
- public:
-  explicit ViewProviderServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
-
-  // Start serving `ViewProvider` for the stream that arrives via `request`.
-  void Bind(fidl::InterfaceRequest<ViewProvider> request) {
-    bindings_.AddBinding(this, std::move(request), dispatcher_);
-  }
-
-  // Set this callback to direct where an incoming message from `CreateView2` will
-  // get forwarded to.
-  void SetCreateView2Callback(std::function<void(CreateView2Args)> callback) {
-    create_view2_callback_ = std::move(callback);
-  }
-
-  // LocalComponent::Start
-  void Start(std::unique_ptr<LocalComponentHandles> mock_handles) override {
-    // When this component starts, add a binding to the fuchsia.ui.app.ViewProvider
-    // protocol to this component's outgoing directory.
-    FX_CHECK(mock_handles->outgoing()->AddPublicService(
-                 fidl::InterfaceRequestHandler<ViewProvider>([this](auto request) {
-                   bindings_.AddBinding(this, std::move(request), dispatcher_);
-                 })) == ZX_OK);
-    mock_handles_.emplace_back(std::move(mock_handles));
-  }
-
-  // Gfx protocol is not implemented.
-  void CreateView(
-      ::zx::eventpair token,
-      ::fidl::InterfaceRequest<::fuchsia::sys::ServiceProvider> incoming_services,
-      ::fidl::InterfaceHandle<::fuchsia::sys::ServiceProvider> outgoing_services) override {
-    FAIL() << "CreateView is not supported.";
-  }
-
-  // Gfx protocol is not implemented.
-  void CreateViewWithViewRef(::zx::eventpair token, ViewRefControl view_ref_control,
-                             ViewRef view_ref) override {
-    FAIL() << "CreateViewWithRef is not supported.";
-  }
-
-  // Implements server-side `fuchsia.ui.app.ViewProvider/CreateView2`
-  void CreateView2(CreateView2Args args) override { create_view2_callback_(std::move(args)); }
-
- private:
-  async_dispatcher_t* dispatcher_ = nullptr;
-  std::vector<std::unique_ptr<LocalComponentHandles>> mock_handles_;
-  fidl::BindingSet<ViewProvider> bindings_;
-
-  std::function<void(CreateView2Args)> create_view2_callback_ = nullptr;
-};
 
 // `ResponseListener` is a local test protocol that our test Flutter app uses to let us know
 // what position and button press state the mouse cursor has.
@@ -184,110 +106,13 @@ class ResponseListenerServer : public test::mouse::ResponseListener, public Loca
   fit::function<void(test::mouse::PointerData)> respond_callback_;
 };
 
-// A minimal server for fuchsia.ui.composition.ParentViewportWatcher.  All it
-// does is forward the values it receives to the functions set by the user.
-class ParentViewportWatcherClient {
- public:
-  struct Callbacks {
-    // Called when GetLayout returns.
-    std::function<void(LayoutInfo info)> on_get_layout{};
-    // Called when GetStatus returns.
-    std::function<void(ParentViewportStatus info)> on_status_info{};
-  };
-  explicit ParentViewportWatcherClient(fidl::InterfaceHandle<ParentViewportWatcher> client_end,
-                                       Callbacks callbacks)
-      // Subtle: callbacks are initialized before a call to Bind, so that we don't
-      // receive messages from the client end before the callbacks are installed.
-      : callbacks_(std::move(callbacks)), client_end_(client_end.Bind()) {
-    client_end_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(ERROR) << "watcher error: " << zx_status_get_string(status);
-    });
-    // Kick off hanging get requests now.
-    ScheduleGetLayout();
-    ScheduleStatusInfo();
-  }
-
- private:
-  // Schedule* methods ensure that changes to the status are continuously
-  // communicated to the test fixture. This is because the statuses may
-  // change several times before they settle into the value we need.
-
-  void ScheduleGetLayout() {
-    client_end_->GetLayout([this](LayoutInfo l) {
-      this->callbacks_.on_get_layout(std::move(l));
-      ScheduleGetLayout();
-    });
-  }
-
-  void ScheduleStatusInfo() {
-    client_end_->GetStatus([this](ParentViewportStatus s) {
-      this->callbacks_.on_status_info(s);
-      ScheduleStatusInfo();
-    });
-  }
-
-  Callbacks callbacks_;
-  fidl::InterfacePtr<ParentViewportWatcher> client_end_;
-};
-
-// A minimal server for fuchsia.ui.composition.ChildViewWatcher.  All it does is
-// forward the values it receives to the functions set by the user.
-class ChildViewWatcherClient {
- public:
-  struct Callbacks {
-    // Called when GetStatus returns.
-    std::function<void(ChildViewStatus)> on_get_status{};
-    // Called when GetViewRef returns.
-    std::function<void(ViewRef)> on_get_view_ref{};
-  };
-
-  explicit ChildViewWatcherClient(fidl::InterfaceHandle<ChildViewWatcher> client_end,
-                                  Callbacks callbacks)
-      // Subtle: callbacks need to be initialized before a call to Bind, else
-      // we may receive messages before we install the message handlers.
-      : callbacks_(std::move(callbacks)), client_end_(client_end.Bind()) {
-    client_end_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(ERROR) << "watcher error: " << zx_status_get_string(status);
-    });
-    ScheduleGetStatus();
-    ScheduleGetViewRef();
-  }
-
- private:
-  // Schedule* methods ensure that changes to the status are continuously
-  // communicated to the test fixture. This is because the statuses may
-  // change several times before they settle into the value we need.
-
-  void ScheduleGetStatus() {
-    client_end_->GetStatus([this](ChildViewStatus status) {
-      this->callbacks_.on_get_status(status);
-      this->ScheduleGetStatus();
-    });
-  }
-
-  void ScheduleGetViewRef() {
-    client_end_->GetViewRef([this](ViewRef view_ref) {
-      this->callbacks_.on_get_view_ref(std::move(view_ref));
-      this->ScheduleGetViewRef();
-    });
-  }
-
-  Callbacks callbacks_;
-  fidl::InterfacePtr<ChildViewWatcher> client_end_;
-};
-
-constexpr auto kTestRealm = "workstation-test-realm";
 constexpr auto kResponseListener = "response_listener";
 
 class MouseInputBase : public gtest::RealLoopFixture {
  protected:
-  MouseInputBase()
-      : realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::Create())),
-        view_provider_server_(std::make_unique<ViewProviderServer>(dispatcher())),
-        response_listener_(std::make_unique<ResponseListenerServer>(dispatcher())) {}
+  MouseInputBase() : response_listener_(std::make_unique<ResponseListenerServer>(dispatcher())) {}
 
-  RealmBuilder* builder() { return realm_builder_.get(); }
-  RealmRoot* realm() { return realm_.get(); }
+  sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
 
   ResponseListenerServer* response_listener() { return response_listener_.get(); }
 
@@ -297,6 +122,17 @@ class MouseInputBase : public gtest::RealLoopFixture {
         dispatcher(),
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
+
+    ui_testing::UITestManager::Config config;
+    config.use_flatland = true;
+    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER;
+    config.use_input = true;
+    config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
+    config.ui_to_client_services = {
+        fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::composition::Flatland::Name_,
+        fuchsia::ui::composition::Allocator::Name_, fuchsia::ui::input::ImeService::Name_,
+        fuchsia::ui::input3::Keyboard::Name_};
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
     AssembleRealm(this->GetTestComponents(), this->GetTestRoutes());
   }
@@ -308,143 +144,6 @@ class MouseInputBase : public gtest::RealLoopFixture {
   // Subclass should implement this method to add capability routes to the test
   // realm next to the base ones added.
   virtual std::vector<Route> GetTestRoutes() { return {}; }
-
-  // Launches the test client by connecting to ViewProviderServer.
-  void LaunchClient(std::string debug_name) {
-    auto scene_manager = realm_->Connect<fuchsia::session::scene::Manager>();
-
-    fidl::InterfaceHandle<ViewProvider> view_provider_handle;
-    view_provider_server_->Bind(view_provider_handle.NewRequest());
-
-    std::optional<fuchsia::ui::app::CreateView2Args> args;
-    view_provider_server_->SetCreateView2Callback(
-        [&](fuchsia::ui::app::CreateView2Args a) { args = std::move(a); });
-
-    std::optional<ViewRef> view_ref_from_scene;
-    scene_manager->SetRootView(
-        std::move(view_provider_handle),
-        [&view_ref_from_scene](ViewRef ref) { view_ref_from_scene = std::move(ref); });
-    FX_LOGS(INFO) << "Waiting for args";
-    RunLoopUntil([&] { return args.has_value(); });
-
-    // Connect to the scene graph.
-    auto flatland = realm_->Connect<fuchsia::ui::composition::Flatland>();
-
-    // After each Present call we need to wait until a frame is presented.
-    std::optional<bool> presented;
-    flatland.events().OnFramePresented = [&presented](auto) { presented = true; };
-    flatland.events().OnError = [](fuchsia::ui::composition::FlatlandError error) {
-      FX_LOGS(ERROR) << "Flatland present OnError received: " << static_cast<uint32_t>(error);
-    };
-    flatland.set_error_handler([](zx_status_t status) {
-      FX_LOGS(ERROR) << "Flatland error status: " << zx_status_get_string(status);
-    });
-    EXPECT_TRUE(flatland.is_bound());
-    flatland->SetDebugName(debug_name);
-
-    fidl::InterfaceHandle<fuchsia::ui::composition::ParentViewportWatcher> parent_watcher;
-    auto view_identity = scenic::NewViewIdentityOnCreation();
-    flatland->CreateView2(std::move(*args.value().mutable_view_creation_token()),
-                          std::move(view_identity), {}, parent_watcher.NewRequest());
-
-    std::optional<LayoutInfo> layout_info;
-    std::optional<ParentViewportStatus> status_info;
-    ParentViewportWatcherClient parent_watcher_client{
-        std::move(parent_watcher),
-        ParentViewportWatcherClient::Callbacks{
-            .on_get_layout =
-                [&layout_info](LayoutInfo l) {
-                  FX_VLOGS(1) << "OnGetLayout message received.";
-                  layout_info = std::move(l);
-                },
-            .on_status_info =
-                [&status_info](ParentViewportStatus s) {
-                  FX_VLOGS(1) << "SetOnStatusInfo message received.";
-                  status_info = s;
-                },
-        },
-    };
-
-    // Subtle: OnGetLayout can return before a call to Present is made.
-    // OnStatusInfo may not return until after a call to Present is made.
-    FX_LOGS(INFO) << "Waiting for layout information";
-    RunLoopUntil([&] { return layout_info.has_value(); });
-
-    // A transform must exist on the view in order for the connection to be
-    // established properly. Set it up here.  The ID is set to an arbitrary
-    // number.
-    flatland->CreateTransform(TransformId{.value = 42});
-    flatland->SetRootTransform(TransformId{.value = 42});
-
-    // Commit all previously scheduled operations.
-    presented = std::nullopt;
-    flatland->Present(PresentArgs{});
-
-    FX_LOGS(INFO) << "Waiting for status info.";
-    RunLoopUntil([&] {
-      return status_info.has_value() &&
-             status_info.value() == ParentViewportStatus::CONNECTED_TO_DISPLAY &&
-             presented.has_value() && presented == true;
-    });
-
-    FX_LOGS(INFO) << "Waiting for view_ref";
-    RunLoopUntil([&] { return view_ref_from_scene.has_value(); });
-
-    // Create request pair for ChildViewWatcher protocol. We get to use this protocol as
-    // a result of the CreateViewport FIDL call below, but we need to provide both
-    // ends of that channel, hand one side (server end) to Flatland, and keep the other
-    // side (client end) for us.
-    fidl::InterfaceHandle<fuchsia::ui::composition::ChildViewWatcher> child_view_watcher;
-
-    // Create a viewport in this test, which will be a parent of the child view.
-    // No action is committed until flatland.Present is called.
-    auto view_creation_token_pair = scenic::ViewCreationTokenPair::New();
-    ViewportProperties viewport_properties;
-    viewport_properties.set_logical_size(fidl::Clone(layout_info.value().logical_size()));
-    flatland->CreateViewport(ContentId{.value = 43},
-                             std::move(view_creation_token_pair.viewport_token),
-                             std::move(viewport_properties), child_view_watcher.NewRequest());
-    presented = std::nullopt;
-    flatland->Present(PresentArgs{});
-
-    // Now create a viewport (parent side of the scene rendering), and let the child view
-    // know how to connect its view to our viewport.
-    std::optional<ChildViewStatus> child_view_status;
-    // This client will catch the events related to the child view that Flatland will
-    // report to us.  The client issues the appropriate hanging get requests.
-    ChildViewWatcherClient child_view_watcher_client{
-        std::move(child_view_watcher),
-        ChildViewWatcherClient::Callbacks{
-            // The closure we hand to the client here will get called when Flatland decides
-            // to respond to the client's hanging get.  The only task of the closure is to
-            // pull the reported `status` into a variable `child_view_status ` that the tests's
-            // main program flow can use.
-            .on_get_status =
-                [&child_view_status](ChildViewStatus status) {
-                  FX_VLOGS(1) << "ChildViewStatus received";
-                  child_view_status = status;
-                },
-            .on_get_view_ref = [](ViewRef) {},
-        },
-    };
-
-    auto flutter_app_view_provider = realm_->Connect<fuchsia::ui::app::ViewProvider>();
-
-    CreateView2Args view2_args;
-    view2_args.set_view_creation_token(std::move(view_creation_token_pair.view_token));
-    flutter_app_view_provider->CreateView2(std::move(view2_args));
-
-    // All of the above setup consists of fire-and-forget calls, so we must wait on
-    // some synchronization point to allow all of them to unfold.  It seems reasonable
-    // to wait on the signal that the child has
-    // presented its content.
-    FX_LOGS(INFO) << "Wait for the child window to render";
-    RunLoopUntil([&]() {
-      return child_view_status.has_value() &&
-             child_view_status.value() == ChildViewStatus::CONTENT_HAS_PRESENTED &&
-             presented.has_value() && presented == true;
-    });
-  }
 
   // Helper method for checking the test.mouse.ResponseListener response from the client app.
   void SetResponseExpectations(uint32_t expected_x, uint32_t expected_y,
@@ -476,53 +175,39 @@ class MouseInputBase : public gtest::RealLoopFixture {
 
   void AssembleRealm(const std::vector<std::pair<ChildName, LegacyUrl>>& components,
                      const std::vector<Route>& routes) {
+    FX_LOGS(INFO) << "Building realm";
+    realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
+
     // Key part of service setup: have this test component vend the
     // |ResponseListener| service in the constructed realm.
-    builder()->AddLocalChild(kResponseListener, response_listener());
-
-    // Add static test realm as a component to the realm.
-    builder()->AddChild(kTestRealm, "#meta/workstation-test-realm.cm");
+    realm_->AddLocalChild(kResponseListener, response_listener());
 
     // Add components specific for this test case to the realm.
     for (const auto& [name, component] : components) {
-      builder()->AddLegacyChild(name, component);
+      realm_->AddLegacyChild(name, component);
     }
-
-    // Capabilities routed from static test realm up to test driver (this component).
-    builder()->AddRoute(Route{.capabilities =
-                                  {
-                                      Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                                      Protocol{fuchsia::ui::composition::Flatland::Name_},
-                                      Protocol{::fuchsia::session::scene::Manager::Name_},
-                                      Protocol{test::inputsynthesis::Mouse::Name_},
-                                  },
-                              .source = ChildRef{kTestRealm},
-                              .targets = {ParentRef()}});
-
-    // Capabilities routed from test_manager to components in static test realm.
-    builder()->AddRoute(Route{.capabilities =
-                                  {
-                                      Protocol{fuchsia::logger::LogSink::Name_},
-                                      Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-                                      Protocol{fuchsia::sysmem::Allocator::Name_},
-                                      Protocol{fuchsia::tracing::provider::Registry::Name_},
-                                      Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                                  },
-                              .source = ParentRef(),
-                              .targets = {ChildRef{kTestRealm}}});
 
     // Add the necessary routing for each of the extra components added above.
     for (const auto& route : routes) {
-      builder()->AddRoute(route);
+      realm_->AddRoute(route);
     }
 
     // Finally, build the realm using the provided components and routes.
-    realm_ = std::make_unique<RealmRoot>(builder()->Build());
+    ui_test_manager_->BuildRealm();
+    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
   }
 
-  std::unique_ptr<RealmBuilder> realm_builder_;
-  std::unique_ptr<RealmRoot> realm_;
-  std::unique_ptr<ViewProviderServer> view_provider_server_;
+  void LaunchClient() {
+    // Initialize scene, and attach client view.
+    ui_test_manager_->InitializeScene();
+    FX_LOGS(INFO) << "Wait for client view to render";
+    RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsRendering(); });
+  }
+
+  std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
+  std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
+  std::unique_ptr<Realm> realm_;
+
   std::unique_ptr<ResponseListenerServer> response_listener_;
 };
 
@@ -557,11 +242,6 @@ class FlutterInputTest : public MouseInputBase {
                      Protocol{fuchsia::ui::composition::Allocator::Name_},
                      Protocol{fuchsia::ui::composition::Flatland::Name_},
                      Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                 },
-             .source = ChildRef{kTestRealm},
-             .targets = {target}},
-            {.capabilities =
-                 {
                      // Redirect logging output for the test realm to
                      // the host console output.
                      Protocol{fuchsia::logger::LogSink::Name_},
@@ -579,14 +259,7 @@ class FlutterInputTest : public MouseInputBase {
       "fuchsia-pkg://fuchsia.com/mouse-input-test#meta/mouse-input-flutter.cmx";
 };
 
-#ifndef INPUT_USE_MODERN_INPUT_INJECTION
-TEST_F(FlutterInputTest, DISABLED_FlutterMouseMove) {
-  // Pass the test where modern injection is unavailable.  Modern injection is
-  // not available outside of devices that support mouse, on which this test
-  // doesn't apply anyways.
-#else
 TEST_F(FlutterInputTest, FlutterMouseMove) {
-#endif
   // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
   zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
 
@@ -595,13 +268,13 @@ TEST_F(FlutterInputTest, FlutterMouseMove) {
                           /*expected_y=*/0, input_injection_time,
                           /*component_name=*/"mouse-input-flutter", initialization_complete);
 
-  LaunchClient("FlutterMouseMove");
+  LaunchClient();
 
   FX_LOGS(INFO) << "Wait for the initial mouse state";
   RunLoopUntil([&initialization_complete] { return initialization_complete; });
 
   // TODO: Inject input.
-  auto input_synthesis = realm_->Connect<test::inputsynthesis::Mouse>();
+  auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
 }
 
 }  // namespace
