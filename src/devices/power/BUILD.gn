@@ -10,7 +10,6 @@ group("drivers") {
     "drivers/fusb302:fusb302",
     "drivers/nelson-brownout-protection:nelson-brownout-protection",
     "drivers/power",
-    "drivers/silergy:sy-buck",
     "drivers/ti-ina231:ti-ina231",
   ]
 }

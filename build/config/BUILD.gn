@@ -710,7 +710,6 @@ config("Wno-conversion") {
     "//src/devices/nand/drivers/ram-nand:*",
     "//src/devices/pci/testing:*",
     "//src/devices/power/drivers/fusb302:*",
-    "//src/devices/power/drivers/silergy:*",
     "//src/devices/power/drivers/ti-ina231:*",
     "//src/devices/pwm/drivers/aml-pwm:*",
     "//src/devices/radar/tests/radar-integration-test:*",

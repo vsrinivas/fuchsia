@@ -162,7 +162,6 @@
 //src/devices/power/drivers/fusb302:fusb302-driver
 //src/devices/power/drivers/nelson-brownout-protection:nelson-brownout-protection-driver
 //src/devices/power/drivers/power:power-driver
-//src/devices/power/drivers/silergy:sy-buck-driver
 //src/devices/power/drivers/ti-ina231:ti-ina231-driver
 //src/devices/pwm/drivers/aml-pwm-init:aml-pwm-init-driver
 //src/devices/pwm/drivers/aml-pwm:aml-pwm-driver

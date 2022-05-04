@@ -374,3 +374,9 @@
   available_in_git: '636114fa5f0c3a175cf6f054f26b415f72a72dad'
   areas: ['Light']
   path: '/src/ui/light/drivers/lp50xx-light'
+- short_description: 'Silergy SY8827 power driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '675799'
+  available_in_git: 'e5cb9cb2fa06ad1bd95f0e5357b00d62f8bb34e6'
+  areas: ['Power']
+  path: '/src/devices/power/drivers/silergy'
