@@ -135,7 +135,7 @@ NandDevice::NandDevice() {
     caller_.reset(fbl::unique_fd(open(parent_->Path(), O_RDWR)));
   } else {
     fdio_cpp::UnownedFdioCaller caller(parent_->get());
-    const char kBroker[] = "/boot/driver/nand-broker.so";
+    const char kBroker[] = "nand-broker.so";
     auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
                     ->Bind(::fidl::StringView(kBroker));
     zx_status_t status = resp.status();
