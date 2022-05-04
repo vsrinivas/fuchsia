@@ -21,6 +21,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.pkg.internal:fuchsia.pkg.internal-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
@@ -564,6 +565,37 @@ rustc_test("metrics") {
   sources = [ "src/metrics.rs" ]
 }
 
+rustc_test("eager_updates") {
+  name = "eager-updates"
+  edition = "2018"
+
+  source_root = "src/eager_updates.rs"
+
+  deps = [
+    ":lib",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.pkg.internal:fuchsia.pkg.internal-rustc",
+    "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-url",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
+    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/testing/pkgfs-ramdisk",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:openat",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  sources = [ "src/eager_updates.rs" ]
+}
+
 fuchsia_test_component("dynamic_repositories_disabled-component") {
   component_name = "dynamic-repositories-disabled"
   manifest = "meta/dynamic-repositories-disabled.cml"
@@ -648,6 +680,12 @@ fuchsia_test_component("metrics-component") {
   deps = [ ":metrics" ]
 }
 
+fuchsia_test_component("eager_updates-component") {
+  component_name = "eager-updates"
+  manifest = "meta/eager-updates.cml"
+  deps = [ ":eager_updates" ]
+}
+
 renamed_binary("pkgsvr-binary") {
   dest = "bin/pkgsvr"
   source = "$root_out_dir/grand_unified_binary"
@@ -718,6 +756,7 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
     ":base_pinning-component",
     ":dynamic_repositories_disabled-component",
     ":dynamic_rewrite_disabled-component",
+    ":eager_updates-component",
     ":get_hash-component",
     ":metrics-component",
     ":persists_tuf_metadata-component",

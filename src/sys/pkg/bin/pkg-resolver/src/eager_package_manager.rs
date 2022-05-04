@@ -14,6 +14,7 @@ use {
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::fx_log_err,
     fuchsia_url::pkg_url::{Hash, PinnedPkgUrl, PkgUrl},
+    fuchsia_zircon as zx,
     futures::{lock::Mutex as AsyncMutex, prelude::*},
     omaha_client::protocol::response::Response,
     serde::Deserialize,
@@ -40,7 +41,6 @@ pub struct EagerPackageManager<T: Resolver> {
 }
 
 impl<T: Resolver> EagerPackageManager<T> {
-    #[allow(dead_code)]
     pub async fn from_namespace(
         package_resolver: T,
         pkg_cache: cache::Client,
@@ -142,9 +142,22 @@ impl<T: Resolver> EagerPackageManager<T> {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    pub fn is_eager_package(&self, url: &PkgUrl) -> bool {
-        self.packages.contains_key(url)
+    // Returns eager package directory.
+    // Returns Ok(None) if that's not an eager package, or the package is pinned.
+    pub fn get_package_dir(&self, url: &PkgUrl) -> Result<Option<PackageDirectory>, Error> {
+        if url.package_hash().is_some() {
+            // Optimization: since all URLs in self.packages are unpinned, return early.
+            return Ok(None);
+        }
+        if let Some(eager_package) = self.packages.get(url) {
+            if eager_package.package_directory.is_some() {
+                Ok(eager_package.package_directory.clone())
+            } else {
+                Err(anyhow!("eager package dir not found for {}", url))
+            }
+        } else {
+            Ok(None)
+        }
     }
 
     async fn resolve_pinned(
@@ -153,7 +166,7 @@ impl<T: Resolver> EagerPackageManager<T> {
     ) -> Result<PackageDirectory, ResolvePinnedError> {
         let expected_hash = url.package_hash();
 
-        let pkg_dir = package_resolver.resolve(url.into()).await?;
+        let pkg_dir = package_resolver.resolve(url.into(), None).await?;
 
         let hash = pkg_dir.merkle_root().await?;
         if hash != expected_hash {
@@ -370,11 +383,25 @@ struct EagerPackageConfig {
 }
 
 impl EagerPackageConfigs {
+    /// Read eager config from namespace. Returns an empty instance of `EagerPackageConfigs` in
+    /// case config was not found.
     async fn from_namespace() -> Result<Self, Error> {
-        let json = io_util::file::read_in_namespace(EAGER_PACKAGE_CONFIG_PATH)
-            .await
-            .context("reading eager package config file")?;
-        serde_json::from_slice(&json).context("parsing eager package config")
+        match io_util::file::read_in_namespace(EAGER_PACKAGE_CONFIG_PATH).await {
+            Ok(json) => Ok(serde_json::from_slice(&json).context("parsing eager package config")?),
+            Err(e) => match e.into_inner() {
+                io_util::file::ReadError::Open(io_util::node::OpenError::OpenError(e))
+                    if e == zx::Status::NOT_FOUND =>
+                {
+                    // This error is only reachable if /config/data exists, but the file is missing.
+                    Ok(EagerPackageConfigs { packages: Vec::new() })
+                }
+                err => Err(anyhow!(
+                    "Error reading eager package config file {}: {}",
+                    EAGER_PACKAGE_CONFIG_PATH,
+                    err
+                )),
+            },
+        }
     }
 }
 
@@ -593,34 +620,22 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_is_eager_package() {
-        let config = EagerPackageConfigs {
-            packages: vec![
-                EagerPackageConfig {
-                    url: PkgUrl::parse("fuchsia-pkg://example.com/package").unwrap(),
-                    executable: true,
-                },
-                EagerPackageConfig {
-                    url: PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap(),
-                    executable: false,
-                },
-            ],
-        };
+    async fn test_get_eager_package_with_empty_config() {
+        let config = EagerPackageConfigs { packages: Vec::new() };
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
         let manager = EagerPackageManager::from_config(config, package_resolver, pkg_cache, None)
             .await
             .unwrap();
 
-        for url in ["fuchsia-pkg://example.com/package", "fuchsia-pkg://example.com/package2"] {
-            assert!(manager.is_eager_package(&PkgUrl::parse(url).unwrap()));
-        }
+        assert!(manager.packages.is_empty());
+
         for url in [
             "fuchsia-pkg://example2.com/package",
             "fuchsia-pkg://example.com/package3",
             "fuchsia-pkg://example.com/package?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
         ] {
-            assert!(!manager.is_eager_package(&PkgUrl::parse(url).unwrap()));
+            assert_matches!(manager.get_package_dir(&PkgUrl::parse(url).unwrap()), Ok(None));
         }
     }
 
@@ -690,9 +705,17 @@ mod tests {
         )
         .await;
         let manager = manager.unwrap();
+        assert_matches!(
+            manager.get_package_dir(
+                &PkgUrl::parse("fuchsia-pkg://example.com/non-eager-package").unwrap()
+            ),
+            Ok(None)
+        );
         assert!(manager.packages[&url].package_directory.is_some());
+        assert!(manager.get_package_dir(&url).unwrap().is_some());
         assert_eq!(manager.packages[&url].cup, Some(cup));
         assert!(manager.packages[&url2].package_directory.is_none());
+        assert_matches!(manager.get_package_dir(&url2), Err(_));
         // cup is still loaded even if resolve fails
         assert_eq!(manager.packages[&url2].cup, Some(cup2));
     }

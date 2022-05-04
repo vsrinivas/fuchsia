@@ -8,6 +8,7 @@ use {
             BasePackageIndex, BlobFetcher, CacheError::*, MerkleForError, MerkleForError::*,
             ToResolveError as _, ToResolveStatus as _,
         },
+        eager_package_manager::EagerPackageManager,
         font_package_manager::FontPackageManager,
         repository_manager::RepositoryManager,
         repository_manager::{GetPackageError, GetPackageError::*, GetPackageHashError},
@@ -56,14 +57,21 @@ pub struct QueuedResolver {
 /// ensures that packages are available on the local filesystem and/or fetch them from remote
 /// repository if necessary and possible.
 #[async_trait]
-pub trait Resolver: std::fmt::Debug {
-    /// Returns local package directory for the package provided as a `url` parameter.
-    async fn resolve(&self, url: PkgUrl) -> Result<PackageDirectory, pkg::ResolveError>;
+pub trait Resolver: std::fmt::Debug + Sync + Sized {
+    async fn resolve(
+        &self,
+        url: PkgUrl,
+        eager_package_manager: Option<&EagerPackageManager<Self>>,
+    ) -> Result<PackageDirectory, pkg::ResolveError>;
 }
 
 #[async_trait]
 impl Resolver for QueuedResolver {
-    async fn resolve(&self, pkg_url: PkgUrl) -> Result<PackageDirectory, pkg::ResolveError> {
+    async fn resolve(
+        &self,
+        pkg_url: PkgUrl,
+        eager_package_manager: Option<&EagerPackageManager<Self>>,
+    ) -> Result<PackageDirectory, pkg::ResolveError> {
         trace::duration_begin!("app", "resolve", "url" => pkg_url.to_string().as_str());
         // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
         // given one.
@@ -88,6 +96,28 @@ impl Resolver for QueuedResolver {
         let rewritten_url =
             rewrite_url(&self.rewriter, &pkg_url).await.map_err(|e| e.to_resolve_error())?;
         let _package_inspect = package_inspect.rewritten_url(&rewritten_url);
+
+        // Attempt to use EagerPackageManager to resolve the package.
+        if let Some(eager_package_manager) = eager_package_manager {
+            if let Some(dir) =
+                eager_package_manager.get_package_dir(&rewritten_url).map_err(|e| {
+                    fx_log_err!(
+                        "failed to resolve eager package at {} as {}: {:#}",
+                        pkg_url,
+                        rewritten_url,
+                        e
+                    );
+                    pkg::ResolveError::PackageNotFound
+                })?
+            {
+                fx_log_info!(
+                    "resolved {} as {} with eager package manager",
+                    pkg_url,
+                    rewritten_url,
+                );
+                return Ok(dir);
+            }
+        }
 
         // Fetch from TUF.
         let queued_fetch = self.queue.push(rewritten_url.clone(), ());
@@ -262,7 +292,11 @@ impl MockResolver {
 #[cfg(test)]
 #[async_trait]
 impl Resolver for MockResolver {
-    async fn resolve(&self, url: PkgUrl) -> Result<PackageDirectory, pkg::ResolveError> {
+    async fn resolve(
+        &self,
+        url: PkgUrl,
+        _eager_package_manager: Option<&EagerPackageManager<Self>>,
+    ) -> Result<PackageDirectory, pkg::ResolveError> {
         let queued_fetch = self.queue.push(url, ());
         queued_fetch.await.expect("expected queue to be open").map_err(|e| e.to_resolve_error())
     }
@@ -277,6 +311,7 @@ pub async fn run_resolver_service(
     stream: PackageResolverRequestStream,
     cobalt_sender: CobaltSender,
     inspect: Arc<ResolverServiceInspectState>,
+    eager_package_manager: Arc<Option<EagerPackageManager<QueuedResolver>>>,
 ) -> Result<(), Error> {
     stream
         .map_err(anyhow::Error::new)
@@ -285,8 +320,13 @@ pub async fn run_resolver_service(
             match event {
                 PackageResolverRequest::Resolve { package_url, dir, responder } => {
                     let start_time = Instant::now();
-                    let response =
-                        resolve_and_reopen(&package_resolver, package_url.clone(), dir).await;
+                    let response = resolve_and_reopen(
+                        &package_resolver,
+                        package_url.clone(),
+                        dir,
+                        eager_package_manager.as_ref().as_ref(),
+                    )
+                    .await;
 
                     cobalt_sender.log_event_count(
                         metrics::RESOLVE_STATUS_METRIC_ID,
@@ -322,6 +362,7 @@ pub async fn run_resolver_service(
                         &system_cache_list,
                         &package_url.url,
                         &inspect,
+                        eager_package_manager.as_ref().as_ref(),
                     )
                     .await
                     {
@@ -393,6 +434,7 @@ async fn hash_from_base_or_repo_or_cache(
     system_cache_list: &CachePackages,
     pkg_url: &PkgUrl,
     inspect_state: &ResolverServiceInspectState,
+    eager_package_manager: Option<&EagerPackageManager<QueuedResolver>>,
 ) -> Result<BlobId, Status> {
     if let Some(blob) = base_package_index.is_unpinned_base_package(pkg_url) {
         fx_log_info!("get_hash for {} to {} with base pin", pkg_url, blob);
@@ -400,6 +442,20 @@ async fn hash_from_base_or_repo_or_cache(
     }
 
     let rewritten_url = rewrite_url(rewriter, &pkg_url).await?;
+
+    // Attempt to use EagerPackageManager to resolve the package.
+    if let Some(eager_package_manager) = eager_package_manager {
+        if let Some(dir) = eager_package_manager.get_package_dir(&pkg_url).map_err(|err| {
+            fx_log_err!("retrieval error eager package url {}: {:#}", pkg_url, anyhow!(err));
+            Status::NOT_FOUND
+        })? {
+            return dir.merkle_root().await.map(Into::into).map_err(|err| {
+                fx_log_err!("package hash error eager package url {}: {:#}", pkg_url, anyhow!(err));
+                Status::INTERNAL
+            });
+        }
+    }
+
     hash_from_repo_or_cache(repo_manager, system_cache_list, pkg_url, &rewritten_url, inspect_state)
         .await
         .map_err(|e| {
@@ -542,6 +598,7 @@ async fn get_hash(
     system_cache_list: &CachePackages,
     url: &str,
     inspect_state: &ResolverServiceInspectState,
+    eager_package_manager: Option<&EagerPackageManager<QueuedResolver>>,
 ) -> Result<BlobId, Status> {
     let pkg_url = PkgUrl::parse(url).map_err(|e| handle_bad_package_url(e, url))?;
     // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
@@ -550,6 +607,7 @@ async fn get_hash(
         fx_log_err!("package url should not contain a resource name: {}", pkg_url);
         return Err(Status::INVALID_ARGS);
     }
+
     trace::duration_begin!("app", "get-hash", "url" => pkg_url.to_string().as_str());
     let hash_or_status = hash_from_base_or_repo_or_cache(
         &repo_manager,
@@ -558,6 +616,7 @@ async fn get_hash(
         &system_cache_list,
         &pkg_url,
         inspect_state,
+        eager_package_manager,
     )
     .await;
     trace::duration_end!("app", "get-hash",
@@ -569,9 +628,10 @@ async fn resolve_and_reopen(
     package_resolver: &QueuedResolver,
     url: String,
     dir_request: ServerEnd<fio::DirectoryMarker>,
+    eager_package_manager: Option<&EagerPackageManager<QueuedResolver>>,
 ) -> Result<(), pkg::ResolveError> {
     let pkg_url = PkgUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
-    let pkg = package_resolver.resolve(pkg_url.clone()).await?;
+    let pkg = package_resolver.resolve(pkg_url.clone(), eager_package_manager).await?;
 
     pkg.reopen(dir_request).map_err(|clone_err| {
         fx_log_err!("failed to open package url {:?}: {:#}", pkg_url, anyhow!(clone_err));
@@ -647,7 +707,7 @@ async fn resolve_font<'a>(
         1,
     );
     if is_font_package {
-        resolve_and_reopen(&package_resolver, package_url, directory_request).await
+        resolve_and_reopen(&package_resolver, package_url, directory_request, None).await
     } else {
         fx_log_err!("font resolver asked to resolve non-font package: {}", package_url);
         Err(pkg::ResolveError::PackageNotFound)

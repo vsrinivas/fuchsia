@@ -9,16 +9,19 @@ use {
     cobalt_client::traits::AsEventCodes,
     diagnostics_hierarchy::{testing::TreeAssertion, DiagnosticsHierarchy},
     diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
+    fidl::encoding::encode_persistent_with_context,
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker as _},
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
     fidl_fuchsia_component::{RealmMarker, RealmProxy},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
-        ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy, PackageCacheMarker,
-        PackageResolverAdminMarker, PackageResolverAdminProxy, PackageResolverMarker,
-        PackageResolverProxy, RepositoryManagerMarker, RepositoryManagerProxy,
+        CupData, ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy,
+        PackageCacheMarker, PackageResolverAdminMarker, PackageResolverAdminProxy,
+        PackageResolverMarker, PackageResolverProxy, PackageUrl, RepositoryManagerMarker,
+        RepositoryManagerProxy,
     },
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs},
+    fidl_fuchsia_pkg_internal::{PersistentEagerPackage, PersistentEagerPackages},
     fidl_fuchsia_pkg_rewrite::{
         EngineMarker as RewriteEngineMarker, EngineProxy as RewriteEngineProxy,
     },
@@ -31,7 +34,7 @@ use {
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::SystemImageBuilder,
     fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder, Repository},
-    fuchsia_url::pkg_url::RepoUrl,
+    fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
     fuchsia_zircon::{self as zx, Status},
     futures::{future::BoxFuture, prelude::*},
     mock_boot_arguments::MockBootArgumentsService,
@@ -109,6 +112,7 @@ pub struct MountsBuilder {
     dynamic_repositories: Option<RepositoryConfigs>,
     custom_config_data: Vec<(PathBuf, String)>,
     persisted_repos_config: Option<PersistedReposConfig>,
+    eager_packages: Vec<String>,
 }
 
 impl MountsBuilder {
@@ -148,6 +152,14 @@ impl MountsBuilder {
         self.custom_config_data.push((path.into(), data.into()));
         self
     }
+    pub fn eager_packages(
+        mut self,
+        package_urls: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Self {
+        self.eager_packages.extend(package_urls.into_iter().map(Into::into));
+        self
+    }
+
     pub fn build(self) -> Mounts {
         let mounts = Mounts {
             pkg_resolver_data: self
@@ -174,6 +186,9 @@ impl MountsBuilder {
         }
         for (path, data) in self.custom_config_data {
             mounts.add_custom_config_data(path, data);
+        }
+        if !self.eager_packages.is_empty() {
+            mounts.add_eager_packages(self.eager_packages);
         }
         mounts
     }
@@ -243,6 +258,42 @@ impl Mounts {
             assert!(!path.exists());
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(path, &data).unwrap();
+        } else {
+            panic!("not supported");
+        }
+    }
+
+    fn add_eager_packages(&self, packages: impl IntoIterator<Item = impl Into<String>>) {
+        if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
+            let mut f = BufWriter::new(File::create(d.path().join("eager_packages.pf")).unwrap());
+
+            let mut packages = PersistentEagerPackages {
+                packages: Some(
+                    packages
+                        .into_iter()
+                        .map(|url| {
+                            let pkg_url = PkgUrl::parse(&url.into()).unwrap();
+                            let cup = get_test_cup_data(&pkg_url);
+                            PersistentEagerPackage {
+                                url: Some(PackageUrl { url: pkg_url.strip_hash().to_string() }),
+                                cup: Some(cup),
+                                ..PersistentEagerPackage::EMPTY
+                            }
+                        })
+                        .collect(),
+                ),
+                ..PersistentEagerPackages::EMPTY
+            };
+
+            let data = encode_persistent_with_context(
+                &fidl::encoding::Context {
+                    wire_format_version: fidl::encoding::WireFormatVersion::V2,
+                },
+                &mut packages,
+            )
+            .unwrap();
+            f.write_all(&data).unwrap();
+            f.flush().unwrap();
         } else {
             panic!("not supported");
         }
@@ -1117,4 +1168,41 @@ pub async fn get_rules(rewrite_engine: &RewriteEngineProxy) -> Vec<Rule> {
         }
         ret.extend(rules.into_iter().map(|r| r.try_into().unwrap()))
     }
+}
+
+fn get_test_cup_data(package_url: &PkgUrl) -> CupData {
+    let response = serde_json::json!({"response":{
+        "server": "prod",
+        "protocol": "3.0",
+        "app": [{
+            "appid": "appid",
+            "cohortname": "stable",
+            "status": "ok",
+            "updatecheck": {
+                "status": "ok",
+                "urls":{
+                    "url":[
+                        {"codebase": format!("{}/", package_url.repo()) },
+                    ]
+                },
+                "manifest": {
+                    "version": "1.2.3.4",
+                    "actions": {
+                        "action": [],
+                    },
+                    "packages": {
+                        "package": [
+                            {
+                                "name": format!("{}?hash={}", package_url.name(), package_url.package_hash().unwrap()),
+                                "required": true,
+                                "fp": "",
+                            }
+                        ],
+                    },
+                }
+            }
+        }],
+    }});
+    let response = serde_json::to_vec(&response).unwrap();
+    CupData { response: Some(response), ..CupData::EMPTY }
 }

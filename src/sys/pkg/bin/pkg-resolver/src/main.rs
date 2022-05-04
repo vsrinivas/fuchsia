@@ -208,7 +208,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
             &config,
             &channel_inspect_state,
             cobalt_sender.clone(),
-            data_proxy,
+            data_proxy.clone(),
             config_proxy,
         )
         .await,
@@ -231,7 +231,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         inspector.root().create_child("resolver_service"),
     ));
     let (package_fetch_queue, package_resolver) = resolver_service::QueuedResolver::new(
-        pkg_cache,
+        pkg_cache.clone(),
         Arc::clone(&base_package_index),
         Arc::clone(&system_cache_list),
         Arc::clone(&repo_manager),
@@ -241,6 +241,23 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         Arc::clone(&resolver_service_inspect_state),
     );
     futures.push(package_fetch_queue.boxed_local());
+
+    // `pkg-resolver` is required for an OTA and EagerPackageManager isn't.
+    // Also `EagerPackageManager` depends on /data, which may or may not be available, especially in
+    // tests. Wrapping `EagerPackageManager` in Arc<Option<_>> allows it to be used if available
+    // during package resolve process.
+    let eager_package_manager = Arc::new(
+        crate::eager_package_manager::EagerPackageManager::from_namespace(
+            package_resolver.clone(),
+            pkg_cache,
+            data_proxy,
+        )
+        .await
+        .map_err(|e| {
+            fx_log_err!("failed to create EagerPackageManager: {:#}", &e);
+        })
+        .ok(),
+    );
 
     let resolver_cb = {
         let repo_manager = Arc::clone(&repo_manager);
@@ -261,6 +278,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
                     stream,
                     cobalt_sender.clone(),
                     Arc::clone(&resolver_service_inspect),
+                    Arc::clone(&eager_package_manager),
                 )
                 .unwrap_or_else(|e| fx_log_err!("run_resolver_service failed: {:#}", anyhow!(e))),
             )

@@ -617,8 +617,10 @@ async fn minfs_fails_create_repo_configs() {
         // * when trying to open rewrites.json on start
         // * when trying to open repositories.json when adding a dynamic repo config
         3,
-        // We fail an additional 2 times after the restart to account for repositories.json
-        // and rewrites.json failing to open again on startup.
+        // We fail an additional 3 times after the restart to account for following files
+        // failing to open again on startup:
+        // * repositories.json
+        // * rewrites.json
         5,
         || open_handler.make_open_succeed(),
     )
@@ -634,14 +636,16 @@ async fn minfs_fails_create_rewrite_rules() {
     verify_pkg_resolution_succeeds_during_minfs_repo_config_and_rewrite_rule_failure(
         Arc::clone(&open_handler),
         || open_handler.get_open_fail_count(),
-        // Before the first pkg-resolver restart, we fail 4 times:
+        // Before the first pkg-resolver restart, we fail 5 times:
         // * when trying to open repositories.json on start
         // * when trying to open rewrites.json on start
         // * when trying to open repositories.json when adding a dynamic repo config
         // * when trying to open rewrites.json when adding a dynamic rewrite rule
         4,
-        // We fail an additional 2 times after the restart to account for repositories.json
-        // and rewrites.json failing to open again on startup.
+        // We fail an additional 3 times after the restart to account for following files
+        // failing to open again on startup:
+        // * repositories.json
+        // * rewrites.json
         6,
         || open_handler.make_open_succeed(),
     )
