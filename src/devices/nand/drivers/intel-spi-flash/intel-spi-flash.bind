@@ -4,8 +4,13 @@
 
 using fuchsia.pci;
 using fuchsia.intel.pci;
+using fuchsia.driver.framework;
 
 fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.INTEL;
 fuchsia.BIND_PCI_DID == fuchsia.intel.pci.BIND_PCI_DID.SUNRISE_POINT_SERIALIO_SPIFLASH;
-fuchsia.BIND_COMPOSITE == 1;
+if fuchsia.BIND_COMPOSITE == 1 {
+  true;
+} else {
+  fuchsia.driver.framework.dfv2 == true;
+}
