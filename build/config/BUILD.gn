@@ -531,17 +531,13 @@ config("default_warnings") {
     "-Wnonportable-system-include-path",
   ]
 
-  # TODO(fxbug.dev/97746): Clean this up in Fuchsia; make this fine-grained in
-  # third-party dependencies.
-  cflags_c = [ "-Wno-strict-prototypes" ]
-
   if (is_gcc) {
     # GCC is pedantic about which flags apply to which language.
     cflags -= [
       "-Wstrict-prototypes",
       "-Wextra-semi",
     ]
-    cflags_c += [ "-Wstrict-prototypes" ]
+    cflags_c = [ "-Wstrict-prototypes" ]
     cflags_cc = [ "-Wextra-semi" ]
 
     # GCC doesn't support these flags
