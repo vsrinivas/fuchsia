@@ -521,17 +521,19 @@ fpromise::promise<void, zx_status_t> Device::RebindToLibname(std::string_view li
 
 zx_status_t Device::ConnectFragmentFidl(const char* fragment_name, const char* protocol_name,
                                         zx::channel request) {
-  bool fragment_exists = false;
-  for (auto& fragment : fragments_) {
-    if (fragment == fragment_name) {
-      fragment_exists = true;
-      break;
+  if (std::string_view(fragment_name) != "default") {
+    bool fragment_exists = false;
+    for (auto& fragment : fragments_) {
+      if (fragment == fragment_name) {
+        fragment_exists = true;
+        break;
+      }
     }
-  }
-  if (!fragment_exists) {
-    FDF_LOG(ERROR, "Tried to connect to fragment '%s' but it's not in the fragment list",
-            fragment_name);
-    return ZX_ERR_NOT_FOUND;
+    if (!fragment_exists) {
+      FDF_LOG(ERROR, "Tried to connect to fragment '%s' but it's not in the fragment list",
+              fragment_name);
+      return ZX_ERR_NOT_FOUND;
+    }
   }
 
   auto connect_string = std::string("/")

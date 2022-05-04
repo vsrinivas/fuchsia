@@ -464,59 +464,6 @@ TEST_F(DeviceTest, GetProtocolFromDevice) {
   ASSERT_EQ(ZX_OK, with.GetProtocol(ZX_PROTOCOL_BLOCK, nullptr));
 }
 
-TEST_F(DeviceTest, GetFidlProtocol) {
-  // Set up a fake incoming /svc.
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  auto outgoing = component::OutgoingDirectory::Create(dispatcher());
-  auto echo_impl = fbl::MakeRefCounted<EchoImpl>(dispatcher());
-  ASSERT_EQ(ZX_OK, outgoing.AddProtocol(echo_impl.get()).status_value());
-  ASSERT_EQ(ZX_OK, outgoing.Serve(std::move(endpoints->server)).status_value());
-
-  // Set up the driver namespace.
-  fidl::Arena arena;
-  fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry> entries;
-  entries.Allocate(arena, 1);
-  entries[0].Allocate(arena);
-  entries[0].set_path(arena, "/").set_directory(std::move(endpoints->client));
-  auto ret = driver::Namespace::Create(entries);
-  ASSERT_EQ(ZX_OK, ret.status_value());
-  auto ns = std::move(ret.value());
-
-  auto [node, node_client] = CreateTestNode();
-
-  auto drv_logger = driver::Logger::Create(ns, dispatcher(), "test-logger");
-  ASSERT_EQ(ZX_OK, drv_logger.status_value());
-  auto drv_outgoing = component::OutgoingDirectory::Create(dispatcher());
-  compat::Driver drv(dispatcher(), {std::move(node_client), dispatcher()}, std::move(ns),
-                     std::move(*drv_logger), "fuchsia-boot:///#meta/fake-driver.cm",
-                     compat::kDefaultDevice, nullptr, std::move(drv_outgoing));
-
-  compat::Device dev(compat::kDefaultDevice, nullptr, &drv, std::nullopt, logger(), dispatcher());
-
-  auto echo_endpoints = fidl::CreateEndpoints<test_placeholders::Echo>();
-  ASSERT_EQ(ZX_OK, echo_endpoints.status_value());
-
-  ASSERT_EQ(ZX_OK, device_connect_fidl_protocol(
-                       dev.ZxDevice(), fidl::DiscoverableProtocolName<test_placeholders::Echo>,
-                       echo_endpoints->server.TakeChannel().release()));
-
-  fidl::WireClient client(std::move(echo_endpoints->client), dispatcher());
-  bool done = false;
-  client->EchoString("hello").Then(
-      [&done](fidl::WireUnownedResult<test_placeholders::Echo::EchoString>& result) {
-        if (!result.ok()) {
-          FAIL() << result.error();
-          return;
-        }
-        auto* response = result.Unwrap();
-        ASSERT_STREQ("hello", response->response.begin());
-        done = true;
-      });
-
-  ASSERT_TRUE(RunLoopUntilIdle());
-  ASSERT_TRUE(done);
-}
-
 TEST_F(DeviceTest, DeviceMetadata) {
   // Create a device.
   zx_protocol_device_t ops{};
