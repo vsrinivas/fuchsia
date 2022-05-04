@@ -15,6 +15,7 @@ zx_library("fidl_base") {
   sdk_publishable = true
   sdk_headers = [
     "lib/fidl/coding.h",
+    "lib/fidl/cpp/wire_format_metadata.h",
     "lib/fidl/txn_header.h",
     "lib/fidl/internal.h",
     "lib/fidl/internal_callable_traits.h",

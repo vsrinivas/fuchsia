@@ -7,6 +7,7 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message_part.h>
+#include <lib/fidl/cpp/wire_format_metadata.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>

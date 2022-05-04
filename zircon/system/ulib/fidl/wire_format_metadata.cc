@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/internal.h>
+#include <lib/fidl/cpp/wire_format_metadata.h>
+#include <zircon/assert.h>
 
 #include <cstring>
 

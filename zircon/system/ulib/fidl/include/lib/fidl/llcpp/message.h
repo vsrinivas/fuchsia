@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_MESSAGE_H_
 #define LIB_FIDL_LLCPP_MESSAGE_H_
 
+#include <lib/fidl/cpp/wire_format_metadata.h>
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/status.h>

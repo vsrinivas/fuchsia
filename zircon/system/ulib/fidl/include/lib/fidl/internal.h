@@ -26,6 +26,7 @@
 #endif  // __cplusplus
 
 #ifdef __cplusplus
+
 namespace fidl {
 namespace internal {
 
@@ -53,65 +54,6 @@ inline zx_status_t fidl_exclude_header_bytes(const void* bytes, uint32_t num_byt
   *out_bytes = (uint8_t*)bytes + sizeof(fidl_message_header_t);
   return ZX_OK;
 }
-
-enum class WireFormatVersion {
-  // V1 wire format: features extensible unions (xunions).
-  // Starting at 1 to invalidate a default constructed |WireFormatVersion|.
-  kV1 = 1,
-
-  // V2 wire format: features efficient envelopes and inlining small values in
-  // envelopes.
-  kV2,
-};
-
-// Wire format metadata describing the format and revision of an encoded FIDL
-// message. This class is shared by the various C++ FIDL bindings.
-//
-// TODO(fxbug.dev/82681): We would like to eventually expose this structure in
-// the public API as part of FIDL-at-rest.
-class WireFormatMetadata {
- public:
-  // Creates a |WireFormatMetadata| from an opaque binary representation.
-  static WireFormatMetadata FromOpaque(fidl_opaque_wire_format_metadata_t opaque);
-
-  // Creates a |WireFormatMetadata| by extracting the relevant information from
-  // a transactional header.
-  static WireFormatMetadata FromTransactionalHeader(fidl_message_header_t header);
-
-  // Export this |WireFormatMetadata| to an opaque binary representation, which
-  // may be later sent down the wire.
-  fidl_opaque_wire_format_metadata_t ToOpaque() const;
-
-  // Returns if the metadata is valid (e.g. recognized magic number).
-  bool is_valid() const;
-
-  // Returns the wire format version.
-  //
-  // Will panic if the metadata is invalid (e.g. unknown magic number). Callers
-  // should first validate the metadata or the transactional header from which
-  // it is derived.
-  WireFormatVersion wire_format_version() const;
-
-  // Returns the wire format version as a C enum.
-  //
-  // Will panic if the metadata is invalid (e.g. unknown magic number). Callers
-  // should first validate the metadata or the transactional header from which
-  // it is derived.
-  ::FidlWireFormatVersion c_wire_format_version() const;
-
- private:
-  WireFormatMetadata() = default;
-
-  friend WireFormatMetadata WireFormatMetadataForVersion(WireFormatVersion version);
-
-  uint8_t disambiguator_ = 0;
-  uint8_t magic_number_ = 0;
-  uint8_t at_rest_flags_[2] = {};
-  uint8_t reserved_[4] = {};
-};
-
-// Constructs a |WireFormatMetadata| corresponding to the version.
-WireFormatMetadata WireFormatMetadataForVersion(WireFormatVersion version);
 
 }  // namespace internal
 }  // namespace fidl
