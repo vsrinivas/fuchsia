@@ -55,22 +55,53 @@ UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent, std::unique_ptr<UsbAudioS
   position_reply_time_ = root_.CreateInt("position_reply_time", 0);
   frames_requested_ = root_.CreateUint("frames_requested", 0);
   ring_buffer_size2_ = root_.CreateUint("ring_buffer_size", 0);
-  number_of_usb_requests_ = root_.CreateUint("number_of_usb_requests", 0);
-  usb_request_outstanding_ = root_.CreateString("usb_request_outstanding", "not_set");
+  usb_requests_sent_ = root_.CreateUint("usb_requests_sent", 0);
+  usb_requests_outstanding_ = root_.CreateInt("usb_requests_outstanding", 0);
 
   frame_rate_ = root_.CreateUint("frame_rate", 0);
   bits_per_slot_ = root_.CreateUint("bits_per_slot", 0);
   bits_per_sample_ = root_.CreateUint("bits_per_sample", 0);
   sample_format_ = root_.CreateString("sample_format", "not_set");
 
+  size_t number_of_formats = ifc_->formats().size();
+  supported_min_number_of_channels_ =
+      root_.CreateUintArray("supported_min_number_of_channels", number_of_formats);
+  supported_max_number_of_channels_ =
+      root_.CreateUintArray("supported_max_number_of_channels", number_of_formats);
+  supported_min_frame_rates_ =
+      root_.CreateUintArray("supported_min_frame_rates", number_of_formats);
+  supported_max_frame_rates_ =
+      root_.CreateUintArray("supported_max_frame_rates", number_of_formats);
+  supported_bits_per_slot_ = root_.CreateUintArray("supported_bits_per_slot", number_of_formats);
+  supported_bits_per_sample_ =
+      root_.CreateUintArray("supported_bits_per_sample", number_of_formats);
+  supported_sample_formats_ =
+      root_.CreateStringArray("supported_sample_formats", number_of_formats);
+
   size_t count = 0;
   for (auto i : ifc_->formats()) {
-    auto base = std::string("supported_frame_rates[") + std::to_string(count);
-    auto min = base + std::string("].min");
-    auto max = base + std::string("].max");
+    supported_min_number_of_channels_.Set(count, i.range_.min_channels);
+    supported_max_number_of_channels_.Set(count, i.range_.max_channels);
+    supported_min_frame_rates_.Set(count, i.range_.min_frames_per_second);
+    supported_max_frame_rates_.Set(count, i.range_.max_frames_per_second);
+    std::vector<utils::Format> formats = utils::GetAllFormats(i.range_.sample_formats);
+    // Each UsbAudioStreamInterface formats() entry only reports one format.
+    ZX_ASSERT(formats.size() == 1);
+    utils::Format format = formats[0];
+    supported_bits_per_slot_.Set(count, format.bytes_per_sample * 8);
+    supported_bits_per_sample_.Set(count, format.valid_bits_per_sample);
+    switch (format.format) {
+      case audio_fidl::wire::SampleFormat::kPcmSigned:
+        supported_sample_formats_.Set(count, "PCM_signed");
+        break;
+      case audio_fidl::wire::SampleFormat::kPcmUnsigned:
+        supported_sample_formats_.Set(count, "PCM_unsigned");
+        break;
+      case audio_fidl::wire::SampleFormat::kPcmFloat:
+        supported_sample_formats_.Set(count, "PCM_float");
+        break;
+    }
     count++;
-    supported_formats_.frame_rates.push_back(root_.CreateUint(min, i.range_.min_frames_per_second));
-    supported_formats_.frame_rates.push_back(root_.CreateUint(max, i.range_.max_frames_per_second));
   }
 }
 
@@ -893,7 +924,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
 
   audio_fidl::wire::RingBufferPositionInfo position_info = {};
 
-  usb_request_outstanding_.Set("false");
+  usb_requests_outstanding_.Subtract(1);
 
   uint64_t complete_time = zx::clock::get_monotonic().get();
   Action when_finished = Action::NONE;
@@ -1093,8 +1124,8 @@ void UsbAudioStream::QueueRequestLocked() {
       .callback = UsbAudioStream::RequestCompleteCallback,
       .ctx = this,
   };
-  number_of_usb_requests_.Add(1);
-  usb_request_outstanding_.Set("true");
+  usb_requests_sent_.Add(1);
+  usb_requests_outstanding_.Add(1);
   usb_request_queue(&parent_.usb_proto(), req, &complete);
 }
 

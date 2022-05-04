@@ -313,14 +313,28 @@ TEST_F(UsbAudioTest, Inspect) {
       CheckProperty(inspect->node(), "state", inspect::StringPropertyValue("created")));
   ASSERT_NO_FATAL_FAILURE(
       CheckProperty(inspect->node(), "start_time", inspect::IntPropertyValue(0)));
-  ASSERT_NO_FATAL_FAILURE(CheckProperty(inspect->node(), "supported_frame_rates[0].min",
-                                        inspect::UintPropertyValue(48'000)));
-  ASSERT_NO_FATAL_FAILURE(CheckProperty(inspect->node(), "supported_frame_rates[0].max",
-                                        inspect::UintPropertyValue(48'000)));
-  ASSERT_NO_FATAL_FAILURE(CheckProperty(inspect->node(), "supported_frame_rates[1].min",
-                                        inspect::UintPropertyValue(44'100)));
-  ASSERT_NO_FATAL_FAILURE(CheckProperty(inspect->node(), "supported_frame_rates[1].max",
-                                        inspect::UintPropertyValue(44'100)));
+
+  ASSERT_NO_FATAL_FAILURE(
+      CheckProperty(inspect->node(), "supported_min_number_of_channels",
+                    inspect::UintArrayValue({2, 2}, inspect::ArrayDisplayFormat::kFlat)));
+  ASSERT_NO_FATAL_FAILURE(
+      CheckProperty(inspect->node(), "supported_max_number_of_channels",
+                    inspect::UintArrayValue({2, 2}, inspect::ArrayDisplayFormat::kFlat)));
+  ASSERT_NO_FATAL_FAILURE(
+      CheckProperty(inspect->node(), "supported_min_frame_rates",
+                    inspect::UintArrayValue({48'000, 44'100}, inspect::ArrayDisplayFormat::kFlat)));
+  ASSERT_NO_FATAL_FAILURE(
+      CheckProperty(inspect->node(), "supported_max_frame_rates",
+                    inspect::UintArrayValue({48'000, 44'100}, inspect::ArrayDisplayFormat::kFlat)));
+  ASSERT_NO_FATAL_FAILURE(
+      CheckProperty(inspect->node(), "supported_bits_per_slot",
+                    inspect::UintArrayValue({16, 16}, inspect::ArrayDisplayFormat::kFlat)));
+  ASSERT_NO_FATAL_FAILURE(
+      CheckProperty(inspect->node(), "supported_bits_per_sample",
+                    inspect::UintArrayValue({16, 16}, inspect::ArrayDisplayFormat::kFlat)));
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(
+      inspect->node(), "supported_sample_formats",
+      inspect::StringArrayValue({"PCM_signed", "PCM_signed"}, inspect::ArrayDisplayFormat::kFlat)));
 
   fake_device.DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());

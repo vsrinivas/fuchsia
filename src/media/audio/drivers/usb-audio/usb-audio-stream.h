@@ -342,17 +342,21 @@ class UsbAudioStream : public UsbAudioStreamBase,
   inspect::IntProperty position_request_time_;
   inspect::IntProperty position_reply_time_;
   inspect::UintProperty ring_buffer_size2_;
-  inspect::UintProperty number_of_usb_requests_;
-  inspect::StringProperty usb_request_outstanding_;
+  inspect::UintProperty usb_requests_sent_;
+  inspect::IntProperty usb_requests_outstanding_;
   inspect::UintProperty frames_requested_;
   inspect::UintProperty number_of_channels_;
   inspect::UintProperty frame_rate_;
   inspect::UintProperty bits_per_slot_;
   inspect::UintProperty bits_per_sample_;
   inspect::StringProperty sample_format_;
-  struct SupportedFormats {
-    std::vector<inspect::UintProperty> frame_rates;
-  } supported_formats_;
+  inspect::UintArray supported_min_number_of_channels_;
+  inspect::UintArray supported_max_number_of_channels_;
+  inspect::UintArray supported_min_frame_rates_;
+  inspect::UintArray supported_max_frame_rates_;
+  inspect::UintArray supported_bits_per_slot_;
+  inspect::UintArray supported_bits_per_sample_;
+  inspect::StringArray supported_sample_formats_;
 };
 
 }  // namespace usb
