@@ -29,6 +29,7 @@ rustc_library("surpass") {
     "src/layout/slice_cache.rs",
     "src/lib.rs",
     "src/lines.rs",
+    "src/order.rs",
     "src/painter/layer_workbench.rs",
     "src/painter/mod.rs",
     "src/painter/style.rs",

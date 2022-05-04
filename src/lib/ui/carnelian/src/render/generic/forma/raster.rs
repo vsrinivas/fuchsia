@@ -21,7 +21,7 @@ pub(crate) struct Print {
 #[derive(Clone, Debug)]
 pub struct FormaRaster {
     pub(crate) prints: SmallVec<[Print; 1]>,
-    pub(crate) layer_details: Rc<RefCell<Option<(forma::LayerId, Vector2D<f32>)>>>,
+    pub(crate) layer_details: Rc<RefCell<Option<(forma::GeomId, Vector2D<f32>)>>>,
     pub(crate) translation: Vector2D<f32>,
 }
 

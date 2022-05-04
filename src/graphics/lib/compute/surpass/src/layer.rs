@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::order::Order;
+
 #[derive(Clone, Debug)]
 pub struct Layer {
     pub is_enabled: bool,
     pub affine_transform: Option<[f32; 6]>,
-    pub order: Option<u32>,
+    pub order: Option<Order>,
 }
 
 impl Default for Layer {

@@ -16,11 +16,9 @@ macro_rules! duration {
 
 pub mod buffer;
 mod composition;
-mod layer;
 mod utils;
 
-pub use composition::{Composition, LayerId};
-pub use layer::{Layer, Order};
+pub use composition::{Composition, Layer};
 pub use utils::clear_buffer;
 
 pub use surpass::{
@@ -28,5 +26,6 @@ pub use surpass::{
         BlendMode, Channel, Color, Fill, FillRule, Func, Gradient, GradientBuilder, GradientType,
         Image, Props, Rect, Style, Texture, BGR0, BGR1, BGRA, RGB0, RGB1, RGBA,
     },
-    AffineTransform, GeomPresTransform, GeomPresTransformError, Path, PathBuilder, Point,
+    AffineTransform, GeomId, GeomPresTransform, GeomPresTransformError, Order, OrderError, Path,
+    PathBuilder, Point,
 };

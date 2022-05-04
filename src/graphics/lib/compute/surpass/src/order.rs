@@ -1,20 +1,10 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{
-    cell::RefCell, cmp::Ordering, convert::TryFrom, error::Error, fmt, iter::FromIterator, mem,
-};
+use std::{convert::TryFrom, error::Error, fmt, num::NonZeroU32};
 
-use rustc_hash::FxHashMap;
-use surpass::{self, painter::Props, GeomPresTransform, LinesBuilder, Path, LAYER_LIMIT};
-
-use crate::{
-    composition::{self, CompositionId},
-    LayerId,
-};
-
-const IDENTITY: &[f32; 6] = &[1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+use crate::LAYER_LIMIT;
 
 #[derive(Debug, PartialEq)]
 pub enum OrderError {
@@ -29,22 +19,49 @@ impl fmt::Display for OrderError {
 
 impl Error for OrderError {}
 
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Order(u32);
+#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Order(NonZeroU32);
+
+impl Default for Order {
+    fn default() -> Self {
+        match Self::new(0) {
+            Ok(order) => order,
+            Err(_) => panic!("0 is smaller than Order::MAX"),
+        }
+    }
+}
 
 impl Order {
-    pub const MAX: Self = Self(LAYER_LIMIT as u32);
+    pub const MAX: Self = Self(match NonZeroU32::new(LAYER_LIMIT as u32 ^ u32::MAX) {
+        Some(val) => val,
+        None => panic!("LAYER_LIMIT is smaller than u32::MAX"),
+    });
 
     pub const fn as_u32(&self) -> u32 {
-        self.0
+        self.0.get() ^ u32::MAX
     }
 
     pub const fn new(order: u32) -> Result<Self, OrderError> {
         if order > Self::MAX.as_u32() {
             Err(OrderError::ExceededLayerLimit)
         } else {
-            Ok(Self(order))
+            Ok(Self(match NonZeroU32::new(order ^ u32::MAX) {
+                Some(val) => val,
+                None => panic!("Order::MAX is smaller than u32::MAX"),
+            }))
         }
+    }
+}
+
+impl fmt::Debug for Order {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Order").field(&self.as_u32()).finish()
+    }
+}
+
+impl From<Order> for u32 {
+    fn from(order: Order) -> Self {
+        order.as_u32()
     }
 }
 
@@ -60,7 +77,9 @@ impl TryFrom<usize> for Order {
     type Error = OrderError;
 
     fn try_from(order: usize) -> Result<Self, OrderError> {
-        u32::try_from(order).map_err(|_| OrderError::ExceededLayerLimit).and_then(Self::try_from)
+        u32::try_from(order as u32)
+            .map_err(|_| OrderError::ExceededLayerLimit)
+            .and_then(Self::try_from)
     }
 }
 
@@ -91,6 +110,6 @@ mod tests {
         let order_value = Order::MAX.as_u32();
         let order = Order::try_from(order_value);
 
-        assert_eq!(order, Ok(Order(order_value as u32)));
+        assert_eq!(order, Ok(Order(NonZeroU32::new(order_value as u32 ^ u32::MAX).unwrap())));
     }
 }

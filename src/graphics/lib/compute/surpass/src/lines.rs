@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::cell::Cell;
+use std::{cell::Cell, num::NonZeroU64};
 
 use rayon::prelude::*;
 
@@ -25,6 +25,32 @@ fn prefix_sum(vals: &mut [u32]) -> u32 {
     }
 
     sum
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[repr(transparent)]
+pub struct GeomId(NonZeroU64);
+
+impl GeomId {
+    #[cfg(test)]
+    pub fn get(self) -> u64 {
+        self.0.get() - 1
+    }
+
+    #[inline]
+    pub fn next(self) -> Self {
+        Self(
+            NonZeroU64::new(self.0.get().checked_add(1).expect("id should never reach u64::MAX"))
+                .unwrap(),
+        )
+    }
+}
+
+impl Default for GeomId {
+    #[inline]
+    fn default() -> Self {
+        Self(NonZeroU64::new(1).unwrap())
+    }
 }
 
 #[derive(Debug, Default)]
@@ -61,7 +87,7 @@ impl LinesBuilder {
     }
 
     #[inline]
-    pub fn push_path(&mut self, id: u32, path: &Path) {
+    pub fn push_path(&mut self, id: GeomId, path: &Path) {
         path.push_lines_to(&mut self.lines.x, &mut self.lines.y, id, &mut self.lines.ids);
 
         self.lines.ids.resize(self.lines.x.len().checked_sub(1).unwrap_or_default(), Some(id));
@@ -72,7 +98,7 @@ impl LinesBuilder {
     }
 
     #[cfg(test)]
-    pub fn push(&mut self, id: u32, segment: [crate::Point; 2]) {
+    pub fn push(&mut self, id: GeomId, segment: [crate::Point; 2]) {
         let new_point_needed =
             if let (Some(&x), Some(&y)) = (self.lines.x.last(), self.lines.y.last()) {
                 let last_point = crate::Point { x, y };
@@ -110,7 +136,7 @@ impl LinesBuilder {
 
     pub fn retain<F>(&mut self, mut f: F)
     where
-        F: FnMut(u32) -> bool,
+        F: FnMut(GeomId) -> bool,
     {
         let len = self.lines.x.len();
         let mut del = 0;
@@ -123,7 +149,7 @@ impl LinesBuilder {
             let id = self.lines.ids[i];
             let should_retain = id
                 .or(prev_id)
-                .map(&mut f)
+                .map(|id| f(id))
                 .expect("consecutive None values should not exist in ids");
             prev_id = id;
 
@@ -153,7 +179,7 @@ impl LinesBuilder {
 
     pub fn build<F>(mut self, layers: F) -> Lines
     where
-        F: Fn(u32) -> Option<Layer> + Send + Sync,
+        F: Fn(GeomId) -> Option<Layer> + Send + Sync,
     {
         let transform = self.lines.transform;
         let ps_layers = self.lines.x.par_windows(2).with_min_len(MIN_LEN).zip_eq(
@@ -173,14 +199,17 @@ impl LinesBuilder {
                 return Default::default();
             }
 
-            let layer = id.map(&layers).unwrap_or_default();
+            let layer = match id.map(|id| layers(id)).flatten() {
+                Some(layer) => layer,
+                None => return Default::default(),
+            };
 
-            if let Some(Layer { is_enabled: false, .. }) = layer {
+            if let Layer { is_enabled: false, .. } = layer {
                 return Default::default();
             }
 
-            let order = match layer.as_ref().and_then(|layer| layer.order).or(id) {
-                Some(order) => order,
+            let order = match layer.order {
+                Some(order) => order.as_u32(),
                 None => return Default::default(),
             };
 
@@ -191,10 +220,7 @@ impl LinesBuilder {
                 )
             }
 
-            let transform = layer
-                .as_ref()
-                .and_then(|layer| layer.affine_transform.as_ref())
-                .or(transform.as_ref());
+            let transform = layer.affine_transform.as_ref().or(transform.as_ref());
             let (p0x, p0y, p1x, p1y) = if let Some(transform) = transform {
                 let (p0x, p0y) = transform_point((p0x, p0y), transform);
                 let (p1x, p1y) = transform_point((p1x, p1y), transform);
@@ -271,7 +297,7 @@ pub struct Lines {
     pub x: Vec<f32>,
     pub y: Vec<f32>,
     transform: Option<[f32; 6]>,
-    pub ids: Vec<Option<u32>>,
+    pub ids: Vec<Option<GeomId>>,
     pub orders: Vec<u32>,
     pub x0: Vec<f32>,
     pub y0: Vec<f32>,

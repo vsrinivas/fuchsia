@@ -10,9 +10,9 @@ use std::{
 pub use surpass::layout;
 use surpass::painter::Color;
 
-use crate::layer::SmallBitSet;
-
 use layout::{Flusher, Layout};
+
+use crate::composition::SmallBitSet;
 
 #[derive(Debug)]
 pub struct Buffer<'b, 'l, L: Layout> {

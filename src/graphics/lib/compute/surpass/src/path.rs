@@ -21,6 +21,7 @@ use rayon::prelude::*;
 
 use crate::{
     extend::{ExtendTuple3, ExtendVec},
+    lines::GeomId,
     transform::GeomPresTransform,
     Point, PIXEL_WIDTH,
 };
@@ -457,11 +458,11 @@ impl Primitives {
                     let incr = match PointCommand::from(point_command) {
                         PointCommand::Start(spline_i) => {
                             let point = self.splines[spline_i as usize].p0;
-                            return ((point.x, point.y), Some(0));
+                            return ((point.x, point.y), false);
                         }
                         PointCommand::End(spline_i, new_contour) => {
                             let point = self.splines[spline_i as usize].p2;
-                            return ((point.x, point.y), (!new_contour).then(|| 0));
+                            return ((point.x, point.y), new_contour);
                         }
                         PointCommand::Incr(incr) => incr,
                     };
@@ -484,12 +485,12 @@ impl Primitives {
 
                     let point = self.eval_quad(qi, t);
 
-                    ((point.x, point.y), Some(0))
+                    ((point.x, point.y), false)
                 });
 
             (
                 (ExtendVec::new(&mut lines.x), ExtendVec::new(&mut lines.y)),
-                ExtendVec::new(&mut lines.ids),
+                ExtendVec::new(&mut lines.start_new_contour),
             )
                 .par_extend(points);
         });
@@ -528,7 +529,7 @@ enum PathCommand {
 struct Lines {
     x: Vec<f32>,
     y: Vec<f32>,
-    ids: Vec<Option<u32>>,
+    start_new_contour: Vec<bool>,
 }
 
 #[derive(Debug)]
@@ -638,36 +639,48 @@ impl Path {
         &self,
         x: &mut Vec<f32>,
         y: &mut Vec<f32>,
-        id: u32,
-        ids: &mut Vec<Option<u32>>,
+        id: GeomId,
+        ids: &mut Vec<Option<GeomId>>,
     ) {
         let mut inner = self.inner.borrow_mut();
 
         let lines = inner.lines();
         let transform = &self.transform;
 
-        let iter = lines
-            .x
-            .par_iter()
-            .with_min_len(MIN_LEN)
-            .zip(
-                lines
-                    .y
-                    .par_iter()
-                    .with_min_len(MIN_LEN)
-                    .zip(lines.ids.par_iter().with_min_len(MIN_LEN)),
-            )
-            .map(|(&x, (&y, current_id))| {
-                let point = if let Some(transform) = &transform {
-                    transform.transform(Point::new(x, y))
-                } else {
-                    Point::new(x, y)
-                };
+        if let Some(transform) = &transform {
+            let iter = lines
+                .x
+                .par_iter()
+                .with_min_len(MIN_LEN)
+                .zip(
+                    lines
+                        .y
+                        .par_iter()
+                        .with_min_len(MIN_LEN)
+                        .zip(lines.start_new_contour.par_iter().with_min_len(MIN_LEN)),
+                )
+                .map(|(&x, (&y, start_new_contour))| {
+                    let point = transform.transform(Point::new(x, y));
+                    (point.x, point.y, (!start_new_contour).then(|| id))
+                });
 
-                (point.x, point.y, current_id.map(|_| id))
-            });
+            ExtendTuple3::new((x, y, ids)).par_extend(iter);
+        } else {
+            let iter = lines
+                .x
+                .par_iter()
+                .with_min_len(MIN_LEN)
+                .zip(
+                    lines
+                        .y
+                        .par_iter()
+                        .with_min_len(MIN_LEN)
+                        .zip(lines.start_new_contour.par_iter().with_min_len(MIN_LEN)),
+                )
+                .map(|(&x, (&y, start_new_contour))| (x, y, (!start_new_contour).then(|| id)));
 
-        ExtendTuple3::new((x, y, ids)).par_extend(iter);
+            ExtendTuple3::new((x, y, ids)).par_extend(iter);
+        }
     }
 
     #[inline]
@@ -1229,12 +1242,15 @@ mod tests {
 
         let lines = primitives.into_lines();
 
-        assert_eq!(lines.ids.len(), 30);
+        assert_eq!(lines.start_new_contour.len(), 30);
 
-        assert_eq!(lines.ids.iter().filter(|id| id.is_none()).count(), 2);
+        assert_eq!(
+            lines.start_new_contour.iter().filter(|&&start_new_contour| start_new_contour).count(),
+            2
+        );
 
-        assert_eq!(lines.ids[16], None);
-        assert_eq!(lines.ids[29], None);
+        assert_eq!(lines.start_new_contour[16], true);
+        assert_eq!(lines.start_new_contour[29], true);
     }
 
     #[test]
@@ -1255,12 +1271,15 @@ mod tests {
 
         let lines = primitives.into_lines();
 
-        assert_eq!(lines.ids.len(), 26);
+        assert_eq!(lines.start_new_contour.len(), 26);
 
-        assert_eq!(lines.ids.iter().filter(|id| id.is_none()).count(), 2);
+        assert_eq!(
+            lines.start_new_contour.iter().filter(|&&start_new_contour| start_new_contour).count(),
+            2
+        );
 
-        assert_eq!(lines.ids[12], None);
-        assert_eq!(lines.ids[25], None);
+        assert_eq!(lines.start_new_contour[12], true);
+        assert_eq!(lines.start_new_contour[25], true);
     }
 
     #[test]
@@ -1328,11 +1347,14 @@ mod tests {
         let mut y = Vec::new();
         let mut ids = Vec::new();
 
-        path.push_lines_to(&mut x, &mut y, 1, &mut ids);
+        let id0 = GeomId::default();
+        let id1 = id0.next();
+
+        path.push_lines_to(&mut x, &mut y, id1, &mut ids);
 
         let orig_len = x.len();
 
-        assert_eq!(ids[..ids.len() - 1], vec![Some(1); ids.len() - 1]);
+        assert_eq!(ids[..ids.len() - 1], vec![Some(id1); ids.len() - 1]);
         assert_eq!(ids[ids.len() - 1], None);
 
         for (&x, &y) in x.iter().zip(y.iter()) {
@@ -1346,7 +1368,7 @@ mod tests {
         x.clear();
         y.clear();
 
-        translated_path.push_lines_to(&mut x, &mut y, 0, &mut ids);
+        translated_path.push_lines_to(&mut x, &mut y, id0, &mut ids);
 
         for (&x, &y) in x.iter().zip(y.iter()) {
             assert!((Point::new(x - dx, y - dy).len() - radius).abs() <= 0.1);
@@ -1358,7 +1380,7 @@ mod tests {
         x.clear();
         y.clear();
 
-        scaled_path.push_lines_to(&mut x, &mut y, 0, &mut ids);
+        scaled_path.push_lines_to(&mut x, &mut y, id0, &mut ids);
 
         for (&x, &y) in x.iter().zip(y.iter()) {
             assert!((Point::new(x, y).len() - s * radius).abs() <= 0.1);
@@ -1405,7 +1427,7 @@ mod tests {
         let mut y = Vec::new();
         let mut ids = Vec::new();
 
-        path.push_lines_to(&mut x, &mut y, 1, &mut ids);
+        path.push_lines_to(&mut x, &mut y, GeomId::default(), &mut ids);
 
         let mut points: Vec<_> = x.iter().zip(y.iter()).map(|(&x, &y)| Point::new(x, y)).collect();
         points.pop(); // Remove duplicate point.

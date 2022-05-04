@@ -10,6 +10,7 @@ mod extend;
 mod layer;
 pub mod layout;
 mod lines;
+mod order;
 pub mod painter;
 mod path;
 mod point;
@@ -19,7 +20,8 @@ mod transform;
 
 pub use affine_transform::AffineTransform;
 pub use layer::Layer;
-pub use lines::{Lines, LinesBuilder};
+pub use lines::{GeomId, Lines, LinesBuilder};
+pub use order::{Order, OrderError};
 pub use path::{Path, PathBuilder};
 pub use point::Point;
 pub use transform::{GeomPresTransform, GeomPresTransformError};
@@ -47,4 +49,46 @@ const _ASSERT_MAX_TILE_HEIGHT: usize = 128 - TILE_HEIGHT;
 const TILE_HEIGHT_SHIFT: usize = TILE_HEIGHT.trailing_zeros() as usize;
 const TILE_HEIGHT_MASK: usize = TILE_HEIGHT - 1;
 
-pub const LAYER_LIMIT: usize = (1 << rasterizer::BIT_FIELD_LENS[2]) - 1;
+const LAYER_LIMIT: usize = (1 << rasterizer::BIT_FIELD_LENS[2]) - 1;
+
+trait CanonBits {
+    fn to_canon_bits(self) -> u32;
+}
+
+impl CanonBits for f32 {
+    fn to_canon_bits(self) -> u32 {
+        if self.is_nan() {
+            return f32::NAN.to_bits();
+        }
+
+        if self == 0.0 {
+            return 0.0f32.to_bits();
+        }
+
+        self.to_bits()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn f32_canon_bits_nan() {
+        let nan0 = 0.0 / 0.0;
+        let nan1 = nan0 + 1.0;
+
+        assert_ne!(nan0, nan1);
+        assert_eq!(nan0.to_canon_bits(), nan1.to_canon_bits());
+    }
+
+    #[test]
+    fn f32_canon_bits_zero() {
+        let neg_zero = -0.0f32;
+        let pos_zero = 0.0;
+
+        assert_eq!(neg_zero, pos_zero);
+        assert_ne!(neg_zero.to_bits(), pos_zero.to_bits());
+        assert_eq!(neg_zero.to_canon_bits(), pos_zero.to_canon_bits());
+    }
+}

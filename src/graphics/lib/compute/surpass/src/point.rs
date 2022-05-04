@@ -2,13 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::f32;
-use std::ops::{Add, Div, Mul, Sub};
+use std::{
+    f32, hash,
+    ops::{Add, Div, Mul, Sub},
+};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+use crate::CanonBits;
+
+#[derive(Clone, Copy, Debug)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
+}
+
+impl Eq for Point {}
+
+impl PartialEq for Point {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
+
+impl hash::Hash for Point {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.x.to_canon_bits().hash(state);
+        self.y.to_canon_bits().hash(state);
+    }
 }
 
 impl Point {

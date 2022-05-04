@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{fmt, sync::Arc};
+use std::{fmt, hash, sync::Arc};
 
-use crate::{simd::f32x8, AffineTransform, Point};
+use crate::{simd::f32x8, AffineTransform, CanonBits, Point};
 
 pub(crate) trait Ratio {
     fn zero() -> Self;
@@ -53,12 +53,29 @@ pub const BGR0: [Channel; 4] = [Channel::Blue, Channel::Green, Channel::Red, Cha
 pub const RGB1: [Channel; 4] = [Channel::Red, Channel::Green, Channel::Blue, Channel::One];
 pub const BGR1: [Channel; 4] = [Channel::Blue, Channel::Green, Channel::Red, Channel::One];
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug)]
 pub struct Color {
     pub r: f32,
     pub g: f32,
     pub b: f32,
     pub a: f32,
+}
+
+impl Eq for Color {}
+
+impl PartialEq for Color {
+    fn eq(&self, other: &Self) -> bool {
+        self.r == other.r && self.g == other.g && self.b == other.b && self.a == other.a
+    }
+}
+
+impl hash::Hash for Color {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.r.to_canon_bits().hash(state);
+        self.g.to_canon_bits().hash(state);
+        self.b.to_canon_bits().hash(state);
+        self.a.to_canon_bits().hash(state);
+    }
 }
 
 impl Color {
@@ -105,7 +122,7 @@ impl Default for Color {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum FillRule {
     NonZero,
     EvenOdd,
@@ -117,7 +134,7 @@ impl Default for FillRule {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum GradientType {
     Linear,
     Radial,
@@ -178,12 +195,36 @@ impl GradientBuilder {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Gradient {
     r#type: GradientType,
     start: Point,
     end: Point,
     stops: Arc<[(Color, f32)]>,
+}
+
+impl Eq for Gradient {}
+
+impl PartialEq for Gradient {
+    fn eq(&self, other: &Self) -> bool {
+        self.r#type == other.r#type
+            && self.start == other.start
+            && self.end == other.end
+            && self.stops == other.stops
+    }
+}
+
+impl hash::Hash for Gradient {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.r#type.hash(state);
+        self.start.hash(state);
+        self.end.hash(state);
+
+        self.stops.len().hash(state);
+        for (color, stop) in self.stops.iter() {
+            (color, stop.to_canon_bits()).hash(state);
+        }
+    }
 }
 
 impl Gradient {
@@ -299,7 +340,7 @@ impl fmt::Display for ImageError {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Image {
     /// Image pixels stored as f32 components xyza in linear space.
     /// The array is expected to contain width * height elements.
@@ -308,6 +349,24 @@ pub struct Image {
     width: f32,
     /// Height of the image.
     height: f32,
+}
+
+impl Eq for Image {}
+
+impl PartialEq for Image {
+    fn eq(&self, other: &Self) -> bool {
+        self.data.as_ptr() == other.data.as_ptr()
+            && self.width == other.width
+            && self.height == other.height
+    }
+}
+
+impl hash::Hash for Image {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.data.as_ptr().hash(state);
+        self.width.to_canon_bits().hash(state);
+        self.height.to_canon_bits().hash(state);
+    }
 }
 
 impl Image {
@@ -323,7 +382,7 @@ impl Image {
 }
 
 /// Describes how to shade a surface using a bitmap image.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Texture {
     /// Transformation from screen-space to texture-space.
     pub transform: AffineTransform,
@@ -365,7 +424,7 @@ impl Texture {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Fill {
     Solid(Color),
     Gradient(Gradient),
@@ -378,7 +437,7 @@ impl Default for Fill {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum BlendMode {
     Over,
     Multiply,
@@ -779,7 +838,7 @@ impl Default for BlendMode {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Style {
     pub is_clipped: bool,
     pub fill: Fill,

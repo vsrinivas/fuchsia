@@ -4,7 +4,6 @@
 
 use euclid::default::{Transform2D, Vector2D};
 use forma::{Color as FormaColor, GeomPresTransform, Order as FormaOrder};
-use rustc_hash::{FxHashMap, FxHashSet};
 use std::convert::TryFrom;
 
 use crate::{
@@ -20,22 +19,22 @@ use crate::{
 pub struct FormaComposition {
     pub(crate) id: Option<usize>,
     pub(crate) composition: forma::Composition,
-    orders_to_layer_ids: FxHashMap<FormaOrder, forma::LayerId>,
-    pub(crate) current_layer_ids: FxHashSet<forma::LayerId>,
     cached_display_transform: Option<Transform2D<Coord>>,
     pub(crate) background_color: Color,
 }
 
 impl FormaComposition {
-    fn insert_in_composition(&mut self, raster: &FormaRaster) -> forma::LayerId {
+    fn insert_in_composition(&mut self, order: FormaOrder, raster: &FormaRaster) {
         let mut option = raster.layer_details.borrow_mut();
         let layer_details = option
-            .filter(|&(layer_id, layer_translation)| {
-                self.composition.layer(layer_id).is_some()
+            .filter(|&(id, layer_translation)| {
+                self.composition.get_order_if_stored(id) == Some(order)
                     && raster.translation == layer_translation
             })
             .unwrap_or_else(|| {
-                let mut layer = self.composition.create_layer().unwrap();
+                let layer = self.composition.get_mut_or_insert_default(order);
+
+                layer.clear();
 
                 for print in &raster.prints {
                     let transform: [f32; 9] = [
@@ -52,12 +51,10 @@ impl FormaComposition {
                     layer.insert(&print.path.transform(&transform));
                 }
 
-                (layer.id(), raster.translation)
+                (layer.geom_id(), raster.translation)
             });
 
         *option = Some(layer_details);
-
-        layer_details.0
     }
 
     fn forma_transform(&self, translation: Vector2D<Coord>) -> [f32; 6] {
@@ -85,7 +82,7 @@ impl FormaComposition {
 
             self.cached_display_transform = Some(new_transform);
 
-            for mut layer in self.composition.layers() {
+            for (_, layer) in self.composition.layers_mut() {
                 let transform = *layer.transform().as_slice();
                 let transform = Transform2D {
                     m11: transform[0],
@@ -119,46 +116,27 @@ impl Composition<Forma> for FormaComposition {
         Self {
             id: None,
             composition: forma::Composition::new(),
-            orders_to_layer_ids: FxHashMap::default(),
-            current_layer_ids: FxHashSet::default(),
             cached_display_transform: None,
             background_color,
         }
     }
 
     fn clear(&mut self) {
-        self.current_layer_ids.clear();
-        for mut layer in self.composition.layers() {
-            layer.disable();
+        for (_, layer) in self.composition.layers_mut() {
+            layer.clear();
         }
     }
 
     fn insert(&mut self, order: Order, layer: Layer<Forma>) {
-        for i in 0..2 {
-            if let Some(id) = self.orders_to_layer_ids.remove(
-                &(FormaOrder::try_from(order.as_u32() * 2 + i)).unwrap_or_else(|e| panic!("{}", e)),
-            ) {
-                if let Some(mut layer) = self.composition.layer(id) {
-                    if !self.current_layer_ids.contains(&id) {
-                        layer.disable();
-                    }
-                }
-            }
-        }
-
-        if layer.raster.prints.is_empty() {
-            return;
-        }
-
+        let forma_order =
+            FormaOrder::try_from(order.as_u32() * 2).unwrap_or_else(|e| panic!("{}", e));
         if let Some(ref clip) = layer.clip {
-            let id = self.insert_in_composition(clip);
+            self.insert_in_composition(forma_order, clip);
 
             let forma_transform = self.forma_transform(layer.raster.translation);
-            let mut forma_layer = self.composition.layer(id).unwrap();
+            let forma_layer = self.composition.get_mut(forma_order).unwrap();
 
-            let forma_order =
-                FormaOrder::try_from(order.as_u32() * 2).unwrap_or_else(|e| panic!("{}", e));
-            forma_layer.enable().set_order(forma_order).set_props(forma::Props {
+            forma_layer.set_props(forma::Props {
                 fill_rule: match layer.style.fill_rule {
                     FillRule::NonZero => forma::FillRule::NonZero,
                     FillRule::EvenOdd => forma::FillRule::EvenOdd,
@@ -169,18 +147,24 @@ impl Composition<Forma> for FormaComposition {
             forma_layer.set_transform(
                 GeomPresTransform::try_from(forma_transform).unwrap_or_else(|e| panic!("{}", e)),
             );
-
-            self.orders_to_layer_ids.insert(forma_order, id);
-            self.current_layer_ids.insert(id);
+        } else {
+            self.composition.remove(forma_order);
         }
 
-        let id = self.insert_in_composition(&layer.raster);
-
-        let forma_transform = self.forma_transform(layer.raster.translation);
-        let mut forma_layer = self.composition.layer(id).unwrap();
         let forma_order =
             FormaOrder::try_from(order.as_u32() * 2 + 1).unwrap_or_else(|e| panic!("{}", e));
-        forma_layer.enable().set_order(forma_order).set_props(forma::Props {
+
+        if layer.raster.prints.is_empty() {
+            self.composition.remove(forma_order);
+            return;
+        }
+
+        self.insert_in_composition(forma_order, &layer.raster);
+
+        let forma_transform = self.forma_transform(layer.raster.translation);
+        let forma_layer = self.composition.get_mut(forma_order).unwrap();
+
+        forma_layer.set_props(forma::Props {
             fill_rule: match layer.style.fill_rule {
                 FillRule::NonZero => forma::FillRule::NonZero,
                 FillRule::EvenOdd => forma::FillRule::EvenOdd,
@@ -231,20 +215,13 @@ impl Composition<Forma> for FormaComposition {
         forma_layer.set_transform(
             GeomPresTransform::try_from(forma_transform).unwrap_or_else(|e| panic!("{}", e)),
         );
-
-        self.orders_to_layer_ids.insert(forma_order, id);
-        self.current_layer_ids.insert(id);
     }
 
     fn remove(&mut self, order: Order) {
         for i in 0..2 {
             let order =
                 FormaOrder::try_from(order.as_u32() * 2 + i).unwrap_or_else(|e| panic!("{}", e));
-            if let Some(id) = self.orders_to_layer_ids.remove(&order) {
-                if let Some(mut layer) = self.composition.layer(id) {
-                    layer.disable();
-                }
-            }
+            self.composition.remove(order);
         }
     }
 }

@@ -139,14 +139,15 @@ mod tests {
     use super::*;
 
     use crate::{
-        rasterizer::pixel_segment::PixelSegmentUnpacked, LinesBuilder, Point, TILE_HEIGHT,
-        TILE_WIDTH,
+        rasterizer::pixel_segment::PixelSegmentUnpacked, GeomId, Layer, LinesBuilder, Order, Point,
+        TILE_HEIGHT, TILE_WIDTH,
     };
 
     fn segments(p0: Point, p1: Point) -> Vec<PixelSegment> {
         let mut builder = LinesBuilder::new();
-        builder.push(0, [p0, p1]);
-        let lines = builder.build(|_| None);
+        builder.push(GeomId::default(), [p0, p1]);
+        let lines = builder
+            .build(|_| Some(Layer { order: Some(Order::new(0).unwrap()), ..Default::default() }));
 
         let mut rasterizer = Rasterizer::default();
         rasterizer.rasterize(&lines);

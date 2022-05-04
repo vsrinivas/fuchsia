@@ -169,7 +169,7 @@ impl Rect {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Func {
     Draw(Style),
     Clip(usize),
@@ -181,7 +181,7 @@ impl Default for Func {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Props {
     pub fill_rule: FillRule,
     pub func: Func,
@@ -675,8 +675,8 @@ mod tests {
     use std::{collections::HashMap, iter};
 
     use crate::{
-        layout::LinearLayout, painter::style::Color, point::Point, rasterizer::Rasterizer,
-        LinesBuilder, TILE_HEIGHT, TILE_WIDTH,
+        layout::LinearLayout, painter::style::Color, point::Point, rasterizer::Rasterizer, GeomId,
+        Layer, LinesBuilder, Order, TILE_HEIGHT, TILE_WIDTH,
     };
 
     const RED: Color = Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
@@ -756,13 +756,16 @@ mod tests {
 
     fn line_segments(points: &[(Point, Point)], same_layer: bool) -> Vec<PixelSegment> {
         let mut builder = LinesBuilder::new();
+        let ids = iter::successors(Some(GeomId::default()), |id| Some(id.next()));
 
-        for (layer, &(p0, p1)) in points.iter().enumerate() {
-            let layer = if same_layer { 0 } else { layer };
-            builder.push(layer as u32, [p0, p1]);
+        for (&(p0, p1), id) in points.iter().zip(ids) {
+            let id = if same_layer { GeomId::default() } else { id };
+            builder.push(id, [p0, p1]);
         }
 
-        let lines = builder.build(|_| None);
+        let lines = builder.build(|id| {
+            Some(Layer { order: Some(Order::new(id.get() as u32).unwrap()), ..Default::default() })
+        });
 
         let mut rasterizer = Rasterizer::new();
         rasterizer.rasterize(&lines);
