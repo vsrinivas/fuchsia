@@ -20,7 +20,6 @@
 #include <phys/symbolize.h>
 #include <phys/trampoline-boot.h>
 
-#include "acpi.h"
 #include "legacy-boot-shim.h"
 #include "stdout.h"
 

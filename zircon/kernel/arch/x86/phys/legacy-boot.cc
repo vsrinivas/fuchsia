@@ -49,6 +49,8 @@ ktl::span<const ktl::byte> AsBytes(const T& obj) {
 void InitAcpi(LegacyBoot& boot_info) {
   auto acpi_parser = MakeAcpiParser(boot_info.acpi_rsdp);
   if (acpi_parser.is_error()) {
+    printf("%s: Cannot find ACPI tables (%" PRId32 ") from %#" PRIx64 "\n", ProgramName(),
+           acpi_parser.error_value(), gLegacyBoot.acpi_rsdp);
     return;
   }
   boot_info.acpi_rsdp = acpi_parser->rsdp_pa();

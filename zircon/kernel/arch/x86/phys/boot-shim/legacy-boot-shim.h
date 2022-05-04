@@ -12,6 +12,7 @@
 #include <lib/boot-shim/boot-shim.h>
 #include <lib/boot-shim/pool-mem-config.h>
 #include <lib/boot-shim/test-serial-number.h>
+#include <lib/boot-shim/uart.h>
 #include <stdio.h>
 
 #include "../legacy-boot.h"
@@ -23,7 +24,7 @@ class TrampolineBoot;
 
 using LegacyBootShimBase = boot_shim::BootShim<  //
     boot_shim::PoolMemConfigItem,                //
-    boot_shim::AcpiUartItem,                     //
+    boot_shim::UartItem,                         //
     boot_shim::AcpiRsdpItem,                     //
     boot_shim::TestSerialNumberItem>;
 
@@ -35,14 +36,11 @@ class LegacyBootShim : public LegacyBootShimBase {
     set_cmdline(info.cmdline);
     Log(input_zbi_.storage());
     Check("Error scanning ZBI", Get<SerialNumber>().Init(input_zbi_));
+    Get<boot_shim::AcpiRsdpItem>().set_payload(info.acpi_rsdp);
+    Get<boot_shim::UartItem>().Init(info.uart);
   }
 
   void InitMemConfig(const memalloc::Pool& pool) { Get<boot_shim::PoolMemConfigItem>().Init(pool); }
-
-  void InitAcpi(const acpi_lite::AcpiParser& parser) {
-    Get<boot_shim::AcpiUartItem>().Init(parser);
-    Get<boot_shim::AcpiRsdpItem>().Init(parser);
-  }
 
   InputZbi& input_zbi() { return input_zbi_; }
 

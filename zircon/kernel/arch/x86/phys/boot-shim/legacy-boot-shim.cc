@@ -19,7 +19,6 @@
 #include <phys/trampoline-boot.h>
 #include <phys/uart.h>
 
-#include "acpi.h"
 #include "stdout.h"
 
 void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
@@ -42,8 +41,6 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   // The pool knows all the memory details, so populate the ZBI item that way.
   memalloc::Pool& memory = Allocation::GetPool();
   shim.InitMemConfig(memory);
-
-  InitAcpi(shim);
 
   TrampolineBoot boot;
   if (shim.Load(boot)) {

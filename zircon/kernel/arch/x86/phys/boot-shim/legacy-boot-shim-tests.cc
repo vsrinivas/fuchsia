@@ -6,6 +6,7 @@
 
 #include <lib/acpi_lite/testing/test_data.h>
 #include <lib/boot-shim/test-helper.h>
+#include <lib/uart/ns8250.h>
 #include <stdio.h>
 
 #include <algorithm>
@@ -90,24 +91,18 @@ TEST(X86LegacyBootShimTests, CmdlineItem) {
                static_cast<int>(cmdline_payload.size()), cmdline_payload.data());
 }
 
-TEST(X86LegacyBootShimTests, AcpiItems) {
+TEST(X86LegacyBootShimTests, AcpiAndUartItems) {
   LegacyBoot info;
+  constexpr uint64_t kRsdp = 0x7fa2'9000;
+  constexpr dcfg_simple_pio_t kUart = {.base = 0x3f8};
+  info.acpi_rsdp = kRsdp;
+  info.uart = uart::ns8250::PioDriver(kUart);
+
   boot_shim::testing::TestHelper test;
   LegacyBootShim shim("X86LegacyBootShimTests", info, test.log());
 
-  constexpr dcfg_simple_pio_t kUart = {.base = 0x3f8};
   constexpr size_t kUartItemSize = sizeof(zbi_header_t) + sizeof(kUart);
-
-  constexpr uint64_t kRsdp = 0x7fa2'9000;
   constexpr size_t kRsdpItemSize = sizeof(zbi_header_t) + sizeof(kRsdp);
-
-  {
-    auto mem_reader = acpi_lite::testing::IntelNuc7i5dnPhysMemReader();
-    auto result = acpi_lite::AcpiParser::Init(mem_reader, mem_reader.rsdp());
-    ASSERT_TRUE(result.is_ok());
-    auto& parser = result.value();
-    shim.InitAcpi(parser);
-  }
 
   size_t data_budget = shim.size_bytes();
   EXPECT_GE(data_budget, kUartItemSize + kRsdpItemSize);

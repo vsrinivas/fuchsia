@@ -155,14 +155,8 @@ source_set("legacy-mem-config") {
 
 if (toolchain_environment == "kernel.phys32") {
   source_set("legacy-boot-shim") {
-    public = [
-      "acpi.h",
-      "legacy-boot-shim.h",
-    ]
-    sources = [
-      "acpi.cc",
-      "legacy-boot-shim.cc",
-    ]
+    public = [ "legacy-boot-shim.h" ]
+    sources = [ "legacy-boot-shim.cc" ]
     public_deps = [
       ":stdout",
       "..:address-space",
@@ -175,10 +169,10 @@ if (toolchain_environment == "kernel.phys32") {
       "//zircon/kernel/phys:page-table",
       "//zircon/kernel/phys:symbolize",
       "//zircon/kernel/phys:trampoline-boot",
-      "//zircon/kernel/phys:uart",
       "//zircon/kernel/phys/lib/boot-shim",
       "//zircon/system/ulib/hwreg",
     ]
+    deps = [ "//zircon/kernel/phys:uart" ]
     friend = [ ":legacy-boot-shim-tests" ]
   }
 
