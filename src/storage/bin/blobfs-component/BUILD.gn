@@ -17,6 +17,7 @@ executable("blobfs-component") {
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/syslog/cpp",
     "//src/storage/blobfs",
+    "//src/storage/blobfs:decompressor-sandbox",
     "//zircon/system/ulib/service:service-llcpp",
   ]
 

@@ -79,7 +79,6 @@
     offer: [
         {
             protocol: [
-                "fuchsia.blobfs.internal.DecompressorCreator",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",

@@ -8,6 +8,12 @@
         binary: "bin/blobfs-component",
         lifecycle: { stop_event: "notify" },
     },
+    children: [
+        {
+            name: "decompressor",
+            url: "fuchsia-boot:///#meta/decompressor-sandbox.cm",
+        },
+    ],
     capabilities: [
         {
             directory: "root",
@@ -37,7 +43,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.blobfs.internal.DecompressorCreator",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",
@@ -47,10 +52,25 @@
             ],
         },
         {
+            protocol: [ "fuchsia.blobfs.internal.DecompressorCreator" ],
+            from: "#decompressor",
+        },
+        {
             directory: "dev",
             from: "parent",
             rights: [ "r*" ],
             path: "/dev",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#decompressor",
         },
     ],
     expose: [
