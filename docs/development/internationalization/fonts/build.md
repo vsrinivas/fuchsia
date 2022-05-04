@@ -266,7 +266,9 @@ Most local font bundles are declared in
 Example:
 
 ```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/fonts/collections/BUILD.gn" indented_block="local_font_bundle\(\"open-fonts-local\"\)" adjust_indentation="auto" %}
+```gn
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/fonts/collections/BUILD.gn"
+ indented_block="local_font_bundle\(\"small-open-fonts-local\"\)" adjust_indentation="auto" %}
 ```
 
 ### `font_package_group` {#font_package_group}
