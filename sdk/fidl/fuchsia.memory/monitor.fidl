@@ -4,12 +4,18 @@
 library fuchsia.memory;
 
 using fuchsia.memorypressure;
+using zx;
 
 /// Interface used to register for memory notifications.
 @discoverable
 protocol Monitor {
     Watch(resource struct {
         watcher client_end:Watcher;
+    });
+
+    // Writes to `socket` a JSON capture as a well-formed UTF-8 string.
+    WriteJsonCapture(resource struct {
+        socket zx.handle:<SOCKET, zx.rights.WRITE>;
     });
 };
 

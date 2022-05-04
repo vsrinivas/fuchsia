@@ -9,6 +9,7 @@ ffx_plugin("ffx_profile") {
   edition = "2018"
   plugin_deps = [
     "cpu:ffx_cpu",
+    "memory:ffx_profile_memory",
     "temperature:ffx_temperature",
   ]
 

@@ -25,6 +25,7 @@
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <sstream>
 
 #include <soc/aml-common/aml-ram.h>
 #include <trace-vthread/event_vthread.h>
@@ -36,6 +37,7 @@
 #include "src/developer/memory/monitor/high_water.h"
 #include "src/developer/memory/monitor/memory_metrics_registry.cb.h"
 #include "src/developer/memory/monitor/pressure_observer.h"
+#include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/command_line.h"
@@ -265,6 +267,24 @@ void Monitor::Watch(fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) {
       [this, proxy_raw_ptr](zx_status_t status) { ReleaseWatcher(proxy_raw_ptr); });
   watchers_.push_back(std::move(watcher_proxy));
   SampleAndPost();
+}
+
+void Monitor::WriteJsonCapture(zx::socket socket) {
+  // Capture state and store it in a string.
+  Capture capture;
+  const zx_status_t capture_status = GetCapture(&capture);
+  if (capture_status != ZX_OK) {
+    FX_LOGS(ERROR) << "Error getting capture: " << zx_status_get_string(capture_status);
+    return;
+  }
+  std::stringstream stream;
+  Printer printer(stream);
+  printer.PrintCapture(capture);
+  // TODO(b/229972119): avoid a copy by having the stream write directly to the socket.
+  const std::string json_string = stream.str();
+
+  // Send string through socket.
+  fsl::BlockingCopyFromString(json_string, socket);
 }
 
 void Monitor::ReleaseWatcher(fuchsia::memory::Watcher* watcher) {
