@@ -41,7 +41,7 @@ async fn format_disk(
 
     let server_end = match data_sink.wipe_volume().await? {
         Ok(server) => server,
-        Err(err) => return Err(format_err!("failed to wipe volume: {}", err)),
+        Err(err) => return Err(format_err!("failed to wipe volume: {:?}", err)),
     };
 
     let file = fc.create_fd(server_end.into_channel().into())?;
@@ -84,10 +84,11 @@ impl Storage {
         println!("About to Initialize storage");
         let paver = connect_to_protocol::<PaverMarker>()?;
         let fc: FormatDiskConnector = Rc::new(Box::new(FuchsiaFormatDiskConnector {}));
-        let (blobfs_path, minfs_path) = format_disk(fc, paver.clone()).await?;
+        let (blobfs_path, minfs_path) =
+            format_disk(fc, paver.clone()).await.context("failed to format disk")?;
 
-        let blobfs = create_blobfs(blobfs_path)?;
-        let minfs = create_minfs(minfs_path)?;
+        let blobfs = create_blobfs(blobfs_path).context("Could not create new blobfs")?;
+        let minfs = create_minfs(minfs_path).context("Could not create new minfs")?;
 
         println!("Storage initialized");
         Ok(Storage { _blobfs: blobfs, minfs })

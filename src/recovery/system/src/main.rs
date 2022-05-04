@@ -603,7 +603,7 @@ impl RecoveryViewAssistant {
                     MessageTarget::View(view_key),
                     make_message(RecoveryMessages::ResetFailed),
                 );
-                panic!("Could not connect to factory_reset_service: {}", error);
+                panic!("Could not connect to factory_reset_service: {:?}", error);
             }
         };
 
