@@ -3,11 +3,19 @@
 // found in the LICENSE file.
 
 using fuchsia.acpi;
-
-fuchsia.BIND_COMPOSITE == 1;
+using fuchsia.driver.framework;
 
 if fuchsia.acpi.hid == "PNP0B00" {
-  true;
+  if fuchsia.BIND_COMPOSITE == 1 {
+    true;
+  } else {
+    fuchsia.driver.framework.dfv2 == true;
+  }
 } else {
   fuchsia.acpi.first_cid == "PNP0B00";
+  if fuchsia.BIND_COMPOSITE == 1 {
+    true;
+  } else {
+    fuchsia.driver.framework.dfv2 == true;
+  }
 }
