@@ -221,9 +221,6 @@ impl TranslationTable {
         if size == 0 {
             return Err(anyhow!("QCOW file has 0 size"));
         }
-        if size & cluster_mask(cluster_bits) != 0 {
-            return Err(anyhow!("QCOW file size is not sector aligned"));
-        }
 
         // QCOW files can be encrypted, but we don't support that.
         if header.crypt_method.get() != wire::QCOW_CRYPT_NONE {
