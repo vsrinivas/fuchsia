@@ -370,15 +370,25 @@ fn pv(version_list: &Value) -> String {
         };
 
         if version["name"] == "added" {
-            added = format!("Added:{version_val}", version_val = version_val);
+            added = format!(
+                "<span class=\"fidl-attribute fidl-version\">Added: {version_val}</span>",
+                version_val = version_val
+            );
         } else if version["name"] == "removed" {
-            removed = format!("Removed:{version_val}", version_val = version_val);
+            removed = format!(
+                "<span class=\"fidl-attribute fidl-version\">Removed: {version_val}</span>",
+                version_val = version_val
+            );
         } else if version["name"] == "deprecated" {
-            deprecated = format!("Deprecated:{version_val}", version_val = version_val);
+            deprecated = format!(
+                "<span class=\"fidl-attribute fidl-version\">Deprecated: {version_val}</span>",
+                version_val = version_val
+            );
         }
     }
     return format!(
-        "{added} {deprecated} {removed}",
+        // The order is backward to allow float right to show Added, Deprecated, Removed
+        "{removed} {deprecated} {added}",
         added = added,
         removed = removed,
         deprecated = deprecated
@@ -545,7 +555,7 @@ file, the error is <code>ZX_ERR_NOT_FILE</code>.</li>
             json!({"value": json!({"value": "2"}),
             "name": "deprecated",}),
         ]);
-        assert_eq!(pv(&fidl_json1), "Added:1 Deprecated:2 Removed:3");
+        assert_eq!(pv(&fidl_json1), "<span class=\"fidl-attribute fidl-version\">Removed: 3</span> <span class=\"fidl-attribute fidl-version\">Deprecated: 2</span> <span class=\"fidl-attribute fidl-version\">Added: 1</span>");
 
         let fidl_json2 = json!([
             json!({"value": json!({"value": "1"}),
@@ -553,11 +563,11 @@ file, the error is <code>ZX_ERR_NOT_FILE</code>.</li>
             json!({"value": json!({"value": "2"}),
             "name": "deprecated",}),
         ]);
-        assert_eq!(pv(&fidl_json2), "Added:1 Deprecated:2");
+        assert_eq!(pv(&fidl_json2), "<span class=\"fidl-attribute fidl-version\">Deprecated: 2</span> <span class=\"fidl-attribute fidl-version\">Added: 1</span>");
 
         let fidl_json3 = json!([json!({"value": json!({"value": "1"}),
             "name": "added",})]);
-        assert_eq!(pv(&fidl_json3), "Added:1");
+        assert_eq!(pv(&fidl_json3), "<span class=\"fidl-attribute fidl-version\">Added: 1</span>");
     }
 
     #[test]

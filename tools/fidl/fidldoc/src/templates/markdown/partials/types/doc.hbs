@@ -10,7 +10,7 @@
             </p>
         {{~ /if ~}}
         {{~ #if (eq (lower_snake_case name) "available") ~}}
-            <p><b>{{processVersions arguments}}</b></p>
+            <div class="fidl-version-div">{{processVersions arguments}}</div>
         {{~ /if ~}}
         {{~ #if (eq (lower_snake_case name) "doc") ~}}
             {{~ #if (eq (len arguments) "1") ~}}
