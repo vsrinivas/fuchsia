@@ -20,6 +20,9 @@ base_package_labels += [ "//src/sys/tools/stash_ctl" ]
 base_package_labels +=
     [ "//src/connectivity/network:network-legacy-deprecated" ]
 
+# Setting service configuration
+base_package_labels += [ "//src/settings/config:workstation_interface_config" ]
+
 # Improve DX by allowing iteration on these packages without and OTA.
 _developer_packages = [
   "//src/sys/activity",
