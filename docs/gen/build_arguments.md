@@ -3487,12 +3487,6 @@ From //products/bringup.gni:66
 
 From //build/packages/prebuilt_package_with_flavors.gni:29
 
-### persist_logs
-
-**Current value (from the default):** `false`
-
-From //build/persist_logs.gni:13
-
 ### persistent_ram_allocation_granularity
 Controls the granularity of allocation of the global pool of persistent RAM.
 All features which wish to use persistent RAM to preserve data across reboot

@@ -261,7 +261,6 @@ group("cmx_allowlist") {
     "//src/diagnostics/archivist/tests/logging-component:*",
     "//src/diagnostics/archivist/tests/logs-connector:*",
     "//src/diagnostics/iquery/test/test_component:*",
-    "//src/diagnostics/log_listener:*",
     "//src/diagnostics/persistence:*",
     "//src/diagnostics/persistence/tests:*",
     "//src/diagnostics/validator/inspect:*",

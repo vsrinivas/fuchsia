@@ -1,0 +1,12 @@
+{
+    include: [
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/log_listener_return_code_test",
+    },
+    use: [
+        { protocol: "fuchsia.process.Launcher" },
+    ],
+}
