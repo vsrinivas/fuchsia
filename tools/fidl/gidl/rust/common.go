@@ -199,7 +199,7 @@ func wrapNullable(decl gidlmixer.Declaration, valueStr string) string {
 		return valueStr
 	}
 	switch decl.(type) {
-	case *gidlmixer.ArrayDecl, *gidlmixer.VectorDecl, *gidlmixer.StringDecl, *gidlmixer.HandleDecl:
+	case *gidlmixer.ArrayDecl, *gidlmixer.VectorDecl, *gidlmixer.StringDecl, *gidlmixer.HandleDecl, *gidlmixer.ClientEndDecl, *gidlmixer.ServerEndDecl:
 		return fmt.Sprintf("Some(%s)", valueStr)
 	case *gidlmixer.StructDecl, *gidlmixer.UnionDecl:
 		return fmt.Sprintf("Some(Box::new(%s))", valueStr)
