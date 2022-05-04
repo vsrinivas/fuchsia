@@ -8,46 +8,25 @@
 
 namespace debug {
 
-Regex::Regex() = default;
-
-Regex::~Regex() {
-  if (handle_.has_value())
-    regfree(&handle_.value());
-}
-
-Regex::Regex(Regex&& other) : handle_(std::move(other.handle_)) { other.handle_.reset(); }
-
-Regex& Regex::operator=(Regex&& other) {
-  if (this == &other)
-    return *this;
-
-  handle_ = std::move(other.handle_);
-  other.handle_.reset();
-  return *this;
-}
-
-bool Regex::Init(const std::string& regexp, Regex::CompareType compare_type) {
+bool Regex::Init(const std::string& regexp_str, Regex::CompareType compare_type) {
   if (valid())
     return false;
 
-  regex_t r;
-  int flags = REG_EXTENDED;
-  if (compare_type == Regex::CompareType::kCaseInsensitive)
-    flags |= REG_ICASE;
-  int status = regcomp(&r, regexp.c_str(), flags);
-  if (status) {
+  re2::RE2::Options opts(re2::RE2::DefaultOptions);
+  opts.set_case_sensitive(compare_type == Regex::CompareType::kCaseSensitive);
+
+  auto r = std::make_unique<re2::RE2>(regexp_str, opts);
+  if (!r->ok()) {
     return false;
   }
 
-  handle_ = r;
+  regex_ = std::move(r);
   return true;
 }
 
 bool Regex::Match(const std::string& candidate) const {
   FX_DCHECK(valid());
-
-  int status = regexec(&handle_.value(), candidate.c_str(), 0, nullptr, 0);
-  return status == 0;
+  return re2::RE2::PartialMatch(candidate, *regex_);
 }
 
 }  // namespace debug

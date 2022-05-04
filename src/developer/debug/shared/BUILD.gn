@@ -44,6 +44,7 @@ static_library("shared") {
     "//src/developer/debug/shared/logging",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
+    "//third_party/re2",
   ]
 
   if (is_host) {
