@@ -89,15 +89,30 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
 
   sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
 
- private:
+  void WatchProxyViewStatus() {
+    proxy_viewport_watcher_->GetStatus(
+        [this](fuchsia::ui::composition::ParentViewportStatus status) {
+          if (status == fuchsia::ui::composition::ParentViewportStatus::CONNECTED_TO_DISPLAY) {
+            proxy_view_attached_ = true;
+          } else {
+            proxy_view_attached_ = false;
+          }
+
+          FX_LOGS(INFO) << "proxy_view_attached_ = " << std::boolalpha << proxy_view_attached_;
+
+          WatchProxyViewStatus();
+        });
+  }
+
+ protected:
   std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
   std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
   std::unique_ptr<Realm> realm_;
+  bool proxy_view_attached_ = false;
+  fidl::InterfacePtr<fuchsia::ui::composition::ParentViewportWatcher> proxy_viewport_watcher_;
 };
 
 TEST_F(FlatlandAccessibilityViewTest, TestSceneConnected) {
-  bool proxy_view_attached = false;
-
   auto flatland_display =
       realm_exposed_services()->Connect<fuchsia::ui::composition::FlatlandDisplay>();
   auto proxy_session = realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>();
@@ -122,19 +137,16 @@ TEST_F(FlatlandAccessibilityViewTest, TestSceneConnected) {
   fidl::InterfacePtr<fuchsia::ui::composition::ParentViewportWatcher> parent_viewport_watcher;
   auto identity = scenic::NewViewIdentityOnCreation();
   proxy_session->CreateView2(std::move(proxy_view_token), std::move(identity), {},
-                             parent_viewport_watcher.NewRequest());
+                             proxy_viewport_watcher_.NewRequest());
 
-  parent_viewport_watcher->GetStatus(
-      [&proxy_view_attached](fuchsia::ui::composition::ParentViewportStatus status) {
-        if (status == fuchsia::ui::composition::ParentViewportStatus::CONNECTED_TO_DISPLAY) {
-          proxy_view_attached = true;
-        }
-      });
+  // Watch for connected/disconnected to display events for the proxy view.
+  WatchProxyViewStatus();
 
   proxy_session->Present({});
+
   // Run until the proxy view has been attached to the scene, which can only
   // happen if the a11y manager has correctly inserted its view.
-  RunLoopUntil([&proxy_view_attached]() { return proxy_view_attached; });
+  RunLoopUntil([this]() { return proxy_view_attached_; });
 }
 
 }  // namespace
