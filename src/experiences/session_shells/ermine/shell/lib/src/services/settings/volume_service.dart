@@ -17,9 +17,11 @@ import 'package:fuchsia_services/services.dart';
 class VolumeService implements TaskService {
   late final VoidCallback onChanged;
 
-  VolumeControlProxy? _control;
+  VolumeControlProxy? _controlMedia;
+  VolumeControlProxy? _controlCommunication;
   AudioCoreProxy? _audioCore;
-  late StreamSubscription _volumeSubscription;
+  late StreamSubscription _volumeSubscriptionMedia;
+  late StreamSubscription _volumeSubscriptionCommunication;
 
   late bool _muted;
   late double _volume;
@@ -29,17 +31,25 @@ class VolumeService implements TaskService {
   double get volume => _volume;
   set volume(double value) {
     // Setting new volume should only work when connected (started).
-    assert(_control != null, 'VolumeService not started');
+    assert(_controlMedia != null,
+        'VolumeService not started: media control null.');
+    assert(_controlCommunication != null,
+        'VolumeService not started: communication control null.');
 
-    if (_control != null && _volume != value) {
+    if (_controlMedia != null &&
+        _controlCommunication != null &&
+        _volume != value) {
       _volume = value;
-      _control!.setVolume(value);
+      _controlMedia!.setVolume(value);
+      _controlCommunication!.setVolume(value);
       if (value == 0) {
         _muted = true;
-        _control!.setMute(true);
+        _controlMedia!.setMute(true);
+        _controlCommunication!.setMute(true);
       } else {
         _muted = false;
-        _control!.setMute(false);
+        _controlMedia!.setMute(false);
+        _controlCommunication!.setMute(false);
       }
     }
     onChanged();
@@ -65,27 +75,35 @@ class VolumeService implements TaskService {
   bool get muted => _muted;
   set muted(bool value) {
     _muted = value;
-    _control?.setMute(value);
+    _controlMedia?.setMute(value);
+    _controlCommunication?.setMute(value);
     onChanged();
   }
 
   @override
   Future<void> start() async {
-    if (_control != null) {
+    if (_controlMedia != null || _controlCommunication != null) {
       return;
     }
 
-    _control = VolumeControlProxy();
+    _controlMedia = VolumeControlProxy();
+    _controlCommunication = VolumeControlProxy();
     _audioCore = AudioCoreProxy();
     Incoming.fromSvcPath().connectToService(_audioCore);
 
     await _audioCore!.bindUsageVolumeControl(
         Usage.withRenderUsage(AudioRenderUsage.media),
-        _control!.ctrl.request());
+        _controlMedia!.ctrl.request());
+
+    await _audioCore!.bindUsageVolumeControl(
+        Usage.withRenderUsage(AudioRenderUsage.communication),
+        _controlCommunication!.ctrl.request());
 
     // Watch for changes in volume.
-    _volumeSubscription =
-        _control!.onVolumeMuteChanged.listen(_onVolumeMuteChanged);
+    _volumeSubscriptionMedia =
+        _controlMedia!.onVolumeMuteChanged.listen(_onVolumeMuteChanged);
+    _volumeSubscriptionCommunication =
+        _controlCommunication!.onVolumeMuteChanged.listen(_onVolumeMuteChanged);
   }
 
   @override
@@ -94,10 +112,15 @@ class VolumeService implements TaskService {
   @override
   void dispose() {
     Future.wait(
-      [_volumeSubscription.cancel()],
+      [
+        _volumeSubscriptionMedia.cancel(),
+        _volumeSubscriptionCommunication.cancel()
+      ],
       cleanUp: (_) {
-        _control?.ctrl.close();
-        _control = null;
+        _controlMedia?.ctrl.close();
+        _controlMedia = null;
+        _controlCommunication?.ctrl.close();
+        _controlCommunication = null;
       },
     );
   }
