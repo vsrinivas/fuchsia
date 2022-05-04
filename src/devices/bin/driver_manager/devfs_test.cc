@@ -7,7 +7,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/driver.h>
-#include <lib/service/llcpp/outgoing_directory.h>
 #include <lib/svc/outgoing.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 

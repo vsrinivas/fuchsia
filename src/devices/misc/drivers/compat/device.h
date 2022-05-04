@@ -14,7 +14,6 @@
 #include <lib/driver2/logger.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
-#include <lib/service/llcpp/outgoing_directory.h>
 
 #include <list>
 #include <memory>

@@ -11,7 +11,6 @@
 #include <lib/driver2/test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/service/llcpp/outgoing_directory.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 
 namespace fdfs = fuchsia::device::fs;

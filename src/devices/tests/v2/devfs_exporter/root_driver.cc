@@ -12,7 +12,6 @@
 #include <lib/driver2/record_cpp.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
-#include <lib/service/llcpp/outgoing_directory.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 
 namespace fdf {

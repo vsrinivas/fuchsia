@@ -9,7 +9,6 @@
 #include <lib/driver2/driver2.h>
 #include <lib/driver2/inspect.h>
 #include <lib/fpromise/scope.h>
-#include <lib/service/llcpp/outgoing_directory.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <zircon/errors.h>
 

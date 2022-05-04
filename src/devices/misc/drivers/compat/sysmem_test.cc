@@ -10,7 +10,6 @@
 #include <fbl/ref_ptr.h>
 #include <gtest/gtest.h>
 
-#include "lib/service/llcpp/outgoing_directory.h"
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/device.h"
 #include "src/devices/misc/drivers/compat/driver.h"
