@@ -15,6 +15,7 @@
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/configuration/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -24,7 +25,10 @@
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 
+#include <test/inputsynthesis/cpp/fidl.h>
+
 #include "sdk/lib/syslog/cpp/macros.h"
+#include "src/ui/testing/ui_test_manager/flatland_scene_manager_scene.h"
 #include "src/ui/testing/ui_test_manager/gfx_root_presenter_scene.h"
 #include "src/ui/testing/ui_test_manager/gfx_scene_manager_scene.h"
 
@@ -46,6 +50,7 @@ constexpr auto kScenicOnlyUrl = "#meta/scenic_only.cm";
 constexpr auto kRootPresenterSceneUrl = "#meta/root_presenter_scene.cm";
 constexpr auto kRootPresenterSceneWithInputUrl = "#meta/root_presenter_scene_with_input.cm";
 constexpr auto kSceneManagerSceneUrl = "#meta/scene_manager_scene.cm";
+constexpr auto kSceneManagerSceneWithInputUrl = "#meta/scene_manager_scene_with_input.cm";
 
 // System component urls.
 constexpr auto kFakeA11yManagerUrl = "#meta/fake-a11y-manager.cm";
@@ -55,7 +60,14 @@ constexpr auto kClientSubrealmName = "client-subrealm";
 
 constexpr auto kA11yManagerName = "a11y-manager";
 
-// Set of low-level system services that components in the realm can consume
+// Contents of config file used to force scenic to use flatland.
+constexpr auto kUseFlatlandScenicConfig = R"(
+{
+  "flatland_buffer_collection_import_mode": "renderer_only",
+  "i_can_haz_flatland": true
+}
+)";
+
 // from parent (test_manager).
 std::vector<std::string> DefaultSystemServices() {
   return {fuchsia::logger::LogSink::Name_, fuchsia::scheduler::ProfileProvider::Name_,
@@ -65,13 +77,7 @@ std::vector<std::string> DefaultSystemServices() {
 
 }  // namespace
 
-UITestManager::UITestManager(UITestManager::Config config) : config_(config) {
-  FX_CHECK(!config_.use_flatland) << "Flatland not currently supported";
-}
-
-void UITestManager::SetUseFlatlandConfig(bool use_flatland) {
-  // Not yet implemented.
-}
+UITestManager::UITestManager(UITestManager::Config config) : config_(config) {}
 
 void UITestManager::RouteServices(std::vector<std::string> services, Ref source,
                                   std::vector<Ref> targets) {
@@ -102,7 +108,7 @@ void UITestManager::AddBaseRealmComponent() {
   } else if (config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
     url = config_.use_input ? kRootPresenterSceneWithInputUrl : kRootPresenterSceneUrl;
   } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
-    url = kSceneManagerSceneUrl;
+    url = config_.use_input ? kSceneManagerSceneWithInputUrl : kSceneManagerSceneUrl;
   }
 
   realm_builder_.AddChild(kTestRealmName, url);
@@ -190,16 +196,17 @@ void UITestManager::ConfigureInput() {
                    fuchsia::ui::policy::DeviceListenerRegistry::Name_},
                   /* source = */ ChildRef{kTestRealmName},
                   /* targets = */ {ParentRef()});
+    if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
+      RouteServices({test::inputsynthesis::Mouse::Name_, test::inputsynthesis::Text::Name_,
+                     fuchsia::ui::input::ImeService::Name_, fuchsia::ui::input3::Keyboard::Name_},
+                    /* source = */ ChildRef{kTestRealmName},
+                    /* targets = */ {ParentRef()});
+    }
   } else {
     RouteServices({fuchsia::ui::pointerinjector::Registry::Name_},
                   /* source = */ ChildRef{kTestRealmName},
                   /* targets = */ {ParentRef()});
   }
-
-  // Specify display rotation.
-  realm_builder_.RouteReadOnlyDirectory(
-      "config", {ChildRef{kTestRealmName}},
-      std::move(component_testing::DirectoryContents().AddFile("data/display_rotation", "90")));
 }
 
 void UITestManager::ConfigureScenic() {
@@ -209,6 +216,28 @@ void UITestManager::ConfigureScenic() {
        fuchsia::ui::focus::FocusChainListenerRegistry::Name_, fuchsia::ui::scenic::Scenic::Name_,
        fuchsia::ui::views::ViewRefInstalled::Name_},
       /* source = */ ChildRef{kTestRealmName}, /* targets = */ {ParentRef()});
+}
+
+void UITestManager::RouteConfigData() {
+  auto config_directory_contents = component_testing::DirectoryContents();
+  bool directory_has_contents = false;
+
+  // Override scenic's Override "i_can_haz_flatland" if necessary.
+  if (config_.use_flatland) {
+    directory_has_contents = true;
+    config_directory_contents.AddFile("data/scenic_config", kUseFlatlandScenicConfig);
+  }
+
+  // Supply a default display rotation.
+  if (config_.scene_owner) {
+    directory_has_contents = true;
+    config_directory_contents.AddFile("data/display_rotation", "90");
+  }
+
+  if (directory_has_contents) {
+    realm_builder_.RouteReadOnlyDirectory("config", {ChildRef{kTestRealmName}},
+                                          std::move(config_directory_contents));
+  }
 }
 
 void UITestManager::BuildRealm() {
@@ -234,6 +263,10 @@ void UITestManager::BuildRealm() {
   // use them for scene setup and monitoring.
   ConfigureScenic();
 
+  // Route config data directories to appropriate recipients (currently, scenic,
+  // scene manager, and root presenter are the only use cases for config files.
+  RouteConfigData();
+
   // This step needs to come after ConfigureAccessibility(), because the a11y
   // manager component needs to be added to the realm first.
   ConfigureClientSubrealm();
@@ -251,7 +284,11 @@ void UITestManager::InitializeScene() {
   if (*config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
     scene_ = std::make_unique<ui_testing::GfxRootPresenterScene>(realm_root_);
   } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
-    scene_ = std::make_unique<ui_testing::GfxSceneManagerScene>(realm_root_);
+    if (config_.use_flatland) {
+      scene_ = std::make_unique<ui_testing::FlatlandSceneManagerScene>(realm_root_);
+    } else {
+      scene_ = std::make_unique<ui_testing::GfxSceneManagerScene>(realm_root_);
+    }
   } else {
     FX_LOGS(FATAL) << "Unsupported scene owner";
   }

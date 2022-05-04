@@ -1,0 +1,58 @@
+{
+    children: [
+        {
+            name: "text-manager",
+            url: "#meta/text_manager.cm",
+        },
+        {
+            name: "input-synthesis",
+            url: "#meta/input-synthesis-component.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#input-synthesis",
+                "#text-manager",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.ui.input3.KeyEventInjector" ],
+            from: "#text-manager",
+            to: [ "#scene-manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.ui.input.InputDeviceRegistry",
+            ],
+            from: "#scene-manager",
+            to: [ "#input-synthesis" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
+            from: "#scene-manager",
+        },
+        {
+            protocol: [
+                "test.inputsynthesis.Mouse",
+                "test.inputsynthesis.Text",
+            ],
+            from: "#input-synthesis",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+            ],
+            from: "#text-manager",
+        },
+    ],
+}

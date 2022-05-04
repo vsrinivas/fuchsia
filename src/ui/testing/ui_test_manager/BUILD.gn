@@ -9,6 +9,7 @@ source_set("ui_test_manager") {
   testonly = true
 
   sources = [
+    "flatland_scene_manager_scene.cc",
     "flatland_scene_manager_scene.h",
     "flatland_test_manager_scene.h",
     "gfx_root_presenter_scene.cc",
@@ -36,6 +37,7 @@ source_set("ui_test_manager") {
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.focus",
+    "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
     "//sdk/fidl/fuchsia.ui.policy",
@@ -47,6 +49,7 @@ source_set("ui_test_manager") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/ui/input-synthesis:test.inputsynthesis",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -59,6 +62,7 @@ group("test_realms") {
     ":root_presenter_scene",
     ":root_presenter_scene_with_input",
     ":scene_manager_scene",
+    ":scene_manager_scene_with_input",
     ":scenic_only",
   ]
 }
@@ -121,6 +125,23 @@ fuchsia_component("scene_manager_scene") {
     "//src/ui/a11y/bin/a11y_manager:component_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
     "//src/ui/bin/scene_manager:scene_manager_component",
+    "//src/ui/scenic:component_v2",
+  ]
+}
+
+fuchsia_component("scene_manager_scene_with_input") {
+  testonly = true
+
+  component_name = "scene_manager_scene_with_input"
+  manifest = "meta/scene_manager_scene_with_input.cml"
+  deps = [
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/lib/ui/input-synthesis:input-synthesis-component",
+    "//src/lib/ui/input-synthesis:test.inputsynthesis",
+    "//src/ui/a11y/bin/a11y_manager:component_v2",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/bin/scene_manager:scene_manager_component",
+    "//src/ui/bin/text:text_manager_comp_v2",
     "//src/ui/scenic:component_v2",
   ]
 }

@@ -5,7 +5,11 @@
 #ifndef SRC_UI_TESTING_UI_TEST_MANAGER_FLATLAND_SCENE_MANAGER_SCENE_H_
 #define SRC_UI_TESTING_UI_TEST_MANAGER_FLATLAND_SCENE_MANAGER_SCENE_H_
 
+#include <fuchsia/session/scene/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
+
+#include <optional>
 
 #include "src/ui/testing/ui_test_manager/ui_test_scene.h"
 
@@ -44,8 +48,13 @@ class FlatlandSceneManagerScene : public UITestScene {
   // |UITestScene|
   std::optional<zx_koid_t> ClientViewRefKoid() override;
 
+  // |UITestScene|
+  float ClientViewScaleFactor() override;
+
  private:
-  // Service handles, client view state, etc.
+  std::shared_ptr<component_testing::RealmRoot> realm_;
+  fuchsia::session::scene::ManagerPtr scene_manager_;
+  std::optional<fuchsia::ui::views::ViewRef> client_view_ref_;
 };
 
 }  // namespace ui_testing

@@ -1,7 +1,7 @@
 {
     children: [
         {
-            name: "scene_manager",
+            name: "scene-manager",
             url: "#meta/scene_manager.cm",
 
             // Known missing capabilities:
@@ -25,7 +25,7 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [ "#scene_manager" ],
+            to: [ "#scene-manager" ],
         },
         {
             protocol: [
@@ -37,7 +37,7 @@
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "#scenic",
-            to: [ "#scene_manager" ],
+            to: [ "#scene-manager" ],
         },
     ],
     expose: [
@@ -46,7 +46,7 @@
                 "fuchsia.session.scene.Manager",
                 "fuchsia.ui.accessibility.view.Registry",
             ],
-            from: "#scene_manager",
+            from: "#scene-manager",
         },
     ],
 }

@@ -2,41 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/accessibility/semantics/cpp/fidl.h>
-#include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/component/cpp/fidl.h>
-#include <fuchsia/fonts/cpp/fidl.h>
-#include <fuchsia/hardware/display/cpp/fidl.h>
-#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
-#include <fuchsia/kernel/cpp/fidl.h>
-#include <fuchsia/memorypressure/cpp/fidl.h>
-#include <fuchsia/net/interfaces/cpp/fidl.h>
-#include <fuchsia/netstack/cpp/fidl.h>
-#include <fuchsia/posix/socket/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
-#include <fuchsia/session/scene/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
-#include <fuchsia/web/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
-#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/ui/scenic/cpp/resources.h>
-#include <lib/ui/scenic/cpp/session.h>
-#include <lib/ui/scenic/cpp/view_creation_tokens.h>
-#include <lib/ui/scenic/cpp/view_identity.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
@@ -52,42 +33,21 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
-#include <src/ui/tests/lib/child_view_watcher_client.h>
-#include <src/ui/tests/lib/parent_viewport_watcher_client.h>
-#include <src/ui/tests/lib/view_provider_server.h>
 #include <test/inputsynthesis/cpp/fidl.h>
 #include <test/text/cpp/fidl.h>
 
-#include "fuchsia/sysmem/cpp/fidl.h"
+#include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
 namespace {
 
-using fuchsia::io::Operations;
-using fuchsia::ui::app::CreateView2Args;
-using fuchsia::ui::app::ViewProvider;
-using fuchsia::ui::composition::ChildViewStatus;
-using fuchsia::ui::composition::ChildViewWatcher;
-using fuchsia::ui::composition::ContentId;
-using fuchsia::ui::composition::LayoutInfo;
-using fuchsia::ui::composition::ParentViewportStatus;
-using fuchsia::ui::composition::ParentViewportWatcher;
-using fuchsia::ui::composition::PresentArgs;
-using fuchsia::ui::composition::TransformId;
-using fuchsia::ui::composition::ViewportProperties;
-using fuchsia::ui::views::ViewRef;
-using fuchsia::ui::views::ViewRefControl;
-
 // Types imported for the realm_builder library.
 using component_testing::ChildRef;
-using component_testing::Directory;
 using component_testing::LocalComponent;
 using component_testing::LocalComponentHandles;
 using component_testing::ParentRef;
 using component_testing::Protocol;
-using component_testing::RealmRoot;
+using component_testing::Realm;
 using component_testing::Route;
-using RealmBuilder = component_testing::RealmBuilder;
 
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.
@@ -140,16 +100,13 @@ class TestResponseListenerServer : public test::text::ResponseListener, public L
   std::optional<std::string> response_;
 };
 
-constexpr auto kTestRealm = "workstation-test-realm";
 constexpr auto kTextInputFlutter = "text_input_flutter";
 constexpr auto kResponseListener = "test_text_response_listener";
 
 class TextInputTest : public gtest::RealLoopFixture {
  protected:
   TextInputTest()
-      : realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::Create())),
-        view_provider_server_(std::make_unique<ViewProviderServer>(dispatcher())),
-        test_response_listener_(std::make_unique<TestResponseListenerServer>(dispatcher())) {}
+      : test_response_listener_(std::make_unique<TestResponseListenerServer>(dispatcher())) {}
 
   void SetUp() override {
     // Post a "just in case" quit task, if the test hangs.
@@ -158,229 +115,73 @@ class TextInputTest : public gtest::RealLoopFixture {
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
-    SetUpRealm(realm_builder_.get());
+    ui_testing::UITestManager::Config config;
+    config.use_flatland = true;
+    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER;
+    config.use_input = true;
+    config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
+    config.ui_to_client_services = {
+        fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::composition::Flatland::Name_,
+        fuchsia::ui::composition::Allocator::Name_, fuchsia::ui::input::ImeService::Name_,
+        fuchsia::ui::input3::Keyboard::Name_};
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
-    realm_ = std::make_unique<RealmRoot>(realm_builder_->Build());
+    FX_LOGS(INFO) << "Building realm";
+    realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
+
+    realm_->AddLocalChild(kResponseListener, test_response_listener_.get());
+    realm_->AddLegacyChild(kTextInputFlutter,
+                           "fuchsia-pkg://fuchsia.com/text-input-test#meta/text-input-flutter.cmx");
+    realm_->AddRoute(Route{.capabilities =
+                               {
+                                   Protocol{fuchsia::ui::app::ViewProvider::Name_},
+                               },
+                           .source = ChildRef{kTextInputFlutter},
+                           .targets = {ParentRef()}});
+    realm_->AddRoute(Route{.capabilities =
+                               {
+                                   Protocol{fuchsia::ui::composition::Flatland::Name_},
+                                   Protocol{fuchsia::ui::composition::Allocator::Name_},
+                                   Protocol{fuchsia::ui::input::ImeService::Name_},
+                                   Protocol{fuchsia::ui::input3::Keyboard::Name_},
+                                   Protocol{fuchsia::ui::scenic::Scenic::Name_},
+                                   // Redirect logging output for the test realm to
+                                   // the host console output.
+                                   Protocol{fuchsia::logger::LogSink::Name_},
+                                   Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                                   Protocol{fuchsia::sysmem::Allocator::Name_},
+                                   Protocol{fuchsia::tracing::provider::Registry::Name_},
+                                   Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                               },
+                           .source = ParentRef(),
+                           .targets = {ChildRef{kTextInputFlutter}}});
+
+    realm_->AddRoute(Route{.capabilities =
+                               {
+                                   Protocol{test::text::ResponseListener::Name_},
+                               },
+                           .source = ChildRef{kResponseListener},
+                           .targets = {ChildRef{kTextInputFlutter}}});
+
+    ui_test_manager_->BuildRealm();
+    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
+
+    // Initialize scene, and attach client view.
+    ui_test_manager_->InitializeScene();
+    FX_LOGS(INFO) << "Wait for client view to render";
+    RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsRendering(); });
   }
 
-  void SetUpRealm(RealmBuilder* builder) {
-    builder->AddLocalChild(kResponseListener, test_response_listener_.get());
+  sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
 
-    builder->AddChild(kTestRealm, "#meta/workstation-test-realm.cm");
+  std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
+  std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
+  std::unique_ptr<Realm> realm_;
 
-    // Capabilities offered to this test fixture by the test realm.
-    builder->AddRoute(Route{.capabilities =
-                                {
-                                    Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                                    Protocol{fuchsia::ui::composition::Flatland::Name_},
-                                    Protocol{::fuchsia::session::scene::Manager::Name_},
-                                    Protocol{test::inputsynthesis::Text::Name_},
-                                },
-                            .source = ChildRef{kTestRealm},
-                            .targets = {ParentRef()}});
-
-    builder->AddLegacyChild(
-        kTextInputFlutter, "fuchsia-pkg://fuchsia.com/text-input-test#meta/text-input-flutter.cmx");
-
-    // Capabilities given to this test fixture by the test flutter app.
-    builder->AddRoute(Route{.capabilities =
-                                {
-                                    Protocol{fuchsia::ui::app::ViewProvider::Name_},
-                                },
-                            .source = ChildRef{kTextInputFlutter},
-                            .targets = {ParentRef()}});
-
-    // Capabilities passed down from the parent.
-    builder->AddRoute(Route{.capabilities =
-                                {
-                                    // Redirect logging output for the test realm to
-                                    // the host console output.
-                                    Protocol{fuchsia::logger::LogSink::Name_},
-                                    Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-                                    Protocol{fuchsia::sysmem::Allocator::Name_},
-                                    Protocol{fuchsia::tracing::provider::Registry::Name_},
-                                    Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                                },
-                            .source = ParentRef(),
-                            .targets = {ChildRef{kTestRealm}, ChildRef{kTextInputFlutter}}});
-    // Capabilities given to the test app by the test realm.
-    builder->AddRoute(Route{.capabilities =
-                                {
-                                    Protocol{fuchsia::ui::composition::Flatland::Name_},
-                                    Protocol{fuchsia::ui::composition::Allocator::Name_},
-                                    Protocol{fuchsia::ui::input::ImeService::Name_},
-                                    Protocol{fuchsia::ui::input3::Keyboard::Name_},
-                                    Protocol{fuchsia::cobalt::LoggerFactory::Name_},
-                                    Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                                },
-                            .source = ChildRef{kTestRealm},
-                            .targets = {ChildRef{kTextInputFlutter}}});
-
-    // Test-specific instrumentation.
-    builder->AddRoute(Route{.capabilities =
-                                {
-                                    Protocol{test::text::ResponseListener::Name_},
-                                },
-                            .source = ChildRef{kResponseListener},
-                            .targets = {ChildRef{kTextInputFlutter}}});
-  }
-
-  std::unique_ptr<RealmBuilder> realm_builder_;
-  std::unique_ptr<RealmRoot> realm_;
-  std::unique_ptr<ViewProviderServer> view_provider_server_;
   std::unique_ptr<TestResponseListenerServer> test_response_listener_;
 };
 
-#ifndef INPUT_USE_MODERN_INPUT_INJECTION
-TEST_F(TextInputTest, DISABLED_FlutterTextFieldEntry) {
-  // Pass the test where modern injection is unavailable.  Modern injection is
-  // not available outside of devices that support keyboard, on which this test
-  // doesn't apply anyways.
-#else
 TEST_F(TextInputTest, FlutterTextFieldEntry) {
-#endif
-  auto scene_manager = realm_->Connect<fuchsia::session::scene::Manager>();
-
-  fidl::InterfaceHandle<ViewProvider> view_provider_handle;
-  view_provider_server_->Bind(view_provider_handle.NewRequest());
-
-  std::optional<fuchsia::ui::app::CreateView2Args> args;
-  view_provider_server_->SetCreateView2Callback(
-      [&](fuchsia::ui::app::CreateView2Args a) { args = std::move(a); });
-
-  std::optional<ViewRef> view_ref_from_scene;
-  scene_manager->SetRootView(std::move(view_provider_handle), [&view_ref_from_scene](ViewRef ref) {
-    view_ref_from_scene = std::move(ref);
-  });
-  FX_LOGS(INFO) << "Waiting for args";
-  RunLoopUntil([&] { return args.has_value(); });
-
-  // Must connect to the scene graph here.
-
-  auto flatland = realm_->Connect<fuchsia::ui::composition::Flatland>();
-  // After each Present call we need to wait until a frame is presented.
-  std::optional<bool> presented;
-  flatland.events().OnFramePresented = [&presented](auto) { presented = true; };
-
-  flatland.events().OnError = [](fuchsia::ui::composition::FlatlandError error) {
-    FX_LOGS(ERROR) << "Flatland present OnError received: " << static_cast<uint32_t>(error);
-  };
-  flatland.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "flatland error status: " << zx_status_get_string(status);
-  });
-  EXPECT_TRUE(flatland.is_bound());
-  flatland->SetDebugName("text-input-test");
-
-  fidl::InterfaceHandle<fuchsia::ui::composition::ParentViewportWatcher> parent_watcher;
-  auto view_identity = scenic::NewViewIdentityOnCreation();
-  flatland->CreateView2(std::move(*args.value().mutable_view_creation_token()),
-                        std::move(view_identity), {}, parent_watcher.NewRequest());
-
-  std::optional<LayoutInfo> layout_info;
-  std::optional<ParentViewportStatus> status_info;
-  ParentViewportWatcherClient parent_watcher_client{
-      std::move(parent_watcher),
-      ParentViewportWatcherClient::Callbacks{
-          .on_get_layout =
-              [&layout_info](LayoutInfo l) {
-                FX_VLOGS(1) << "OnGetLayout message received.";
-                layout_info = std::move(l);
-              },
-          .on_status_info =
-              [&status_info](ParentViewportStatus s) {
-                FX_VLOGS(1) << "SetOnStatusInfo message received.";
-                status_info = s;
-              },
-      },
-  };
-
-  // Subtle: OnGetLayout can return before a call to Present is made.
-  // OnStatusInfo may not return until after a call to Present is made.
-  FX_LOGS(INFO) << "Waiting for layout information";
-  RunLoopUntil([&] { return layout_info.has_value(); });
-
-  // A transform must exist on the view in order for the connection to be
-  // established properly. Set it up here.  The ID is set to an arbitrary
-  // number.
-  flatland->CreateTransform(TransformId{.value = 42});
-  flatland->SetRootTransform(TransformId{.value = 42});
-
-  // A call to flatland.Present commits all previously scheduled operations.
-  presented = std::nullopt;
-  flatland->Present(PresentArgs{});
-
-  FX_LOGS(INFO) << "Waiting for status info.";
-  RunLoopUntil([&] {
-    return status_info.has_value() &&
-           status_info.value() == ParentViewportStatus::CONNECTED_TO_DISPLAY &&
-           presented.has_value() && presented == true;
-  });
-
-  // I suppose when this happens then our view has been presented.
-  FX_LOGS(INFO) << "Waiting for view_ref";
-  RunLoopUntil([&] { return view_ref_from_scene.has_value(); });  // .await
-
-  // Now, on to installing a view from flutter.  Flutter's view must be a child of
-  // the viewport that this test fixture creates.
-
-  // Create request pair for ChildViewWatcher protocol.  We get to use this protocol as
-  // a result of the CreateViewport FIDL call below, but we need to provide both
-  // ends of that channel, hand one side (server end) to Flatland, and keep the other
-  // side (client end) for us.
-  fidl::InterfaceHandle<fuchsia::ui::composition::ChildViewWatcher> child_view_watcher;
-
-  // Create a viewport in this test, which will be a parent of the flutter app view.
-  // No action is committed until flatland.Present is called.
-  auto view_creation_token_pair = scenic::ViewCreationTokenPair::New();
-  ViewportProperties viewport_properties;
-  viewport_properties.set_logical_size(fidl::Clone(layout_info.value().logical_size()));
-  flatland->CreateViewport(ContentId{.value = 43},
-                           std::move(view_creation_token_pair.viewport_token),
-                           std::move(viewport_properties), child_view_watcher.NewRequest());
-  presented = std::nullopt;
-  flatland->Present(PresentArgs{});
-
-  // Now create a viewport (parent side of the scene rendering), and let the flutter app
-  // know how to connect its view to our viewport.
-
-  std::optional<ChildViewStatus> child_view_status;
-  // This client will catch the events related to the child view that Flatland will
-  // report to us.  The client issues the appropriate hanging get requests.
-  ChildViewWatcherClient child_view_watcher_client{
-      std::move(child_view_watcher),
-      ChildViewWatcherClient::Callbacks{
-          // The closure we hand to the client here will get called when Flatland decides
-          // to respond to the client's hanging get.  The only task of the closure is to
-          // pull the reported `status` into a variable `child_view_status ` that the tests's
-          // main program flow can use.
-          .on_get_status =
-              [&child_view_status](ChildViewStatus status) {
-                FX_VLOGS(1) << "ChildViewStatus received";
-                child_view_status = status;
-              },
-          .on_get_view_ref = [](ViewRef) {},
-      },
-  };
-
-  auto flutter_app_view_provider = realm_->Connect<fuchsia::ui::app::ViewProvider>();
-
-  CreateView2Args view2_args;
-  view2_args.set_view_creation_token(std::move(view_creation_token_pair.view_token));
-  // This is hopefully enough for Flutter to start.
-  flutter_app_view_provider->CreateView2(std::move(view2_args));
-
-  // All of the above setup consists of fire-and-forget calls, so we must wait on
-  // some synchronization point to allow all of them to unfold.  It seems reasonable
-  // to wait on the signal that the child (i.e. in this case the flutter app) has
-  // presented its content.
-
-  FX_LOGS(INFO) << "Wait for the child window to render";
-  RunLoopUntil([&]() {
-    return child_view_status.has_value() &&
-           child_view_status.value() == ChildViewStatus::CONTENT_HAS_PRESENTED &&
-           presented.has_value() && presented == true;
-  });
-
   FX_LOGS(INFO) << "Wait for the initial text response";
   RunLoopUntil([&] { return test_response_listener_->HasResponse(""); });
 
@@ -389,7 +190,7 @@ TEST_F(TextInputTest, FlutterTextFieldEntry) {
   // Now, send it some text. test_response_listener_ will eventually contain
   // the entire response.
 
-  auto input_synthesis = realm_->Connect<test::inputsynthesis::Text>();
+  auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Text>();
 
   FX_LOGS(INFO) << "Sending a text message";
   bool done = false;

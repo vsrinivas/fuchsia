@@ -262,8 +262,6 @@ class UITestManager {
   float ClientViewScaleFactor();
 
  private:
-  void SetUseFlatlandConfig(bool use_flatland);
-
   // Helper methods to configure the test realm.
   void AddBaseRealmComponent();
   void ConfigureTestSubrealm();
@@ -272,6 +270,7 @@ class UITestManager {
   void ConfigureInput();
   void ConfigureAccessibility();
   void ConfigureScenic();
+  void RouteConfigData();
 
   // Helper method to route a set of services from the specified source to the
   // spceified targets.
