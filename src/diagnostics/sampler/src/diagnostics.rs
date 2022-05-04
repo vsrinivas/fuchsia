@@ -20,12 +20,12 @@ impl SamplerExecutorStats {
 
 #[derive(Inspect, Default, Debug)]
 pub struct ProjectSamplerStats {
-    // Total number of unique project samplers for this project.
+    /// Total number of unique project samplers for this project.
     pub project_sampler_count: inspect::UintProperty,
-    // Total number of configured metrics across all
-    // project samplers for this project..
+    /// Total number of configured metrics across all
+    /// project samplers for this project..
     pub metrics_configured: inspect::UintProperty,
-    // Total number of cobalt logs sent on the behalf of this project.
+    /// Total number of cobalt logs sent on the behalf of this project.
     pub cobalt_logs_sent: inspect::UintProperty,
     inspect_node: fuchsia_inspect::Node,
 }

@@ -52,9 +52,9 @@ impl ProjectConfig {
     }
 }
 
-// Configuration for a single FIRE project template to map Inspect data to its Cobalt metrics
-// for all components in the ComponentIdInfo. Just like ProjectConfig except it uses MetricTemplate
-// instead of MetricConfig.
+/// Configuration for a single FIRE project template to map Inspect data to its Cobalt metrics
+/// for all components in the ComponentIdInfo. Just like ProjectConfig except it uses MetricTemplate
+/// instead of MetricConfig.
 #[derive(Deserialize, Debug, PartialEq)]
 struct ProjectTemplate {
     /// Project ID that metrics are being sampled and forwarded on behalf of.
@@ -105,47 +105,47 @@ pub struct MetricConfig {
     pub use_legacy_cobalt: Option<bool>,
 }
 
-// Configuration for a single FIRE metric template to map from an Inspect property
-// to a cobalt metric. Unlike MetricConfig, selectors aren't parsed, and event_codes is
-// optional.
+/// Configuration for a single FIRE metric template to map from an Inspect property
+/// to a cobalt metric. Unlike MetricConfig, selectors aren't parsed, and event_codes is
+/// optional.
 #[derive(Clone, Deserialize, Debug, PartialEq)]
 struct MetricTemplate {
-    // Selector identifying the metric to
-    // sample via the diagnostics platform.
+    /// Selector identifying the metric to
+    /// sample via the diagnostics platform.
     #[serde(rename = "selector")]
     selectors: StringList,
-    // Cobalt metric id to map the selector to.
+    /// Cobalt metric id to map the selector to.
     metric_id: u32,
-    // Data type to transform the metric to.
+    /// Data type to transform the metric to.
     metric_type: DataType,
-    // Event codes defining the dimensions of the
-    // cobalt metric.
-    // Notes:
-    // - Order matters, and must match the order of the defined dimensions
-    //    in the cobalt metric file.
-    // - The FIRE component-ID will be inserted as the first element of event_codes.
-    // - The event_codes field may be omitted from the config file if component-ID is the only
-    //    event code.
+    /// Event codes defining the dimensions of the
+    /// cobalt metric.
+    /// Notes:
+    /// - Order matters, and must match the order of the defined dimensions
+    ///    in the cobalt metric file.
+    /// - The FIRE component-ID will be inserted as the first element of event_codes.
+    /// - The event_codes field may be omitted from the config file if component-ID is the only
+    ///    event code.
     event_codes: Option<Vec<u32>>,
-    // Optional boolean specifying whether to upload
-    // the specified metric only once, the first time
-    // it becomes available to the sampler.
+    /// Optional boolean specifying whether to upload
+    /// the specified metric only once, the first time
+    /// it becomes available to the sampler.
     upload_once: Option<bool>,
-    // Optional boolean specifying whether to use Cobalt v1.0
-    // protocol. This value may either be absent or true.
+    /// Optional boolean specifying whether to use Cobalt v1.0
+    /// protocol. This value may either be absent or true.
     use_legacy_cobalt: Option<bool>,
 }
 
 /// The supported V1.0 Cobalt Metrics
 #[derive(Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
 pub enum DataType {
-    // Maps cached diffs from Uint or Int Inspect types.
-    // NOTE: This does not use duration tracking. Durations
-    //       are always set to 0.
+    /// Maps cached diffs from Uint or Int Inspect types.
+    /// NOTE: This does not use duration tracking. Durations
+    ///       are always set to 0.
     Occurrence,
-    // Maps raw Int Inspect types.
+    /// Maps raw Int Inspect types.
     Integer,
-    // Maps cached diffs from IntHistogram Inspect type.
+    /// Maps cached diffs from IntHistogram Inspect type.
     IntHistogram,
     // TODO(lukenicholson): Expand sampler support for new
     // data types.
@@ -170,7 +170,7 @@ struct ComponentIdInfoList(Vec<ComponentIdInfo>);
 struct ComponentIdInfo {
     moniker: String,
     id: u32,
-    // Not used by Sampler, but we need to validate it
+    /// Not used by Sampler, but we need to validate it
     #[allow(unused)]
     label: String,
 }
@@ -215,7 +215,7 @@ impl RemembersSource for ProjectTemplate {
 }
 
 impl RemembersSource for ComponentIdInfoList {
-    // ComponentIdInfoList doesn't actually remember its source.
+    /// ComponentIdInfoList doesn't actually remember its source.
     fn remember_source(&mut self, _source: String) {}
 }
 
@@ -367,8 +367,8 @@ impl SamplerConfig {
         Self::from_directories_internal(minimum_sample_rate_sec, sampler_dir, Some(fire_dir))
     }
 
-    // Parse the ProjectConfigurations for every project from config data.
-    // If a FIRE directory is given, load FIRE data and convert it to ProjectConfig's.
+    /// Parse the ProjectConfigurations for every project from config data.
+    /// If a FIRE directory is given, load FIRE data and convert it to ProjectConfig's.
     fn from_directories_internal(
         minimum_sample_rate_sec: i64,
         sampler_dir: impl AsRef<Path>,

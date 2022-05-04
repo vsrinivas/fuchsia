@@ -20,7 +20,7 @@ mod executor;
 /// The name of the subcommand and the logs-tag.
 pub const PROGRAM_NAME: &str = "sampler";
 
-/// args used to configure sampler.
+/// Arguments used to configure sampler.
 #[derive(Debug, Default, FromArgs, PartialEq)]
 #[argh(subcommand, name = "sampler")]
 pub struct Args {}

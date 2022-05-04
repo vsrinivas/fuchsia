@@ -1,6 +1,98 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+//! # Data Structure and Algorithm Overview
+//!
+//! Cobalt is organized into Projects, each of which contains several Metrics.
+//!
+//! [`MetricConfig`] - defined in src/diagnostics/lib/sampler-config/src/lib.rs
+//! This is deserialized from Sampler config files or created by FIRE by interpolating
+//! component information into FIRE config files. It contains
+//!  - selectors: SelectorList
+//!  - metric_id
+//!  - metric_type: DataType
+//!  - event_codes: Vec<u32>
+//!  - upload_once boolean
+//!  - use_legacy_cobalt boolean
+//!
+//! **NOTE:** Multiple selectors can be provided in a single metric. Only one selector is
+//! expected to fetch/match data. When one does, the other selectors will be disabled for
+//! efficiency.
+//!
+//! [`ProjectConfig`] - defined in src/diagnostics/lib/sampler-config/src/lib.rs
+//! This encodes the contents of a single config file:
+//!  - project_id
+//!  - customer_id (defaults to 1)
+//!  - poll_rate_sec
+//!  - metrics: Vec<MetricConfig>
+//!
+//! [`SamplerConfig`] - defined in src/diagnostics/lib/sampler-config/src/lib.rs
+//! The entire config for Sampler. Contains
+//!  - list of ProjectConfig
+//!  - minimum sample rate
+//!
+//! [`ProjectSampler`] - defined in src/diagnostics/sampler/src/executor.rs
+//! This contains
+//!  - several MetricConfig's
+//!  - an ArchiveReader configured with all active selectors
+//!  - a cache of previous Diagnostic values, indexed by selector strings
+//!  - FIDL proxies for Cobalt and MetricEvent loggers
+//!     - these loggers are configured with project_id and customer_id
+//!  - Poll rate
+//!  - Inspect stats (struct ProjectSamplerStats)
+//!  - moniker_to_selector_map (see below * )
+//!
+//! [`ProjectSampler`] is stored in:
+//!  - [`TaskCancellation`]:     execution_context: fasync::Task<Vec<ProjectSampler>>,
+//!  - [`RebootSnapshotProcessor`]:    project_samplers: Vec<ProjectSampler>,
+//!  - [`SamplerExecutor`]:     project_samplers: Vec<ProjectSampler>,
+//!  - [`ProjectSamplerTaskExit::RebootTriggered(ProjectSampler)`],
+//!
+//! [`SamplerExecutor`] (defined in executor.rs) is built from a single [`SamplerConfig`].
+//! [`SamplerExecutor`] contains
+//!  - a list of ProjectSamplers
+//!  - an Inspect stats structure
+//! [`SamplerExecutor`] only has one member function execute() which calls spawn() on each
+//! project sampler, passing it a receiver-oneshot to cancel it. The collection of
+//! oneshot-senders and spawned-tasks builds the returned TaskCancellation.
+//!
+//! [`TaskCancellation`] is then passed to a reboot_watcher (in src/diagnostics/sampler/src/lib.rs)
+//! which does nothing until the reboot service either closes (calling
+//! run_without_cancellation()) or sends a message (calling perform_reboot_cleanup()).
+//!
+//! [`ProjectSampler`] calls fasync::Task::spawn to create a task that starts a timer, then loops
+//! listening to that timer and to the reboot_oneshot. When the timer triggers, it calls
+//! self.process_next_snapshot(). If the reboot oneshot arrives, the task returns
+//! [`ProjectSamplerTaskExit::RebootTriggered(self)`].
+//!
+//!
+//! * moniker_to_selector_map
+//!
+//! When a [`ProjectSampler`] retrieves data, the data arrives from the Archivist organized by
+//! moniker. For each moniker, we need to visit the selectors that may find data in it. Those
+//! selectors may be scattered throughout the [`MetricConfig`]'s in the [`ProjectSampler`].
+//! moniker_to_selector_map contains a map from moniker to [`SelectorIndexes`], a struct containing
+//! the index of the [`MetricConfig`] in the [`ProjectSampler`]'s list, and the selector in the
+//! [`MetricConfig`]'s list.
+//!
+//! **NOTE:** The moniker portion of the selectors must match exactly the moniker returned from
+//! the Archivist. No wildcards.
+//!
+//! Selectors will become unused, either because of upload_once, or because data was found by a
+//! different selector. Rather than implement deletion in the moniker_to_selector_map and the vec's,
+//! which would add lots of bug surface and maintenance debt, each selector is an Option<> so that
+//! selectors can be deleted/disabled without changing the rest of the data structure.
+//! Once all Diagnostic data is processed, the structure is rebuilt if any selectors
+//! have been disabled; rebuilding less often would be
+//! premature optimization at this point.
+//!
+//! perform_reboot_cleanup() builds a moniker_to_project_map for use by the
+//! [`RebootSnapshotProcessor`]. This has a similar purpose to moniker_to_selector_map, since
+//! monikers' data may be relevant to any number of projects. When not rebooting, each project
+//! fetches its own data from Archivist, so there's no need for a moniker_to_project_map. But
+//! on reboot, all projects' data is fetched at once, and needs to be sorted out.
+
 use {
     crate::diagnostics::*,
     anyhow::{format_err, Context, Error},
@@ -32,100 +124,9 @@ use {
     tracing::{error, info, warn},
 };
 
-// Data structure and algorithm overview
-//
-// Cobalt is organized into Projects, each of which contains several Metrics.
-//
-// MetricConfig - defined in src/diagnostics/lib/sampler-config/src/lib.rs
-// This is deserialized from Sampler config files or created by FIRE by interpolating
-// component information into FIRE config files. It contains
-//  - selectors: SelectorList
-//  - metric_id
-//  - metric_type: DataType
-//  - event_codes: Vec<u32>
-//  - upload_once boolean
-//  - use_legacy_cobalt boolean
-//
-// ** NOTE ** Multiple selectors can be provided in a single metric. Only one selector is
-// expected to fetch/match data. When one does, the other selectors will be disabled for
-// efficiency.
-//
-// ProjectConfig - defined in src/diagnostics/lib/sampler-config/src/lib.rs
-// This encodes the contents of a single config file:
-//  - project_id
-//  - customer_id (defaults to 1)
-//  - poll_rate_sec
-//  - metrics: Vec<MetricConfig>
-//
-// SamplerConfig - defined in src/diagnostics/lib/sampler-config/src/lib.rs
-// The entire config for Sampler. Contains
-//  - list of ProjectConfig
-//  - minimum sample rate
-//
-// ProjectSampler - defined in src/diagnostics/sampler/src/executor.rs
-// This contains
-//  - several MetricConfig's
-//  - an ArchiveReader configured with all active selectors
-//  - a cache of previous Diagnostic values, indexed by selector strings
-//  - FIDL proxies for Cobalt and MetricEvent loggers
-//     - these loggers are configured with project_id and customer_id
-//  - Poll rate
-//  - Inspect stats (struct ProjectSamplerStats)
-//  - moniker_to_selector_map (see below * )
-//
-// ProjectSampler is stored in:
-//  - TaskCancellation:     execution_context: fasync::Task<Vec<ProjectSampler>>,
-//  - RebootSnapshotProcessor:    project_samplers: Vec<ProjectSampler>,
-//  - SamplerExecutor:     project_samplers: Vec<ProjectSampler>,
-//  - ProjectSamplerTaskExit::RebootTriggered(ProjectSampler),
-//
-// SamplerExecutor (defined in executor.rs) is built from a single SamplerConfig
-// SamplerExecutor contains
-//  - a list of ProjectSamplers
-//  - an Inspect stats structure
-// SamplerExecutor only has one member function execute() which calls spawn() on each
-// project sampler, passing it a receiver-oneshot to cancel it. The collection of
-// oneshot-senders and spawned-tasks builds the returned TaskCancellation.
-//
-// TaskCancellation is then passed to a reboot_watcher (in src/diagnostics/sampler/src/lib.rs)
-// which does nothing until the reboot service either closes (in which case it calls
-// run_without_cancellation()) or sends a message (in which case it calls perform_reboot_cleanup()).
-//
-// ProjectSampler.spawn() calls fasync::Task::spawn to create a task that starts a timer, then loops
-// listening to that timer and to the reboot_oneshot. When the timer triggers, it calls
-// self.process_next_snapshot(). If the reboot oneshot arrives, the task returns
-// ProjectSamplerTaskExit::RebootTriggered(self).
-//
-//
-// * moniker_to_selector_map
-//
-// When a ProjectSampler retrieves data, the data arrives from the Archivist organized by moniker.
-// For each moniker, we need to visit the selectors that may find data in it. Those selectors may
-// be scattered throughout the MetricConfig's in the ProjectSampler.
-// moniker_to_selector_map contains a map from moniker to SelectorIndexes, a struct containing the
-// index of the MetricConfig in the ProjectSampler's list, and the selector in the MetricConfig's
-// list.
-//
-// ** NOTE ** The moniker portion of the selectors must match exactly the moniker returned from
-// the Archivist. No wildcards.
-//
-// Selectors will become unused, either because of upload_once, or because data was found by a
-// different selector. Rather than implement deletion in the moniker_to_selector_map and the vec's,
-// which would add lots of bug surface and maintenance debt, each selector is an Option<> so that
-// selectors can be deleted/disabled without changing the rest of the data structure.
-// Once all Diagnostic data is processed, the structure is rebuilt if any selectors
-// have been disabled; rebuilding less often would be
-// premature optimization at this point.
-//
-// perform_reboot_cleanup() builds a moniker_to_project_map for use by the RebootSnapshotProcessor.
-// This has a similar purpose to moniker_to_selector_map, since monikers' data may
-// be relevant to any number of projects. When not rebooting, each project fetches
-// its own data from Archivist, so there's no need for a moniker_to_project_map. But
-// on reboot, all projects' data is fetched at once, and needs to be sorted out.
-
-// An event to be logged to the legacy or cobalt logger. Events are generated first,
-// then logged. (This permits unit-testing the code that generates events from
-// Diagnostic data.)
+/// An event to be logged to the legacy or cobalt logger. Events are generated first,
+/// then logged. (This permits unit-testing the code that generates events from
+/// Diagnostic data.)
 #[derive(Debug)]
 enum EventToLog {
     MetricEvent(MetricEvent),
@@ -139,9 +140,9 @@ pub struct TaskCancellation {
 }
 
 impl TaskCancellation {
-    // It's possible the reboot register goes down. If that
-    // happens, we want to continue driving execution with
-    // no consideration for cancellation. This does that.
+    /// It's possible the reboot register goes down. If that
+    /// happens, we want to continue driving execution with
+    /// no consideration for cancellation. This does that.
     pub async fn run_without_cancellation(self) {
         self.execution_context.await;
     }
@@ -194,15 +195,15 @@ impl TaskCancellation {
 }
 
 struct RebootSnapshotProcessor {
-    // Reader constructed from the union of selectors
-    // for every ProjectSampler config.
+    /// Reader constructed from the union of selectors
+    /// for every [`ProjectSampler`] config.
     reader: ArchiveReader,
-    // Vector of mutable ProjectSamplers that will
-    // process their final samples.
+    /// Vector of mutable [`ProjectSampler`] objects that will
+    /// process their final samples.
     project_samplers: Vec<ProjectSampler>,
-    // Mapping from a moniker to a vector of indices into
-    // the project_samplers, where each indexed ProjectSampler has
-    // at least one selector that uses that moniker.
+    /// Mapping from a moniker to a vector of indices into
+    /// the project_samplers, where each indexed [`ProjectSampler`] has
+    /// at least one selector that uses that moniker.
     moniker_to_projects_map: HashMap<String, HashSet<usize>>,
 }
 
@@ -263,7 +264,7 @@ pub struct SamplerExecutor {
 
 impl SamplerExecutor {
     /// Instantiate connection to the cobalt logger and map ProjectConfigurations
-    /// to ProjectSampler plans.
+    /// to [`ProjectSampler`] plans.
     pub async fn new(sampler_config: SamplerConfig) -> Result<Self, Error> {
         let logger_factory: Arc<LoggerFactoryProxy> = Arc::new(
             connect_to_protocol::<LoggerFactoryMarker>()
@@ -331,7 +332,7 @@ impl SamplerExecutor {
         Ok(SamplerExecutor { project_samplers, sampler_executor_stats })
     }
 
-    /// Turn each ProjectSampler plan into an fasync::Task which executes its associated plan,
+    /// Turn each [`ProjectSampler`] plan into an [`fasync::Task`] which executes its associated plan,
     /// and process errors if any tasks exit unexpectedly.
     pub fn execute(self) -> TaskCancellation {
         // Take ownership of the inspect struct so we can give it to the execution context. We do this
@@ -383,23 +384,23 @@ impl SamplerExecutor {
 
 pub struct ProjectSampler {
     archive_reader: ArchiveReader,
-    // The metrics used by this Project. Indexed by moniker_to_selector_map.
+    /// The metrics used by this Project. Indexed by moniker_to_selector_map.
     metrics: Vec<MetricConfig>,
-    // Cache from Inspect selector to last sampled property. This is the selector from
-    // MetricConfig; it may contain wildcards.
+    /// Cache from Inspect selector to last sampled property. This is the selector from
+    /// [`MetricConfig`]; it may contain wildcards.
     metric_cache: HashMap<MetricCacheKey, Property>,
-    // Cobalt logger proxy using this ProjectSampler's project id.
+    /// Cobalt logger proxy using this ProjectSampler's project id.
     cobalt_logger: Option<LoggerProxy>,
-    // fuchsia.metrics logger proxy using this ProjectSampler's project id.
+    /// fuchsia.metrics logger proxy using this ProjectSampler's project id.
     metrics_logger: Option<MetricEventLoggerProxy>,
-    // Map from moniker to relevant selectors.
+    /// Map from moniker to relevant selectors.
     moniker_to_selector_map: HashMap<String, Vec<SelectorIndexes>>,
-    // The frequency with which we snapshot Inspect properties
-    // for this project.
+    /// The frequency with which we snapshot Inspect properties
+    /// for this project.
     poll_rate_sec: i64,
-    // Inspect stats on a node namespaced by this project's associated id.
-    // It's an arc since a single project can have multiple samplers at
-    // different frequencies, but we want a single project to have one node.
+    /// Inspect stats on a node namespaced by this project's associated id.
+    /// It's an arc since a single project can have multiple samplers at
+    /// different frequencies, but we want a single project to have one node.
     project_sampler_stats: Arc<ProjectSamplerStats>,
 }
 
@@ -411,20 +412,17 @@ struct MetricCacheKey {
 
 #[derive(Clone, Debug)]
 struct SelectorIndexes {
-    // The index of the metric in ProjectSampler's `metrics` list.
+    /// The index of the metric in [`ProjectSampler`]'s `metrics` list.
     metric_index: usize,
-    // The index of the selector in the MetricConfig's `selectors` list.
+    /// The index of the selector in the [`MetricConfig`]'s `selectors` list.
     selector_index: usize,
 }
 
 pub enum ProjectSamplerTaskExit {
-    // The project sampler processed a
-    // reboot signal on its oneshot and
-    // yielded to the final-snapshot.
+    /// The [`ProjectSampler`] processed a reboot signal on its oneshot, and yielded
+    /// to the final-snapshot.
     RebootTriggered(ProjectSampler),
-    // The project sampler has no more
-    // work to complete; perhaps all
-    // metrics were "upload_once"?
+    /// The [`ProjectSampler`] has no more work to complete; perhaps all metrics were "upload_once"?
     WorkCompleted,
 }
 
@@ -435,10 +433,10 @@ pub enum ProjectSamplerEvent {
     RebootChannelClosed(Error),
 }
 
-// Indicates whether a sampler in the project has been removed (set to None), in which case the
-// ArchiveAccessor should be reconfigured.
-// The selector lists may be consolidated (and thus the maps would be rebuilt), but
-// the program will run correctly whether they are or not.
+/// Indicates whether a sampler in the project has been removed (set to None), in which case the
+/// ArchiveAccessor should be reconfigured.
+/// The selector lists may be consolidated (and thus the maps would be rebuilt), but
+/// the program will run correctly whether they are or not.
 #[derive(PartialEq)]
 enum SnapshotOutcome {
     SelectorsChanged,
@@ -851,7 +849,7 @@ impl ProjectSampler {
     }
 }
 
-// This is only called for Cobalt 1.0 metrics.
+/// Transforms a [`MetricEventPayload`] (Cobalt 1.1) to an equivalent [`EventPayload`] (Cobalt 1.0).
 fn transform_metrics_payload_to_cobalt(payload: MetricEventPayload) -> EventPayload {
     match payload {
         MetricEventPayload::Count(count) => {
@@ -908,9 +906,9 @@ fn process_sample_for_data_type(
     }
 }
 
-// It's possible for Inspect numerical properties to experience overflows/conversion
-// errors when being mapped to cobalt types. Sanitize these numericals, and provide
-// meaningful errors.
+/// It's possible for Inspect numerical properties to experience overflows/conversion
+/// errors when being mapped to Cobalt types. Sanitize these numericals, and provide
+/// meaningful errors.
 fn sanitize_unsigned_numerical(diff: u64, data_source: &MetricCacheKey) -> Result<i64, Error> {
     match diff.try_into() {
         Ok(diff) => Ok(diff),
@@ -1208,9 +1206,9 @@ mod tests {
     use diagnostics_hierarchy::{hierarchy, Bucket};
     use futures::executor;
 
+    /// Test inserting a string into the hierarchy that requires escaping.
     #[fuchsia::test]
     fn test_process_payload_with_escapes() {
-        // Inserting a string into the hierarchy that requires escaping.
         let unescaped: String = "path/to".to_string();
         let hierarchy = hierarchy! {
             root: {
@@ -1656,10 +1654,10 @@ mod tests {
         }
     }
 
+    /// Test that simple in-bounds first-samples of both types of Inspect histograms
+    /// produce correct event types.
     #[fuchsia::test]
     fn test_normal_process_int_histogram() {
-        // Test that simple in-bounds first-samples of both types of Inspect histograms
-        // produce correct event types.
         let new_i64_sample = convert_vector_to_int_histogram(vec![1, 1, 1, 1]);
         let new_u64_sample = convert_vector_to_uint_histogram(vec![1, 1, 1, 1]);
 
@@ -1777,12 +1775,12 @@ mod tests {
         });
     }
 
+    /// Ensure that data distinguished only by metadata-filename - with the same moniker and
+    /// selector path - is kept properly separate in the previous-value cache. The same
+    /// MetricConfig should match each data source, but the occurrence counts
+    /// should reflect that the distinct values are individually tracked.
     #[fuchsia::test]
     async fn test_filename_distinguishes_data() {
-        // Ensure that data distinguished only by metadata-filename - with the same moniker and
-        // selector path - is kept properly separate in the previous-value cache. The same
-        // MetricConfig should match each data source, but the occurrence counts
-        // should reflect that the distinct values are individually tracked.
         let mut sampler = ProjectSampler {
             archive_reader: ArchiveReader::new(),
             moniker_to_selector_map: HashMap::new(),
