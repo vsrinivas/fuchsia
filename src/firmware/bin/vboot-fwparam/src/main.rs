@@ -65,16 +65,6 @@ async fn find_flashmap_device() -> Result<FlashmapProxy, anyhow::Error> {
         &(nand_path.to_owned() + "/" + &contents[0].name),
     )
     .context("Connecting to nand device")?;
-    match device
-        .bind("nand-broker.so")
-        .await
-        .context("Sending bind request")?
-        .map_err(zx::Status::from_raw)
-    {
-        Ok(()) => {}
-        Err(zx::Status::ALREADY_BOUND) => {}
-        Err(e) => Err(e).context("Binding broker driver")?,
-    }
 
     // Get the "real" path of the device, so that we can access the broker.
     let path = device
