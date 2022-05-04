@@ -37,7 +37,7 @@ type ExtendedCapability = struct {
     offset uint16;
 };
 
-type Device = struct {
+type PciDevice = struct {
     base_addresses vector<BaseAddress>:BASE_ADDRESS_COUNT;
     capabilities vector<Capability>:MAX_CAPABILITIES;
     ext_capabilities vector<ExtendedCapability>:MAX_EXT_CAPABILITIES;
@@ -53,6 +53,6 @@ protocol Bus {
         info HostBridgeInfo;
     });
     GetDevices() -> (struct {
-        devices vector<Device>:MAX_DEVICES;
+        devices vector<PciDevice>:MAX_DEVICES;
     });
 };

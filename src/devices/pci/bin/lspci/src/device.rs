@@ -7,7 +7,7 @@ use {
     crate::db::PciDb,
     crate::util::format_bytes,
     crate::Args,
-    fidl_fuchsia_hardware_pci::Device as FidlDevice,
+    fidl_fuchsia_hardware_pci::PciDevice as FidlDevice,
     std::fmt,
     zerocopy::LayoutVerified,
 };

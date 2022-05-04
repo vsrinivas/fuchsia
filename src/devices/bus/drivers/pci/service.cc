@@ -14,9 +14,10 @@ namespace pci {
 
 // We need size both for the final serialized Device, as well as the out of line space used before
 // everything is serialized.
-constexpr size_t kAllocatorSize = (fidl::TypeTraits<PciFidl::wire::Device>::kPrimarySize +
-                                   (fidl::TypeTraits<PciFidl::wire::Device>::kMaxOutOfLine * 2)) *
-                                  PciFidl::wire::kMaxDevices;
+constexpr size_t kAllocatorSize =
+    (fidl::TypeTraits<PciFidl::wire::PciDevice>::kPrimarySize +
+     (fidl::TypeTraits<PciFidl::wire::PciDevice>::kMaxOutOfLine * 2)) *
+    PciFidl::wire::kMaxDevices;
 
 static_assert(PciFidl::wire::kBaseConfigSize == PCI_BASE_CONFIG_SIZE);
 
@@ -26,7 +27,7 @@ void Bus::GetDevices(GetDevicesRequestView request, GetDevicesCompleter::Sync& c
   fidl::Arena<kAllocatorSize> allocator;
 
   size_t dev_idx = 0;
-  fidl::VectorView<PciFidl::wire::Device> devices(allocator, dev_cnt);
+  fidl::VectorView<PciFidl::wire::PciDevice> devices(allocator, dev_cnt);
   for (auto& device : devices_) {
     auto& cfg = device.config();
     if (dev_idx >= PciFidl::wire::kMaxDevices) {
