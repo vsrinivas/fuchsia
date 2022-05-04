@@ -34,6 +34,7 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 
+#include "src/lib/files/glob.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -235,12 +236,28 @@ void Service::Launch(int conn, const std::string& peer_name) {
       {.action = FDIO_SPAWN_ACTION_CLONE_FD,
        .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}},
   };
+
+  // Find the sys realm
+  // TODO(fxbug.dev/97903): don't give sshd all of legacy sys.
+  std::string sys_path;
+  files::Glob glob("/hub/r/sys/*");
+  if (glob.size() == 0) {
+    // sshd-host.cmx is launched in sys, so its /hub is sys.
+    // TODO(fxbug.dev/90440): delete this branch once sshd-host.cmx is gone.
+    sys_path = "/hub";
+  } else if (glob.size() == 1) {
+    sys_path = *(glob.begin());
+  } else {
+    FX_LOGS(ERROR) << "Could not find sys realm, found " << glob.size() << " matches";
+    return;
+  }
+
   constexpr uint32_t kSpawnFlags =
       FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_UTC_CLOCK;
   zx::process process;
   std::string error;
   zx_status_t status =
-      chrealm::SpawnBinaryInRealmAsync("/hub", kSshdArgv, child_job.get(), kSpawnFlags, actions,
+      chrealm::SpawnBinaryInRealmAsync(sys_path, kSshdArgv, child_job.get(), kSpawnFlags, actions,
                                        process.reset_and_get_address(), &error);
   if (status < 0) {
     shutdown(conn, SHUT_RDWR);
