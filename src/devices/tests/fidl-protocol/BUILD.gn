@@ -20,17 +20,15 @@ test("test") {
 
   deps = [
     ":echo_llcpp",
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//sdk/fidl/fuchsia.driver.test",
     "//sdk/lib/device-watcher/cpp",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/service:service-llcpp",
-    "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_unittest_package("fidl-protocol-test") {
@@ -38,7 +36,6 @@ fuchsia_unittest_package("fidl-protocol-test") {
     ":child",
     ":parent",
     ":test",
-    "//sdk/lib/driver_test_realm",
     "//src/devices/misc/drivers/test-parent",
   ]
 }
@@ -102,7 +99,6 @@ fuchsia_driver_component("child") {
   component_name = "child"
   deps = [ ":child-driver" ]
   info = "child-info.json"
-  colocate = true
 }
 
 group("tests") {

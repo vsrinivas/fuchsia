@@ -152,7 +152,8 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   }
 
   // +1 for the implicit BIND_PROTOCOL property.
-  device->properties_.reserve(zx_args->prop_count + zx_args->str_prop_count + 1);
+  device->properties_.reserve(zx_args->prop_count + zx_args->str_prop_count +
+                              zx_args->fidl_protocol_offer_count + 1);
   bool has_protocol = false;
   for (auto [id, _, value] : cpp20::span(zx_args->props, zx_args->prop_count)) {
     device->properties_.emplace_back(arena_)
@@ -186,6 +187,14 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
         FDF_LOG(ERROR, "Unsupported property type, key: %s", key);
         break;
     }
+  }
+
+  for (auto value :
+       cpp20::span(zx_args->fidl_protocol_offers, zx_args->fidl_protocol_offer_count)) {
+    device->properties_.emplace_back(arena_)
+        .set_key(arena_, fdf::wire::NodePropertyKey::WithStringValue(
+                             arena_, fidl::StringView::FromExternal(value)))
+        .set_value(arena_, fdf::wire::NodePropertyValue::WithBoolValue(true));
   }
 
   // Some DFv1 devices expect to be able to set their own protocol, without specifying proto_id.
