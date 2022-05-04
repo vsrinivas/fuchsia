@@ -749,6 +749,10 @@ class UnownedEncodedMessage final {
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
+  fidl::internal::WireFormatMetadata wire_format_metadata() const {
+    return fidl::internal::WireFormatMetadataForVersion(wire_format_version_);
+  }
+
   template <typename TransportObject>
   void Write(TransportObject&& client, WriteOptions options = {}) {
     message_.Write(std::forward<TransportObject>(client), std::move(options));
@@ -805,6 +809,10 @@ class OwnedEncodedMessage final {
   template <typename TransportObject>
   void Write(TransportObject&& client, WriteOptions options = {}) {
     message_.Write(std::forward<TransportObject>(client), std::move(options));
+  }
+
+  fidl::internal::WireFormatMetadata wire_format_metadata() const {
+    return message_.wire_format_metadata();
   }
 
  private:

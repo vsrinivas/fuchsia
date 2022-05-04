@@ -82,5 +82,19 @@ WireFormatVersion WireFormatMetadata::wire_format_version() const {
   ZX_PANIC("Unsupported wire format version %d", static_cast<int>(wire_format_version()));
 }
 
+// Constructs a |WireFormatMetadata| corresponding to the version.
+WireFormatMetadata WireFormatMetadataForVersion(WireFormatVersion version) {
+  WireFormatMetadata metadata;
+  metadata.magic_number_ = kFidlWireFormatMagicNumberInitial;
+  switch (version) {
+    case WireFormatVersion::kV1:
+      return metadata;
+    case WireFormatVersion::kV2:
+      metadata.at_rest_flags_[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
+      return metadata;
+  }
+  ZX_PANIC("Unsupported wire format version %d", static_cast<int>(version));
+}
+
 }  // namespace internal
 }  // namespace fidl

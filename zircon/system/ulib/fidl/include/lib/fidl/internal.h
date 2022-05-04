@@ -102,11 +102,16 @@ class WireFormatMetadata {
  private:
   WireFormatMetadata() = default;
 
+  friend WireFormatMetadata WireFormatMetadataForVersion(WireFormatVersion version);
+
   uint8_t disambiguator_ = 0;
   uint8_t magic_number_ = 0;
   uint8_t at_rest_flags_[2] = {};
   uint8_t reserved_[4] = {};
 };
+
+// Constructs a |WireFormatMetadata| corresponding to the version.
+WireFormatMetadata WireFormatMetadataForVersion(WireFormatVersion version);
 
 }  // namespace internal
 }  // namespace fidl

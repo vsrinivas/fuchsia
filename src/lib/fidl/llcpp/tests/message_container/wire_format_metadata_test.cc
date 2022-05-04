@@ -80,6 +80,31 @@ TEST(WireFormatMetadata, FromTransactionalHeader) {
   }
 }
 
+TEST(WireFormatMetadata, FromInternalVersion) {
+  {
+    ::fidl::internal::WireFormatMetadata metadata =
+        ::fidl::internal::WireFormatMetadataForVersion(::fidl::internal::WireFormatVersion::kV1);
+    EXPECT_TRUE(metadata.is_valid());
+    fidl_opaque_wire_format_metadata_t opaque = metadata.ToOpaque();
+    EXPECT_EQ(0x100ull, opaque.metadata);
+  }
+
+  {
+    ::fidl::internal::WireFormatMetadata metadata =
+        ::fidl::internal::WireFormatMetadataForVersion(::fidl::internal::WireFormatVersion::kV2);
+    EXPECT_TRUE(metadata.is_valid());
+    fidl_opaque_wire_format_metadata_t opaque = metadata.ToOpaque();
+    EXPECT_EQ(0x100ull | 0x20000ull, opaque.metadata);
+  }
+
+  ASSERT_DEATH(
+      {
+        (void)::fidl::internal::WireFormatMetadataForVersion(
+            static_cast<::fidl::internal::WireFormatVersion>(100));
+      },
+      "Unsupported");
+}
+
 TEST(WireFormatMetadata, ToOpaque) {
   {
     ::fidl::internal::WireFormatMetadata metadata =
