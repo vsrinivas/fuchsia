@@ -10,24 +10,38 @@ package trace
 type EventScope int
 type Arg struct{}
 type FlowID uint64
+type CounterID uint64
+type AsyncID uint64
 type BlobType int
 
-func Instant(category, name string, scope EventScope, args ...Arg) {
+func Instant(category, name string, scope EventScope) {
 }
 
-func DurationBegin(category, name string, args ...Arg) {
+func Counter(category, name string, counterID CounterID) {
 }
 
-func DurationEnd(category, name string, args ...Arg) {
+func DurationBegin(category, name string) {
 }
 
-func FlowBegin(category, name string, flowID FlowID, args ...Arg) {
+func DurationEnd(category, name string) {
 }
 
-func FlowStep(category, name string, flowID FlowID, args ...Arg) {
+func AsyncBegin(category, name string, asyncID AsyncID) {
 }
 
-func FlowEnd(category, name string, flowID FlowID, args ...Arg) {
+func AsyncInstant(category, name string, asyncID AsyncID) {
+}
+
+func AsyncEnd(category, name string, asyncID AsyncID) {
+}
+
+func FlowBegin(category, name string, flowID FlowID) {
+}
+
+func FlowStep(category, name string, flowID FlowID) {
+}
+
+func FlowEnd(category, name string, flowID FlowID) {
 }
 
 func Blob(typ BlobType, name string, blob []byte) {
