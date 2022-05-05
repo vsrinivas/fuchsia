@@ -450,9 +450,13 @@ dm poweroff
 	}
 	// Make a minfs filesystem to mount in the target.
 	fs := filepath.Join(root, "a.fs")
-	cmd := exec.Command(hostPathMinfsBinary, fs+"@100M", "mkfs")
-	if err := cmd.Run(); err != nil {
-		return "", "", err
+	{
+		cmd := exec.Command(hostPathMinfsBinary, fs+"@100M", "mkfs")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return "", "", err
+		}
 	}
 
 	images, err := d.loadImageManifest()
@@ -488,31 +492,37 @@ dm poweroff
 
 	fmt.Printf("Running non-interactive %s %s\n", args[0], args[1:])
 
-	cmd = exec.Command(args[0], args[1:]...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	// QEMU looks in the cwd for some specially named files, in particular
-	// multiboot.bin, so avoid picking those up accidentally. See
-	// https://fxbug.dev/53751.
-	// TODO(fxbug.dev/58804): Remove this.
-	cmd.Dir = "/"
-	if err := cmd.Start(); err != nil {
-		return "", "", err
-	}
-	defer cmd.Process.Kill()
-	if err := cmd.Wait(); err != nil {
-		return "", "", err
+	{
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		// QEMU looks in the cwd for some specially named files, in particular
+		// multiboot.bin, so avoid picking those up accidentally. See
+		// https://fxbug.dev/53751.
+		// TODO(fxbug.dev/58804): Remove this.
+		cmd.Dir = "/"
+		if err := cmd.Run(); err != nil {
+			return "", "", err
+		}
 	}
 
 	log := filepath.Join(root, "log.txt")
 	logerr := filepath.Join(root, "err.txt")
-	cmd = exec.Command(hostPathMinfsBinary, fs, "cp", "::/log.txt", log)
-	if err := cmd.Run(); err != nil {
-		return "", "", err
+	{
+		cmd := exec.Command(hostPathMinfsBinary, fs, "cp", "::/log.txt", log)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return "", "", err
+		}
 	}
-	cmd = exec.Command(hostPathMinfsBinary, fs, "cp", "::/err.txt", logerr)
-	if err := cmd.Run(); err != nil {
-		return "", "", err
+	{
+		cmd := exec.Command(hostPathMinfsBinary, fs, "cp", "::/err.txt", logerr)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return "", "", err
+		}
 	}
 
 	retLog, err := ioutil.ReadFile(log)
