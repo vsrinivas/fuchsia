@@ -275,6 +275,34 @@ fn strict_match(foo: fidl_foo::StrictFoo) {
 > TODO(https://github.com/rust-lang/rust/issues/89554): Revisit `non_exhaustive`
 guidance once `non_exhaustive_omitted_patterns` lint is stabilized.
 
+## Avoid default type parameters
+
+Rust supports defining parameterized types with defaulted type parameters.
+This can be convenient for certain parameters, e.g. ones that are only used to
+override behavior in tests. For example:
+
+```rust
+// This can be used as `Foo<X>` or `Foo<X, Y>`.
+struct Foo<A, B = u32>(A, B);
+
+// Blanket impl for all possible `Foo`s.
+impl<A, B> MyTrait for Foo<A, B> { /* ... */ }
+```
+
+The problem with defaulting type parameters is that it can easily lead to
+incomplete blanket implementations. Suppose `Foo` is extended with another defaulted type parameter:
+
+```rust
+// Now `Foo<A> = Foo<A, u32> = Foo<A, u32, ()>.
+struct Foo<A, B = u32, C = ()>(A, B, C);
+```
+
+The `impl MyTrait` block still works unmodified, so there's **no signal from the
+compiler** that the coverage is incomplete: it only covers `Foo<A, B, ()>`
+instead of all possible `Foo<A, B, C>`s. Avoiding defaulted type parameters puts
+the onus on the author to make sure any impls, blanket or otherwise, cover the
+correct set of types.
+
 ## Process for changes to this page
 
 All are invited and welcome to propose changes to the patterns adopted by the
