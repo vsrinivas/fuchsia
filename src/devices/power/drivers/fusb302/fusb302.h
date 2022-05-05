@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_POWER_DRIVERS_FUSB302_FUSB302_H_
 #define SRC_DEVICES_POWER_DRIVERS_FUSB302_FUSB302_H_
 
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power/cpp/wire.h>
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 
@@ -118,8 +118,8 @@ class StateMachine : public StateMachineBase<HwDrpStates, Fusb302> {
 // thread, which in turn runs StateMachine when called on.
 class Fusb302 : public DeviceType {
  public:
-  Fusb302(zx_device_t* parent, const ddk::I2cProtocolClient& i2c, zx::interrupt irq)
-      : DeviceType(parent), i2c_(i2c), irq_(std::move(irq)) {}
+  Fusb302(zx_device_t* parent, fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c, zx::interrupt irq)
+      : DeviceType(parent), i2c_(std::move(i2c)), irq_(std::move(irq)) {}
   ~Fusb302() override {
     irq_.destroy();
     if (is_thread_running_) {
@@ -158,7 +158,7 @@ class Fusb302 : public DeviceType {
   zx_status_t IrqThread();
   zx::status<Event> GetInterrupt();
 
-  ddk::I2cProtocolClient i2c_;
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
   zx::interrupt irq_;
   zx::port port_;
   std::atomic_bool is_thread_running_ = false;

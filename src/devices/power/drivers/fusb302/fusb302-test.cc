@@ -4,6 +4,8 @@
 
 #include "src/devices/power/drivers/fusb302/fusb302.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <zxtest/zxtest.h>
@@ -19,7 +21,8 @@ using DataMessageType = usb::pd::DataPdMessage::DataMessageType;
 
 class Fusb302Test : public Fusb302 {
  public:
-  Fusb302Test(const i2c_protocol_t* i2c) : Fusb302(nullptr, i2c, {}) {}  // TODO
+  Fusb302Test(fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c)
+      : Fusb302(nullptr, std::move(i2c), {}) {}  // TODO
 
   zx_status_t Init() {
     // Test version of Init doesn't start IrqThread
@@ -37,9 +40,18 @@ class Fusb302Test : public Fusb302 {
 
 class Fusb302TestFixture : public InspectTestHelper, public zxtest::Test {
  public:
-  Fusb302TestFixture() : dut_(mock_i2c_.GetProto()) {}
+  Fusb302TestFixture() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() override {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    EXPECT_TRUE(endpoints.is_ok());
+
+    EXPECT_OK(loop_.StartThread());
+
+    dut_ = std::make_unique<Fusb302Test>(std::move(endpoints->client));
+    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
+                                        &mock_i2c_);
+
     // InitInspect
     mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0x91});  // Device ID
 
@@ -83,18 +95,19 @@ class Fusb302TestFixture : public InspectTestHelper, public zxtest::Test {
       mock_i2c_.ExpectWriteStop({0x02, 0x3F});
     }
 
-    EXPECT_OK(dut_.Init());
+    EXPECT_OK(dut_->Init());
   }
 
   void TearDown() override { mock_i2c_.VerifyAndClear(); }
 
  protected:
   mock_i2c::MockI2c mock_i2c_;
-  Fusb302Test dut_;
+  std::unique_ptr<Fusb302Test> dut_;
+  async::Loop loop_;
 };
 
 TEST_F(Fusb302TestFixture, InspectTest) {
-  ASSERT_NO_FATAL_FAILURE(ReadInspect(dut_.inspect_vmo()));
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(dut_->inspect_vmo()));
   auto* inspect_device_id = hierarchy().GetByPath({"DeviceId"});
   ASSERT_TRUE(inspect_device_id);
   // VersionId: 9
@@ -161,7 +174,7 @@ TEST_F(Fusb302TestFixture, FifoTransmitTest) {
   DataPdMessage message(/* num_data_objects */ 1, /* message_id */ 4,
                         /* power_role: sink */ false, SpecRev::kRev2,
                         /* data_role: UFP */ true, DataMessageType::REQUEST, payload);
-  EXPECT_OK(dut_.FifoTransmit(message));
+  EXPECT_OK(dut_->FifoTransmit(message));
 }
 
 TEST_F(Fusb302TestFixture, FifoReceiveTest) {
@@ -169,7 +182,7 @@ TEST_F(Fusb302TestFixture, FifoReceiveTest) {
   for (unsigned char& i : expected) {
     mock_i2c_.ExpectWrite({0x43}).ExpectReadStop({i});
   }
-  auto message = dut_.FifoReceive();
+  auto message = dut_->FifoReceive();
   EXPECT_OK(message.status_value());
   EXPECT_EQ(message->header().value, 0x1042);
   EXPECT_EQ(message->payload()[0], 0x12);

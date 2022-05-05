@@ -55,7 +55,7 @@ enum DataRole : uint8_t {
 template <class RegType>
 class Fusb302Reg : public hwreg::I2cRegisterBase<RegType, uint8_t, 1> {
  public:
-  static RegType ReadFrom(ddk::I2cProtocolClient& i2c) {
+  static RegType ReadFrom(const fidl::ClientEnd<fuchsia_hardware_i2c::Device>& i2c) {
     auto reg = RegType::Get().FromValue(0);
     ZX_ASSERT(reg.I2cRegisterBase::ReadFrom(i2c) == ZX_OK);
     return reg;
