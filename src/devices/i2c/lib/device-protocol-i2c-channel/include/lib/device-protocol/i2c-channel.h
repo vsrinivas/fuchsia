@@ -11,6 +11,7 @@
 #include <lib/sync/completion.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <optional>
 
 namespace ddk {
@@ -139,6 +140,73 @@ class I2cFidlChannel : public I2cChannelBase {
     return ZX_OK;
   }
 
+  void Transact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
+                void* cookie) {
+    if (op_count > fuchsia_hardware_i2c::wire::kMaxCountTransactions) {
+      callback(cookie, ZX_ERR_OUT_OF_RANGE, nullptr, 0);
+      return;
+    }
+
+    fidl::Arena arena;
+    fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction> transactions(arena, op_count);
+
+    size_t read_count = 0;
+    for (size_t i = 0; i < op_count; i++) {
+      if (op_list[i].data_size > fuchsia_hardware_i2c::wire::kMaxTransferSize) {
+        callback(cookie, ZX_ERR_INVALID_ARGS, nullptr, 0);
+        return;
+      }
+
+      const auto size = static_cast<uint32_t>(op_list[i].data_size);
+      if (op_list[i].is_read) {
+        read_count++;
+        transactions[i] =
+            fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+                .data_transfer(fuchsia_hardware_i2c::wire::DataTransfer::WithReadSize(size))
+                .stop(op_list[i].stop)
+                .Build();
+      } else {
+        fidl::VectorView<uint8_t> write_data(arena, size);
+        memcpy(write_data.mutable_data(), op_list[i].data_buffer, size);
+        transactions[i] =
+            fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+                .data_transfer(
+                    fuchsia_hardware_i2c::wire::DataTransfer::WithWriteData(arena, write_data))
+                .stop(op_list[i].stop)
+                .Build();
+      }
+    }
+
+    const auto reply = fidl_client_->Transfer(transactions);
+    if (!reply.ok()) {
+      callback(cookie, reply.status(), nullptr, 0);
+      return;
+    }
+    if (reply->result.is_err()) {
+      callback(cookie, reply->result.err(), nullptr, 0);
+      return;
+    }
+
+    const fidl::VectorView<fidl::VectorView<uint8_t>>& read_data =
+        reply->result.response().read_data;
+    if (read_data.count() != read_count) {
+      callback(cookie, ZX_ERR_INTERNAL, nullptr, 0);
+      return;
+    }
+
+    i2c_op_t read_ops[fuchsia_hardware_i2c::wire::kMaxCountSegments];
+    for (size_t i = 0; i < read_count; i++) {
+      read_ops[i] = {
+          .data_buffer = read_data[i].data(),
+          .data_size = read_data[i].count(),
+          .is_read = true,
+          .stop = false,
+      };
+    }
+
+    callback(cookie, ZX_OK, read_ops, read_count);
+  }
+
  private:
   fidl::WireSyncClient<fuchsia_hardware_i2c::Device> fidl_client_;
 };
@@ -185,11 +253,17 @@ class I2cChannel : public I2cChannelBase {
 
   bool is_valid() const { return banjo_client_.is_valid() || fidl_client_.has_value(); }
 
+  // Note: Currently Transact() calls to FIDL clients are synchronous.
+  // TODO(fxbug.dev/96293): Add support for async FIDL calls if needed.
   void Transact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
-                void* cookie) const {
-    // TODO(fxbug.dev/96293): Translate this into a (possibly async) FIDL call.
-    ZX_ASSERT_MSG(!fidl_client_.has_value(), "Transact() is not implemented for FIDL clients");
-    banjo_client_.Transact(op_list, op_count, callback, cookie);
+                void* cookie) {
+    if (banjo_client_.is_valid()) {
+      banjo_client_.Transact(op_list, op_count, callback, cookie);
+    } else if (fidl_client_.has_value()) {
+      fidl_client_->Transact(op_list, op_count, callback, cookie);
+    } else {
+      ZX_ASSERT_MSG(false, "No Banjo or FIDL client is available");
+    }
   }
 
   zx_status_t GetMaxTransferSize(uint64_t* out_size) const {
