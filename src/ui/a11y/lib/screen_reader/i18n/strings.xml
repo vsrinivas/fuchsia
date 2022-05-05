@@ -46,6 +46,8 @@
     <string name="set_size"><xliff:g id="num_items" example="7">{num_items}</xliff:g> items</string>
     <!-- Spoken message that the user has entered a list of elements. -->
     <string name="entered_list">Entered list</string>
+    <!-- Spoken message that describes when the user has entered a list of elements. -->
+    <string name="entered_list_detail">Entered list with {num_items, plural, =0{no items} =1{one item} other{<xliff:g id="num" example="2">#</xliff:g> items}}</string>
     <!-- Spoken message that the user has exited a list of elements. -->
     <string name="exited_list">Exited list</string>
     <!-- Spoken message that summarizes a table. -->
@@ -99,7 +101,7 @@
     <string name="role_ordered_list">Ordered list</string>
     <!-- Spoken message that describes a list. For example, <ul> html tag. -->
     <string name="role_list">List</string>
-    <!-- Spoken message that describes a list-like element in detail. For example, this message can be combined with others to produce List with 3 items. -->
+    <!-- TODO(fxbug.dev/99346) Deprecate this. Spoken message that describes the number of an items in an element. For example, this message can be combined with others to produce 'List with 3 items.' -->
     <string name="list_items">{num_items, plural, =0{with no items} =1{with one item} other{with <xliff:g id="num" example="2">#</xliff:g> items}}</string>
     <!-- Spoken message that describes when the user switches to the normal navigation granularity, which allows one to navigate the interface visiting all focusable elements. -->
     <string name="normal_navigation_granularity">Normal navigation</string>
