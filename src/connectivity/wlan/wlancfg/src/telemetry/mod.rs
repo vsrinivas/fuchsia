@@ -1781,6 +1781,7 @@ impl StatsLogger {
         // Cobalt STRING metrics don't have AT_LEAST_ONCE local aggregation. So in order to
         // imitate the metric "how many devices connect to APs from an OUI", we build a set
         // seen OUIs and make sure we only log them once each day.
+        // TODO(fxbug.dev/98997): Remove these lines after verifying the UNIQUE_DEVICE_STRING_COUNTS report.
         for oui in &self.last_1d_detailed_stats.connected_ouis {
             metric_events.push(MetricEvent {
                 metric_id: metrics::DEVICE_CONNECTED_TO_AP_OUI_METRIC_ID,
@@ -2265,6 +2266,13 @@ impl StatsLogger {
             payload: MetricEventPayload::Count(1),
         });
 
+        let oui = latest_ap_state.bssid.0.to_oui_uppercase("");
+        metric_events.push(MetricEvent {
+            metric_id: metrics::DEVICE_CONNECTED_TO_AP_OUI_2_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::StringValue(oui.clone()),
+        });
+
         append_device_connected_channel_cobalt_metrics(
             &mut metric_events,
             latest_ap_state.channel.primary,
@@ -2273,7 +2281,7 @@ impl StatsLogger {
         // Cobalt STRING metrics don't have AT_LEAST_ONCE local aggregation. So in order to
         // imitate the metric "how many devices connect to APs from an OUI", we build a set
         // seen OUIs now and then make sure we only log them once each day.
-        let oui = latest_ap_state.bssid.0.to_oui_uppercase("");
+        // TODO(fxbug.dev/98997): Remove this line after verifying the UNIQUE_DEVICE_STRING_COUNTS report.
         let _new = self.last_1d_detailed_stats.connected_ouis.insert(oui);
 
         log_cobalt_1dot1_batch!(
@@ -5092,7 +5100,8 @@ mod tests {
                 .set(IeType::WMM_INFO, wmm_info)
                 .set(IeType::RM_ENABLED_CAPABILITIES, rm_enabled_capabilities)
                 .set(IeType::MOBILITY_DOMAIN, vec![0x00; 3])
-                .set(IeType::EXT_CAPABILITIES, ext_capabilities)
+                .set(IeType::EXT_CAPABILITIES, ext_capabilities),
+            bssid: [0x00, 0xf6, 0x20, 0x03, 0x04, 0x05],
         );
         test_helper.send_connected_event(bss_description);
         test_helper.drain_cobalt_events(&mut test_fut);
@@ -5174,6 +5183,14 @@ mod tests {
             ]
         );
         assert_eq!(breakdown_by_channel_band[0].payload, MetricEventPayload::Count(1));
+
+        let ap_oui_connected =
+            test_helper.get_logged_metrics(metrics::DEVICE_CONNECTED_TO_AP_OUI_2_METRIC_ID);
+        assert_eq!(ap_oui_connected.len(), 1);
+        assert_eq!(
+            ap_oui_connected[0].payload,
+            MetricEventPayload::StringValue("00F620".to_string())
+        );
     }
 
     #[fuchsia::test]
@@ -5215,16 +5232,29 @@ mod tests {
         assert_eq!(connected_bss_transition_mgmt.len(), 0);
     }
 
-    #[test_case(metrics::NUMBER_OF_CONNECTED_DEVICES_METRIC_ID; "number_of_connected_devices")]
-    #[test_case(metrics::CONNECTED_NETWORK_SECURITY_TYPE_METRIC_ID; "breakdown_by_security_type")]
-    #[test_case(metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID; "breakdown_by_is_multi_bss")]
-    #[test_case(metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID; "breakdown_by_primary_channel")]
-    #[test_case(metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID; "breakdown_by_channel_band")]
+    #[test_case(metrics::NUMBER_OF_CONNECTED_DEVICES_METRIC_ID, None; "number_of_connected_devices")]
+    #[test_case(metrics::CONNECTED_NETWORK_SECURITY_TYPE_METRIC_ID, None; "breakdown_by_security_type")]
+    #[test_case(metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID, None; "breakdown_by_is_multi_bss")]
+    #[test_case(metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID, None; "breakdown_by_primary_channel")]
+    #[test_case(metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID, None; "breakdown_by_channel_band")]
+    #[test_case(metrics::DEVICE_CONNECTED_TO_AP_OUI_2_METRIC_ID,
+        Some(vec![
+            MetricEvent {
+                metric_id: metrics::DEVICE_CONNECTED_TO_AP_OUI_2_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::StringValue("00F620".to_string()),
+            },
+        ]); "number_of_devices_connected_to_specific_oui")]
     #[fuchsia::test(add_test_attr = false)]
-    fn test_log_device_connected_cobalt_metrics_on_disconnect_and_periodically(metric_id: u32) {
+    fn test_log_device_connected_cobalt_metrics_on_disconnect_and_periodically(
+        metric_id: u32,
+        payload: Option<Vec<MetricEvent>>,
+    ) {
         let (mut test_helper, mut test_fut) = setup_test();
 
-        let bss_description = random_bss_description!(Wpa2);
+        let bss_description = random_bss_description!(Wpa2,
+            bssid: [0x00, 0xf6, 0x20, 0x03, 0x04, 0x05],
+        );
         test_helper.send_connected_event(bss_description);
         test_helper.drain_cobalt_events(&mut test_fut);
         test_helper.cobalt_events.clear();
@@ -5235,6 +5265,10 @@ mod tests {
         // device is still connected
         let metrics = test_helper.get_logged_metrics(metric_id);
         assert!(!metrics.is_empty());
+
+        if let Some(payload) = payload {
+            assert_eq_cobalt_events(metrics, payload)
+        }
 
         test_helper.cobalt_events.clear();
 
@@ -5309,6 +5343,7 @@ mod tests {
         assert_eq!(breakdown_by_channel_band[0].payload, MetricEventPayload::Count(1));
     }
 
+    // TODO(fxbug.dev/98997): Remove this test after verifying the UNIQUE_DEVICE_STRING_COUNTS report.
     #[fuchsia::test]
     fn test_log_device_connected_to_ap_oui_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
@@ -5340,6 +5375,7 @@ mod tests {
         )
     }
 
+    // TODO(fxbug.dev/98997): Remove this test after verifying the UNIQUE_DEVICE_STRING_COUNTS report.
     #[fuchsia::test]
     fn test_log_device_connected_to_ap_oui_cobalt_metrics_periodically() {
         let (mut test_helper, mut test_fut) = setup_test();
