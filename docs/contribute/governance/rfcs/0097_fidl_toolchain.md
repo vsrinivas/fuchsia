@@ -345,9 +345,8 @@ to further process doc comments in the future.
 
 The FIDL language, its implementation as the `fidlc` compiler, and the
 definition of the intermediate representation should be designed to allow an
-[inclusive](/docs/concepts/principles/inclusive.md) backends ecosystem, where all
-backends, whether built as part of the Fuchsia project or not, are on an equal
-footing.
+inclusive backends ecosystem, where all backends, whether built as part of the
+Fuchsia project or not, are on an equal footing.
 
 In choosing this dividing line, we are explicitly making a choice to avoid
 expediency for short term needs of the Fuchsia FIDL team owned backend, instead

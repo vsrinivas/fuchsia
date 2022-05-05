@@ -48,9 +48,3 @@ toc:
   path: /docs/contribute/governance/deprecated-ftp-template.md
 - title: "Fuchsia.dev shortlinks"
   path: /docs/go/README.md
-
-# Temporarily orphaning these until updates.
-
-- title: "Architecture principles"
-  section:
-  - include: /docs/concepts/principles/_toc.yaml

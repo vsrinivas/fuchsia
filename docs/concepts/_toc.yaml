@@ -8,6 +8,9 @@
 toc:
 - title: "Overview"
   path: /docs/concepts/index.md
+- title: "Principles"
+  section:
+  - include: /docs/concepts/principles/_toc.yaml
 - title: "Software model"
   path: /docs/concepts/software_model.md
 - title: "Accessibility"

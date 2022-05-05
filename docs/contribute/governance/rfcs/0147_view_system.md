@@ -484,7 +484,7 @@ protocol](https://wayland.freedesktop.org/architecture.html).
 System interacts with Fuchsia's user-input subsystems.
 
 [input-rfc]: /docs/contribute/governance/rfcs/0096_user_input_arch.md
-[byor]: /docs/concepts/principles/inclusive.md
+[byor]: /docs/contribute/governance/rfcs/0082_starnix.md
 [component]: /docs/concepts/components/v2/README.md
 [scenic]: /docs/concepts/ui/scenic/index.md
 [viewref]: /docs/development/graphics/scenic/concepts/view_ref.md

@@ -23,14 +23,14 @@ Fuchsia platform testing should serve the goals of the project and align with
   interfaces between components should continue to work. Tests that are outside
   of Fuchsia tree should not assume implementation details of platform
   components.
-- **[Inclusive][principles-inclusive]**: Testing frameworks and testing guides
+- **Inclusive**: Testing frameworks and testing guides
   should either not assume that the developer is using a particular runtime,
   programming language, or hardware, or alternatively demonstrate that
   developers can make their own choices, such as by providing support in
   multiple distinct languages and making it easy to bring up new language
   support. Tests for public and open source Fuchsia code should themselves be
   public and open source.
-- **[Pragmatic][principles-pragmatic]**: When the principles presented above are
+- **Pragmatic**: When the principles presented above are
   in conflict with each other or with important near-term goals, it’s ok to make
   pragmatic choices. It is usually not important to meet an arbitrary bar, for
   instance a fixed percentage of test coverage, or a particular mix of
@@ -83,8 +83,6 @@ the problems and solutions that are also encountered when developing Fuchsia.
 [best-practices]: /docs/contribute/testing/best-practices.md
 [continuous-integration]: https://martinfowler.com/articles/continuousIntegration.html
 [principles]: /docs/concepts/index.md
-[principles-inclusive]: /docs/concepts/principles/inclusive.md
-[principles-pragmatic]: /docs/concepts/principles/pragmatic.md
 [principles-secure]: /docs/concepts/principles/secure.md
 [principles-updatable]: /docs/concepts/principles/updatable.md
 [glossary.component]: /docs/glossary/README.md#component

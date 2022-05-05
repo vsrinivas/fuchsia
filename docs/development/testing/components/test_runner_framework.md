@@ -11,7 +11,7 @@ programming languages for components, including C/C++, Rust, Dart, and Go.
 
 The Test Runner Framework uses Component Framework [runners][runners] as an
 integration layer between various testing runtimes and a common Fuchsia protocol
-for launching tests and receiving their results. This makes for an [inclusive]
+for launching tests and receiving their results. This makes for an inclusive
 design that on one hand allows developers to bring their language and testing
 framework of choice, and on the other hand allows building and testing Fuchsia
 on a variety of systems and targeting different hardware.
@@ -396,7 +396,7 @@ given glob patterns will be executed.
 
 ### A runtime-agnostic, runtime-inclusive testing framework {#inclusive}
 
-Fuchsia aims to be [inclusive][inclusive], for instance in the sense that
+Fuchsia aims to be inclusive, for instance in the sense that
 developers can create components (and their tests) in their language and runtime
 of choice. The Test Runner Framework itself is language-agnostic by design, with
 individual test runners specializing in particular programming languages or test
@@ -713,7 +713,6 @@ Components in the test realm may play various roles in the test, as follows:
 [fidl-test-suite]: /sdk/fidl/fuchsia.test/suite.fidl
 [ffx]: /docs/development/tools/ffx/overview.md
 [fx-test]: https://fuchsia.dev/reference/tools/fx/cmd/test
-[inclusive]: /docs/concepts/principles/inclusive.md
 [integration-testing]: /docs/development/testing/components/integration_testing.md
 [manifests-offer]: https://fuchsia.dev/reference/cml#offer
 [manifests-use]: https://fuchsia.dev/reference/cml#use

@@ -93,7 +93,7 @@ the scope of out-of-tree development & testing targeting Fuchsia. These include:
 
 - *[Drivers as Components][dac]* will include a demonstration of a driver built
   and tested out-of-tree, to realize the promise of
-  [robust hardware support on Fuchsia][fuchsia-hardware] via
+  robust hardware support on Fuchsia] via
   [driver ABI stability][driver-abi-stability].
 
 - *[Workstation out-of-tree][workstation-out-of-tree]* expects to test
@@ -328,7 +328,6 @@ covered in a [separate roadmap document][oot-system-testing].
 [fof-velocity]: /docs/contribute/roadmap/2021/flutter_on_fuchsia_velocity.md
 [fssh]: https://fuchsia.dev/reference/tools/sdk/fssh.md
 [fuchsia-git]: https://fuchsia.googlesource.com/fuchsia
-[fuchsia-hardware]: /docs/concepts/principles/inclusive.md#fuchsia_is_designed_to_support_a_wide_range_of_hardware
 [fx-gce]: https://fuchsia.dev/reference/tools/fx/cmd/gce
 [fx-log]: https://fuchsia.dev/reference/tools/fx/cmd/log
 [fx-qemu]: https://fuchsia.dev/reference/tools/fx/cmd/qemu

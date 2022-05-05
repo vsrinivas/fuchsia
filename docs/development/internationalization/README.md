@@ -24,7 +24,7 @@ work done by software engineers.
 
 ## Fuchsia's approach {#fuchsias-approach}
 
-Because Fuchsia is [designed to be extensible][inclusive] and to flexibly
+Because Fuchsia is designed to be extensible and to flexibly
 support a variety of runtimes and target products, the core operating system
 does not strictly specify how to implement i18n and l10n.
 
@@ -62,4 +62,3 @@ the operating system itself, in multi-language environments.
 
 <!--xrefs-->
 
-[inclusive]: /docs/concepts/principles/inclusive.md#fuchsia_architecture_is_inclusive_by_design

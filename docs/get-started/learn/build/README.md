@@ -1,7 +1,7 @@
 # Building Fuchsia
 
 Fuchsia is an open source effort that strives to be
-[inclusive](/docs/concepts/principles/inclusive.md).
+[inclusive](/CODE_OF_CONDUCT.md).
 Google steers the direction of Fuchsia and makes platform decisions, but the
 Fuchsia project encourages contributions from the entire community.
 The [bug tracking system](/docs/contribute/report-issue.md) and

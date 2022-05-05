@@ -16,7 +16,7 @@ components described are under development as of publication.
 
 ## Motivation
 
-To support Fuchsia's [inclusive][inclusive] philosophy, Fuchsia input must
+To support Fuchsia's inclusive philosophy, Fuchsia input must
 provide platform-level support to components built on top of different runtimes
 that utilize different UI frameworks (e.g. Flutter, Chromium), as well as allow
 product owners to customize input behavior. On other platforms these behaviors
@@ -743,7 +743,6 @@ future but was deemed too heavyweight for the current use-cases.
 [latencyreference]: https://www-user.tu-chemnitz.de/~attig/Attig-Rauh-Franke-Krems_2017_LatencyGuidelines.pdf
 [inputmethod]: https://en.wikipedia.org/wiki/Input_method
 [i18n]: /docs/development/internationalization/README.md
-[inclusive]: /docs/concepts/principles/inclusive.md
 [root-presenter]: /src/ui/bin/root_presenter/presentation.cc
 [input-pipeline]: /docs/concepts/session/input.md#input-pipeline
 [drivers]: /docs/development/drivers/concepts/driver_architectures/input_drivers/input.md
