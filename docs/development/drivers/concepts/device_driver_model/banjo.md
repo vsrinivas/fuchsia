@@ -2,7 +2,6 @@
 
 Devices may implement protocols, which are Banjo ABIs used by child devices
 to interact with parent devices in a device-specific manner. The
-[PCI Protocol](/sdk/banjo/fuchsia.hardware.pci/pci.fidl),
 [USB Protocol](/sdk/banjo/fuchsia.hardware.usb/usb.fidl),
 [Block Core Protocol](/sdk/banjo/fuchsia.hardware.block/block.fidl), and
 [Ethernet Protocol](/sdk/banjo/fuchsia.hardware.ethernet/ethernet.fidl), are

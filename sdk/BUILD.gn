@@ -566,7 +566,6 @@ sdk_molecule("banjo") {
   visibility = [ ":*" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_sdk($fidl_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_sdk($fidl_toolchain)",
     "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_sdk($fidl_toolchain)",
     "//sdk/banjo/fuchsia.hardware.serialimpl:fuchsia.hardware.serialimpl_sdk($fidl_toolchain)",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_sdk($fidl_toolchain)",

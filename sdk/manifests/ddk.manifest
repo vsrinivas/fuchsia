@@ -17,7 +17,6 @@ sdk://fidl/fuchsia.driver.framework
 sdk://fidl/fuchsia.hardware.ftdi
 sdk://fidl/fuchsia.hardware.i2c
 sdk://fidl/fuchsia.hardware.i2cimpl
-sdk://fidl/fuchsia.hardware.pci
 sdk://fidl/fuchsia.hardware.serial
 sdk://fidl/fuchsia.hardware.serialimpl
 sdk://fidl/fuchsia.hardware.usb
