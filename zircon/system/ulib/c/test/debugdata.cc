@@ -140,11 +140,6 @@ TEST(DebugDataTests, PublishDataWithoutSvc) {
 TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
   namespace fio = fuchsia_io;
 
-  static_assert(fuchsia_io_MAX_PATH == fio::wire::kMaxPath);
-  static_assert(fuchsia_io_OPEN_RIGHT_READABLE ==
-                static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable));
-  static_assert(fuchsia_io_OPEN_RIGHT_WRITABLE ==
-                static_cast<uint32_t>(fio::wire::OpenFlags::kRightWritable));
   static_assert(fuchsia_io_DirectoryOpenOrdinal ==
                 fidl::internal::WireOrdinal<fio::Directory::Open>::value);
 

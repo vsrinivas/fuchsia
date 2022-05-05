@@ -185,6 +185,10 @@ template("fidl") {
 
     # Define the C generated bindings
     if (is_fuchsia) {
+      fidl_c_header(target_name) {
+        forward_variables_from(invoker, "*")
+      }
+
       fidl_c_client(target_name) {
         forward_variables_from(invoker, "*")
       }
@@ -202,6 +206,7 @@ template("fidl") {
 
         public_deps = [
           ":${target_name}_client",
+          ":${target_name}_header",
           ":${target_name}_server",
         ]
       }

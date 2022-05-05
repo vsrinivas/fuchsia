@@ -8,7 +8,7 @@ if (zircon_toolchain != false) {
   source_set("sanitizers") {
     deps = [
       ":backtrace",
-      "//zircon/system/fidl:fuchsia-debugdata.c_header",
+      "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_c_header",
       "//zircon/system/ulib/zircon-internal",
       "//zircon/system/ulib/zx",
       "//zircon/third_party/ulib/musl:musl_internal",

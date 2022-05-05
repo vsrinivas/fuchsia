@@ -93,7 +93,8 @@ zx_handle_t sanitizer_debugdata_connect() {
   }
 
   status = _fuchsia_io_DirectoryOpen(
-      __zircon_namespace_svc, fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE, 0,
+      __zircon_namespace_svc,
+      fuchsia_io_OpenFlags_RIGHT_READABLE | fuchsia_io_OpenFlags_RIGHT_WRITABLE, 0,
       fuchsia_debugdata_Publisher_Name, strlen(fuchsia_debugdata_Publisher_Name), h0);
   if (status != ZX_OK) {
     constexpr const char kErrorDirectoryOpen[] = "Failed to open service namespace";

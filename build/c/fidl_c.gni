@@ -39,7 +39,7 @@ template("fidl_tables") {
 # The parameters for this template are defined in //build/fidl/fidl.gni. The
 # relevant parameters in this template are:
 #   name: string, name of the FIDL library
-#   type: string, 'client' or 'server'
+#   type: string, 'header', 'client', or 'server'
 
 template("fidl_c_target") {
   assert(is_fuchsia, "This template can only be used in $target_toolchain.")
@@ -55,7 +55,6 @@ template("fidl_c_target") {
       get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
   generated_binding_dir = "$fidl_target_gen_dir/$target_name/c"
   c_header = "$generated_binding_dir/$c_stem.h"
-  c_file = "$generated_binding_dir/$c_stem.$type.c"
 
   config(config_target_name) {
     include_dirs = [ generated_binding_dir ]
@@ -69,9 +68,11 @@ template("fidl_c_target") {
                              "testonly",
                              "visibility",
                            ])
-
-    sources = [ c_file ]
     public = [ c_header ]
+
+    if (type != "header") {
+      sources = [ "$generated_binding_dir/$c_stem.$type.c" ]
+    }
 
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ ":$config_target_name" ]
@@ -101,6 +102,26 @@ template("fidl_c_target") {
     # in generated C bindings code itself. Delete this line after everything
     # migrates off of the C bindings.
     configs += [ "//build/c:fidl-deprecated-c-bindings-reserved-for-fidlc-generated-code-only" ]
+  }
+}
+
+# TODO(fxbug.dev/99732): Evaluate whether we really need this.
+template("fidl_c_header") {
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
+  forward_variables_from(invoker,
+                         [
+                           "deps",
+                           "public_deps",
+                           "testonly",
+                           "visibility",
+                         ])
+
+  fidl_c_target(target_name) {
+    name = library_name
+    type = "header"
   }
 }
 
