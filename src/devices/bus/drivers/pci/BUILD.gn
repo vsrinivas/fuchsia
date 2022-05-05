@@ -33,7 +33,7 @@ source_set("user_pci") {
     "device_caps.cc",
     "device_irqs.cc",
     "device_protocol.cc",
-    "service.cc",
+    "device_service.cc",
     "upstream_node.cc",
   ]
 
