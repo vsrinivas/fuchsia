@@ -359,8 +359,8 @@ a component runs only when a something [binds][component-binding]
 to a capability it exposes. In OOP terms, it would be as if an object
 came into existence the first time a method was called on it (a type
 of [Late Binding][late-binding] or [Lazy Initialization][lazy-init]).
-Components have their own [lifecycle][lifecycle] (create, start, stop, destroy,
-purge), which largely does not need to be observed.
+Components have their own [lifecycle][lifecycle] which largely does not need to
+be observed.
 
 The exception to static component initialization is [dynamic
 component collections][component-collections]. The collection itself is

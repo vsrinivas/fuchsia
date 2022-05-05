@@ -46,11 +46,6 @@ modern component framework. For details on legacy components, see
 -   [Components vs. processes](components_vs_processes.md): how the concepts
     differ.
 
-## Misc
-
--   [Termination policies](termination_policies.md): Policies that
-    can be configured to react to component termination
-
 [glossary.components v1]: /docs/glossary/README.md#components-v1
 [glossary.components v2]: /docs/glossary/README.md#components-v2
 [legacy-components]: /docs/concepts/components/v1/README.md

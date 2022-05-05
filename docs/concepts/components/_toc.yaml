@@ -24,8 +24,6 @@ toc:
   path: /docs/concepts/components/v2/realms.md
 - title: "Environments"
   path: /docs/concepts/components/v2/environments.md
-- title: "Termination policies"
-  path: /docs/concepts/components/v2/termination_policies.md
 - title: "Capabilities"
   section:
   - include: /docs/concepts/components/v2/capabilities/_toc.yaml
