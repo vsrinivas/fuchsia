@@ -230,11 +230,13 @@ type Attributes = table {
     /// For example, radio buttons that are related are part of the same set.
     5: set SetAttributes;
 
-    /// The list attributes are filled iff the node is a list.
-    /// Note that only the size and set_element_ids may be filled for a list node.
+    /// The list attributes should be filled if the node has the LIST role.
+    /// Note that only `size` and `set_element_ids` should be filled.
     6: list_attributes SetAttributes;
 
-    /// The list element attributes are filled iff the node is a child of a list node.
+    /// The list element attributes should be filled if the node has a
+    /// LIST_ELEMENT role and descends from a node with a LIST role.
+    /// Note that only `index` should be filled.
     7: list_element_attributes SetAttributes;
 
     /// The hierarchical level of an element. For example, a header can be of
