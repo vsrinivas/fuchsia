@@ -4074,8 +4074,6 @@ dependencies = [
 [[package]]
 name = "trust-dns-resolver"
 version = "0.21.0-alpha.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3aec2bf8a00c7dc8afbf61e7e7fc1f419c58af67d29c5857eb93fe089a1fe089"
 dependencies = [
  "cfg-if 1.0.0",
  "futures-util",

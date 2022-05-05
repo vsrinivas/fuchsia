@@ -10751,7 +10751,7 @@ rust_library("trust-dns-proto-v0_21_0-alpha_4") {
 
 rust_library("trust-dns-resolver-v0_21_0-alpha_4") {
   crate_name = "trust_dns_resolver"
-  crate_root = "//third_party/rust_crates/vendor/trust-dns-resolver/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/trust-dns-resolver/src/lib.rs"
   output_name = "trust_dns_resolver-ffc6b5ee4993b09f"
   configs -= [
     "//build/config/rust:edition_2018",
