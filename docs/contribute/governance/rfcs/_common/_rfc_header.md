@@ -25,6 +25,7 @@
     {%- for _rfc in rfcs %}
         {%- if _rfc.name == rfcid %}
             {%- set rfc=_rfc %}
+            <meta name="description" value="Fuchsia {{_rfc.name}} - {{_rfc.title}} - {{_rfc.short_description}}"/>
             {% include "docs/contribute/governance/rfcs/_common/_rfc_metadata.md" %}
             {%- set found=true %}
         {%- endif %}
