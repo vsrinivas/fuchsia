@@ -9,6 +9,9 @@ declare_args() {
   # A list of binary labels to include in the system_image package.
   product_system_image_deps = []
 
+  # A list of binary host tool labels to also build.
+  product_host_labels = []
+
   # A human readable product description.
   product_description = ""
 

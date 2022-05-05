@@ -5,22 +5,46 @@
 import("//build/board.gni")
 import("//build/security.gni")
 
-group("bootfs_labels") {
-  testonly = fuchsia_zbi_testonly
-  deps = [ "//boards/kernel_cmdline" ]
-  deps += board_bootfs_labels
-}
+if (is_host) {
+  group("host") {
+    testonly = true
 
-group("recovery_bootfs_labels") {
-  deps = board_recovery_bootfs_labels
-}
+    # This causes all labels listed in the GN arg to be assumed to be in the
+    # host toolchain, but if a different toolchain is specified, it is
+    # preserved.
+    #
+    # [ "//some/label", "//some/other:label(//some/toolchain)" ]
+    #
+    # becomes
+    #
+    # [ "//some/label($host_toolchain)", "//some/other:label(//some/toolchain)"]
+    #
+    # This is for cases where the board needs to build "host tools" for
+    # specific platforms that aren't necessarily the one that the compilation
+    # is running on.
+    deps = board_host_labels
+  }
+} else {
+  ## These should only be in the default toolchain.
+  assert(current_toolchain == default_toolchain)
 
-group("system_image_deps") {
-  testonly = fuchsia_zbi_testonly
-  deps = board_system_image_deps
-}
+  group("bootfs_labels") {
+    testonly = fuchsia_zbi_testonly
+    deps = [ "//boards/kernel_cmdline" ]
+    deps += board_bootfs_labels
+  }
 
-group("zedboot_bootfs_labels") {
-  testonly = true
-  deps = board_zedboot_bootfs_labels
+  group("recovery_bootfs_labels") {
+    deps = board_recovery_bootfs_labels
+  }
+
+  group("system_image_deps") {
+    testonly = fuchsia_zbi_testonly
+    deps = board_system_image_deps
+  }
+
+  group("zedboot_bootfs_labels") {
+    testonly = true
+    deps = board_zedboot_bootfs_labels
+  }
 }

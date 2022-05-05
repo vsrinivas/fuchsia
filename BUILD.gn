@@ -1311,9 +1311,14 @@ group("additional_universe_packages") {
 group("host") {
   # TODO(fxbug.dev/80548) investigate removing testonly here
   testonly = true
-  public_deps = []
-  foreach(label, host_labels + legacy_host_labels) {
-    public_deps += [ "$label($host_toolchain)" ]
+  public_deps = [
+    "//build/input/board:host($host_toolchain)",
+    "//build/input/product:host($host_toolchain)",
+  ]
+  foreach(label, host_labels) {
+    # Strip any toolchain that is provided, and replace with the host toolchain.
+    full_label = get_label_info(label, "label_no_toolchain")
+    public_deps += [ "$full_label($host_toolchain)" ]
   }
 }
 
