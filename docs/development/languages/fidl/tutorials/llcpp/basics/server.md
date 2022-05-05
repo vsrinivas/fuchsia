@@ -142,8 +142,10 @@ The implementation contains the following elements:
 * It contains a `ServerBindingRef` in order to be able to send events to the
   client.
 * The constructor method binds the implementation to a given `request`.
-* The method for `EchoString` replies with the request value by using the
-  completer.
+* The method for `EchoString` replies synchronously with the request value by using the
+  completer (for asynchronous replies, see
+  [responding to requests asynchronously in
+  LLCPP](/docs/development/languages/fidl/tutorials/llcpp/topics/async-completer.md)).
 * The method for `SendString` uses the `binding_` member (if defined) to send
   an `OnString` event containing the request value.
 
