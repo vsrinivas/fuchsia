@@ -30,7 +30,7 @@ namespace mock_i2c {
 // EXPECT_OK(dut.SomeMethod());
 // EXPECT_TRUE(i2c.VerifyAndClear());
 
-class MockI2c : ddk::I2cProtocol<MockI2c> {
+class MockI2c : ddk::I2cProtocol<MockI2c>, public fidl::WireServer<fuchsia_hardware_i2c::Device> {
  public:
   MockI2c() : proto_{&i2c_protocol_ops_, this} {}
 
@@ -85,8 +85,48 @@ class MockI2c : ddk::I2cProtocol<MockI2c> {
 
   zx_status_t I2cGetMaxTransferSize(size_t* out_size) { return ZX_ERR_NOT_SUPPORTED; }
 
-  zx_status_t I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
-    return ZX_ERR_NOT_SUPPORTED;
+  void Transfer(TransferRequestView request, TransferCompleter::Sync& completer) override {
+    fbl::Vector<i2c_op_t> read_ops;
+    zx_status_t status;
+
+    for (auto it = request->transactions.cbegin(); it != request->transactions.cend();) {
+      if (!it->has_data_transfer()) {
+        completer.ReplyError(ZX_ERR_INVALID_ARGS);
+        return;
+      }
+
+      i2c_op_t op{
+          .is_read = it->data_transfer().is_read_size(),
+          .stop = it->has_stop() ? it->stop() : false,
+      };
+
+      if (op.is_read) {
+        op.data_buffer = nullptr;
+        op.data_size = it->data_transfer().read_size();
+      } else {
+        op.data_buffer = it->data_transfer().write_data().data();
+        op.data_size = it->data_transfer().write_data().count();
+      }
+
+      if (++it == request->transactions.cend()) {
+        op.stop = true;
+      }
+
+      CheckI2cOp(op, &read_ops, &status);
+    }
+
+    fidl::Arena arena;
+    fidl::ObjectView<fuchsia_hardware_i2c::wire::DeviceTransferResponse> response(arena);
+    response->read_data = {arena, read_ops.size()};
+
+    auto read_data_it = response->read_data.begin();
+    for (const i2c_op_t& op : read_ops) {
+      *read_data_it = {arena, op.data_size};
+      memcpy(read_data_it->mutable_data(), op.data_buffer, op.data_size);
+      read_data_it++;
+    }
+
+    completer.Reply(fuchsia_hardware_i2c::wire::DeviceTransferResult::WithResponse(response));
   }
 
  private:
