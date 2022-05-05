@@ -244,7 +244,7 @@ int Controller::InitScan() {
 
 zx_status_t Controller::Create(zx_device_t* parent, std::unique_ptr<Controller>* con_out) {
   fbl::AllocChecker ac;
-  std::unique_ptr<Bus> bus(new (&ac) PciBus());
+  std::unique_ptr<Bus> bus(new (&ac) PciBus(parent));
   if (!ac.check()) {
     zxlogf(ERROR, "ahci: out of memory");
     return ZX_ERR_NO_MEMORY;

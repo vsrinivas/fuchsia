@@ -27,22 +27,20 @@ zx_status_t PciBus::RegWrite(size_t offset, uint32_t val) {
 
 zx_status_t PciBus::Configure(zx_device_t* parent) {
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  if (device_get_fragment_protocol(parent, "pci", ZX_PROTOCOL_PCI, &pci_) != ZX_OK) {
+  if (!pci_.is_valid()) {
     zxlogf(ERROR, "ahci: error getting pci config information");
     return status;
   }
 
   // Map register window.
-  mmio_buffer_t buf;
-  status = pci_map_bar_buffer(&pci_, 5u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
+  status = pci_.MapMmio(5u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: error %d mapping pci register window", status);
     return status;
   }
-  mmio_ = fdf::MmioBuffer(buf);
 
   pci_device_info_t config;
-  status = pci_get_device_info(&pci_, &config);
+  status = pci_.GetDeviceInfo(&config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: error getting pci config information");
     return status;
@@ -56,28 +54,28 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
 
   // FIXME intel devices need to set SATA port enable at config + 0x92
   // ahci controller is bus master
-  status = pci_set_bus_mastering(&pci_, true);
+  status = pci_.SetBusMastering(true);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: error %d enabling bus master", status);
     return status;
   }
 
   // Request 1 interrupt of any mode.
-  status = pci_configure_interrupt_mode(&pci_, 1, &irq_mode_);
+  status = pci_.ConfigureInterruptMode(1, &irq_mode_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: no interrupts available %d", status);
     return ZX_ERR_NO_RESOURCES;
   }
 
   // Get bti handle.
-  status = pci_get_bti(&pci_, 0, bti_.reset_and_get_address());
+  status = pci_.GetBti(0, &bti_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: error %d getting bti handle", status);
     return status;
   }
 
   // Get irq handle.
-  status = pci_map_interrupt(&pci_, 0, irq_.reset_and_get_address());
+  status = pci_.MapInterrupt(0, &irq_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: error %d getting irq handle", status);
     return status;
@@ -110,7 +108,7 @@ zx_status_t PciBus::BtiPin(uint32_t options, const zx::unowned_vmo& vmo, uint64_
 
 zx_status_t PciBus::InterruptWait() {
   if (irq_mode_ == PCI_INTERRUPT_MODE_LEGACY) {
-    pci_ack_interrupt(&pci_);
+    pci_.AckInterrupt();
   }
 
   return irq_.wait(nullptr);
