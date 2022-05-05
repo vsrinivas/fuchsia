@@ -2645,6 +2645,9 @@ namespace internal {
 constexpr uint64_t
     kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal =
         0x2081e7454e06d536lu;
+constexpr ::fidl::MessageDynamicFlags
+    kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -2678,9 +2681,15 @@ class ImportsSameNameContext_SyncProxy;
 namespace internal {
 constexpr uint64_t kImportsSameNameContext_Unattributed_Ordinal =
     0x698380acfd29e8flu;
+constexpr ::fidl::MessageDynamicFlags
+    kImportsSameNameContext_Unattributed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t
     kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal =
         0x2874096c521236f8lu;
+constexpr ::fidl::MessageDynamicFlags
+    kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -2696,12 +2705,26 @@ class DenyEachBinding_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kDenyEachBinding_OnlyDenyDart_Ordinal = 0x75384066a26d87d7lu;
+constexpr ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenyDart_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kDenyEachBinding_OnlyDenyGo_Ordinal = 0x657655b981478d99lu;
+constexpr ::fidl::MessageDynamicFlags kDenyEachBinding_OnlyDenyGo_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal =
     0x1e4f89c329617b1elu;
+constexpr ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kDenyEachBinding_OnlyDenyRust_Ordinal = 0x339f67244edd5cb6lu;
+constexpr ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenyRust_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kDenyEachBinding_OnlyDenySyzkaller_Ordinal =
     0x202ee614a749e98alu;
+constexpr ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

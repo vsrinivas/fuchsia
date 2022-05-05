@@ -8,6 +8,10 @@ namespace test_placementofattributes {
 [[maybe_unused]] constexpr uint64_t kExampleProtocol_Method_Ordinal =
     6023439637367187273lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kExampleProtocol_Method_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_placementofattributes_ExampleProtocolMethodRequestTable;
 #ifdef __Fuchsia__
@@ -233,9 +237,9 @@ void fidl::WireServer<::test_placementofattributes::ExampleProtocol>::
 
 void ::fidl::internal::TransactionalRequest<
     ::test_placementofattributes::ExampleProtocol::Method>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0,
-      ::test_placementofattributes::kExampleProtocol_Method_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_placementofattributes::kExampleProtocol_Method_Ordinal,
+      ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

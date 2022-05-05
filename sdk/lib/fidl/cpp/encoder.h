@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_ENCODER_H_
 
 #include <lib/fidl/cpp/message.h>
+#include <lib/fidl/cpp/transaction_header.h>
 #include <lib/fidl/internal.h>
 
 #ifdef __Fuchsia__
@@ -68,8 +69,9 @@ class Encoder {
 // The MessageEncoder produces an |HLCPPOutgoingMessage|, representing a transactional message.
 class MessageEncoder final : public Encoder {
  public:
-  explicit MessageEncoder(uint64_t ordinal);
-  MessageEncoder(uint64_t ordinal, internal::WireFormatVersion wire_format);
+  explicit MessageEncoder(uint64_t ordinal, MessageDynamicFlags dynamic_flags);
+  MessageEncoder(uint64_t ordinal, MessageDynamicFlags dynamic_flags,
+                 internal::WireFormatVersion wire_format);
 
   MessageEncoder(MessageEncoder&&) noexcept = default;
   MessageEncoder& operator=(MessageEncoder&&) noexcept = default;
@@ -77,10 +79,10 @@ class MessageEncoder final : public Encoder {
   ~MessageEncoder() = default;
 
   HLCPPOutgoingMessage GetMessage();
-  void Reset(uint64_t ordinal);
+  void Reset(uint64_t ordinal, MessageDynamicFlags dynamic_flags);
 
  private:
-  void EncodeMessageHeader(uint64_t ordinal);
+  void EncodeMessageHeader(uint64_t ordinal, MessageDynamicFlags dynamic_flags);
 };
 
 // The BodyEncoder produces an |HLCPPOutgoingBody|, representing a transactional message body.

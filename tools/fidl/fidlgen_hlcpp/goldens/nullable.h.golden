@@ -845,6 +845,8 @@ class SimpleProtocol_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kSimpleProtocol_Add_Ordinal = 0x7ee19cf19ae30276lu;
+constexpr ::fidl::MessageDynamicFlags kSimpleProtocol_Add_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

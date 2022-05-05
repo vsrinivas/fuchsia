@@ -35,7 +35,8 @@ TEST(ServerTests, dispatch_test) {
   fidl_test_echo_EchoEchoRequestMessage request;
   memset(&request, 0, sizeof(request));
   zx_txid_t txid = 42;
-  fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal);
+  fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal,
+                       FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD);
   request.process = FIDL_HANDLE_PRESENT;
   request.thread = FIDL_HANDLE_PRESENT;
 
@@ -165,7 +166,8 @@ TEST(ServerTests, error_test) {
   fidl_test_echo_EchoEchoRequestMessage request;
   memset(&request, 0, sizeof(request));
   zx_txid_t txid = 42;
-  fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal);
+  fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal,
+                       FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD);
   request.process = FIDL_HANDLE_PRESENT;
   request.thread = FIDL_HANDLE_PRESENT;
 
@@ -208,7 +210,8 @@ TEST(ServerTests, incompatible_magic_test) {
   fidl_test_echo_EchoEchoRequestMessage request;
   memset(&request, 0, sizeof(request));
   zx_txid_t txid = 42;
-  fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal);
+  fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal,
+                       FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD);
   request.hdr.magic_number = 0;
   request.process = FIDL_HANDLE_PRESENT;
   request.thread = FIDL_HANDLE_PRESENT;

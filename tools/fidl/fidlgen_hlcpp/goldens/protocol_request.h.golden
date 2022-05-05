@@ -431,9 +431,17 @@ class Parent_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kParent_GetChild_Ordinal = 0xc3cd963aafc873blu;
+constexpr ::fidl::MessageDynamicFlags kParent_GetChild_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kParent_GetChildRequest_Ordinal = 0xf38d08d64f71c79lu;
+constexpr ::fidl::MessageDynamicFlags kParent_GetChildRequest_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kParent_TakeChild_Ordinal = 0x3e08fd7ca04b2290lu;
+constexpr ::fidl::MessageDynamicFlags kParent_TakeChild_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x2063f76b1bb45f87lu;
+constexpr ::fidl::MessageDynamicFlags kParent_TakeChildRequest_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

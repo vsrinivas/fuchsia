@@ -8,14 +8,30 @@ namespace test_unknowninteractions {
 [[maybe_unused]] constexpr uint64_t kExample_StrictOneWay_Ordinal =
     2276912608357927194lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kExample_StrictOneWay_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr uint64_t kExample_FlexibleOneWay_Ordinal =
     2309537410782500280lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kExample_FlexibleOneWay_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
 [[maybe_unused]] constexpr uint64_t kExample_StrictTwoWay_Ordinal =
     4530909159434307973lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kExample_StrictTwoWay_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr uint64_t kExample_FlexibleTwoWay_Ordinal =
     9070032238358100524lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kExample_FlexibleTwoWay_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
 extern "C" const fidl_type_t
     test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
@@ -23,8 +39,16 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kExample_StrictEvent_Ordinal =
     2942732192976592869lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kExample_StrictEvent_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr uint64_t kExample_FlexibleEvent_Ordinal =
     2065245206460174394lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kExample_FlexibleEvent_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kFlexibleMethod;
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
 ::fidl::WireResult<::test_unknowninteractions::Example::StrictOneWay>::
@@ -687,50 +711,58 @@ void fidl::internal::WireBufferCompleterImpl<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_unknowninteractions::Example::StrictOneWay>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_unknowninteractions::kExample_StrictOneWay_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_unknowninteractions::kExample_StrictOneWay_Ordinal,
+      ::test_unknowninteractions::kExample_StrictOneWay_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_unknowninteractions::Example::FlexibleOneWay>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_unknowninteractions::kExample_FlexibleOneWay_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_unknowninteractions::kExample_FlexibleOneWay_Ordinal,
+      ::test_unknowninteractions::kExample_FlexibleOneWay_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_unknowninteractions::Example::StrictTwoWay>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal,
+      ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_unknowninteractions::Example::StrictTwoWay>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_unknowninteractions::kExample_StrictTwoWay_Ordinal,
+      ::test_unknowninteractions::kExample_StrictTwoWay_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_unknowninteractions::Example::FlexibleTwoWay>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal,
+      ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_unknowninteractions::Example::FlexibleTwoWay>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_unknowninteractions::kExample_FlexibleTwoWay_Ordinal,
+      ::test_unknowninteractions::kExample_FlexibleTwoWay_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_unknowninteractions::Example::StrictEvent>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_unknowninteractions::kExample_StrictEvent_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_unknowninteractions::kExample_StrictEvent_Ordinal,
+      ::test_unknowninteractions::kExample_StrictEvent_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_unknowninteractions::Example::FlexibleEvent>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal,
+      ::test_unknowninteractions::kExample_FlexibleEvent_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

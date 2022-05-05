@@ -8,6 +8,10 @@ namespace test_anonymous {
 [[maybe_unused]] constexpr uint64_t kSomeProtocol_SomeMethod_Ordinal =
     2515914517457749720lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kSomeProtocol_SomeMethod_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
 
 extern "C" const fidl_type_t
@@ -341,14 +345,16 @@ void fidl::internal::WireBufferCompleterImpl<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_anonymous::SomeProtocol::SomeMethod>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
+      ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_anonymous::SomeProtocol::SomeMethod>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
+      ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

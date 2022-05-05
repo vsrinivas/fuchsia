@@ -70,11 +70,14 @@ void Encoder::EncodeUnknownHandle(zx::object_base* value) {
 }
 #endif
 
-MessageEncoder::MessageEncoder(uint64_t ordinal) { EncodeMessageHeader(ordinal); }
+MessageEncoder::MessageEncoder(uint64_t ordinal, MessageDynamicFlags dynamic_flags) {
+  EncodeMessageHeader(ordinal, dynamic_flags);
+}
 
-MessageEncoder::MessageEncoder(uint64_t ordinal, internal::WireFormatVersion wire_format)
+MessageEncoder::MessageEncoder(uint64_t ordinal, MessageDynamicFlags dynamic_flags,
+                               internal::WireFormatVersion wire_format)
     : Encoder(wire_format) {
-  EncodeMessageHeader(ordinal);
+  EncodeMessageHeader(ordinal, dynamic_flags);
 }
 
 HLCPPOutgoingMessage MessageEncoder::GetMessage() {
@@ -85,16 +88,16 @@ HLCPPOutgoingMessage MessageEncoder::GetMessage() {
                             static_cast<uint32_t>(handles_.size())));
 }
 
-void MessageEncoder::Reset(uint64_t ordinal) {
+void MessageEncoder::Reset(uint64_t ordinal, MessageDynamicFlags dynamic_flags) {
   bytes_.clear();
   handles_.clear();
-  EncodeMessageHeader(ordinal);
+  EncodeMessageHeader(ordinal, dynamic_flags);
 }
 
-void MessageEncoder::EncodeMessageHeader(uint64_t ordinal) {
+void MessageEncoder::EncodeMessageHeader(uint64_t ordinal, MessageDynamicFlags dynamic_flags) {
   size_t offset = Alloc(sizeof(fidl_message_header_t));
   fidl_message_header_t* header = GetPtr<fidl_message_header_t>(offset);
-  fidl_init_txn_header(header, 0, ordinal);
+  fidl::InitTxnHeader(header, 0, ordinal, dynamic_flags);
   ZX_DEBUG_ASSERT(wire_format() == internal::WireFormatVersion::kV2);
   header->at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
 }

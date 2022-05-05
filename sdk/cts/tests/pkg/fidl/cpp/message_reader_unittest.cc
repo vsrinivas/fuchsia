@@ -4,11 +4,11 @@
 
 #include "lib/fidl/cpp/internal/message_reader.h"
 
+#include <fidl/test/misc/cpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/errors.h>
 #include <zircon/fidl.h>
 
-#include <fidl/test/misc/cpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/binding.h"
@@ -100,7 +100,7 @@ constexpr size_t kMessageDataStart = 16;
 template <size_t N>
 StringMessage<N> CreateFidlMessage(const char (&data)[N]) {
   StringMessage<N> msg;
-  fidl_init_txn_header(&msg.hdr, 0, 0);
+  fidl::InitTxnHeader(&msg.hdr, 0, 0, fidl::MessageDynamicFlags::kStrictMethod);
   memcpy(&msg.data, data, N);
   return msg;
 }

@@ -62,7 +62,8 @@ zx_status_t SecondProtocol_Proxy::Dispatch_(
 
 void SecondProtocol_Proxy::MethodOnSecond() {
   ::fidl::MessageEncoder _encoder(
-      ::test::service::internal::kSecondProtocol_MethodOnSecond_Ordinal);
+      ::test::service::internal::kSecondProtocol_MethodOnSecond_Ordinal,
+      ::test::service::internal::kSecondProtocol_MethodOnSecond_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   controller_->Send(
       req_type,
@@ -130,7 +131,8 @@ SecondProtocol_SyncProxy::~SecondProtocol_SyncProxy() = default;
 
 zx_status_t SecondProtocol_SyncProxy::MethodOnSecond() {
   ::fidl::MessageEncoder _encoder(
-      ::test::service::internal::kSecondProtocol_MethodOnSecond_Ordinal);
+      ::test::service::internal::kSecondProtocol_MethodOnSecond_Ordinal,
+      ::test::service::internal::kSecondProtocol_MethodOnSecond_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   return proxy_.Send(
       req_type, ::test::service::SecondProtocol_RequestEncoder::MethodOnSecond(
@@ -191,7 +193,8 @@ zx_status_t FirstProtocol_Proxy::Dispatch_(
 
 void FirstProtocol_Proxy::MethodOnFirst() {
   ::fidl::MessageEncoder _encoder(
-      ::test::service::internal::kFirstProtocol_MethodOnFirst_Ordinal);
+      ::test::service::internal::kFirstProtocol_MethodOnFirst_Ordinal,
+      ::test::service::internal::kFirstProtocol_MethodOnFirst_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   controller_->Send(
       req_type,
@@ -259,7 +262,8 @@ FirstProtocol_SyncProxy::~FirstProtocol_SyncProxy() = default;
 
 zx_status_t FirstProtocol_SyncProxy::MethodOnFirst() {
   ::fidl::MessageEncoder _encoder(
-      ::test::service::internal::kFirstProtocol_MethodOnFirst_Ordinal);
+      ::test::service::internal::kFirstProtocol_MethodOnFirst_Ordinal,
+      ::test::service::internal::kFirstProtocol_MethodOnFirst_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   return proxy_.Send(
       req_type,

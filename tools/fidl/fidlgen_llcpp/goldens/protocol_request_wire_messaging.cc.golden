@@ -8,11 +8,18 @@ namespace test_protocolrequest {
 [[maybe_unused]] constexpr uint64_t kParent_GetChild_Ordinal =
     881818649151440699lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kParent_GetChild_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildTopResponseTable;
 
 [[maybe_unused]] constexpr uint64_t kParent_GetChildRequest_Ordinal =
     1096855814967598201lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kParent_GetChildRequest_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildRequestTopResponseTable;
@@ -20,10 +27,17 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kParent_TakeChild_Ordinal =
     4470101341872267920lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kParent_TakeChild_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
 
 [[maybe_unused]] constexpr uint64_t kParent_TakeChildRequest_Ordinal =
     2333981071306416007lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kParent_TakeChildRequest_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_protocolrequest_ParentTakeChildRequestRequestTable;
@@ -707,31 +721,35 @@ void fidl::internal::WireBufferCompleterImpl<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocolrequest::Parent::GetChild>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocolrequest::kParent_GetChild_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0,
+                        ::test_protocolrequest::kParent_GetChild_Ordinal,
+                        ::test_protocolrequest::kParent_GetChild_DynamicFlags);
 }
 
 #ifdef __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocolrequest::Parent::GetChild>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocolrequest::kParent_GetChild_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0,
+                        ::test_protocolrequest::kParent_GetChild_Ordinal,
+                        ::test_protocolrequest::kParent_GetChild_DynamicFlags);
 }
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocolrequest::Parent::GetChildRequest>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocolrequest::kParent_GetChildRequest_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
+      ::test_protocolrequest::kParent_GetChildRequest_DynamicFlags);
 }
 
 #ifdef __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocolrequest::Parent::GetChildRequest>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocolrequest::kParent_GetChildRequest_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
+      ::test_protocolrequest::kParent_GetChildRequest_DynamicFlags);
 }
 #endif  // __Fuchsia__
 
@@ -739,8 +757,9 @@ void ::fidl::internal::TransactionalResponse<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocolrequest::Parent::TakeChild>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocolrequest::kParent_TakeChild_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0,
+                        ::test_protocolrequest::kParent_TakeChild_Ordinal,
+                        ::test_protocolrequest::kParent_TakeChild_DynamicFlags);
 }
 #endif  // __Fuchsia__
 
@@ -748,8 +767,9 @@ void ::fidl::internal::TransactionalRequest<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocolrequest::Parent::TakeChildRequest>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_protocolrequest::kParent_TakeChildRequest_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocolrequest::kParent_TakeChildRequest_Ordinal,
+      ::test_protocolrequest::kParent_TakeChildRequest_DynamicFlags);
 }
 #endif  // __Fuchsia__
 

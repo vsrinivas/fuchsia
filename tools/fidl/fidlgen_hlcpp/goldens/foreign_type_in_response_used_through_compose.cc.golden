@@ -90,7 +90,9 @@ Top_GetFoo_ResponseHandler(Top::GetFooCallback&& callback) {
 void Top_Proxy::GetFoo(GetFooCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::foreigntypeinresponseusedthroughcompose::internal::
-          kTop_GetFoo_Ordinal);
+          kTop_GetFoo_Ordinal,
+      ::test::foreigntypeinresponseusedthroughcompose::internal::
+          kTop_GetFoo_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   controller_->Send(req_type,
                     ::test::foreigntypeinresponseusedthroughcompose::
@@ -116,7 +118,9 @@ class Top_GetFoo_Responder final {
   void operator()(::test::bottom::Foo foo) {
     ::fidl::MessageEncoder _encoder(
         ::test::foreigntypeinresponseusedthroughcompose::internal::
-            kTop_GetFoo_Ordinal);
+            kTop_GetFoo_Ordinal,
+        ::test::foreigntypeinresponseusedthroughcompose::internal::
+            kTop_GetFoo_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::foreigntypeinresponseusedthroughcompose::_internal::
             test_middle_MiddleGetFooTopResponseTable;
@@ -181,7 +185,9 @@ Top_SyncProxy::~Top_SyncProxy() = default;
 zx_status_t Top_SyncProxy::GetFoo(::test::bottom::Foo* out_foo) {
   ::fidl::MessageEncoder _encoder(
       ::test::foreigntypeinresponseusedthroughcompose::internal::
-          kTop_GetFoo_Ordinal);
+          kTop_GetFoo_Ordinal,
+      ::test::foreigntypeinresponseusedthroughcompose::internal::
+          kTop_GetFoo_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type = nullptr;

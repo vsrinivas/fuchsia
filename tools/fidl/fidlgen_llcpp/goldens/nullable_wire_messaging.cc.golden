@@ -8,6 +8,10 @@ namespace test_nullable {
 [[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_Ordinal =
     9142761280038437494lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kSimpleProtocol_Add_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
@@ -292,14 +296,16 @@ void fidl::internal::WireBufferCompleterImpl<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_nullable::SimpleProtocol::Add>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_nullable::kSimpleProtocol_Add_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0,
+                        ::test_nullable::kSimpleProtocol_Add_Ordinal,
+                        ::test_nullable::kSimpleProtocol_Add_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_nullable::SimpleProtocol::Add>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_nullable::kSimpleProtocol_Add_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0,
+                        ::test_nullable::kSimpleProtocol_Add_Ordinal,
+                        ::test_nullable::kSimpleProtocol_Add_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

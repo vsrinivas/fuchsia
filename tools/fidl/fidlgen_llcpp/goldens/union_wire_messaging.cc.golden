@@ -9,12 +9,20 @@ namespace test_union {
     kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
         582913180652179677lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
 
 [[maybe_unused]] constexpr uint64_t
     kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
         7698084639218919941lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
@@ -547,37 +555,45 @@ void fidl::internal::WireBufferCompleterImpl<
 void ::fidl::internal::TransactionalRequest<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::
     _InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
       ::test_union::
-          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
+      ::test_union::
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::
     _InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
       ::test_union::
-          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
+      ::test_union::
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_union::TestProtocol::
         FlexibleXUnionHenceResponseMustBeHeapAllocated>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
       ::test_union::
-          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
+      ::test_union::
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_union::TestProtocol::
         FlexibleXUnionHenceResponseMustBeHeapAllocated>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
       ::test_union::
-          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
+      ::test_union::
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

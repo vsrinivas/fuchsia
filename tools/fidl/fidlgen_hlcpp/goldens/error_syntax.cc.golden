@@ -510,7 +510,9 @@ void ExampleUseOfErrorSyntax_Proxy::ComposedCallWhichMayFail(
     ::std::string s, ComposedCallWhichMayFailCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::errorsyntax::internal::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal);
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
+      ::test::errorsyntax::internal::
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::errorsyntax::_internal::
           test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable;
@@ -548,7 +550,9 @@ void ExampleUseOfErrorSyntax_Proxy::CallWhichMayFail(
     ::std::string s, CallWhichMayFailCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::errorsyntax::internal::
-          kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal);
+          kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
+      ::test::errorsyntax::internal::
+          kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::errorsyntax::_internal::
           test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
@@ -582,7 +586,9 @@ class ExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Responder final {
           ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result result) {
     ::fidl::MessageEncoder _encoder(
         ::test::errorsyntax::internal::
-            kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal);
+            kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
+        ::test::errorsyntax::internal::
+            kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::errorsyntax::_internal::
             test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponseTable;
@@ -607,7 +613,9 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Responder final {
           result) {
     ::fidl::MessageEncoder _encoder(
         ::test::errorsyntax::internal::
-            kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal);
+            kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
+        ::test::errorsyntax::internal::
+            kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::errorsyntax::_internal::
             test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
@@ -695,7 +703,9 @@ zx_status_t ExampleUseOfErrorSyntax_SyncProxy::ComposedCallWhichMayFail(
         ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result* out_result) {
   ::fidl::MessageEncoder _encoder(
       ::test::errorsyntax::internal::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal);
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
+      ::test::errorsyntax::internal::
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
@@ -724,7 +734,9 @@ zx_status_t ExampleUseOfErrorSyntax_SyncProxy::CallWhichMayFail(
         out_result) {
   ::fidl::MessageEncoder _encoder(
       ::test::errorsyntax::internal::
-          kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal);
+          kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
+      ::test::errorsyntax::internal::
+          kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =

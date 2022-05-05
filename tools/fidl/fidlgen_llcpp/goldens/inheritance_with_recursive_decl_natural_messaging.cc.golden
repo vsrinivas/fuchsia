@@ -6,6 +6,9 @@ namespace test_inheritancewithrecursivedecl {
 [[maybe_unused]] constexpr inline uint64_t kParent_First_Ordinal =
     3973163707930985819lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kParent_First_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
 ::fitx::result<::fidl::Error> fidl::internal::
@@ -14,7 +17,8 @@ namespace test_inheritancewithrecursivedecl {
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_inheritancewithrecursivedecl::kParent_First_Ordinal};
+      ::test_inheritancewithrecursivedecl::kParent_First_Ordinal,
+      ::test_inheritancewithrecursivedecl::kParent_First_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>>::
@@ -101,8 +105,14 @@ namespace test_inheritancewithrecursivedecl {
 [[maybe_unused]] constexpr inline uint64_t kChild_First_Ordinal =
     3973163707930985819lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kChild_First_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t kChild_Second_Ordinal =
     2545123272820824165lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kChild_Second_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
@@ -112,7 +122,8 @@ namespace test_inheritancewithrecursivedecl {
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_inheritancewithrecursivedecl::kChild_First_Ordinal};
+      ::test_inheritancewithrecursivedecl::kChild_First_Ordinal,
+      ::test_inheritancewithrecursivedecl::kChild_First_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>>::
@@ -129,7 +140,8 @@ namespace test_inheritancewithrecursivedecl {
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal};
+      ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
+      ::test_inheritancewithrecursivedecl::kChild_Second_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>>::

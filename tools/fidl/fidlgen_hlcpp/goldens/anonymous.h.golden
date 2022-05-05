@@ -1777,6 +1777,8 @@ class SomeProtocol_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kSomeProtocol_SomeMethod_Ordinal = 0x22ea52ec7a5146d8lu;
+constexpr ::fidl::MessageDynamicFlags kSomeProtocol_SomeMethod_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

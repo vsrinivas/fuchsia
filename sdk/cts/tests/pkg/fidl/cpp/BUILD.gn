@@ -82,6 +82,7 @@ cts_source_set("test_sources") {
     "stub_controller_unittest.cc",
     "synchronous_interface_ptr_unittest.cc",
     "thread_safe_binding_set_unittest.cc",
+    "unknown_interactions_test.cc",
     "wire_format_v2_decode_test.cc",
   ]
 
@@ -95,6 +96,8 @@ cts_source_set("test_sources") {
     "//sdk/testing/fidl:fidl_test_handles",
     "//sdk/testing/fidl:test",
     "//sdk/testing/fidl:test_support",
+    "//sdk/testing/fidl/protocols_tests:test.unknown.interactions",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

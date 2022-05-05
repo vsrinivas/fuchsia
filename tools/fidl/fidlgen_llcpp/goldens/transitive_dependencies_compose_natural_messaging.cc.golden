@@ -6,6 +6,9 @@ namespace test_transitivedependenciescompose {
 [[maybe_unused]] constexpr inline uint64_t kTop_GetFoo_Ordinal =
     2618685789258237543lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kTop_GetFoo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 #ifdef __Fuchsia__
 }  // namespace test_transitivedependenciescompose
 ::fidl::internal::NaturalThenable<
@@ -14,7 +17,8 @@ fidl::internal::NaturalClientImpl<
     ::test_transitivedependenciescompose::Top>::GetFoo() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
+      ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal,
+      ::test_transitivedependenciescompose::kTop_GetFoo_DynamicFlags};
   return ::fidl::internal::NaturalThenable<
       ::test_transitivedependenciescompose::Top::GetFoo>(
       &client_base(), {}, std::move(_encoder),
@@ -51,7 +55,8 @@ void fidl::internal::NaturalCompleterBase<
               response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
+      ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal,
+      ::test_transitivedependenciescompose::kTop_GetFoo_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>>::

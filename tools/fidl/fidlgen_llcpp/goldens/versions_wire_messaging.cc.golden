@@ -112,6 +112,9 @@ void fidl::WireServer<::test_versions::OtherProtocol>::dispatch_message(
 namespace test_versions {
 [[maybe_unused]] constexpr uint64_t kProtocol_Foo_Ordinal =
     6231434419097198905lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kProtocol_Foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_versions
 ::fidl::WireResult<::test_versions::Protocol::Foo>::WireResult(
@@ -278,7 +281,8 @@ void fidl::WireServer<::test_versions::Protocol>::dispatch_message(
 
 void ::fidl::internal::TransactionalRequest<
     ::test_versions::Protocol::Foo>::_InitHeader() {
-  fidl_init_txn_header(&header, 0, ::test_versions::kProtocol_Foo_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0, ::test_versions::kProtocol_Foo_Ordinal,
+                        ::test_versions::kProtocol_Foo_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

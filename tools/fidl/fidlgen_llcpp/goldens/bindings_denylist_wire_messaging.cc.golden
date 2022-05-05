@@ -113,6 +113,10 @@ namespace test_bindingsdenylist {
 [[maybe_unused]] constexpr uint64_t
     kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal =
         2342407566057198902lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
 ::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -398,19 +402,23 @@ void fidl::internal::WireBufferCompleterImpl<
 void ::fidl::internal::TransactionalRequest<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
         LibfuzzerNeedsNonemptyProtocol>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
       ::test_bindingsdenylist::
-          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal);
+          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal,
+      ::test_bindingsdenylist::
+          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
         LibfuzzerNeedsNonemptyProtocol>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
       ::test_bindingsdenylist::
-          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal);
+          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal,
+      ::test_bindingsdenylist::
+          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags);
 }
 
 #ifdef __Fuchsia__
@@ -531,9 +539,17 @@ namespace test_bindingsdenylist {
 [[maybe_unused]] constexpr uint64_t
     kImportsSameNameContext_Unattributed_Ordinal = 475191379775102607lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kImportsSameNameContext_Unattributed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr uint64_t
     kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal =
         2914965219653596920lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
 ::fidl::WireResult<
@@ -807,18 +823,22 @@ void fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>::
 void ::fidl::internal::TransactionalRequest<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>::
     _InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal);
+      ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal,
+      ::test_bindingsdenylist::
+          kImportsSameNameContext_Unattributed_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_bindingsdenylist::ImportsSameNameContext::
         AlwaysAppearsInImportingLibrary>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
       ::test_bindingsdenylist::
-          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal);
+          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal,
+      ::test_bindingsdenylist::
+          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags);
 }
 
 #ifdef __Fuchsia__
@@ -829,6 +849,10 @@ namespace test_bindingsdenylist {
 [[maybe_unused]] constexpr uint64_t kDenyEachBinding_OnlyDenyDart_Ordinal =
     8446571910689294295lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenyDart_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
 
@@ -837,6 +861,10 @@ extern "C" const fidl_type_t
 
 [[maybe_unused]] constexpr uint64_t kDenyEachBinding_OnlyDenyGo_Ordinal =
     7311125300308839833lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenyGo_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
@@ -847,6 +875,10 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal =
     2184115815603862302lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
 
@@ -856,6 +888,10 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kDenyEachBinding_OnlyDenyRust_Ordinal =
     3719805222870932662lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenyRust_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
 
@@ -864,6 +900,10 @@ extern "C" const fidl_type_t
 
 [[maybe_unused]] constexpr uint64_t kDenyEachBinding_OnlyDenySyzkaller_Ordinal =
     2319043834522757514lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
@@ -2175,74 +2215,84 @@ void fidl::internal::WireBufferCompleterImpl<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal);
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal);
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
     _InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
     _InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal);
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal);
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
     _InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
     _InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

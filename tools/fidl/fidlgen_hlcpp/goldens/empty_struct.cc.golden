@@ -280,7 +280,8 @@ zx_status_t EmptyProtocol_Proxy::Dispatch_(
 
 void EmptyProtocol_Proxy::Send(::test::emptystruct::Empty e) {
   ::fidl::MessageEncoder _encoder(
-      ::test::emptystruct::internal::kEmptyProtocol_Send_Ordinal);
+      ::test::emptystruct::internal::kEmptyProtocol_Send_Ordinal,
+      ::test::emptystruct::internal::kEmptyProtocol_Send_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::emptystruct::_internal::
           test_emptystruct_EmptyProtocolSendRequestTable;
@@ -313,7 +314,9 @@ EmptyProtocol_SendAndReceive_ResponseHandler(
 void EmptyProtocol_Proxy::SendAndReceive(::test::emptystruct::Empty e,
                                          SendAndReceiveCallback callback) {
   ::fidl::MessageEncoder _encoder(
-      ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal);
+      ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal,
+      ::test::emptystruct::internal::
+          kEmptyProtocol_SendAndReceive_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::emptystruct::_internal::
           test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
@@ -342,7 +345,9 @@ class EmptyProtocol_SendAndReceive_Responder final {
 
   void operator()(::test::emptystruct::Empty e) {
     ::fidl::MessageEncoder _encoder(
-        ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal);
+        ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal,
+        ::test::emptystruct::internal::
+            kEmptyProtocol_SendAndReceive_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::emptystruct::_internal::
             test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
@@ -412,7 +417,8 @@ zx_status_t EmptyProtocol_Stub::Dispatch_(
 }
 void EmptyProtocol_Stub::Receive(::test::emptystruct::Empty e) {
   ::fidl::MessageEncoder _encoder(
-      ::test::emptystruct::internal::kEmptyProtocol_Receive_Ordinal);
+      ::test::emptystruct::internal::kEmptyProtocol_Receive_Ordinal,
+      ::test::emptystruct::internal::kEmptyProtocol_Receive_DynamicFlags);
   const fidl_type_t* resp_type =
       &::test::emptystruct::_internal::
           test_emptystruct_EmptyProtocolReceiveRequestTable;
@@ -428,7 +434,8 @@ EmptyProtocol_SyncProxy::~EmptyProtocol_SyncProxy() = default;
 
 zx_status_t EmptyProtocol_SyncProxy::Send(::test::emptystruct::Empty e) {
   ::fidl::MessageEncoder _encoder(
-      ::test::emptystruct::internal::kEmptyProtocol_Send_Ordinal);
+      ::test::emptystruct::internal::kEmptyProtocol_Send_Ordinal,
+      ::test::emptystruct::internal::kEmptyProtocol_Send_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::emptystruct::_internal::
           test_emptystruct_EmptyProtocolSendRequestTable;
@@ -440,7 +447,9 @@ zx_status_t EmptyProtocol_SyncProxy::Send(::test::emptystruct::Empty e) {
 zx_status_t EmptyProtocol_SyncProxy::SendAndReceive(
     ::test::emptystruct::Empty e, ::test::emptystruct::Empty* out_e) {
   ::fidl::MessageEncoder _encoder(
-      ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal);
+      ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal,
+      ::test::emptystruct::internal::
+          kEmptyProtocol_SendAndReceive_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =

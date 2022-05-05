@@ -6,14 +6,28 @@ namespace test_protocolrequest {
 [[maybe_unused]] constexpr inline uint64_t kParent_GetChild_Ordinal =
     881818649151440699lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kParent_GetChild_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t kParent_GetChildRequest_Ordinal =
     1096855814967598201lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kParent_GetChildRequest_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 [[maybe_unused]] constexpr inline uint64_t kParent_TakeChild_Ordinal =
     4470101341872267920lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kParent_TakeChild_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t kParent_TakeChildRequest_Ordinal =
     2333981071306416007lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kParent_TakeChildRequest_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
@@ -22,7 +36,8 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::GetChild()
     const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolrequest::kParent_GetChild_Ordinal};
+      ::test_protocolrequest::kParent_GetChild_Ordinal,
+      ::test_protocolrequest::kParent_GetChild_DynamicFlags};
   return ::fidl::internal::NaturalThenable<
       ::test_protocolrequest::Parent::GetChild>(
       &client_base(), {}, std::move(_encoder),
@@ -40,7 +55,8 @@ fidl::internal::NaturalClientImpl<
     ::test_protocolrequest::Parent>::GetChildRequest() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolrequest::kParent_GetChildRequest_Ordinal};
+      ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
+      ::test_protocolrequest::kParent_GetChildRequest_DynamicFlags};
   return ::fidl::internal::NaturalThenable<
       ::test_protocolrequest::Parent::GetChildRequest>(
       &client_base(), {}, std::move(_encoder),
@@ -57,7 +73,8 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
     ::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolrequest::kParent_TakeChild_Ordinal};
+      ::test_protocolrequest::kParent_TakeChild_Ordinal,
+      ::test_protocolrequest::kParent_TakeChild_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::
@@ -74,7 +91,8 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolrequest::kParent_TakeChildRequest_Ordinal};
+      ::test_protocolrequest::kParent_TakeChildRequest_Ordinal,
+      ::test_protocolrequest::kParent_TakeChildRequest_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>>::
@@ -107,7 +125,8 @@ void fidl::internal::
         ::fidl::Response<::test_protocolrequest::Parent::GetChild>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolrequest::kParent_GetChild_Ordinal};
+      ::test_protocolrequest::kParent_GetChild_Ordinal,
+      ::test_protocolrequest::kParent_GetChild_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Response<::test_protocolrequest::Parent::GetChild>>::
@@ -122,7 +141,8 @@ void fidl::internal::NaturalCompleterBase<
               response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolrequest::kParent_GetChildRequest_Ordinal};
+      ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
+      ::test_protocolrequest::kParent_GetChildRequest_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>::

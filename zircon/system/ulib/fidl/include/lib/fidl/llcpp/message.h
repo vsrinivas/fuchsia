@@ -5,12 +5,12 @@
 #ifndef LIB_FIDL_LLCPP_MESSAGE_H_
 #define LIB_FIDL_LLCPP_MESSAGE_H_
 
+#include <lib/fidl/cpp/transaction_header.h>
 #include <lib/fidl/cpp/wire_format_metadata.h>
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/status.h>
 #include <lib/fidl/llcpp/traits.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fit/nullable.h>
 #include <lib/fitx/result.h>
 #include <zircon/assert.h>

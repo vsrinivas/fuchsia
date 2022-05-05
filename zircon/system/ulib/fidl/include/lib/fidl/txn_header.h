@@ -11,7 +11,8 @@ __BEGIN_CDECLS
 
 // TODO(fxbug.dev/38643): make this inline
 // Initialize a txn header as per the Transaction Header v3 proposal (FTP-037)
-void fidl_init_txn_header(fidl_message_header_t* out_hdr, zx_txid_t txid, uint64_t ordinal);
+void fidl_init_txn_header(fidl_message_header_t* out_hdr, zx_txid_t txid, uint64_t ordinal,
+                          uint8_t dynamic_flags);
 
 zx_status_t fidl_validate_txn_header(const fidl_message_header_t* hdr);
 

@@ -8,6 +8,9 @@ namespace test_inheritancewithrecursivedecl {
 [[maybe_unused]] constexpr uint64_t kParent_First_Ordinal =
     3973163707930985819lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kParent_First_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 #ifdef __Fuchsia__
@@ -236,8 +239,9 @@ void fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>::
 
 void ::fidl::internal::TransactionalRequest<
     ::test_inheritancewithrecursivedecl::Parent::First>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_inheritancewithrecursivedecl::kParent_First_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_inheritancewithrecursivedecl::kParent_First_Ordinal,
+      ::test_inheritancewithrecursivedecl::kParent_First_DynamicFlags);
 }
 #endif  // __Fuchsia__
 
@@ -249,11 +253,17 @@ namespace test_inheritancewithrecursivedecl {
 [[maybe_unused]] constexpr uint64_t kChild_First_Ordinal =
     3973163707930985819lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kChild_First_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 [[maybe_unused]] constexpr uint64_t kChild_Second_Ordinal =
     2545123272820824165lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kChild_Second_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ChildSecondRequestTable;
@@ -597,8 +607,9 @@ void fidl::WireServer<::test_inheritancewithrecursivedecl::Child>::
 
 void ::fidl::internal::TransactionalRequest<
     ::test_inheritancewithrecursivedecl::Child::First>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_inheritancewithrecursivedecl::kChild_First_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_inheritancewithrecursivedecl::kChild_First_Ordinal,
+      ::test_inheritancewithrecursivedecl::kChild_First_DynamicFlags);
 }
 #endif  // __Fuchsia__
 
@@ -606,8 +617,9 @@ void ::fidl::internal::TransactionalRequest<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_inheritancewithrecursivedecl::Child::Second>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
+      ::test_inheritancewithrecursivedecl::kChild_Second_DynamicFlags);
 }
 #endif  // __Fuchsia__
 

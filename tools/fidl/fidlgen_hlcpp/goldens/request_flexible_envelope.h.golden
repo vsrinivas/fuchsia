@@ -801,8 +801,14 @@ class Protocol_SyncProxy;
 namespace internal {
 constexpr uint64_t kProtocol_RequestStrictResponseFlexible_Ordinal =
     0x9b8c7d3d118df13lu;
+constexpr ::fidl::MessageDynamicFlags
+    kProtocol_RequestStrictResponseFlexible_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_Ordinal =
     0x480c77690533acb7lu;
+constexpr ::fidl::MessageDynamicFlags
+    kProtocol_RequestFlexibleResponseStrict_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

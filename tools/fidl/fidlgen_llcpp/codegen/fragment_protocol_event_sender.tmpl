@@ -188,7 +188,7 @@ class {{ .NaturalEventSender }}
 ::fitx::result<::fidl::Error> {{ $.NaturalWeakEventSender.NoLeading }}::{{ .Name }}(
     {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }} };
+      &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
   {{- if .HasResponsePayload }}
   _encoder.EncodeBody(std::move(payload));
   {{- end }}
@@ -200,7 +200,7 @@ class {{ .NaturalEventSender }}
 ::fitx::result<::fidl::Error> {{ $.NaturalEventSender.NoLeading }}::{{ .Name }}(
     {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }} };
+      &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
   {{- if .HasResponsePayload }}
   _encoder.EncodeBody(std::move(payload));
   {{- end }}

@@ -239,6 +239,8 @@ class super_SyncProxy;
 
 namespace internal {
 constexpr uint64_t ksuper_foo_Ordinal = 0x68a61c2a230db8b8lu;
+constexpr ::fidl::MessageDynamicFlags ksuper_foo_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -254,6 +256,8 @@ class sub_SyncProxy;
 
 namespace internal {
 constexpr uint64_t ksub_foo_Ordinal = 0x68a61c2a230db8b8lu;
+constexpr ::fidl::MessageDynamicFlags ksub_foo_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

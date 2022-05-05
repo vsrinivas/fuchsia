@@ -6,7 +6,7 @@
 #include <lib/driver-unit-test/logger.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
-#include <lib/fidl/txn_header.h>
+#include <lib/fidl/cpp/transaction_header.h>
 
 #include <algorithm>
 
@@ -46,8 +46,9 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
   fidl::Builder builder(buf, len);
 
   auto* req = builder.New<fuchsia_driver_test_logger_LoggerLogMessageRequestMessage>();
-  fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
-                       fuchsia_driver_test_logger_LoggerLogMessageOrdinal);
+  fidl::InitTxnHeader(&req->hdr, FIDL_TXID_NO_RESPONSE,
+                      fuchsia_driver_test_logger_LoggerLogMessageOrdinal,
+                      fidl::MessageDynamicFlags::kStrictMethod);
 
   auto* data = builder.NewArray<char>(static_cast<uint32_t>(log_msg_size));
   req->msg.data = data;
@@ -76,8 +77,9 @@ zx_status_t Logger::SendLogTestCase() {
   fidl::Builder builder(buf, len);
 
   auto* req = builder.New<fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessage>();
-  fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
-                       fuchsia_driver_test_logger_LoggerLogTestCaseOrdinal);
+  fidl::InitTxnHeader(&req->hdr, FIDL_TXID_NO_RESPONSE,
+                      fuchsia_driver_test_logger_LoggerLogTestCaseOrdinal,
+                      fidl::MessageDynamicFlags::kStrictMethod);
 
   auto* data = builder.NewArray<char>(static_cast<uint32_t>(test_name_size));
   req->name.data = data;

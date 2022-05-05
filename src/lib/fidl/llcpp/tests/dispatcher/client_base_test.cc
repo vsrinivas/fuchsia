@@ -25,7 +25,7 @@ constexpr uint64_t kTestOrdinal = 0x1234567812345678;
 class GoodMessage {
  public:
   GoodMessage() : message_(MakeMessage(&content_)) {
-    fidl_init_txn_header(&content_, 0, kTestOrdinal);
+    fidl::InitTxnHeader(&content_, 0, kTestOrdinal, fidl::MessageDynamicFlags::kStrictMethod);
   }
 
   fidl::OutgoingMessage& message() { return message_; }

@@ -72,7 +72,7 @@
   {{- IfdefFuchsia -}}
   {{- end }}
     void {{ .WireTransactionalEvent }}::_InitHeader() {
-      fidl_init_txn_header(&header, 0, {{ .OrdinalName }});
+      ::fidl::InitTxnHeader(&header, 0, {{ .OrdinalName }}, {{ .DynamicFlagsName }});
     }
   {{- if .Response.IsResource }}
   {{- EndifFuchsia -}}

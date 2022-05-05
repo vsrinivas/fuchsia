@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/internal/natural_message_encoder.h>
-#include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 
 namespace fidl::internal {
 
-NaturalMessageEncoder::NaturalMessageEncoder(const TransportVTable* vtable, uint64_t ordinal)
+NaturalMessageEncoder::NaturalMessageEncoder(const TransportVTable* vtable, uint64_t ordinal,
+                                             MessageDynamicFlags dynamic_flags)
     : body_encoder_(vtable, WireFormatVersion::kV2) {
-  EncodeMessageHeader(ordinal);
+  EncodeMessageHeader(ordinal, dynamic_flags);
 }
 
 fidl::OutgoingMessage NaturalMessageEncoder::GetMessage() {
@@ -33,15 +33,16 @@ fidl::OutgoingMessage NaturalMessageEncoder::GetMessage() {
       });
 }
 
-void NaturalMessageEncoder::Reset(uint64_t ordinal) {
+void NaturalMessageEncoder::Reset(uint64_t ordinal, MessageDynamicFlags dynamic_flags) {
   body_encoder_.Reset();
-  EncodeMessageHeader(ordinal);
+  EncodeMessageHeader(ordinal, dynamic_flags);
 }
 
-void NaturalMessageEncoder::EncodeMessageHeader(uint64_t ordinal) {
+void NaturalMessageEncoder::EncodeMessageHeader(uint64_t ordinal,
+                                                MessageDynamicFlags dynamic_flags) {
   size_t offset = body_encoder_.Alloc(sizeof(fidl_message_header_t));
   fidl_message_header_t* header = body_encoder_.GetPtr<fidl_message_header_t>(offset);
-  fidl_init_txn_header(header, 0, ordinal);
+  fidl::InitTxnHeader(header, 0, ordinal, dynamic_flags);
   if (body_encoder_.wire_format() == internal::WireFormatVersion::kV2) {
     header->at_rest_flags[0] |= FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
   }

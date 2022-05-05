@@ -15,7 +15,9 @@ constexpr uint64_t kTestOrdinal = 0x1234567812345678;
 // |GoodMessage| is a helper to create a valid FIDL transactional message.
 class GoodMessage {
  public:
-  GoodMessage() { fidl_init_txn_header(&content_, 0, kTestOrdinal); }
+  GoodMessage() {
+    fidl::InitTxnHeader(&content_, 0, kTestOrdinal, fidl::MessageDynamicFlags::kStrictMethod);
+  }
 
   fidl::OutgoingMessage message() {
     fidl_outgoing_msg_t c_msg = {

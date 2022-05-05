@@ -7,8 +7,16 @@ namespace test_errorsyntax {
     kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal =
         3565108794310607393lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t
     kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal = 3757408930698888354lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_errorsyntax
@@ -22,7 +30,9 @@ fidl::internal::NaturalClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
+      ::test_errorsyntax::
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::
@@ -47,7 +57,9 @@ fidl::internal::NaturalClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
+      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
+      ::test_errorsyntax::
+          kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::
@@ -89,7 +101,9 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
+      ::test_errorsyntax::
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
@@ -106,7 +120,9 @@ void fidl::internal::NaturalCompleterBase<
               response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
+      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
+      ::test_errorsyntax::
+          kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::

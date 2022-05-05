@@ -5,10 +5,10 @@
 #ifndef LIB_FIDL_LLCPP_TRANSACTION_H_
 #define LIB_FIDL_LLCPP_TRANSACTION_H_
 
+#include <lib/fidl/cpp/transaction_header.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/status.h>
 #include <lib/fidl/llcpp/traits.h>
-#include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 

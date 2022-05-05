@@ -6,13 +6,18 @@ namespace test_service {
 [[maybe_unused]] constexpr inline uint64_t
     kSecondProtocol_MethodOnSecond_Ordinal = 8121179205110225988lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kSecondProtocol_MethodOnSecond_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 #ifdef __Fuchsia__
 }  // namespace test_service
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_service::SecondProtocol>::MethodOnSecond() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_service::kSecondProtocol_MethodOnSecond_Ordinal};
+      ::test_service::kSecondProtocol_MethodOnSecond_Ordinal,
+      ::test_service::kSecondProtocol_MethodOnSecond_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
@@ -87,13 +92,18 @@ namespace test_service {
 [[maybe_unused]] constexpr inline uint64_t
     kFirstProtocol_MethodOnFirst_Ordinal = 6352548393671797041lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kFirstProtocol_MethodOnFirst_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 #ifdef __Fuchsia__
 }  // namespace test_service
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_service::FirstProtocol>::MethodOnFirst() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_service::kFirstProtocol_MethodOnFirst_Ordinal};
+      ::test_service::kFirstProtocol_MethodOnFirst_Ordinal,
+      ::test_service::kFirstProtocol_MethodOnFirst_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);

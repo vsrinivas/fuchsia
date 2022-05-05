@@ -401,7 +401,8 @@ Example_foo_ResponseHandler(Example::fooCallback&& callback) {
 }  // namespace
 void Example_Proxy::foo(::std::string s, fooCallback callback) {
   ::fidl::MessageEncoder _encoder(
-      ::test::error::internal::kExample_foo_Ordinal);
+      ::test::error::internal::kExample_foo_Ordinal,
+      ::test::error::internal::kExample_foo_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::error::_internal::test_error_ExampleFooRequestTable;
   controller_->Send(req_type,
@@ -425,7 +426,8 @@ class Example_foo_Responder final {
 
   void operator()(::test::error::Example_foo_Result result) {
     ::fidl::MessageEncoder _encoder(
-        ::test::error::internal::kExample_foo_Ordinal);
+        ::test::error::internal::kExample_foo_Ordinal,
+        ::test::error::internal::kExample_foo_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::error::_internal::test_error_ExampleFooTopResponseTable;
     response_.Send(resp_type, ::test::error::Example_ResponseEncoder::foo(
@@ -492,7 +494,8 @@ Example_SyncProxy::~Example_SyncProxy() = default;
 zx_status_t Example_SyncProxy::foo(
     ::std::string s, ::test::error::Example_foo_Result* out_result) {
   ::fidl::MessageEncoder _encoder(
-      ::test::error::internal::kExample_foo_Ordinal);
+      ::test::error::internal::kExample_foo_Ordinal,
+      ::test::error::internal::kExample_foo_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =

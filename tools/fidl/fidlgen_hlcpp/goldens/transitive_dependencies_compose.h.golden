@@ -72,6 +72,8 @@ class Top_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kTop_GetFoo_Ordinal = 0x245770d9d719c667lu;
+constexpr ::fidl::MessageDynamicFlags kTop_GetFoo_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

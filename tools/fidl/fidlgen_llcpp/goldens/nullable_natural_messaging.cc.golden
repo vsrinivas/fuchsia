@@ -6,6 +6,10 @@ namespace test_nullable {
 [[maybe_unused]] constexpr inline uint64_t kSimpleProtocol_Add_Ordinal =
     9142761280038437494lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kSimpleProtocol_Add_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 #ifdef __Fuchsia__
 }  // namespace test_nullable
 ::fidl::internal::NaturalThenable<::test_nullable::SimpleProtocol::Add>
@@ -13,7 +17,8 @@ fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol>::Add(
     ::fidl::Request<::test_nullable::SimpleProtocol::Add> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_nullable::kSimpleProtocol_Add_Ordinal};
+      ::test_nullable::kSimpleProtocol_Add_Ordinal,
+      ::test_nullable::kSimpleProtocol_Add_DynamicFlags};
   _encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<
                       ::fidl::Request<::test_nullable::SimpleProtocol::Add>>::
                           IntoDomainObject(std::move(request)));
@@ -51,7 +56,8 @@ void fidl::internal::
         ::fidl::Response<::test_nullable::SimpleProtocol::Add>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_nullable::kSimpleProtocol_Add_Ordinal};
+      ::test_nullable::kSimpleProtocol_Add_Ordinal,
+      ::test_nullable::kSimpleProtocol_Add_DynamicFlags};
   _encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<
                       ::fidl::Response<::test_nullable::SimpleProtocol::Add>>::
                           IntoDomainObject(std::move(response)));

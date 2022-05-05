@@ -53,13 +53,15 @@ void CheckTransaction(const board_test::DeviceEntry& entry, const char* device_f
   fidl_message_header_t hdr;
   std::memset(&hdr, 0, sizeof(hdr));
   zx_txid_t first_txid = 1;
-  fidl_init_txn_header(&hdr, first_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
+  fidl::InitTxnHeader(&hdr, first_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal,
+                      fidl::MessageDynamicFlags::kStrictMethod);
   ASSERT_OK(zx_channel_write(driver_channel, 0, &hdr, sizeof(hdr), nullptr, 0));
   ASSERT_OK(zx_object_wait_one(driver_channel, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, nullptr));
 
   std::memset(&hdr, 0, sizeof(hdr));
   zx_txid_t second_txid = 2;
-  fidl_init_txn_header(&hdr, second_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
+  fidl::InitTxnHeader(&hdr, second_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal,
+                      fidl::MessageDynamicFlags::kStrictMethod);
   ASSERT_OK(zx_channel_write(driver_channel, 0, &hdr, sizeof(hdr), nullptr, 0));
 
   // If the transaction incorrectly closes the sent handles, it will cause a policy violation.

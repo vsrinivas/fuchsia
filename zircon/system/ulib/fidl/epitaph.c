@@ -13,7 +13,8 @@
 zx_status_t fidl_epitaph_write(zx_handle_t channel, zx_status_t error) {
   fidl_epitaph_t epitaph;
   memset(&epitaph, 0, sizeof(epitaph));
-  fidl_init_txn_header(&epitaph.hdr, 0, kFidlOrdinalEpitaph);
+  fidl_init_txn_header(&epitaph.hdr, 0, kFidlOrdinalEpitaph,
+                       FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD);
   epitaph.error = error;
 
   return zx_channel_write(channel, 0, &epitaph, sizeof(epitaph), NULL, 0);

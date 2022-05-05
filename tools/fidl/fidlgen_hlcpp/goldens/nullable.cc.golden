@@ -658,7 +658,8 @@ SimpleProtocol_Add_ResponseHandler(SimpleProtocol::AddCallback&& callback) {
 }  // namespace
 void SimpleProtocol_Proxy::Add(int32_t a, int32_t b, AddCallback callback) {
   ::fidl::MessageEncoder _encoder(
-      ::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
+      ::test::nullable::internal::kSimpleProtocol_Add_Ordinal,
+      ::test::nullable::internal::kSimpleProtocol_Add_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::nullable::_internal::test_nullable_SimpleProtocolAddRequestTable;
   controller_->Send(
@@ -684,7 +685,8 @@ class SimpleProtocol_Add_Responder final {
 
   void operator()(int32_t sum) {
     ::fidl::MessageEncoder _encoder(
-        ::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
+        ::test::nullable::internal::kSimpleProtocol_Add_Ordinal,
+        ::test::nullable::internal::kSimpleProtocol_Add_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::nullable::_internal::
             test_nullable_SimpleProtocolAddTopResponseTable;
@@ -755,7 +757,8 @@ SimpleProtocol_SyncProxy::~SimpleProtocol_SyncProxy() = default;
 zx_status_t SimpleProtocol_SyncProxy::Add(int32_t a, int32_t b,
                                           int32_t* out_sum) {
   ::fidl::MessageEncoder _encoder(
-      ::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
+      ::test::nullable::internal::kSimpleProtocol_Add_Ordinal,
+      ::test::nullable::internal::kSimpleProtocol_Add_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =

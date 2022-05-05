@@ -8,6 +8,10 @@ namespace test_driverhandle {
 [[maybe_unused]] constexpr uint64_t kHandlesInProtocol_SendHandles_Ordinal =
     8904504160365833729lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kHandlesInProtocol_SendHandles_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
 
@@ -182,8 +186,9 @@ void fdf::WireServer<::test_driverhandle::HandlesInProtocol>::dispatch_message(
 
 void ::fidl::internal::TransactionalRequest<
     ::test_driverhandle::HandlesInProtocol::SendHandles>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal,
+      ::test_driverhandle::kHandlesInProtocol_SendHandles_DynamicFlags);
 }
 #endif  // __Fuchsia__
 

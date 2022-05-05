@@ -4,8 +4,8 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl/cpp/transaction_header.h>
 #include <lib/fidl/llcpp/internal/transport_channel.h>
-#include <lib/fidl/txn_header.h>
 
 #include <atomic>
 
@@ -18,7 +18,7 @@ TEST(ChannelTransport, Success) {
   zx::channel ch1, ch2;
   ASSERT_OK(zx::channel::create(0, &ch1, &ch2));
   fidl_message_header_t message;
-  fidl_init_txn_header(&message, 123, 456);
+  fidl::InitTxnHeader(&message, 123, 456, fidl::MessageDynamicFlags::kStrictMethod);
   ASSERT_OK(ch2.write(0, &message, sizeof(message), nullptr, 0));
 
   bool success = false;

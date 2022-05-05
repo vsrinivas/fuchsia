@@ -51,6 +51,10 @@ namespace test_bindingsdenylist {
     kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal =
         2342407566057198902lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
 ::fidl::internal::NaturalThenable<
@@ -62,7 +66,9 @@ fidl::internal::NaturalClientImpl<
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_bindingsdenylist::
-          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
+          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal,
+      ::test_bindingsdenylist::
+          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags};
   return ::fidl::internal::NaturalThenable<
       ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
           LibfuzzerNeedsNonemptyProtocol>(
@@ -100,7 +106,9 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_bindingsdenylist::
-          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
+          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal,
+      ::test_bindingsdenylist::
+          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
@@ -209,9 +217,17 @@ namespace test_bindingsdenylist {
 [[maybe_unused]] constexpr inline uint64_t
     kImportsSameNameContext_Unattributed_Ordinal = 475191379775102607lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kImportsSameNameContext_Unattributed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t
     kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal =
         2914965219653596920lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
@@ -219,7 +235,9 @@ namespace test_bindingsdenylist {
     ::test_bindingsdenylist::ImportsSameNameContext>::Unattributed() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal};
+      ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal,
+      ::test_bindingsdenylist::
+          kImportsSameNameContext_Unattributed_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
@@ -231,7 +249,9 @@ namespace test_bindingsdenylist {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
       ::test_bindingsdenylist::
-          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal};
+          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal,
+      ::test_bindingsdenylist::
+          kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
@@ -336,17 +356,37 @@ namespace test_bindingsdenylist {
 [[maybe_unused]] constexpr inline uint64_t
     kDenyEachBinding_OnlyDenyDart_Ordinal = 8446571910689294295lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenyDart_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t kDenyEachBinding_OnlyDenyGo_Ordinal =
     7311125300308839833lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenyGo_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 [[maybe_unused]] constexpr inline uint64_t
     kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal = 2184115815603862302lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t
     kDenyEachBinding_OnlyDenyRust_Ordinal = 3719805222870932662lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenyRust_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t
     kDenyEachBinding_OnlyDenySyzkaller_Ordinal = 2319043834522757514lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
@@ -358,7 +398,8 @@ fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal};
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::
@@ -382,7 +423,8 @@ fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal};
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::
@@ -407,7 +449,8 @@ fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal};
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::
@@ -431,7 +474,8 @@ fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal};
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::
@@ -456,7 +500,8 @@ fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal};
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::
@@ -497,7 +542,8 @@ void fidl::internal::NaturalCompleterBase<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal};
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::
@@ -513,7 +559,8 @@ void fidl::internal::NaturalCompleterBase<
             response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal};
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::
@@ -529,7 +576,8 @@ void fidl::internal::NaturalCompleterBase<
               response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal};
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::
@@ -544,7 +592,8 @@ void fidl::internal::NaturalCompleterBase<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal};
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::
@@ -560,7 +609,8 @@ void fidl::internal::NaturalCompleterBase<
               response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal};
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal,
+      ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::

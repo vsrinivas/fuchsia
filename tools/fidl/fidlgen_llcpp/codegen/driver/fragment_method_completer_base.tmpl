@@ -116,7 +116,7 @@ class {{ .NaturalCompleterBase }} : public ::fidl::CompleterBase {
 void {{ .NaturalCompleterBase.NoLeading }}::Reply(
     {{- template "Method:NaturalReplySignature:Helper" . }}) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }} };
+      &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
 
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {

@@ -615,7 +615,8 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 
 void Interface_Proxy::Method() {
   ::fidl::MessageEncoder _encoder(
-      ::test::doccomments::internal::kInterface_Method_Ordinal);
+      ::test::doccomments::internal::kInterface_Method_Ordinal,
+      ::test::doccomments::internal::kInterface_Method_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   controller_->Send(
       req_type,
@@ -677,7 +678,8 @@ zx_status_t Interface_Stub::Dispatch_(
 }
 void Interface_Stub::OnEvent() {
   ::fidl::MessageEncoder _encoder(
-      ::test::doccomments::internal::kInterface_OnEvent_Ordinal);
+      ::test::doccomments::internal::kInterface_OnEvent_Ordinal,
+      ::test::doccomments::internal::kInterface_OnEvent_DynamicFlags);
   const fidl_type_t* resp_type = nullptr;
   sender_()->Send(
       resp_type,
@@ -691,7 +693,8 @@ Interface_SyncProxy::~Interface_SyncProxy() = default;
 
 zx_status_t Interface_SyncProxy::Method() {
   ::fidl::MessageEncoder _encoder(
-      ::test::doccomments::internal::kInterface_Method_Ordinal);
+      ::test::doccomments::internal::kInterface_Method_Ordinal,
+      ::test::doccomments::internal::kInterface_Method_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   return proxy_.Send(
       req_type,

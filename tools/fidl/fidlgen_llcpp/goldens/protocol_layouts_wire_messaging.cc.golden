@@ -8,11 +8,19 @@ namespace test_protocollayouts {
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OneWayAnonComposed_Ordinal =
     467706262354916833lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OneWayAnonComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolOneWayAnonComposedRequestTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_TwoWayAnonComposed_Ordinal =
     1634702755099390832lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayAnonComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedRequestTable;
@@ -23,6 +31,10 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t
     kMainProtocol_TwoWayAnonComposedWithError_Ordinal = 3374101322700362141lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayAnonComposedWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorRequestTable;
 
@@ -32,11 +44,19 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnAnonComposed_Ordinal =
     9198778981238868491lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnAnonComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolOnAnonComposedRequestTable;
 
 [[maybe_unused]] constexpr uint64_t
     kMainProtocol_OnAnonComposedWithError_Ordinal = 712214127111113275lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnAnonComposedWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolOnAnonComposedWithErrorRequestTable;
@@ -44,11 +64,19 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OneWayNamedComposed_Ordinal =
     6735359826241449560lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OneWayNamedComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ImportTablePayloadTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_TwoWayNamedComposed_Ordinal =
     1110122450485917712lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayNamedComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ImportUnionPayloadTable;
@@ -59,6 +87,10 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t
     kMainProtocol_TwoWayNamedComposedWithError_Ordinal = 3520341666774118271lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayNamedComposedWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ImportTablePayloadTable;
 
@@ -68,11 +100,19 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnNamedComposed_Ordinal =
     6802961197456477674lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnNamedComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ImportUnionPayloadTable;
 
 [[maybe_unused]] constexpr uint64_t
     kMainProtocol_OnNamedComposedWithError_Ordinal = 7488207288618998795lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnNamedComposedWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ComposedProtocolOnNamedComposedWithErrorRequestTable;
@@ -80,11 +120,19 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OneWayImport_Ordinal =
     374039999976906043lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OneWayImport_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ImportTablePayloadTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_TwoWayImport_Ordinal =
     3167860988423964164lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayImport_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ImportUnionPayloadTable;
@@ -95,6 +143,10 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t
     kMainProtocol_TwoWayImportWithError_Ordinal = 4837028007581646602lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayImportWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ImportTablePayloadTable;
 
@@ -104,11 +156,19 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnImport_Ordinal =
     6584793811321990352lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnImport_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_imported_ImportUnionPayloadTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnImportWithError_Ordinal =
     1123803631971094487lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnImportWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnImportWithErrorRequestTable;
@@ -116,10 +176,18 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OneWayLocal_Ordinal =
     6085941264859402051lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OneWayLocal_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_TwoWayLocal_Ordinal =
     7763901300032164763lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayLocal_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t test_protocollayouts_LocalUnionPayloadTable;
 
@@ -127,6 +195,10 @@ extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_TwoWayLocalWithError_Ordinal =
     5609487496960056151lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayLocalWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
 
@@ -136,10 +208,18 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnLocal_Ordinal =
     4199259762307646332lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnLocal_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t test_protocollayouts_LocalUnionPayloadTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnLocalWithError_Ordinal =
     8767483445230259748lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnLocalWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnLocalWithErrorRequestTable;
@@ -147,11 +227,19 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OneWayAnon_Ordinal =
     4203317713771984620lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OneWayAnon_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOneWayAnonRequestTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_TwoWayAnon_Ordinal =
     7435080039097281487lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayAnon_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonRequestTable;
@@ -162,6 +250,10 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kMainProtocol_TwoWayAnonWithError_Ordinal =
     7770394869745610225lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayAnonWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable;
 
@@ -171,11 +263,19 @@ extern "C" const fidl_type_t
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnAnon_Ordinal =
     7275479350674227467lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnAnon_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnAnonRequestTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnAnonWithError_Ordinal =
     3672186790919812761lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnAnonWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnAnonWithErrorRequestTable;
@@ -3492,242 +3592,283 @@ void fidl::internal::WireBufferCompleterImpl<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::OneWayAnonComposed>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_OneWayAnonComposed_Ordinal);
+      ::test_protocollayouts::kMainProtocol_OneWayAnonComposed_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OneWayAnonComposed_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_TwoWayAnonComposed_Ordinal);
+      ::test_protocollayouts::kMainProtocol_TwoWayAnonComposed_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayAnonComposed_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_TwoWayAnonComposed_Ordinal);
+      ::test_protocollayouts::kMainProtocol_TwoWayAnonComposed_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayAnonComposed_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>::
     _InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocollayouts::
-                           kMainProtocol_TwoWayAnonComposedWithError_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0,
+      ::test_protocollayouts::kMainProtocol_TwoWayAnonComposedWithError_Ordinal,
+      ::test_protocollayouts::
+          kMainProtocol_TwoWayAnonComposedWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>::
     _InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocollayouts::
-                           kMainProtocol_TwoWayAnonComposedWithError_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0,
+      ::test_protocollayouts::kMainProtocol_TwoWayAnonComposedWithError_Ordinal,
+      ::test_protocollayouts::
+          kMainProtocol_TwoWayAnonComposedWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_protocollayouts::MainProtocol::OnAnonComposed>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_protocollayouts::kMainProtocol_OnAnonComposed_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_OnAnonComposed_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OnAnonComposed_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>::
     _InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_OnAnonComposedWithError_Ordinal);
+      ::test_protocollayouts::kMainProtocol_OnAnonComposedWithError_Ordinal,
+      ::test_protocollayouts::
+          kMainProtocol_OnAnonComposedWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::OneWayNamedComposed>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_OneWayNamedComposed_Ordinal);
+      ::test_protocollayouts::kMainProtocol_OneWayNamedComposed_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OneWayNamedComposed_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_TwoWayNamedComposed_Ordinal);
+      ::test_protocollayouts::kMainProtocol_TwoWayNamedComposed_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayNamedComposed_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_TwoWayNamedComposed_Ordinal);
+      ::test_protocollayouts::kMainProtocol_TwoWayNamedComposed_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayNamedComposed_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>::
     _InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocollayouts::
-                           kMainProtocol_TwoWayNamedComposedWithError_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0,
+      ::test_protocollayouts::
+          kMainProtocol_TwoWayNamedComposedWithError_Ordinal,
+      ::test_protocollayouts::
+          kMainProtocol_TwoWayNamedComposedWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>::
     _InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocollayouts::
-                           kMainProtocol_TwoWayNamedComposedWithError_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0,
+      ::test_protocollayouts::
+          kMainProtocol_TwoWayNamedComposedWithError_Ordinal,
+      ::test_protocollayouts::
+          kMainProtocol_TwoWayNamedComposedWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_protocollayouts::MainProtocol::OnNamedComposed>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0,
-      ::test_protocollayouts::kMainProtocol_OnNamedComposed_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_OnNamedComposed_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OnNamedComposed_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>::
     _InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_OnNamedComposedWithError_Ordinal);
+      ::test_protocollayouts::kMainProtocol_OnNamedComposedWithError_Ordinal,
+      ::test_protocollayouts::
+          kMainProtocol_OnNamedComposedWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::OneWayImport>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_protocollayouts::kMainProtocol_OneWayImport_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_OneWayImport_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OneWayImport_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::TwoWayImport>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayImport_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayImport_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayImport_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayImport>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayImport_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayImport_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayImport_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::TwoWayImportWithError>::
     _InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_TwoWayImportWithError_Ordinal);
+      ::test_protocollayouts::kMainProtocol_TwoWayImportWithError_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayImportWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayImportWithError>::
     _InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_TwoWayImportWithError_Ordinal);
+      ::test_protocollayouts::kMainProtocol_TwoWayImportWithError_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayImportWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_protocollayouts::MainProtocol::OnImport>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocollayouts::kMainProtocol_OnImport_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_OnImport_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OnImport_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_protocollayouts::MainProtocol::OnImportWithError>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_OnImportWithError_Ordinal);
+      ::test_protocollayouts::kMainProtocol_OnImportWithError_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OnImportWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::OneWayLocal>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_protocollayouts::kMainProtocol_OneWayLocal_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_OneWayLocal_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OneWayLocal_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::TwoWayLocal>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayLocal_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayLocal_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayLocal_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayLocal>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayLocal_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayLocal_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayLocal_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_TwoWayLocalWithError_Ordinal);
+      ::test_protocollayouts::kMainProtocol_TwoWayLocalWithError_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayLocalWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_TwoWayLocalWithError_Ordinal);
+      ::test_protocollayouts::kMainProtocol_TwoWayLocalWithError_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayLocalWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_protocollayouts::MainProtocol::OnLocal>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocollayouts::kMainProtocol_OnLocal_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_OnLocal_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OnLocal_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_protocollayouts::MainProtocol::OnLocalWithError>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_OnLocalWithError_Ordinal);
+      ::test_protocollayouts::kMainProtocol_OnLocalWithError_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OnLocalWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::OneWayAnon>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_protocollayouts::kMainProtocol_OneWayAnon_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_OneWayAnon_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OneWayAnon_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::TwoWayAnon>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayAnon_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayAnon_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayAnon_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayAnon>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayAnon_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_TwoWayAnon_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayAnon_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_TwoWayAnonWithError_Ordinal);
+      ::test_protocollayouts::kMainProtocol_TwoWayAnonWithError_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayAnonWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>::_InitHeader() {
-  fidl_init_txn_header(
+  ::fidl::InitTxnHeader(
       &header, 0,
-      ::test_protocollayouts::kMainProtocol_TwoWayAnonWithError_Ordinal);
+      ::test_protocollayouts::kMainProtocol_TwoWayAnonWithError_Ordinal,
+      ::test_protocollayouts::kMainProtocol_TwoWayAnonWithError_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_protocollayouts::MainProtocol::OnAnon>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_protocollayouts::kMainProtocol_OnAnon_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_OnAnon_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OnAnon_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_protocollayouts::MainProtocol::OnAnonWithError>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0,
-      ::test_protocollayouts::kMainProtocol_OnAnonWithError_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_protocollayouts::kMainProtocol_OnAnonWithError_Ordinal,
+      ::test_protocollayouts::kMainProtocol_OnAnonWithError_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

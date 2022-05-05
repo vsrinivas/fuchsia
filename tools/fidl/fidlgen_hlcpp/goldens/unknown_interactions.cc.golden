@@ -432,7 +432,9 @@ zx_status_t Example_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 
 void Example_Proxy::StrictOneWay() {
   ::fidl::MessageEncoder _encoder(
-      ::test::unknowninteractions::internal::kExample_StrictOneWay_Ordinal);
+      ::test::unknowninteractions::internal::kExample_StrictOneWay_Ordinal,
+      ::test::unknowninteractions::internal::
+          kExample_StrictOneWay_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   controller_->Send(
       req_type,
@@ -442,7 +444,9 @@ void Example_Proxy::StrictOneWay() {
 }
 void Example_Proxy::FlexibleOneWay() {
   ::fidl::MessageEncoder _encoder(
-      ::test::unknowninteractions::internal::kExample_FlexibleOneWay_Ordinal);
+      ::test::unknowninteractions::internal::kExample_FlexibleOneWay_Ordinal,
+      ::test::unknowninteractions::internal::
+          kExample_FlexibleOneWay_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   controller_->Send(
       req_type,
@@ -468,7 +472,9 @@ Example_StrictTwoWay_ResponseHandler(Example::StrictTwoWayCallback&& callback) {
 }  // namespace
 void Example_Proxy::StrictTwoWay(StrictTwoWayCallback callback) {
   ::fidl::MessageEncoder _encoder(
-      ::test::unknowninteractions::internal::kExample_StrictTwoWay_Ordinal);
+      ::test::unknowninteractions::internal::kExample_StrictTwoWay_Ordinal,
+      ::test::unknowninteractions::internal::
+          kExample_StrictTwoWay_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   controller_->Send(
       req_type,
@@ -499,7 +505,9 @@ Example_FlexibleTwoWay_ResponseHandler(
 }  // namespace
 void Example_Proxy::FlexibleTwoWay(FlexibleTwoWayCallback callback) {
   ::fidl::MessageEncoder _encoder(
-      ::test::unknowninteractions::internal::kExample_FlexibleTwoWay_Ordinal);
+      ::test::unknowninteractions::internal::kExample_FlexibleTwoWay_Ordinal,
+      ::test::unknowninteractions::internal::
+          kExample_FlexibleTwoWay_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   controller_->Send(
       req_type,
@@ -525,7 +533,9 @@ class Example_StrictTwoWay_Responder final {
 
   void operator()() {
     ::fidl::MessageEncoder _encoder(
-        ::test::unknowninteractions::internal::kExample_StrictTwoWay_Ordinal);
+        ::test::unknowninteractions::internal::kExample_StrictTwoWay_Ordinal,
+        ::test::unknowninteractions::internal::
+            kExample_StrictTwoWay_DynamicFlags);
     const fidl_type_t* resp_type = nullptr;
     response_.Send(
         resp_type,
@@ -545,7 +555,9 @@ class Example_FlexibleTwoWay_Responder final {
   void operator()(
       ::test::unknowninteractions::Example_FlexibleTwoWay_Result result) {
     ::fidl::MessageEncoder _encoder(
-        ::test::unknowninteractions::internal::kExample_FlexibleTwoWay_Ordinal);
+        ::test::unknowninteractions::internal::kExample_FlexibleTwoWay_Ordinal,
+        ::test::unknowninteractions::internal::
+            kExample_FlexibleTwoWay_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::unknowninteractions::_internal::
             test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
@@ -620,7 +632,8 @@ zx_status_t Example_Stub::Dispatch_(
 }
 void Example_Stub::StrictEvent() {
   ::fidl::MessageEncoder _encoder(
-      ::test::unknowninteractions::internal::kExample_StrictEvent_Ordinal);
+      ::test::unknowninteractions::internal::kExample_StrictEvent_Ordinal,
+      ::test::unknowninteractions::internal::kExample_StrictEvent_DynamicFlags);
   const fidl_type_t* resp_type = nullptr;
   sender_()->Send(
       resp_type,
@@ -629,7 +642,9 @@ void Example_Stub::StrictEvent() {
 }
 void Example_Stub::FlexibleEvent() {
   ::fidl::MessageEncoder _encoder(
-      ::test::unknowninteractions::internal::kExample_FlexibleEvent_Ordinal);
+      ::test::unknowninteractions::internal::kExample_FlexibleEvent_Ordinal,
+      ::test::unknowninteractions::internal::
+          kExample_FlexibleEvent_DynamicFlags);
   const fidl_type_t* resp_type = nullptr;
   sender_()->Send(
       resp_type,
@@ -644,7 +659,9 @@ Example_SyncProxy::~Example_SyncProxy() = default;
 
 zx_status_t Example_SyncProxy::StrictOneWay() {
   ::fidl::MessageEncoder _encoder(
-      ::test::unknowninteractions::internal::kExample_StrictOneWay_Ordinal);
+      ::test::unknowninteractions::internal::kExample_StrictOneWay_Ordinal,
+      ::test::unknowninteractions::internal::
+          kExample_StrictOneWay_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   return proxy_.Send(
       req_type,
@@ -654,7 +671,9 @@ zx_status_t Example_SyncProxy::StrictOneWay() {
 
 zx_status_t Example_SyncProxy::FlexibleOneWay() {
   ::fidl::MessageEncoder _encoder(
-      ::test::unknowninteractions::internal::kExample_FlexibleOneWay_Ordinal);
+      ::test::unknowninteractions::internal::kExample_FlexibleOneWay_Ordinal,
+      ::test::unknowninteractions::internal::
+          kExample_FlexibleOneWay_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   return proxy_.Send(
       req_type,
@@ -664,7 +683,9 @@ zx_status_t Example_SyncProxy::FlexibleOneWay() {
 
 zx_status_t Example_SyncProxy::StrictTwoWay() {
   ::fidl::MessageEncoder _encoder(
-      ::test::unknowninteractions::internal::kExample_StrictTwoWay_Ordinal);
+      ::test::unknowninteractions::internal::kExample_StrictTwoWay_Ordinal,
+      ::test::unknowninteractions::internal::
+          kExample_StrictTwoWay_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type = nullptr;
@@ -681,7 +702,9 @@ zx_status_t Example_SyncProxy::StrictTwoWay() {
 zx_status_t Example_SyncProxy::FlexibleTwoWay(
     ::test::unknowninteractions::Example_FlexibleTwoWay_Result* out_result) {
   ::fidl::MessageEncoder _encoder(
-      ::test::unknowninteractions::internal::kExample_FlexibleTwoWay_Ordinal);
+      ::test::unknowninteractions::internal::kExample_FlexibleTwoWay_Ordinal,
+      ::test::unknowninteractions::internal::
+          kExample_FlexibleTwoWay_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type = nullptr;

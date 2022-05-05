@@ -7,6 +7,9 @@
 namespace test_drivertwoway {
 [[maybe_unused]] constexpr uint64_t kTwoWay_Add_Ordinal = 989730524426044687lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kTwoWay_Add_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
@@ -181,10 +184,12 @@ void fidl::internal::WireBufferCompleterImpl<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_drivertwoway::TwoWay::Add>::_InitHeader() {
-  fidl_init_txn_header(&header, 0, ::test_drivertwoway::kTwoWay_Add_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0, ::test_drivertwoway::kTwoWay_Add_Ordinal,
+                        ::test_drivertwoway::kTwoWay_Add_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_drivertwoway::TwoWay::Add>::_InitHeader() {
-  fidl_init_txn_header(&header, 0, ::test_drivertwoway::kTwoWay_Add_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0, ::test_drivertwoway::kTwoWay_Add_Ordinal,
+                        ::test_drivertwoway::kTwoWay_Add_DynamicFlags);
 }

@@ -749,7 +749,9 @@ void Protocol_Proxy::RequestStrictResponseFlexible(
     RequestStrictResponseFlexibleCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestStrictResponseFlexible_Ordinal);
+          kProtocol_RequestStrictResponseFlexible_Ordinal,
+      ::test::requestflexibleenvelope::internal::
+          kProtocol_RequestStrictResponseFlexible_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::requestflexibleenvelope::_internal::
           test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
@@ -785,7 +787,9 @@ void Protocol_Proxy::RequestFlexibleResponseStrict(
     RequestFlexibleResponseStrictCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestFlexibleResponseStrict_Ordinal);
+          kProtocol_RequestFlexibleResponseStrict_Ordinal,
+      ::test::requestflexibleenvelope::internal::
+          kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::requestflexibleenvelope::_internal::
           test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
@@ -815,7 +819,9 @@ class Protocol_RequestStrictResponseFlexible_Responder final {
   void operator()(::test::requestflexibleenvelope::FlexibleFoo f) {
     ::fidl::MessageEncoder _encoder(
         ::test::requestflexibleenvelope::internal::
-            kProtocol_RequestStrictResponseFlexible_Ordinal);
+            kProtocol_RequestStrictResponseFlexible_Ordinal,
+        ::test::requestflexibleenvelope::internal::
+            kProtocol_RequestStrictResponseFlexible_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::requestflexibleenvelope::_internal::
             test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
@@ -837,7 +843,9 @@ class Protocol_RequestFlexibleResponseStrict_Responder final {
   void operator()(::test::requestflexibleenvelope::StrictFoo f) {
     ::fidl::MessageEncoder _encoder(
         ::test::requestflexibleenvelope::internal::
-            kProtocol_RequestFlexibleResponseStrict_Ordinal);
+            kProtocol_RequestFlexibleResponseStrict_Ordinal,
+        ::test::requestflexibleenvelope::internal::
+            kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::requestflexibleenvelope::_internal::
             test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
@@ -921,7 +929,9 @@ zx_status_t Protocol_SyncProxy::RequestStrictResponseFlexible(
     ::test::requestflexibleenvelope::FlexibleFoo* out_f) {
   ::fidl::MessageEncoder _encoder(
       ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestStrictResponseFlexible_Ordinal);
+          kProtocol_RequestStrictResponseFlexible_Ordinal,
+      ::test::requestflexibleenvelope::internal::
+          kProtocol_RequestStrictResponseFlexible_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
@@ -947,7 +957,9 @@ zx_status_t Protocol_SyncProxy::RequestFlexibleResponseStrict(
     ::test::requestflexibleenvelope::StrictFoo* out_f) {
   ::fidl::MessageEncoder _encoder(
       ::test::requestflexibleenvelope::internal::
-          kProtocol_RequestFlexibleResponseStrict_Ordinal);
+          kProtocol_RequestFlexibleResponseStrict_Ordinal,
+      ::test::requestflexibleenvelope::internal::
+          kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =

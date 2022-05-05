@@ -8,8 +8,15 @@ namespace test_doccomments {
 [[maybe_unused]] constexpr uint64_t kInterface_Method_Ordinal =
     5017051197196532121lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kInterface_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr uint64_t kInterface_OnEvent_Ordinal =
     28780186509098736lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kInterface_OnEvent_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_doccomments
 ::fidl::WireResult<::test_doccomments::Interface::Method>::WireResult(
@@ -219,14 +226,16 @@ void fidl::WireServer<::test_doccomments::Interface>::dispatch_message(
 
 void ::fidl::internal::TransactionalRequest<
     ::test_doccomments::Interface::Method>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_doccomments::kInterface_Method_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0,
+                        ::test_doccomments::kInterface_Method_Ordinal,
+                        ::test_doccomments::kInterface_Method_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalEvent<
     ::test_doccomments::Interface::OnEvent>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_doccomments::kInterface_OnEvent_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0,
+                        ::test_doccomments::kInterface_OnEvent_Ordinal,
+                        ::test_doccomments::kInterface_OnEvent_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

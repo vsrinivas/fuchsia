@@ -780,6 +780,8 @@ class ExampleProtocol_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kExampleProtocol_Method_Ordinal = 0x53978e6fc7476749lu;
+constexpr ::fidl::MessageDynamicFlags kExampleProtocol_Method_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

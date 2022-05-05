@@ -81,7 +81,7 @@ struct {{ .WireTransactionalRequest }} final {
 {{- IfdefFuchsia -}}
 {{- end }}
   void {{ .WireTransactionalRequest }}::_InitHeader() {
-    fidl_init_txn_header(&header, 0, {{ .OrdinalName }});
+    ::fidl::InitTxnHeader(&header, 0, {{ .OrdinalName }}, {{ .DynamicFlagsName }});
   }
 {{- if .Request.IsResource }}
 {{- EndifFuchsia -}}

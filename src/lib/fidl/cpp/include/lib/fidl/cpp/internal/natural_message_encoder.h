@@ -7,6 +7,7 @@
 
 #include <lib/fidl/cpp/natural_encoder.h>
 #include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/transaction_header.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/message.h>
 #include <zircon/fidl.h>
@@ -17,7 +18,8 @@ namespace fidl::internal {
 // message.
 class NaturalMessageEncoder final {
  public:
-  NaturalMessageEncoder(const TransportVTable* vtable, uint64_t ordinal);
+  NaturalMessageEncoder(const TransportVTable* vtable, uint64_t ordinal,
+                        MessageDynamicFlags dynamic_flags);
 
   NaturalMessageEncoder(NaturalMessageEncoder&&) noexcept = default;
   NaturalMessageEncoder& operator=(NaturalMessageEncoder&&) noexcept = default;
@@ -41,7 +43,7 @@ class NaturalMessageEncoder final {
         &body_encoder(), &payload, sizeof(fidl_message_header_t), kRecursionDepthInitial);
   }
 
-  void Reset(uint64_t ordinal);
+  void Reset(uint64_t ordinal, MessageDynamicFlags dynamic_flags);
 
   // Return an outgoing message representing the encoded header plus body.
   // Handle ownership will be transferred to the outgoing message.
@@ -50,7 +52,7 @@ class NaturalMessageEncoder final {
  private:
   NaturalBodyEncoder body_encoder_;
 
-  void EncodeMessageHeader(uint64_t ordinal);
+  void EncodeMessageHeader(uint64_t ordinal, MessageDynamicFlags dynamic_flags);
 };
 
 }  // namespace fidl::internal

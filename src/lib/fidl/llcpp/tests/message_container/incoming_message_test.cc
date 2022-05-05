@@ -36,8 +36,8 @@ TEST(IncomingMessage, ConstructNonOkMessageRequiresNonOkStatus) {
 class IncomingMessageWithHandlesTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    fidl_init_txn_header(reinterpret_cast<fidl_message_header_t*>(bytes_), /* txid */ 1,
-                         /* ordinal */ 1);
+    fidl::InitTxnHeader(reinterpret_cast<fidl_message_header_t*>(bytes_), /* txid */ 1,
+                        /* ordinal */ 1, fidl::MessageDynamicFlags::kStrictMethod);
 
     ASSERT_EQ(ZX_OK, zx_event_create(0, &event1_));
     checker_.AddEvent(event1_);
@@ -121,7 +121,7 @@ TEST_F(IncomingMessageWithHandlesTest, MoveConstructorHandleOwnership) {
 TEST(IncomingMessage, ValidateTransactionalMessageHeader) {
   uint8_t bytes[sizeof(fidl_message_header_t)] = {};
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  fidl_init_txn_header(hdr, /* txid */ 1, /* ordinal */ 1);
+  fidl::InitTxnHeader(hdr, /* txid */ 1, /* ordinal */ 1, fidl::MessageDynamicFlags::kStrictMethod);
   // Unsupported wire-format magic number.
   hdr->magic_number = 42;
 
@@ -171,7 +171,7 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannel) {
 
   uint8_t bytes[sizeof(fidl_message_header_t)] = {};
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-  fidl_init_txn_header(hdr, /* txid */ 1, /* ordinal */ 1);
+  fidl::InitTxnHeader(hdr, /* txid */ 1, /* ordinal */ 1, fidl::MessageDynamicFlags::kStrictMethod);
   sink.write(0, bytes, std::size(bytes), nullptr, 0);
 
   auto incoming = fidl::MessageRead(source, byte_buffer_view(), handle_data(),
@@ -209,7 +209,8 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannelInvalidMessage) {
   uint8_t bytes[sizeof(fidl_message_header_t)] = {};
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
   // An epitaph must have zero txid, so the following is invalid.
-  fidl_init_txn_header(hdr, /* txid */ 42, /* ordinal */ kFidlOrdinalEpitaph);
+  fidl::InitTxnHeader(hdr, /* txid */ 42, /* ordinal */ kFidlOrdinalEpitaph,
+                      fidl::MessageDynamicFlags::kStrictMethod);
   sink.write(0, bytes, std::size(bytes), nullptr, 0);
 
   auto incoming = fidl::MessageRead(source, byte_buffer_view(), handle_data(),

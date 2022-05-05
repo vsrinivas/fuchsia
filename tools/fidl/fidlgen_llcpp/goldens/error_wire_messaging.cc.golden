@@ -8,6 +8,9 @@ namespace test_error {
 [[maybe_unused]] constexpr uint64_t kExample_foo_Ordinal =
     1107623248440401476lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kExample_foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
 
 extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
@@ -313,12 +316,14 @@ void fidl::internal::WireBufferCompleterImpl<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_error::Example::Foo>::_InitHeader() {
-  fidl_init_txn_header(&header, 0, ::test_error::kExample_foo_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0, ::test_error::kExample_foo_Ordinal,
+                        ::test_error::kExample_foo_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_error::Example::Foo>::_InitHeader() {
-  fidl_init_txn_header(&header, 0, ::test_error::kExample_foo_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0, ::test_error::kExample_foo_Ordinal,
+                        ::test_error::kExample_foo_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

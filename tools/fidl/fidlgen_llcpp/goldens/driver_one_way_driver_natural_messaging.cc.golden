@@ -2,6 +2,9 @@
 namespace test_driveroneway {
 [[maybe_unused]] constexpr inline uint64_t kOneWay_Send_Ordinal =
     7942965975761529343lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kOneWay_Send_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
 ::fitx::result<::fidl::Error>
@@ -9,7 +12,8 @@ fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay>::Send(
     ::fidl::Request<::test_driveroneway::OneWay::Send> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable,
-      ::test_driveroneway::kOneWay_Send_Ordinal};
+      ::test_driveroneway::kOneWay_Send_Ordinal,
+      ::test_driveroneway::kOneWay_Send_DynamicFlags};
 
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {

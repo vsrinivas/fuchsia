@@ -67,7 +67,8 @@ TEST(SyncClientErrorTest, DecodeError) {
 
     // Send the number 42 as |MyError|, which will fail validation at the sync client when it
     // receives the message.
-    fidl_init_txn_header(&message.header, request.header.txid, request.header.ordinal);
+    fidl::InitTxnHeader(&message.header, request.header.txid, request.header.ordinal,
+                        fidl::MessageDynamicFlags::kStrictMethod);
     message.body.e = static_cast<test::wire::MyError>(42);
     ASSERT_OK(endpoints->server.channel().write(0, reinterpret_cast<void*>(&message),
                                                 sizeof(message), nullptr, 0));

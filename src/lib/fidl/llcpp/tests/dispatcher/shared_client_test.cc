@@ -173,7 +173,7 @@ TEST(WireSharedClient, Clone) {
     EXPECT_TRUE(spy.IsPending(contexts.back()->Txid()));
     // Send a "response" message with the same txid from the remote end of the channel.
     fidl_message_header_t hdr;
-    fidl_init_txn_header(&hdr, contexts.back()->Txid(), 0);
+    fidl::InitTxnHeader(&hdr, contexts.back()->Txid(), 0, fidl::MessageDynamicFlags::kStrictMethod);
     ASSERT_OK(
         endpoints->server.channel().write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
   }

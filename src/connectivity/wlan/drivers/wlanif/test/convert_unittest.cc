@@ -46,7 +46,7 @@ using ::testing::UnorderedElementsAreArray;
 
 template <typename T>
 zx_status_t ValidateMessage(T* msg) {
-  fidl::MessageEncoder enc(0);
+  fidl::MessageEncoder enc(0, fidl::MessageDynamicFlags::kStrictMethod);
   enc.Alloc(fidl::EncodingInlineSize<T>(&enc));
   msg->Encode(&enc, sizeof(fidl_message_header_t));
 

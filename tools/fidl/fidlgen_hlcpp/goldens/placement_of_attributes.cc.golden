@@ -641,7 +641,9 @@ zx_status_t ExampleProtocol_Proxy::Dispatch_(
 
 void ExampleProtocol_Proxy::Method(::test::exampleusing::Empty arg) {
   ::fidl::MessageEncoder _encoder(
-      ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal);
+      ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal,
+      ::test::placementofattributes::internal::
+          kExampleProtocol_Method_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::placementofattributes::_internal::
           test_placementofattributes_ExampleProtocolMethodRequestTable;
@@ -716,7 +718,9 @@ ExampleProtocol_SyncProxy::~ExampleProtocol_SyncProxy() = default;
 
 zx_status_t ExampleProtocol_SyncProxy::Method(::test::exampleusing::Empty arg) {
   ::fidl::MessageEncoder _encoder(
-      ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal);
+      ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal,
+      ::test::placementofattributes::internal::
+          kExampleProtocol_Method_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::placementofattributes::_internal::
           test_placementofattributes_ExampleProtocolMethodRequestTable;

@@ -229,7 +229,8 @@ zx_status_t LogExporter::Log(fidl::HLCPPIncomingMessage message) {
 
   fuchsia_logger_LogListenerSafeLogManyResponseMessage response;
   memset(&response, 0, sizeof(response));
-  fidl_init_txn_header(&response.hdr, message.txid(), message.ordinal());
+  fidl::InitTxnHeader(&response.hdr, message.txid(), message.ordinal(),
+                      fidl::MessageDynamicFlags::kStrictMethod);
   return channel_.write(0, &response, sizeof(response), nullptr, 0);
 }
 
@@ -253,7 +254,8 @@ zx_status_t LogExporter::LogMany(fidl::HLCPPIncomingMessage message) {
 
   fuchsia_logger_LogListenerSafeLogManyResponseMessage response;
   memset(&response, 0, sizeof(response));
-  fidl_init_txn_header(&response.hdr, message.txid(), message.ordinal());
+  fidl::InitTxnHeader(&response.hdr, message.txid(), message.ordinal(),
+                      fidl::MessageDynamicFlags::kStrictMethod);
   return channel_.write(0, &response, sizeof(response), nullptr, 0);
 }
 
@@ -318,7 +320,8 @@ std::unique_ptr<LogExporter> LaunchLogExporter(const std::string_view syslog_pat
     return nullptr;
   }
   fuchsia_logger_LogListenSafeRequestMessage req = {};
-  fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogListenSafeOrdinal);
+  fidl::InitTxnHeader(&req.hdr, 0, fuchsia_logger_LogListenSafeOrdinal,
+                      fidl::MessageDynamicFlags::kStrictMethod);
   req.log_listener = FIDL_HANDLE_PRESENT;
   zx_handle_t listener_handle = listener.release();
   status = logger.write(0, &req, sizeof(req), &listener_handle, 1);

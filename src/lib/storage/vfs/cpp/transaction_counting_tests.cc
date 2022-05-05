@@ -104,7 +104,7 @@ class TransactionCountingTest : public zxtest::Test {
 
 void SendHangingMessage(const zx::channel& c) {
   fidl_message_header_t hdr = {};
-  fidl_init_txn_header(&hdr, 1, 1);
+  fidl::InitTxnHeader(&hdr, 1, 1, fidl::MessageDynamicFlags::kStrictMethod);
   ASSERT_OK(c.write(0, &hdr, sizeof(hdr), nullptr, 0));
 }
 
@@ -192,7 +192,7 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyValidMessage) {
     ASSERT_EQ(inflight_transactions(), 1);
 
     fidl_message_header_t hdr = {};
-    fidl_init_txn_header(&hdr, 1, 1);
+    fidl::InitTxnHeader(&hdr, 1, 1, fidl::MessageDynamicFlags::kStrictMethod);
 
     zx_channel_iovec_t iovecs[1] = {
         {

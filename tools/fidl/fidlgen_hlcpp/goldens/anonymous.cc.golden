@@ -1542,7 +1542,8 @@ void SomeProtocol_Proxy::SomeMethod(::test::anonymous::UnionMember union_member,
                                     ::test::anonymous::TableMember table_member,
                                     SomeMethodCallback callback) {
   ::fidl::MessageEncoder _encoder(
-      ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal);
+      ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal,
+      ::test::anonymous::internal::kSomeProtocol_SomeMethod_DynamicFlags);
   const fidl_type_t* req_type =
       &::test::anonymous::_internal::
           test_anonymous_SomeProtocolSomeMethodRequestTable;
@@ -1570,7 +1571,8 @@ class SomeProtocol_SomeMethod_Responder final {
 
   void operator()(::test::anonymous::SomeProtocol_SomeMethod_Result result) {
     ::fidl::MessageEncoder _encoder(
-        ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal);
+        ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal,
+        ::test::anonymous::internal::kSomeProtocol_SomeMethod_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::anonymous::_internal::
             test_anonymous_SomeProtocolSomeMethodTopResponseTable;
@@ -1643,7 +1645,8 @@ zx_status_t SomeProtocol_SyncProxy::SomeMethod(
     ::test::anonymous::TableMember table_member,
     ::test::anonymous::SomeProtocol_SomeMethod_Result* out_result) {
   ::fidl::MessageEncoder _encoder(
-      ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal);
+      ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal,
+      ::test::anonymous::internal::kSomeProtocol_SomeMethod_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =

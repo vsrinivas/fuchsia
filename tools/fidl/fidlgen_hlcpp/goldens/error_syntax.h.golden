@@ -616,8 +616,14 @@ class ExampleUseOfErrorSyntax_SyncProxy;
 namespace internal {
 constexpr uint64_t kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal =
     0x3179cf8f46814221lu;
+constexpr ::fidl::MessageDynamicFlags
+    kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal =
     0x3424ff83ce3004a2lu;
+constexpr ::fidl::MessageDynamicFlags
+    kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

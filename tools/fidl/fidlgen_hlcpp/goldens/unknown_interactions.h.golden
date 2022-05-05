@@ -411,11 +411,23 @@ class Example_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kExample_StrictOneWay_Ordinal = 0x1f9937f425c8491alu;
+constexpr ::fidl::MessageDynamicFlags kExample_StrictOneWay_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kExample_FlexibleOneWay_Ordinal = 0x200d2009e52a95b8lu;
+constexpr ::fidl::MessageDynamicFlags kExample_FlexibleOneWay_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kFlexibleMethod;
 constexpr uint64_t kExample_StrictTwoWay_Ordinal = 0x3ee105dfeda54985lu;
+constexpr ::fidl::MessageDynamicFlags kExample_StrictTwoWay_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kExample_FlexibleTwoWay_Ordinal = 0x7ddf3a4404acfa2clu;
+constexpr ::fidl::MessageDynamicFlags kExample_FlexibleTwoWay_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kFlexibleMethod;
 constexpr uint64_t kExample_StrictEvent_Ordinal = 0x28d6af569779dfe5lu;
+constexpr ::fidl::MessageDynamicFlags kExample_StrictEvent_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kExample_FlexibleEvent_Ordinal = 0x1ca93992b923103alu;
+constexpr ::fidl::MessageDynamicFlags kExample_FlexibleEvent_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kFlexibleMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

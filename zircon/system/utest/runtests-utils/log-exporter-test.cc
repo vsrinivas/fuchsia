@@ -111,7 +111,7 @@ zx_status_t SendLogMessagesHelper(const zx::channel& listener, uint64_t ordinal,
   uint8_t msg[msg_len];
   memset(msg, 0, msg_len);
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg);
-  fidl_init_txn_header(hdr, 0, ordinal);
+  fidl::InitTxnHeader(hdr, 0, ordinal, fidl::MessageDynamicFlags::kStrictMethod);
   fuchsia_logger_LogMessage* fidl_log_msg = reinterpret_cast<fuchsia_logger_LogMessage*>(hdr + 1);
   if (ordinal == fuchsia_logger_LogListenerSafeLogManyOrdinal ||
       ordinal == fuchsia_logger_LogListenerSafeLogManyOrdinal) {

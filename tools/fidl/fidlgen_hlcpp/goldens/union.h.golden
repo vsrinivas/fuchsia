@@ -4156,9 +4156,15 @@ namespace internal {
 constexpr uint64_t
     kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
         0x816ec730baa90ddlu;
+constexpr ::fidl::MessageDynamicFlags
+    kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t
     kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
         0x6ad517317388ea05lu;
+constexpr ::fidl::MessageDynamicFlags
+    kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

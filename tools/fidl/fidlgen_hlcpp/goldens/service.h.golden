@@ -94,6 +94,9 @@ class SecondProtocol_SyncProxy;
 namespace internal {
 constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
     0x70b439758de25c44lu;
+constexpr ::fidl::MessageDynamicFlags
+    kSecondProtocol_MethodOnSecond_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -117,6 +120,9 @@ class FirstProtocol_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 0x5828c91b57492931lu;
+constexpr ::fidl::MessageDynamicFlags
+    kFirstProtocol_MethodOnFirst_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

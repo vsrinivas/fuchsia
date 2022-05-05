@@ -47,7 +47,8 @@ TEST_F(ServerTest, Bad_ClientClosingChannelCausesUnbind) {
 TEST_F(ServerTest, Bad_WrongOrdinalCausesUnbind) {
   when([&]() {
     fidl_message_header_t hdr;
-    fidl_init_txn_header(&hdr, 0, /* some wrong ordinal */ 8888888lu);
+    fidl::InitTxnHeader(&hdr, 0, /* some wrong ordinal */ 8888888lu,
+                        fidl::MessageDynamicFlags::kStrictMethod);
     zx_channel_write(client_end, 0, &hdr, sizeof(fidl_message_header_t), nullptr, 0);
   }).wait_for([&](auto observations) {
       return observations.has(Observation::Kind::kOnComplete);
@@ -68,7 +69,8 @@ TEST_F(ServerTest, Good_OneWayInteraction) {
 
   when([&]() {
     fidl_message_header_t hdr;
-    fidl_init_txn_header(&hdr, 0, kOrdinalOneWayInteractionNoPayload);
+    fidl::InitTxnHeader(&hdr, 0, kOrdinalOneWayInteractionNoPayload,
+                        fidl::MessageDynamicFlags::kStrictMethod);
     zx_channel_write(client_end, 0, &hdr, sizeof(fidl_message_header_t), nullptr, 0);
   }).wait_for([&](auto observations) {
       return 2 <= observations.size();
@@ -87,7 +89,8 @@ TEST_F(ServerTest, Bad_OneWayInteractionWithTxIdNotZero) {
 
   when([&]() {
     fidl_message_header_t hdr;
-    fidl_init_txn_header(&hdr, 56 /* txid not 0 */, kOrdinalOneWayInteractionNoPayload);
+    fidl::InitTxnHeader(&hdr, 56 /* txid not 0 */, kOrdinalOneWayInteractionNoPayload,
+                        fidl::MessageDynamicFlags::kStrictMethod);
     zx_channel_write(client_end, 0, &hdr, sizeof(fidl_message_header_t), nullptr, 0);
   }).wait_for([&](auto observations) {
       return 2 <= observations.size();

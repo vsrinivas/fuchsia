@@ -408,8 +408,15 @@ class EmptyProtocol_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kEmptyProtocol_Send_Ordinal = 0x132262fd8b200708lu;
+constexpr ::fidl::MessageDynamicFlags kEmptyProtocol_Send_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kEmptyProtocol_Receive_Ordinal = 0x1ff0ccf9b710e23flu;
+constexpr ::fidl::MessageDynamicFlags kEmptyProtocol_Receive_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kEmptyProtocol_SendAndReceive_Ordinal = 0x76a931254962cealu;
+constexpr ::fidl::MessageDynamicFlags
+    kEmptyProtocol_SendAndReceive_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

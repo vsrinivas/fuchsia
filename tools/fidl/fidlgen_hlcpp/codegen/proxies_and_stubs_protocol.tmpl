@@ -19,6 +19,8 @@ class {{ .SyncProxy.Name }};
 {{ range .Methods }}
 {{- EnsureNamespace .OrdinalName }}
 constexpr uint64_t {{ .OrdinalName.Name }} = {{ .Ordinal | printf "%#x" }}lu;
+{{- EnsureNamespace .DynamicFlagsName }}
+constexpr ::fidl::MessageDynamicFlags {{ .DynamicFlagsName.Name }} = {{ .DynamicFlags }};
 {{- end }}
 
 {{- EndifFuchsia -}}
@@ -341,7 +343,7 @@ namespace {
 }  // namespace
 {{- end }}
 void {{ $.Proxy.Name }}::{{ template "RequestMethodSignature" . }} {
-  ::fidl::MessageEncoder _encoder({{ .OrdinalName }});
+  ::fidl::MessageEncoder _encoder({{ .OrdinalName }}, {{ .DynamicFlagsName }});
   const fidl_type_t* req_type =
     {{- if .HasRequestPayload -}}
       &{{ .Request.HlCodingTable }};
@@ -380,7 +382,7 @@ class {{ .ResponderType }} final {
       : response_(std::move(response)) {}
 
   void operator()({{ template "Params" .ResponseArgs }}) {
-    ::fidl::MessageEncoder _encoder({{ .OrdinalName }});
+    ::fidl::MessageEncoder _encoder({{ .OrdinalName }}, {{ .DynamicFlagsName }});
     const fidl_type_t* resp_type =
     {{- if .HasResponsePayload -}}
       &{{ .Response.HlCodingTable }};
@@ -461,7 +463,7 @@ zx_status_t {{ .Stub.Name }}::Dispatch_(
   {{- if not .HasRequest }}
     {{- if .HasResponse }}
 void {{ $.Stub.Name }}::{{ template "EventMethodSignature" . }} {
-  ::fidl::MessageEncoder _encoder({{ .OrdinalName }});
+  ::fidl::MessageEncoder _encoder({{ .OrdinalName }}, {{ .DynamicFlagsName }});
   const fidl_type_t* resp_type =
     {{- if .HasResponsePayload -}}
       &{{ .Response.HlCodingTable }};
@@ -487,7 +489,7 @@ void {{ $.Stub.Name }}::{{ template "EventMethodSignature" . }} {
   {{- if .HasRequest }}
 
 zx_status_t {{ $.SyncProxy.Name }}::{{ template "SyncRequestMethodSignature" . }} {
-  ::fidl::MessageEncoder _encoder({{ .OrdinalName }});
+  ::fidl::MessageEncoder _encoder({{ .OrdinalName }}, {{ .DynamicFlagsName }});
     {{- if .HasResponse }}
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();

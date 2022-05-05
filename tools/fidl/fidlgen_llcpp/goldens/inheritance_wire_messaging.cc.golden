@@ -7,6 +7,9 @@
 namespace test_inheritance {
 [[maybe_unused]] constexpr uint64_t ksuper_foo_Ordinal = 7540745593380780216lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags ksuper_foo_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
 extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
@@ -280,12 +283,14 @@ void fidl::internal::WireBufferCompleterImpl<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_inheritance::Super::Foo>::_InitHeader() {
-  fidl_init_txn_header(&header, 0, ::test_inheritance::ksuper_foo_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0, ::test_inheritance::ksuper_foo_Ordinal,
+                        ::test_inheritance::ksuper_foo_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_inheritance::Super::Foo>::_InitHeader() {
-  fidl_init_txn_header(&header, 0, ::test_inheritance::ksuper_foo_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0, ::test_inheritance::ksuper_foo_Ordinal,
+                        ::test_inheritance::ksuper_foo_DynamicFlags);
 }
 
 #ifdef __Fuchsia__
@@ -294,6 +299,9 @@ void ::fidl::internal::TransactionalResponse<
 
 namespace test_inheritance {
 [[maybe_unused]] constexpr uint64_t ksub_foo_Ordinal = 7540745593380780216lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags ksub_foo_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
@@ -568,12 +576,14 @@ void fidl::internal::WireBufferCompleterImpl<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_inheritance::Sub::Foo>::_InitHeader() {
-  fidl_init_txn_header(&header, 0, ::test_inheritance::ksub_foo_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0, ::test_inheritance::ksub_foo_Ordinal,
+                        ::test_inheritance::ksub_foo_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_inheritance::Sub::Foo>::_InitHeader() {
-  fidl_init_txn_header(&header, 0, ::test_inheritance::ksub_foo_Ordinal);
+  ::fidl::InitTxnHeader(&header, 0, ::test_inheritance::ksub_foo_Ordinal,
+                        ::test_inheritance::ksub_foo_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

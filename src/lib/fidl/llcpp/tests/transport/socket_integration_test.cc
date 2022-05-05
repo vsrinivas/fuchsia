@@ -145,7 +145,8 @@ class TestServer : public fidl::internal::IncomingMessageDispatcher {
     ZX_ASSERT(decoded.PrimaryObject()->payload == kRequestPayload);
 
     TwoWayResponse response{.payload = kResponsePayload};
-    fidl_init_txn_header(&response.header, kTwoWayTxid, kTwoWayOrdinal);
+    fidl::InitTxnHeader(&response.header, kTwoWayTxid, kTwoWayOrdinal,
+                        fidl::MessageDynamicFlags::kStrictMethod);
     fidl::unstable::OwnedEncodedMessage<TwoWayResponse, fidl::internal::SocketTransport> encoded(
         &response);
     txn->Reply(&encoded.GetOutgoingMessage());
@@ -179,7 +180,8 @@ TEST(TransportIntegration, TwoWayAsync) {
   TestClient client;
   client.Bind(std::move(s2), loop.dispatcher());
   TwoWayRequest request{.payload = kRequestPayload};
-  fidl_init_txn_header(&request.header, kTwoWayTxid, kTwoWayOrdinal);
+  fidl::InitTxnHeader(&request.header, kTwoWayTxid, kTwoWayOrdinal,
+                      fidl::MessageDynamicFlags::kStrictMethod);
   client.TwoWay(request,
                 [](TwoWayResponse response) { ASSERT_EQ(kResponsePayload, response.payload); });
 

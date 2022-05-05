@@ -130,7 +130,8 @@ class Server {
     consume_directories_num_calls_.fetch_add(1);
     EXPECT_EQ(decoded.PrimaryObject()->body.dirents.count(), 3);
     fidl::internal::TransactionalResponse<gen::DirEntTestInterface::ConsumeDirectories> response;
-    fidl_init_txn_header(&response.header, 0, decoded.PrimaryObject()->header.ordinal);
+    fidl::InitTxnHeader(&response.header, 0, decoded.PrimaryObject()->header.ordinal,
+                        fidl::MessageDynamicFlags::kStrictMethod);
     return Reply(txn, &response);
   }
 

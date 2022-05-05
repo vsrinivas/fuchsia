@@ -563,6 +563,7 @@ type methodInner struct {
 
 	nameVariants
 	Ordinal                   uint64
+	IsStrict                  bool
 	IsEvent                   bool
 	HasRequest                bool
 	HasRequestPayload         bool
@@ -586,6 +587,7 @@ type methodInner struct {
 type Method struct {
 	methodInner
 	OrdinalName         nameVariants
+	DynamicFlagsName    nameVariants
 	Request             message
 	Response            message
 	CallbackType        *nameVariants
@@ -659,6 +661,13 @@ func (m Method) EventMessageBase() string {
 	return m.ResponseMessageBase()
 }
 
+func (m Method) DynamicFlags() string {
+	if m.IsStrict {
+		return "::fidl::MessageDynamicFlags::kStrictMethod"
+	}
+	return "::fidl::MessageDynamicFlags::kFlexibleMethod"
+}
+
 // CtsMethodAnnotation generates a comment containing information about the FIDL
 // method that is covered by the C++ generated method. It is primarily meant
 // to be parsed by machines, but can serve as human readable documentation too.
@@ -727,6 +736,8 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames, p f
 	}
 	ordinalName := fmt.Sprintf("k%s_%s_Ordinal",
 		inner.protocolName.HLCPP.Name(), inner.HLCPP.Name())
+	dynamicFlagsName := fmt.Sprintf("k%s_%s_DynamicFlags",
+		inner.protocolName.HLCPP.Name(), inner.HLCPP.Name())
 
 	m := Method{
 		methodInner: inner,
@@ -734,6 +745,11 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames, p f
 			HLCPP:   inner.protocolName.HLCPP.Namespace().append("internal").member(ordinalName),
 			Wire:    inner.protocolName.Wire.Namespace().member(ordinalName),
 			Unified: inner.protocolName.Wire.Namespace().member(ordinalName),
+		},
+		DynamicFlagsName: nameVariants{
+			HLCPP:   inner.protocolName.HLCPP.Namespace().append("internal").member(dynamicFlagsName),
+			Wire:    inner.protocolName.Wire.Namespace().member(dynamicFlagsName),
+			Unified: inner.protocolName.Wire.Namespace().member(dynamicFlagsName),
 		},
 		Request: newMessage(messageInner{
 			TypeShapeV1:     inner.requestTypeShapeV1,
@@ -896,6 +912,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			// TODO(fxbug.dev/84834): Use the functionality in //tools/fidl/lib/fidlgen/identifiers.go
 			FullyQualifiedName:        fmt.Sprintf("%s.%s", p.Name, v.Name),
 			Ordinal:                   v.Ordinal,
+			IsStrict:                  v.IsStrict(),
 			IsEvent:                   !v.HasRequest && v.HasResponse,
 			HasRequest:                v.HasRequest,
 			HasRequestPayload:         v.HasRequestPayload(),

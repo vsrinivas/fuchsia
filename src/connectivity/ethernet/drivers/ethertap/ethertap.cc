@@ -188,8 +188,9 @@ void TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
                                    FIDL_ALIGN(fuchsia_hardware_ethertap_MAX_MTU)];
   fidl::Builder builder(temp_buff, sizeof(temp_buff));
   auto* event = builder.New<fuchsia_hardware_ethertap_TapDeviceOnFrameEventMessage>();
-  fidl_init_txn_header(&event->hdr, FIDL_TXID_NO_RESPONSE,
-                       fuchsia_hardware_ethertap_TapDeviceOnFrameOrdinal);
+  fidl::InitTxnHeader(&event->hdr, FIDL_TXID_NO_RESPONSE,
+                      fuchsia_hardware_ethertap_TapDeviceOnFrameOrdinal,
+                      fidl::MessageDynamicFlags::kStrictMethod);
   event->data.count = length;
   auto* data = builder.NewArray<uint8_t>(static_cast<uint32_t>(length));
   event->data.data = data;
@@ -227,8 +228,9 @@ zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const
                 FIDL_ALIGN(fuchsia_hardware_ethertap_MAX_PARAM_DATA)];
   fidl::Builder builder(temp_buff, sizeof(temp_buff));
   auto* event = builder.New<fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventMessage>();
-  fidl_init_txn_header(&event->hdr, FIDL_TXID_NO_RESPONSE,
-                       fuchsia_hardware_ethertap_TapDeviceOnReportParamsOrdinal);
+  fidl::InitTxnHeader(&event->hdr, FIDL_TXID_NO_RESPONSE,
+                      fuchsia_hardware_ethertap_TapDeviceOnReportParamsOrdinal,
+                      fidl::MessageDynamicFlags::kStrictMethod);
 
   event->param = param;
   event->value = value;

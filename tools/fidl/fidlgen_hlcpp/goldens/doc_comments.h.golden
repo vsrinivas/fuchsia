@@ -977,7 +977,11 @@ class Interface_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kInterface_Method_Ordinal = 0x45a0257b7cd8f999lu;
+constexpr ::fidl::MessageDynamicFlags kInterface_Method_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kInterface_OnEvent_Ordinal = 0x663f6d5971bef0lu;
+constexpr ::fidl::MessageDynamicFlags kInterface_OnEvent_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

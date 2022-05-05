@@ -2,6 +2,10 @@
 namespace test_driverhandle {
 [[maybe_unused]] constexpr inline uint64_t
     kHandlesInProtocol_SendHandles_Ordinal = 8904504160365833729lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kHandlesInProtocol_SendHandles_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_driverhandle
 ::fitx::result<::fidl::Error> fidl::internal::
@@ -10,7 +14,8 @@ namespace test_driverhandle {
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable,
-      ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal};
+      ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal,
+      ::test_driverhandle::kHandlesInProtocol_SendHandles_DynamicFlags};
 
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {

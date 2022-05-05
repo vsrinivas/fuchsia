@@ -6,6 +6,10 @@ namespace test_placementofattributes {
 [[maybe_unused]] constexpr inline uint64_t kExampleProtocol_Method_Ordinal =
     6023439637367187273lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kExampleProtocol_Method_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes
 ::fitx::result<::fidl::Error> fidl::internal::
@@ -14,7 +18,8 @@ namespace test_placementofattributes {
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_placementofattributes::kExampleProtocol_Method_Ordinal};
+      ::test_placementofattributes::kExampleProtocol_Method_Ordinal,
+      ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_placementofattributes::ExampleProtocol::Method>>::

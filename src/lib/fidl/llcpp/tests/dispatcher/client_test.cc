@@ -75,7 +75,7 @@ TEST(ClientBindingTestCase, AsyncTxn) {
   spy.PrepareAsyncTxn(&context);
   EXPECT_TRUE(spy.IsPending(context.Txid()));
   fidl_message_header_t hdr;
-  fidl_init_txn_header(&hdr, context.Txid(), 0);
+  fidl::InitTxnHeader(&hdr, context.Txid(), 0, fidl::MessageDynamicFlags::kStrictMethod);
   ASSERT_OK(remote.channel().write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
 
   // Trigger unbound handler.
@@ -124,7 +124,7 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
       spy.PrepareAsyncTxn(context);
       EXPECT_TRUE(spy.IsPending(context->Txid()));
       fidl_message_header_t hdr;
-      fidl_init_txn_header(&hdr, context->Txid(), 0);
+      fidl::InitTxnHeader(&hdr, context->Txid(), 0, fidl::MessageDynamicFlags::kStrictMethod);
       ASSERT_OK(remote->write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
     });
   }
@@ -195,7 +195,7 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
   // Send a "response" message for which there was no outgoing request.
   ASSERT_EQ(0, spy.GetTxidCount());
   fidl_message_header_t hdr;
-  fidl_init_txn_header(&hdr, 1, 0);
+  fidl::InitTxnHeader(&hdr, 1, 0, fidl::MessageDynamicFlags::kStrictMethod);
   ASSERT_OK(remote.channel().write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
 
   // on_unbound should be triggered by the erroneous response.
@@ -235,7 +235,7 @@ TEST(ClientBindingTestCase, Events) {
   for (int i = 0; i < 10; ++i) {
     threads[i] = std::thread([remote = &remote.channel()] {
       fidl_message_header_t hdr;
-      fidl_init_txn_header(&hdr, 0, 0);
+      fidl::InitTxnHeader(&hdr, 0, 0, fidl::MessageDynamicFlags::kStrictMethod);
       ASSERT_OK(remote->write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
     });
   }

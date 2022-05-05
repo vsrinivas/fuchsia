@@ -536,7 +536,8 @@ zx_status_t Protocol_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 
 void Protocol_Proxy::Foo() {
   ::fidl::MessageEncoder _encoder(
-      ::test::versions::internal::kProtocol_Foo_Ordinal);
+      ::test::versions::internal::kProtocol_Foo_Ordinal,
+      ::test::versions::internal::kProtocol_Foo_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   controller_->Send(req_type,
                     ::test::versions::Protocol_RequestEncoder::Foo(&_encoder),
@@ -603,7 +604,8 @@ Protocol_SyncProxy::~Protocol_SyncProxy() = default;
 
 zx_status_t Protocol_SyncProxy::Foo() {
   ::fidl::MessageEncoder _encoder(
-      ::test::versions::internal::kProtocol_Foo_Ordinal);
+      ::test::versions::internal::kProtocol_Foo_Ordinal,
+      ::test::versions::internal::kProtocol_Foo_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   return proxy_.Send(req_type,
                      ::test::versions::Protocol_RequestEncoder::Foo(&_encoder));

@@ -5360,7 +5360,9 @@ void TestProtocol_Proxy::StrictXUnionHenceResponseMayBeStackAllocated(
     StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::union_::internal::
-          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
+      ::test::union_::internal::
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   controller_->Send(
       req_type,
@@ -5396,7 +5398,9 @@ void TestProtocol_Proxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::union_::internal::
-          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
+      ::test::union_::internal::
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags);
   const fidl_type_t* req_type = nullptr;
   controller_->Send(
       req_type,
@@ -5426,7 +5430,9 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Responder
   void operator()(::test::union_::StrictBoundedXUnion xu) {
     ::fidl::MessageEncoder _encoder(
         ::test::union_::internal::
-            kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
+            kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
+        ::test::union_::internal::
+            kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::union_::_internal::
             test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
@@ -5449,7 +5455,9 @@ class TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Responder
   void operator()(::test::union_::OlderSimpleUnion xu) {
     ::fidl::MessageEncoder _encoder(
         ::test::union_::internal::
-            kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
+            kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
+        ::test::union_::internal::
+            kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags);
     const fidl_type_t* resp_type =
         &::test::union_::_internal::
             test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
@@ -5528,7 +5536,9 @@ TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated(
     ::test::union_::StrictBoundedXUnion* out_xu) {
   ::fidl::MessageEncoder _encoder(
       ::test::union_::internal::
-          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
+      ::test::union_::internal::
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type = nullptr;
@@ -5552,7 +5562,9 @@ TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
     ::test::union_::OlderSimpleUnion* out_xu) {
   ::fidl::MessageEncoder _encoder(
       ::test::union_::internal::
-          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
+      ::test::union_::internal::
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type = nullptr;

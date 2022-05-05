@@ -34,7 +34,8 @@ static void echo_server(zx_handle_t server) {
       fidl_message_header_t* req = (fidl_message_header_t*)msg;
       fidl_test_echo_EchoEchoResponseMessage response;
       memset(&response, 0, sizeof(response));
-      fidl_init_txn_header(&response.hdr, req->txid, req->ordinal);
+      fidl_init_txn_header(&response.hdr, req->txid, req->ordinal,
+                           FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD);
       response.status = ZX_OK;
       status = zx_channel_write(server, 0, &response, sizeof(response), NULL, 0);
       ASSERT_EQ(ZX_OK, status, "");

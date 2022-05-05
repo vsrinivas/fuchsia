@@ -3891,42 +3891,108 @@ class MainProtocol_SyncProxy;
 namespace internal {
 constexpr uint64_t kMainProtocol_OneWayAnonComposed_Ordinal =
     0x67da05e1ae3f5e1lu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OneWayAnonComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_TwoWayAnonComposed_Ordinal =
     0x16afa17ea70d3370lu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayAnonComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_TwoWayAnonComposedWithError_Ordinal =
     0x2ed33746b7bb119dlu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayAnonComposedWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OnAnonComposed_Ordinal = 0x7fa8a0bf08128a0blu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnAnonComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OnAnonComposedWithError_Ordinal =
     0x9e24af9a2790a3blu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnAnonComposedWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OneWayNamedComposed_Ordinal =
     0x5d78ce13958eee58lu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OneWayNamedComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_TwoWayNamedComposed_Ordinal =
     0xf67f27cae663810lu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayNamedComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_TwoWayNamedComposedWithError_Ordinal =
     0x30dac4182813ef7flu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayNamedComposedWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OnNamedComposed_Ordinal = 0x5e68f92a5b28cdealu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnNamedComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OnNamedComposedWithError_Ordinal =
     0x67eb74dad2a05c0blu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnNamedComposedWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OneWayImport_Ordinal = 0x530db65f2691d3blu;
+constexpr ::fidl::MessageDynamicFlags kMainProtocol_OneWayImport_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_TwoWayImport_Ordinal = 0x2bf680c8f0d40604lu;
+constexpr ::fidl::MessageDynamicFlags kMainProtocol_TwoWayImport_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_TwoWayImportWithError_Ordinal =
     0x432093586084ff0alu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayImportWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OnImport_Ordinal = 0x5b61e3156b09acd0lu;
+constexpr ::fidl::MessageDynamicFlags kMainProtocol_OnImport_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OnImportWithError_Ordinal =
     0xf988d72f8ee4fd7lu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnImportWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OneWayLocal_Ordinal = 0x54759b55efd60f43lu;
+constexpr ::fidl::MessageDynamicFlags kMainProtocol_OneWayLocal_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_TwoWayLocal_Ordinal = 0x6bbeeb18f39c539blu;
+constexpr ::fidl::MessageDynamicFlags kMainProtocol_TwoWayLocal_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_TwoWayLocalWithError_Ordinal =
     0x4dd8e7287c4c9b57lu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayLocalWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OnLocal_Ordinal = 0x3a46c48153f0437clu;
+constexpr ::fidl::MessageDynamicFlags kMainProtocol_OnLocal_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OnLocalWithError_Ordinal =
     0x79ac5bbdc7114e24lu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnLocalWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OneWayAnon_Ordinal = 0x3a552f30c77c76eclu;
+constexpr ::fidl::MessageDynamicFlags kMainProtocol_OneWayAnon_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_TwoWayAnon_Ordinal = 0x672eb5e71efdabcflu;
+constexpr ::fidl::MessageDynamicFlags kMainProtocol_TwoWayAnon_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_TwoWayAnonWithError_Ordinal =
     0x6bd5fcf6f7b46df1lu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayAnonWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OnAnon_Ordinal = 0x64f7b1ec1ba0810blu;
+constexpr ::fidl::MessageDynamicFlags kMainProtocol_OnAnon_DynamicFlags =
+    ::fidl::MessageDynamicFlags::kStrictMethod;
 constexpr uint64_t kMainProtocol_OnAnonWithError_Ordinal = 0x32f63a6e25a83699lu;
+constexpr ::fidl::MessageDynamicFlags
+    kMainProtocol_OnAnonWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
 #endif  // __Fuchsia__
 

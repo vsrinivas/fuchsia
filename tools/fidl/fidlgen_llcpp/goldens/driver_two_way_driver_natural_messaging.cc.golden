@@ -2,6 +2,9 @@
 namespace test_drivertwoway {
 [[maybe_unused]] constexpr inline uint64_t kTwoWay_Add_Ordinal =
     989730524426044687lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kTwoWay_Add_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway
 ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>
@@ -9,7 +12,8 @@ fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(
     ::fidl::Request<::test_drivertwoway::TwoWay::Add> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable,
-      ::test_drivertwoway::kTwoWay_Add_Ordinal};
+      ::test_drivertwoway::kTwoWay_Add_Ordinal,
+      ::test_drivertwoway::kTwoWay_Add_DynamicFlags};
 
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {
@@ -63,7 +67,8 @@ void fidl::internal::NaturalCompleterBase<::test_drivertwoway::TwoWay::Add>::
     Reply(::fidl::Response<::test_drivertwoway::TwoWay::Add>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable,
-      ::test_drivertwoway::kTwoWay_Add_Ordinal};
+      ::test_drivertwoway::kTwoWay_Add_Ordinal,
+      ::test_drivertwoway::kTwoWay_Add_DynamicFlags};
 
   auto _arena = fdf::Arena::Create(0, "");
   if (!_arena.is_ok()) {

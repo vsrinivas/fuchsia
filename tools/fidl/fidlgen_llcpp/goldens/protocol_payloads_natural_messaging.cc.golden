@@ -6,62 +6,142 @@ namespace test_protocolpayloads {
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OneWayComposed_Ordinal = 2602591870026304272lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OneWayComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayComposed_Ordinal = 2542459230546612144lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayComposedWithError_Ordinal = 7681984876526769495lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayComposedWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnComposed_Ordinal =
     1872339328378152762lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OnComposed_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OnComposedWithError_Ordinal = 7167282778061495960lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OnComposedWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayLocal_Ordinal =
     7755175439334311701lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OneWayLocal_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayLocal_Ordinal =
     8374292137648566031lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayLocal_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayLocalWithError_Ordinal = 2898559119954589948lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayLocalWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnLocal_Ordinal =
     5135782819583756313lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OnLocal_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OnLocalWithError_Ordinal = 5678277415565140399lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OnLocalWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayImport_Ordinal =
     3344777159365288972lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OneWayImport_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayImport_Ordinal =
     2374708679656510579lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayImport_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayImportWithError_Ordinal = 4286143084949642173lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayImportWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnImport_Ordinal =
     1996489653379631369lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OnImport_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OnImportWithError_Ordinal = 7102941407914553861lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OnImportWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayAnon_Ordinal =
     811587311021806764lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OneWayAnon_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_TwoWayAnon_Ordinal =
     629880979996923737lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayAnon_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_TwoWayAnonWithError_Ordinal = 6368863385719175734lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_TwoWayAnonWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OnAnon_Ordinal =
     4815229650203439104lu;
 
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OnAnon_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 [[maybe_unused]] constexpr inline uint64_t
     kMainProtocol_OnAnonWithError_Ordinal = 5024931894357412354lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags
+    kMainProtocol_OnAnonWithError_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
@@ -73,7 +153,8 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocolpayloads::MainProtocol::TwoWayComposed>>::
@@ -98,7 +179,9 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal,
+      ::test_protocolpayloads::
+          kMainProtocol_TwoWayComposedWithError_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::
@@ -122,7 +205,8 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>>::
@@ -147,7 +231,8 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::
@@ -171,7 +256,8 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayImport_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocolpayloads::MainProtocol::TwoWayImport>>::
@@ -196,7 +282,9 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal,
+      ::test_protocolpayloads::
+          kMainProtocol_TwoWayImportWithError_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::
@@ -220,7 +308,8 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::
@@ -245,7 +334,8 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::
@@ -267,7 +357,8 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayComposed_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OneWayComposed_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OneWayComposed_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocolpayloads::MainProtocol::OneWayComposed>>::
@@ -284,7 +375,8 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayLocal_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OneWayLocal_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OneWayLocal_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>>::
@@ -301,7 +393,8 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayImport_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OneWayImport_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OneWayImport_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<
           ::test_protocolpayloads::MainProtocol::OneWayImport>>::
@@ -318,7 +411,8 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
             request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OneWayAnon_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OneWayAnon_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OneWayAnon_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>>::
@@ -481,7 +575,8 @@ fidl::internal::NaturalEventDispatcher<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads_imported::ImportStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnComposed_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
@@ -493,7 +588,8 @@ fidl::internal::NaturalEventDispatcher<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads_imported::ImportStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnComposed_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
@@ -507,7 +603,8 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
             ComposedProtocolOnComposedWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnComposedWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
@@ -521,7 +618,8 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
             ComposedProtocolOnComposedWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnComposedWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
@@ -533,7 +631,8 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads::LocalStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnLocal_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
@@ -545,7 +644,8 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads::LocalStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnLocal_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
@@ -558,7 +658,8 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnLocalWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
@@ -570,7 +671,8 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnLocalWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
@@ -582,7 +684,8 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads_imported::ImportStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnImport_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
@@ -594,7 +697,8 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads_imported::ImportStructPayload payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnImport_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
@@ -607,7 +711,8 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnImportWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
@@ -620,7 +725,8 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnImportWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
@@ -632,7 +738,8 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads::MainProtocolOnAnonRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnAnon_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
@@ -644,7 +751,8 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads::MainProtocolOnAnonRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnAnon_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
@@ -657,7 +765,8 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnAnonWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
@@ -669,7 +778,8 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
         ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_OnAnonWithError_DynamicFlags};
   _encoder.EncodeBody(std::move(payload));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());
@@ -684,7 +794,8 @@ void fidl::internal::NaturalCompleterBase<
           ::test_protocolpayloads::MainProtocol::TwoWayComposed>&& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayComposed_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_protocolpayloads::MainProtocol::TwoWayComposed>>::
@@ -700,7 +811,9 @@ void fidl::internal::NaturalCompleterBase<
               response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal,
+      ::test_protocolpayloads::
+          kMainProtocol_TwoWayComposedWithError_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::
@@ -715,7 +828,8 @@ void fidl::internal::NaturalCompleterBase<
               response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayLocal_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_protocolpayloads::MainProtocol::TwoWayLocal>>::
@@ -731,7 +845,8 @@ void fidl::internal::NaturalCompleterBase<
               response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::
@@ -747,7 +862,8 @@ void fidl::internal::NaturalCompleterBase<
             response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayImport_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_protocolpayloads::MainProtocol::TwoWayImport>>::
@@ -763,7 +879,9 @@ void fidl::internal::NaturalCompleterBase<
               response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal,
+      ::test_protocolpayloads::
+          kMainProtocol_TwoWayImportWithError_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::
@@ -778,7 +896,8 @@ void fidl::internal::NaturalCompleterBase<
               response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayAnon_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<
           ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::
@@ -794,7 +913,8 @@ void fidl::internal::NaturalCompleterBase<
               response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable,
-      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal};
+      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal,
+      ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_DynamicFlags};
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::

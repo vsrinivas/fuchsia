@@ -457,9 +457,10 @@ TEST(OutgoingMessage, GoodEncodeNoBody) {
 
   using Request = fidl::internal::TransactionalRequest<fidl_llcpp_empty_test::OnlyEmpty::Empty>;
   Request request;
-  fidl_init_txn_header(
+  fidl::InitTxnHeader(
       &request.header, 1,
-      ::fidl::internal::WireOrdinal<::fidl_llcpp_empty_test::OnlyEmpty::Empty>::value);
+      ::fidl::internal::WireOrdinal<::fidl_llcpp_empty_test::OnlyEmpty::Empty>::value,
+      fidl::MessageDynamicFlags::kStrictMethod);
 
   msg.Encode<Request>(fidl::internal::WireFormatVersion::kV2, &request);
   ASSERT_EQ(ZX_OK, msg.status());
@@ -482,9 +483,10 @@ TEST(OutgoingMessage, BadEncodeNoBodyBufferTooLarge) {
 
   using Request = fidl::internal::TransactionalRequest<fidl_llcpp_empty_test::OnlyEmpty::Empty>;
   Request request;
-  fidl_init_txn_header(
+  fidl::InitTxnHeader(
       &request.header, 1,
-      ::fidl::internal::WireOrdinal<::fidl_llcpp_empty_test::OnlyEmpty::Empty>::value);
+      ::fidl::internal::WireOrdinal<::fidl_llcpp_empty_test::OnlyEmpty::Empty>::value,
+      fidl::MessageDynamicFlags::kStrictMethod);
 
   msg.Encode<Request>(fidl::internal::WireFormatVersion::kV2, &request);
   ASSERT_FALSE(msg.ok());

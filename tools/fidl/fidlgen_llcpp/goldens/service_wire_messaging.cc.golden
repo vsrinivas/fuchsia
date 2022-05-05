@@ -7,6 +7,10 @@
 namespace test_service {
 [[maybe_unused]] constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
     8121179205110225988lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kSecondProtocol_MethodOnSecond_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_service
 ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond>::WireResult(
@@ -182,8 +186,9 @@ void fidl::WireServer<::test_service::SecondProtocol>::dispatch_message(
 
 void ::fidl::internal::TransactionalRequest<
     ::test_service::SecondProtocol::MethodOnSecond>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_service::kSecondProtocol_MethodOnSecond_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_service::kSecondProtocol_MethodOnSecond_Ordinal,
+      ::test_service::kSecondProtocol_MethodOnSecond_DynamicFlags);
 }
 
 #ifdef __Fuchsia__
@@ -193,6 +198,10 @@ void ::fidl::internal::TransactionalRequest<
 namespace test_service {
 [[maybe_unused]] constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal =
     6352548393671797041lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kFirstProtocol_MethodOnFirst_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_service
 ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst>::WireResult(
@@ -368,8 +377,9 @@ void fidl::WireServer<::test_service::FirstProtocol>::dispatch_message(
 
 void ::fidl::internal::TransactionalRequest<
     ::test_service::FirstProtocol::MethodOnFirst>::_InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_service::kFirstProtocol_MethodOnFirst_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_service::kFirstProtocol_MethodOnFirst_Ordinal,
+      ::test_service::kFirstProtocol_MethodOnFirst_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

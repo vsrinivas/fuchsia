@@ -8,6 +8,10 @@ namespace test_requestflexibleenvelope {
 [[maybe_unused]] constexpr uint64_t
     kProtocol_RequestStrictResponseFlexible_Ordinal = 700529454616207123lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kProtocol_RequestStrictResponseFlexible_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
@@ -16,6 +20,10 @@ extern "C" const fidl_type_t
 
 [[maybe_unused]] constexpr uint64_t
     kProtocol_RequestFlexibleResponseStrict_Ordinal = 5191655763393883319lu;
+
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kProtocol_RequestFlexibleResponseStrict_DynamicFlags =
+        ::fidl::MessageDynamicFlags::kStrictMethod;
 
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
@@ -569,33 +577,45 @@ void fidl::internal::WireBufferCompleterImpl<
 void ::fidl::internal::TransactionalRequest<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::
     _InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_requestflexibleenvelope::
-                           kProtocol_RequestStrictResponseFlexible_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestStrictResponseFlexible_Ordinal,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestStrictResponseFlexible_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::
     _InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_requestflexibleenvelope::
-                           kProtocol_RequestStrictResponseFlexible_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestStrictResponseFlexible_Ordinal,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestStrictResponseFlexible_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalRequest<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::
     _InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_requestflexibleenvelope::
-                           kProtocol_RequestFlexibleResponseStrict_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestFlexibleResponseStrict_Ordinal,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::
     _InitHeader() {
-  fidl_init_txn_header(&header, 0,
-                       ::test_requestflexibleenvelope::
-                           kProtocol_RequestFlexibleResponseStrict_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestFlexibleResponseStrict_Ordinal,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

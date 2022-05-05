@@ -31,7 +31,7 @@ TEST(ProxyController, Send) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  MessageEncoder encoder(5u);
+  MessageEncoder encoder(5u, fidl::MessageDynamicFlags::kStrictMethod);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -59,7 +59,7 @@ TEST(ProxyController, Callback) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  MessageEncoder encoder(3u);
+  MessageEncoder encoder(3u, fidl::MessageDynamicFlags::kStrictMethod);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -90,7 +90,7 @@ TEST(ProxyController, Callback) {
 
   zx_txid_t txid = message.txid();
   fidl_message_header_t header = {};
-  fidl_init_txn_header(&header, txid, 42u);
+  fidl::InitTxnHeader(&header, txid, 42u, fidl::MessageDynamicFlags::kStrictMethod);
 
   EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
@@ -108,7 +108,7 @@ TEST(ProxyController, BadSend) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  MessageEncoder encoder(3u);
+  MessageEncoder encoder(3u, fidl::MessageDynamicFlags::kStrictMethod);
   // Bad message format.
 
   int error_count = 0;
@@ -167,7 +167,7 @@ TEST(ProxyController, BadReply) {
   });
 
   fidl_message_header_t header = {};
-  fidl_init_txn_header(&header, 0, 42u);
+  fidl::InitTxnHeader(&header, 0, 42u, fidl::MessageDynamicFlags::kStrictMethod);
 
   EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
@@ -205,7 +205,7 @@ TEST(ProxyController, ShortReply) {
   });
 
   fidl_message_header_t header = {};
-  fidl_init_txn_header(&header, 0, 42u);
+  fidl::InitTxnHeader(&header, 0, 42u, fidl::MessageDynamicFlags::kStrictMethod);
 
   EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
@@ -235,7 +235,7 @@ TEST(ProxyController, Move) {
   ProxyController controller1;
   EXPECT_EQ(ZX_OK, controller1.reader().Bind(std::move(h1)));
 
-  MessageEncoder encoder(3u);
+  MessageEncoder encoder(3u, fidl::MessageDynamicFlags::kStrictMethod);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -270,7 +270,7 @@ TEST(ProxyController, Move) {
 
   zx_txid_t txid = message.txid();
   fidl_message_header_t header = {};
-  fidl_init_txn_header(&header, txid, 42u);
+  fidl::InitTxnHeader(&header, txid, 42u, fidl::MessageDynamicFlags::kStrictMethod);
 
   EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
@@ -288,7 +288,7 @@ TEST(ProxyController, Reset) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  MessageEncoder encoder(3u);
+  MessageEncoder encoder(3u, fidl::MessageDynamicFlags::kStrictMethod);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -322,7 +322,7 @@ TEST(ProxyController, Reset) {
 
   zx_txid_t txid = message.txid();
   fidl_message_header_t header = {};
-  fidl_init_txn_header(&header, txid, 42u);
+  fidl::InitTxnHeader(&header, txid, 42u, fidl::MessageDynamicFlags::kStrictMethod);
 
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
@@ -340,7 +340,7 @@ TEST(ProxyController, ReentrantDestructor) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  MessageEncoder encoder(3u);
+  MessageEncoder encoder(3u, fidl::MessageDynamicFlags::kStrictMethod);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -349,7 +349,7 @@ TEST(ProxyController, ReentrantDestructor) {
     ++destructor_count;
     EXPECT_EQ(destructor_count, 1);
 
-    MessageEncoder encoder(3u);
+    MessageEncoder encoder(3u, fidl::MessageDynamicFlags::kStrictMethod);
     StringPtr string("world!");
     fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
     auto callback_handler = std::make_unique<SingleUseMessageHandler>(

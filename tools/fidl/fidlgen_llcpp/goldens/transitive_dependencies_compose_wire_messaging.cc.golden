@@ -7,6 +7,9 @@
 namespace test_transitivedependenciescompose {
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 2618685789258237543lu;
 
+[[maybe_unused]] constexpr ::fidl::MessageDynamicFlags
+    kTop_GetFoo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_transitivedependenciescompose
@@ -306,14 +309,16 @@ void fidl::internal::WireBufferCompleterImpl<
 
 void ::fidl::internal::TransactionalRequest<
     ::test_transitivedependenciescompose::Top::GetFoo>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal,
+      ::test_transitivedependenciescompose::kTop_GetFoo_DynamicFlags);
 }
 
 void ::fidl::internal::TransactionalResponse<
     ::test_transitivedependenciescompose::Top::GetFoo>::_InitHeader() {
-  fidl_init_txn_header(
-      &header, 0, ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal);
+  ::fidl::InitTxnHeader(
+      &header, 0, ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal,
+      ::test_transitivedependenciescompose::kTop_GetFoo_DynamicFlags);
 }
 
 #ifdef __Fuchsia__

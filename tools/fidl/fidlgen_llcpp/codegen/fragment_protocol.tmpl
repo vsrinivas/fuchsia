@@ -356,6 +356,9 @@ static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $par
 {{ EnsureNamespace .OrdinalName }}
 [[maybe_unused]]
 constexpr uint64_t {{ .OrdinalName.Name }} = {{ .Ordinal }}lu;
+{{ EnsureNamespace .DynamicFlagsName }}
+[[maybe_unused]]
+constexpr ::fidl::MessageDynamicFlags {{ .DynamicFlagsName.Name }} = {{ .DynamicFlags }};
 {{- if .HasRequestPayload }}
 {{ EnsureNamespace .Request.WireCodingTable }}
 extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};

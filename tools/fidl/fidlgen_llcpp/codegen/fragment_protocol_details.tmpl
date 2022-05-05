@@ -24,6 +24,10 @@ struct {{ .ProtocolDetails }} {
 {{ EnsureNamespace .OrdinalName }}
 [[maybe_unused]]
 constexpr inline uint64_t {{ .OrdinalName.Name }} = {{ .Ordinal }}lu;
+
+{{ EnsureNamespace .DynamicFlagsName }}
+[[maybe_unused]]
+constexpr inline ::fidl::MessageDynamicFlags {{ .DynamicFlagsName.Name }} = {{ .DynamicFlags }};
 {{- end }}
 
 {{- end }}
