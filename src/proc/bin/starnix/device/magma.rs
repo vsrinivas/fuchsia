@@ -244,7 +244,7 @@ pub struct StarnixPollItem {
     pub type_: u32,
     pub condition: u32,
     pub result: u32,
-    pub __bindgen_padding_0: [u8; 4usize],
+    pub unused: [u8; 4usize],
 }
 
 impl StarnixPollItem {
@@ -261,7 +261,7 @@ impl StarnixPollItem {
             type_: poll_item.type_,
             condition: poll_item.condition,
             result: poll_item.result,
-            __bindgen_padding_0: poll_item.__bindgen_padding_0,
+            unused: [0; 4],
         }
     }
 
@@ -278,7 +278,7 @@ impl StarnixPollItem {
             type_: self.type_,
             condition: self.condition,
             result: self.result,
-            __bindgen_padding_0: self.__bindgen_padding_0,
+            unused: 0,
         }
     }
 }

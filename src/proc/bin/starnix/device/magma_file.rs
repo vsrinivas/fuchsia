@@ -138,9 +138,9 @@ impl FileOps for MagmaFile {
                 let device_channel = client_channel.raw_handle();
                 *self.channel.lock() = Some(client_channel);
 
-                let mut device_out: usize = 0;
+                let mut device_out: u64 = 0;
                 response.result_return = unsafe {
-                    magma_device_import(device_channel, &mut device_out as *mut usize) as u64
+                    magma_device_import(device_channel, &mut device_out as *mut u64) as u64
                 };
 
                 response.device_out = device_out;
@@ -153,12 +153,11 @@ impl FileOps for MagmaFile {
                     virtio_magma_create_connection2_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                let mut connection_out: magma_connection_t = std::ptr::null_mut();
-                response.result_return = unsafe {
-                    magma_create_connection2(control.device as usize, &mut connection_out) as u64
-                };
+                let mut connection_out: magma_connection_t = 0;
+                response.result_return =
+                    unsafe { magma_create_connection2(control.device, &mut connection_out) as u64 };
 
-                response.connection_out = connection_out as usize;
+                response.connection_out = connection_out;
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_CREATE_CONNECTION2 as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
@@ -182,7 +181,7 @@ impl FileOps for MagmaFile {
                     virtio_magma_device_release_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                unsafe { magma_device_release(control.device as usize) };
+                unsafe { magma_device_release(control.device) };
 
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_DEVICE_RELEASE as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
@@ -194,7 +193,7 @@ impl FileOps for MagmaFile {
                 ) = read_control_and_response(current_task, &command)?;
 
                 let mut create_info_ptr: u64 = 0;
-                let create_info_address = UserAddress::from(control.create_info as u64);
+                let create_info_address = UserAddress::from(control.create_info);
                 current_task
                     .mm
                     .read_object(UserRef::new(create_info_address), &mut create_info_ptr)?;
@@ -235,7 +234,7 @@ impl FileOps for MagmaFile {
                 ) = read_control_and_response(current_task, &command)?;
 
                 let image_info_address_ref =
-                    UserRef::new(UserAddress::from(control.image_info_out as u64));
+                    UserRef::new(UserAddress::from(control.image_info_out));
                 let mut image_info_ptr = UserAddress::default();
                 current_task.mm.read_object(image_info_address_ref, &mut image_info_ptr)?;
 
@@ -266,7 +265,7 @@ impl FileOps for MagmaFile {
                     virtio_magma_get_buffer_size_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                response.result_return = unsafe { magma_get_buffer_size(control.buffer as usize) };
+                response.result_return = unsafe { magma_get_buffer_size(control.buffer) };
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_SIZE as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
@@ -298,18 +297,16 @@ impl FileOps for MagmaFile {
                 response.result_return = unsafe {
                     magma_read_notification_channel2(
                         control.connection as magma_connection_t,
-                        &mut buffer[0] as *mut u8,
+                        &mut buffer[0] as *mut u8 as *mut std::ffi::c_void,
                         control.buffer_size,
                         &mut buffer_size_out,
                         &mut more_data_out as *mut u8,
                     ) as u64
                 };
 
-                response.more_data_out = more_data_out as usize;
-                response.buffer_size_out = buffer_size_out as usize;
-                current_task
-                    .mm
-                    .write_memory(UserAddress::from(control.buffer as u64), &mut buffer)?;
+                response.more_data_out = more_data_out as u64;
+                response.buffer_size_out = buffer_size_out;
+                current_task.mm.write_memory(UserAddress::from(control.buffer), &mut buffer)?;
 
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_READ_NOTIFICATION_CHANNEL2 as u32;
@@ -338,7 +335,7 @@ impl FileOps for MagmaFile {
                         OpenFlags::RDWR,
                     );
                     let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
-                    response.handle_out = fd.raw() as usize;
+                    response.handle_out = fd.raw() as u64;
                     response.result_return = MAGMA_STATUS_OK as u64;
                 }
 
@@ -353,7 +350,7 @@ impl FileOps for MagmaFile {
                 ) = read_control_and_response(current_task, &command)?;
 
                 self.connections.lock().get_mut(&{ control.connection }).map(
-                    |buffers| match buffers.remove(&(control.buffer as usize)) {
+                    |buffers| match buffers.remove(&(control.buffer as u64)) {
                         Some(_) => unsafe {
                             magma_release_buffer(
                                 control.connection as magma_connection_t,
@@ -402,7 +399,7 @@ impl FileOps for MagmaFile {
                         ),
                     };
                     let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
-                    response.buffer_handle_out = fd.raw() as usize;
+                    response.buffer_handle_out = fd.raw() as u64;
                 }
 
                 response.result_return = status as u64;
@@ -443,10 +440,9 @@ impl FileOps for MagmaFile {
                 ) = read_control_and_response(current_task, &command)?;
 
                 let mut value_out = 0;
-                response.result_return = unsafe {
-                    magma_query2(control.device as usize, control.id, &mut value_out) as u64
-                };
-                response.value_out = value_out as usize;
+                response.result_return =
+                    unsafe { magma_query2(control.device, control.id, &mut value_out) as u64 };
+                response.value_out = value_out;
 
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_QUERY2 as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
@@ -478,7 +474,7 @@ impl FileOps for MagmaFile {
                         &mut context_id_out,
                     ) as u64
                 };
-                response.context_id_out = context_id_out as usize;
+                response.context_id_out = context_id_out as u64;
 
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_CREATE_CONTEXT as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
@@ -516,8 +512,8 @@ impl FileOps for MagmaFile {
                         &mut buffer_out,
                     ) as u64
                 };
-                response.size_out = size_out as usize;
-                response.buffer_out = buffer_out as usize;
+                response.size_out = size_out;
+                response.buffer_out = buffer_out;
                 self.add_buffer_info(
                     control.connection as magma_connection_t,
                     buffer_out,
@@ -580,7 +576,7 @@ impl FileOps for MagmaFile {
                 );
                 let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
 
-                response.handle_out = fd.raw() as usize;
+                response.handle_out = fd.raw() as u64;
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_QUERY_RETURNS_BUFFER2 as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
@@ -662,7 +658,7 @@ impl FileOps for MagmaFile {
                         &mut semaphore_handle_out,
                     ) as u64
                 };
-                response.semaphore_handle_out = semaphore_handle_out as usize;
+                response.semaphore_handle_out = semaphore_handle_out as u64;
 
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXPORT_SEMAPHORE as u32;
@@ -705,7 +701,7 @@ impl FileOps for MagmaFile {
                 response.result_return = unsafe {
                     magma_map_buffer_gpu(
                         control.connection as magma_connection_t,
-                        control.buffer as usize,
+                        control.buffer,
                         control.page_offset,
                         control.page_count,
                         control.gpu_va,
@@ -721,7 +717,7 @@ impl FileOps for MagmaFile {
                     read_control_and_response(current_task, &command)?;
 
                 let num_items = control.count as usize / std::mem::size_of::<StarnixPollItem>();
-                let items_ref = UserRef::new(UserAddress::from(control.items as u64));
+                let items_ref = UserRef::new(UserAddress::from(control.items));
                 // Read the poll items as `StarnixPollItem`, since they contain a union. Also note
                 // that the minimum length of the vector is 1, to always have a valid reference for
                 // `magma_poll`.
