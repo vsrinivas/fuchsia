@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/config.gni")
 import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
 
@@ -11,6 +12,9 @@ import("//build/testing/host_test_data.gni")
 # golden copies checked into the source tree. When invoked with the --regen
 # flag, the test instead overwrites the golden files with freshly generated
 # copies, guaranteeing that the next test run will pass.
+#
+# Set the `bless_goldens` build arg to true to include `--regen` in the arguments
+# to the test script.
 #
 # For simpler, single-file golden testing that executes during the build, see
 # //build/testing/golden_file.gni.
@@ -216,6 +220,9 @@ template("golden_test") {
       "--manifest",
       rebase_path(manifest_file, root_build_dir),
     ]
+    if (bless_goldens) {
+      args += [ "--regen" ]
+    }
     deps = [
       ":${target_generated_files}",
       ":${target_test_data_goldens_list}",

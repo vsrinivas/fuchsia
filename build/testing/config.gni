@@ -1,0 +1,9 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Set to true for the golden_file template to implicitly write updated goldens
+  # instead of failing the action or test.
+  bless_goldens = false
+}
