@@ -16,13 +16,14 @@ use crate::{
         LayerProps, Props, Style,
     },
     rasterizer::{self, PixelSegment},
+    TILE_HEIGHT, TILE_WIDTH,
 };
 
 mod passes;
 
 pub(crate) trait LayerPainter {
     fn clear_cells(&mut self);
-    fn acc_segment(&mut self, segment: PixelSegment);
+    fn acc_segment(&mut self, segment: PixelSegment<TILE_WIDTH, TILE_HEIGHT>);
     fn acc_cover(&mut self, cover: Cover);
     fn clear(&mut self, color: Color);
     fn paint_layer(
@@ -112,7 +113,7 @@ pub enum TileWriteOp {
 pub struct Context<'c, P: LayerProps> {
     pub tile_x: usize,
     pub tile_y: usize,
-    pub segments: &'c [PixelSegment],
+    pub segments: &'c [PixelSegment<TILE_WIDTH, TILE_HEIGHT>],
     pub props: &'c P,
     pub previous_clear_color: Option<Color>,
     pub previous_layers: Cell<Option<&'c mut Option<u32>>>,
@@ -133,7 +134,7 @@ impl LayerWorkbenchState {
         &self,
         context: &'c Context<'_, P>,
         id: u32,
-    ) -> Option<&'c [PixelSegment]> {
+    ) -> Option<&'c [PixelSegment<TILE_WIDTH, TILE_HEIGHT>]> {
         self.segment_ranges.get(&id).map(|range| &context.segments[range.clone()])
     }
 
@@ -384,7 +385,7 @@ mod tests {
         CoverCarry { cover, layer_id }
     }
 
-    fn segment(layer_id: u32) -> PixelSegment {
+    fn segment(layer_id: u32) -> PixelSegment<TILE_WIDTH, TILE_HEIGHT> {
         PixelSegment::new(layer_id, 0, 0, 0, 0, 0, 0)
     }
 
@@ -944,7 +945,7 @@ mod tests {
                 unimplemented!();
             }
 
-            fn acc_segment(&mut self, _segment: PixelSegment) {
+            fn acc_segment(&mut self, _segment: PixelSegment<TILE_WIDTH, TILE_HEIGHT>) {
                 unimplemented!();
             }
 

@@ -4,13 +4,13 @@
 
 use std::{cmp::Ordering, fmt, mem};
 
-use crate::{MAX_HEIGHT_SHIFT, MAX_WIDTH_SHIFT, PIXEL_WIDTH, TILE_HEIGHT_SHIFT, TILE_WIDTH_SHIFT};
+use crate::{MAX_HEIGHT_SHIFT, MAX_WIDTH_SHIFT, PIXEL_WIDTH};
 
 // Tile coordinates are signed integers stored with a bias.
 // The value range goes from -1 to 2^bits - 2 inclusive.
 const TILE_BIAS: i16 = 1;
 
-pub const BIT_FIELD_LENS: [usize; 7] = {
+pub const fn bit_field_lens<const TW: usize, const TH: usize>() -> [usize; 7] {
     const fn log2_round_up(n: usize) -> usize {
         if n.count_ones() == 1 {
             n.trailing_zeros() as usize
@@ -19,17 +19,20 @@ pub const BIT_FIELD_LENS: [usize; 7] = {
         }
     }
 
+    let tile_width_shift = TW.trailing_zeros() as usize;
+    let tile_height_shift = TH.trailing_zeros() as usize;
+
     let mut bit_field_lens = [
-        MAX_HEIGHT_SHIFT - TILE_WIDTH_SHIFT,
-        MAX_WIDTH_SHIFT - TILE_HEIGHT_SHIFT,
+        MAX_HEIGHT_SHIFT - tile_height_shift,
+        MAX_WIDTH_SHIFT - tile_width_shift,
         0,
-        TILE_HEIGHT_SHIFT,
-        TILE_WIDTH_SHIFT,
+        tile_width_shift,
+        tile_height_shift,
         log2_round_up((PIXEL_WIDTH + 1) * 2),
         log2_round_up((PIXEL_WIDTH + 1) * 2),
     ];
 
-    let layer_id_len = mem::size_of::<PixelSegment>() * 8
+    let layer_id_len = mem::size_of::<PixelSegment<TW, TH>>() * 8
         - bit_field_lens[0]
         - bit_field_lens[1]
         - bit_field_lens[3]
@@ -40,38 +43,40 @@ pub const BIT_FIELD_LENS: [usize; 7] = {
     bit_field_lens[2] = layer_id_len;
 
     bit_field_lens
-};
-
-const fn mask_for(bit_field_index: usize) -> u64 {
-    ((1 << BIT_FIELD_LENS[bit_field_index]) - 1) as u64
 }
 
-const fn shift_left_for(bit_field_index: usize) -> u32 {
+const fn mask_for<const TW: usize, const TH: usize>(bit_field_index: usize) -> u64 {
+    ((1 << bit_field_lens::<TW, TH>()[bit_field_index]) - 1) as u64
+}
+
+const fn shift_left_for<const TW: usize, const TH: usize>(bit_field_index: usize) -> u32 {
     let mut amount = 0;
     let mut i = 0;
 
     while i < bit_field_index {
-        amount += BIT_FIELD_LENS[i];
+        amount += bit_field_lens::<TW, TH>()[i];
         i += 1;
     }
 
     amount as u32
 }
 
-const fn shift_right_for(bit_field_index: usize) -> u32 {
-    (mem::size_of::<PixelSegment>() * 8 - BIT_FIELD_LENS[bit_field_index]) as u32
+const fn shift_right_for<const TW: usize, const TH: usize>(bit_field_index: usize) -> u32 {
+    (mem::size_of::<PixelSegment<TW, TH>>() * 8 - bit_field_lens::<TW, TH>()[bit_field_index])
+        as u32
 }
 
 macro_rules! extract {
-    ( $pixel_segment:expr , $bit_field_index:expr ) => {{
-        $pixel_segment << shift_left_for($bit_field_index) >> shift_right_for($bit_field_index)
+    ( $tw:expr , $th:expr , $pixel_segment:expr , $bit_field_index:expr ) => {{
+        $pixel_segment << shift_left_for::<$tw, $th>($bit_field_index)
+            >> shift_right_for::<$tw, $th>($bit_field_index)
     }};
 }
 
 #[derive(Clone, Copy, Default, Eq, Ord, PartialEq, PartialOrd)]
-pub struct PixelSegment(u64);
+pub struct PixelSegment<const TW: usize, const TH: usize>(u64);
 
-impl PixelSegment {
+impl<const TW: usize, const TH: usize> PixelSegment<TW, TH> {
     #[inline]
     pub fn new(
         layer_id: u32,
@@ -84,57 +89,57 @@ impl PixelSegment {
     ) -> Self {
         let mut val = 0;
 
-        val |= mask_for(0) & (tile_y + TILE_BIAS).max(0) as u64;
+        val |= mask_for::<TW, TH>(0) & (tile_y + TILE_BIAS).max(0) as u64;
 
-        val <<= BIT_FIELD_LENS[1];
-        val |= mask_for(1) & (tile_x + TILE_BIAS).max(0) as u64;
+        val <<= bit_field_lens::<TW, TH>()[1];
+        val |= mask_for::<TW, TH>(1) & (tile_x + TILE_BIAS).max(0) as u64;
 
-        val <<= BIT_FIELD_LENS[2];
-        val |= mask_for(2) & layer_id as u64;
+        val <<= bit_field_lens::<TW, TH>()[2];
+        val |= mask_for::<TW, TH>(2) & layer_id as u64;
 
-        val <<= BIT_FIELD_LENS[3];
-        val |= mask_for(3) & local_y as u64;
+        val <<= bit_field_lens::<TW, TH>()[3];
+        val |= mask_for::<TW, TH>(3) & local_x as u64;
 
-        val <<= BIT_FIELD_LENS[4];
-        val |= mask_for(4) & local_x as u64;
+        val <<= bit_field_lens::<TW, TH>()[4];
+        val |= mask_for::<TW, TH>(4) & local_y as u64;
 
-        val <<= BIT_FIELD_LENS[5];
-        val |= mask_for(5) & double_area_multiplier as u64;
+        val <<= bit_field_lens::<TW, TH>()[5];
+        val |= mask_for::<TW, TH>(5) & double_area_multiplier as u64;
 
-        val <<= BIT_FIELD_LENS[6];
-        val |= mask_for(6) & cover as u64;
+        val <<= bit_field_lens::<TW, TH>()[6];
+        val |= mask_for::<TW, TH>(6) & cover as u64;
 
         Self(val)
     }
 
     #[inline]
     pub fn layer_id(self) -> u32 {
-        extract!(self.0, 2) as u32
+        extract!(TW, TH, self.0, 2) as u32
     }
 
     #[inline]
     pub fn tile_x(self) -> i16 {
-        extract!(self.0, 1) as i16 - TILE_BIAS
+        extract!(TW, TH, self.0, 1) as i16 - TILE_BIAS
     }
 
     #[inline]
     pub fn tile_y(self) -> i16 {
-        extract!(self.0, 0) as i16 - TILE_BIAS
+        extract!(TW, TH, self.0, 0) as i16 - TILE_BIAS
     }
 
     #[inline]
     pub fn local_x(self) -> u8 {
-        extract!(self.0, 4) as u8
+        extract!(TW, TH, self.0, 3) as u8
     }
 
     #[inline]
     pub fn local_y(self) -> u8 {
-        extract!(self.0, 3) as u8
+        extract!(TW, TH, self.0, 4) as u8
     }
 
     #[inline]
     fn double_area_multiplier(self) -> u8 {
-        extract!(self.0, 5) as u8
+        extract!(TW, TH, self.0, 5) as u8
     }
 
     #[inline]
@@ -144,11 +149,11 @@ impl PixelSegment {
 
     #[inline]
     pub fn cover(self) -> i8 {
-        extract!(self.0 as i64, 6) as i8
+        extract!(TW, TH, self.0 as i64, 6) as i8
     }
 }
 
-impl fmt::Debug for PixelSegment {
+impl<const TW: usize, const TH: usize> fmt::Debug for PixelSegment<TW, TH> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let unpacked: PixelSegmentUnpacked = (*self).into();
         f.debug_struct("PixelSegment")
@@ -163,16 +168,20 @@ impl fmt::Debug for PixelSegment {
     }
 }
 
-impl From<&PixelSegment> for u64 {
-    fn from(segment: &PixelSegment) -> Self {
+impl<const TW: usize, const TH: usize> From<&PixelSegment<TW, TH>> for u64 {
+    fn from(segment: &PixelSegment<TW, TH>) -> Self {
         segment.0
     }
 }
 
 #[inline]
-pub fn search_last_by_key<F, K>(segments: &[PixelSegment], key: K, mut f: F) -> Result<usize, usize>
+pub fn search_last_by_key<F, K, const TW: usize, const TH: usize>(
+    segments: &[PixelSegment<TW, TH>],
+    key: K,
+    mut f: F,
+) -> Result<usize, usize>
 where
-    F: FnMut(&PixelSegment) -> K,
+    F: FnMut(&PixelSegment<TW, TH>) -> K,
     K: Ord,
 {
     let mut len = segments.len();
@@ -208,8 +217,8 @@ pub struct PixelSegmentUnpacked {
     pub cover: i8,
 }
 
-impl From<PixelSegment> for PixelSegmentUnpacked {
-    fn from(value: PixelSegment) -> Self {
+impl<const TW: usize, const TH: usize> From<PixelSegment<TW, TH>> for PixelSegmentUnpacked {
+    fn from(value: PixelSegment<TW, TH>) -> Self {
         PixelSegmentUnpacked {
             layer_id: value.layer_id(),
             tile_x: value.tile_x(),
@@ -226,7 +235,7 @@ impl From<PixelSegment> for PixelSegmentUnpacked {
 mod tests {
     use super::*;
 
-    use crate::{LAYER_LIMIT, PIXEL_DOUBLE_WIDTH, PIXEL_WIDTH};
+    use crate::{LAYER_LIMIT, PIXEL_DOUBLE_WIDTH, PIXEL_WIDTH, TILE_HEIGHT, TILE_WIDTH};
 
     #[test]
     fn pixel_segment() {
@@ -238,7 +247,7 @@ mod tests {
         let double_area_multiplier = 8;
         let cover = 9;
 
-        let pixel_segment = PixelSegment::new(
+        let pixel_segment = PixelSegment::<TILE_WIDTH, TILE_HEIGHT>::new(
             layer_id,
             tile_x,
             tile_y,
@@ -260,14 +269,14 @@ mod tests {
     #[test]
     fn pixel_segment_max() {
         let layer_id = LAYER_LIMIT as u32;
-        let tile_x = (1 << (BIT_FIELD_LENS[1] - 1)) - 1;
-        let tile_y = (1 << (BIT_FIELD_LENS[0] - 1)) - 1;
-        let local_x = (1 << BIT_FIELD_LENS[4]) - 1;
-        let local_y = (1 << BIT_FIELD_LENS[3]) - 1;
+        let tile_x = (1 << (bit_field_lens::<TILE_WIDTH, TILE_HEIGHT>()[1] - 1)) - 1;
+        let tile_y = (1 << (bit_field_lens::<TILE_WIDTH, TILE_HEIGHT>()[0] - 1)) - 1;
+        let local_x = (1 << bit_field_lens::<TILE_WIDTH, TILE_HEIGHT>()[4]) - 1;
+        let local_y = (1 << bit_field_lens::<TILE_WIDTH, TILE_HEIGHT>()[3]) - 1;
         let double_area_multiplier = PIXEL_DOUBLE_WIDTH as u8;
         let cover = PIXEL_WIDTH as i8;
 
-        let pixel_segment = PixelSegment::new(
+        let pixel_segment = PixelSegment::<TILE_WIDTH, TILE_HEIGHT>::new(
             layer_id,
             tile_x,
             tile_y,
@@ -296,7 +305,7 @@ mod tests {
         let double_area_multiplier = 0;
         let cover = -(PIXEL_WIDTH as i8);
 
-        let pixel_segment = PixelSegment::new(
+        let pixel_segment = PixelSegment::<TILE_WIDTH, TILE_HEIGHT>::new(
             layer_id,
             tile_x,
             tile_y,
@@ -320,7 +329,8 @@ mod tests {
         let tile_x = -2;
         let tile_y = -2;
 
-        let pixel_segment = PixelSegment::new(0, tile_x, tile_y, 0, 0, 0, 0);
+        let pixel_segment =
+            PixelSegment::<TILE_WIDTH, TILE_HEIGHT>::new(0, tile_x, tile_y, 0, 0, 0, 0);
 
         assert_eq!(pixel_segment.tile_x(), -1, "negative tile coord clipped to -1");
         assert_eq!(pixel_segment.tile_y(), -1, "negative tile coord clipped to -1");
@@ -328,7 +338,8 @@ mod tests {
         let tile_x = i16::MIN;
         let tile_y = i16::MIN;
 
-        let pixel_segment = PixelSegment::new(0, tile_x, tile_y, 0, 0, 0, 0);
+        let pixel_segment =
+            PixelSegment::<TILE_WIDTH, TILE_HEIGHT>::new(0, tile_x, tile_y, 0, 0, 0, 0);
 
         assert_eq!(pixel_segment.tile_x(), -1, "negative tile coord clipped to -1");
         assert_eq!(pixel_segment.tile_y(), -1, "negative tile coord clipped to -1");
@@ -337,8 +348,9 @@ mod tests {
     #[test]
     fn search_last_by_key_test() {
         let size = 50;
-        let segments: Vec<PixelSegment> =
-            (0..(size * 2)).map(|i| PixelSegment::new(i / 2, 0, 0, 0, 0, 0, 0)).collect();
+        let segments: Vec<_> = (0..(size * 2))
+            .map(|i| PixelSegment::<TILE_WIDTH, TILE_HEIGHT>::new(i / 2, 0, 0, 0, 0, 0, 0))
+            .collect();
         for i in 0..size {
             assert_eq!(
                 Ok((i * 2 + 1) as usize),

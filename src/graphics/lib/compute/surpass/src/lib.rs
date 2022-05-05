@@ -41,15 +41,13 @@ pub const TILE_WIDTH: usize = 16;
 const _ASSERT_TILE_WIFTH_MULTIPLE_OF_16: usize = 0 - (TILE_WIDTH % 16);
 const _ASSERT_MAX_TILE_WIDTH: usize = 128 - TILE_WIDTH;
 const TILE_WIDTH_SHIFT: usize = TILE_WIDTH.trailing_zeros() as usize;
-const TILE_WIDTH_MASK: usize = TILE_WIDTH - 1;
 
 pub const TILE_HEIGHT: usize = 16;
 const _ASSERT_TILE_WIDTH_MULTIPLE_OF_16: usize = 0 - (TILE_HEIGHT % 16);
 const _ASSERT_MAX_TILE_HEIGHT: usize = 128 - TILE_HEIGHT;
 const TILE_HEIGHT_SHIFT: usize = TILE_HEIGHT.trailing_zeros() as usize;
-const TILE_HEIGHT_MASK: usize = TILE_HEIGHT - 1;
 
-const LAYER_LIMIT: usize = (1 << rasterizer::BIT_FIELD_LENS[2]) - 1;
+const LAYER_LIMIT: usize = (1 << rasterizer::bit_field_lens::<TILE_WIDTH, TILE_HEIGHT>()[2]) - 1;
 
 trait CanonBits {
     fn to_canon_bits(self) -> u32;

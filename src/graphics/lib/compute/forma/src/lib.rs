@@ -18,7 +18,7 @@ pub mod buffer;
 mod composition;
 mod utils;
 
-pub use composition::{Composition, Layer};
+pub use composition::{Backend, Composition, CpuBackend, Layer};
 pub use utils::clear_buffer;
 
 pub use surpass::{

@@ -12,37 +12,176 @@ use rustc_hash::FxHashMap;
 use surpass::{
     layout::Layout,
     painter::{self, Channel, Color, LayerProps, Props, Rect},
-    rasterizer::Rasterizer,
     GeomId, Order,
 };
 
 use crate::buffer::{Buffer, BufferLayerCache};
 
+mod backend;
 mod interner;
 mod layer;
 mod small_bit_set;
 mod state;
 
-pub use self::layer::Layer;
 use self::state::{LayerSharedState, LayerSharedStateInner};
+pub use self::{
+    backend::{Backend, CpuBackend},
+    layer::Layer,
+};
 pub(crate) use small_bit_set::SmallBitSet;
 
 const LINES_GARBAGE_THRESHOLD: usize = 2;
 
 #[derive(Debug, Default)]
-pub struct Composition {
+pub struct Composition<B: Backend = CpuBackend> {
+    backend: B,
     layers: FxHashMap<Order, Layer>,
     shared_state: Rc<RefCell<LayerSharedStateInner>>,
-    rasterizer: Rasterizer,
     buffers_with_caches: Rc<RefCell<SmallBitSet>>,
 }
 
-impl Composition {
+impl Composition<CpuBackend> {
     #[inline]
     pub fn new() -> Self {
         Self::default()
     }
 
+    pub fn render<L>(
+        &mut self,
+        buffer: &mut Buffer<'_, '_, L>,
+        mut channels: [Channel; 4],
+        clear_color: Color,
+        crop: Option<Rect>,
+    ) where
+        L: Layout,
+    {
+        // If `clear_color` has alpha = 1 we can upgrade the alpha channel to `Channel::One`
+        // in order to skip reading the alpha channel.
+        if clear_color.a == 1.0 {
+            channels = channels.map(|c| match c {
+                Channel::Alpha => Channel::One,
+                c => c,
+            });
+        }
+
+        if let Some(buffer_layer_cache) = buffer.layer_cache.as_ref() {
+            let tiles_len = buffer.layout.width_in_tiles() * buffer.layout.height_in_tiles();
+
+            if buffer_layer_cache.cache.borrow().1.len() != tiles_len {
+                buffer_layer_cache.cache.borrow_mut().1.resize(tiles_len, None);
+                buffer_layer_cache.clear();
+            }
+        }
+
+        self.compact_geom();
+        self.shared_state.borrow_mut().props_interner.compact();
+
+        let layers = &self.layers;
+        let shared_state = &mut *self.shared_state.borrow_mut();
+        let lines_builder = &mut shared_state.lines_builder;
+        let geom_id_to_order = &shared_state.geom_id_to_order;
+        let rasterizer = &mut self.backend.rasterizer;
+
+        struct CompositionContext<'l> {
+            layers: &'l FxHashMap<Order, Layer>,
+            cache_id: Option<u8>,
+        }
+
+        impl LayerProps for CompositionContext<'_> {
+            #[inline]
+            fn get(&self, id: u32) -> Cow<'_, Props> {
+                Cow::Borrowed(
+                    self.layers
+                        .get(&Order::new(id).expect("PixelSegment layer_id cannot overflow Order"))
+                        .map(|layer| &layer.props)
+                        .expect(
+                            "Layers outside of HashMap should not produce visible PixelSegments",
+                        ),
+                )
+            }
+
+            #[inline]
+            fn is_unchanged(&self, id: u32) -> bool {
+                match self.cache_id {
+                    None => false,
+                    Some(cache_id) => self
+                        .layers
+                        .get(&Order::new(id).expect("PixelSegment layer_id cannot overflow Order"))
+                        .map(|layer| layer.is_unchanged(cache_id))
+                        .expect(
+                            "Layers outside of HashMap should not produce visible PixelSegments",
+                        ),
+                }
+            }
+        }
+
+        let context = CompositionContext {
+            layers,
+            cache_id: buffer.layer_cache.as_ref().map(|cache| cache.id),
+        };
+
+        // `take()` sets the RefCell's content with `Default::default()` which is cheap for Option.
+        let builder = lines_builder.take().expect("lines_builder should not be None");
+
+        *lines_builder = {
+            let lines = {
+                duration!("gfx", "LinesBuilder::build");
+                builder.build(|id| {
+                    geom_id_to_order
+                        .get(&id)
+                        .copied()
+                        .flatten()
+                        .and_then(|order| context.layers.get(&order))
+                        .map(|layer| layer.inner.clone())
+                })
+            };
+
+            {
+                duration!("gfx", "Rasterizer::rasterize");
+                rasterizer.rasterize(&lines);
+            }
+            {
+                duration!("gfx", "Rasterizer::sort");
+                rasterizer.sort();
+            }
+
+            let previous_clear_color =
+                buffer.layer_cache.as_ref().and_then(|layer_cache| layer_cache.cache.borrow().0);
+
+            let layers_per_tile = buffer.layer_cache.as_ref().map(|layer_cache| {
+                RefMut::map(layer_cache.cache.borrow_mut(), |cache| &mut cache.1)
+            });
+
+            {
+                duration!("gfx", "painter::for_each_row");
+                painter::for_each_row(
+                    buffer.layout,
+                    buffer.buffer,
+                    channels,
+                    buffer.flusher.as_deref(),
+                    previous_clear_color,
+                    layers_per_tile,
+                    rasterizer.segments(),
+                    clear_color,
+                    &crop,
+                    &context,
+                );
+            }
+
+            Some(lines.unwrap())
+        };
+
+        if let Some(buffer_layer_cache) = &buffer.layer_cache {
+            buffer_layer_cache.cache.borrow_mut().0 = Some(clear_color);
+
+            for layer in self.layers.values_mut() {
+                layer.set_is_unchanged(buffer_layer_cache.id, layer.inner.is_enabled);
+            }
+        }
+    }
+}
+
+impl<B: Backend> Composition<B> {
     #[inline]
     pub fn create_layer(&mut self) -> Layer {
         let (geom_id, props) = {
@@ -167,140 +306,6 @@ impl Composition {
                 .as_mut()
                 .expect("lines_builder should not be None")
                 .retain(|id| geom_id_to_order.contains_key(&id));
-        }
-    }
-
-    pub fn render<L>(
-        &mut self,
-        buffer: &mut Buffer<'_, '_, L>,
-        mut channels: [Channel; 4],
-        clear_color: Color,
-        crop: Option<Rect>,
-    ) where
-        L: Layout,
-    {
-        // If `clear_color` has alpha = 1 we can upgrade the alpha channel to `Channel::One`
-        // in order to skip reading the alpha channel.
-        if clear_color.a == 1.0 {
-            channels = channels.map(|c| match c {
-                Channel::Alpha => Channel::One,
-                c => c,
-            });
-        }
-
-        if let Some(buffer_layer_cache) = buffer.layer_cache.as_ref() {
-            let tiles_len = buffer.layout.width_in_tiles() * buffer.layout.height_in_tiles();
-
-            if buffer_layer_cache.cache.borrow().1.len() != tiles_len {
-                buffer_layer_cache.cache.borrow_mut().1.resize(tiles_len, None);
-                buffer_layer_cache.clear();
-            }
-        }
-
-        self.compact_geom();
-        self.shared_state.borrow_mut().props_interner.compact();
-
-        let layers = &self.layers;
-        let shared_state = &mut *self.shared_state.borrow_mut();
-        let lines_builder = &mut shared_state.lines_builder;
-        let geom_id_to_order = &shared_state.geom_id_to_order;
-        let rasterizer = &mut self.rasterizer;
-
-        struct CompositionContext<'l> {
-            layers: &'l FxHashMap<Order, Layer>,
-            cache_id: Option<u8>,
-        }
-
-        impl LayerProps for CompositionContext<'_> {
-            #[inline]
-            fn get(&self, id: u32) -> Cow<'_, Props> {
-                Cow::Borrowed(
-                    self.layers
-                        .get(&Order::new(id).expect("PixelSegment layer_id cannot overflow Order"))
-                        .map(|layer| &layer.props)
-                        .expect(
-                            "Layers outside of HashMap should not produce visible PixelSegments",
-                        ),
-                )
-            }
-
-            #[inline]
-            fn is_unchanged(&self, id: u32) -> bool {
-                match self.cache_id {
-                    None => false,
-                    Some(cache_id) => self
-                        .layers
-                        .get(&Order::new(id).expect("PixelSegment layer_id cannot overflow Order"))
-                        .map(|layer| layer.is_unchanged(cache_id))
-                        .expect(
-                            "Layers outside of HashMap should not produce visible PixelSegments",
-                        ),
-                }
-            }
-        }
-
-        let context = CompositionContext {
-            layers,
-            cache_id: buffer.layer_cache.as_ref().map(|cache| cache.id),
-        };
-
-        // `take()` sets the RefCell's content with `Default::default()` which is cheap for Option.
-        let builder = lines_builder.take().expect("lines_builder should not be None");
-
-        *lines_builder = {
-            let lines = {
-                duration!("gfx", "LinesBuilder::build");
-                builder.build(|id| {
-                    geom_id_to_order
-                        .get(&id)
-                        .copied()
-                        .flatten()
-                        .and_then(|order| context.layers.get(&order))
-                        .map(|layer| layer.inner.clone())
-                })
-            };
-
-            {
-                duration!("gfx", "Rasterizer::rasterize");
-                rasterizer.rasterize(&lines);
-            }
-            {
-                duration!("gfx", "Rasterizer::sort");
-                rasterizer.sort();
-            }
-
-            let previous_clear_color =
-                buffer.layer_cache.as_ref().and_then(|layer_cache| layer_cache.cache.borrow().0);
-
-            let layers_per_tile = buffer.layer_cache.as_ref().map(|layer_cache| {
-                RefMut::map(layer_cache.cache.borrow_mut(), |cache| &mut cache.1)
-            });
-
-            {
-                duration!("gfx", "painter::for_each_row");
-                painter::for_each_row(
-                    buffer.layout,
-                    buffer.buffer,
-                    channels,
-                    buffer.flusher.as_deref(),
-                    previous_clear_color,
-                    layers_per_tile,
-                    rasterizer.segments(),
-                    clear_color,
-                    &crop,
-                    &context,
-                );
-            }
-
-            Some(lines.unwrap())
-        };
-
-        if let Some(buffer_layer_cache) = &buffer.layer_cache {
-            buffer_layer_cache.cache.borrow_mut().0 = Some(clear_color);
-
-            for layer in self.layers.values_mut() {
-                layer.set_is_unchanged(buffer_layer_cache.id, layer.inner.is_enabled);
-            }
         }
     }
 }

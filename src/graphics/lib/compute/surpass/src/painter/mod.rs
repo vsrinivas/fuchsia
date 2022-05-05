@@ -263,7 +263,7 @@ impl LayerPainter for Painter {
         self.covers.iter_mut().for_each(|cover| *cover = i8x16::splat(0));
     }
 
-    fn acc_segment(&mut self, segment: PixelSegment) {
+    fn acc_segment(&mut self, segment: PixelSegment<TILE_WIDTH, TILE_HEIGHT>) {
         let x = segment.local_x() as usize;
         let y = segment.local_y() as usize;
 
@@ -471,7 +471,7 @@ impl Painter {
         &mut self,
         workbench: &mut LayerWorkbench,
         tile_y: usize,
-        mut segments: &[PixelSegment],
+        mut segments: &[PixelSegment<TILE_WIDTH, TILE_HEIGHT>],
         props: &S,
         channels: [Channel; 4],
         clear_color: Color,
@@ -558,7 +558,7 @@ thread_local!(static PAINTER_WORKBENCH: RefCell<(Painter, LayerWorkbench)> = Ref
 
 #[allow(clippy::too_many_arguments)]
 fn print_row<S: LayerProps, L: Layout>(
-    segments: &[PixelSegment],
+    segments: &[PixelSegment<TILE_WIDTH, TILE_HEIGHT>],
     channels: [Channel; 4],
     clear_color: Color,
     crop: &Option<Rect>,
@@ -617,7 +617,7 @@ pub fn for_each_row<L: Layout, S: LayerProps>(
     flusher: Option<&dyn Flusher>,
     previous_clear_color: Option<Color>,
     layers_per_tile: Option<RefMut<'_, Vec<Option<u32>>>>,
-    mut segments: &[PixelSegment],
+    mut segments: &[PixelSegment<TILE_WIDTH, TILE_HEIGHT>],
     clear_color: Color,
     crop: &Option<Rect>,
     styles: &S,
@@ -754,7 +754,10 @@ mod tests {
         }
     }
 
-    fn line_segments(points: &[(Point, Point)], same_layer: bool) -> Vec<PixelSegment> {
+    fn line_segments(
+        points: &[(Point, Point)],
+        same_layer: bool,
+    ) -> Vec<PixelSegment<TILE_WIDTH, TILE_HEIGHT>> {
         let mut builder = LinesBuilder::new();
         let ids = iter::successors(Some(GeomId::default()), |id| Some(id.next()));
 
@@ -778,7 +781,7 @@ mod tests {
 
     fn paint_tile(
         cover_carries: impl IntoIterator<Item = CoverCarry>,
-        segments: &[PixelSegment],
+        segments: &[PixelSegment<TILE_WIDTH, TILE_HEIGHT>],
         props: &impl LayerProps,
         clear_color: Color,
     ) -> [[f32; 4]; TILE_WIDTH * TILE_HEIGHT] {

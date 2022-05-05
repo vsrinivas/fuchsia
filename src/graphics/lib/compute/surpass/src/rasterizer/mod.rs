@@ -4,16 +4,13 @@
 
 use rayon::prelude::*;
 
-use crate::{
-    Lines, PIXEL_SHIFT, PIXEL_WIDTH, TILE_HEIGHT_MASK, TILE_HEIGHT_SHIFT, TILE_WIDTH_MASK,
-    TILE_WIDTH_SHIFT,
-};
+use crate::{Lines, PIXEL_SHIFT, PIXEL_WIDTH};
 
 mod grouped_iter;
 mod pixel_segment;
 
 use grouped_iter::GroupedIter;
-pub use pixel_segment::{search_last_by_key, PixelSegment, PixelSegmentUnpacked, BIT_FIELD_LENS};
+pub use pixel_segment::{bit_field_lens, search_last_by_key, PixelSegment, PixelSegmentUnpacked};
 
 // This finds the ith term in the ordered union of two sequences:
 //
@@ -43,16 +40,16 @@ fn round(v: f32) -> i32 {
 }
 
 #[derive(Debug, Default)]
-pub struct Rasterizer {
-    segments: Vec<PixelSegment>,
+pub struct Rasterizer<const TW: usize, const TH: usize> {
+    segments: Vec<PixelSegment<TW, TH>>,
 }
 
-impl Rasterizer {
+impl<const TW: usize, const TH: usize> Rasterizer<TW, TH> {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn segments(&self) -> &[PixelSegment] {
+    pub fn segments(&self) -> &[PixelSegment<TW, TH>] {
         self.segments.as_slice()
     }
 
@@ -98,10 +95,10 @@ impl Rasterizer {
                 let border_x = x0_sub.min(x1_sub) >> PIXEL_SHIFT;
                 let border_y = y0_sub.min(y1_sub) >> PIXEL_SHIFT;
 
-                let tile_x = (border_x >> TILE_WIDTH_SHIFT as i32) as i16;
-                let tile_y = (border_y >> TILE_HEIGHT_SHIFT as i32) as i16;
-                let local_x = (border_x & TILE_WIDTH_MASK as i32) as u8;
-                let local_y = (border_y & TILE_HEIGHT_MASK as i32) as u8;
+                let tile_x = (border_x >> TW.trailing_zeros() as i32) as i16;
+                let tile_y = (border_y >> TH.trailing_zeros() as i32) as i16;
+                let local_x = (border_x & (TW - 1) as i32) as u8;
+                let local_y = (border_y & (TH - 1) as i32) as u8;
 
                 let border = (border_x << PIXEL_SHIFT) + PIXEL_WIDTH as i32;
                 let height = y1_sub - y0_sub;
@@ -129,7 +126,10 @@ impl Rasterizer {
         self.segments.par_sort_unstable_by_key(|segment| {
             let segment: u64 = segment.into();
             segment
-                >> (BIT_FIELD_LENS[3] + BIT_FIELD_LENS[4] + BIT_FIELD_LENS[5] + BIT_FIELD_LENS[6])
+                >> (bit_field_lens::<TW, TH>()[3]
+                    + bit_field_lens::<TW, TH>()[4]
+                    + bit_field_lens::<TW, TH>()[5]
+                    + bit_field_lens::<TW, TH>()[6])
         });
     }
 }
@@ -143,7 +143,7 @@ mod tests {
         TILE_HEIGHT, TILE_WIDTH,
     };
 
-    fn segments(p0: Point, p1: Point) -> Vec<PixelSegment> {
+    fn segments(p0: Point, p1: Point) -> Vec<PixelSegment<TILE_WIDTH, TILE_HEIGHT>> {
         let mut builder = LinesBuilder::new();
         builder.push(GeomId::default(), [p0, p1]);
         let lines = builder
@@ -155,7 +155,7 @@ mod tests {
         rasterizer.segments().to_vec()
     }
 
-    fn areas_and_covers(segments: &[PixelSegment]) -> Vec<(i16, i8)> {
+    fn areas_and_covers(segments: &[PixelSegment<TILE_WIDTH, TILE_HEIGHT>]) -> Vec<(i16, i8)> {
         segments
             .iter()
             .map(|&segment| {
@@ -297,7 +297,7 @@ mod tests {
         );
     }
 
-    fn tiles(segments: &[PixelSegment]) -> Vec<(i16, i16, u8, u8)> {
+    fn tiles(segments: &[PixelSegment<TILE_WIDTH, TILE_HEIGHT>]) -> Vec<(i16, i16, u8, u8)> {
         segments
             .iter()
             .map(|&segment| {
