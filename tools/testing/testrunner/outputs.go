@@ -100,7 +100,23 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 			break
 		}
 	}
+
+	// If the stdout/stderr file didn't already exist in the test result's OutputFiles,
+	// create it using the bytes from the test Stdio.
+	//
+	// We'll write a file even if the stdio is empty for consistency, and to
+	// make it clear that a file's stdio was empty versus infra silently failing
+	// to create the file.
 	if !containsStdio {
+		pathWriter, err := osmisc.CreateFile(filepath.Join(o.OutDir, stdioPath))
+		if err != nil {
+			return fmt.Errorf("failed to create stdio file for test %q: %w", result.Name, err)
+		}
+		defer pathWriter.Close()
+		if _, err := pathWriter.Write(result.Stdio); err != nil {
+			return fmt.Errorf("failed to write stdio file for test %q: %w", result.Name, err)
+		}
+
 		suiteOutputFiles = append(suiteOutputFiles, stdioPath)
 	}
 
@@ -119,20 +135,6 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 		newCase.OutputFiles = caseOutputFiles
 		newCase.OutputDir = ""
 		cases = append(cases, newCase)
-	}
-
-	// If the stdout/stderr file didn't already exist in the test result's OutputFiles,
-	// create it using the bytes from the test Stdio.
-	if !containsStdio && len(result.Stdio) > 0 {
-		stdioPath := filepath.Join(o.OutDir, stdioPath)
-		pathWriter, err := osmisc.CreateFile(stdioPath)
-		if err != nil {
-			return fmt.Errorf("failed to create stdio file for test %q: %w", result.Name, err)
-		}
-		defer pathWriter.Close()
-		if _, err := pathWriter.Write(result.Stdio); err != nil {
-			return fmt.Errorf("failed to write stdio file for test %q: %w", result.Name, err)
-		}
 	}
 
 	// Only append the test summary after writing all output files to disk. This
