@@ -1,0 +1,13 @@
+--- !ifs-v1
+IfsVersion:      3.0
+SoName:          libtrace-provider-so.so
+Symbols:
+  - { Name: trace_provider_connect_with_fdio, Type: Func }
+  - { Name: trace_provider_create, Type: Func }
+  - { Name: trace_provider_create_synchronously, Type: Func }
+  - { Name: trace_provider_create_synchronously_with_fdio, Type: Func }
+  - { Name: trace_provider_create_with_fdio, Type: Func }
+  - { Name: trace_provider_create_with_name, Type: Func }
+  - { Name: trace_provider_create_with_name_fdio, Type: Func }
+  - { Name: trace_provider_destroy, Type: Func }
+...

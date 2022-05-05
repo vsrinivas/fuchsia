@@ -1,0 +1,49 @@
+--- !ifs-v1
+IfsVersion:      3.0
+SoName:          libzxio_standalone.so
+Symbols:
+  - { Name: zxio_add_inotify_filter, Type: Func }
+  - { Name: zxio_attr_get, Type: Func }
+  - { Name: zxio_attr_set, Type: Func }
+  - { Name: zxio_clone, Type: Func }
+  - { Name: zxio_close, Type: Func }
+  - { Name: zxio_create, Type: Func }
+  - { Name: zxio_create_with_info, Type: Func }
+  - { Name: zxio_create_with_on_open, Type: Func }
+  - { Name: zxio_dirent_iterator_destroy, Type: Func }
+  - { Name: zxio_dirent_iterator_init, Type: Func }
+  - { Name: zxio_dirent_iterator_next, Type: Func }
+  - { Name: zxio_flags_get, Type: Func }
+  - { Name: zxio_flags_set, Type: Func }
+  - { Name: zxio_get_posix_mode, Type: Func }
+  - { Name: zxio_get_read_buffer_available, Type: Func }
+  - { Name: zxio_get_window_size, Type: Func }
+  - { Name: zxio_isatty, Type: Func }
+  - { Name: zxio_link, Type: Func }
+  - { Name: zxio_open, Type: Func }
+  - { Name: zxio_open_async, Type: Func }
+  - { Name: zxio_read, Type: Func }
+  - { Name: zxio_read_at, Type: Func }
+  - { Name: zxio_readv, Type: Func }
+  - { Name: zxio_readv_at, Type: Func }
+  - { Name: zxio_release, Type: Func }
+  - { Name: zxio_rename, Type: Func }
+  - { Name: zxio_seek, Type: Func }
+  - { Name: zxio_set_window_size, Type: Func }
+  - { Name: zxio_sync, Type: Func }
+  - { Name: zxio_token_get, Type: Func }
+  - { Name: zxio_truncate, Type: Func }
+  - { Name: zxio_unlink, Type: Func }
+  - { Name: zxio_vmo_get, Type: Func }
+  - { Name: zxio_vmo_get_clone, Type: Func }
+  - { Name: zxio_vmo_get_copy, Type: Func }
+  - { Name: zxio_vmo_get_exact, Type: Func }
+  - { Name: zxio_vmo_get_exec, Type: Func }
+  - { Name: zxio_wait_begin, Type: Func }
+  - { Name: zxio_wait_end, Type: Func }
+  - { Name: zxio_wait_one, Type: Func }
+  - { Name: zxio_write, Type: Func }
+  - { Name: zxio_write_at, Type: Func }
+  - { Name: zxio_writev, Type: Func }
+  - { Name: zxio_writev_at, Type: Func }
+...

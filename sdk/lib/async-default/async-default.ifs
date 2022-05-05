@@ -1,0 +1,7 @@
+--- !ifs-v1
+IfsVersion:      3.0
+SoName:          libasync-default.so
+Symbols:
+  - { Name: async_get_default_dispatcher, Type: Func }
+  - { Name: async_set_default_dispatcher, Type: Func }
+...

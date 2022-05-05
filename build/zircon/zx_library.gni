@@ -243,7 +243,7 @@ template("zx_library") {
             category = sdk_category
             libcxx_linkage = "static"
             sdk_name = target_name
-            symbols_api = "//sdk/lib/$target_name/$target_name.symbols.api"
+            symbols_api = "//sdk/lib/$target_name/$target_name.ifs"
             if (defined(invoker.sdk_private_headers)) {
               private_headers = invoker.sdk_private_headers
             }

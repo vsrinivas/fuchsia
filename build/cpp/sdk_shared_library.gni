@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/extract_public_symbols.gni")
 import("//build/cpp/verify_pragma_once.gni")
 import("//build/cpp/verify_public_symbols.gni")
 import("//build/sdk/sdk_atom.gni")
@@ -26,11 +25,10 @@ import("//sdk/cts/plasa/plasa_artifacts.gni")
 #     Defaults to "<SDK name>.api".
 #
 #   symbols_api (optional)
-#     Path to the file containing the public symbols of this library.
-#     This file is used to ensure modifications to the library's API are
+#     Path to the ifs file containing the public symbols of this library.
+#     This file is used to ensure modifications to the library's ABI are
 #     explicitly acknowledged. It is mandatory for publication categories of
 #     "partner" or "public".
-#     Default to "<SDK name>.symbols.api".
 #
 #   no_headers (optional)
 #     Whether to include the library's headers in the SDK.
@@ -91,6 +89,7 @@ template("sdk_shared_library") {
   if (defined(invoker.do_abi_check)) {
     do_abi_check = invoker.do_abi_check
   }
+  not_needed([ "do_abi_check" ])
 
   if ((invoker.category == "partner" || invoker.category == "public") &&
       !no_headers) {
@@ -104,8 +103,6 @@ template("sdk_shared_library") {
   metadata_target_name = "${target_name}_sdk_metadata"
   manifest_target_name = "${target_name}_sdk_manifest"
   verify_pragma_target_name = "${target_name}_sdk_pragma"
-  extract_public_symbols_target_name =
-      "${target_name}_sdk_extract_public_symbols"
   sdk_target_name = "${target_name}_sdk"
 
   shared_library(main_target_name) {
@@ -319,36 +316,20 @@ template("sdk_shared_library") {
     headers = all_headers
   }
 
-  # Don't extract symbols for non-public APIs.
-  if (do_abi_check &&
-      (invoker.category == "partner" || invoker.category == "public")) {
-    main_target_dir = get_label_info(":$main_target_name", "dir")
-    reference_symbols_file = "$main_target_dir/${output_name}.symbols.api"
-    if (defined(invoker.symbols_api)) {
-      reference_symbols_file = invoker.symbols_api
-    }
-  }
-  generated_symbols_file = "$target_gen_dir/${output_name}.symbols.api"
-  extract_public_symbols(extract_public_symbols_target_name) {
-    library = "$shared_out_dir/$lib_name"
-    deps = [ shared_lib_target ]
-    symbols = generated_symbols_file
-  }
-
   # Don't verify the public symbols for non-publicized APIs.
+  # TODO(abrachet): Make this required for all libraries.
   if (invoker.category == "partner" || invoker.category == "public") {
+    assert(defined(invoker.symbols_api), "Must define path to an ifs file")
+    main_target_dir = get_label_info(":$main_target_name", "dir")
+
     verify_public_symbols_target_name =
         "${target_name}_sdk_verify_public_symbols"
-    if (do_abi_check) {
-      verify_public_symbols(verify_public_symbols_target_name) {
-        current = generated_symbols_file
-        reference = reference_symbols_file
-        library_name = main_target_dir
-        deps = [ ":$extract_public_symbols_target_name" ]
-      }
-    } else {
-      group(verify_public_symbols_target_name) {
-      }
+    verify_public_symbols(verify_public_symbols_target_name) {
+      current = "$shared_out_dir/lib$output_name.ifs"
+      reference = invoker.symbols_api
+      library_name = main_target_dir
+
+      deps = [ shared_lib_target ]
     }
   }
 

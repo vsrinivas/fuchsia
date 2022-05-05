@@ -1,0 +1,27 @@
+--- !ifs-v1
+IfsVersion:      3.0
+SoName:          libsyslog.so
+Symbols:
+  - { Name: fx_log_get_logger, Type: Func }
+  - { Name: fx_log_is_enabled, Type: Func }
+  - { Name: fx_log_reconfigure, Type: Func }
+  - { Name: fx_log_severity_from_verbosity, Type: Func }
+  - { Name: fx_logger_activate_fallback, Type: Func }
+  - { Name: fx_logger_create, Type: Func }
+  - { Name: fx_logger_create_internal, Type: Func }
+  - { Name: fx_logger_destroy, Type: Func }
+  - { Name: fx_logger_get_connection_status, Type: Func }
+  - { Name: fx_logger_get_min_severity, Type: Func }
+  - { Name: fx_logger_get_tags, Type: Func }
+  - { Name: fx_logger_log, Type: Func }
+  - { Name: fx_logger_log_with_source, Type: Func }
+  - { Name: fx_logger_logf, Type: Func }
+  - { Name: fx_logger_logf_with_source, Type: Func }
+  - { Name: fx_logger_logvf, Type: Func }
+  - { Name: fx_logger_logvf_with_source, Type: Func }
+  - { Name: fx_logger_reconfigure, Type: Func }
+  - { Name: fx_logger_reconfigure_structured, Type: Func }
+  - { Name: fx_logger_set_connection, Type: Func }
+  - { Name: fx_logger_set_min_severity, Type: Func }
+  - { Name: fx_vlog_is_enabled, Type: Func }
+...

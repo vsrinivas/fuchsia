@@ -23,6 +23,8 @@ sdk_shared_library("svc") {
 
   deps = [ "//sdk/lib/vfs/cpp" ]
 
+  symbols_api = "svc.ifs"
+
   include_base = "//sdk"
 
   libcxx_linkage = "static"

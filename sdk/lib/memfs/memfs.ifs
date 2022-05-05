@@ -1,0 +1,8 @@
+--- !ifs-v1
+IfsVersion:      3.0
+SoName:          libmemfs.so
+Symbols:
+  - { Name: memfs_create_filesystem, Type: Func }
+  - { Name: memfs_free_filesystem, Type: Func }
+  - { Name: memfs_install_at, Type: Func }
+...

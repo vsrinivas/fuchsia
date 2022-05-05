@@ -1,0 +1,57 @@
+--- !ifs-v1
+IfsVersion:      3.0
+SoName:          libtrace-engine.so
+Symbols:
+  - { Name: trace_acquire_context, Type: Func }
+  - { Name: trace_acquire_context_for_category, Type: Func }
+  - { Name: trace_acquire_context_for_category_cached, Type: Func }
+  - { Name: trace_acquire_prolonged_context, Type: Func }
+  - { Name: trace_context_alloc_record, Type: Func }
+  - { Name: trace_context_begin_write_blob_record, Type: Func }
+  - { Name: trace_context_get_buffering_mode, Type: Func }
+  - { Name: trace_context_is_category_enabled, Type: Func }
+  - { Name: trace_context_register_category_literal, Type: Func }
+  - { Name: trace_context_register_current_thread, Type: Func }
+  - { Name: trace_context_register_string_copy, Type: Func }
+  - { Name: trace_context_register_string_literal, Type: Func }
+  - { Name: trace_context_register_thread, Type: Func }
+  - { Name: trace_context_register_vthread, Type: Func }
+  - { Name: trace_context_send_alert, Type: Func }
+  - { Name: trace_context_snapshot_buffer_header_internal, Type: Func }
+  - { Name: trace_context_write_async_begin_event_record, Type: Func }
+  - { Name: trace_context_write_async_end_event_record, Type: Func }
+  - { Name: trace_context_write_async_instant_event_record, Type: Func }
+  - { Name: trace_context_write_blob_attachment_record, Type: Func }
+  - { Name: trace_context_write_blob_event_record, Type: Func }
+  - { Name: trace_context_write_blob_record, Type: Func }
+  - { Name: trace_context_write_context_switch_record, Type: Func }
+  - { Name: trace_context_write_counter_event_record, Type: Func }
+  - { Name: trace_context_write_duration_begin_event_record, Type: Func }
+  - { Name: trace_context_write_duration_end_event_record, Type: Func }
+  - { Name: trace_context_write_duration_event_record, Type: Func }
+  - { Name: trace_context_write_flow_begin_event_record, Type: Func }
+  - { Name: trace_context_write_flow_end_event_record, Type: Func }
+  - { Name: trace_context_write_flow_step_event_record, Type: Func }
+  - { Name: trace_context_write_initialization_record, Type: Func }
+  - { Name: trace_context_write_instant_event_record, Type: Func }
+  - { Name: trace_context_write_kernel_object_record_for_handle, Type: Func }
+  - { Name: trace_context_write_log_record, Type: Func }
+  - { Name: trace_context_write_process_info_record, Type: Func }
+  - { Name: trace_context_write_string_record, Type: Func }
+  - { Name: trace_context_write_thread_info_record, Type: Func }
+  - { Name: trace_context_write_thread_record, Type: Func }
+  - { Name: trace_engine_flush_category_cache, Type: Func }
+  - { Name: trace_engine_initialize, Type: Func }
+  - { Name: trace_engine_mark_buffer_saved, Type: Func }
+  - { Name: trace_engine_start, Type: Func }
+  - { Name: trace_engine_stop, Type: Func }
+  - { Name: trace_engine_terminate, Type: Func }
+  - { Name: trace_generate_nonce, Type: Func }
+  - { Name: trace_is_category_enabled, Type: Func }
+  - { Name: trace_notify_observer_updated, Type: Func }
+  - { Name: trace_register_observer, Type: Func }
+  - { Name: trace_release_context, Type: Func }
+  - { Name: trace_release_prolonged_context, Type: Func }
+  - { Name: trace_state, Type: Func }
+  - { Name: trace_unregister_observer, Type: Func }
+...
