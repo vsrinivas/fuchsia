@@ -30,23 +30,6 @@ group("workstation_tests") {
   ]
 }
 
-# TODO(fxbug.dev/92780): Instantiated scenic for test, remove once bug is fixed.
-fuchsia_component("scenic-for-test") {
-  component_name = "scenic"
-  manifest = "meta/scenic.cml"
-  deps = [ "//src/ui/scenic/bin" ]
-
-  if (escher_use_runtime_glsl) {
-    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_resources" ]
-  } else {
-    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_spirv_resources" ]
-  }
-
-  if (scenic_enable_vulkan_validation) {
-    deps += [ "//src/lib/vulkan:vulkan_validation_layers" ]
-  }
-}
-
 fuchsia_component("wrapped-root-presenter") {
   testonly = true
   manifest = "meta/wrapped-root-presenter.cml"
@@ -65,9 +48,9 @@ fuchsia_component("scenic-test-realm") {
   testonly = true
   manifest = "meta/scenic-test-realm.cml"
   deps = [
-    ":scenic-for-test",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/scenic:component_v2",
   ]
 }
 
@@ -78,7 +61,6 @@ fuchsia_component("workstation-test-realm") {
   testonly = true
   manifest = "meta/workstation-test-realm.cml"
   deps = [
-    ":scenic-for-test",
     ":scenic-test-realm",
     ":wrapped-root-presenter",
     "//src/lib/ui/input-synthesis:input-synthesis-component",
