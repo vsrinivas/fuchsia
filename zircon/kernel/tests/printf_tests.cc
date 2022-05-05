@@ -134,6 +134,11 @@ static bool alt_and_sign() {
   EXPECT_TRUE(test_printf("int: +12345678 -12345678", "int: %+d %+d", 12345678, -12345678));
   EXPECT_TRUE(test_printf("int:  12345678 +12345678", "int: % d %+d", 12345678, 12345678));
 
+  // Test if zero-padding works fine with hex's alt (%#x)
+  EXPECT_TRUE(test_printf("uint: 0x02 0X02", "uint: %#04x %#04X", 2, 2));
+  EXPECT_TRUE(test_printf("uint: 0x0000002 0X0000002", "uint: %#09x %#09X", 2, 2));
+  EXPECT_TRUE(test_printf("uint: 0x2 0X2", "uint: %#02x %#02X", 2, 2));
+
   END_TEST;
 }
 

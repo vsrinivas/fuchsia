@@ -90,7 +90,11 @@ __NO_INLINE const char *longlong_to_hexstring(char *buf, unsigned long long u, s
     buf[--pos] = table[digit];
   } while (u != 0);
 
-  if (flag & ALTFLAG) {
+  /* ALTFLAG processing with LEADZEROFLAG is done later, when actually outputting stuff, since 0x
+   * needs to be prepended to the zero pad, and if done here, zero pad would have a limit of len
+   * zeros
+   */
+  if ((flag & (ALTFLAG | LEADZEROFLAG)) == (ALTFLAG)) {
     buf[--pos] = (flag & CAPSFLAG) ? 'X' : 'x';
     buf[--pos] = '0';
   }
@@ -210,7 +214,7 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
         break;
       case 's':
         s = va_arg(ap, const char *);
-        if (s == 0)
+        if (s == nullptr)
           s = "<null>";
         flags &= ~LEADZEROFLAG; /* doesn't make sense for strings */
         goto _output_string;
@@ -309,6 +313,17 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
             (flags & PTRDIFFFLAG) ? (uintptr_t)va_arg(ap, ptrdiff_t) :
             va_arg(ap, unsigned int);
         s = longlong_to_hexstring(num_buffer, n, sizeof(num_buffer), flags);
+
+        /* Normalize c, since code in _output_string needs to know that this is printing hex */
+        c = 'x';
+
+        /* Two ways the later hex altflag processing is bypassed:
+         * 1) 0 does not get 0x prepended to it;
+         * 2) We didn't have a lead zero pad (so it's already been done)
+         */
+        if (n == 0 || !(flags & LEADZEROFLAG))
+          flags &= ~ALTFLAG;
+
         goto _output_string;
         // clang-format on
       case 'n':
@@ -364,6 +379,17 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
       /* output the sign char before the leading zeros */
       if (flags & LEADZEROFLAG && signchar != '\0')
         OUTPUT_CHAR(signchar);
+
+      /* Handle (altflag) printing 0x before the number */
+      /* Note that this needs to be done before padding the number */
+      if (c == 'x' && (flags & ALTFLAG)) {
+        OUTPUT_CHAR('0');
+        OUTPUT_CHAR(flags & CAPSFLAG ? 'X' : 'x');
+
+        /* Width is adjusted so i.e printf("%#04x", 0x02) -> 0x02 instead of 0x0002 */
+        if (width >= 2)
+          width -= 2;
+      }
 
       /* pad according to the format string */
       for (; width > string_len; width--)
