@@ -787,13 +787,10 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
         let net = sandbox.create_network(format!("net{}", net_num)).await.expect("create network");
         let fake_ep = net.create_fake_endpoint().expect("create fake endpoint");
         let iface = realm
-            .join_network::<E, _>(
-                &net,
-                format!("iface{}", net_num),
-                &netemul::InterfaceConfig::StaticIp(addr),
-            )
+            .join_network::<E, _>(&net, format!("iface{}", net_num))
             .await
             .expect("configure networking");
+        iface.add_address_and_subnet_route(addr).await.expect("configure address");
 
         (net, fake_ep, iface)
     };

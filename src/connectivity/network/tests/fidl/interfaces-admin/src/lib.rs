@@ -1427,14 +1427,8 @@ async fn get_set_forwarding<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create netstack realm");
     let net = sandbox.create_network("net").await.expect("create network");
-    let iface1 = realm
-        .join_network::<E, _>(&net, "iface1", &netemul::InterfaceConfig::None)
-        .await
-        .expect("create iface1");
-    let iface2 = realm
-        .join_network::<E, _>(&net, "iface2", &netemul::InterfaceConfig::None)
-        .await
-        .expect("create iface1");
+    let iface1 = realm.join_network::<E, _>(&net, "iface1").await.expect("create iface1");
+    let iface2 = realm.join_network::<E, _>(&net, "iface2").await.expect("create iface1");
 
     #[derive(Debug, PartialEq)]
     struct IpForwarding {

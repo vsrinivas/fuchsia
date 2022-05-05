@@ -79,13 +79,10 @@ async fn test_resolve_route() {
         .expect("failed to connect to netstack");
 
     let host_ep = host
-        .join_network::<netemul::NetworkDevice, _>(
-            &net,
-            "host",
-            &netemul::InterfaceConfig::StaticIp(HOST_IP_V4),
-        )
+        .join_network::<netemul::NetworkDevice, _>(&net, "host")
         .await
         .expect("host failed to join network");
+    host_ep.add_address_and_subnet_route(HOST_IP_V4).await.expect("configure address");
     let _host_address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
         &host_ep,
         HOST_IP_V6,
@@ -104,10 +101,10 @@ async fn test_resolve_route() {
             &net,
             "gateway",
             netemul::NetworkDevice::make_config(netemul::DEFAULT_MTU, Some(GATEWAY_MAC)),
-            &netemul::InterfaceConfig::StaticIp(GATEWAY_IP_V4),
         )
         .await
         .expect("gateway failed to join network");
+    gateway_ep.add_address_and_subnet_route(GATEWAY_IP_V4).await.expect("configure address");
     let _gateway_address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
         &gateway_ep,
         GATEWAY_IP_V6,
@@ -217,9 +214,10 @@ async fn test_resolve_default_route_while_dhcp_is_running() {
         .expect("failed to connect to netstack");
 
     let ep = realm
-        .join_network::<netemul::NetworkDevice, _>(&net, "host", &netemul::InterfaceConfig::Dhcp)
+        .join_network::<netemul::NetworkDevice, _>(&net, "host")
         .await
         .expect("host failed to join network");
+    ep.start_dhcp().await.expect("failed to start DHCP");
 
     let routes = realm
         .connect_to_protocol::<fidl_fuchsia_net_routes::StateMarker>()

@@ -142,14 +142,11 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
         )
         .expect("failed to create client realm");
 
-    let _server_iface = server_realm
-        .join_network::<E, _>(
-            &network,
-            "server-ep",
-            &netemul::InterfaceConfig::StaticIp(SERVER_ADDR),
-        )
+    let server_iface = server_realm
+        .join_network::<E, _>(&network, "server-ep")
         .await
         .expect("failed to configure server networking");
+    server_iface.add_address_and_subnet_route(SERVER_ADDR).await.expect("configure address");
 
     let dhcp_server = server_realm
         .connect_to_protocol::<net_dhcp::Server_Marker>()
@@ -197,10 +194,11 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
         .expect("dhcp/Server.StartServing returned error");
 
     // Start networking on client realm.
-    let _client_iface = client_realm
-        .join_network::<E, _>(&network, "client-ep", &netemul::InterfaceConfig::Dhcp)
+    let client_iface = client_realm
+        .join_network::<E, _>(&network, "client-ep")
         .await
         .expect("failed to configure client networking");
+    client_iface.start_dhcp().await.expect("failed to start DHCP");
 
     // Send a Router Advertisement with DNS server configurations.
     let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");

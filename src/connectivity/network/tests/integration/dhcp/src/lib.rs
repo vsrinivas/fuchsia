@@ -513,7 +513,6 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                                 let iface = netstack_realm_ref
                                     .install_endpoint(
                                         endpoint,
-                                        &netemul::InterfaceConfig::None,
                                         Some(if_name.clone()),
                                     )
                                     .await
@@ -584,7 +583,7 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                             .create_endpoint::<E>()
                             .await;
                         let iface = netstack_realm_ref
-                            .install_endpoint(endpoint, &netemul::InterfaceConfig::None, None)
+                            .install_endpoint(endpoint, None)
                             .await
                             .expect("failed to install client endpoint");
                         let expected_acquired = match ep_type {
@@ -787,16 +786,16 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
     let if_name = "testeth";
     let endpoint =
         network.create_endpoint::<E, _>("server-ep").await.expect("failed to create endpoint");
-    let _server_ep = server_realm
-        .install_endpoint(
-            endpoint,
-            &netemul::InterfaceConfig::StaticIp(DEFAULT_TEST_CONFIG.server_subnet()),
-            Some(if_name.to_string()),
-        )
+    let server_ep = server_realm
+        .install_endpoint(endpoint, Some(if_name.to_string()))
         .await
         .expect("failed to create server network endpoint");
+    server_ep
+        .add_address_and_subnet_route(DEFAULT_TEST_CONFIG.server_subnet())
+        .await
+        .expect("configure address");
     let client_ep = client_realm
-        .join_network::<E, _>(&network, "client-ep", &netemul::InterfaceConfig::None)
+        .join_network::<E, _>(&network, "client-ep")
         .await
         .expect("failed to create client network endpoint");
 
@@ -953,14 +952,14 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
     let if_name = "testeth";
     let endpoint =
         network.create_endpoint::<E, _>("server-ep").await.expect("failed to create endpoint");
-    let _server_ep = server_realm
-        .install_endpoint(
-            endpoint,
-            &netemul::InterfaceConfig::StaticIp(DEFAULT_TEST_CONFIG.server_subnet()),
-            Some(if_name.to_string()),
-        )
+    let server_ep = server_realm
+        .install_endpoint(endpoint, Some(if_name.to_string()))
         .await
         .expect("failed to create server network endpoint");
+    server_ep
+        .add_address_and_subnet_route(DEFAULT_TEST_CONFIG.server_subnet())
+        .await
+        .expect("configure address");
 
     // Configure the server with parameters and then restart it.
     {

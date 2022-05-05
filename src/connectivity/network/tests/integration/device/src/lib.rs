@@ -220,23 +220,15 @@ async fn ping_succeeds_with_expected_payload<E: netemul::Endpoint>(
 
     let mtu = u16::try_from(mtu).expect("failed to convert mtu to u16");
     let source_if = source_realm
-        .join_network_with(
-            &network,
-            "source_ep",
-            E::make_config(mtu, Some(SOURCE_MAC_ADDRESS)),
-            &netemul::InterfaceConfig::StaticIp(SOURCE_SUBNET),
-        )
+        .join_network_with(&network, "source_ep", E::make_config(mtu, Some(SOURCE_MAC_ADDRESS)))
         .await
         .expect("failed to join network with source");
+    source_if.add_address_and_subnet_route(SOURCE_SUBNET).await.expect("configure address");
     let target_if = target_realm
-        .join_network_with(
-            &network,
-            "target_ep",
-            E::make_config(mtu, Some(TARGET_MAC_ADDRESS)),
-            &netemul::InterfaceConfig::StaticIp(TARGET_SUBNET),
-        )
+        .join_network_with(&network, "target_ep", E::make_config(mtu, Some(TARGET_MAC_ADDRESS)))
         .await
         .expect("failed to join network with target");
+    target_if.add_address_and_subnet_route(TARGET_SUBNET).await.expect("configure address");
 
     // Add static ARP entries as we've observed flakes in CQ due to ARP timeouts
     // and ARP resolution is immaterial to this test.

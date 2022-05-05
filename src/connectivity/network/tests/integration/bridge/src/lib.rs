@@ -101,25 +101,25 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
         .await
         .expect("failed to create network between switch and gateway");
     let gateway_if = gateway_realm
-        .join_network::<E, _>(
-            &net_switch_gateway,
-            "gateway_ep",
-            &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.255.1/16")),
-        )
+        .join_network::<E, _>(&net_switch_gateway, "gateway_ep")
         .await
         .expect("failed to join network in gateway realm");
+    gateway_if
+        .add_address_and_subnet_route(fidl_subnet!("192.168.255.1/16"))
+        .await
+        .expect("configure address");
 
     let switch_realm = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_{}_switch", name, sub_name))
         .expect("failed to create switch netstack realm");
     let switch_if = switch_realm
-        .join_network::<E, _>(
-            &net_switch_gateway,
-            "switch_ep",
-            &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.254.1/16")),
-        )
+        .join_network::<E, _>(&net_switch_gateway, "switch_ep")
         .await
         .expect("failed to join network in switch realm");
+    switch_if
+        .add_address_and_subnet_route(fidl_subnet!("192.168.254.1/16"))
+        .await
+        .expect("configure address");
 
     let gateway_node =
         ping_helper::Node::new_with_v4_and_v6_link_local(&gateway_realm, &gateway_if)
@@ -198,26 +198,22 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
                                 .await
                                 .expect("failed to create network between host and switch");
                             let host_if = realm
-                                .join_network::<E, _>(
-                                    &net,
-                                    format!("host{}", link),
-                                    &netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                                        addr: fidl_fuchsia_net::IpAddress::Ipv4(
-                                            fidl_fuchsia_net::Ipv4Address {
-                                                addr: [192, 168, link.id(), 1],
-                                            },
-                                        ),
-                                        prefix_len: 16,
-                                    }),
-                                )
+                                .join_network::<E, _>(&net, format!("host{}", link))
                                 .await
                                 .expect("failed to join network in host realm");
+                            host_if
+                                .add_address_and_subnet_route(fidl_fuchsia_net::Subnet {
+                                    addr: fidl_fuchsia_net::IpAddress::Ipv4(
+                                        fidl_fuchsia_net::Ipv4Address {
+                                            addr: [192, 168, link.id(), 1],
+                                        },
+                                    ),
+                                    prefix_len: 16,
+                                })
+                                .await
+                                .expect("configure address");
                             let switch_if = switch_realm
-                                .join_network::<E, _>(
-                                    &net,
-                                    format!("switch_ep{}", link),
-                                    &netemul::InterfaceConfig::None,
-                                )
+                                .join_network::<E, _>(&net, format!("switch_ep{}", link))
                                 .await
                                 .expect("failed to join network in switch realm");
 
@@ -363,25 +359,25 @@ async fn test_remove_bridge_interface_disabled<E: netemul::Endpoint>(name: &str)
         .await
         .expect("failed to create network between switch and gateway");
     let gateway_if = gateway_realm
-        .join_network::<E, _>(
-            &net_switch_gateway,
-            "gateway_ep",
-            &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.255.1/16")),
-        )
+        .join_network::<E, _>(&net_switch_gateway, "gateway_ep")
         .await
         .expect("failed to join network in gateway realm");
+    gateway_if
+        .add_address_and_subnet_route(fidl_subnet!("192.168.255.1/16"))
+        .await
+        .expect("configure address");
 
     let switch_realm = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_switch", name))
         .expect("failed to create switch netstack realm");
     let switch_if = switch_realm
-        .join_network::<E, _>(
-            &net_switch_gateway,
-            "switch_ep",
-            &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.254.1/16")),
-        )
+        .join_network::<E, _>(&net_switch_gateway, "switch_ep")
         .await
         .expect("failed to join network to gateway in switch realm");
+    switch_if
+        .add_address_and_subnet_route(fidl_subnet!("192.168.254.1/16"))
+        .await
+        .expect("configure address");
 
     let gateway_node =
         ping_helper::Node::new_with_v4_and_v6_link_local(&gateway_realm, &gateway_if)

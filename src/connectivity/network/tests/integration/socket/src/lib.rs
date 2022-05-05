@@ -104,14 +104,10 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str, protocol: UdpProtocol
     };
 
     let client_ep = client
-        .join_network_with(
-            &net,
-            "client",
-            E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC)),
-            &netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET),
-        )
+        .join_network_with(&net, "client", E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC)))
         .await
         .expect("client failed to join network");
+    client_ep.add_address_and_subnet_route(CLIENT_SUBNET).await.expect("configure address");
     let server = match protocol {
         UdpProtocol::Synchronous => sandbox
             .create_netstack_realm::<Netstack2, _>(format!("{}_server", name))
@@ -121,14 +117,10 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str, protocol: UdpProtocol
             .expect("failed to create server realm"),
     };
     let server_ep = server
-        .join_network_with(
-            &net,
-            "server",
-            E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC)),
-            &netemul::InterfaceConfig::StaticIp(SERVER_SUBNET),
-        )
+        .join_network_with(&net, "server", E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC)))
         .await
         .expect("server failed to join network");
+    server_ep.add_address_and_subnet_route(SERVER_SUBNET).await.expect("configure address");
 
     // Add static ARP entries as we've observed flakes in CQ due to ARP timeouts
     // and ARP resolution is immaterial to this test.
@@ -208,27 +200,19 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
         .expect("failed to create client realm");
     let client_ep = client
-        .join_network_with(
-            &net,
-            "client",
-            E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC)),
-            &netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET),
-        )
+        .join_network_with(&net, "client", E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC)))
         .await
         .expect("client failed to join network");
+    client_ep.add_address_and_subnet_route(CLIENT_SUBNET).await.expect("configure address");
 
     let server = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
         .expect("failed to create server realm");
     let server_ep = server
-        .join_network_with(
-            &net,
-            "server",
-            E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC)),
-            &netemul::InterfaceConfig::StaticIp(SERVER_SUBNET),
-        )
+        .join_network_with(&net, "server", E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC)))
         .await
         .expect("server failed to join network");
+    server_ep.add_address_and_subnet_route(SERVER_SUBNET).await.expect("configure address");
 
     // Add static ARP entries as we've observed flakes in CQ due to ARP timeouts
     // and ARP resolution is immaterial to this test.
@@ -770,13 +754,10 @@ async fn ping<E: netemul::Endpoint>(name: &str) {
                 .create_netstack_realm::<Netstack2, _>(format!("{}_{}", name, suffix))
                 .expect("failed to create realm");
             let interface = realm
-                .join_network::<E, _>(
-                    &net,
-                    format!("ep_{}", suffix),
-                    &netemul::InterfaceConfig::StaticIp(addr),
-                )
+                .join_network::<E, _>(&net, format!("ep_{}", suffix))
                 .await
                 .expect("failed to join network in realm");
+            interface.add_address_and_subnet_route(addr).await.expect("configure address");
             (realm, interface)
         }
     };

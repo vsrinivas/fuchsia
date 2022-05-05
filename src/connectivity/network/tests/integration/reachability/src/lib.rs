@@ -445,7 +445,7 @@ async fn test_state<E: netemul::Endpoint>(
                 let fake_ep =
                     network.create_fake_endpoint().expect("failed to create fake endpoint");
                 let interface = realm
-                    .join_network::<E, _>(&network, name, &netemul::InterfaceConfig::None)
+                    .join_network::<E, _>(&network, name)
                     .await
                     .expect("failed to join network with netdevice endpoint");
 

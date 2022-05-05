@@ -267,16 +267,6 @@ impl TestNetworkSetup<'_> {
     }
 }
 
-/// Interface configuration used by [`TestRealm::join_network`].
-pub enum InterfaceConfig {
-    /// Interface is configured with a static address and subnet route.
-    StaticIp(fnet::Subnet),
-    /// Interface is configured to use DHCP to obtain an address.
-    Dhcp,
-    /// No address configuration is performed.
-    None,
-}
-
 /// A realm within a netemul sandbox.
 #[must_use]
 pub struct TestRealm<'a> {
@@ -340,13 +330,12 @@ impl<'a> TestRealm<'a> {
         &self,
         network: &TestNetwork<'a>,
         ep_name: S,
-        if_config: &InterfaceConfig,
     ) -> Result<TestInterface<'a>>
     where
         E: Endpoint,
         S: Into<Cow<'a, str>>,
     {
-        self.join_network_with_if_name::<E, _>(network, ep_name, if_config, None).await
+        self.join_network_with_if_name::<E, _>(network, ep_name, None).await
     }
 
     /// Like [`join_network_with`], but uses default endpoint configurations with the specified
@@ -357,7 +346,6 @@ impl<'a> TestRealm<'a> {
         &self,
         network: &TestNetwork<'a>,
         ep_name: S,
-        if_config: &InterfaceConfig,
         if_name: Option<String>,
     ) -> Result<TestInterface<'a>>
     where
@@ -366,16 +354,15 @@ impl<'a> TestRealm<'a> {
     {
         let endpoint =
             network.create_endpoint::<E, _>(ep_name).await.context("failed to create endpoint")?;
-        self.install_endpoint(endpoint, if_config, if_name).await
+        self.install_endpoint(endpoint, if_name).await
     }
 
-    /// Joins `network` with by creating an endpoint with `ep_config` and
-    /// installing it into the realm with `if_config`.
+    /// Joins `network` by creating an endpoint with `ep_config` and
+    /// installing it into the realm.
     ///
-    /// `join_network_with` is a helper to create a new endpoint `ep_name`
-    /// attached to `network` and configure it with `if_config`. Returns a
-    /// [`TestInterface`] which is already added to this realm's netstack, link
-    /// online, enabled, and configured according to `config`.
+    /// Returns a [`TestInterface`] corresponding to the added interface. The
+    /// interface is guaranteed to have its link up and be enabled when this
+    /// async function resolves.
     ///
     /// Note that this realm needs a Netstack for this operation to succeed.
     ///
@@ -385,13 +372,12 @@ impl<'a> TestRealm<'a> {
         network: &TestNetwork<'a>,
         ep_name: impl Into<Cow<'a, str>>,
         ep_config: fnetemul_network::EndpointConfig,
-        if_config: &InterfaceConfig,
     ) -> Result<TestInterface<'a>> {
         let endpoint = network
             .create_endpoint_with(ep_name, ep_config)
             .await
             .context("failed to create endpoint")?;
-        self.install_endpoint(endpoint, if_config, None).await
+        self.install_endpoint(endpoint, None).await
     }
 
     /// Installs and configures the endpoint in this realm.
@@ -400,7 +386,6 @@ impl<'a> TestRealm<'a> {
     pub async fn install_endpoint(
         &self,
         endpoint: TestEndpoint<'a>,
-        config: &InterfaceConfig,
         name: Option<String>,
     ) -> Result<TestInterface<'a>> {
         let interface = endpoint
@@ -419,47 +404,6 @@ impl<'a> TestRealm<'a> {
                 })
             })
             .context("failed to enable interface")?;
-        let () = match config {
-            InterfaceConfig::StaticIp(subnet) => {
-                let subnet = *subnet;
-                let fnet::Subnet { addr, prefix_len } = subnet;
-                let mut addr = match addr {
-                    fnet::IpAddress::Ipv4(addr) => {
-                        fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-                            addr,
-                            prefix_len,
-                        })
-                    }
-                    fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
-                };
-                let (address_state_provider, server) = fidl::endpoints::create_proxy::<
-                    fnet_interfaces_admin::AddressStateProviderMarker,
-                >()
-                .context("create proxy")?;
-                let () = address_state_provider.detach().context("detach address lifetime")?;
-                let () = interface
-                    .control()
-                    .add_address(&mut addr, fnet_interfaces_admin::AddressParameters::EMPTY, server)
-                    .context("Control.AddAddress FIDL error")?;
-
-                let state_stream =
-                    fnet_interfaces_ext::admin::assignment_state_stream(address_state_provider);
-                futures::pin_mut!(state_stream);
-                let ((), ()) = futures::future::try_join(
-                    fnet_interfaces_ext::admin::wait_assignment_state(
-                        &mut state_stream,
-                        fnet_interfaces_admin::AddressAssignmentState::Assigned,
-                    )
-                    .map(|res| res.context("assignment state")),
-                    interface.add_subnet_route(subnet).map(|res| res.context("add subnet route")),
-                )
-                .await?;
-            }
-            InterfaceConfig::Dhcp => {
-                interface.start_dhcp().await.context("failed to start DHCP")?;
-            }
-            InterfaceConfig::None => (),
-        };
 
         // Wait for Netstack to observe interface up so callers can safely
         // assume the state of the world on return.
@@ -1211,6 +1155,40 @@ impl<'a> TestInterface<'a> {
             .map_err(zx::Status::from_raw)
             .context("failed to stop dhcp client")?;
 
+        Ok(())
+    }
+
+    /// Adds an address and a subnet route, waiting until the address assignment
+    /// state is `ASSIGNED`.
+    pub async fn add_address_and_subnet_route(&self, subnet: fnet::Subnet) -> Result<()> {
+        let fnet::Subnet { addr, prefix_len } = subnet.clone();
+        let mut addr = match addr {
+            fnet::IpAddress::Ipv4(addr) => {
+                fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix { addr, prefix_len })
+            }
+            fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
+        };
+        let (address_state_provider, server) =
+            fidl::endpoints::create_proxy::<fnet_interfaces_admin::AddressStateProviderMarker>()
+                .context("create proxy")?;
+        let () = address_state_provider.detach().context("detach address lifetime")?;
+        let () = self
+            .control
+            .add_address(&mut addr, fnet_interfaces_admin::AddressParameters::EMPTY, server)
+            .context("FIDL error")?;
+
+        let state_stream =
+            fnet_interfaces_ext::admin::assignment_state_stream(address_state_provider);
+        futures::pin_mut!(state_stream);
+        let ((), ()) = futures::future::try_join(
+            fnet_interfaces_ext::admin::wait_assignment_state(
+                &mut state_stream,
+                fnet_interfaces_admin::AddressAssignmentState::Assigned,
+            )
+            .map(|res| res.context("assignment state")),
+            self.add_subnet_route(subnet).map(|res| res.context("add subnet route")),
+        )
+        .await?;
         Ok(())
     }
 

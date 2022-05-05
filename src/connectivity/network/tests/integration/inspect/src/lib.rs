@@ -135,19 +135,24 @@ async fn inspect_nic() {
             &network,
             "eth-ep",
             netemul::Ethernet::make_config(max_frame_size, Some(ETH_MAC)),
-            &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.0.1/24")),
         )
         .await
         .expect("failed to join network with ethernet endpoint");
+    eth.add_address_and_subnet_route(fidl_subnet!("192.168.0.1/24"))
+        .await
+        .expect("configure address");
     let netdev = realm
         .join_network_with(
             &network,
             "netdev-ep",
             netemul::NetworkDevice::make_config(max_frame_size, Some(NETDEV_MAC)),
-            &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.0.2/24")),
         )
         .await
         .expect("failed to join network with netdevice endpoint");
+    netdev
+        .add_address_and_subnet_route(fidl_subnet!("192.168.0.2/24"))
+        .await
+        .expect("configure address");
 
     let interfaces_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -520,10 +525,8 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
     // Create the fake endpoint before installing an endpoint in the netstack to ensure
     // that we receive all DHCP messages sent by the client.
     let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
-    let eth = realm
-        .join_network::<E, _>(&network, "ep1", &netemul::InterfaceConfig::Dhcp)
-        .await
-        .expect("failed to join network");
+    let eth = realm.join_network::<E, _>(&network, "ep1").await.expect("failed to join network");
+    eth.start_dhcp().await.expect("failed to start DHCP");
 
     // Wait for a DHCP message here to ensure that the client is ready to receive
     // incoming packets.

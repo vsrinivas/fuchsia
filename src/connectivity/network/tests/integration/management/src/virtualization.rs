@@ -120,13 +120,10 @@ impl<'a> Guest<'a> {
             .await
             .expect("failed to create network between guest and host");
         let guest_if = realm
-            .join_network::<E, _>(
-                &net,
-                format!("guest{}", interface),
-                &netemul::InterfaceConfig::StaticIp(ipv4_addr),
-            )
+            .join_network::<E, _>(&net, format!("guest{}", interface))
             .await
             .expect("failed to join network as guest");
+        guest_if.add_address_and_subnet_route(ipv4_addr).await.expect("configure address");
 
         let ep = net
             .create_endpoint::<netemul::NetworkDevice, _>(format!("host{}", interface))
@@ -278,13 +275,13 @@ async fn virtualization<E: netemul::Endpoint>(name: &str, sub_name: &str, steps:
         .await
         .expect("failed to create network between host and gateway");
     let gateway_if = gateway_realm
-        .join_network::<E, _>(
-            &net_host_gateway,
-            "ep_gateway",
-            &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.255.1/16")),
-        )
+        .join_network::<E, _>(&net_host_gateway, "ep_gateway")
         .await
         .expect("failed to join network in gateway realm");
+    gateway_if
+        .add_address_and_subnet_route(fidl_subnet!("192.168.255.1/16"))
+        .await
+        .expect("configure address");
 
     let host_realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
@@ -318,11 +315,7 @@ async fn virtualization<E: netemul::Endpoint>(name: &str, sub_name: &str, steps:
                 info!("adding upstream");
                 match upstream_if.replace((
                     host_realm
-                        .join_network::<E, _>(
-                            &net_host_gateway,
-                            "ep_host",
-                            &netemul::InterfaceConfig::None,
-                        )
+                        .join_network::<E, _>(&net_host_gateway, "ep_host")
                         .await
                         .expect("failed to join network in host realm"),
                     true,
@@ -536,7 +529,7 @@ async fn dhcpv4_client_started<E: netemul::Endpoint>(name: &str) {
     let net = sandbox.create_network("net").await.expect("failed to create network");
     let fake_ep = net.create_fake_endpoint().expect("failed to create fake endpoint on net");
     let _upstream_if = host_realm
-        .join_network::<E, _>(&net, "ep_host", &netemul::InterfaceConfig::None)
+        .join_network::<E, _>(&net, "ep_host")
         .await
         .expect("failed to join network in host realm");
 

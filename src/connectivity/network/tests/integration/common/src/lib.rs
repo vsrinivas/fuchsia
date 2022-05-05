@@ -332,7 +332,7 @@ where
     let fake_ep = network.create_fake_endpoint()?;
 
     let iface = realm
-        .join_network::<E, _>(&network, name, &netemul::InterfaceConfig::None)
+        .join_network::<E, _>(&network, name)
         .await
         .context("failed to configure networking")?;
 

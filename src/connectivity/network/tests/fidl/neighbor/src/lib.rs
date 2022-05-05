@@ -55,10 +55,10 @@ async fn create_realm<'a>(
             &network,
             format!("ep-{}", variant_name),
             netemul::NetworkDevice::make_config(netemul::DEFAULT_MTU, Some(mac)),
-            &netemul::InterfaceConfig::StaticIp(static_addr),
         )
         .await
         .expect("failed to join network");
+    ep.add_address_and_subnet_route(static_addr).await.expect("configure address");
 
     let fidl_fuchsia_net_interfaces_ext::Properties {
         id: loopback_id,

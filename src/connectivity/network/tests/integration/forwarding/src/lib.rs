@@ -100,37 +100,31 @@ async fn forwarding<E: netemul::Endpoint>(name: &str, setup: Setup) {
         .expect("create realm");
 
     let client_iface = client
-        .join_network::<E, _>(
-            &client_net,
-            "client-ep",
-            &netemul::InterfaceConfig::StaticIp(client_subnet),
-        )
+        .join_network::<E, _>(&client_net, "client-ep")
         .await
         .expect("install interface in client netstack");
+    client_iface.add_address_and_subnet_route(client_subnet).await.expect("configure address");
     let server_iface = server
-        .join_network::<E, _>(
-            &server_net,
-            "server-ep",
-            &netemul::InterfaceConfig::StaticIp(server_subnet),
-        )
+        .join_network::<E, _>(&server_net, "server-ep")
         .await
         .expect("install interface in server netstack");
+    server_iface.add_address_and_subnet_route(server_subnet).await.expect("configure address");
     let router_client_iface = router
-        .join_network::<E, _>(
-            &client_net,
-            "router-client-ep",
-            &netemul::InterfaceConfig::StaticIp(router_client_ip),
-        )
+        .join_network::<E, _>(&client_net, "router-client-ep")
         .await
         .expect("install interface in router netstack");
+    router_client_iface
+        .add_address_and_subnet_route(router_client_ip)
+        .await
+        .expect("configure address");
     let router_server_iface = router
-        .join_network::<E, _>(
-            &server_net,
-            "router-server-ep",
-            &netemul::InterfaceConfig::StaticIp(router_server_ip),
-        )
+        .join_network::<E, _>(&server_net, "router-server-ep")
         .await
         .expect("install interface in router netstack");
+    router_server_iface
+        .add_address_and_subnet_route(router_server_ip)
+        .await
+        .expect("configure address");
 
     async fn add_default_gateway(
         realm: &netemul::TestRealm<'_>,

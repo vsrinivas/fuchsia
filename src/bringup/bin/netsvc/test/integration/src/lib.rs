@@ -441,10 +441,8 @@ async fn with_netsvc_and_netstack_bind_port<E, F, Fut, A, V>(
     let netstack_realm =
         sandbox.create_netstack_realm::<Netstack2, _>(&ns_name).expect("create netstack realm");
 
-    let interface: netemul::TestInterface<'_> = netstack_realm
-        .join_network::<E, _>(&network, &ns_name, &netemul::InterfaceConfig::None)
-        .await
-        .expect("join network");
+    let interface: netemul::TestInterface<'_> =
+        netstack_realm.join_network::<E, _>(&network, &ns_name).await.expect("join network");
 
     let _: net_types::ip::Ipv6Addr = netstack_testing_common::interfaces::wait_for_v6_ll(
         &netstack_realm

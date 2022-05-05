@@ -298,10 +298,10 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) {
             &net,
             "client",
             E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC_ADDRESS)),
-            &netemul::InterfaceConfig::StaticIp(CLIENT_IPV4_SUBNET),
         )
         .await
         .expect("client failed to join network");
+    client_ep.add_address_and_subnet_route(CLIENT_IPV4_SUBNET).await.expect("configure address");
     let client_filter = client
         .connect_to_protocol::<fnetfilter::FilterMarker>()
         .expect("client failed to connect to filter service");
@@ -314,10 +314,10 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) {
             &net,
             "server",
             E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC_ADDRESS)),
-            &netemul::InterfaceConfig::StaticIp(SERVER_IPV4_SUBNET),
         )
         .await
         .expect("server failed to join network");
+    server_ep.add_address_and_subnet_route(SERVER_IPV4_SUBNET).await.expect("configure address");
 
     // Put client and server in each other's neighbor table. We've observed
     // flakes in CQ due to ARP timeouts and ARP resolution is immaterial to the
@@ -1059,11 +1059,11 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
             .join_network_with_if_name::<E, _>(
                 &net,
                 format!("router_ep{}", net_num),
-                &netemul::InterfaceConfig::StaticIp(router_addr),
                 router_if_name,
             )
             .await
             .expect("router failed to join network");
+        router_ep.add_address_and_subnet_route(router_addr).await.expect("configure address");
 
         let gen_forwarding_config = |forwarding| finterfaces_admin::Configuration {
             ipv4: Some(finterfaces_admin::Ipv4Configuration {
@@ -1088,13 +1088,10 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
         );
 
         let host_ep = host_realm
-            .join_network::<E, _>(
-                &net,
-                format!("host{}_ep", net_num),
-                &netemul::InterfaceConfig::StaticIp(host_addr),
-            )
+            .join_network::<E, _>(&net, format!("host{}_ep", net_num))
             .await
             .expect("host failed to join network");
+        host_ep.add_address_and_subnet_route(host_addr).await.expect("configure address");
 
         let stack = host_realm
             .connect_to_protocol::<fnet_stack::StackMarker>()

@@ -295,7 +295,7 @@ async fn bridged_packet_test<E: netemul::Endpoint>(name: &str) {
 
     let net = sandbox.create_network(name).await.expect("error creating network");
     let iface = realm
-        .join_network::<E, _>(&net, "ep", &netemul::InterfaceConfig::None)
+        .join_network::<E, _>(&net, "ep")
         .await
         .expect("failed to join network in gateway realm");
 

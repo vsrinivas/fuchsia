@@ -66,14 +66,16 @@ async fn timeouts<E: netemul::Endpoint>(name: &str) {
     let server = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_server", name))
         .expect("create realm");
-    let _client_iface = client
-        .join_network::<E, _>(&network, "client-ep", &netemul::InterfaceConfig::StaticIp(CLIENT_IP))
+    let client_iface = client
+        .join_network::<E, _>(&network, "client-ep")
         .await
         .expect("install interface in client netstack");
-    let _server_iface = server
-        .join_network::<E, _>(&network, "server-ep", &netemul::InterfaceConfig::StaticIp(SERVER_IP))
+    client_iface.add_address_and_subnet_route(CLIENT_IP).await.expect("configure address");
+    let server_iface = server
+        .join_network::<E, _>(&network, "server-ep")
         .await
         .expect("install interface in server netstack");
+    server_iface.add_address_and_subnet_route(SERVER_IP).await.expect("configure address");
 
     let _server_sock = fasync::net::TcpListener::listen_in_realm(
         &server,
