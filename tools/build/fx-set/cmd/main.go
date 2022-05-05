@@ -372,19 +372,19 @@ func constructStaticSpec(ctx context.Context, fx fxRunner, checkoutDir string, a
 		gnArgs = append(gnArgs, "enable_netboot=true")
 	}
 
-	basePackages := args.basePackages
+	hostLabels := args.hostLabels
 	if args.cargoTOMLGen {
-		basePackages = append(basePackages, "//build/rust:cargo_toml_gen")
+		hostLabels = append(hostLabels, "//build/rust:cargo_toml_gen")
 	}
 
 	return &fintpb.Static{
 		Board:             boardPath,
 		Product:           productPath,
 		Optimize:          optimize,
-		BasePackages:      basePackages,
+		BasePackages:      args.basePackages,
 		CachePackages:     args.cachePackages,
 		UniversePackages:  args.universePackages,
-		HostLabels:        args.hostLabels,
+		HostLabels:        hostLabels,
 		Variants:          variants,
 		GnArgs:            gnArgs,
 		UseGoma:           useGomaFinal,

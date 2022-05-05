@@ -389,7 +389,8 @@ func TestConstructStaticSpec(t *testing.T) {
 			},
 			expected: &fintpb.Static{
 				UseGoma:      true,
-				BasePackages: []string{"foo", "//build/rust:cargo_toml_gen"},
+				BasePackages: []string{"foo"},
+				HostLabels:   []string{"//build/rust:cargo_toml_gen"},
 			},
 		},
 	}

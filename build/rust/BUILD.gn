@@ -63,38 +63,101 @@ action("cargo_toml_gen_desc") {
 #     to `gn gen`, which generates an up-to-date
 #     `$root_build_dir/project.json` file, used here as input.
 #
-#  2) Add this target to the base packages list to ensure its
-#     action script is run by "fx build".
+#  2) Add this target to the host_labels list to ensure its action script is
+#     run by "fx build".
 #
 # For more details, see docs/development/language/rust/README.md
 #
-action("cargo_toml_gen") {
-  # Nothing in-tree should depend on Cargo files.
-  visibility = [
-    "//:additional_base_packages",
-    "//:additional_cache_packages",
-    "//:additional_universe_packages",
-    "//:developer_universe_packages",
-    "//:legacy_universe_packages",
-  ]
-  script = "//scripts/generate_cargo.py"
-  sources = []
-  inputs = [
-    cargo_toml_gen_desc_out,
-    "//third_party/rust_crates/Cargo.toml",
-  ]
-  hermetic_deps = false
+# Notes on transitioning this target from `base_package_labels` to `host_tools`:
+#
+#  1) Existing `args.gn` files created by `fx set --cargo-toml-gen` will have
+#     added the target to the `base_package_labels` list.  This list assumes the
+#     default toolchain.
+#  2) `base_package_labels` currently feeds into `//:additional_base_packages`,
+#     but that group is being split into multiple groups, and the list will
+#     temporarily be used to create the following groups:
+#       - `//:developer_base_package_labels`
+#       - `//:legacy_base_package_labels`
+#  3) New `args.gn` files created by `fx set --cargo-toml-gen` will instead use
+#     the `host_labels` arg (which assumes the host toolchain).  That list is
+#     currently being used with the `//:host` group, but it's being split into
+#       - `//build/input/product:host_labels`
+#       - `//build/input/board:host_labels`
+#       - `//:host` will remain for developer-specified host tools to include in
+#         the build.
+#   4) Developers _may_ have added `//build/rust:cargo_toml_gen` to either of
+#      following:
+#        - `cache_package_labels` (`//:additional_cache_packages`)
+#        - `universe_package_labels` (`//:additional_universe_packages`)
+#      and those are being split as well, and so the following groups will need
+#      to be added to visibility:
+#        - `//:developer_cache_packages`
+#        - `//:developer_universe_packages`
+#        - `//:legacy_cache_packages`
+#        - `//:legacy_universe_packages`
+#
+if (current_toolchain != default_toolchain) {
+  # This is a redirect from the host toolchain to the default toolchain, as it
+  # is added to the host_labels group, not the product definition inputs.
+  group("cargo_toml_gen") {
+    public_deps = [ ":cargo_toml_gen($default_toolchain)" ]
+    visibility = [
+      # This is the supported group for developers to add tools to, going
+      # forward, and the group used by `fx set --cargo-toml-gen`.
+      "//:host",
+    ]
+  }
+} else {
+  action("cargo_toml_gen") {
+    # Nothing in-tree should depend on Cargo files.
+    visibility = [
+      # The only expected use of this target, going forward (the above group)
+      ":cargo_toml_gen",
 
-  outputs = [ "$root_build_dir/cargo/generate_cargo.stamp" ]
-  depfile = "$root_build_dir/cargo/generate_cargo.stamp.d"
-  args = [
-    rebase_path(cargo_toml_gen_desc_out, root_build_dir),
-    "--root_build_dir",
-    ".",
-    "--fuchsia_dir",
-    rebase_path("//", root_build_dir),
-  ]
-  deps = [ ":cargo_toml_gen_desc" ]
+      # `fx set ... --cargo-toml-gen` previously used the `base_package_labels`
+      # GN arg, which fed into `//:additional_base_packages`.  This is here for
+      # providing a transition for developers' existing `args.gn` files.
+      "//:additional_base_packages",
+
+      # That GN arg will feed into these as well, but using this target in these
+      # groups is deprecated, and will be removed in the future.
+      "//:developer_base_packages",
+      "//:legacy_base_packages",
+
+      # Developers may have used these as well (also deprecated for this
+      # target).
+      "//:additional_cache_packages",
+      "//:additional_universe_packages",
+
+      # And those are being split into the following (also deprecated for this
+      # target).
+      "//:developer_cache_packages",
+      "//:developer_universe_packages",
+      "//:legacy_cache_packages",
+      "//:legacy_universe_packages",
+
+      # via --with-host or `host_labels`, and specifying the fuchsia toolchain:
+      "//:host",
+    ]
+    script = "//scripts/generate_cargo.py"
+    sources = []
+    inputs = [
+      cargo_toml_gen_desc_out,
+      "//third_party/rust_crates/Cargo.toml",
+    ]
+    hermetic_deps = false
+
+    outputs = [ "$root_build_dir/cargo/generate_cargo.stamp" ]
+    depfile = "$root_build_dir/cargo/generate_cargo.stamp.d"
+    args = [
+      rebase_path(cargo_toml_gen_desc_out, root_build_dir),
+      "--root_build_dir",
+      ".",
+      "--fuchsia_dir",
+      rebase_path("//", root_build_dir),
+    ]
+    deps = [ ":cargo_toml_gen_desc" ]
+  }
 }
 
 # When panic=abort, the Rust libtest framework requires sys.process.Launcher in
