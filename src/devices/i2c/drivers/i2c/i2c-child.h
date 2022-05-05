@@ -39,8 +39,8 @@ class I2cChild {
 
  protected:
   // To be called by I2cFidlChild and I2cBanjoChild.
-  void Transfer(fidl::WireServer<fidl_i2c::Device2>::TransferRequestView request,
-                fidl::WireServer<fidl_i2c::Device2>::TransferCompleter::Sync& completer);
+  void Transfer(fidl::WireServer<fidl_i2c::Device>::TransferRequestView request,
+                fidl::WireServer<fidl_i2c::Device>::TransferCompleter::Sync& completer);
 
   // To be called by I2cBanjoChild.
   void Transact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
@@ -60,7 +60,7 @@ class I2cChild {
 };
 
 class I2cFidlChild;
-using I2cFidlChildType = ddk::Device<I2cFidlChild, ddk::Messageable<fidl_i2c::Device2>::Mixin>;
+using I2cFidlChildType = ddk::Device<I2cFidlChild, ddk::Messageable<fidl_i2c::Device>::Mixin>;
 
 class I2cFidlChild : public I2cFidlChildType, public I2cChild {
  public:
@@ -80,8 +80,8 @@ class I2cFidlChild : public I2cFidlChildType, public I2cChild {
   }
 
  private:
-  void Bind(fidl::ServerEnd<fidl_i2c::Device2> request) {
-    fidl::BindServer<fidl::WireServer<fidl_i2c::Device2>>(
+  void Bind(fidl::ServerEnd<fidl_i2c::Device> request) {
+    fidl::BindServer<fidl::WireServer<fidl_i2c::Device>>(
         fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(request), this);
   }
 
@@ -89,7 +89,7 @@ class I2cFidlChild : public I2cFidlChildType, public I2cChild {
 };
 
 class I2cBanjoChild;
-using I2cBanjoChildType = ddk::Device<I2cBanjoChild, ddk::Messageable<fidl_i2c::Device2>::Mixin>;
+using I2cBanjoChildType = ddk::Device<I2cBanjoChild, ddk::Messageable<fidl_i2c::Device>::Mixin>;
 
 class I2cBanjoChild : public I2cBanjoChildType,
                       public ddk::I2cProtocol<I2cBanjoChild, ddk::base_protocol>,

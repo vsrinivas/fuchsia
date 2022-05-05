@@ -38,7 +38,7 @@ class FlakyI2cDevice : public fake_i2c::FakeI2c {
   size_t count_ = 0;
 };
 
-class I2cDevice : public fake_i2c::FakeI2c, public fidl::WireServer<fuchsia_hardware_i2c::Device2> {
+class I2cDevice : public fake_i2c::FakeI2c, public fidl::WireServer<fuchsia_hardware_i2c::Device> {
  public:
   size_t banjo_count() const { return banjo_count_; }
   size_t fidl_count() const { return fidl_count_; }
@@ -46,54 +46,57 @@ class I2cDevice : public fake_i2c::FakeI2c, public fidl::WireServer<fuchsia_hard
   void Transfer(TransferRequestView request, TransferCompleter::Sync& completer) override {
     fidl_count_++;
 
-    if (request->segments_is_write.count() <= 0 || request->segments_is_write.count() > 2) {
+    if (request->transactions.count() <= 0 || request->transactions.count() > 2) {
       completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
       return;
     }
 
-    const bool is_write = request->segments_is_write[0];
-    const bool is_read = !request->segments_is_write[request->segments_is_write.count() - 1];
+    for (const auto& transaction : request->transactions) {
+      if (!transaction.has_data_transfer()) {
+        completer.ReplyError(ZX_ERR_INVALID_ARGS);
+        return;
+      }
+    }
 
-    if (request->segments_is_write.count() == 2 && (!is_write || !is_read)) {
-      completer.ReplyError(ZX_ERR_INVALID_ARGS);
-      return;
-    }
-    if (is_write && request->write_segments_data.count() != 1) {
-      completer.ReplyError(ZX_ERR_INVALID_ARGS);
-      return;
-    }
-    if (is_read && request->read_segments_length.count() != 1) {
+    const auto& write_transfer = request->transactions[0].data_transfer();
+    const auto& read_transfer =
+        request->transactions[request->transactions.count() - 1].data_transfer();
+
+    const bool is_write = write_transfer.is_write_data();
+    const bool is_read = read_transfer.is_read_size();
+
+    if (request->transactions.count() == 2 && (!is_write || !is_read)) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
 
     if (is_write &&
-        request->write_segments_data[0].count() > fuchsia_hardware_i2c::wire::kMaxTransferSize) {
+        write_transfer.write_data().count() > fuchsia_hardware_i2c::wire::kMaxTransferSize) {
       completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
       return;
     }
-    if (is_read && request->read_segments_length[0] != rx_data_.size()) {
+    if (is_read && read_transfer.read_size() != rx_data_.size()) {
       completer.ReplyError(ZX_ERR_IO);
       return;
     }
 
     if (is_write) {
-      tx_data_ = std::vector<uint8_t>(request->write_segments_data[0].cbegin(),
-                                      request->write_segments_data[0].cend());
+      tx_data_ = std::vector<uint8_t>(write_transfer.write_data().cbegin(),
+                                      write_transfer.write_data().cend());
     } else {
       tx_data_.clear();
     }
 
     fidl::Arena arena;
 
-    fidl::ObjectView<fuchsia_hardware_i2c::wire::Device2TransferResponse> response(arena);
+    fidl::ObjectView<fuchsia_hardware_i2c::wire::DeviceTransferResponse> response(arena);
     if (is_read) {
-      response->read_segments_data = fidl::VectorView<fidl::VectorView<uint8_t>>(arena, 1);
-      response->read_segments_data[0] = fidl::VectorView<uint8_t>(arena, rx_data_.size());
-      memcpy(response->read_segments_data[0].mutable_data(), rx_data_.data(), rx_data_.size());
+      response->read_data = fidl::VectorView<fidl::VectorView<uint8_t>>(arena, 1);
+      response->read_data[0] = fidl::VectorView<uint8_t>(arena, rx_data_.size());
+      memcpy(response->read_data[0].mutable_data(), rx_data_.data(), rx_data_.size());
     }
 
-    completer.Reply(fuchsia_hardware_i2c::wire::Device2TransferResult::WithResponse(response));
+    completer.Reply(fuchsia_hardware_i2c::wire::DeviceTransferResult::WithResponse(response));
   }
 
   const std::vector<uint8_t>& tx_data() const { return tx_data_; }
@@ -165,7 +168,7 @@ TEST(I2cChannelTest, RetriesOk) {
 }
 
 TEST_F(I2cChannelTest, FidlRead) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device2>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
   I2cDevice i2c_dev;
@@ -187,7 +190,7 @@ TEST_F(I2cChannelTest, FidlRead) {
 }
 
 TEST_F(I2cChannelTest, FidlWrite) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device2>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
   I2cDevice i2c_dev;
@@ -203,7 +206,7 @@ TEST_F(I2cChannelTest, FidlWrite) {
 }
 
 TEST_F(I2cChannelTest, FidlWriteRead) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device2>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
   I2cDevice i2c_dev;
@@ -230,7 +233,7 @@ TEST_F(I2cChannelTest, FidlWriteRead) {
 }
 
 TEST_F(I2cChannelTest, GetFidlProtocolFromParent) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device2>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
   I2cDevice i2c_dev;
@@ -238,11 +241,11 @@ TEST_F(I2cChannelTest, GetFidlProtocolFromParent) {
 
   auto parent = MockDevice::FakeRootParent();
 
-  parent->AddFidlProtocol(fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device2>,
+  parent->AddFidlProtocol(fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
                           [this, &i2c_dev](zx::channel channel) {
                             fidl::BindServer(
                                 loop_.dispatcher(),
-                                fidl::ServerEnd<fuchsia_hardware_i2c::Device2>(std::move(channel)),
+                                fidl::ServerEnd<fuchsia_hardware_i2c::Device>(std::move(channel)),
                                 &i2c_dev);
                             return ZX_OK;
                           });
@@ -276,7 +279,7 @@ TEST_F(I2cChannelTest, GetFidlProtocolFromParent) {
 }
 
 TEST_F(I2cChannelTest, GetFidlProtocolFromFragment) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device2>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
   I2cDevice i2c_dev;
@@ -285,10 +288,10 @@ TEST_F(I2cChannelTest, GetFidlProtocolFromFragment) {
   auto parent = MockDevice::FakeRootParent();
 
   parent->AddFidlProtocol(
-      fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device2>,
+      fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
       [this, &i2c_dev](zx::channel channel) {
         fidl::BindServer(loop_.dispatcher(),
-                         fidl::ServerEnd<fuchsia_hardware_i2c::Device2>(std::move(channel)),
+                         fidl::ServerEnd<fuchsia_hardware_i2c::Device>(std::move(channel)),
                          &i2c_dev);
         return ZX_OK;
       },
@@ -310,7 +313,7 @@ TEST_F(I2cChannelTest, GetFidlProtocolFromFragment) {
 }
 
 TEST_F(I2cChannelTest, BanjoClientPreferred) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device2>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
   I2cDevice i2c_dev;
@@ -320,11 +323,11 @@ TEST_F(I2cChannelTest, BanjoClientPreferred) {
 
   parent->AddProtocol(ZX_PROTOCOL_I2C, i2c_dev.GetProto()->ops, i2c_dev.GetProto()->ctx);
 
-  parent->AddFidlProtocol(fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device2>,
+  parent->AddFidlProtocol(fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
                           [this, &i2c_dev](zx::channel channel) {
                             fidl::BindServer(
                                 loop_.dispatcher(),
-                                fidl::ServerEnd<fuchsia_hardware_i2c::Device2>(std::move(channel)),
+                                fidl::ServerEnd<fuchsia_hardware_i2c::Device>(std::move(channel)),
                                 &i2c_dev);
                             return ZX_OK;
                           });
@@ -350,7 +353,7 @@ TEST_F(I2cChannelTest, BanjoClientPreferred) {
 }
 
 TEST_F(I2cChannelTest, BanjoClientMethods) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device2>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
   I2cDevice i2c_dev;

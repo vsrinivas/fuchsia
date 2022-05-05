@@ -8,6 +8,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/stdcompat/span.h>
+#include <lib/zx/status.h>
 #include <stdio.h>
 #include <zircon/status.h>
 
@@ -41,18 +42,19 @@ static zx_status_t convert_args(char** argv, size_t length, T* buffer) {
   return ZX_OK;
 }
 
-static zx_status_t write_bytes(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client,
+static zx_status_t write_bytes(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> client,
                                cpp20::span<uint8_t> write_buffer) {
-  bool is_write[] = {true};
-  auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write);
-
-  auto write_segment =
+  auto write_data =
       fidl::VectorView<uint8_t>::FromExternal(write_buffer.data(), write_buffer.size());
 
-  auto read = client->Transfer(
-      std::move(segments_is_write),
-      fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(&write_segment, 1),  // One write.
-      fidl::VectorView<uint32_t>());                                                 // No reads.
+  fidl::Arena arena;
+  auto transactions = fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction>(arena, 1);
+  transactions[0] =
+      fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+          .data_transfer(fuchsia_hardware_i2c::wire::DataTransfer::WithWriteData(arena, write_data))
+          .Build();
+
+  auto read = client->Transfer(transactions);
   auto status = read.status();
   if (status == ZX_OK && read->result.is_err()) {
     status = ZX_ERR_INTERNAL;
@@ -60,30 +62,28 @@ static zx_status_t write_bytes(fidl::WireSyncClient<fuchsia_hardware_i2c::Device
   return status;
 }
 
-static zx_status_t read_byte(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client,
-                             cpp20::span<uint8_t> address, uint8_t* out_byte) {
-  bool is_write[] = {true, false};
-  auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write);
-  auto write_segment = fidl::VectorView<uint8_t>::FromExternal(address.data(), address.size());
-  uint32_t read_length = 1;
+static zx::status<uint8_t> read_byte(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> client,
+                                     cpp20::span<uint8_t> address) {
+  auto write_data = fidl::VectorView<uint8_t>::FromExternal(address.data(), address.size());
 
-  auto read =
-      client->Transfer(std::move(segments_is_write),
-                       fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(&write_segment,
-                                                                                 1),  // One write.
-                       fidl::VectorView<uint32_t>::FromExternal(&read_length, 1));    // One read.
-  auto status = read.status();
-  if (status == ZX_OK) {
-    if (read->result.is_err()) {
-      status = ZX_ERR_INTERNAL;
-    } else {
-      *out_byte = read->result.response().read_segments_data[0].data()[0];
-    }
+  fidl::Arena arena;
+  auto transactions = fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction>(arena, 2);
+  transactions[0] =
+      fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+          .data_transfer(fuchsia_hardware_i2c::wire::DataTransfer::WithWriteData(arena, write_data))
+          .Build();
+  transactions[1] = fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+                        .data_transfer(fuchsia_hardware_i2c::wire::DataTransfer::WithReadSize(1))
+                        .Build();
+
+  auto read = client->Transfer(transactions);
+  if (read.ok() && read->result.is_response()) {
+    return zx::ok(read->result.response().read_data[0].data()[0]);
   }
-  return status;
+  return zx::error(read.ok() ? read->result.err() : read.status());
 }
 
-static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client, int argc,
+static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> client, int argc,
                             char** argv) {
   size_t n_elements = argc - 3;
   size_t n_segments = 0;
@@ -108,8 +108,8 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> 
     usage(argv[0]);
     return -1;
   }
-  if (n_segments > fuchsia_hardware_i2c::wire::kMaxCountSegments) {
-    printf("No more than %u segments allowed\n", fuchsia_hardware_i2c::wire::kMaxCountSegments);
+  if (n_segments > fuchsia_hardware_i2c::wire::kMaxCountTransactions) {
+    printf("No more than %u segments allowed\n", fuchsia_hardware_i2c::wire::kMaxCountTransactions);
     return -1;
   }
 
@@ -120,7 +120,9 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> 
   auto write_data = std::make_unique<fidl::VectorView<uint8_t>[]>(n_writes);
   auto read_lengths = std::make_unique<uint32_t[]>(n_segments - n_writes);
   auto is_write = std::make_unique<bool[]>(n_segments);
-  auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write.get(), n_segments);
+
+  fidl::Arena arena;
+  auto transactions = fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction>(arena, n_segments);
 
   size_t element_cnt = 0;
   size_t segment_cnt = 0;
@@ -144,6 +146,11 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> 
         }
         write_data[write_cnt] =
             fidl::VectorView<uint8_t>::FromExternal(write_buffer_pos, write_len);
+        transactions[segment_cnt] =
+            fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+                .data_transfer(fuchsia_hardware_i2c::wire::DataTransfer::WithWriteData(
+                    arena, write_data[write_cnt]))
+                .Build();
         write_buffer_pos += write_len;
         write_cnt++;
         element_cnt += write_len;
@@ -153,6 +160,11 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> 
           usage(argv[0]);
           return status;
         }
+        transactions[segment_cnt] =
+            fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+                .data_transfer(
+                    fuchsia_hardware_i2c::wire::DataTransfer::WithReadSize(read_lengths[read_cnt]))
+                .Build();
         read_cnt++;
         element_cnt++;
       }
@@ -174,16 +186,13 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> 
     }
     printf("\n");
   }
-  auto read = client->Transfer(
-      std::move(segments_is_write),
-      fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(write_data.get(), n_writes),
-      fidl::VectorView<uint32_t>::FromExternal(read_lengths.get(), n_segments - n_writes));
+  auto read = client->Transfer(transactions);
   auto status = read.status();
   if (status == ZX_OK) {
     if (read->result.is_err()) {
       return ZX_ERR_INTERNAL;
     } else {
-      auto& read_data = read->result.response().read_segments_data;
+      auto& read_data = read->result.response().read_data;
       if (read_data.count() != 0) {
         printf("Reads:");
         for (auto& i : read_data) {
@@ -229,7 +238,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
   }
 
   zx::channel channel(svc);
-  fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client(std::move(channel));
+  fidl::WireSyncClient<fuchsia_hardware_i2c::Device> client(std::move(channel));
 
   zx_status_t status = ZX_OK;
 
@@ -274,15 +283,14 @@ static int device_cmd(int argc, char** argv, bool print_out) {
         return status;
       }
 
-      uint8_t out_byte = 0;
-      status = read_byte(std::move(client), cpp20::span<uint8_t>(write_buffer.get(), n_write_bytes),
-                         &out_byte);
-      if (status == ZX_OK && print_out) {
+      auto byte =
+          read_byte(std::move(client), cpp20::span<uint8_t>(write_buffer.get(), n_write_bytes));
+      if (byte.is_ok() && print_out) {
         printf("Read from");
         for (size_t i = 0; i < n_write_bytes; ++i) {
           printf(" 0x%02X", write_buffer[i]);
         }
-        printf(": 0x%02X\n", out_byte);
+        printf(": 0x%02X\n", byte.value());
       }
       break;
     }

@@ -68,7 +68,7 @@ class I2cChannelBase {
 
 class I2cFidlChannel : public I2cChannelBase {
  public:
-  explicit I2cFidlChannel(fidl::ClientEnd<fuchsia_hardware_i2c::Device2> client_end)
+  explicit I2cFidlChannel(fidl::ClientEnd<fuchsia_hardware_i2c::Device> client_end)
       : fidl_client_(std::move(client_end)) {}
 
   I2cFidlChannel(I2cFidlChannel&& other) noexcept = default;
@@ -76,11 +76,9 @@ class I2cFidlChannel : public I2cChannelBase {
 
   ~I2cFidlChannel() override = default;
 
-  fidl::WireResult<fuchsia_hardware_i2c::Device2::Transfer> Transfer(
-      fidl::VectorView<bool> segments_is_write,
-      fidl::VectorView<fidl::VectorView<uint8_t>> write_segments_data,
-      fidl::VectorView<uint32_t> read_segments_length) {
-    return fidl_client_->Transfer(segments_is_write, write_segments_data, read_segments_length);
+  fidl::WireResult<fuchsia_hardware_i2c::Device::Transfer> Transfer(
+      fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction> transactions) {
+    return fidl_client_->Transfer(transactions);
   }
 
   zx_status_t WriteReadSync(const uint8_t* tx_buf, size_t tx_len, uint8_t* rx_buf,
@@ -92,37 +90,36 @@ class I2cFidlChannel : public I2cChannelBase {
 
     fidl::Arena arena;
 
-    fidl::VectorView<bool> segments_is_write;
-    fidl::VectorView<fidl::VectorView<uint8_t>> write_segments;
-    fidl::VectorView<uint32_t> read_segments_length;
-
-    if (tx_len > 0 && rx_len > 0) {
-      segments_is_write = fidl::VectorView<bool>(arena, 2);
-      segments_is_write[0] = true;
-      segments_is_write[1] = false;
-    } else if (tx_len > 0) {
-      segments_is_write = fidl::VectorView<bool>(arena, 1);
-      segments_is_write[0] = true;
-    } else if (rx_len > 0) {
-      segments_is_write = fidl::VectorView<bool>(arena, 1);
-      segments_is_write[0] = false;
-    } else {
-      return ZX_OK;
+    fidl::VectorView<uint8_t> write_data(arena, tx_len);
+    if (tx_len) {
+      memcpy(write_data.mutable_data(), tx_buf, tx_len);
     }
 
+    auto write_transfer =
+        fuchsia_hardware_i2c::wire::DataTransfer::WithWriteData(arena, write_data);
+    auto read_transfer =
+        fuchsia_hardware_i2c::wire::DataTransfer::WithReadSize(static_cast<uint32_t>(rx_len));
+
+    fuchsia_hardware_i2c::wire::Transaction transactions[2];
+    size_t index = 0;
     if (tx_len > 0) {
-      write_segments = fidl::VectorView<fidl::VectorView<uint8_t>>(arena, 1);
-      write_segments[0] = fidl::VectorView<uint8_t>(arena, tx_len);
-      memcpy(write_segments[0].mutable_data(), tx_buf, tx_len);
+      transactions[index++] = fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+                                  .data_transfer(write_transfer)
+                                  .Build();
     }
-
     if (rx_len > 0) {
-      read_segments_length = fidl::VectorView<uint32_t>(arena, 1);
-      read_segments_length[0] = static_cast<uint32_t>(rx_len);
+      transactions[index++] = fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+                                  .data_transfer(read_transfer)
+                                  .Build();
     }
 
-    const auto reply =
-        fidl_client_->Transfer(segments_is_write, write_segments, read_segments_length);
+    if (index == 0) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    const auto reply = fidl_client_->Transfer(
+        fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction>::FromExternal(transactions,
+                                                                                index));
     if (!reply.ok()) {
       return reply.status();
     }
@@ -131,19 +128,19 @@ class I2cFidlChannel : public I2cChannelBase {
     }
 
     if (rx_len > 0) {
-      const auto& read_segments_data = reply->result.response().read_segments_data;
-      if (read_segments_data.count() != 1 || read_segments_data[0].count() != rx_len) {
+      const auto& read_data = reply->result.response().read_data;
+      if (read_data.count() != 1 || read_data[0].count() != rx_len) {
         return ZX_ERR_IO;
       }
 
-      memcpy(rx_buf, read_segments_data[0].data(), rx_len);
+      memcpy(rx_buf, read_data[0].data(), rx_len);
     }
 
     return ZX_OK;
   }
 
  private:
-  fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> fidl_client_;
+  fidl::WireSyncClient<fuchsia_hardware_i2c::Device> fidl_client_;
 };
 
 // TODO(fxbug.dev/96293): Remove Banjo support once all clients have been switched to FIDL.
@@ -207,7 +204,7 @@ class I2cChannel : public I2cChannelBase {
       return;
     }
 
-    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device2>();
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
     if (endpoints.is_error()) {
       return;
     }
@@ -215,11 +212,11 @@ class I2cChannel : public I2cChannelBase {
     zx_status_t status;
     if (fragment_name == nullptr) {
       status = device_connect_fidl_protocol(
-          parent, fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device2>,
+          parent, fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
           endpoints->server.TakeChannel().release());
     } else {
       status = device_connect_fragment_fidl_protocol(
-          parent, fragment_name, fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device2>,
+          parent, fragment_name, fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
           endpoints->server.TakeChannel().release());
     }
 

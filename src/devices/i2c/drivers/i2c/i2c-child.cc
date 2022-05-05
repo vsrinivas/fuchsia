@@ -122,9 +122,9 @@ zx_status_t I2cFidlChild::CreateAndAddDevice(zx_device_t* parent, uint16_t addre
 
   dev->outgoing_dir_.emplace(dispatcher);
   dev->outgoing_dir_->svc_dir()->AddEntry(
-      fidl::DiscoverableProtocolName<fidl_i2c::Device2>,
+      fidl::DiscoverableProtocolName<fidl_i2c::Device>,
       fbl::MakeRefCounted<fs::Service>(
-          [dev = dev.get()](fidl::ServerEnd<fidl_i2c::Device2> request) mutable {
+          [dev = dev.get()](fidl::ServerEnd<fidl_i2c::Device> request) mutable {
             dev->Bind(std::move(request));
             return ZX_OK;
           }));
@@ -135,7 +135,7 @@ zx_status_t I2cFidlChild::CreateAndAddDevice(zx_device_t* parent, uint16_t addre
     return status;
   }
 
-  std::array offers = {fidl::DiscoverableProtocolName<fidl_i2c::Device2>};
+  std::array offers = {fidl::DiscoverableProtocolName<fidl_i2c::Device>};
 
   char name[32];
   snprintf(name, sizeof(name), "i2c-%u-%u-fidl", bus_id, address);
@@ -159,53 +159,48 @@ zx_status_t I2cFidlChild::CreateAndAddDevice(zx_device_t* parent, uint16_t addre
   return status;
 }
 
-void I2cChild::Transfer(fidl::WireServer<fidl_i2c::Device2>::TransferRequestView request,
-                        fidl::WireServer<fidl_i2c::Device2>::TransferCompleter::Sync& completer) {
-  if (request->segments_is_write.count() < 1) {
+void I2cChild::Transfer(fidl::WireServer<fidl_i2c::Device>::TransferRequestView request,
+                        fidl::WireServer<fidl_i2c::Device>::TransferCompleter::Sync& completer) {
+  if (request->transactions.count() < 1) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
 
-  auto op_list = std::make_unique<i2c_op_t[]>(request->segments_is_write.count());
-  size_t write_cnt = 0;
-  size_t read_cnt = 0;
-  for (size_t i = 0; i < request->segments_is_write.count(); ++i) {
-    if (request->segments_is_write[i]) {
-      if (write_cnt >= request->write_segments_data.count()) {
+  auto op_list = std::make_unique<i2c_op_t[]>(request->transactions.count());
+  for (size_t i = 0; i < request->transactions.count(); ++i) {
+    if (!request->transactions[i].has_data_transfer()) {
+      completer.ReplyError(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+
+    const auto& transfer = request->transactions[i].data_transfer();
+    const bool stop = request->transactions[i].has_stop() && request->transactions[i].stop();
+
+    if (transfer.is_write_data()) {
+      if (transfer.write_data().count() <= 0) {
         completer.ReplyError(ZX_ERR_INVALID_ARGS);
         return;
       }
-      op_list[i].data_buffer = request->write_segments_data[write_cnt].data();
-      op_list[i].data_size = request->write_segments_data[write_cnt].count();
+      op_list[i].data_buffer = transfer.write_data().data();
+      op_list[i].data_size = transfer.write_data().count();
       op_list[i].is_read = false;
-      op_list[i].stop = false;
-      write_cnt++;
+      op_list[i].stop = stop;
     } else {
-      if (read_cnt >= request->read_segments_length.count()) {
+      if (transfer.read_size() <= 0) {
         completer.ReplyError(ZX_ERR_INVALID_ARGS);
         return;
       }
       op_list[i].data_buffer = nullptr;  // unused.
-      op_list[i].data_size = request->read_segments_length[read_cnt];
+      op_list[i].data_size = transfer.read_size();
       op_list[i].is_read = true;
-      op_list[i].stop = false;
-      read_cnt++;
+      op_list[i].stop = stop;
     }
   }
-  op_list[request->segments_is_write.count() - 1].stop = true;
-
-  if (request->write_segments_data.count() != write_cnt) {
-    completer.ReplyError(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-  if (request->read_segments_length.count() != read_cnt) {
-    completer.ReplyError(ZX_ERR_INVALID_ARGS);
-    return;
-  }
+  op_list[request->transactions.count() - 1].stop = true;
 
   struct Ctx {
     sync_completion_t done = {};
-    fidl::WireServer<fidl_i2c::Device2>::TransferCompleter::Sync* completer;
+    fidl::WireServer<fidl_i2c::Device>::TransferCompleter::Sync* completer;
   } ctx;
   ctx.completer = &completer;
   auto callback = [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
@@ -218,13 +213,13 @@ void I2cChild::Transfer(fidl::WireServer<fidl_i2c::Device2>::TransferRequestView
       }
       auto all_reads =
           fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(reads.get(), op_count);
-      ctx2->completer->ReplySuccess(std::move(all_reads));
+      ctx2->completer->ReplySuccess(all_reads);
     } else {
       ctx2->completer->ReplyError(status);
     }
     sync_completion_signal(&ctx2->done);
   };
-  bus_->Transact(address_, op_list.get(), request->segments_is_write.count(), callback, &ctx);
+  bus_->Transact(address_, op_list.get(), request->transactions.count(), callback, &ctx);
   sync_completion_wait(&ctx.done, zx::duration::infinite().get());
 }
 
