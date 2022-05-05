@@ -18,7 +18,6 @@ pub struct InspectCommand {
     #[argh(option, default = "Format::Text", short = 'f')]
     /// the format to be used to display the results (json, text).
     pub format: Format,
-
     #[argh(subcommand)]
     pub subcommand: Subcommand,
 }

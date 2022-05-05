@@ -5,8 +5,9 @@
 use {
     anyhow::Result,
     ffx_core::ffx_plugin,
-    ffx_inspect_common::{extract_format_from_env, run_command, StandardOutput},
+    ffx_inspect_common::{get_writer, run_command},
     ffx_inspect_list_args::ListCommand,
+    ffx_writer::Writer,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, RemoteDiagnosticsBridgeProxy},
     iquery::commands as iq,
 };
@@ -17,10 +18,10 @@ use {
 pub async fn list(
     rcs_proxy: RemoteControlProxy,
     diagnostics_proxy: RemoteDiagnosticsBridgeProxy,
+    #[ffx(machine = Vec<ListResponseItem>)] writer: Writer,
     cmd: ListCommand,
 ) -> Result<()> {
-    let mut output = StandardOutput::new(extract_format_from_env());
-    run_command(rcs_proxy, diagnostics_proxy, iq::ListCommand::from(cmd), &mut output).await
+    run_command(rcs_proxy, diagnostics_proxy, iq::ListCommand::from(cmd), get_writer(writer)).await
 }
 
 #[cfg(test)]
@@ -30,14 +31,15 @@ mod test {
         errors::ResultExt as _,
         ffx_inspect_test_utils::{
             make_lifecycles, setup_fake_diagnostics_bridge, setup_fake_rcs,
-            FakeArchiveIteratorResponse, FakeBridgeData, FakeOutput,
+            FakeArchiveIteratorResponse, FakeBridgeData,
         },
+        ffx_writer::Format,
         fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, BridgeStreamParameters},
         fidl_fuchsia_diagnostics::{ClientSelectorConfiguration, DataType, StreamMode},
         std::sync::Arc,
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_empty() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
@@ -46,7 +48,7 @@ mod test {
             ..BridgeStreamParameters::EMPTY
         };
         let expected_responses = Arc::new(vec![]);
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ListCommand { manifest: None, with_url: false, accessor_path: None };
         run_command(
             setup_fake_rcs(),
@@ -55,15 +57,16 @@ mod test {
                 expected_responses.clone(),
             )]),
             iq::ListCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
 
-        assert_eq!(output.results, vec![String::from("[]")]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, String::from("[]"));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_fidl_error() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
@@ -72,7 +75,7 @@ mod test {
             ..BridgeStreamParameters::EMPTY
         };
         let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_fidl_error()]);
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ListCommand { manifest: None, with_url: false, accessor_path: None };
 
         assert!(run_command(
@@ -82,7 +85,7 @@ mod test {
                 expected_responses.clone()
             )]),
             iq::ListCommand::from(cmd),
-            &mut output,
+            writer
         )
         .await
         .unwrap_err()
@@ -90,7 +93,7 @@ mod test {
         .is_some());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_iterator_error() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
@@ -102,7 +105,7 @@ mod test {
             Arc::new(vec![FakeArchiveIteratorResponse::new_with_iterator_error(
                 ArchiveIteratorError::GenericError,
             )]);
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ListCommand { manifest: None, with_url: false, accessor_path: None };
 
         assert!(run_command(
@@ -112,7 +115,7 @@ mod test {
                 expected_responses.clone()
             )]),
             iq::ListCommand::from(cmd),
-            &mut output,
+            writer
         )
         .await
         .unwrap_err()
@@ -120,7 +123,7 @@ mod test {
         .is_some());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_with_data() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
@@ -131,7 +134,7 @@ mod test {
         let lifecycles = make_lifecycles();
         let value = serde_json::to_string(&lifecycles).unwrap();
         let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_value(value)]);
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ListCommand { manifest: None, with_url: false, accessor_path: None };
         run_command(
             setup_fake_rcs(),
@@ -140,7 +143,7 @@ mod test {
                 expected_responses.clone(),
             )]),
             iq::ListCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
@@ -150,10 +153,11 @@ mod test {
             String::from("test/moniker3"),
         ])
         .unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_with_data_with_url() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
@@ -164,7 +168,7 @@ mod test {
         let lifecycles = make_lifecycles();
         let value = serde_json::to_string(&lifecycles).unwrap();
         let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_value(value)]);
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ListCommand { manifest: None, with_url: true, accessor_path: None };
         run_command(
             setup_fake_rcs(),
@@ -173,7 +177,7 @@ mod test {
                 expected_responses.clone(),
             )]),
             iq::ListCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
@@ -189,10 +193,11 @@ mod test {
             },
         ])
         .unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_with_data_with_manifest_and_archive() {
         let accessor_path = String::from("some/archivist/path");
         let params = BridgeStreamParameters {
@@ -205,7 +210,7 @@ mod test {
         let lifecycles = make_lifecycles();
         let value = serde_json::to_string(&lifecycles).unwrap();
         let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_value(value)]);
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ListCommand {
             manifest: Some(String::from("moniker1")),
             with_url: true,
@@ -218,7 +223,7 @@ mod test {
                 expected_responses.clone(),
             )]),
             iq::ListCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
@@ -228,6 +233,7 @@ mod test {
             component_url: String::from("fake-url://test/moniker1"),
         }])
         .unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 }

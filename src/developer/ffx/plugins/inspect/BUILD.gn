@@ -15,6 +15,6 @@ ffx_plugin("ffx_inspect") {
   ]
 
   args_deps = [ "//src/diagnostics/iquery:lib" ]
-
   args_sources = [ "src/args.rs" ]
+  deps = [ "//src/developer/ffx/lib/writer:lib" ]
 }

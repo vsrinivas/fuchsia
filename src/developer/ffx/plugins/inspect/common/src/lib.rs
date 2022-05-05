@@ -8,6 +8,7 @@ use {
     diagnostics_data::Data,
     errors::ffx_error,
     ffx_lib_sub_command::Subcommand,
+    ffx_writer::Writer,
     fidl::{endpoints::create_proxy, AsyncSocket},
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorMarker, BridgeStreamParameters, DiagnosticsData, RemoteControlProxy,
@@ -29,7 +30,6 @@ use {
     },
     lazy_static::lazy_static,
     regex::Regex,
-    serde::Serialize,
     std::{collections::BTreeSet, io::Write, path::PathBuf},
 };
 
@@ -38,38 +38,13 @@ lazy_static! {
     static ref READDIR_TIMEOUT_SECONDS: u64 = 15;
 }
 
-pub trait Output {
-    fn write<T: Serialize + ToText>(&mut self, result: T) -> anyhow::Result<()>;
-}
-
-pub struct StandardOutput {
-    format: Format,
-}
-
-impl StandardOutput {
-    pub fn new(format: Format) -> Self {
-        StandardOutput { format }
-    }
-}
-
-pub fn extract_format_from_env() -> Format {
+pub fn get_writer(writer: Writer) -> Writer {
     let ffx: ffx_lib_args::Ffx = argh::from_env();
     match ffx.subcommand {
-        Some(Subcommand::FfxInspect(inspect)) => inspect.format,
-        _ => Format::Text,
-    }
-}
-
-impl Output for StandardOutput {
-    fn write<T: Serialize + ToText>(&mut self, result: T) -> anyhow::Result<()> {
-        let result = match self.format {
-            Format::Json => serde_json::to_string_pretty(&result)
-                .map_err(|e| Error::InvalidCommandResponse(e))?,
-            Format::Text => result.to_text(),
-        };
-        let mut writer = std::io::stdout();
-        writeln!(&mut writer, "{}", result)?;
-        Ok(())
+        Some(Subcommand::FfxInspect(inspect)) if inspect.format == Format::Json => {
+            Writer::new(Some(ffx_writer::Format::Json))
+        }
+        _ => writer,
     }
 }
 
@@ -77,11 +52,17 @@ pub async fn run_command(
     rcs_proxy: RemoteControlProxy,
     diagnostics_proxy: RemoteDiagnosticsBridgeProxy,
     cmd: impl iquery::commands::Command,
-    output: &mut impl Output,
+    mut writer: Writer,
 ) -> anyhow::Result<()> {
     let provider = DiagnosticsBridgeProvider::new(diagnostics_proxy, rcs_proxy);
     let result = cmd.execute(&provider).await.map_err(|e| anyhow!(ffx_error!("{}", e)))?;
-    output.write(result)
+    if writer.is_machine() {
+        writer.machine(&result).context("Unable to write structured output to destination.")
+    } else {
+        writer
+            .write_fmt(format_args!("{}", result.to_text()))
+            .context("Unable to write to destination.")
+    }
 }
 
 pub struct DiagnosticsBridgeProvider {

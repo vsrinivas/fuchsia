@@ -5,8 +5,9 @@
 use {
     anyhow::Result,
     ffx_core::ffx_plugin,
-    ffx_inspect_common::{extract_format_from_env, run_command, StandardOutput},
+    ffx_inspect_common::{get_writer, run_command},
     ffx_inspect_list_accessors_args::ListAccessorsCommand,
+    ffx_writer::Writer,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, RemoteDiagnosticsBridgeProxy},
     iquery::commands as iq,
 };
@@ -17,29 +18,35 @@ use {
 pub async fn list_accessors(
     rcs_proxy: RemoteControlProxy,
     diagnostics_proxy: RemoteDiagnosticsBridgeProxy,
+    #[ffx(machine = Vec<String>)] writer: Writer,
     cmd: ListAccessorsCommand,
 ) -> Result<()> {
-    let mut output = StandardOutput::new(extract_format_from_env());
-    run_command(rcs_proxy, diagnostics_proxy, iq::ListAccessorsCommand::from(cmd), &mut output)
-        .await
+    run_command(
+        rcs_proxy,
+        diagnostics_proxy,
+        iq::ListAccessorsCommand::from(cmd),
+        get_writer(writer),
+    )
+    .await
 }
 
 #[cfg(test)]
 mod test {
     use {
         super::*,
-        ffx_inspect_test_utils::{setup_fake_diagnostics_bridge, setup_fake_rcs, FakeOutput},
+        ffx_inspect_test_utils::{setup_fake_diagnostics_bridge, setup_fake_rcs},
+        ffx_writer::Format,
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_accessors_no_parameters() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ListAccessorsCommand { paths: vec![] };
         run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![]),
             iq::ListAccessorsCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
@@ -50,18 +57,19 @@ mod test {
             String::from("/hub-v2/dir2/child5/fuchsia.diagnostics.OneMoreArchiveAccessor"),
         ])
         .unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_accessors_subdirectory() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ListAccessorsCommand { paths: vec!["dir2".into()] };
         run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![]),
             iq::ListAccessorsCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
@@ -71,18 +79,19 @@ mod test {
             String::from("/hub-v2/dir2/child5/fuchsia.diagnostics.OneMoreArchiveAccessor"),
         ])
         .unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_accessors_deeper_subdirectory() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ListAccessorsCommand { paths: vec!["dir2/child3".into()] };
         run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![]),
             iq::ListAccessorsCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
@@ -91,18 +100,19 @@ mod test {
             "/hub-v2/dir2/child3/fuchsia.diagnostics.Some.Other.ArchiveAccessor",
         )])
         .unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_accessors_multiple_paths() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ListAccessorsCommand { paths: vec!["dir1".into(), "dir2/child5".into()] };
         run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![]),
             iq::ListAccessorsCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
@@ -112,23 +122,25 @@ mod test {
             String::from("/hub-v2/dir2/child5/fuchsia.diagnostics.OneMoreArchiveAccessor"),
         ])
         .unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_accessors_path_with_no_accessors() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ListAccessorsCommand { paths: vec!["this/is/bad".into()] };
         run_command(
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![]),
             iq::ListAccessorsCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
 
         let expected = "[]".to_owned();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 }

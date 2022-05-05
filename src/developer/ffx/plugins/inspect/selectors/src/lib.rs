@@ -5,8 +5,9 @@
 use {
     anyhow::Result,
     ffx_core::ffx_plugin,
-    ffx_inspect_common::{extract_format_from_env, run_command, StandardOutput},
+    ffx_inspect_common::{get_writer, run_command},
     ffx_inspect_selectors_args::SelectorsCommand,
+    ffx_writer::Writer,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, RemoteDiagnosticsBridgeProxy},
     iquery::commands as iq,
 };
@@ -17,10 +18,11 @@ use {
 pub async fn selectors(
     rcs_proxy: RemoteControlProxy,
     diagnostics_proxy: RemoteDiagnosticsBridgeProxy,
+    #[ffx(machine = Vec<String>)] writer: Writer,
     cmd: SelectorsCommand,
 ) -> Result<()> {
-    let mut output = StandardOutput::new(extract_format_from_env());
-    run_command(rcs_proxy, diagnostics_proxy, iq::SelectorsCommand::from(cmd), &mut output).await
+    run_command(rcs_proxy, diagnostics_proxy, iq::SelectorsCommand::from(cmd), get_writer(writer))
+        .await
 }
 
 #[cfg(test)]
@@ -30,8 +32,9 @@ mod test {
         errors::ResultExt as _,
         ffx_inspect_test_utils::{
             inspect_bridge_data, lifecycle_bridge_data, make_inspect_with_length,
-            setup_fake_diagnostics_bridge, setup_fake_rcs, FakeBridgeData, FakeOutput,
+            setup_fake_diagnostics_bridge, setup_fake_rcs, FakeBridgeData,
         },
+        ffx_writer::Format,
         fidl_fuchsia_developer_remotecontrol::BridgeStreamParameters,
         fidl_fuchsia_diagnostics::{
             ClientSelectorConfiguration, DataType, SelectorArgument, StreamMode,
@@ -39,7 +42,7 @@ mod test {
         std::sync::Arc,
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_selectors_no_parameters() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
@@ -48,7 +51,7 @@ mod test {
             ..BridgeStreamParameters::EMPTY
         };
         let expected_responses = Arc::new(vec![]);
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = SelectorsCommand { manifest: None, selectors: vec![], accessor_path: None };
         assert!(run_command(
             setup_fake_rcs(),
@@ -57,7 +60,7 @@ mod test {
                 expected_responses.clone(),
             )]),
             iq::SelectorsCommand::from(cmd),
-            &mut output,
+            writer.clone()
         )
         .await
         .unwrap_err()
@@ -65,7 +68,7 @@ mod test {
         .is_some());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_selectors_with_unknown_manifest() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
@@ -74,7 +77,7 @@ mod test {
             ..BridgeStreamParameters::EMPTY
         };
         let expected_responses = Arc::new(vec![]);
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = SelectorsCommand {
             manifest: Some(String::from("some-bad-moniker")),
             selectors: vec![],
@@ -87,7 +90,7 @@ mod test {
                 expected_responses.clone(),
             )]),
             iq::SelectorsCommand::from(cmd),
-            &mut output,
+            writer.clone()
         )
         .await
         .unwrap_err()
@@ -95,9 +98,9 @@ mod test {
         .is_some());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_selectors_with_manifest_that_exists() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = SelectorsCommand {
             manifest: Some(String::from("moniker1")),
             selectors: vec![],
@@ -119,7 +122,7 @@ mod test {
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![lifecycle_data, inspect_data]),
             iq::SelectorsCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
@@ -130,12 +133,13 @@ mod test {
             String::from("test/moniker1:name:hello_6"),
         ])
         .unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_selectors_with_selectors() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = SelectorsCommand {
             manifest: None,
             selectors: vec![String::from("test/moniker1:name:hello_3")],
@@ -153,13 +157,14 @@ mod test {
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![lifecycle_data, inspect_data]),
             iq::SelectorsCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
 
         let expected =
             serde_json::to_string(&vec![String::from("test/moniker1:name:hello_3")]).unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 }

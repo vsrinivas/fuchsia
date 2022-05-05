@@ -5,8 +5,9 @@
 use {
     anyhow::Result,
     ffx_core::ffx_plugin,
-    ffx_inspect_common::{extract_format_from_env, run_command, StandardOutput},
+    ffx_inspect_common::{get_writer, run_command},
     ffx_inspect_show_args::ShowCommand,
+    ffx_writer::Writer,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, RemoteDiagnosticsBridgeProxy},
     iquery::commands as iq,
 };
@@ -17,10 +18,10 @@ use {
 pub async fn show(
     rcs_proxy: RemoteControlProxy,
     diagnostics_proxy: RemoteDiagnosticsBridgeProxy,
+    #[ffx(machine = Vec<ShowCommandResultItem>)] writer: Writer,
     cmd: ShowCommand,
 ) -> Result<()> {
-    let mut output = StandardOutput::new(extract_format_from_env());
-    run_command(rcs_proxy, diagnostics_proxy, iq::ShowCommand::from(cmd), &mut output).await
+    run_command(rcs_proxy, diagnostics_proxy, iq::ShowCommand::from(cmd), get_writer(writer)).await
 }
 
 #[cfg(test)]
@@ -30,14 +31,15 @@ mod test {
         errors::ResultExt as _,
         ffx_inspect_test_utils::{
             inspect_bridge_data, lifecycle_bridge_data, make_inspect_with_length, make_inspects,
-            setup_fake_diagnostics_bridge, setup_fake_rcs, FakeOutput,
+            setup_fake_diagnostics_bridge, setup_fake_rcs,
         },
+        ffx_writer::Format,
         fidl_fuchsia_diagnostics::{ClientSelectorConfiguration, SelectorArgument},
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_show_no_parameters() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ShowCommand { manifest: None, selectors: vec![], accessor_path: None };
         let lifecycle_data = lifecycle_bridge_data();
         let mut inspects = make_inspects();
@@ -47,19 +49,20 @@ mod test {
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![lifecycle_data, inspect_data]),
             iq::ShowCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
 
         inspects.sort_by(|a, b| a.moniker.cmp(&b.moniker));
         let expected = serde_json::to_string(&inspects).unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_show_unknown_manifest() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ShowCommand {
             manifest: Some(String::from("some-bad-moniker")),
             selectors: vec![],
@@ -73,7 +76,7 @@ mod test {
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![lifecycle_data, inspect_data]),
             iq::ShowCommand::from(cmd),
-            &mut output,
+            writer
         )
         .await
         .unwrap_err()
@@ -81,9 +84,9 @@ mod test {
         .is_some());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_show_with_manifest_that_exists() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ShowCommand {
             manifest: Some(String::from("moniker1")),
             selectors: vec![],
@@ -105,19 +108,20 @@ mod test {
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![lifecycle_data, inspect_data]),
             iq::ShowCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
 
         inspects.sort_by(|a, b| a.moniker.cmp(&b.moniker));
         let expected = serde_json::to_string(&inspects).unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_show_with_selectors_with_no_data() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ShowCommand {
             manifest: None,
             selectors: vec![String::from("test/moniker1:name:hello_not_real")],
@@ -134,18 +138,19 @@ mod test {
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![lifecycle_data, inspect_data]),
             iq::ShowCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
 
         let expected = String::from("[]");
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_show_with_selectors_with_data() {
-        let mut output = FakeOutput::new();
+        let writer = Writer::new_test(Some(Format::Json));
         let cmd = ShowCommand {
             manifest: None,
             selectors: vec![String::from("test/moniker1:name:hello_6")],
@@ -163,13 +168,14 @@ mod test {
             setup_fake_rcs(),
             setup_fake_diagnostics_bridge(vec![lifecycle_data, inspect_data]),
             iq::ShowCommand::from(cmd),
-            &mut output,
+            writer.clone(),
         )
         .await
         .unwrap();
 
         inspects.sort_by(|a, b| a.moniker.cmp(&b.moniker));
         let expected = serde_json::to_string(&inspects).unwrap();
-        assert_eq!(output.results, vec![expected]);
+        let output = writer.test_output().expect("unable to get test output.");
+        assert_eq!(output, expected);
     }
 }

@@ -18,6 +18,7 @@ rustc_library("ffx_inspect_common") {
     "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx:ffx_lib_sub_command",
     "//src/developer/ffx/lib/errors:lib",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/diagnostics/iquery:lib",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/fidl/rust/fidl",

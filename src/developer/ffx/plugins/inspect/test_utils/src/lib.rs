@@ -8,7 +8,6 @@ use {
     diagnostics_data::{
         Data, DiagnosticsHierarchy, InspectData, LifecycleData, LifecycleType, Property,
     },
-    ffx_inspect_common::Output,
     fidl::endpoints::ServerEnd,
     fidl::prelude::*,
     fidl_fuchsia_developer_remotecontrol::{
@@ -20,8 +19,6 @@ use {
     fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
     futures::{StreamExt, TryStreamExt},
-    iquery::types::ToText,
-    serde::Serialize,
     std::{
         collections::HashMap,
         io::Write,
@@ -32,23 +29,6 @@ use {
         },
     },
 };
-
-pub struct FakeOutput {
-    pub results: Vec<String>,
-}
-
-impl FakeOutput {
-    pub fn new() -> Self {
-        FakeOutput { results: vec![] }
-    }
-}
-
-impl Output for FakeOutput {
-    fn write<T: Serialize + ToText>(&mut self, result: T) -> Result<()> {
-        self.results.push(serde_json::to_string(&result).unwrap());
-        Ok(())
-    }
-}
 
 #[derive(Default)]
 pub struct FakeArchiveIteratorResponse {
