@@ -26,9 +26,19 @@ pub struct ThreadGroupMutableState {
     pub parent: Option<Arc<ThreadGroup>>,
 
     /// The tasks in the thread group.
+    ///
+    /// The references to Task is weak to prevent cycles as Task have a Arc reference to their
+    /// process.
+    /// It is still expected that these weak references are always valid, as tasks must unregister
+    /// themselves before they are deleted.
     pub tasks: BTreeMap<pid_t, Weak<Task>>,
 
     /// The children of this thread group.
+    ///
+    /// The references to ThreadGroup is weak to prevent cycles as ThreadGroup have a Arc reference
+    /// to their parent.
+    /// It is still expected that these weak references are always valid, as thread groups must unregister
+    /// themselves before they are deleted.
     pub children: BTreeMap<pid_t, Weak<ThreadGroup>>,
 
     /// The IDs used to perform shell job control.
