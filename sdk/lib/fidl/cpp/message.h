@@ -91,12 +91,6 @@ class HLCPPIncomingBody {
   // friend classes that are using |HLCPPIncomingBody| as a view.
   void set_bytes(BytePart bytes) { bytes_ = static_cast<BytePart&&>(bytes); }
   void resize_bytes(uint32_t num_bytes) { bytes_.set_actual(num_bytes); }
-
-  // Transforms the transactional message body in-place.
-  //
-  // |metadata| describes features/revision information about the wire format.
-  zx_status_t Transform(const internal::WireFormatMetadata& metadata, const fidl_type_t* type,
-                        uint32_t* new_num_bytes, const char** error_msg_out);
 };
 
 // An incoming FIDL transactional message.
@@ -203,12 +197,6 @@ class HLCPPIncomingMessage {
  private:
   BytePart bytes_;
   HLCPPIncomingBody body_view_;
-
-  // Transforms the transactional message in-place.
-  //
-  // |metadata| describes features/revision information about the wire format.
-  zx_status_t Transform(const internal::WireFormatMetadata& metadata, const fidl_type_t* type,
-                        const char** error_msg_out);
 };
 
 // An outgoing FIDL transactional message body.
@@ -289,12 +277,6 @@ class HLCPPOutgoingBody {
 
   void set_bytes(BytePart bytes) { bytes_ = static_cast<BytePart&&>(bytes); }
   void resize_bytes(uint32_t num_bytes) { bytes_.set_actual(num_bytes); }
-
-  // Transforms the message body in-place.
-  //
-  // |metadata| describes features/revision information about the wire format.
-  zx_status_t Transform(const internal::WireFormatMetadata& metadata, const fidl_type_t* type,
-                        uint32_t* new_num_bytes, const char** error_msg_out);
 };
 
 // An outgoing FIDL transactional message.
@@ -409,12 +391,6 @@ class HLCPPOutgoingMessage {
  private:
   BytePart bytes_;
   HLCPPOutgoingBody body_view_;
-
-  // Transforms the transactional message in-place.
-  //
-  // |metadata| describes features/revision information about the wire format.
-  zx_status_t Transform(const internal::WireFormatMetadata& metadata, const fidl_type_t* type,
-                        const char** error_msg_out);
 };
 
 }  // namespace fidl

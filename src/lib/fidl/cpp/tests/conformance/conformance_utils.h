@@ -50,11 +50,9 @@ void ForgetHandles(fidl::internal::WireFormatVersion wire_format, Input input) {
 
 inline fidl::internal::WireFormatMetadata CreateWireFormatMetadata(
     fidl::internal::WireFormatVersion wire_format_version) {
-  uint8_t flag_byte_0 = (wire_format_version == fidl::internal::WireFormatVersion::kV2)
-                            ? FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2
-                            : 0;
+  ZX_DEBUG_ASSERT(wire_format_version == fidl::internal::WireFormatVersion::kV2);
   return fidl::internal::WireFormatMetadata::FromTransactionalHeader({
-      .at_rest_flags = {flag_byte_0, 0},
+      .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
       .dynamic_flags = 0,
       .magic_number = kFidlWireFormatMagicNumberInitial,
   });

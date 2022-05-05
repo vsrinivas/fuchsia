@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/test/misc/cpp/fidl.h>
 #include <zircon/types.h>
 
 #include <string>
@@ -68,6 +69,27 @@ TEST(EncodeTest, RequestMagicNumber) {
   loop.RunUntilIdle();
 
   ASSERT_TRUE(handler.is_supported);
+}
+
+TEST(DecodeTest, V1HeaderCompatibilityTest) {
+  // Old versions of the C bindings do not set the V2 wire format bit.
+  // This test verifies that HLCPP will successfully decode messages as V2 that lack the
+  // V2 wire format bit.
+  constexpr fidl_message_header_t kV1Header = {
+      .magic_number = kFidlWireFormatMagicNumberInitial,
+  };
+  std::vector<uint8_t> bytes = {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // header pt1
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // header pt2
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // body
+  };
+  memcpy(bytes.data(), &kV1Header, sizeof(kV1Header));
+  const char* error;
+  fidl::HLCPPIncomingMessage msg(BytePart(bytes.data(), static_cast<uint32_t>(bytes.size()),
+                                          static_cast<uint32_t>(bytes.size())),
+                                 HandleInfoPart());
+  ASSERT_OK(msg.Decode(fidl::test::misc::Int64Struct::FidlType, &error));
+  ASSERT_EQ(2, msg.GetBodyViewAs<fidl::test::misc::Int64Struct>()->x);
 }
 
 }  // namespace

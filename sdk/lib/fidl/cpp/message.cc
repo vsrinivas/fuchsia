@@ -17,6 +17,42 @@
 #include <zircon/syscalls.h>
 #endif
 
+namespace {
+
+bool ContainsEnvelope(const fidl_type_t* type) {
+  switch (type->type_tag()) {
+    case kFidlTypeTable:
+    case kFidlTypeXUnion:
+      return true;
+    case kFidlTypeStruct:
+      return type->coded_struct().contains_envelope;
+    default:
+      ZX_PANIC("unexpected top-level type");
+  }
+}
+
+zx_status_t CheckWireFormatVersion(fidl::internal::WireFormatVersion wire_format,
+                                   const fidl_type_t* type, const char** out_error_msg) {
+  switch (wire_format) {
+    case fidl::internal::WireFormatVersion::kV1:
+      // Old versions of the C bindings will send wire format V1 payloads that are compatible
+      // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
+      // contain envelopes and are compatible with V2.
+      if (ContainsEnvelope(type)) {
+        *out_error_msg = "wire format v1 message received, but it is unsupported";
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return ZX_OK;
+    case fidl::internal::WireFormatVersion::kV2:
+      return ZX_OK;
+    default:
+      *out_error_msg = "unknown wire format version";
+      return ZX_ERR_INVALID_ARGS;
+  }
+}
+
+}  // namespace
+
 namespace fidl {
 
 HLCPPIncomingBody::HLCPPIncomingBody() = default;
@@ -42,61 +78,20 @@ HLCPPIncomingBody& HLCPPIncomingBody::operator=(HLCPPIncomingBody&& other) {
 
 zx_status_t HLCPPIncomingBody::Decode(const internal::WireFormatMetadata& metadata,
                                       const fidl_type_t* type, const char** error_msg_out) {
-  uint32_t transformed_num_bytes = bytes_.actual();
-  zx_status_t status = Transform(metadata, type, &transformed_num_bytes, error_msg_out);
+  if (!metadata.is_valid()) {
+    *error_msg_out = "invalid wire format metadata";
+    return ZX_ERR_INVALID_ARGS;
+  }
+  zx_status_t status = CheckWireFormatVersion(metadata.wire_format_version(), type, error_msg_out);
   if (status != ZX_OK) {
     return status;
   }
-
   fidl_trace(WillHLCPPDecode, type, bytes_.data(), bytes_.actual(), handles_.actual());
   status = internal__fidl_decode_etc_hlcpp__v2__may_break(
       type, bytes_.data(), bytes_.actual(), handles_.data(), handles_.actual(), error_msg_out);
   fidl_trace(DidHLCPPDecode);
 
   ClearHandlesUnsafe();
-  return status;
-}
-
-zx_status_t HLCPPIncomingBody::Transform(const internal::WireFormatMetadata& metadata,
-                                         const fidl_type_t* type, uint32_t* new_num_bytes,
-                                         const char** error_msg_out) {
-  internal::WireFormatVersion version = metadata.wire_format_version();
-  zx_status_t status = ZX_OK;
-  switch (version) {
-    case internal::WireFormatVersion::kV1: {
-      if (type == nullptr) {
-        break;
-      }
-
-      // Transform to V2.
-      status = internal__fidl_validate__v1__may_break(type, bytes_.data(), bytes_.actual(),
-                                                      handles_.actual(), error_msg_out);
-      if (status != ZX_OK) {
-        return status;
-      }
-
-      auto transformer_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
-      uint32_t num_bytes = 0;
-      status = internal__fidl_transform__may_break(
-          FIDL_TRANSFORMATION_V1_TO_V2, type, false, bytes_.data(), bytes_.actual(),
-          transformer_bytes.get(), ZX_CHANNEL_MAX_MSG_BYTES, &num_bytes, error_msg_out);
-      if (status != ZX_OK) {
-        return status;
-      }
-
-      if (num_bytes > bytes_.capacity()) {
-        *error_msg_out = "transformed bytes exceeds message buffer capacity";
-        return ZX_ERR_BUFFER_TOO_SMALL;
-      }
-
-      memcpy(bytes_.data(), transformer_bytes.get(), num_bytes);
-      bytes_.set_actual(num_bytes);
-      break;
-    }
-    case internal::WireFormatVersion::kV2:
-      // No-op: the native format of HLCPP domain objects is V2.
-      break;
-  }
   return status;
 }
 
@@ -121,18 +116,6 @@ HLCPPIncomingMessage& HLCPPIncomingMessage::operator=(HLCPPIncomingMessage&& oth
 zx_status_t HLCPPIncomingMessage::Decode(const fidl_type_t* type, const char** error_msg_out) {
   zx_status_t status = body_view_.Decode(
       internal::WireFormatMetadata::FromTransactionalHeader(header()), type, error_msg_out);
-  return status;
-}
-
-zx_status_t HLCPPIncomingMessage::Transform(const internal::WireFormatMetadata& metadata,
-                                            const fidl_type_t* type, const char** error_msg_out) {
-  uint32_t transformed_num_bytes = bytes_.actual();
-  zx_status_t status = body_view_.Transform(metadata, type, &transformed_num_bytes, error_msg_out);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  bytes_.set_actual(transformed_num_bytes + sizeof(fidl_message_header_t));
   return status;
 }
 
@@ -197,23 +180,14 @@ zx_status_t HLCPPOutgoingBody::Encode(const fidl_type_t* type, const char** erro
 
 zx_status_t HLCPPOutgoingBody::Validate(const internal::WireFormatVersion& wire_format_version,
                                         const fidl_type_t* type, const char** error_msg_out) const {
-  zx_status_t status;
-
-  fidl_trace(WillHLCPPValidate, type, bytes_.data(), bytes_.actual(), handles().actual());
-  switch (wire_format_version) {
-    case internal::WireFormatVersion::kV1:
-      status = internal__fidl_validate__v1__may_break(type, bytes_.data(), bytes_.actual(),
-                                                      handles().actual(), error_msg_out);
-      break;
-    case internal::WireFormatVersion::kV2:
-      status = internal__fidl_validate__v2__may_break(type, bytes_.data(), bytes_.actual(),
-                                                      handles().actual(), error_msg_out);
-      break;
-    default:
-      __builtin_unreachable();
+  zx_status_t status = CheckWireFormatVersion(wire_format_version, type, error_msg_out);
+  if (status != ZX_OK) {
+    return status;
   }
+  fidl_trace(WillHLCPPValidate, type, bytes_.data(), bytes_.actual(), handles().actual());
+  status = internal__fidl_validate__v2__may_break(type, bytes_.data(), bytes_.actual(),
+                                                  handles().actual(), error_msg_out);
   fidl_trace(DidHLCPPValidate);
-
   return status;
 }
 
@@ -249,12 +223,13 @@ zx_status_t HLCPPOutgoingMessage::Encode(const fidl_type_t* type, const char** e
 
 zx_status_t HLCPPOutgoingMessage::Validate(const fidl_type_t* type,
                                            const char** error_msg_out) const {
-  internal::WireFormatVersion wire_format_version = internal::WireFormatVersion::kV1;
-  if ((header().at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) != 0) {
-    wire_format_version = internal::WireFormatVersion::kV2;
+  internal::WireFormatMetadata wire_format_metadata =
+      internal::WireFormatMetadata::FromTransactionalHeader(header());
+  if (!wire_format_metadata.is_valid()) {
+    *error_msg_out = "invalid wire format metadata";
+    return ZX_ERR_INVALID_ARGS;
   }
-
-  return body_view_.Validate(wire_format_version, type, error_msg_out);
+  return body_view_.Validate(wire_format_metadata.wire_format_version(), type, error_msg_out);
 }
 
 #ifdef __Fuchsia__
