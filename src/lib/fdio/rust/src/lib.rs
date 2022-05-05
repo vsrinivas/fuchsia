@@ -735,10 +735,27 @@ impl Namespace {
     }
 }
 
+/// Returns the handle for the given FIDL service, or a Zircon Error Status. This function takes
+/// ownership of 'service' because the File is released when acquiring the service handle.
+///
+/// This corresponds with fdio_get_service_handle in C.
+pub fn get_service_handle(service: File) -> Result<zx_handle_t, zx::Status> {
+    let fd = std::os::unix::io::IntoRawFd::into_raw_fd(service);
+    let mut handle = 0;
+    // Safety: fdio_get_service_handle() is an unsafe function because its 'out' parameter is a raw
+    // pointer and because it closes the given file descriptor. This invocation is safe because:
+    // 1) the supplied 'out' value, "&mut handle", is guaranteed to be valid,
+    // 2) fdio_get_service_handle() does not retain a copy of `out`, and
+    // 3) 'fd' is not used following this invocation.
+    zx::Status::ok(unsafe { fdio_sys::fdio_get_service_handle(fd, &mut handle) })?;
+    Ok(handle)
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_zircon::{object_wait_many, Signals, Status, Time, WaitItem},
     };
 
@@ -923,5 +940,18 @@ mod tests {
 
         open_fd_at(&pkg_fd, "bin", fio::OpenFlags::RIGHT_READABLE)
             .expect("Failed to open bin/ subdirectory using fdio_open_fd_at");
+    }
+
+    // Tests success & error handling of the get_service_handle function. This does not exhaustively
+    // test the underlying FDIO function, as that is tested alongside its C implementation.
+    #[test]
+    fn fdio_get_service_handle() {
+        // Verify get_service_handle succeeds against a valid FIDL service.
+        let service = File::open("/svc").expect("Failed to open /svc.");
+        get_service_handle(service).expect("failed to get fdio service handle");
+
+        // Safety: 0 is not a valid FD; it has no other references and is safe to close.
+        let nonservice = unsafe { File::from_raw_fd(0) };
+        assert_matches!(get_service_handle(nonservice), Err(zx::Status::NOT_SUPPORTED));
     }
 }

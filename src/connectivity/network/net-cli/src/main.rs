@@ -136,14 +136,7 @@ impl net_cli::NetCliDepsConnector for Connector {
             .with_context(|| format!("failed to open device at {}", path))?;
         let topological_path =
             fdio::device_get_topo_path(&dev).context("failed to get topological path")?;
-        let fd = std::os::unix::io::IntoRawFd::into_raw_fd(dev);
-        let mut client = 0;
-        // Safety: the fd supplied to fdio_get_service_handle() must be to a FIDL protocol. In
-        // this case, we've safely extracted the fd from a channel to a fuchsia.io/Node for the
-        // ethernet device. fdio_get_service_handle() will then close this fd in both the success
-        // and error case.
-        zx::Status::ok(unsafe { fdio::fdio_sys::fdio_get_service_handle(fd, &mut client) })
-            .context("failed to get fdio service handle")?;
+        let client = fdio::get_service_handle(dev)?;
         let dev = fidl::endpoints::ClientEnd::<fethernet::DeviceMarker>::new(
             // Safe because we checked the return status above.
             zx::Channel::from(unsafe { zx::Handle::from_raw(client) }),

@@ -19,7 +19,6 @@ use futures::{
 
 use std::fs::File;
 use std::marker::Unpin;
-use std::os::unix::io::AsRawFd;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::Poll;
@@ -99,11 +98,7 @@ impl Client {
         buf_size: usize,
         name: &str,
     ) -> Result<Self, anyhow::Error> {
-        let dev = dev.as_raw_fd();
-        let mut client = 0;
-        // Safe because we're passing a valid fd.
-        let () =
-            zx::Status::ok(unsafe { fdio::fdio_sys::fdio_get_service_handle(dev, &mut client) })?;
+        let client = fdio::get_service_handle(dev)?;
         let dev = fidl::endpoints::ClientEnd::<sys::DeviceMarker>::new(
             // Safe because we checked the return status above.
             fuchsia_zircon::Channel::from(unsafe { fuchsia_zircon::Handle::from_raw(client) }),
