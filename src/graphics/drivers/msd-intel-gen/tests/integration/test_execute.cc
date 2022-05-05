@@ -23,8 +23,8 @@ class TestExecuteWithCount : public testing::TestWithParam<uint32_t> {
 
     ASSERT_EQ(MAGMA_STATUS_OK, magma_create_connection2(base_.device(), &connection_));
 
-    ASSERT_EQ(MAGMA_STATUS_OK,
-              magma_query2(base_.device(), kMagmaIntelGenQueryExtraPageCount, &extra_page_count_));
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_query(base_.device(), kMagmaIntelGenQueryExtraPageCount,
+                                           nullptr, &extra_page_count_));
 
     ASSERT_EQ(MAGMA_STATUS_OK, magma_create_context(connection_, &context_ids_[0]));
     ASSERT_EQ(MAGMA_STATUS_OK, magma_create_context(connection_, &context_ids_[1]));

@@ -34,7 +34,7 @@ class TestConnection : public magma::TestDeviceBase {
     DASSERT(connection_);
 
     magma_status_t status =
-        magma_query2(device(), kMagmaIntelGenQueryExtraPageCount, &extra_page_count_);
+        magma_query(device(), kMagmaIntelGenQueryExtraPageCount, nullptr, &extra_page_count_);
     if (status != MAGMA_STATUS_OK) {
       DLOG("Failed to query kMagmaIntelGenQueryExtraPageCount: %d", status);
       extra_page_count_ = 0;

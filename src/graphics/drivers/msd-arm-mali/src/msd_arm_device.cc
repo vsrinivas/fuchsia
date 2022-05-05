@@ -1653,13 +1653,18 @@ msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id) 
 
 void msd_device_destroy(msd_device_t* dev) { delete MsdArmDevice::cast(dev); }
 
-magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out) {
-  return MsdArmDevice::cast(device)->QueryInfo(id, value_out);
-}
+magma_status_t msd_device_query(msd_device_t* device, uint64_t id,
+                                magma_handle_t* result_buffer_out, uint64_t* result_out) {
+  magma_status_t status = MsdArmDevice::cast(device)->QueryReturnsBuffer(id, result_buffer_out);
 
-magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id,
-                                               uint32_t* buffer_out) {
-  return MsdArmDevice::cast(device)->QueryReturnsBuffer(id, buffer_out);
+  if (status == MAGMA_STATUS_INVALID_ARGS) {
+    status = MsdArmDevice::cast(device)->QueryInfo(id, result_out);
+
+    if (status == MAGMA_STATUS_OK && result_buffer_out)
+      *result_buffer_out = magma::PlatformHandle::kInvalidHandle;
+  }
+
+  return status;
 }
 
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {

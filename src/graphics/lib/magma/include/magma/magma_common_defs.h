@@ -12,23 +12,26 @@ extern "C" {
 #endif
 
 // This is a list of vendor-neutral queries that can be passed to magma_query.
-// Vendor ID should be the PCI ID of the GPU vendor if possible, or the Khronos
-// vendor ID otherwise.
+// Returns the hardware vendor ID (simple result) - should be the PCI ID of the GPU vendor
+// if possible, or the Khronos vendor ID otherwise.
 #define MAGMA_QUERY_VENDOR_ID 0
+// Returns the hardware device ID (simple result)
 #define MAGMA_QUERY_DEVICE_ID 1
 // TODO(fxbug.dev/13126): remove this
+// Returns true if restart for testing is supported (simple result)
 #define MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED 2
+// Returns true if MAGMA_QUERY_TOTAL_TIME is supported (simple result)
 #define MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED 3
 // 4 was MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS
-/// Upper 32bits: max inflight messages, lower 32bits: max inflight memory (MB)
+// Upper 32bits: max inflight messages, lower 32bits: max inflight memory (MB) (simple result)
 #define MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS 5
 
 // All vendor-specific queries IDs that can be passed to magma_query must be >=
 // MAGMA_QUERY_VENDOR_PARAM_0.
 #define MAGMA_QUERY_VENDOR_PARAM_0 10000
 
-// This is a list of vendor-neutral queries that can be passed to
-// magma_query_returns_buffer.
+// This is a list of vendor-neutral queries that can be passed to magma_query.
+// Returns a struct magma_total_time_query_result (buffer result)
 #define MAGMA_QUERY_TOTAL_TIME 500
 
 // reserved ID to represent an invalid object

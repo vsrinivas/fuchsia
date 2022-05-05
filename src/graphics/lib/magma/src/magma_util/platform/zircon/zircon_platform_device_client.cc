@@ -17,7 +17,7 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
   std::unique_ptr<PlatformConnectionClient> Connect() {
     uint64_t inflight_params = 0;
 
-    if (!Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, &inflight_params))
+    if (!Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, nullptr, &inflight_params))
       return DRETP(nullptr, "Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS) failed");
 
     auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
@@ -45,31 +45,37 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
                                                    max_inflight_messages, max_inflight_bytes);
   }
 
-  bool Query(uint64_t query_id, uint64_t* result_out) {
-    auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(channel_.borrow())->Query2(query_id);
+  magma::Status Query(uint64_t query_id, magma_handle_t* result_buffer_out, uint64_t* result_out) {
+    auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(channel_.borrow())->Query(query_id);
 
     if (result.status() != ZX_OK)
-      return DRETF(false, "magma_DeviceQuery failed: %d", result.status());
+      return DRETF(result.status(), "magma_DeviceQuery failed");
+
     if (result->result.is_err())
-      return DRETF(false, "Got error response: %d", result->result.err());
+      return DRETF(result->result.err(), "Got error response");
 
-    *result_out = result->result.response().result;
-    return true;
-  }
+    if (result->result.response().is_buffer_result()) {
+      if (!result_buffer_out)
+        return DRETF(MAGMA_STATUS_INVALID_ARGS, "Can't return query result buffer");
 
-  bool QueryReturnsBuffer(uint64_t query_id, magma_handle_t* buffer_out) {
-    *buffer_out = ZX_HANDLE_INVALID;
-    auto result =
-        fidl::WireCall<fuchsia_gpu_magma::Device>(channel_.borrow())->QueryReturnsBuffer(query_id);
-    if (result.status() != ZX_OK)
-      return DRETF(false, "magma_DeviceQueryReturnsBuffer failed: %d", result.status());
-    if (result->result.is_err())
-      return DRETF(false, "Got error response: %d", result->result.err());
+      *result_buffer_out = result->result.response().buffer_result().release();
 
-    zx::vmo buffer = std::move(result->result.response().buffer);
-    *buffer_out = buffer.release();
+      return MAGMA_STATUS_OK;
+    }
 
-    return true;
+    if (result->result.response().is_simple_result()) {
+      if (!result_out)
+        return DRETF(MAGMA_STATUS_INVALID_ARGS, "Can't return query simple result");
+
+      *result_out = result->result.response().simple_result();
+
+      if (result_buffer_out)
+        *result_buffer_out = ZX_HANDLE_INVALID;
+
+      return MAGMA_STATUS_OK;
+    }
+
+    return DRETF(false, "Unknown result type");
   }
 
  private:

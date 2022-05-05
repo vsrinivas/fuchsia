@@ -36,7 +36,8 @@ class MagmaVsi {
         ASSERT_EQ(magma_device_import(client_end.release(), &(device_)), MAGMA_STATUS_OK);
 
         uint64_t device_id = 0;
-        ASSERT_EQ(magma_query2(device_, MAGMA_QUERY_DEVICE_ID, &device_id), MAGMA_STATUS_OK);
+        ASSERT_EQ(magma_query(device_, MAGMA_QUERY_DEVICE_ID, nullptr, &device_id),
+                  MAGMA_STATUS_OK);
 
         if (device_id == kVersiliconChipID) {
           break;

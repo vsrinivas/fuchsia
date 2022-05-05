@@ -7,13 +7,12 @@
 #include <vector>
 
 #include "msd.h"
+#include "platform_handle.h"
 #include "platform_semaphore.h"
 
 std::unique_ptr<MsdMockBufferManager> g_bufmgr;
 
-struct msd_driver_t* msd_driver_create(void) {
-  return new MsdMockDriver();
-}
+struct msd_driver_t* msd_driver_create(void) { return new MsdMockDriver(); }
 
 void msd_driver_configure(struct msd_driver_t* drv, uint32_t flags) {}
 
@@ -40,14 +39,21 @@ void msd_connection_close(msd_connection_t* connection) {
   delete MsdMockConnection::cast(connection);
 }
 
-magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out) {
+magma_status_t msd_device_query(msd_device_t* device, uint64_t id,
+                                magma_handle_t* result_buffer_out, uint64_t* result_out) {
   switch (id) {
     case MAGMA_QUERY_DEVICE_ID:
-      *value_out = MsdMockDevice::cast(device)->GetDeviceId();
-      return MAGMA_STATUS_OK;
+      *result_out = MsdMockDevice::cast(device)->GetDeviceId();
+      break;
+
     default:
       return MAGMA_STATUS_INVALID_ARGS;
   }
+
+  if (result_buffer_out)
+    *result_buffer_out = magma::PlatformHandle::kInvalidHandle;
+
+  return MAGMA_STATUS_OK;
 }
 
 magma_status_t msd_device_get_icd_list(struct msd_device_t* device, uint64_t count,

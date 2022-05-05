@@ -282,7 +282,22 @@ void magma_device_release(
     magma_device_t device);
 
 ///
-/// \brief Performs a query and returns a result synchronously.
+/// \brief Performs a query synchronously. On MAGMA_STATUS_OK, a given query |id| will return either
+///        a buffer in |result_buffer_out|, or a value in |result_out|. A NULL pointer may be
+///        provided for whichever result parameter is not needed.
+/// \param device An open device.
+/// \param id A vendor-specific ID.
+/// \param result_buffer_out Handle to the returned buffer.
+/// \param result_out Pointer to a uint64 result.
+///
+magma_status_t magma_query(
+    magma_device_t device,
+    uint64_t id,
+    magma_handle_t* result_buffer_out,
+    uint64_t* result_out);
+
+///
+/// \brief DEPRECATED. Performs a query and returns a result synchronously.
 /// \param device An open device.
 /// \param id Either MAGMA_QUERY_DEVICE_ID, or a vendor-specific id starting from
 ///        MAGMA_QUERY_VENDOR_PARAM_0.
@@ -294,8 +309,8 @@ magma_status_t magma_query2(
     uint64_t* value_out);
 
 ///
-/// \brief Performs a query for a large amount of data and puts that into a buffer. Returns
-///        synchronously
+/// \brief DEPRECATED. Performs a query for a large amount of data and puts that into a buffer.
+///        Returns synchronously
 /// \param device An open device.
 /// \param id A vendor-specific ID.
 /// \param handle_out Handle to the returned buffer.

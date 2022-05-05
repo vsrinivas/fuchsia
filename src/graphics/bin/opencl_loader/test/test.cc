@@ -96,10 +96,11 @@ TEST(OpenclLoader, DeviceFs) {
   fuchsia::gpu::magma::DeviceSyncPtr device_ptr;
   EXPECT_EQ(ZX_OK, fdio_service_connect_at(dir.channel().get(), "class/gpu/000",
                                            device_ptr.NewRequest().TakeChannel().release()));
-  fuchsia::gpu::magma::Device_Query2_Result query_result;
-  EXPECT_EQ(ZX_OK, device_ptr->Query2(0u, &query_result));
+  fuchsia::gpu::magma::Device_Query_Result query_result;
+  EXPECT_EQ(ZX_OK, device_ptr->Query(0u, &query_result));
   ASSERT_TRUE(query_result.is_response());
-  EXPECT_EQ(5u, query_result.response().result);
+  ASSERT_TRUE(query_result.response().is_simple_result());
+  EXPECT_EQ(5u, query_result.response().simple_result());
 }
 
 TEST(OpenclLoader, Features) {

@@ -8,6 +8,7 @@
 
 #define MAGMA_VENDOR_ID_MALI 0x13B5
 
+// All queries return a simple result except where indicated.
 enum MsdArmVendorQuery {
   kMsdArmVendorQueryL2Present = MAGMA_QUERY_VENDOR_PARAM_0,
   kMsdArmVendorQueryMaxThreads = MAGMA_QUERY_VENDOR_PARAM_0 + 1,
@@ -22,6 +23,7 @@ enum MsdArmVendorQuery {
   kMsdArmVendorQueryCoherencyEnabled = MAGMA_QUERY_VENDOR_PARAM_0 + 10,
   kMsdArmVendorQueryThreadTlsAlloc = MAGMA_QUERY_VENDOR_PARAM_0 + 11,
   kMsdArmVendorQuerySupportsProtectedMode = MAGMA_QUERY_VENDOR_PARAM_0 + 12,
+  // Returns a buffer result.
   kMsdArmVendorQueryDeviceTimestamp = MAGMA_QUERY_VENDOR_PARAM_0 + 13,
 };
 

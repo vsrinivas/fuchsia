@@ -34,12 +34,11 @@ void msd_device_destroy(struct msd_device_t* dev);
 // Signals the current memory pressure level for the system. May be called on any thread.
 void msd_device_set_memory_pressure_level(struct msd_device_t* dev, MagmaMemoryPressureLevel level);
 
-// Returns a value associated with the given id.
-magma_status_t msd_device_query(struct msd_device_t* device, uint64_t id, uint64_t* value_out);
-
-// Returns a buffer containing values associated with the given id.
-magma_status_t msd_device_query_returns_buffer(struct msd_device_t* device, uint64_t id,
-                                               uint32_t* buffer_out);
+// Returns a value associated with the given id. On MAGMA_STATUS_OK, a given query |id| will return
+// either a buffer in |result_buffer_out|, or a value in |result_out|. A NULL pointer may be
+// provided for whichever result parameter is not needed.
+magma_status_t msd_device_query(struct msd_device_t* device, uint64_t id,
+                                magma_handle_t* result_buffer_out, uint64_t* result_out);
 
 // Outputs a list of ICD components. If icd_info_out is nullptr, doesn't update the list but sets
 // *actual_count_out to the size of the list. Otherwise, returns an error if count is less than the

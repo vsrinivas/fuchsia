@@ -10,9 +10,13 @@
 #define MAGMA_VENDOR_ID_VSI 0x10001  // VK_VENDOR_ID_VIV
 
 enum MsdVsiVendorQuery {
+  // Returns magma_vsi_vip_chip_identity (buffer result)
   kMsdVsiVendorQueryChipIdentity = MAGMA_QUERY_VENDOR_PARAM_0,
+  // Returns magma_vsi_vip_chip_option (buffer result)
   kMsdVsiVendorQueryChipOption = MAGMA_QUERY_VENDOR_PARAM_0 + 1,
+  // Returns the client GPU address range (simple result)
   kMsdVsiVendorQueryClientGpuAddrRange = MAGMA_QUERY_VENDOR_PARAM_0 + 2,
+  // Returns a handle to the external SRAM (buffer result)
   kMsdVsiVendorQueryExternalSram = MAGMA_QUERY_VENDOR_PARAM_0 + 3,
 };
 

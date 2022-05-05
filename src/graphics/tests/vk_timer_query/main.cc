@@ -30,16 +30,15 @@ TEST(VulkanTimerQuery, TimerQuery) {
   ;
 
   uint64_t is_supported = 0;
-  EXPECT_EQ(MAGMA_STATUS_OK,
-            magma_query2(test_device.device(), MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED, &is_supported));
+  EXPECT_EQ(MAGMA_STATUS_OK, magma_query(test_device.device(), MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED,
+                                         nullptr, &is_supported));
 
   // Every Mali driver should support querying GPU time.
   EXPECT_TRUE(is_supported);
 
   zx::vmo result_vmo;
-  EXPECT_EQ(MAGMA_STATUS_OK,
-            magma_query_returns_buffer2(test_device.device(), MAGMA_QUERY_TOTAL_TIME,
-                                        result_vmo.reset_and_get_address()));
+  EXPECT_EQ(MAGMA_STATUS_OK, magma_query(test_device.device(), MAGMA_QUERY_TOTAL_TIME,
+                                         result_vmo.reset_and_get_address(), nullptr));
   magma_total_time_query_result result;
   EXPECT_EQ(ZX_OK, result_vmo.read(&result, 0u, sizeof(result)));
 
@@ -48,9 +47,8 @@ TEST(VulkanTimerQuery, TimerQuery) {
   ASSERT_TRUE(test.Exec());
   ASSERT_TRUE(test.Readback());
 
-  EXPECT_EQ(MAGMA_STATUS_OK,
-            magma_query_returns_buffer2(test_device.device(), MAGMA_QUERY_TOTAL_TIME,
-                                        result_vmo.reset_and_get_address()));
+  EXPECT_EQ(MAGMA_STATUS_OK, magma_query(test_device.device(), MAGMA_QUERY_TOTAL_TIME,
+                                         result_vmo.reset_and_get_address(), nullptr));
   magma_total_time_query_result result2;
   EXPECT_EQ(ZX_OK, result_vmo.read(&result2, 0u, sizeof(result2)));
 

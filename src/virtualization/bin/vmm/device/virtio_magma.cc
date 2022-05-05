@@ -254,6 +254,49 @@ zx_status_t VirtioMagma::Handle_query_returns_buffer2(VirtioDescriptor* request_
   return ZX_OK;
 }
 
+// Returns the buffer size after the response struct.
+zx_status_t VirtioMagma::Handle_query(VirtioDescriptor* request_desc,
+                                      VirtioDescriptor* response_desc, uint32_t* used_out) {
+  virtio_magma_query_resp_t response = {.hdr = {.type = VIRTIO_MAGMA_RESP_QUERY}};
+
+  auto request_copy = *reinterpret_cast<virtio_magma_query_ctrl_t*>(request_desc->addr);
+
+  const auto device = request_copy.device;
+  const auto id = request_copy.id;
+
+  zx::vmo vmo;
+  uint64_t result;
+
+  response.result_return = magma_query(device, id, vmo.reset_and_get_address(), &result);
+
+  if (response_desc->len < sizeof(response) + (vmo.is_valid() ? sizeof(uint64_t) : 0)) {
+    FX_LOGS(ERROR) << "VIRTIO_MAGMA_CMD_QUERY: response descriptor too small";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  response.result_buffer_out = vmo.get();
+  response.result_out = result;
+
+  memcpy(response_desc->addr, &response, sizeof(response));
+  *used_out = sizeof(response);
+
+  if (response.result_return == MAGMA_STATUS_OK && vmo.is_valid()) {
+    uint64_t buffer_size;
+    zx_status_t status = vmo.get_size(&buffer_size);
+    if (status != ZX_OK)
+      return status;
+
+    void* buffer_size_ptr = reinterpret_cast<virtio_magma_query_resp_t*>(response_desc->addr) + 1;
+    memcpy(buffer_size_ptr, &buffer_size, sizeof(buffer_size));
+    *used_out += sizeof(buffer_size);
+
+    // Keep the handle alive while the guest is referencing it.
+    stored_handles_.push_back(std::move(vmo));
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t VirtioMagma::Handle_device_import(const virtio_magma_device_import_ctrl_t* request,
                                               virtio_magma_device_import_resp_t* response) {
   zx::channel server_handle, client_handle;

@@ -53,9 +53,9 @@ bool test_magma_from_c(const char* device_name) {
 #endif
 
   uint64_t device_id = 0;
-  status = magma_query2(device, MAGMA_QUERY_DEVICE_ID, &device_id);
+  status = magma_query(device, MAGMA_QUERY_DEVICE_ID, NULL, &device_id);
   if (status != MAGMA_STATUS_OK)
-    return DRETF(false, "magma_query2 return %d", status);
+    return DRETF(false, "magma_query return %d", status);
 
   if (device_id == 0)
     return DRETF(false, "device_id is 0");

@@ -277,3 +277,45 @@ magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_bu
 
   return MAGMA_STATUS_OK;
 }
+
+magma_status_t magma_query(magma_device_t device, uint64_t id, magma_handle_t* result_buffer_out,
+                           uint64_t* result_out) {
+  auto device_wrapped = virtmagma_device_t::Get(device);
+  device = device_wrapped->Object();
+
+  int32_t file_descriptor = device_wrapped->Parent().fd();
+
+  virtio_magma_query_ctrl_t request{
+      .hdr = {.type = VIRTIO_MAGMA_CMD_QUERY}, .device = device, .id = id};
+  virtio_magma_query_resp_t response{};
+
+  bool success = virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
+                                        sizeof(response));
+  if (!success)
+    return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+
+  magma_status_t status = static_cast<magma_status_t>(response.result_return);
+  if (status != MAGMA_STATUS_OK)
+    return DRET(status);
+
+  if (response.hdr.type != VIRTIO_MAGMA_RESP_QUERY)
+    return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+
+  int fd = static_cast<int>(response.result_buffer_out);
+  if (fd < 0) {
+    if (result_buffer_out)
+      *result_buffer_out = -1;
+
+    *result_out = response.result_out;
+    return MAGMA_STATUS_OK;
+  }
+
+  // If a buffer is present, it's an error to ignore it.
+  if (!result_buffer_out) {
+    close(fd);
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+  }
+
+  *result_buffer_out = fd;
+  return MAGMA_STATUS_OK;
+}

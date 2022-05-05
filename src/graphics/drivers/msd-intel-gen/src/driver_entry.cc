@@ -87,15 +87,57 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevi
     if (!CheckSystemDevice(_completer))
       return;
 
-    zx_handle_t result;
-    magma::Status status =
-        this->magma_system_device->QueryReturnsBuffer(request->query_id, &result);
+    zx::vmo result_buffer;
+    uint64_t unused = 0;
+
+    magma::Status status = this->magma_system_device->Query(
+        request->query_id, result_buffer.reset_and_get_address(), &unused);
     if (!status.ok()) {
       _completer.ReplyError(magma::ToZxStatus(status.get()));
       return;
     }
-    DLOG("query extended query_id 0x%" PRIx64 " returning 0x%x", request->query_id, result);
-    _completer.ReplySuccess(zx::vmo(result));
+
+    if (!result_buffer) {
+      _completer.ReplyError(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+
+    _completer.ReplySuccess(std::move(result_buffer));
+  }
+
+  void Query(QueryRequestView request, QueryCompleter::Sync& _completer) override {
+    DLOG("sysdrv_device_t::Query");
+    std::lock_guard lock(magma_mutex);
+    if (!CheckSystemDevice(_completer))
+      return;
+
+    zx_handle_t result_buffer = ZX_HANDLE_INVALID;
+    uint64_t result = 0;
+
+    switch (request->query_id) {
+      case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
+#if MAGMA_TEST_DRIVER
+        result = 1;
+#else
+        result = 0;
+#endif
+        break;
+      default:
+        magma::Status status =
+            this->magma_system_device->Query(request->query_id, &result_buffer, &result);
+        if (!status.ok()) {
+          _completer.ReplyError(magma::ToZxStatus(status.get()));
+          return;
+        }
+    }
+
+    if (result_buffer != ZX_HANDLE_INVALID) {
+      _completer.ReplySuccess(
+          fuchsia_gpu_magma::wire::DeviceQueryResponse::WithBufferResult(zx::vmo(result_buffer)));
+    } else {
+      _completer.ReplySuccess(fuchsia_gpu_magma::wire::DeviceQueryResponse::WithSimpleResult(
+          fidl::ObjectView<uint64_t>::FromExternal(&result)));
+    }
   }
 
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override {

@@ -37,8 +37,8 @@ bool VADisplayWrapper::InitializeSingleton(uint64_t required_vendor_id) {
     }
     {
       uint64_t vendor_id;
-      magma_status_t magma_status =
-          magma_query2(new_display_wrapper->magma_device_, MAGMA_QUERY_VENDOR_ID, &vendor_id);
+      magma_status_t magma_status = magma_query(new_display_wrapper->magma_device_,
+                                                MAGMA_QUERY_VENDOR_ID, nullptr, &vendor_id);
       if (magma_status == MAGMA_STATUS_OK && vendor_id == required_vendor_id) {
         break;
       }

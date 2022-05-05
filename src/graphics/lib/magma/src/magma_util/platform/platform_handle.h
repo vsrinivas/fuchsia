@@ -36,6 +36,8 @@ class PlatformHandle {
 
   static bool SupportsGetCount();
 
+  static const uint32_t kInvalidHandle;
+
  private:
   PlatformHandle(const PlatformHandle&) = delete;
   PlatformHandle& operator=(const PlatformHandle&) = delete;

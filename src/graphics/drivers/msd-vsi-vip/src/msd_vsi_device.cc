@@ -1341,32 +1341,6 @@ msd_connection_t* msd_device_open(msd_device_t* device, msd_client_id_t client_i
 
 void msd_device_destroy(msd_device_t* device) { delete MsdVsiDevice::cast(device); }
 
-magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out) {
-  switch (id) {
-    case MAGMA_QUERY_VENDOR_ID:
-      *value_out = MAGMA_VENDOR_ID_VSI;
-      return MAGMA_STATUS_OK;
-
-    case MAGMA_QUERY_DEVICE_ID:
-      *value_out = MsdVsiDevice::cast(device)->device_id();
-      return MAGMA_STATUS_OK;
-
-    case MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED:
-      *value_out = 0;
-      return MAGMA_STATUS_OK;
-
-    case kMsdVsiVendorQueryClientGpuAddrRange:
-      uint32_t size_in_pages = AddressSpaceLayout::client_gpu_addr_size() / magma::page_size();
-      DASSERT(size_in_pages * magma::page_size() == AddressSpaceLayout::client_gpu_addr_size());
-      uint32_t base_in_pages = AddressSpaceLayout::client_gpu_addr_base() / magma::page_size();
-      DASSERT(base_in_pages * magma::page_size() == AddressSpaceLayout::client_gpu_addr_base());
-      *value_out =
-          static_cast<uint64_t>(base_in_pages) | (static_cast<uint64_t>(size_in_pages) << 32);
-      return MAGMA_STATUS_OK;
-  }
-  return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
-}
-
 static magma_status_t DataToBuffer(const char* name, void* data, uint64_t size,
                                    uint32_t* buffer_out) {
   std::unique_ptr<magma::PlatformBuffer> buffer = magma::PlatformBuffer::Create(size, name);
@@ -1382,33 +1356,60 @@ static magma_status_t DataToBuffer(const char* name, void* data, uint64_t size,
   return MAGMA_STATUS_OK;
 }
 
-magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id,
-                                               uint32_t* buffer_out) {
+magma_status_t msd_device_query(msd_device_t* device, uint64_t id,
+                                magma_handle_t* result_buffer_out, uint64_t* result_out) {
   switch (id) {
+    case MAGMA_QUERY_VENDOR_ID:
+      *result_out = MAGMA_VENDOR_ID_VSI;
+      break;
+
+    case MAGMA_QUERY_DEVICE_ID:
+      *result_out = MsdVsiDevice::cast(device)->device_id();
+      break;
+
+    case MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED:
+      *result_out = 0;
+      break;
+
+    case kMsdVsiVendorQueryClientGpuAddrRange: {
+      uint32_t size_in_pages = AddressSpaceLayout::client_gpu_addr_size() / magma::page_size();
+      DASSERT(size_in_pages * magma::page_size() == AddressSpaceLayout::client_gpu_addr_size());
+      uint32_t base_in_pages = AddressSpaceLayout::client_gpu_addr_base() / magma::page_size();
+      DASSERT(base_in_pages * magma::page_size() == AddressSpaceLayout::client_gpu_addr_base());
+      *result_out =
+          static_cast<uint64_t>(base_in_pages) | (static_cast<uint64_t>(size_in_pages) << 32);
+      break;
+    }
+
     case kMsdVsiVendorQueryChipIdentity: {
-      magma_vsi_vip_chip_identity result;
-      magma_status_t status = MsdVsiDevice::cast(device)->ChipIdentity(&result);
-      if (status != MAGMA_STATUS_OK) {
+      magma_vsi_vip_chip_identity chip_id;
+      magma_status_t status = MsdVsiDevice::cast(device)->ChipIdentity(&chip_id);
+      if (status != MAGMA_STATUS_OK)
         return status;
-      }
-      return DataToBuffer("chip_identity", &result, sizeof(result), buffer_out);
+
+      return DataToBuffer("chip_identity", &chip_id, sizeof(chip_id), result_buffer_out);
     }
 
     case kMsdVsiVendorQueryChipOption: {
-      magma_vsi_vip_chip_option result;
-      magma_status_t status = MsdVsiDevice::cast(device)->ChipOption(&result);
-      if (status != MAGMA_STATUS_OK) {
+      magma_vsi_vip_chip_option chip_opt;
+      magma_status_t status = MsdVsiDevice::cast(device)->ChipOption(&chip_opt);
+      if (status != MAGMA_STATUS_OK)
         return status;
-      }
-      return DataToBuffer("chip_option", &result, sizeof(result), buffer_out);
+
+      return DataToBuffer("chip_option", &chip_opt, sizeof(chip_opt), result_buffer_out);
     }
 
     case kMsdVsiVendorQueryExternalSram:
-      return MsdVsiDevice::cast(device)->QuerySram(buffer_out);
+      return MsdVsiDevice::cast(device)->QuerySram(result_buffer_out);
 
     default:
-      return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled id %" PRIu64, id);
+      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
   }
+
+  if (result_buffer_out)
+    *result_buffer_out = magma::PlatformHandle::kInvalidHandle;
+
+  return MAGMA_STATUS_OK;
 }
 
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {

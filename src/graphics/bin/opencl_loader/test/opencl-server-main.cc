@@ -39,11 +39,9 @@ class FakeMagmaDevice : public fuchsia::gpu::magma::testing::CombinedDevice_Test
     callback(std::move(vec));
   }
 
-  void Query2(uint64_t id, Query2Callback callback) override {
-    fuchsia::gpu::magma::Device_Query2_Result result;
-    fuchsia::gpu::magma::Device_Query2_Response response;
-    response.result = 5;
-    result.set_response(response);
+  void Query(uint64_t id, QueryCallback callback) override {
+    fuchsia::gpu::magma::Device_Query_Result result;
+    result.set_response(fuchsia::gpu::magma::Device_Query_Response::WithSimpleResult(5));
     callback(std::move(result));
   }
 

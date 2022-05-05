@@ -38,7 +38,7 @@ class TestDeviceBase {
     for (auto& p : std::filesystem::directory_iterator("/dev/class/gpu")) {
       InitializeFromFileName(p.path().c_str());
       uint64_t vendor_id;
-      magma_status_t magma_status = magma_query2(device_, MAGMA_QUERY_VENDOR_ID, &vendor_id);
+      magma_status_t magma_status = magma_query(device_, MAGMA_QUERY_VENDOR_ID, NULL, &vendor_id);
       if (magma_status == MAGMA_STATUS_OK && vendor_id == id) {
         return;
       }

@@ -56,7 +56,7 @@ class TestConnection : public magma::TestDeviceBase {
   bool SupportsProtectedMode() {
     uint64_t value_out;
     EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_query2(device(), kMsdArmVendorQuerySupportsProtectedMode, &value_out));
+              magma_query(device(), kMsdArmVendorQuerySupportsProtectedMode, nullptr, &value_out));
     return !!value_out;
   }
 

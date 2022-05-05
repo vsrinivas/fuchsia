@@ -489,9 +489,9 @@ TEST_F(VirtioMagmaTest, HandleQuery) {
   magma_device_t device{};
   ASSERT_NO_FATAL_FAILURE(ImportDevice(&device));
   {
-    virtio_magma_query2_ctrl_t request{};
-    virtio_magma_query2_resp_t response{};
-    request.hdr.type = VIRTIO_MAGMA_CMD_QUERY2;
+    virtio_magma_query_ctrl_t request{};
+    virtio_magma_query_resp_t response{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_QUERY;
     request.device = device;
     request.id = MAGMA_QUERY_DEVICE_ID;
     uint16_t descriptor_id{};
@@ -508,9 +508,10 @@ TEST_F(VirtioMagmaTest, HandleQuery) {
     EXPECT_EQ(used_elem->id, descriptor_id);
     EXPECT_EQ(used_elem->len, sizeof(response));
     memcpy(&response, response_ptr, sizeof(response));
-    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_QUERY2);
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_QUERY);
     EXPECT_EQ(response.hdr.flags, 0u);
-    EXPECT_GT(response.value_out, 0u);
+    EXPECT_GT(response.result_out, 0u);
+    EXPECT_EQ(response.result_buffer_out, 0u);
     EXPECT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
   }
   ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
@@ -840,16 +841,17 @@ TEST_F(VirtioMagmaTest, QueryReturnsBufferMapAndUnmap) {
 
   uint64_t query_id = 0;
   {
-    virtio_magma_query2_ctrl_t request{};
-    virtio_magma_query2_resp_t response{};
-    request.hdr.type = VIRTIO_MAGMA_CMD_QUERY2;
+    virtio_magma_query_ctrl_t request{};
+    virtio_magma_query_resp_t response{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_QUERY;
     request.device = device;
     request.id = MAGMA_QUERY_VENDOR_ID;
     uint16_t descriptor_id{};
     void* response_ptr;
+    constexpr uint64_t kSizeofResponse = sizeof(response) + sizeof(uint64_t);
     ASSERT_EQ(DescriptorChainBuilder(out_queue_)
                   .AppendReadableDescriptor(&request, sizeof(request))
-                  .AppendWritableDescriptor(&response_ptr, sizeof(response))
+                  .AppendWritableDescriptor(&response_ptr, kSizeofResponse)
                   .Build(&descriptor_id),
               ZX_OK);
     magma_->NotifyQueue(0);
@@ -859,12 +861,13 @@ TEST_F(VirtioMagmaTest, QueryReturnsBufferMapAndUnmap) {
     EXPECT_EQ(used_elem->id, descriptor_id);
     EXPECT_EQ(used_elem->len, sizeof(response));
     memcpy(&response, response_ptr, sizeof(response));
-    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_QUERY2);
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_QUERY);
     EXPECT_EQ(response.hdr.flags, 0u);
-    EXPECT_GT(response.value_out, 0u);
+    EXPECT_GT(response.result_out, 0u);
+    EXPECT_EQ(response.result_buffer_out, 0u);
     EXPECT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
 
-    uint64_t vendor_id = response.value_out;
+    uint64_t vendor_id = response.result_out;
     switch (vendor_id) {
       case 0x8086:
         query_id = kMagmaIntelGenQueryTimestamp;
@@ -877,12 +880,12 @@ TEST_F(VirtioMagmaTest, QueryReturnsBufferMapAndUnmap) {
   magma_handle_t buffer_handle;
   uint64_t buffer_size;
   {
-    virtio_magma_query_returns_buffer2_ctrl_t request{};
-    request.hdr.type = VIRTIO_MAGMA_CMD_QUERY_RETURNS_BUFFER2;
+    virtio_magma_query_ctrl_t request{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_QUERY;
     request.device = device;
     request.id = query_id;
     uint16_t descriptor_id{};
-    virtio_magma_query_returns_buffer2_resp_t response{};
+    virtio_magma_query_resp_t response{};
     void* response_ptr;
     constexpr uint64_t kSizeofResponse = sizeof(response) + sizeof(uint64_t);
     ASSERT_EQ(DescriptorChainBuilder(out_queue_)
@@ -898,9 +901,9 @@ TEST_F(VirtioMagmaTest, QueryReturnsBufferMapAndUnmap) {
     EXPECT_EQ(used_elem->len, kSizeofResponse);
 
     memcpy(&response, response_ptr, sizeof(response));
-    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_QUERY_RETURNS_BUFFER2);
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_QUERY);
     EXPECT_EQ(response.hdr.flags, 0u);
-    EXPECT_NE(response.handle_out, 0u);
+    EXPECT_NE(response.result_buffer_out, 0u);
     ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
 
     memcpy(&buffer_size, reinterpret_cast<uint8_t*>(response_ptr) + sizeof(response),
@@ -908,7 +911,7 @@ TEST_F(VirtioMagmaTest, QueryReturnsBufferMapAndUnmap) {
     EXPECT_EQ(buffer_size, kQueryBufferSize);
 
     // This is a copy of the handle bits, not a true handle, so it can only be used as a reference.
-    buffer_handle = static_cast<magma_handle_t>(response.handle_out);
+    buffer_handle = static_cast<magma_handle_t>(response.result_buffer_out);
   }
 
   std::array<uintptr_t, 2> map_lengths = {kQueryBufferSize / 2, kQueryBufferSize};

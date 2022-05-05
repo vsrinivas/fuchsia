@@ -890,51 +890,53 @@ msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id) 
 
 void msd_device_destroy(msd_device_t* dev) { delete MsdIntelDevice::cast(dev); }
 
-magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out) {
+magma_status_t msd_device_query(msd_device_t* device, uint64_t id,
+                                magma_handle_t* result_buffer_out, uint64_t* result_out) {
   switch (id) {
     case MAGMA_QUERY_VENDOR_ID:
-      *value_out = MAGMA_VENDOR_ID_INTEL;
-      return MAGMA_STATUS_OK;
+      *result_out = MAGMA_VENDOR_ID_INTEL;
+      break;
 
     case MAGMA_QUERY_DEVICE_ID:
-      *value_out = MsdIntelDevice::cast(device)->device_id();
-      return MAGMA_STATUS_OK;
+      *result_out = MsdIntelDevice::cast(device)->device_id();
+      break;
 
     case MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED:
-      *value_out = 0;
-      return MAGMA_STATUS_OK;
+      *result_out = 0;
+      break;
 
     case kMagmaIntelGenQuerySubsliceAndEuTotal:
-      *value_out = MsdIntelDevice::cast(device)->subslice_total();
-      *value_out = (*value_out << 32) | MsdIntelDevice::cast(device)->eu_total();
-      return MAGMA_STATUS_OK;
+      *result_out = MsdIntelDevice::cast(device)->subslice_total();
+      *result_out = (*result_out << 32) | MsdIntelDevice::cast(device)->eu_total();
+      break;
 
     case kMagmaIntelGenQueryGttSize:
-      *value_out = 1ul << 48;
-      return MAGMA_STATUS_OK;
+      *result_out = 1ul << 48;
+      break;
 
     case kMagmaIntelGenQueryExtraPageCount:
-      *value_out = PerProcessGtt::ExtraPageCount();
-      return MAGMA_STATUS_OK;
-  }
-  return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
-}
+      *result_out = PerProcessGtt::ExtraPageCount();
+      break;
 
-magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id,
-                                               uint32_t* buffer_out) {
-  switch (id) {
     case kMagmaIntelGenQueryTimestamp: {
       auto buffer = magma::PlatformBuffer::Create(magma::page_size(), "timestamps");
       if (!buffer)
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to create timestamp buffer");
 
-      if (!buffer->duplicate_handle(buffer_out))
+      if (!buffer->duplicate_handle(result_buffer_out))
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to dupe timestamp buffer");
 
       return MsdIntelDevice::cast(device)->QueryTimestamp(std::move(buffer)).get();
     }
+
+    default:
+      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
   }
-  return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
+
+  if (result_buffer_out)
+    *result_buffer_out = magma::PlatformHandle::kInvalidHandle;
+
+  return MAGMA_STATUS_OK;
 }
 
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {

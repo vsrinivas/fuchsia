@@ -14,6 +14,7 @@ uint32_t MagmaSystemDevice::GetDeviceId() {
   magma::Status status = Query(MAGMA_QUERY_DEVICE_ID, &result);
   if (!status.ok())
     return 0;
+
   DASSERT(result >> 32 == 0);
   return static_cast<uint32_t>(result);
 }
@@ -85,15 +86,16 @@ void MagmaSystemDevice::SetMemoryPressureLevel(MagmaMemoryPressureLevel level) {
   msd_device_set_memory_pressure_level(msd_dev(), level);
 }
 
-magma::Status MagmaSystemDevice::Query(uint64_t id, uint64_t* value_out) {
+magma::Status MagmaSystemDevice::Query(uint64_t id, magma_handle_t* result_buffer_out,
+                                       uint64_t* result_out) {
   switch (id) {
     case MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS:
-      *value_out = magma::PlatformConnection::kMaxInflightMessages;
-      *value_out <<= 32;
-      *value_out |= magma::PlatformConnection::kMaxInflightMemoryMB;
+      *result_out = magma::PlatformConnection::kMaxInflightMessages;
+      *result_out <<= 32;
+      *result_out |= magma::PlatformConnection::kMaxInflightMemoryMB;
       return MAGMA_STATUS_OK;
   }
-  return msd_device_query(msd_dev(), id, value_out);
+  return msd_device_query(msd_dev(), id, result_buffer_out, result_out);
 }
 
 magma_status_t MagmaSystemDevice::GetIcdList(std::vector<msd_icd_info_t>* icd_list_out) {

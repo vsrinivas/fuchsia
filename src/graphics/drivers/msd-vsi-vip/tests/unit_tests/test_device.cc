@@ -48,8 +48,8 @@ TEST_F(MsdVsiDeviceTest, ChipIdentity) {
 
   // Now try to get it as a buffer.
   uint32_t identity_buffer;
-  EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query_returns_buffer(
-                                 device_.get(), kMsdVsiVendorQueryChipIdentity, &identity_buffer));
+  EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query(device_.get(), kMsdVsiVendorQueryChipIdentity,
+                                              &identity_buffer, nullptr));
   magma_vsi_vip_chip_identity identity_from_buf;
   auto buffer = magma::PlatformBuffer::Import(identity_buffer);
   EXPECT_TRUE(buffer);
@@ -58,9 +58,10 @@ TEST_F(MsdVsiDeviceTest, ChipIdentity) {
   EXPECT_EQ(0, memcmp(&identity, &identity_from_buf, sizeof(identity_from_buf)));
 }
 
-TEST_F(MsdVsiDeviceTest, QueryReturnsBufferBadId) {
-  uint32_t buffer;
-  EXPECT_NE(MAGMA_STATUS_OK, msd_device_query_returns_buffer(device_.get(), 0 /* id */, &buffer));
+TEST_F(MsdVsiDeviceTest, QueryBadId) {
+  uint64_t result;
+  EXPECT_NE(MAGMA_STATUS_OK,
+            msd_device_query(device_.get(), 0xabcd1234 /* id */, nullptr, &result));
 }
 
 TEST_F(MsdVsiDeviceTest, ChipOption) {
@@ -69,8 +70,8 @@ TEST_F(MsdVsiDeviceTest, ChipOption) {
 
   // Now try to get it as a buffer.
   uint32_t option_buffer;
-  EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query_returns_buffer(
-                                 device_.get(), kMsdVsiVendorQueryChipOption, &option_buffer));
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            msd_device_query(device_.get(), kMsdVsiVendorQueryChipOption, &option_buffer, nullptr));
   magma_vsi_vip_chip_option option_from_buf;
   auto buffer = magma::PlatformBuffer::Import(option_buffer);
   EXPECT_TRUE(buffer);
@@ -84,8 +85,8 @@ TEST_F(MsdVsiDeviceTest, QuerySram) {
     GTEST_SKIP();
   }
   uint32_t sram_buffer;
-  EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query_returns_buffer(
-                                 device_.get(), kMsdVsiVendorQueryExternalSram, &sram_buffer));
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            msd_device_query(device_.get(), kMsdVsiVendorQueryExternalSram, &sram_buffer, nullptr));
 
   auto buffer = magma::PlatformBuffer::Import(sram_buffer);
   ASSERT_TRUE(buffer);
@@ -118,7 +119,8 @@ TEST_F(MsdVsiDeviceTest, FetchEngineDma) {
   uint16_t prefetch = 0;
 
   EXPECT_TRUE(device_->SubmitCommandBufferNoMmu(bus_mapping->Get()[0], length, &prefetch));
-  EXPECT_EQ(magma::round_up(length, static_cast<uint32_t>(sizeof(uint64_t))) / sizeof(uint64_t), prefetch);
+  EXPECT_EQ(magma::round_up(length, static_cast<uint32_t>(sizeof(uint64_t))) / sizeof(uint64_t),
+            prefetch);
 
   constexpr uint32_t kTimeoutMs = 100;
   EXPECT_TRUE(device_->WaitUntilIdle(kTimeoutMs));
@@ -195,7 +197,8 @@ TEST_F(MsdVsiDeviceTest, LoadAddressSpace) {
     uint16_t prefetch = 0;
 
     EXPECT_TRUE(device->SubmitCommandBufferNoMmu(bus_mapping->Get()[0], length, &prefetch));
-    EXPECT_EQ(magma::round_up(length, static_cast<uint32_t>(sizeof(uint64_t))) / sizeof(uint64_t), prefetch);
+    EXPECT_EQ(magma::round_up(length, static_cast<uint32_t>(sizeof(uint64_t))) / sizeof(uint64_t),
+              prefetch);
 
     constexpr uint32_t kTimeoutMs = 100;
     EXPECT_TRUE(device->WaitUntilIdle(kTimeoutMs));

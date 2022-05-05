@@ -26,7 +26,7 @@ class TestConnection : public magma::TestDeviceBase {
     magma_create_connection2(device(), &connection_);
 
     magma_status_t status =
-        magma_query2(device(), kMagmaIntelGenQueryExtraPageCount, &extra_page_count_);
+        magma_query(device(), kMagmaIntelGenQueryExtraPageCount, nullptr, &extra_page_count_);
     if (status != MAGMA_STATUS_OK) {
       DLOG("Failed to query kMagmaIntelGenQueryExtraPageCount: %d", status);
       extra_page_count_ = 0;
@@ -155,8 +155,9 @@ static void test_shutdown(uint32_t iters) {
 
     {
       auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(test_base.channel()->borrow())
-                        ->Query2(MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED);
-      uint64_t is_supported = result->result.response().result;
+                        ->Query(MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED);
+      ASSERT_TRUE(result->result.response().is_simple_result());
+      uint64_t is_supported = result->result.response().simple_result();
       if (result.status() != ZX_OK || !is_supported) {
         printf("Test restart not supported: status %d is_supported %lu\n", result.status(),
                is_supported);

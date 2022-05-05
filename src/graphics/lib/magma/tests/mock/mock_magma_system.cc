@@ -44,7 +44,8 @@ magma_status_t magma_get_error(magma_connection_t connection) { return MAGMA_STA
 
 magma_status_t magma_flush(magma_connection_t connection) { return MAGMA_STATUS_OK; }
 
-magma_status_t magma_query(int32_t fd, uint64_t id, uint64_t* value_out) {
+magma_status_t magma_query(magma_device_t device, uint64_t id, uint32_t* result_buffer_out,
+                           uint64_t* value_out) {
   switch (id) {
     case MAGMA_QUERY_DEVICE_ID:
       *value_out = 0x1916;
@@ -63,12 +64,7 @@ magma_status_t magma_query(int32_t fd, uint64_t id, uint64_t* value_out) {
 }
 
 magma_status_t magma_query2(magma_device_t device, uint64_t id, uint64_t* value_out) {
-  return magma_query(-1, id, value_out);
-}
-
-magma_status_t magma_query_returns_buffer(int32_t file_descriptor, uint64_t id,
-                                          uint32_t* handle_out) {
-  return MAGMA_STATUS_INVALID_ARGS;
+  return magma_query(device, id, nullptr, value_out);
 }
 
 magma_status_t magma_query_returns_buffer2(magma_device_t device, uint64_t id,

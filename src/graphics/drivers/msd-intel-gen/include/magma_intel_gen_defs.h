@@ -10,9 +10,13 @@
 #define MAGMA_VENDOR_ID_INTEL 0x8086
 
 enum MagmaIntelGenQuery {
+  // Returns chip details (simple result)
   kMagmaIntelGenQuerySubsliceAndEuTotal = MAGMA_QUERY_VENDOR_PARAM_0,
+  // Returns the GTT size (simple result)
   kMagmaIntelGenQueryGttSize = MAGMA_QUERY_VENDOR_PARAM_0 + 1,
+  // Returns the number of pages of padding used when assigning GPU addresses (simple result)
   kMagmaIntelGenQueryExtraPageCount = MAGMA_QUERY_VENDOR_PARAM_0 + 2,
+  // Returns magma_intel_gen_timestamp_query (buffer result)
   kMagmaIntelGenQueryTimestamp = MAGMA_QUERY_VENDOR_PARAM_0 + 3,
 };
 

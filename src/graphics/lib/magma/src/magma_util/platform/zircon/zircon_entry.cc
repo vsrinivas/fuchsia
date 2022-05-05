@@ -58,53 +58,37 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevice>,
     return true;
   }
 
-  magma::Status Query(uint64_t query_id, uint64_t* result_out) MAGMA_REQUIRES(magma_mutex_) {
-    DLOG("GpuDevice::Query");
-    DASSERT(this->magma_system_device_);
-
-    uint64_t result;
-    switch (query_id) {
-      case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
-#if MAGMA_TEST_DRIVER
-        *result_out = 1;
-#else
-        *result_out = 0;
-#endif
-        break;
-      default:
-        if (!this->magma_system_device_->Query(query_id, result_out))
-          return DRET(MAGMA_STATUS_INVALID_ARGS);
-    }
-    DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, query_id, result);
-    return MAGMA_STATUS_OK;
-  }
-
   void Query2(Query2RequestView request, Query2Completer::Sync& _completer) override {
     std::lock_guard lock(magma_mutex_);
     if (!CheckSystemDevice(_completer))
       return;
-    uint64_t result;
-    magma::Status status = Query(request->query_id, &result);
-    if (!status.ok()) {
-      _completer.ReplyError(magma::ToZxStatus(status.get()));
+
+    zx::vmo result_buffer;
+    uint64_t result = 0;
+
+    switch (request->query_id) {
+      case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
+#if MAGMA_TEST_DRIVER
+        result = 1;
+#else
+        result = 0;
+#endif
+        break;
+      default:
+        magma::Status status = this->magma_system_device_->Query(
+            request->query_id, result_buffer.reset_and_get_address(), &result);
+        if (!status.ok()) {
+          _completer.ReplyError(magma::ToZxStatus(status.get()));
+          return;
+        }
+    }
+
+    if (result_buffer) {
+      _completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
+
     _completer.ReplySuccess(result);
-  }
-
-  magma::Status QueryReturnsBuffer(uint64_t query_id, zx::vmo* buffer_out)
-      MAGMA_REQUIRES(magma_mutex_) {
-    DLOG("GpuDevice::QueryReturnsBuffer");
-
-    zx_handle_t result;
-    magma::Status status = this->magma_system_device_->QueryReturnsBuffer(query_id, &result);
-    if (!status.ok())
-      return DRET(status.get());
-
-    DLOG("query extended query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
-    *buffer_out = zx::vmo(result);
-
-    return MAGMA_STATUS_OK;
   }
 
   void QueryReturnsBuffer(QueryReturnsBufferRequestView request,
@@ -112,13 +96,57 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevice>,
     std::lock_guard<std::mutex> lock(magma_mutex_);
     if (!CheckSystemDevice(_completer))
       return;
-    zx::vmo buffer;
-    magma::Status status = QueryReturnsBuffer(request->query_id, &buffer);
+
+    zx::vmo result_buffer;
+    uint64_t result = 0;
+
+    magma::Status status = this->magma_system_device_->Query(
+        request->query_id, result_buffer.reset_and_get_address(), &result);
     if (!status.ok()) {
       _completer.ReplyError(magma::ToZxStatus(status.get()));
       return;
     }
-    _completer.ReplySuccess(std::move(buffer));
+
+    if (!result_buffer) {
+      _completer.ReplyError(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+
+    _completer.ReplySuccess(std::move(result_buffer));
+  }
+
+  void Query(QueryRequestView request, QueryCompleter::Sync& _completer) override {
+    std::lock_guard lock(magma_mutex_);
+    if (!CheckSystemDevice(_completer))
+      return;
+
+    zx::vmo result_buffer;
+    uint64_t result = 0;
+
+    switch (request->query_id) {
+      case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
+#if MAGMA_TEST_DRIVER
+        result = 1;
+#else
+        result = 0;
+#endif
+        break;
+      default:
+        magma::Status status = this->magma_system_device_->Query(
+            request->query_id, result_buffer.reset_and_get_address(), &result);
+        if (!status.ok()) {
+          _completer.ReplyError(magma::ToZxStatus(status.get()));
+          return;
+        }
+    }
+
+    if (result_buffer) {
+      _completer.ReplySuccess(
+          fuchsia_gpu_magma::wire::DeviceQueryResponse::WithBufferResult(std::move(result_buffer)));
+    } else {
+      _completer.ReplySuccess(fuchsia_gpu_magma::wire::DeviceQueryResponse::WithSimpleResult(
+          fidl::ObjectView<uint64_t>::FromExternal(&result)));
+    }
   }
 
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override {

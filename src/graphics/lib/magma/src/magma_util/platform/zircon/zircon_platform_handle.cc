@@ -11,6 +11,9 @@
 
 namespace magma {
 
+// static
+const uint32_t PlatformHandle::kInvalidHandle = ZX_HANDLE_INVALID;
+
 bool ZirconPlatformHandle::GetCount(uint32_t* count_out) {
   zx_info_handle_count_t info;
   zx_status_t status =

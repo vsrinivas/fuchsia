@@ -31,7 +31,7 @@ TEST(HardwareUnitTests, All) {
 
   test_base = std::make_unique<magma::TestDeviceBase>(MAGMA_VENDOR_ID_INTEL);
 
-  auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(test_base->channel()->borrow())
+  auto result = fidl::WireCall<fuchsia_gpu_magma::TestDevice>(test_base->channel()->borrow())
                     ->GetUnitTestStatus();
 
   EXPECT_EQ(ZX_OK, result.status()) << "Device connection lost, check syslog for any errors.";

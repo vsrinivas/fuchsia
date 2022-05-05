@@ -386,8 +386,8 @@ TEST(VkLoop, DriverDeath) {
 
   magma::TestDeviceBase test_device(test.get_vendor_id());
   uint64_t is_supported = 0;
-  magma_status_t status =
-      magma_query2(test_device.device(), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported);
+  magma_status_t status = magma_query(test_device.device(), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED,
+                                      nullptr, &is_supported);
   if (status != MAGMA_STATUS_OK || !is_supported) {
     fprintf(stderr, "Test restart not supported: status %d is_supported %lu\n", status,
             is_supported);

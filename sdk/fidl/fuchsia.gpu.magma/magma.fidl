@@ -20,13 +20,25 @@ using fuchsia.memorypressure;
 /// Types of information about the hardware and driver that can be queried from the Magma system
 /// driver. Vendor-specific ID numbers may be used, but those IDs will be listed elsewhere.
 type QueryId = strict enum {
+    /// Returns the hardware vendor ID (simple result) - should be the PCI ID of the GPU vendor
+    /// if possible, or the Khronos vendor ID otherwise.
     VENDOR_ID = 0;
+
+    /// Returns the hardware device ID (simple result)
     DEVICE_ID = 1;
+
+    /// Returns true if restart for testing is supported (simple result)
     IS_TEST_RESTART_SUPPORTED = 2;
+
+    /// Returns true if MAGMA_QUERY_TOTAL_TIME is supported (simple result)
     IS_TOTAL_TIME_SUPPORTED = 3;
 
-    /// Upper 32bits: max inflight messages, lower 32bits: max inflight memory (MB)
+    /// Upper 32bits: max inflight messages, lower 32bits: max inflight memory (MB) (simple result)
     MAXIMUM_INFLIGHT_PARAMS = 5;
+
+    /// Returns a struct magma_total_time_query_result (buffer result); see:
+    /// src/graphics/lib/magma/include/magma/magma_common_defs.h
+    MAGMA_QUERY_TOTAL_TIME = 500;
 
     /// Vendor specific query IDs start here
     VENDOR_QUERY_0 = 10000;
@@ -57,18 +69,26 @@ type IcdInfo = table {
 /// a primary channel for making requests (see Primary protocol below), and a secondary channel
 /// for receiving notification messages.
 protocol Device {
-    /// On success, returns a value given a QueryId; otherwise returns an error.
+    /// DEPRECATED
     Query2(struct {
         query_id uint64;
     }) -> (struct {
         result uint64;
     }) error zx.status;
 
-    /// On success, returns a buffer given a QueryId; otherwise returns an error.
+    /// DEPRECATED
     QueryReturnsBuffer(struct {
         query_id uint64;
     }) -> (resource struct {
         buffer zx.handle:VMO;
+    }) error zx.status;
+
+    /// On success, returns a result either in a buffer or a simple value.
+    Query(struct {
+        query_id uint64;
+    }) -> (strict resource union {
+        1: simple_result uint64;
+        2: buffer_result zx.handle:VMO;
     }) error zx.status;
 
     /// DEPRECATED

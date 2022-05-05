@@ -123,6 +123,14 @@ class TestConnection {
   static constexpr const char* kDeviceNameLinux = "/dev/dri/renderD128";
   static constexpr const char* kDeviceNameVirt = "/dev/magma0";
 
+#if defined(__Fuchsia__)
+  static constexpr bool is_valid_handle(magma_handle_t handle) { return handle != 0; }
+#else
+  static constexpr bool is_valid_handle(magma_handle_t handle) {
+    return static_cast<int>(handle) >= 0;
+  }
+#endif
+
 #if defined(VIRTMAGMA)
   static std::string device_name() { return kDeviceNameVirt; }
 #elif defined(__linux__)
@@ -166,7 +174,7 @@ class TestConnection {
 
       if (gVendorId) {
         uint64_t vendor_id;
-        status = magma_query2(device, MAGMA_QUERY_VENDOR_ID, &vendor_id);
+        status = magma_query(device, MAGMA_QUERY_VENDOR_ID, NULL, &vendor_id);
         EXPECT_EQ(MAGMA_STATUS_OK, status);
         if (status != MAGMA_STATUS_OK)
           return false;
@@ -308,7 +316,7 @@ class TestConnection {
 
     {
       uint64_t vendor_id;
-      ASSERT_EQ(MAGMA_STATUS_OK, magma_query2(device_, MAGMA_QUERY_VENDOR_ID, &vendor_id));
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_query(device_, MAGMA_QUERY_VENDOR_ID, nullptr, &vendor_id));
       // Unmap not implemented on Intel
       if (vendor_id != 0x8086) {
         magma_unmap_buffer_gpu(connection_, buffer, kGpuAddress);
@@ -819,16 +827,34 @@ class TestConnection {
   void GetDeviceIdImported() {
     ASSERT_TRUE(device_);
 
+    // Ensure failure if result pointer not provided
+    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
+              magma_query(device_, MAGMA_QUERY_DEVICE_ID, nullptr, nullptr));
+
     uint64_t device_id = 0;
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_query2(device_, MAGMA_QUERY_DEVICE_ID, &device_id));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_query(device_, MAGMA_QUERY_DEVICE_ID, nullptr, &device_id));
+    EXPECT_NE(0u, device_id);
+
+    magma_handle_t unused;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_query(device_, MAGMA_QUERY_DEVICE_ID, &unused, &device_id));
+    EXPECT_FALSE(is_valid_handle(unused));
     EXPECT_NE(0u, device_id);
   }
 
   void GetVendorIdImported() {
     ASSERT_TRUE(device_);
 
+    // Ensure failure if result pointer not provided
+    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
+              magma_query(device_, MAGMA_QUERY_VENDOR_ID, nullptr, nullptr));
+
     uint64_t vendor_id = 0;
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_query2(device_, MAGMA_QUERY_VENDOR_ID, &vendor_id));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_query(device_, MAGMA_QUERY_VENDOR_ID, nullptr, &vendor_id));
+    EXPECT_NE(0u, vendor_id);
+
+    magma_handle_t unused;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_query(device_, MAGMA_QUERY_VENDOR_ID, &unused, &vendor_id));
+    EXPECT_FALSE(is_valid_handle(unused));
     EXPECT_NE(0u, vendor_id);
   }
 
@@ -841,7 +867,7 @@ class TestConnection {
 
     uint64_t query_id = 0;
     uint64_t vendor_id;
-    ASSERT_EQ(MAGMA_STATUS_OK, magma_query2(device_, MAGMA_QUERY_VENDOR_ID, &vendor_id));
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_query(device_, MAGMA_QUERY_VENDOR_ID, nullptr, &vendor_id));
     switch (vendor_id) {
       case kVendorIdIntel:
         query_id = kMagmaIntelGenQueryTimestamp;
@@ -853,10 +879,14 @@ class TestConnection {
         GTEST_SKIP();
     }
 
+    // Ensure failure if handle pointer not provided
+    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_query(device_, query_id, nullptr, nullptr));
+
     uint64_t before_ns = clock_gettime_monotonic_raw();
 
-    uint32_t buffer_handle = 0;
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_query_returns_buffer2(device_, query_id, &buffer_handle));
+    magma_handle_t buffer_handle;
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_query(device_, query_id, &buffer_handle, nullptr));
+    EXPECT_TRUE(is_valid_handle(buffer_handle));
 
     uint64_t after_ns = clock_gettime_monotonic_raw();
 
@@ -925,7 +955,7 @@ class TestConnection {
 
     uint64_t is_supported = 0;
     EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_query2(device_, MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported));
+              magma_query(device_, MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, nullptr, &is_supported));
     // We don't care about the value of |is_supported|, just that the query returns ok.
   }
 

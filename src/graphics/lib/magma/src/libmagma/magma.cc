@@ -33,31 +33,22 @@ void magma_device_release(magma_device_t device) {
   delete reinterpret_cast<magma::PlatformDeviceClient*>(device);
 }
 
+// DEPRECATED
 magma_status_t magma_query2(magma_device_t device, uint64_t id, uint64_t* value_out) {
-  if (!value_out)
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad value_out address");
-
-  auto platform_device_client = reinterpret_cast<magma::PlatformDeviceClient*>(device);
-
-  if (!platform_device_client->Query(id, value_out))
-    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "magma::PlatformDeviceClient::Query failed");
-
-  DLOG("magma_query2 id %" PRIu64 " returned 0x%" PRIx64, id, *value_out);
-  return MAGMA_STATUS_OK;
+  return magma_query(device, id, nullptr, value_out);
 }
 
+// DEPRECATED
 magma_status_t magma_query_returns_buffer2(magma_device_t device, uint64_t id,
                                            magma_handle_t* handle_out) {
+  return magma_query(device, id, handle_out, nullptr);
+}
+
+magma_status_t magma_query(magma_device_t device, uint64_t id, magma_handle_t* result_buffer_out,
+                           uint64_t* result_out) {
   auto platform_device_client = reinterpret_cast<magma::PlatformDeviceClient*>(device);
-  if (!handle_out)
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad handle_out address");
 
-  if (!platform_device_client->QueryReturnsBuffer(id, handle_out))
-    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
-                    "magma::PlatformDeviceClient::QueryReturnsBuffer failed");
-
-  DLOG("magma_query_returns_buffer2 id %" PRIu64 " returned buffer 0x%x", id, *handle_out);
-  return MAGMA_STATUS_OK;
+  return platform_device_client->Query(id, result_buffer_out, result_out).get();
 }
 
 magma_status_t magma_create_connection2(magma_device_t device, magma_connection_t* connection_out) {

@@ -18,8 +18,8 @@ TEST(TestQuery, AddressSpaceRange) {
   magma::TestDeviceBase test_device(MAGMA_VENDOR_ID_VSI);
 
   uint64_t value;
-  ASSERT_EQ(MAGMA_STATUS_OK,
-            magma_query2(test_device.device(), kMsdVsiVendorQueryClientGpuAddrRange, &value));
+  ASSERT_EQ(MAGMA_STATUS_OK, magma_query(test_device.device(), kMsdVsiVendorQueryClientGpuAddrRange,
+                                         nullptr, &value));
 
   uint32_t base = static_cast<uint32_t>(value) * kPageSize;
   EXPECT_EQ(base, 0u);
@@ -32,9 +32,8 @@ TEST(TestQuery, Sram) {
   magma::TestDeviceBase test_device(MAGMA_VENDOR_ID_VSI);
 
   uint32_t identity_buffer;
-  EXPECT_EQ(MAGMA_STATUS_OK,
-            magma_query_returns_buffer2(test_device.device(), kMsdVsiVendorQueryChipIdentity,
-                                        &identity_buffer));
+  EXPECT_EQ(MAGMA_STATUS_OK, magma_query(test_device.device(), kMsdVsiVendorQueryChipIdentity,
+                                         &identity_buffer, nullptr));
 
   magma_vsi_vip_chip_identity identity;
   {
@@ -48,9 +47,8 @@ TEST(TestQuery, Sram) {
   }
 
   uint32_t sram_buffer;
-  EXPECT_EQ(MAGMA_STATUS_OK,
-            magma_query_returns_buffer2(test_device.device(), kMsdVsiVendorQueryExternalSram,
-                                        &sram_buffer));
+  EXPECT_EQ(MAGMA_STATUS_OK, magma_query(test_device.device(), kMsdVsiVendorQueryExternalSram,
+                                         &sram_buffer, nullptr));
 
   auto buffer = magma::PlatformBuffer::Import(sram_buffer);
   ASSERT_TRUE(buffer);
@@ -64,15 +62,13 @@ TEST(TestQuery, Sram) {
   EXPECT_TRUE(buffer->UnmapCpu());
 
   // Can't be requested while we have a handle.
-  EXPECT_NE(MAGMA_STATUS_OK,
-            magma_query_returns_buffer2(test_device.device(), kMsdVsiVendorQueryExternalSram,
-                                        &sram_buffer));
+  EXPECT_NE(MAGMA_STATUS_OK, magma_query(test_device.device(), kMsdVsiVendorQueryExternalSram,
+                                         &sram_buffer, nullptr));
 
   buffer.reset();
 
-  EXPECT_EQ(MAGMA_STATUS_OK,
-            magma_query_returns_buffer2(test_device.device(), kMsdVsiVendorQueryExternalSram,
-                                        &sram_buffer));
+  EXPECT_EQ(MAGMA_STATUS_OK, magma_query(test_device.device(), kMsdVsiVendorQueryExternalSram,
+                                         &sram_buffer, nullptr));
 
   buffer = magma::PlatformBuffer::Import(sram_buffer);
   ASSERT_TRUE(buffer);
