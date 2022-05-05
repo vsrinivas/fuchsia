@@ -427,3 +427,65 @@ fn send_error(object: ServerEnd<fio::NodeMarker>, status: Status) {
     let _ = control_handle.send_on_open_(status.into_raw(), None);
     control_handle.shutdown_with_epitaph(status);
 }
+
+pub fn get_v1_json_dump() -> serde_json::Value {
+    serde_json::json!(
+        [
+            {
+                "data_source":"Inspect",
+                "metadata":{
+                    "filename":"fuchsia.inspect.Tree",
+                    "component_url": "fuchsia-pkg://fuchsia.com/account#meta/account_manager.cmx",
+                    "timestamp":0
+                },
+                "moniker":"realm1/realm2/session5/account_manager.cmx",
+                "moniker":"realm1/realm2/session5/account_manager.cmx",
+                "payload":{
+                    "root": {
+                        "accounts": {
+                            "active": 0,
+                            "total": 0
+                        },
+                        "auth_providers": {
+                            "types": "google"
+                        },
+                        "listeners": {
+                            "active": 1,
+                            "events": 0,
+                            "total_opened": 1
+                        }
+                    }
+                },
+                "version":1
+            }
+        ]
+    )
+}
+
+pub fn get_v1_single_value_json() -> serde_json::Value {
+    serde_json::json!(
+        [
+            {
+                "data_source":"Inspect",
+                "metadata":{
+                    "filename":"fuchsia.inspect.Tree",
+                    "component_url": "fuchsia-pkg://fuchsia.com/account#meta/account_manager.cmx",
+                    "timestamp":0
+                },
+                "moniker":"realm1/realm2/session5/account_manager.cmx",
+                "payload":{
+                    "root": {
+                        "accounts": {
+                            "active": 0
+                        }
+                    }
+                },
+                "version":1
+            }
+        ]
+    )
+}
+
+pub fn get_empty_value_json() -> serde_json::Value {
+    serde_json::json!([])
+}
