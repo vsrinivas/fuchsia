@@ -132,49 +132,70 @@ void NetdeviceMigration::EthernetIfcStatus(uint32_t status) __TA_EXCLUDES(status
 
 void NetdeviceMigration::EthernetIfcRecv(const uint8_t* data_buffer, size_t data_size,
                                          uint32_t flags) __TA_EXCLUDES(rx_lock_, vmo_lock_) {
-  std::lock_guard rx_lock(rx_lock_);
-  if (rx_spaces_.empty()) {
-    zxlogf(ERROR,
-           "received ethernet frames without any queued rx buffers; frame "
-           "dropped");
-    return;
-  }
-  const rx_space_buffer_t& space = rx_spaces_.front();
-  rx_spaces_.pop();
-  // Bounds check the incoming frame to verify that the ethernet driver respects the MTU.
-  if (data_size > space.region.length) {
-    zxlogf(ERROR, "received ethernet frame larger than rx buffer length, %zu > %lu", data_size,
-           space.region.length);
-    DdkAsyncRemove();
-    return;
-  }
-  {
-    network::SharedAutoLock vmo_lock(&vmo_lock_);
-    auto* vmo = vmo_store_.GetVmo(space.region.vmo);
-    if (vmo == nullptr) {
-      zxlogf(ERROR, "rx buffer space %du queued with unknown vmo id %du", space.id,
-             space.region.vmo);
-      DdkAsyncRemove();
-      return;
+  rx_space_buffer_t space;
+  // Use a closure to move logging outside of the scope of the lock.
+  const zx_status_t status = [&]() {
+    std::lock_guard rx_lock(rx_lock_);
+    if (rx_spaces_.empty()) {
+      return ZX_ERR_NO_RESOURCES;
     }
-    cpp20::span<uint8_t> vmo_view = vmo->data();
-    std::copy_n(data_buffer, data_size, vmo_view.begin() + space.region.offset);
+    space = rx_spaces_.front();
+    rx_spaces_.pop();
+    // Bounds check the incoming frame to verify that the ethernet driver respects the MTU.
+    if (data_size > space.region.length) {
+      DdkAsyncRemove();
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    {
+      network::SharedAutoLock vmo_lock(&vmo_lock_);
+      auto* vmo = vmo_store_.GetVmo(space.region.vmo);
+      if (vmo == nullptr) {
+        DdkAsyncRemove();
+        return ZX_ERR_INVALID_ARGS;
+      }
+      cpp20::span<uint8_t> vmo_view = vmo->data();
+      std::copy_n(data_buffer, data_size, vmo_view.begin() + space.region.offset);
+    }
+    rx_buffer_part_t part = {
+        .id = space.id,
+        .offset = 0,
+        .length = static_cast<uint32_t>(data_size),
+    };
+    rx_buffer_t buf = {
+        .meta =
+            {
+                .port = kPortId,
+                .frame_type = static_cast<uint8_t>(fuchsia_hardware_network::FrameType::kEthernet),
+            },
+        .data_list = &part,
+        .data_count = 1,
+    };
+    netdevice_.CompleteRx(&buf, 1);
+    return ZX_OK;
+  }();
+
+  switch (status) {
+    case ZX_OK:
+      break;
+    case ZX_ERR_NO_RESOURCES:
+      ++no_rx_space_;
+      if (no_rx_space_.load() >= kNoRxBuffersReportingRate) {
+        zxlogf(ERROR, "received ethernet frames without any queued rx buffers; %zu frames dropped",
+               no_rx_space_.load());
+        no_rx_space_.store(0);
+      }
+      break;
+    case ZX_ERR_BUFFER_TOO_SMALL:
+      zxlogf(ERROR, "received ethernet frames larger than rx buffer length of %lu",
+             space.region.length);
+      break;
+    case ZX_ERR_INVALID_ARGS:
+      zxlogf(ERROR, "queued frames with unknown VMO IDs");
+      break;
+    default:
+      ZX_PANIC("unexpected status %s", zx_status_get_string(status));
+      break;
   }
-  rx_buffer_part_t part = {
-      .id = space.id,
-      .offset = 0,
-      .length = static_cast<uint32_t>(data_size),
-  };
-  rx_buffer_t buf = {
-      .meta =
-          {
-              .port = kPortId,
-              .frame_type = static_cast<uint8_t>(fuchsia_hardware_network::FrameType::kEthernet),
-          },
-      .data_list = &part,
-      .data_count = 1,
-  };
-  netdevice_.CompleteRx(&buf, 1);
 }
 
 zx_status_t NetdeviceMigration::NetworkDeviceImplInit(const network_device_ifc_protocol_t* iface) {

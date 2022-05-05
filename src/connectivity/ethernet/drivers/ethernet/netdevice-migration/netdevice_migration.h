@@ -132,6 +132,9 @@ class NetdeviceMigration
   void SetMacParam(uint32_t param, int32_t value, const uint8_t* data_buffer,
                    size_t data_size) const;
 
+  static constexpr size_t kNoRxBuffersReportingRate = 50;
+  std::atomic<size_t> no_rx_space_{0};
+
   ddk::NetworkDeviceIfcProtocolClient netdevice_;
 
   const ddk::EthernetImplProtocolClient ethernet_;
