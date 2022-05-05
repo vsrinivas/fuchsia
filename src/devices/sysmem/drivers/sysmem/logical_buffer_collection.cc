@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/fidl/llcpp/arena.h>
+#include <lib/fit/defer.h>
 #include <lib/image-format/image_format.h>
 #include <lib/sysmem-version/sysmem-version.h>
 #include <lib/zx/clock.h>

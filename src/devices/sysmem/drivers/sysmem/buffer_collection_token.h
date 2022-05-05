@@ -6,8 +6,6 @@
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_BUFFER_COLLECTION_TOKEN_H_
 
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
-#include <lib/fidl-async-2/fidl_server.h>
-#include <lib/fidl-async-2/simple_binding.h>
 
 #include "logging.h"
 #include "logical_buffer_collection.h"

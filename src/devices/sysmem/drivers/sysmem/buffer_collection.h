@@ -95,9 +95,6 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
   bool is_connected() const override;
 
  private:
-  using V1CBufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                             fuchsia_sysmem::wire::BufferCollectionInfo2>;
-
   friend class FidlServer;
 
   explicit BufferCollection(fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,

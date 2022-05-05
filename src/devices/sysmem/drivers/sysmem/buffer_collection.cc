@@ -259,8 +259,6 @@ void BufferCollection::GetAuxBuffers(GetAuxBuffersRequestView request,
     // We're failing async - no need to fail sync.
     return;
   }
-  BufferCollection::V1CBufferCollectionInfo v1_c(
-      BufferCollection::V1CBufferCollectionInfo::Default);
   ZX_DEBUG_ASSERT(logical_allocation_result_->buffer_collection_info);
   auto v1_result =
       CloneAuxBuffersResultForSendingV1(*logical_allocation_result_->buffer_collection_info);

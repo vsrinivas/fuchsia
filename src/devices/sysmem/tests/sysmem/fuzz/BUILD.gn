@@ -106,7 +106,6 @@ fuzzer("sysmem_fuzzer_multi") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl:fidl-llcpp",
-    "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",

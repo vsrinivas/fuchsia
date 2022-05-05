@@ -9,7 +9,6 @@
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/fidl/llcpp/arena.h>
 #include <lib/zx/channel.h>
 
