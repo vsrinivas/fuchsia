@@ -318,6 +318,8 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
     return true;
   }
 
+  auto release_buffer = fit::defer([&]() { output_buffer_pool_.FreeBuffer(buffer->base()); });
+
   // For the moment we use DRM_PRIME_2 to represent VMOs.
   // To specify the destination VMO, we need two VASurfaceAttrib, one for the
   // DRM_PRIME_2 and one for the ext_attrib.
@@ -413,6 +415,8 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
     ZX_DEBUG_ASSERT(in_use_by_client_.find(output_packet) == in_use_by_client_.end());
 
     in_use_by_client_.emplace(output_packet, VaApiOutput(buffer->base(), this));
+    // VaApiOutput has taken ownership of the buffer.
+    release_buffer.cancel();
   }
   events_->onCoreCodecOutputPacket(output_packet,
                                    /*error_detected_before=*/false,
