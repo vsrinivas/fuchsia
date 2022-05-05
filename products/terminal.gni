@@ -7,7 +7,7 @@ import("//products/core.gni")
 core_realm_package_name = "core-terminal"
 core_realm_shards += [ "//src/intl/intl_services:intl_services_shard" ]
 
-base_package_labels += [
+legacy_base_package_labels += [
   "//src/devices/sysmem/bin/sysmem_connector",
   "//src/ui/bin/root_presenter",
   "//src/ui/bin/root_presenter:configs",
@@ -23,7 +23,7 @@ base_package_labels += [
   "//src/ui/bin/text:ime_service",
   "//src/ui/bin/text:text_manager",
 ]
-base_package_labels -= [
+legacy_base_package_labels -= [
   # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
   "//src/intl/intl_services/config:sysmgr_small",
 ]
@@ -32,9 +32,9 @@ base_package_labels -= [
 core_realm_shards -= [ "//src/intl/intl_services:intl_services_small_shard" ]
 
 # Add build type config data
-base_package_labels += [ "//src/fonts:build_type_eng" ]
+legacy_base_package_labels += [ "//src/fonts:build_type_eng" ]
 
-cache_package_labels += [
+legacy_cache_package_labels += [
   "//src/fonts/collections:small-open-fonts-collection",
   "//src/ui/bin/terminal",
   "//src/ui/scenic",
@@ -46,7 +46,7 @@ cache_package_labels += [
 #
 # TODO(fxbug.dev/9892): Support a package server on bots so this can be added to
 # universe like the tests.
-cache_package_labels += [
+legacy_cache_package_labels += [
   # Used for Chromium tests for example:
   #    //src/chromium/web_runner_tests:tests
   "//src/testing/fidl/intl_property_manager",
@@ -67,18 +67,18 @@ cache_package_labels += [
 
 # Add SDK tools set to "cache" so these tools are automatically available in
 # QEMU images generated for the SDK, but in cache, so they can be updated.
-cache_package_labels += [ "//sdk/bundles:tools" ]
+legacy_cache_package_labels += [ "//sdk/bundles:tools" ]
 
 core_realm_shards += [ "//src/media/codec:codec_factory_shard" ]
 
 # Add cfv2 sl4f to base.
 core_realm_shards += [ "//src/testing/sl4f:sl4f_terminal_core_shard" ]
-base_package_labels += [
+legacy_base_package_labels += [
   "//src/testing/sl4f",
   "//src/sys/bin/start_sl4f",
 ]
 
-universe_package_labels += [
+legacy_universe_package_labels += [
   # E2E Product Tests. They don't produce fuchsia packages, but host
   # executables, and must just be included somewhere in the build configuration
   # of the product.

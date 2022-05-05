@@ -5,23 +5,24 @@
 import("//products/common/workstation.gni")
 
 # Add build type config data
-base_package_labels += [ "//src/fonts:build_type_eng" ]
+legacy_base_package_labels += [ "//src/fonts:build_type_eng" ]
 
 # Always report DEBUG metrics in Cobalt
-base_package_labels -= [ "//src/cobalt/bin/app:user_config" ]
-base_package_labels += [ "//src/cobalt/bin/app:config" ]
+legacy_base_package_labels -= [ "//src/cobalt/bin/app:user_config" ]
+legacy_base_package_labels += [ "//src/cobalt/bin/app:config" ]
 
-base_package_labels += [ "//src/developer/ssh-key-manager" ]
+legacy_base_package_labels += [ "//src/developer/ssh-key-manager" ]
 
 # TODO: Remove this once Scenic supports multiple displays.
-base_package_labels += [ "//src/sys/tools/stash_ctl" ]
+legacy_base_package_labels += [ "//src/sys/tools/stash_ctl" ]
 
 # Used by integration tests to inject v1 networking components.
-base_package_labels +=
+legacy_base_package_labels +=
     [ "//src/connectivity/network:network-legacy-deprecated" ]
 
 # Setting service configuration
-base_package_labels += [ "//src/settings/config:workstation_interface_config" ]
+legacy_base_package_labels +=
+    [ "//src/settings/config:workstation_interface_config" ]
 
 # Improve DX by allowing iteration on these packages without and OTA.
 _developer_packages = [
@@ -46,11 +47,11 @@ _developer_packages = [
   # Starnix
   "//src/proc/bundles:examples",
 ]
-base_package_labels -= _developer_packages
-cache_package_labels += _developer_packages
+legacy_base_package_labels -= _developer_packages
+legacy_cache_package_labels += _developer_packages
 
 # Add examples to universe.
-universe_package_labels += [
+legacy_universe_package_labels += [
   "//examples/fidl:tests",
   "//src/lib/ui/carnelian:examples",
   "//src/ui/examples/bouncing_ball",
@@ -70,7 +71,7 @@ policy_labels.swd = "unrestricted"
 #
 # TODO(fxbug.dev/9892): Support a package server on bots so this can be added to
 # universe like the tests.
-cache_package_labels += [
+legacy_cache_package_labels += [
   # Used for Chromium tests for example: web_runner_tests.
   "//src/testing/fidl/intl_property_manager",
 
@@ -93,7 +94,7 @@ host_labels += [
   "//src/tests/end_to_end/copy_files:test",
 ]
 
-universe_package_labels += [
+legacy_universe_package_labels += [
   # E2E Product Tests. They don't produce fuchsia packages, but host
   # executables, and must just be included somewhere in the build configuration
   # of the product.
@@ -109,11 +110,11 @@ universe_package_labels += [
 
 # Add SDK tools set to "cache" so these tools are automatically available in
 # QEMU images generated for the SDK, but in cache, so they can be updated.
-cache_package_labels += [ "//sdk/bundles:core-tools" ]
+legacy_cache_package_labels += [ "//sdk/bundles:core-tools" ]
 
 # Add cfv2 sl4f to base.
 core_realm_shards += [ "//src/testing/sl4f:sl4f_terminal_core_shard" ]
-base_package_labels += [
+legacy_base_package_labels += [
   "//src/testing/sl4f",
   "//src/sys/bin/start_sl4f",
 ]
@@ -124,7 +125,7 @@ product_bootfs_labels += [ "//src/sys/live_usb:live_usb_is_system" ]
 
 # Build with both JIT and AOT non-product runners. JIT is used for debug builds, and AOT is used
 # for release builds.
-cache_package_labels += [
+legacy_cache_package_labels += [
   "//src/dart:dart_jit",
   "//src/flutter:flutter_jit",
   "//src/dart:dart_aot",

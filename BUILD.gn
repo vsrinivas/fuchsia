@@ -1170,6 +1170,7 @@ group("default") {
     "//:create-all-drivers-doc",
     "//:host",
     "//:test-list",
+    "//build/assembly:validate_product_defs",
     "//build/images:packages",
     "//build/input:build_only",
     "//build/zircon/zbi_tests",

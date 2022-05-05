@@ -55,6 +55,11 @@ copy("assembly_input_bundle_tool_install") {
   sources = [ "${target_out_dir}/assembly_input_bundle_tool.pyz" ]
 }
 
+python_binary("product_def_gn_arg_validator") {
+  main_source = "validate_product_defs.py"
+  deps = [ "//build/python/modules/depfile" ]
+}
+
 group("tests") {
   testonly = true
   deps = [ ":test_make_legacy_config" ]

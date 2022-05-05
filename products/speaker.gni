@@ -4,12 +4,12 @@
 
 import("//products/core.gni")
 
-base_package_labels += [ "//src/media/audio/bundles:services" ]
+legacy_base_package_labels += [ "//src/media/audio/bundles:services" ]
 
 # Remove as much as possible from core to produce a minimal headless system. We
 # eventually have to reintroduce some of these packages to support a fully
 # functional product. See fxbug.dev/92985 for milestone progress.
-base_package_labels -= [
+legacy_base_package_labels -= [
   "//garnet/bin/setui:setui_service",
   "//src/cobalt/bin/app:cobalt",
   "//src/cobalt/bin/app:cobalt_registry",
@@ -42,6 +42,6 @@ core_realm_shards -= [
   "//src/intl/intl_services:intl_services_small_timezones_core_shard",
 ]
 
-cache_package_labels += []
+legacy_cache_package_labels += []
 
-universe_package_labels += []
+legacy_universe_package_labels += []

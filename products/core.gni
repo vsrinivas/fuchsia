@@ -50,7 +50,7 @@ core_realm_shards = [
 ]
 core_realm_restrict_persistent_storage = false
 
-base_package_labels += [
+legacy_base_package_labels += [
   "//build/info:build-info",
   "//src/diagnostics/log_listener:log_listener_shell",
   "//src/intl/intl_services:pkg_small",
@@ -129,16 +129,16 @@ base_package_labels += [
 # access to the full universe package set.
 # Product configurations that lack an accessible shell environment should
 # remove these tools from the base package set.
-base_package_labels += [ "//src/sys/pkg:tools" ]
+legacy_base_package_labels += [ "//src/sys/pkg:tools" ]
 
 # cargo-gnaw is currently part of all build graphs, but it should only
 # built by fx tooling
-base_package_labels += [ "//tools/cargo-gnaw:install-cargo-gnaw" ]
+legacy_base_package_labels += [ "//tools/cargo-gnaw:install-cargo-gnaw" ]
 
-cache_package_labels += [ "//src/developer/ffx:runtime" ]
+legacy_cache_package_labels += [ "//src/developer/ffx:runtime" ]
 
 product_system_image_deps += [ "//bundles:tools-system" ]
-universe_package_labels += [ "//bundles:tools" ]
+legacy_universe_package_labels += [ "//bundles:tools" ]
 
 product_bootfs_labels += [
   # Core products have pkgfs, so include the base resolver.

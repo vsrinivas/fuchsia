@@ -4,6 +4,7 @@
 
 import("//build/assembly/assembly_input_bundle.gni")
 import("//build/assembly/legacy.gni")
+import("//build/python/python_action.gni")
 import("//build/security.gni")
 
 if (is_fuchsia) {
@@ -29,6 +30,20 @@ if (is_fuchsia) {
     public_deps = [
       ":emulator_support",
       "scripts:assembly_input_bundle_tool_install($host_toolchain)",
+    ]
+  }
+
+  python_action("validate_product_defs") {
+    binary_label = "//build/assembly/scripts:product_def_gn_arg_validator"
+    outputs = [ "$target_out_dir/$target_name.txt" ]
+    depfile = outputs[0] + ".d"
+    args = [
+      "--output",
+      rebase_path(outputs[0], root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--source-root",
+      rebase_path("//", root_build_dir),
     ]
   }
 }

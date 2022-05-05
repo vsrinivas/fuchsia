@@ -19,7 +19,7 @@ core_realm_shards += [
   "//src/ui:ui-core-shard",
 ]
 
-base_package_labels += [
+legacy_base_package_labels += [
   "//src/connectivity/wlan/drivers:iwlwifi",
   "//src/developer/memory/buckets:workstation_memory_monitor_config",
   "//src/fonts",
@@ -41,14 +41,14 @@ base_package_labels += [
   "//src/ui/bin/shortcut",
   "//third_party/openssh-portable:openssh-tools",
 ]
-base_package_labels -= [
+legacy_base_package_labels -= [
   # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
   "//src/intl/intl_services/config:sysmgr_small",
 ]
 core_realm_shards -= [ "//src/intl/intl_services:intl_services_small_shard" ]
 
 # Add Linux runner
-base_package_labels += [
+legacy_base_package_labels += [
   "//src/ui/wayland/bin/bridge",
   "//src/virtualization/bin/vmm",
   "//src/virtualization/bin/guest_manager",
@@ -63,7 +63,7 @@ core_realm_shards +=
     [ "//src/connectivity/bluetooth/profiles/bt-a2dp:eager_core_shard" ]
 
 # To use the eager shard, cache the packages so they are available before network.
-cache_package_labels += [
+legacy_cache_package_labels += [
   "//src/connectivity/bluetooth/profiles/bt-a2dp:source-only",
   "//src/connectivity/bluetooth/profiles/bt-avrcp-target",
 
@@ -73,19 +73,20 @@ cache_package_labels += [
 ]
 
 # Disable reporting DEBUG metrics in Cobalt
-base_package_labels -= [ "//src/cobalt/bin/app:config" ]
-base_package_labels += [ "//src/cobalt/bin/app:user_config" ]
+legacy_base_package_labels -= [ "//src/cobalt/bin/app:config" ]
+legacy_base_package_labels += [ "//src/cobalt/bin/app:user_config" ]
 
 # Explicitly prefer wired networking on workstation
-base_package_labels -= [ "//src/connectivity/network/netcfg:config-default" ]
-base_package_labels +=
+legacy_base_package_labels -=
+    [ "//src/connectivity/network/netcfg:config-default" ]
+legacy_base_package_labels +=
     [ "//src/connectivity/network/netcfg:config-prefer-wired" ]
 
 # This package is only used for tests, so it must stay out of non-eng workstation products.
-base_package_labels -=
+legacy_base_package_labels -=
     [ "//src/connectivity/network:network-legacy-deprecated" ]
 
-base_package_labels += [
+legacy_base_package_labels += [
   "//src/chromium:chrome_browser",
   "//src/experiences/bin/settings/license:license_settings",
   "//src/experiences/session_shells/ermine",
