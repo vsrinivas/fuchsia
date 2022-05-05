@@ -37,7 +37,7 @@ const PIXEL_AREA: usize = PIXEL_WIDTH * PIXEL_WIDTH;
 const PIXEL_DOUBLE_AREA: usize = 2 * PIXEL_AREA;
 
 const MAGNITUDE_BIT_LEN: usize = PIXEL_DOUBLE_AREA.trailing_zeros() as usize;
-const MAGNITUDE_MASK: usize = MAGNITUDE_BIT_LEN - 1;
+const MAGNITUDE_MASK: usize = (1 << MAGNITUDE_BIT_LEN) - 1;
 
 // From Hacker's Delight, p. 378-380. 2 ^ 23 as f32.
 const C23: u32 = 0x4B00_0000;
@@ -802,6 +802,46 @@ mod tests {
         workbench.drive_tile_painting(&mut painter, &context);
 
         painter.colors()
+    }
+
+    fn coverage(double_area: i32, fill_rules: FillRule) -> f32 {
+        let array = doubled_area_to_coverage(i32x8::splat(double_area), fill_rules).to_array();
+
+        for val in array {
+            assert_eq!(val, array[0]);
+        }
+
+        array[0]
+    }
+
+    #[test]
+    fn double_area_non_zero() {
+        let area = PIXEL_DOUBLE_AREA as i32;
+
+        assert_eq!(coverage(-area * 2, FillRule::NonZero), 1.0);
+        assert_eq!(coverage(-area * 3 / 2, FillRule::NonZero), 1.0);
+        assert_eq!(coverage(-area, FillRule::NonZero), 1.0);
+        assert_eq!(coverage(-area / 2, FillRule::NonZero), 0.5);
+        assert_eq!(coverage(0, FillRule::NonZero), 0.0);
+        assert_eq!(coverage(area / 2, FillRule::NonZero), 0.5);
+        assert_eq!(coverage(area, FillRule::NonZero), 1.0);
+        assert_eq!(coverage(area * 3 / 2, FillRule::NonZero), 1.0);
+        assert_eq!(coverage(area * 2, FillRule::NonZero), 1.0);
+    }
+
+    #[test]
+    fn double_area_even_odd() {
+        let area = PIXEL_DOUBLE_AREA as i32;
+
+        assert_eq!(coverage(-area * 2, FillRule::NonZero), 1.0);
+        assert_eq!(coverage(-area * 3 / 2, FillRule::EvenOdd), 0.5);
+        assert_eq!(coverage(-area, FillRule::EvenOdd), 1.0);
+        assert_eq!(coverage(-area / 2, FillRule::EvenOdd), 0.5);
+        assert_eq!(coverage(0, FillRule::EvenOdd), 0.0);
+        assert_eq!(coverage(area / 2, FillRule::EvenOdd), 0.5);
+        assert_eq!(coverage(area, FillRule::EvenOdd), 1.0);
+        assert_eq!(coverage(area * 3 / 2, FillRule::EvenOdd), 0.5);
+        assert_eq!(coverage(area * 2, FillRule::NonZero), 1.0);
     }
 
     #[test]
