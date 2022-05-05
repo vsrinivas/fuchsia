@@ -23,7 +23,7 @@ use {
     },
     pin_utils::pin_mut,
     std::{panic, thread, time},
-    wlan_common::{bss::Protection::Open, fake_fidl_bss_description},
+    wlan_common::{bss::Protection::Open, fake_fidl_bss_description, TimeUnit},
     wlan_hw_sim::*,
 };
 
@@ -133,6 +133,8 @@ async fn multiple_clients_ap() {
             Open,
             ssid: AP_SSID.clone(),
             bssid: AP_MAC_ADDR.0,
+            // Unrealistically long beacon period so that connect doesn't timeout on slow bots.
+            beacon_period: TimeUnit::DEFAULT_BEACON_INTERVAL.0 * 20u16,
             channel: WLANCFG_DEFAULT_AP_CHANNEL.into(),
         ),
         credential: Credential::None(fidl_sme::Empty {}),
@@ -173,6 +175,8 @@ async fn multiple_clients_ap() {
             Open,
             ssid: AP_SSID.clone(),
             bssid: AP_MAC_ADDR.0,
+            // Unrealistically long beacon period so that connect doesn't timeout on slow bots.
+            beacon_period: TimeUnit::DEFAULT_BEACON_INTERVAL.0 * 20u16,
             channel: WLANCFG_DEFAULT_AP_CHANNEL.into(),
         ),
         credential: Credential::None(fidl_sme::Empty {}),
