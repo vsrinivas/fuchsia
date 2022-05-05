@@ -922,23 +922,18 @@ mod tests {
     #[test]
     fn fdio_open_fd_and_open_fd_at() {
         // fdio_open_fd requires paths to be absolute
-        match open_fd("pkg", fio::OpenFlags::RIGHT_READABLE) {
-            Err(zx::Status::NOT_FOUND) => {}
-            Ok(_) => panic!("fdio_open_fd with relative path unexpectedly succeeded"),
-            Err(err) => panic!("Unexpected error from fdio_open_fd: {}", err),
-        }
+        assert_matches!(open_fd("pkg", fio::OpenFlags::RIGHT_READABLE), Err(zx::Status::NOT_FOUND));
 
         let pkg_fd = open_fd("/pkg", fio::OpenFlags::RIGHT_READABLE)
             .expect("Failed to open /pkg using fdio_open_fd");
 
         // Trying to open a non-existent directory should fail.
-        match open_fd_at(&pkg_fd, "blahblah", fio::OpenFlags::RIGHT_READABLE) {
-            Err(zx::Status::NOT_FOUND) => {}
-            Ok(_) => panic!("fdio_open_fd_at with greater rights unexpectedly succeeded"),
-            Err(err) => panic!("Unexpected error from fdio_open_fd_at: {}", err),
-        }
+        assert_matches!(
+            open_fd_at(&pkg_fd, "blahblah", fio::OpenFlags::RIGHT_READABLE),
+            Err(zx::Status::NOT_FOUND)
+        );
 
-        open_fd_at(&pkg_fd, "bin", fio::OpenFlags::RIGHT_READABLE)
+        let _: File = open_fd_at(&pkg_fd, "bin", fio::OpenFlags::RIGHT_READABLE)
             .expect("Failed to open bin/ subdirectory using fdio_open_fd_at");
     }
 
@@ -948,10 +943,11 @@ mod tests {
     fn fdio_get_service_handle() {
         // Verify get_service_handle succeeds against a valid FIDL service.
         let service = File::open("/svc").expect("Failed to open /svc.");
-        get_service_handle(service).expect("failed to get fdio service handle");
+        let _: zx_handle_t =
+            get_service_handle(service).expect("failed to get fdio service handle");
 
         // Safety: 0 is not a valid FD; it has no other references and is safe to close.
         let nonservice = unsafe { File::from_raw_fd(0) };
-        assert_matches!(get_service_handle(nonservice), Err(zx::Status::NOT_SUPPORTED));
+        assert_eq!(get_service_handle(nonservice), Err(zx::Status::NOT_SUPPORTED));
     }
 }

@@ -33,6 +33,8 @@ rustc_library("fdio") {
     "src/lib.rs",
     "src/spawn_builder.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 rustc_binary("spawn_test_target") {
@@ -40,6 +42,8 @@ rustc_binary("spawn_test_target") {
   edition = "2018"
   source_root = "test/spawn_test_target.rs"
   sources = [ "test/spawn_test_target.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 rustc_binary("spawn_builder_test_target") {
@@ -47,6 +51,8 @@ rustc_binary("spawn_builder_test_target") {
   visibility = [ ":*" ]
   source_root = "test/spawn_builder_test_target.rs"
   sources = [ "test/spawn_builder_test_target.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("test-component") {
