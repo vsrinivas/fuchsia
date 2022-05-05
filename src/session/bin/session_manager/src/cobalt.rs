@@ -107,7 +107,7 @@ mod tests {
                 assert_eq!(metric_id, metrics::SESSION_LAUNCH_TIME_MIGRATED_METRIC_ID);
                 assert_eq!(
                     event_codes,
-                    vec![metrics::SessionLaunchTimeMetricDimensionStatus::Success as u32]
+                    vec![metrics::SessionLaunchTimeMigratedMetricDimensionStatus::Success as u32]
                 );
                 assert_eq!(value, 5);
             } else {
