@@ -160,6 +160,29 @@ zx_status_t send(const zx_packet_user_t* data) {
 }
 ```
 
+### Verifying synchronization requirements
+
+Thread-unsafe types require accesses to its methods and fields to be externally
+synchronized. To enforce this guarantee, one may be tempted to record the
+thread ID each time the thread-unsafe object is used, and check that they
+stay the same. This is an anti-pattern because async dispatchers may support
+_sequences_: sequential execution domains which runs a series of tasks with
+strict mutual exclusion, but where the underlying execution may hop from one
+thread to another. Checking thread IDs would fail whenever a sequence is
+migrated to a different underlying thread, even if those threads never execute
+in parallel.
+
+When a dispatcher supports sequences, one may call `async_get_sequence_id` to
+obtain an identifier for the currently running sequence, and verify external
+synchronization by checking that they stay the same. See
+[async/sequence_id.h](include/lib/async/sequence_id.h) for details.
+
+When a dispatcher does not support sequences, falling back to checking thread
+identifiers is usually the next best alternative.
+[async/cpp/sequence_checker.h](include/lib/async/cpp/sequence_checker.h)
+provides a BasicLockable type that implements this fallback and could be used
+in thread-unsafe code to improve safety.
+
 ## The default async dispatcher
 
 As a client of the async dispatcher, where should you get your

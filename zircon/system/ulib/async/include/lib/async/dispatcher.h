@@ -22,6 +22,7 @@ typedef struct async_task async_task_t;
 typedef struct async_receiver async_receiver_t;
 typedef struct async_irq async_irq_t;
 typedef struct async_paged_vmo async_paged_vmo_t;
+typedef struct async_sequence_id async_sequence_id_t;
 
 // Private state owned by the asynchronous dispatcher.
 // This allows the dispatcher to associate a small amount of state with pending
@@ -72,6 +73,7 @@ typedef uint32_t async_ops_version_t;
 
 #define ASYNC_OPS_V1 ((async_ops_version_t)1)
 #define ASYNC_OPS_V2 ((async_ops_version_t)2)
+#define ASYNC_OPS_V3 ((async_ops_version_t)3)
 
 typedef struct async_ops {
   // The interface version number, e.g. |ASYNC_OPS_V1|.
@@ -108,6 +110,11 @@ typedef struct async_ops {
                                     zx_handle_t* vmo_out);
     zx_status_t (*detach_paged_vmo)(async_dispatcher_t* dispatcher, async_paged_vmo_t* paged_vmo);
   } v2;
+  struct v3 {
+    // See |async_get_sequence_id()| for details.
+    zx_status_t (*get_sequence_id)(async_dispatcher_t* dispatcher,
+                                   async_sequence_id_t* out_thread_id);
+  } v3;
 } async_ops_t;
 
 struct async_dispatcher {

@@ -12,6 +12,7 @@ zx_library("async") {
     "lib/async/irq.h",
     "lib/async/paged_vmo.h",
     "lib/async/receiver.h",
+    "lib/async/sequence_id.h",
     "lib/async/task.h",
     "lib/async/time.h",
     "lib/async/trap.h",
@@ -45,6 +46,7 @@ zx_library("async-cpp") {
     "lib/async/cpp/time.h",
     "lib/async/cpp/trap.h",
     "lib/async/cpp/wait.h",
+    "lib/async/cpp/sequence_checker.h",
   ]
 
   public_deps = [
@@ -57,12 +59,16 @@ zx_library("async-cpp") {
 
     # <lib/async/cpp/task.h> has #include <lib/fit/function.h>.
     "//sdk/lib/fit:headers",
+
+    # <lib/async/cpp/sequence_checker.h> has #include <lib/stdcompat/variant.h>.
+    "//sdk/lib/stdcompat:headers",
   ]
   sources = [
     "executor.cc",
     "irq.cc",
     "paged_vmo.cc",
     "receiver.cc",
+    "sequence_checker.cc",
     "task.cc",
     "trap.cc",
     "wait.cc",

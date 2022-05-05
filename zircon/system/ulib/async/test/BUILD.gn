@@ -19,6 +19,8 @@ test("async") {
     "irq_tests.cc",
     "paged_vmo_tests.cc",
     "receiver_tests.cc",
+    "sequence_checker_tests.cc",
+    "sequence_id_tests.cc",
     "task_tests.cc",
     "time_tests.cc",
     "trap_tests.cc",

@@ -58,8 +58,14 @@ zx_status_t stub_detach_paged_vmo(async_dispatcher_t* dispatcher, async_paged_vm
   return static_cast<DispatcherStub*>(dispatcher)->DetachPagedVmo(paged_vmo);
 }
 
+zx_status_t stub_get_sequence_id(async_dispatcher_t* dispatcher,
+                                 async_sequence_id_t* out_sequence_id) {
+  return static_cast<DispatcherStub*>(dispatcher)->GetSequenceId(out_sequence_id);
+}
+
 const async_ops_t g_stub_ops = {
-    .version = ASYNC_OPS_V2,
+    .version = ASYNC_OPS_V3,
+    .reserved = 0,
     .v1 =
         {
             .now = stub_now,
@@ -77,6 +83,10 @@ const async_ops_t g_stub_ops = {
             .unbind_irq = stub_unbind_irq,
             .create_paged_vmo = stub_create_paged_vmo,
             .detach_paged_vmo = stub_detach_paged_vmo,
+        },
+    .v3 =
+        {
+            .get_sequence_id = stub_get_sequence_id,
         },
 };
 
@@ -116,6 +126,10 @@ zx_status_t DispatcherStub::CreatePagedVmo(async_paged_vmo_t* paged_vmo, zx_hand
 }
 
 zx_status_t DispatcherStub::DetachPagedVmo(async_paged_vmo_t* paged_vmo) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t DispatcherStub::GetSequenceId(async_sequence_id_t* out_sequence_id) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

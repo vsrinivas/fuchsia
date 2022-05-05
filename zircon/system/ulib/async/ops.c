@@ -66,3 +66,11 @@ zx_status_t async_detach_paged_vmo(async_dispatcher_t* dispatcher, async_paged_v
   }
   return dispatcher->ops->v2.detach_paged_vmo(dispatcher, paged_vmo);
 }
+
+zx_status_t async_get_sequence_id(async_dispatcher_t* dispatcher,
+                                  async_sequence_id_t* out_sequence_id) {
+  if (dispatcher->ops->version < ASYNC_OPS_V3) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return dispatcher->ops->v3.get_sequence_id(dispatcher, out_sequence_id);
+}
