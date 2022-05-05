@@ -55,6 +55,7 @@ async fn create_realm<'a>(
             &network,
             format!("ep-{}", variant_name),
             netemul::NetworkDevice::make_config(netemul::DEFAULT_MTU, Some(mac)),
+            Default::default(),
         )
         .await
         .expect("failed to join network");

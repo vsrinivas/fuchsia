@@ -101,6 +101,7 @@ async fn test_resolve_route() {
             &net,
             "gateway",
             netemul::NetworkDevice::make_config(netemul::DEFAULT_MTU, Some(GATEWAY_MAC)),
+            Default::default(),
         )
         .await
         .expect("gateway failed to join network");

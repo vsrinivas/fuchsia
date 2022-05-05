@@ -267,6 +267,15 @@ impl TestNetworkSetup<'_> {
     }
 }
 
+/// [`TestInterface`] configuration.
+#[derive(Default)]
+pub struct InterfaceConfig<'a> {
+    /// Optional interface name.
+    pub name: Option<Cow<'a, str>>,
+    /// Optional default route metric.
+    pub metric: Option<u32>,
+}
+
 /// A realm within a netemul sandbox.
 #[must_use]
 pub struct TestRealm<'a> {
@@ -323,9 +332,11 @@ impl<'a> TestRealm<'a> {
             .with_context(|| format!("failed to stop child component '{}'", child_name))
     }
 
-    /// Like [`join_network_with_if_name`], but does not allow specifying the interface name.
+    /// Use default endpoint/interface configuration and the specified address
+    /// configuration to create a test interface.
     ///
-    /// Characters may be dropped from the front of `ep_name` if it exceeds the maximum length.
+    /// Characters may be dropped from the front of `ep_name` if it exceeds the
+    /// maximum length.
     pub async fn join_network<E, S>(
         &self,
         network: &TestNetwork<'a>,
@@ -335,18 +346,19 @@ impl<'a> TestRealm<'a> {
         E: Endpoint,
         S: Into<Cow<'a, str>>,
     {
-        self.join_network_with_if_name::<E, _>(network, ep_name, None).await
+        self.join_network_with_if_config::<E, S>(network, ep_name, Default::default()).await
     }
 
-    /// Like [`join_network_with`], but uses default endpoint configurations with the specified
-    /// interface name.
+    /// Use default endpoint configuration and the specified interface/address
+    /// configuration to create a test interface.
     ///
-    /// Characters may be dropped from the front of `ep_name` if it exceeds the maximum length.
-    pub async fn join_network_with_if_name<E, S>(
+    /// Characters may be dropped from the front of `ep_name` if it exceeds the
+    /// maximum length.
+    pub async fn join_network_with_if_config<E, S>(
         &self,
         network: &TestNetwork<'a>,
         ep_name: S,
-        if_name: Option<String>,
+        if_config: InterfaceConfig<'a>,
     ) -> Result<TestInterface<'a>>
     where
         E: Endpoint,
@@ -354,11 +366,11 @@ impl<'a> TestRealm<'a> {
     {
         let endpoint =
             network.create_endpoint::<E, _>(ep_name).await.context("failed to create endpoint")?;
-        self.install_endpoint(endpoint, if_name).await
+        self.install_endpoint(endpoint, if_config).await
     }
 
-    /// Joins `network` by creating an endpoint with `ep_config` and
-    /// installing it into the realm.
+    /// Joins `network` with by creating an endpoint with `ep_config` and
+    /// installing it into the realm with `if_config`.
     ///
     /// Returns a [`TestInterface`] corresponding to the added interface. The
     /// interface is guaranteed to have its link up and be enabled when this
@@ -372,12 +384,13 @@ impl<'a> TestRealm<'a> {
         network: &TestNetwork<'a>,
         ep_name: impl Into<Cow<'a, str>>,
         ep_config: fnetemul_network::EndpointConfig,
+        if_config: InterfaceConfig<'a>,
     ) -> Result<TestInterface<'a>> {
         let endpoint = network
             .create_endpoint_with(ep_name, ep_config)
             .await
             .context("failed to create endpoint")?;
-        self.install_endpoint(endpoint, None).await
+        self.install_endpoint(endpoint, if_config).await
     }
 
     /// Installs and configures the endpoint in this realm.
@@ -386,10 +399,10 @@ impl<'a> TestRealm<'a> {
     pub async fn install_endpoint(
         &self,
         endpoint: TestEndpoint<'a>,
-        name: Option<String>,
+        if_config: InterfaceConfig<'a>,
     ) -> Result<TestInterface<'a>> {
         let interface = endpoint
-            .into_interface_in_realm_with_name(self, name)
+            .into_interface_in_realm_with_name(self, if_config)
             .await
             .context("failed to add endpoint")?;
         let () = interface.set_link_up(true).await.context("failed to start endpoint")?;
@@ -847,7 +860,7 @@ impl<'a> TestEndpoint<'a> {
     pub async fn add_to_stack(
         &self,
         realm: &TestRealm<'a>,
-        name: Option<impl Into<Cow<'a, str>>>,
+        InterfaceConfig { name, metric }: InterfaceConfig<'_>,
     ) -> Result<(
         u64,
         fnet_interfaces_ext::admin::Control,
@@ -877,7 +890,7 @@ impl<'a> TestEndpoint<'a> {
                                 &mut fnetstack::InterfaceConfig {
                                     name,
                                     filepath: String::new(),
-                                    metric: 0,
+                                    metric: metric.unwrap_or(0),
                                 },
                                 eth,
                             )
@@ -923,7 +936,7 @@ impl<'a> TestEndpoint<'a> {
                         server_end,
                         fnet_interfaces_admin::Options {
                             name,
-                            metric: None,
+                            metric,
                             ..fnet_interfaces_admin::Options::EMPTY
                         },
                     )
@@ -937,16 +950,16 @@ impl<'a> TestEndpoint<'a> {
     /// Consumes this `TestEndpoint` and tries to add it to the Netstack in
     /// `realm`, returning a [`TestInterface`] on success.
     pub async fn into_interface_in_realm(self, realm: &TestRealm<'a>) -> Result<TestInterface<'a>> {
-        self.into_interface_in_realm_with_name(realm, None).await
+        self.into_interface_in_realm_with_name(realm, Default::default()).await
     }
 
     async fn into_interface_in_realm_with_name(
         self,
         realm: &TestRealm<'a>,
-        name: Option<String>,
+        if_config: InterfaceConfig<'_>,
     ) -> Result<TestInterface<'a>> {
         let (id, control, device_control) = self
-            .add_to_stack(realm, name)
+            .add_to_stack(realm, if_config)
             .await
             .with_context(|| format!("failed to add {} to realm {}", self.name, realm.name))?;
         let stack = realm

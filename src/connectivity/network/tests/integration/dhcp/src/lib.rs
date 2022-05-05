@@ -513,7 +513,8 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                                 let iface = netstack_realm_ref
                                     .install_endpoint(
                                         endpoint,
-                                        Some(if_name.clone()),
+                                        netemul::InterfaceConfig {
+                                            name: Some(if_name.clone().into()), ..Default::default() },
                                     )
                                     .await
                                     .expect("failed to install server endpoint");
@@ -583,7 +584,7 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                             .create_endpoint::<E>()
                             .await;
                         let iface = netstack_realm_ref
-                            .install_endpoint(endpoint, None)
+                            .install_endpoint(endpoint, Default::default())
                             .await
                             .expect("failed to install client endpoint");
                         let expected_acquired = match ep_type {
@@ -787,7 +788,10 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
     let endpoint =
         network.create_endpoint::<E, _>("server-ep").await.expect("failed to create endpoint");
     let server_ep = server_realm
-        .install_endpoint(endpoint, Some(if_name.to_string()))
+        .install_endpoint(
+            endpoint,
+            netemul::InterfaceConfig { name: Some(if_name.into()), ..Default::default() },
+        )
         .await
         .expect("failed to create server network endpoint");
     server_ep
@@ -953,7 +957,10 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
     let endpoint =
         network.create_endpoint::<E, _>("server-ep").await.expect("failed to create endpoint");
     let server_ep = server_realm
-        .install_endpoint(endpoint, Some(if_name.to_string()))
+        .install_endpoint(
+            endpoint,
+            netemul::InterfaceConfig { name: Some(if_name.into()), ..Default::default() },
+        )
         .await
         .expect("failed to create server network endpoint");
     server_ep

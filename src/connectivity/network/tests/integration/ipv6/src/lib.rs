@@ -72,10 +72,15 @@ const DAD_IDGEN_DELAY: zx::Duration = zx::Duration::from_seconds(1);
 async fn install_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
     realm: &netemul::TestRealm<'_>,
     endpoint: &netemul::TestEndpoint<'_>,
-    name: String,
+    name: &str,
 ) -> Vec<net::Ipv6Address> {
-    let (id, control, _device_control) =
-        endpoint.add_to_stack(realm, Some(name)).await.expect("installing interface");
+    let (id, control, _device_control) = endpoint
+        .add_to_stack(
+            realm,
+            netemul::InterfaceConfig { name: Some(name.into()), ..Default::default() },
+        )
+        .await
+        .expect("installing interface");
     let did_enable = control.enable().await.expect("calling enable").expect("enable failed");
     assert!(did_enable);
 
@@ -144,8 +149,7 @@ async fn consistent_initial_ipv6_addrs<E: netemul::Endpoint>(name: &str) {
 
     // Make sure netstack uses the same addresses across runs for a device.
     let first_run_addrs =
-        install_and_get_ipv6_addrs_for_endpoint::<Netstack2>(&realm, &endpoint, name.to_string())
-            .await;
+        install_and_get_ipv6_addrs_for_endpoint::<Netstack2>(&realm, &endpoint, name).await;
 
     // Stop the netstack.
     let () = realm
@@ -154,8 +158,7 @@ async fn consistent_initial_ipv6_addrs<E: netemul::Endpoint>(name: &str) {
         .expect("failed to stop netstack");
 
     let second_run_addrs =
-        install_and_get_ipv6_addrs_for_endpoint::<Netstack2>(&realm, &endpoint, name.to_string())
-            .await;
+        install_and_get_ipv6_addrs_for_endpoint::<Netstack2>(&realm, &endpoint, name).await;
     assert_eq!(first_run_addrs, second_run_addrs);
 }
 

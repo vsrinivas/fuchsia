@@ -135,6 +135,7 @@ async fn inspect_nic() {
             &network,
             "eth-ep",
             netemul::Ethernet::make_config(max_frame_size, Some(ETH_MAC)),
+            Default::default(),
         )
         .await
         .expect("failed to join network with ethernet endpoint");
@@ -146,6 +147,7 @@ async fn inspect_nic() {
             &network,
             "netdev-ep",
             netemul::NetworkDevice::make_config(max_frame_size, Some(NETDEV_MAC)),
+            Default::default(),
         )
         .await
         .expect("failed to join network with netdevice endpoint");

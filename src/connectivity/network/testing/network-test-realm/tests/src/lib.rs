@@ -227,7 +227,10 @@ where
         .expect("failed to create endpoint");
     // Note that calling `install_endpoint` also enables the interface.
     realm
-        .install_endpoint(endpoint, Some(name.to_string()))
+        .install_endpoint(
+            endpoint,
+            netemul::InterfaceConfig { name: Some(name.into()), ..Default::default() },
+        )
         .await
         .expect("failed to install endpoint")
 }
@@ -333,6 +336,7 @@ where
             &network,
             interface_name,
             E::make_config(netemul::DEFAULT_MTU, Some(mac_address)),
+            Default::default(),
         )
         .await
         .expect("join_network failed");
@@ -1207,10 +1211,10 @@ async fn ping<E: netemul::Endpoint>(
         .expect("failed to create target netstack realm");
 
     let target_ep = target_realm
-        .join_network_with_if_name::<E, _>(
+        .join_network_with_if_config::<E, _>(
             &network,
             INTERFACE2_NAME,
-            Some(INTERFACE2_NAME.to_string()),
+            netemul::InterfaceConfig { name: Some(INTERFACE2_NAME.into()), ..Default::default() },
         )
         .await
         .expect("join_network failed for target_realm");
@@ -1238,6 +1242,7 @@ async fn ping<E: netemul::Endpoint>(
             &network,
             INTERFACE1_NAME,
             E::make_config(netemul::DEFAULT_MTU, Some(INTERFACE1_MAC_ADDRESS)),
+            Default::default(),
         )
         .await
         .expect("join_network failed for base realm");

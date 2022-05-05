@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use std::{convert::TryFrom as _, ops::RangeInclusive};
+use std::{borrow::Cow, convert::TryFrom as _, ops::RangeInclusive};
 
 use anyhow::Context as _;
 use fidl_fuchsia_net as fnet;
@@ -298,6 +298,7 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) {
             &net,
             "client",
             E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC_ADDRESS)),
+            Default::default(),
         )
         .await
         .expect("client failed to join network");
@@ -314,6 +315,7 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) {
             &net,
             "server",
             E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC_ADDRESS)),
+            Default::default(),
         )
         .await
         .expect("server failed to join network");
@@ -1034,11 +1036,11 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
         .create_netstack_realm::<Netstack2, _>(format!("{}_router", name))
         .expect("failed to create router_realm");
 
-    async fn configure_host_network<'a, E: netemul::Endpoint>(
+    async fn configure_host_network<'a, E: netemul::Endpoint, S: Into<Cow<'a, str>>>(
         sandbox: &'a netemul::TestSandbox,
         name: &str,
         router_realm: &netemul::TestRealm<'a>,
-        router_if_name: Option<String>,
+        router_if_name: Option<S>,
         net_num: u8,
         subnet: fnet::Subnet,
         other_subnet: fnet::Subnet,
@@ -1056,10 +1058,13 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
             .expect("failed to create host realm");
 
         let router_ep = router_realm
-            .join_network_with_if_name::<E, _>(
+            .join_network_with_if_config::<E, _>(
                 &net,
                 format!("router_ep{}", net_num),
-                router_if_name,
+                netemul::InterfaceConfig {
+                    name: router_if_name.map(Into::into),
+                    ..Default::default()
+                },
             )
             .await
             .expect("router failed to join network");
@@ -1114,11 +1119,11 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
         HostNetwork { net, router_ep, router_addr, host_realm, host_ep, host_addr }
     }
 
-    let net1 = configure_host_network::<E>(
+    let net1 = configure_host_network::<E, _>(
         &sandbox,
         name,
         &router_realm,
-        None,
+        None::<&str>,
         1,
         *src_subnet,
         *dst_subnet,
@@ -1134,7 +1139,7 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
     } = &net1;
 
     let net2_factory = |router_if_name| async {
-        configure_host_network::<E>(
+        configure_host_network::<E, _>(
             &sandbox,
             name,
             &router_realm,

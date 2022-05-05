@@ -104,7 +104,12 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str, protocol: UdpProtocol
     };
 
     let client_ep = client
-        .join_network_with(&net, "client", E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC)))
+        .join_network_with(
+            &net,
+            "client",
+            E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC)),
+            Default::default(),
+        )
         .await
         .expect("client failed to join network");
     client_ep.add_address_and_subnet_route(CLIENT_SUBNET).await.expect("configure address");
@@ -117,7 +122,12 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str, protocol: UdpProtocol
             .expect("failed to create server realm"),
     };
     let server_ep = server
-        .join_network_with(&net, "server", E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC)))
+        .join_network_with(
+            &net,
+            "server",
+            E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC)),
+            Default::default(),
+        )
         .await
         .expect("server failed to join network");
     server_ep.add_address_and_subnet_route(SERVER_SUBNET).await.expect("configure address");
@@ -200,7 +210,12 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
         .expect("failed to create client realm");
     let client_ep = client
-        .join_network_with(&net, "client", E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC)))
+        .join_network_with(
+            &net,
+            "client",
+            E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC)),
+            Default::default(),
+        )
         .await
         .expect("client failed to join network");
     client_ep.add_address_and_subnet_route(CLIENT_SUBNET).await.expect("configure address");
@@ -209,7 +224,12 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
         .expect("failed to create server realm");
     let server_ep = server
-        .join_network_with(&net, "server", E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC)))
+        .join_network_with(
+            &net,
+            "server",
+            E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC)),
+            Default::default(),
+        )
         .await
         .expect("server failed to join network");
     server_ep.add_address_and_subnet_route(SERVER_SUBNET).await.expect("configure address");
