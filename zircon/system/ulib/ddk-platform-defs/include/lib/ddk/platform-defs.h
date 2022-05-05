@@ -381,6 +381,10 @@ __BEGIN_CDECLS
 #define PDEV_VID_VERISILICON            0x1D
 #define PDEV_DID_VERISILICON_MAGMA_VIP  0x01
 
+// Dialog
+#define PDEV_VID_DIALOG                 0x1E
+#define PDEV_DID_DIALOG_DA7219          0x01
+
 // clang-format on
 
 __END_CDECLS

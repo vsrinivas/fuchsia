@@ -561,8 +561,8 @@ TEST_F(DeviceEnumerationTest, NucTest) {
 
 TEST_F(DeviceEnumerationTest, AtlasTest) {
   static const char* kDevicePaths[] = {
-      "pci-01:00.0/iwlwifi-wlanphyimpl",
-      "pci-01:00.0/iwlwifi-wlanphyimpl/wlanphy",
+      "pci-01:00.0/iwlwifi-wlanphyimpl", "pci-01:00.0/iwlwifi-wlanphyimpl/wlanphy",
+      "pci-00:19.2/i2c-bus-9d64/i2c/i2c-3-26",  // Codec headphones.
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

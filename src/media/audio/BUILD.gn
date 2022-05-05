@@ -24,6 +24,7 @@ group("drivers") {
     "drivers/aml-g12-tdm:aml-g12-tdm-dai",
     "drivers/codecs/alc5514",
     "drivers/codecs/alc5663",
+    "drivers/codecs/da7219",
     "drivers/codecs/max98373",
     "drivers/codecs/max98927",
     "drivers/codecs/tas27xx",

@@ -291,6 +291,7 @@
 //src/media/audio/drivers/aml-g12-tdm:aml-g12-tdm-driver
 //src/media/audio/drivers/codecs/alc5514:alc5514-driver
 //src/media/audio/drivers/codecs/alc5663:alc5663-driver
+//src/media/audio/drivers/codecs/da7219:driver
 //src/media/audio/drivers/codecs/max98373:max98373-driver
 //src/media/audio/drivers/codecs/max98927:max98927-driver
 //src/media/audio/drivers/codecs/tas27xx:tas27xx-driver

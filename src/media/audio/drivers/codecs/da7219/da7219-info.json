@@ -1,0 +1,12 @@
+{
+    "short_description": "Dialog DA7219 audio hardware codec driver",
+    "manufacturer": "Dialog",
+    "families": [],
+    "models": [
+        "da7219"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}
