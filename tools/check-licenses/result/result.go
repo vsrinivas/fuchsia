@@ -159,6 +159,7 @@ func saveConfig(pkg string, c interface{}) error {
 // Save the "Values" metrics: freeform data stored in a map with string keys.
 func saveMetrics(pkg string, m MetricsInterface) error {
 	for k, v := range m.Values() {
+		sort.Strings(v)
 		if bytes, err := json.MarshalIndent(v, "", "  "); err != nil {
 			return err
 		} else {

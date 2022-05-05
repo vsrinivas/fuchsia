@@ -19,6 +19,11 @@ template("license_data") {
   # that use this template.
   not_needed(invoker, [ "configs" ])
 
+  filter = ""
+  if (defined(invoker.filter)) {
+    filter = invoker.filter
+  }
+
   out_dir = "$target_out_dir/check-licenses"
   if (defined(invoker.out_dir)) {
     out_dir = invoker.out_dir
@@ -75,14 +80,22 @@ template("license_data") {
       "--log_level",
       "0",
       "--fuchsia_dir",
-      rebase_path("//"),
+      rebase_path("//", root_build_dir),
       "--out_dir",
       rebase_path(out_dir, root_build_dir),
       "--gn_path",
-      rebase_path("//prebuilt/third_party/gn/${host_os}-${host_cpu}/gn", "//"),
+      rebase_path("//prebuilt/third_party/gn/${host_os}-${host_cpu}/gn",
+                  root_build_dir),
       "--build_dir",
       rebase_path(root_out_dir, root_build_dir),
     ]
+
+    if (filter != "") {
+      args += [
+        "--filter",
+        filter,
+      ]
+    }
   }
 
   copy(copy_txt_notices_target) {

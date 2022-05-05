@@ -13,9 +13,9 @@ go_library("world") {
     "csv.go",
     "diff.go",
     "filter.go",
-    "gn.go",
     "gn_test.go",
     "init.go",
+    "metrics.go",
     "world.go",
   ]
   deps = [

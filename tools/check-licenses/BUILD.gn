@@ -22,7 +22,10 @@ go_library("main") {
     "//tools/lib/logger",
   ]
 
-  sources = [ "main.go" ]
+  sources = [
+    "gn.go",
+    "main.go",
+  ]
 }
 
 go_library("lib") {
