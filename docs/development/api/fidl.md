@@ -61,6 +61,36 @@ name "C" instead of the method name "B" for calculating the hash:
 Selectors can also be used to maintain backwards compatibility with the wire
 format in cases where developers wish to change the name of a method.
 
+### Diagnostics
+
+Sometimes there’s the need to expose information useful for debugging purposes or diagnostics of a
+program. This data can take the form of statistics and metrics (like number of errors, calls,
+sizes, etc), information useful for development, health state of a component or similar.
+
+It's tempting to expose this information in test protocols or debug methods in a production
+protocol. Fuchsia, however, provides a separate mechanism for exposing this type of information:
+[Inspect][inspect] which should be taken into account to make the best decision on how to expose
+this type of data. Inspect should be used instead of a FIDL method/protocol when there’s a need to
+expose diagnostics information about a program that is useful for debugging in tests, used by dev
+tools, or retrieved in the field through crash reports or metrics as long as no other program uses
+that information to make runtime decisions.
+
+FIDL should be used when runtime decisions will be made based on diagnostics information by other
+programs. Inspect must never be used for communication between programs, it’s a best effort system
+that must not be relied on to make decisions or alter behavior during runtime in production.
+
+A heuristic to decide whether to use Insepct or FIDL could be:
+
+1. Is the data used by other programs in production?
+   - Yes: Use FIDL.
+
+1. Is the data used by crash reports or in metrics?
+   - Yes: Use Inspect.
+
+1. Is the data used by tests or developer tools? Any chance that it will ever be used in production?
+   - Yes: Use FIDL.
+   - No: Use either.
+
 ## Library structure
 
 Grouping of FIDL declarations into FIDL libraries has two specific goals:
@@ -1585,6 +1615,7 @@ a more idiomatic interface:
 [api-council]: /docs/contribute/governance/api_council.md
 [api-council-membership]: /docs/contribute/governance/api_council.md#membership
 [bindings-spec-unknown-enums]: /docs/reference/fidl/language/bindings-spec.md#unknown-enums
+[inspect]: /docs/development/diagnostics/inspect/quickstart.md
 [rfc-0025]: /docs/contribute/governance/rfcs/0025_bit_flags.md
 [rfc-0114]: /docs/contribute/governance/rfcs/0114_fidl_envelope_inlining.md
 [locale-passing-example]: /examples/intl/wisdom/
