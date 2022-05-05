@@ -455,8 +455,7 @@ class Minfs :
   MinfsMetrics metrics_ = {};
   std::unique_ptr<fs::Journal> journal_;
 
-  // This event's koid is used as a unique identifier for this filesystem instance. This must be
-  // an event because it's returned by the fs.Query interface.
+  // This event's koid is used as a unique identifier for this filesystem instance.
   zx::event fs_id_;
 
   async::TaskClosure journal_sync_task_;

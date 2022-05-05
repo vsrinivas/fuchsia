@@ -31,7 +31,6 @@
         {
             protocol: [
                 "fuchsia.fs.Admin",
-                "fuchsia.fs.Query",
                 "fuchsia.update.verify.BlobfsVerifier",
             ],
         },
@@ -85,7 +84,6 @@
         {
             protocol: [
                 "fuchsia.fs.Admin",
-                "fuchsia.fs.Query",
                 "fuchsia.fs.startup.Startup",
                 "fuchsia.update.verify.BlobfsVerifier",
             ],

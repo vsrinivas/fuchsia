@@ -63,7 +63,6 @@ alias Token = zx.handle:EVENT;
 /// encounters nodes from different backing instances. Therefore, the ID is best
 /// used for debugging and informational purposes.
 ///
-/// If the implementation also supports [`fuchsia.fs/Query`], the
-/// [`fuchsia.fs/FilesystemInfo.fs_id`] field may be used to disambiguate IDs
-/// from different backing instances.
+/// The [`fuchsia.fs/FilesystemInfo.fs_id`] field may be used to disambiguate
+/// IDs from different backing instances.
 alias Id = uint64;

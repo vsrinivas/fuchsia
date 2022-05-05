@@ -5,7 +5,6 @@
         binary: "bin/fatfs_mounter",
     },
     capabilities: [
-        { protocol: "fuchsia.fs.Query" },
         { protocol: "fuchsia.fs.Admin" },
     ],
     use: [
@@ -16,11 +15,6 @@
         },
     ],
     expose: [
-        {
-            protocol: "fuchsia.fs.Query",
-            from: "self",
-            as: "svc-fuchsia.fat.Query",
-        },
         {
             protocol: "fuchsia.fs.Admin",
             from: "self",

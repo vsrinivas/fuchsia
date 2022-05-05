@@ -51,8 +51,7 @@ class Memfs : public fs::ManagedVfs {
  private:
   explicit Memfs(async_dispatcher_t* dispatcher);
 
-  // This event's koid is used as a unique identifier for this filesystem instance. This must be
-  // an event because it's returned by the fs.Query interface.
+  // This event's koid is used as a unique identifier for this filesystem instance.
   zx::event fs_id_;
 
   // Since no directory contains the root, it is owned by the VFS object.
