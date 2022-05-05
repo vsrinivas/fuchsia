@@ -48,18 +48,22 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
 
   void GetConfig(GetConfigCallback callback) final {
     fuchsia::io::test::Io1Config config;
-    config.set_immutable_file(false);
-    config.set_no_vmofile(false);
-    config.set_no_remote_dir(false);
-    config.set_no_get_token(false);
 
-    // PseudoFile/PseudoDir do not support a variety of methods:
-    config.set_no_execfile(true);
-    config.set_immutable_dir(true);
-    config.set_no_get_buffer(true);
-    config.set_no_rename(true);
-    config.set_no_link(true);
-    config.set_no_set_attr(true);
+    // Supported options
+    config.set_mutable_file(true);
+    config.set_supports_vmo_file(true);
+    config.set_supports_remote_dir(true);
+    config.set_supports_get_token(true);
+    config.set_conformant_path_handling(true);
+
+    // Unsupported options
+    config.set_supports_create(false);
+    config.set_supports_executable_file(false);
+    config.set_supports_get_buffer(false);
+    config.set_supports_rename(false);
+    config.set_supports_link(false);
+    config.set_supports_set_attr(false);
+    config.set_supports_unlink(false);
 
     callback(std::move(config));
   }
@@ -144,8 +148,8 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
         test_vmos_.emplace_back(std::move(buffer.vmo));
         break;
       }
-      case fuchsia::io::test::DirectoryEntry::Tag::kExecFile:
-        FX_LOGS(ERROR) << "ExecFile not supported yet";
+      case fuchsia::io::test::DirectoryEntry::Tag::kExecutableFile:
+        FX_LOGS(ERROR) << "ExecutableFile not supported yet";
         break;
       case fuchsia::io::test::DirectoryEntry::Tag::Invalid:
         FX_LOGS(ERROR) << "Unknown DirectoryEntry type";

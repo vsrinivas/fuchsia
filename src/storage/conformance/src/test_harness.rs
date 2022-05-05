@@ -17,17 +17,17 @@ pub struct TestHarness {
     /// Config for the filesystem.
     pub config: io_test::Io1Config,
 
-    /// All Directory rights supported by the filesystem.
+    /// All [`io_test::Directory`] rights supported by the filesystem.
     pub dir_rights: Rights,
 
-    /// All File rights supported by the filesystem.
+    /// All [`io_test::File`] rights supported by the filesystem.
     pub file_rights: Rights,
 
-    /// All VmoFile rights supported by the filesystem.
-    pub vmofile_rights: Rights,
+    /// All [`io_test::VmoFile`] rights supported by the filesystem.
+    pub vmo_file_rights: Rights,
 
-    /// All ExecFile rights supported by the filesystem.
-    pub execfile_rights: Rights,
+    /// All [`io_test::ExecutableFile`] rights supported by the filesystem.
+    pub executable_file_rights: Rights,
 }
 
 impl TestHarness {
@@ -35,20 +35,38 @@ impl TestHarness {
     pub async fn new() -> TestHarness {
         let proxy = connect_to_harness().await;
         let config = proxy.get_config().await.expect("Could not get config from proxy");
+
+        // Validate configuration options for consistency, disallow invalid combinations.
+        if config.supports_executable_file.unwrap_or_default() {
+            assert!(
+                config.supports_get_buffer.unwrap_or_default(),
+                "GetBuffer must be supported for testing ExecutableFile objects!"
+            );
+        }
+        if config.supports_rename.unwrap_or_default() || config.supports_link.unwrap_or_default() {
+            assert!(
+                config.supports_get_token.unwrap_or_default(),
+                "GetToken must be supported for testing Rename/Link!"
+            );
+        }
+
+        // Generate set of supported open rights for each object type.
         let dir_rights = Rights::new(get_supported_dir_rights(&config));
         let file_rights = Rights::new(get_supported_file_rights(&config));
-        let vmofile_rights = Rights::new(get_supported_vmofile_rights());
-        let execfile_rights = Rights::new(get_supported_execfile_rights());
+        let vmo_file_rights = Rights::new(get_supported_vmo_file_rights());
+        let executable_file_rights = Rights::new(get_supported_executable_file_rights());
 
-        // TODO(fxbug.dev/77633): Validate configuration options for consistency, e.g.:
-        //  - If no_get_buffer is false, no_vmofile should be false
-        //  - If no_execfile is false, no_get_buffer should be false
-        //  - If no_admin or no_link is false, immutable_dir should be false (what about no_rename?)
-
-        TestHarness { proxy, config, dir_rights, file_rights, vmofile_rights, execfile_rights }
+        TestHarness {
+            proxy,
+            config,
+            dir_rights,
+            file_rights,
+            vmo_file_rights,
+            executable_file_rights,
+        }
     }
 
-    /// Creates a DirectoryProxy with the given root directory structure.
+    /// Creates a [`fio::DirectoryProxy`] with the given root directory structure.
     pub fn get_directory(
         &self,
         root: io_test::Directory,
@@ -61,7 +79,7 @@ impl TestHarness {
         client
     }
 
-    /// Creates a DirectoryProxy with the specified remote directory mounted at the given path.
+    /// Creates a [`fio::DirectoryProxy`] with the specified remote directory mounted at `path`.
     pub fn get_directory_with_remote_directory(
         &self,
         remote_dir: ClientEnd<fio::DirectoryMarker>,
@@ -104,7 +122,7 @@ async fn connect_to_harness() -> io_test::Io1HarnessProxy {
     .expect("Cannot connect to test harness protocol")
 }
 
-/// Returns the aggregate of all rights that are supported for Directory objects.
+/// Returns the aggregate of all rights that are supported for [`io_test::Directory`] objects.
 ///
 /// Must support read, write, execute.
 fn get_supported_dir_rights(_config: &io_test::Io1Config) -> fio::OpenFlags {
@@ -113,27 +131,27 @@ fn get_supported_dir_rights(_config: &io_test::Io1Config) -> fio::OpenFlags {
         | fio::OpenFlags::RIGHT_EXECUTABLE
 }
 
-/// Returns the aggregate of all rights that are supported for File objects.
+/// Returns the aggregate of all rights that are supported for [`io_test::File`] objects.
 ///
-/// Must support read, and optionally, write (if immutable_file == true).
+/// Must support read, and optionally, write (if mutable_file is true).
 fn get_supported_file_rights(config: &io_test::Io1Config) -> fio::OpenFlags {
     let mut rights = fio::OpenFlags::RIGHT_READABLE;
-    if !config.immutable_file.unwrap_or_default() {
+    if config.mutable_file.unwrap_or_default() {
         rights |= fio::OpenFlags::RIGHT_WRITABLE;
     }
     rights
 }
 
-/// Returns the aggregate of all rights that are supported for VmoFile objects.
+/// Returns the aggregate of all rights that are supported for [`io_test::VmoFile`] objects.
 ///
 /// Must support both read and write.
-fn get_supported_vmofile_rights() -> fio::OpenFlags {
+fn get_supported_vmo_file_rights() -> fio::OpenFlags {
     fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE
 }
 
-/// Returns the aggregate of all rights that are supported for ExecFile objects.
+/// Returns the aggregate of all rights that are supported for [`io_test::ExecutableFile`] objects.
 ///
 /// Must support both read and execute.
-fn get_supported_execfile_rights() -> fio::OpenFlags {
+fn get_supported_executable_file_rights() -> fio::OpenFlags {
     fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE
 }

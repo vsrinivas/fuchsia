@@ -56,7 +56,7 @@ fn new_vmo_file(buffer: &fidl_fuchsia_mem::Range) -> Result<Arc<dyn DirectoryEnt
 
 /// Creates and returns a Rust VFS VmoFile-backed executable file using the contents of the
 /// conformance test harness binary itself.
-fn new_exec_file() -> Result<Arc<dyn DirectoryEntry>, Error> {
+fn new_executable_file() -> Result<Arc<dyn DirectoryEntry>, Error> {
     let init_vmo = || async {
         let file = fdio::open_fd(
             HARNESS_EXEC_PATH,
@@ -99,9 +99,9 @@ fn add_entry(
             let buffer = vmo_file.buffer.as_ref().expect("VMO file must have a buffer");
             dest.add_entry(name, new_vmo_file(buffer)?)?;
         }
-        io_test::DirectoryEntry::ExecFile(exec_file) => {
-            let name = exec_file.name.as_ref().expect("Exec file must have a name");
-            dest.add_entry(name, new_exec_file()?)?;
+        io_test::DirectoryEntry::ExecutableFile(executable_file) => {
+            let name = executable_file.name.as_ref().expect("Exec file must have a name");
+            dest.add_entry(name, new_executable_file()?)?;
         }
     }
     Ok(())
@@ -112,18 +112,23 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
         let (dir, flags, directory_request) = match request {
             Io1HarnessRequest::GetConfig { responder } => {
                 let config = Io1Config {
-                    immutable_dir: Some(false),
-                    immutable_file: Some(false),
-                    no_vmofile: Some(false),
-                    no_execfile: Some(false),
-                    no_get_buffer: Some(false),
-                    no_rename: Some(false),
-                    // Link is actually supported, but not using a pseudo filesystem.
-                    no_link: Some(true),
-                    no_remote_dir: Some(false),
-                    no_get_token: Some(false),
-                    // TODO(fxbug.dev/72801): SetAttr doesn't seem to work, but should?
-                    no_set_attr: Some(true),
+                    // Supported options:
+                    mutable_file: Some(true),
+                    supports_create: Some(true),
+                    supports_executable_file: Some(true),
+                    supports_vmo_file: Some(true),
+                    supports_remote_dir: Some(true),
+                    supports_get_buffer: Some(true),
+                    supports_rename: Some(true),
+                    supports_get_token: Some(true),
+                    conformant_path_handling: Some(true),
+                    supports_unlink: Some(true),
+
+                    // Unsupported options:
+                    supports_link: Some(false), // Link is not supported using a pseudo filesystem.
+                    // TODO(fxbug.dev/72801): SetAttr should work, investigate why the test fails.
+                    supports_set_attr: Some(false),
+
                     ..Io1Config::EMPTY
                 };
                 responder.send(config)?;

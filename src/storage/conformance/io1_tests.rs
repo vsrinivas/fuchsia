@@ -165,7 +165,7 @@ fn get_directory_entry_name(dir_entry: &io_test::DirectoryEntry) -> String {
         DirectoryEntry::Directory(entry) => entry.name.as_ref(),
         DirectoryEntry::File(entry) => entry.name.as_ref(),
         DirectoryEntry::VmoFile(entry) => entry.name.as_ref(),
-        DirectoryEntry::ExecFile(entry) => entry.name.as_ref(),
+        DirectoryEntry::ExecutableFile(entry) => entry.name.as_ref(),
     }
     .expect("DirectoryEntry name is None!")
     .clone()
@@ -253,8 +253,8 @@ fn vmo_file(name: &str, contents: &[u8]) -> io_test::DirectoryEntry {
     })
 }
 
-fn exec_file(name: &str) -> io_test::DirectoryEntry {
-    io_test::DirectoryEntry::ExecFile(io_test::ExecutableFile {
+fn executable_file(name: &str) -> io_test::DirectoryEntry {
+    io_test::DirectoryEntry::ExecutableFile(io_test::ExecutableFile {
         name: Some(name.to_string()),
         ..io_test::ExecutableFile::EMPTY
     })
@@ -281,9 +281,25 @@ async fn validate_file_rights() {
     // Create a test directory with a single File object, and ensure the directory has all rights.
     let root = root_directory(vec![file(TEST_FILE, vec![])]);
     let root_dir = harness.get_directory(root, harness.dir_rights.all());
-    if harness.config.immutable_file.unwrap_or_default() {
-        // If files are immutable, check that opening with OPEN_RIGHT_WRITABLE results in
-        // access denied, and return (since all other combinations are valid in this case).
+
+    // Opening as READABLE must succeed.
+    open_node::<fio::NodeMarker>(&root_dir, fio::OpenFlags::RIGHT_READABLE, 0, TEST_FILE).await;
+
+    if harness.config.mutable_file.unwrap_or_default() {
+        // Opening as WRITABLE must succeed.
+        open_node::<fio::NodeMarker>(&root_dir, fio::OpenFlags::RIGHT_WRITABLE, 0, TEST_FILE).await;
+        // Opening as EXECUTABLE must fail (W^X).
+        open_node_status::<fio::NodeMarker>(
+            &root_dir,
+            fio::OpenFlags::RIGHT_EXECUTABLE,
+            0,
+            TEST_FILE,
+        )
+        .await
+        .expect_err("open succeeded");
+    } else {
+        // If files are immutable, check that opening as WRITABLE results in access denied.
+        // All other combinations are valid in this case.
         assert_eq!(
             open_node_status::<fio::NodeMarker>(
                 &root_dir,
@@ -295,21 +311,14 @@ async fn validate_file_rights() {
             .expect_err("open succeeded"),
             zx::Status::ACCESS_DENIED
         );
-        return;
     }
-    // Opening with WRITE must succeed.
-    open_node::<fio::NodeMarker>(&root_dir, fio::OpenFlags::RIGHT_WRITABLE, 0, TEST_FILE).await;
-    // Opening with EXECUTE must fail.
-    open_node_status::<fio::NodeMarker>(&root_dir, fio::OpenFlags::RIGHT_EXECUTABLE, 0, TEST_FILE)
-        .await
-        .expect_err("open succeeded");
 }
 
 // Validate allowed rights for VmoFile objects (ensures cannot be opened as executable).
 #[fasync::run_singlethreaded(test)]
-async fn validate_vmofile_rights() {
+async fn validate_vmo_file_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_vmofile.unwrap_or_default() {
+    if !harness.config.supports_vmo_file.unwrap_or_default() {
         return;
     }
     // Create a test directory with a VmoFile object, and ensure the directory has all rights.
@@ -337,15 +346,15 @@ async fn validate_vmofile_rights() {
     ));
 }
 
-// Validate allowed rights for ExecFile objects (ensures cannot be opened as writable).
+// Validate allowed rights for ExecutableFile objects (ensures cannot be opened as writable).
 #[fasync::run_singlethreaded(test)]
-async fn validate_execfile_rights() {
+async fn validate_executable_file_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_execfile.unwrap_or_default() {
+    if !harness.config.supports_executable_file.unwrap_or_default() {
         return;
     }
-    // Create a test directory with an ExecFile object, and ensure the directory has all rights.
-    let root = root_directory(vec![exec_file(TEST_FILE)]);
+    // Create a test directory with an ExecutableFile object, and ensure the directory has all rights.
+    let root = root_directory(vec![executable_file(TEST_FILE)]);
     let root_dir = harness.get_directory(root, harness.dir_rights.all());
     // Opening with READABLE/EXECUTABLE should succeed.
     open_node::<fio::NodeMarker>(
@@ -373,7 +382,7 @@ async fn validate_execfile_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn open_remote_directory_test() {
     let harness = TestHarness::new().await;
-    if harness.config.no_remote_dir.unwrap_or_default() {
+    if !harness.config.supports_remote_dir.unwrap_or_default() {
         return;
     }
 
@@ -414,7 +423,7 @@ async fn open_remote_directory_test() {
 #[fasync::run_singlethreaded(test)]
 async fn open_remote_file_test() {
     let harness = TestHarness::new().await;
-    if harness.config.no_remote_dir.unwrap_or_default() {
+    if !harness.config.supports_remote_dir.unwrap_or_default() {
         return;
     }
 
@@ -475,7 +484,7 @@ async fn open_remote_file_test() {
 #[fasync::run_singlethreaded(test)]
 async fn open_remote_directory_right_escalation_test() {
     let harness = TestHarness::new().await;
-    if harness.config.no_remote_dir.unwrap_or_default() {
+    if !harness.config.supports_remote_dir.unwrap_or_default() {
         return;
     }
 
@@ -770,7 +779,7 @@ async fn open_file_with_extra_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn open_path() {
     let harness = TestHarness::new().await;
-    if harness.config.non_conformant_path_handling.unwrap_or_default() {
+    if !harness.config.conformant_path_handling.unwrap_or_default() {
         return;
     }
 
@@ -918,7 +927,7 @@ async fn open_flags_and_mode() {
 #[fasync::run_singlethreaded(test)]
 async fn create_file_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.immutable_dir.unwrap_or_default() {
+    if !harness.config.supports_create.unwrap_or_default() {
         return;
     }
 
@@ -945,7 +954,7 @@ async fn create_file_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn create_file_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.immutable_dir.unwrap_or_default() {
+    if !harness.config.supports_create.unwrap_or_default() {
         return;
     }
 
@@ -1179,11 +1188,11 @@ async fn file_read_in_subdirectory() {
 #[fasync::run_singlethreaded(test)]
 async fn file_get_readable_buffer_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_get_buffer.unwrap_or_default() {
+    if !harness.config.supports_get_buffer.unwrap_or_default() {
         return;
     }
 
-    for file_flags in harness.vmofile_rights.valid_combos_with(fio::OpenFlags::RIGHT_READABLE) {
+    for file_flags in harness.vmo_file_rights.valid_combos_with(fio::OpenFlags::RIGHT_READABLE) {
         // Should be able to get a readable VMO in default, exact, and private sharing modes.
         for sharing_mode in
             [fio::VmoFlags::empty(), fio::VmoFlags::SHARED_BUFFER, fio::VmoFlags::PRIVATE_CLONE]
@@ -1212,11 +1221,11 @@ async fn file_get_readable_buffer_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_get_readable_buffer_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_get_buffer.unwrap_or_default() {
+    if !harness.config.supports_get_buffer.unwrap_or_default() {
         return;
     }
 
-    for file_flags in harness.vmofile_rights.valid_combos_without(fio::OpenFlags::RIGHT_READABLE) {
+    for file_flags in harness.vmo_file_rights.valid_combos_without(fio::OpenFlags::RIGHT_READABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
         assert_eq!(
             create_file_and_get_buffer(file, &harness, file_flags, fio::VmoFlags::READ)
@@ -1230,14 +1239,14 @@ async fn file_get_readable_buffer_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_get_writable_buffer_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_get_buffer.unwrap_or_default() {
+    if !harness.config.supports_get_buffer.unwrap_or_default() {
         return;
     }
     // Writable VMOs currently require private sharing mode.
     const VMO_FLAGS: fio::VmoFlags =
         fio::VmoFlags::empty().union(fio::VmoFlags::WRITE).union(fio::VmoFlags::PRIVATE_CLONE);
 
-    for file_flags in harness.vmofile_rights.valid_combos_with(fio::OpenFlags::RIGHT_WRITABLE) {
+    for file_flags in harness.vmo_file_rights.valid_combos_with(fio::OpenFlags::RIGHT_WRITABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
         let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, VMO_FLAGS)
             .await
@@ -1254,13 +1263,13 @@ async fn file_get_writable_buffer_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_get_writable_buffer_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_get_buffer.unwrap_or_default() {
+    if !harness.config.supports_get_buffer.unwrap_or_default() {
         return;
     }
     const VMO_FLAGS: fio::VmoFlags =
         fio::VmoFlags::empty().union(fio::VmoFlags::WRITE).union(fio::VmoFlags::PRIVATE_CLONE);
 
-    for file_flags in harness.vmofile_rights.valid_combos_without(fio::OpenFlags::RIGHT_WRITABLE) {
+    for file_flags in harness.vmo_file_rights.valid_combos_without(fio::OpenFlags::RIGHT_WRITABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
         assert_eq!(
             create_file_and_get_buffer(file, &harness, file_flags, VMO_FLAGS)
@@ -1274,8 +1283,8 @@ async fn file_get_writable_buffer_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_get_executable_buffer_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_get_buffer.unwrap_or_default()
-        || harness.config.no_execfile.unwrap_or_default()
+    if !harness.config.supports_get_buffer.unwrap_or_default()
+        || !harness.config.supports_executable_file.unwrap_or_default()
     {
         return;
     }
@@ -1286,7 +1295,7 @@ async fn file_get_executable_buffer_with_sufficient_rights() {
     for sharing_mode in
         [fio::VmoFlags::empty(), fio::VmoFlags::SHARED_BUFFER, fio::VmoFlags::PRIVATE_CLONE]
     {
-        let file = exec_file(TEST_FILE);
+        let file = executable_file(TEST_FILE);
         let vmo_flags = fio::VmoFlags::READ | fio::VmoFlags::EXECUTE | sharing_mode;
         let (buffer, _) = create_file_and_get_buffer(
             file,
@@ -1304,15 +1313,16 @@ async fn file_get_executable_buffer_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_get_executable_buffer_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_get_buffer.unwrap_or_default()
-        || harness.config.no_execfile.unwrap_or_default()
+    if !harness.config.supports_get_buffer.unwrap_or_default()
+        || !harness.config.supports_executable_file.unwrap_or_default()
     {
         return;
     }
     // We should fail to get the buffer if the connection lacks execute rights.
-    for file_flags in harness.execfile_rights.valid_combos_without(fio::OpenFlags::RIGHT_EXECUTABLE)
+    for file_flags in
+        harness.executable_file_rights.valid_combos_without(fio::OpenFlags::RIGHT_EXECUTABLE)
     {
-        let file = exec_file(TEST_FILE);
+        let file = executable_file(TEST_FILE);
         assert_eq!(
             create_file_and_get_buffer(file, &harness, file_flags, fio::VmoFlags::EXECUTE)
                 .await
@@ -1322,8 +1332,10 @@ async fn file_get_executable_buffer_with_insufficient_rights() {
     }
     // The fuchsia.io interface additionally specifies that GetBuffer should fail if VmoFlags::EXECUTE
     // is specified but connection lacks OPEN_RIGHT_READABLE.
-    for file_flags in harness.execfile_rights.valid_combos_without(fio::OpenFlags::RIGHT_READABLE) {
-        let file = exec_file(TEST_FILE);
+    for file_flags in
+        harness.executable_file_rights.valid_combos_without(fio::OpenFlags::RIGHT_READABLE)
+    {
+        let file = executable_file(TEST_FILE);
         assert_eq!(
             create_file_and_get_buffer(file, &harness, file_flags, fio::VmoFlags::EXECUTE)
                 .await
@@ -1337,7 +1349,7 @@ async fn file_get_executable_buffer_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_get_buffer_exact_same_koid() {
     let harness = TestHarness::new().await;
-    if harness.config.no_get_buffer.unwrap_or_default() {
+    if !harness.config.supports_get_buffer.unwrap_or_default() {
         return;
     }
 
@@ -1396,7 +1408,7 @@ async fn file_describe() {
 #[fasync::run_singlethreaded(test)]
 async fn vmo_file_describe() {
     let harness = TestHarness::new().await;
-    if harness.config.no_vmofile.unwrap_or_default() {
+    if !harness.config.supports_vmo_file.unwrap_or_default() {
         return;
     }
 
@@ -1430,7 +1442,7 @@ async fn vmo_file_describe() {
 #[fasync::run_singlethreaded(test)]
 async fn get_token_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_get_token.unwrap_or_default() {
+    if !harness.config.supports_get_token.unwrap_or_default() {
         return;
     }
 
@@ -1447,7 +1459,7 @@ async fn get_token_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn get_token_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_get_token.unwrap_or_default() {
+    if !harness.config.supports_get_token.unwrap_or_default() {
         return;
     }
 
@@ -1463,8 +1475,8 @@ async fn get_token_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn rename_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_rename.unwrap_or_default()
-        || harness.config.no_get_token.unwrap_or_default()
+    if !harness.config.supports_rename.unwrap_or_default()
+        || !harness.config.supports_get_token.unwrap_or_default()
     {
         return;
     }
@@ -1498,8 +1510,8 @@ async fn rename_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn rename_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_rename.unwrap_or_default()
-        || harness.config.no_get_token.unwrap_or_default()
+    if !harness.config.supports_rename.unwrap_or_default()
+        || !harness.config.supports_get_token.unwrap_or_default()
     {
         return;
     }
@@ -1528,8 +1540,8 @@ async fn rename_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn rename_with_slash_in_path_fails() {
     let harness = TestHarness::new().await;
-    if harness.config.no_rename.unwrap_or_default()
-        || harness.config.no_get_token.unwrap_or_default()
+    if !harness.config.supports_rename.unwrap_or_default()
+        || !harness.config.supports_get_token.unwrap_or_default()
     {
         return;
     }
@@ -1563,7 +1575,8 @@ async fn rename_with_slash_in_path_fails() {
 #[fasync::run_singlethreaded(test)]
 async fn link_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_link.unwrap_or_default() || harness.config.no_get_token.unwrap_or_default()
+    if !harness.config.supports_link.unwrap_or_default()
+        || !harness.config.supports_get_token.unwrap_or_default()
     {
         return;
     }
@@ -1594,7 +1607,8 @@ async fn link_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn link_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_link.unwrap_or_default() || harness.config.no_get_token.unwrap_or_default()
+    if !harness.config.supports_link.unwrap_or_default()
+        || !harness.config.supports_get_token.unwrap_or_default()
     {
         return;
     }
@@ -1625,7 +1639,7 @@ async fn link_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn unlink_file_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.immutable_dir.unwrap_or_default() {
+    if !harness.config.supports_unlink.unwrap_or_default() {
         return;
     }
     let contents = "abcdef".as_bytes();
@@ -1650,7 +1664,7 @@ async fn unlink_file_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn unlink_file_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.immutable_dir.unwrap_or_default() {
+    if !harness.config.supports_unlink.unwrap_or_default() {
         return;
     }
     let contents = "abcdef".as_bytes();
@@ -1678,7 +1692,7 @@ async fn unlink_file_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn unlink_directory_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.immutable_dir.unwrap_or_default() {
+    if !harness.config.supports_unlink.unwrap_or_default() {
         return;
     }
 
@@ -1698,7 +1712,7 @@ async fn unlink_directory_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn unlink_directory_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.immutable_dir.unwrap_or_default() {
+    if !harness.config.supports_unlink.unwrap_or_default() {
         return;
     }
 
@@ -1722,7 +1736,7 @@ async fn unlink_directory_with_insufficient_rights() {
 async fn unlink_must_be_directory() {
     let harness = TestHarness::new().await;
 
-    if harness.config.immutable_dir.unwrap_or_default() {
+    if !harness.config.supports_unlink.unwrap_or_default() {
         return;
     }
 
@@ -1900,7 +1914,7 @@ async fn clone_directory_with_additional_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn set_attr_file_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_set_attr.unwrap_or_default() {
+    if !harness.config.supports_set_attr.unwrap_or_default() {
         return;
     }
 
@@ -1937,7 +1951,7 @@ async fn set_attr_file_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn set_attr_file_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_set_attr.unwrap_or_default() {
+    if !harness.config.supports_set_attr.unwrap_or_default() {
         return;
     }
 
@@ -1964,7 +1978,7 @@ async fn set_attr_file_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn set_attr_directory_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_set_attr.unwrap_or_default() {
+    if !harness.config.supports_set_attr.unwrap_or_default() {
         return;
     }
 
@@ -2001,7 +2015,7 @@ async fn set_attr_directory_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn set_attr_directory_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_set_attr.unwrap_or_default() {
+    if !harness.config.supports_set_attr.unwrap_or_default() {
         return;
     }
 

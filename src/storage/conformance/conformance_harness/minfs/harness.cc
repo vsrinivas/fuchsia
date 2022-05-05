@@ -73,18 +73,22 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
 
   void GetConfig(GetConfigCallback callback) final {
     fuchsia::io::test::Io1Config config;
-    config.set_immutable_file(false);
-    config.set_immutable_dir(false);
-    config.set_no_rename(false);
-    config.set_no_link(false);
-    config.set_no_set_attr(false);
-    config.set_no_get_token(false);
 
-    // Minfs doesn't support executable files, VMO files, nor remote directories.
-    config.set_no_execfile(true);
-    config.set_no_vmofile(true);
-    config.set_no_remote_dir(true);
-    config.set_no_get_buffer(true);
+    // Supported options
+    config.set_mutable_file(true);
+    config.set_supports_create(true);
+    config.set_supports_rename(true);
+    config.set_supports_link(true);
+    config.set_supports_set_attr(true);
+    config.set_supports_get_token(true);
+    config.set_conformant_path_handling(true);
+    config.set_supports_unlink(true);
+
+    // Unsupported options
+    config.set_supports_executable_file(false);
+    config.set_supports_vmo_file(false);
+    config.set_supports_remote_dir(false);
+    config.set_supports_get_buffer(false);
 
     callback(std::move(config));
   }
@@ -154,7 +158,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
       }
       case fuchsia::io::test::DirectoryEntry::Tag::kVmoFile:
         ZX_PANIC("VMO files are not supported");
-      case fuchsia::io::test::DirectoryEntry::Tag::kExecFile:
+      case fuchsia::io::test::DirectoryEntry::Tag::kExecutableFile:
         ZX_PANIC("Executable files are not supported");
       case fuchsia::io::test::DirectoryEntry::Tag::Invalid:
         ZX_PANIC("Unknown DirectoryEntry type");

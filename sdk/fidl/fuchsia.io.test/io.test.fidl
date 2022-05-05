@@ -37,40 +37,43 @@ using zx;
 /// to true informs the test suites that files hosted by this harness do not
 /// support mutation.
 type Io1Config = table {
-    /// Files are read-only.
-    1: immutable_file bool;
+    /// Files are mutable (i.e. support RIGHT_WRITABLE).
+    1: mutable_file bool;
 
-    /// Directories are read-only.
-    2: immutable_dir bool;
+    /// Directories support the CREATE flag for creating new files.
+    2: supports_create bool;
 
-    /// ExecFile objects are not supported.
-    3: no_execfile bool;
+    /// ExecutableFile objects are supported.
+    3: supports_executable_file bool;
 
-    /// VmoFile objects are not supported.
-    4: no_vmofile bool;
+    /// VmoFile objects are supported.
+    4: supports_vmo_file bool;
 
-    /// Remote directories are not supported.
-    5: no_remote_dir bool;
+    /// Remote directories are supported.
+    5: supports_remote_dir bool;
 
-    /// The GetBuffer method is not supported.
-    6: no_get_buffer bool;
+    /// GetBuffer is supported by VmoFile objects.
+    6: supports_get_buffer bool;
 
-    /// The Rename method is not supported.
-    7: no_rename bool;
+    /// Rename is supported.
+    7: supports_rename bool;
 
-    /// The Link and Unlink methods are not supported.
-    8: no_link bool;
+    /// Link is supported.
+    8: supports_link bool;
 
-    /// The SetAttr method is not supported.
-    9: no_set_attr bool;
+    /// SetAttr is supported.
+    9: supports_set_attr bool;
 
-    /// The GetToken method is not supported.
-   10: no_get_token bool;
+    /// GetToken is supported.
+   10: supports_get_token bool;
 
-    /// Path handling does not conform to in-tree behavior.
+    /// Path handling conforms to in-tree behavior.
     /// TODO(fxbug.dev/82672): Ensure all libraries are conformant and remove this option.
     /// Currently the only non-conformant implementation being tested is the SDK VFS.
-   11: non_conformant_path_handling bool;
+   11: conformant_path_handling bool;
+
+    /// Unlink is supported.
+   12: supports_unlink bool;
 };
 
 /// Directory entries should support opening with any combination of read/write/execute rights.
@@ -82,10 +85,12 @@ type Directory = resource table {
     2: entries vector<DirectoryEntry:optional>;
 };
 
-/// File object which supports reading, and if `immutable_file` is false, also supports writing.
+/// File object which supports reading, and if `mutable_file` is true, also supports writing.
 ///
-/// As the conformance tests verify W^X enforcement, attempting to open a File object as executable
-/// should fail with ACCESS_DENIED. If executable files are required, use ExecFile.
+/// As the conformance tests verify W^X enforcement, attempting to open a File with RIGHT_EXECUTABLE
+/// should fail with ACCESS_DENIED if `mutable_file` is true.
+///
+/// If executable files are required, use ExecutableFile instead.
 type File = table {
     1: name string;
     2: contents bytes;
@@ -93,10 +98,10 @@ type File = table {
 
 /// Vmo-backed file object which supports opening as readable + writable.
 ///
-/// Enabled via the `no_vmofile` configuration option.
+/// Enabled via the `supports_vmo_file` configuration option.
 ///
 /// As the conformance tests verify W^X enforcement, attempting to open a VmoFile as executable
-/// should fail with ACCESS_DENIED. If executable pseudofiles are required, use ExecFile.
+/// should fail with ACCESS_DENIED. If executable files are required, use ExecutableFile.
 type VmoFile = resource table {
     1: name string;
     2: buffer fuchsia.mem.Range;
@@ -105,10 +110,11 @@ type VmoFile = resource table {
 /// Adds an executable file that supports opening as readable + executable. The file has a non-zero
 /// size, but the contents are otherwise unspecified.
 ///
-/// Enabled by setting `no_execfile` to false. If enabled, `no_get_buffer` should also be false.
+/// Enabled by setting `supports_executable_file` to false. If enabled, `supports_get_buffer` should
+/// be enabled to validate the permissions of the VMO backing the ExecutableFile.
 ///
-/// As the conformance tests verify W^X enforcement, attempting to open an ExecFile as writable
-/// should fail with ACCESS_DENIED. If writable pseudofiles are required, use File/VmoFile instead.
+/// As the conformance tests verify W^X enforcement, opening an ExecutableFile with RIGHT_WRITABLE
+/// should fail with ACCESS_DENIED. If writable files are required, use File/VmoFile instead.
 type ExecutableFile = table {
     1: name string;
 };
@@ -117,7 +123,7 @@ type DirectoryEntry = strict resource union {
     1: directory Directory;
     2: file File;
     3: vmo_file VmoFile;
-    4: exec_file ExecutableFile;
+    4: executable_file ExecutableFile;
 };
 
 @discoverable
