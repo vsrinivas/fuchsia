@@ -39,7 +39,7 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
             name,
             &[
                 KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
-                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DnsResolver { with_fake_clock: false },
                 KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
                 KnownServiceProvider::SecureStash,
@@ -86,7 +86,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
             name,
             &[
                 KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
-                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DnsResolver { with_fake_clock: false },
                 KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
                 KnownServiceProvider::SecureStash,
@@ -463,7 +463,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
             name,
             &[
                 KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
-                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DnsResolver { with_fake_clock: false },
                 KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
                 KnownServiceProvider::SecureStash,
@@ -502,7 +502,7 @@ async fn observes_stop_events<M: Manager>(name: &str) {
             name,
             &[
                 KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
-                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DnsResolver { with_fake_clock: false },
                 KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
                 KnownServiceProvider::SecureStash,

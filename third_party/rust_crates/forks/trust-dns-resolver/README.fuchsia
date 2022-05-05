@@ -8,8 +8,9 @@ No.
 
 # What differs from upstream?
 
-This fork includes a short-term fix to https://fxbug.dev/98434, which was not yet fixed upstream at
-the time of writing.
+This fork includes a short-term fix to issues tracked in
+https://github.com/bluejekyll/trust-dns/issues/1702, which were not yet fixed upstream at the time
+of writing.
 
 # Are there any restrictions to how it should be rolled?
 

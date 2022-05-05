@@ -761,6 +761,9 @@ pub struct ResolverOpts {
     pub preserve_intermediates: bool,
     /// Try queries over TCP if they fail over UDP.
     pub try_tcp_on_error: bool,
+    /// Query name servers in priority order based on statistics collected on successful and failed
+    /// queries.
+    pub prioritize_name_servers: bool,
 }
 
 impl Default for ResolverOpts {
@@ -786,6 +789,7 @@ impl Default for ResolverOpts {
             num_concurrent_reqs: 2,
             preserve_intermediates: false,
             try_tcp_on_error: false,
+            prioritize_name_servers: true,
         }
     }
 }

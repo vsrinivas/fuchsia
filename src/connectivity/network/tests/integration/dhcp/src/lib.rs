@@ -485,7 +485,7 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                         format!("netstack_realm_{}_{}", test_name, id),
                         &[
                             KnownServiceProvider::DhcpServer { persistent: false },
-                            KnownServiceProvider::DnsResolver,
+                            KnownServiceProvider::DnsResolver { with_fake_clock: false },
                             KnownServiceProvider::SecureStash,
                         ],
                     )
@@ -766,7 +766,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                         KnownServiceProvider::DhcpServer { persistent: true }
                     }
                 },
-                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DnsResolver { with_fake_clock: false },
                 KnownServiceProvider::SecureStash,
             ],
         )
@@ -935,7 +935,7 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
                         KnownServiceProvider::DhcpServer { persistent: true }
                     }
                 },
-                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DnsResolver { with_fake_clock: false },
                 KnownServiceProvider::SecureStash,
             ],
         )
