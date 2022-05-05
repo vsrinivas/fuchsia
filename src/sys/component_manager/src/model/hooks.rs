@@ -560,22 +560,27 @@ impl Hooks {
     }
 
     pub async fn dispatch(&self, event: &Event) -> Result<(), ModelError> {
-        let mut hooks_map = self.hooks_map.lock().await;
-        if let Some(hooks) = hooks_map.get_mut(&event.event_type()) {
-            // We must upgrade our weak references to hooks to strong ones before we can
-            // call out to them.
-            let mut strong_hooks = vec![];
-            hooks.retain(|hook| {
-                if let Some(hook) = hook.upgrade() {
-                    strong_hooks.push(hook);
-                    true
-                } else {
-                    false
-                }
-            });
-            for hook in strong_hooks {
-                hook.on(event).await?;
+        let strong_hooks = {
+            let mut hooks_map = self.hooks_map.lock().await;
+            if let Some(hooks) = hooks_map.get_mut(&event.event_type()) {
+                // We must upgrade our weak references to hooks to strong ones before we can
+                // call out to them.
+                let mut strong_hooks = vec![];
+                hooks.retain(|hook| {
+                    if let Some(hook) = hook.upgrade() {
+                        strong_hooks.push(hook);
+                        true
+                    } else {
+                        false
+                    }
+                });
+                strong_hooks
+            } else {
+                vec![]
             }
+        };
+        for hook in strong_hooks {
+            hook.on(event).await?;
         }
         Ok(())
     }
