@@ -5,6 +5,7 @@
 use {
     crate::resolver_service::Resolver,
     anyhow::{anyhow, Context as _, Error},
+    async_lock::RwLock as AsyncRwLock,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
         CupData, CupRequest, CupRequestStream, GetInfoError, PackageUrl, WriteError,
@@ -15,7 +16,7 @@ use {
     fuchsia_syslog::fx_log_err,
     fuchsia_url::pkg_url::{Hash, PinnedPkgUrl, PkgUrl},
     fuchsia_zircon as zx,
-    futures::{lock::Mutex as AsyncMutex, prelude::*},
+    futures::prelude::*,
     omaha_client::protocol::response::Response,
     serde::Deserialize,
     std::{collections::BTreeMap, sync::Arc},
@@ -405,28 +406,35 @@ impl EagerPackageConfigs {
     }
 }
 
-#[allow(dead_code)]
 pub async fn run_cup_service<T: Resolver>(
-    manager: Arc<AsyncMutex<EagerPackageManager<T>>>,
+    manager: Arc<Option<AsyncRwLock<EagerPackageManager<T>>>>,
     mut stream: CupRequestStream,
 ) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await? {
         match event {
             CupRequest::Write { url, cup, responder } => {
-                let response = manager.lock().await.cup_write(&url, cup).await;
-                responder.send(&mut response.map_err(|e| {
-                    let write_error = (&e).into();
-                    fx_log_err!("cup_write failed for url '{}': {:#}", url.url, anyhow!(e));
-                    write_error
-                }))?;
+                let mut response = match manager.as_ref() {
+                    Some(manager) => {
+                        manager.write().await.cup_write(&url, cup).await.map_err(|e| {
+                            let write_error = (&e).into();
+                            fx_log_err!("cup_write failed for url '{}': {:#}", url.url, anyhow!(e));
+                            write_error
+                        })
+                    }
+                    None => Err(WriteError::Storage),
+                };
+                responder.send(&mut response)?;
             }
             CupRequest::GetInfo { url, responder } => {
-                let response = manager.lock().await.cup_get_info(&url).await;
-                responder.send(&mut response.map_err(|e| {
-                    let get_info_error = (&e).into();
-                    fx_log_err!("cup_get_info failed for url '{}': {:#}", url.url, anyhow!(e));
-                    get_info_error
-                }))?;
+                let mut response = match manager.as_ref() {
+                    Some(manager) => manager.read().await.cup_get_info(&url).await.map_err(|e| {
+                        let get_info_error = (&e).into();
+                        fx_log_err!("cup_get_info failed for url '{}': {:#}", url.url, anyhow!(e));
+                        get_info_error
+                    }),
+                    None => Err(GetInfoError::NotAvailable),
+                };
+                responder.send(&mut response)?;
             }
         }
     }

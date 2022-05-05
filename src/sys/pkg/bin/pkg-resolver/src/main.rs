@@ -256,7 +256,8 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         .map_err(|e| {
             fx_log_err!("failed to create EagerPackageManager: {:#}", &e);
         })
-        .ok(),
+        .ok()
+        .map(AsyncRwLock::new),
     );
 
     let resolver_cb = {
@@ -267,6 +268,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         let system_cache_list = Arc::clone(&system_cache_list);
         let cobalt_sender = cobalt_sender.clone();
         let resolver_service_inspect = Arc::clone(&resolver_service_inspect_state);
+        let eager_package_manager = Arc::clone(&eager_package_manager);
         move |stream| {
             fasync::Task::local(
                 resolver_service::run_resolver_service(
@@ -328,12 +330,23 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         .detach()
     };
 
+    let cup_cb = {
+        move |stream| {
+            fasync::Task::local(
+                eager_package_manager::run_cup_service(Arc::clone(&eager_package_manager), stream)
+                    .unwrap_or_else(|e| fx_log_err!("run_cup_service failed: {:#}", anyhow!(e))),
+            )
+            .detach()
+        }
+    };
+
     let mut fs = ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(resolver_cb)
         .add_fidl_service(font_resolver_cb)
         .add_fidl_service(repo_cb)
-        .add_fidl_service(rewrite_cb);
+        .add_fidl_service(rewrite_cb)
+        .add_fidl_service(cup_cb);
 
     inspect_runtime::serve(&inspector, &mut fs)?;
 

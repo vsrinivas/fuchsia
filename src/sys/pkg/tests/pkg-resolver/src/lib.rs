@@ -15,10 +15,10 @@ use {
     fidl_fuchsia_component::{RealmMarker, RealmProxy},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
-        CupData, ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy,
-        PackageCacheMarker, PackageResolverAdminMarker, PackageResolverAdminProxy,
-        PackageResolverMarker, PackageResolverProxy, PackageUrl, RepositoryManagerMarker,
-        RepositoryManagerProxy,
+        CupData, CupMarker, CupProxy, ExperimentToggle as Experiment, FontResolverMarker,
+        FontResolverProxy, GetInfoError, PackageCacheMarker, PackageResolverAdminMarker,
+        PackageResolverAdminProxy, PackageResolverMarker, PackageResolverProxy, PackageUrl,
+        RepositoryManagerMarker, RepositoryManagerProxy, WriteError,
     },
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs},
     fidl_fuchsia_pkg_internal::{PersistentEagerPackage, PersistentEagerPackages},
@@ -748,6 +748,7 @@ pub struct Proxies {
     pub repo_manager: RepositoryManagerProxy,
     pub rewrite_engine: RewriteEngineProxy,
     pub font_resolver: FontResolverProxy,
+    pub cup: CupProxy,
 }
 
 impl Proxies {
@@ -768,6 +769,9 @@ impl Proxies {
             font_resolver: instance
                 .connect_to_protocol_at_exposed_dir::<FontResolverMarker>()
                 .expect("connect to font resolver"),
+            cup: instance
+                .connect_to_protocol_at_exposed_dir::<CupMarker>()
+                .expect("connect to cup"),
         }
     }
 }
@@ -1093,6 +1097,25 @@ impl<P: PkgFs> TestEnv<P> {
             )
         }
     }
+
+    pub async fn cup_write(&self, url: impl Into<String>, cup: CupData) -> Result<(), WriteError> {
+        self.proxies
+            .cup
+            .write(&mut fidl_fuchsia_pkg::PackageUrl { url: url.into() }, cup)
+            .await
+            .unwrap()
+    }
+
+    pub async fn cup_get_info(
+        &self,
+        url: impl Into<String>,
+    ) -> Result<(String, String), GetInfoError> {
+        self.proxies
+            .cup
+            .get_info(&mut fidl_fuchsia_pkg::PackageUrl { url: url.into() })
+            .await
+            .unwrap()
+    }
 }
 
 pub const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
@@ -1170,7 +1193,7 @@ pub async fn get_rules(rewrite_engine: &RewriteEngineProxy) -> Vec<Rule> {
     }
 }
 
-fn get_test_cup_data(package_url: &PkgUrl) -> CupData {
+pub fn get_test_cup_data(package_url: &PkgUrl) -> CupData {
     let response = serde_json::json!({"response":{
         "server": "prod",
         "protocol": "3.0",

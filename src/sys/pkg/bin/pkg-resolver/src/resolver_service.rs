@@ -61,7 +61,7 @@ pub trait Resolver: std::fmt::Debug + Sync + Sized {
     async fn resolve(
         &self,
         url: PkgUrl,
-        eager_package_manager: Option<&EagerPackageManager<Self>>,
+        eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
     ) -> Result<PackageDirectory, pkg::ResolveError>;
 }
 
@@ -70,7 +70,7 @@ impl Resolver for QueuedResolver {
     async fn resolve(
         &self,
         pkg_url: PkgUrl,
-        eager_package_manager: Option<&EagerPackageManager<Self>>,
+        eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
     ) -> Result<PackageDirectory, pkg::ResolveError> {
         trace::duration_begin!("app", "resolve", "url" => pkg_url.to_string().as_str());
         // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
@@ -100,7 +100,7 @@ impl Resolver for QueuedResolver {
         // Attempt to use EagerPackageManager to resolve the package.
         if let Some(eager_package_manager) = eager_package_manager {
             if let Some(dir) =
-                eager_package_manager.get_package_dir(&rewritten_url).map_err(|e| {
+                eager_package_manager.read().await.get_package_dir(&rewritten_url).map_err(|e| {
                     fx_log_err!(
                         "failed to resolve eager package at {} as {}: {:#}",
                         pkg_url,
@@ -295,7 +295,7 @@ impl Resolver for MockResolver {
     async fn resolve(
         &self,
         url: PkgUrl,
-        _eager_package_manager: Option<&EagerPackageManager<Self>>,
+        _eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
     ) -> Result<PackageDirectory, pkg::ResolveError> {
         let queued_fetch = self.queue.push(url, ());
         queued_fetch.await.expect("expected queue to be open").map_err(|e| e.to_resolve_error())
@@ -311,7 +311,7 @@ pub async fn run_resolver_service(
     stream: PackageResolverRequestStream,
     cobalt_sender: CobaltSender,
     inspect: Arc<ResolverServiceInspectState>,
-    eager_package_manager: Arc<Option<EagerPackageManager<QueuedResolver>>>,
+    eager_package_manager: Arc<Option<AsyncRwLock<EagerPackageManager<QueuedResolver>>>>,
 ) -> Result<(), Error> {
     stream
         .map_err(anyhow::Error::new)
@@ -434,7 +434,7 @@ async fn hash_from_base_or_repo_or_cache(
     system_cache_list: &CachePackages,
     pkg_url: &PkgUrl,
     inspect_state: &ResolverServiceInspectState,
-    eager_package_manager: Option<&EagerPackageManager<QueuedResolver>>,
+    eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
 ) -> Result<BlobId, Status> {
     if let Some(blob) = base_package_index.is_unpinned_base_package(pkg_url) {
         fx_log_info!("get_hash for {} to {} with base pin", pkg_url, blob);
@@ -445,10 +445,12 @@ async fn hash_from_base_or_repo_or_cache(
 
     // Attempt to use EagerPackageManager to resolve the package.
     if let Some(eager_package_manager) = eager_package_manager {
-        if let Some(dir) = eager_package_manager.get_package_dir(&pkg_url).map_err(|err| {
-            fx_log_err!("retrieval error eager package url {}: {:#}", pkg_url, anyhow!(err));
-            Status::NOT_FOUND
-        })? {
+        if let Some(dir) =
+            eager_package_manager.read().await.get_package_dir(&pkg_url).map_err(|err| {
+                fx_log_err!("retrieval error eager package url {}: {:#}", pkg_url, anyhow!(err));
+                Status::NOT_FOUND
+            })?
+        {
             return dir.merkle_root().await.map(Into::into).map_err(|err| {
                 fx_log_err!("package hash error eager package url {}: {:#}", pkg_url, anyhow!(err));
                 Status::INTERNAL
@@ -598,7 +600,7 @@ async fn get_hash(
     system_cache_list: &CachePackages,
     url: &str,
     inspect_state: &ResolverServiceInspectState,
-    eager_package_manager: Option<&EagerPackageManager<QueuedResolver>>,
+    eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
 ) -> Result<BlobId, Status> {
     let pkg_url = PkgUrl::parse(url).map_err(|e| handle_bad_package_url(e, url))?;
     // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
@@ -628,7 +630,7 @@ async fn resolve_and_reopen(
     package_resolver: &QueuedResolver,
     url: String,
     dir_request: ServerEnd<fio::DirectoryMarker>,
-    eager_package_manager: Option<&EagerPackageManager<QueuedResolver>>,
+    eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
 ) -> Result<(), pkg::ResolveError> {
     let pkg_url = PkgUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
     let pkg = package_resolver.resolve(pkg_url.clone(), eager_package_manager).await?;
