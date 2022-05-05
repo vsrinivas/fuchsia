@@ -671,16 +671,6 @@ class MainProtocol_OnAnonWithError_Response final {
     Destruct(&a_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   MainProtocol_OnAnonWithError_Response();
   MainProtocol_OnAnonWithError_Response(
       MainProtocol_OnAnonWithError_Response&& other);
@@ -712,14 +702,7 @@ class MainProtocol_OnAnonWithError_Response final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -739,7 +722,6 @@ class MainProtocol_OnAnonWithError_Response final {
     uint16_t value;
   };
   ValueUnion_a a_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using MainProtocol_OnAnonWithError_ResponsePtr =
@@ -952,16 +934,6 @@ class MainProtocolTwoWayAnonWithErrorRequest final {
     Destruct(&a_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   MainProtocolTwoWayAnonWithErrorRequest();
   MainProtocolTwoWayAnonWithErrorRequest(
       MainProtocolTwoWayAnonWithErrorRequest&& other);
@@ -994,14 +966,7 @@ class MainProtocolTwoWayAnonWithErrorRequest final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -1021,7 +986,6 @@ class MainProtocolTwoWayAnonWithErrorRequest final {
     uint16_t value;
   };
   ValueUnion_a a_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using MainProtocolTwoWayAnonWithErrorRequestPtr =
@@ -1063,16 +1027,6 @@ class MainProtocolTwoWayAnonResponse final {
     Destruct(&a_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   MainProtocolTwoWayAnonResponse();
   MainProtocolTwoWayAnonResponse(MainProtocolTwoWayAnonResponse&& other);
   ~MainProtocolTwoWayAnonResponse();
@@ -1102,14 +1056,7 @@ class MainProtocolTwoWayAnonResponse final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -1129,7 +1076,6 @@ class MainProtocolTwoWayAnonResponse final {
     uint16_t value;
   };
   ValueUnion_a a_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using MainProtocolTwoWayAnonResponsePtr =
@@ -1269,16 +1215,6 @@ class MainProtocolOneWayAnonRequest final {
     Destruct(&a_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   MainProtocolOneWayAnonRequest();
   MainProtocolOneWayAnonRequest(MainProtocolOneWayAnonRequest&& other);
   ~MainProtocolOneWayAnonRequest();
@@ -1308,14 +1244,7 @@ class MainProtocolOneWayAnonRequest final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -1335,7 +1264,6 @@ class MainProtocolOneWayAnonRequest final {
     uint16_t value;
   };
   ValueUnion_a a_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using MainProtocolOneWayAnonRequestPtr =
@@ -1736,16 +1664,6 @@ class LocalTablePayload final {
     Destruct(&a_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   LocalTablePayload();
   LocalTablePayload(LocalTablePayload&& other);
   ~LocalTablePayload();
@@ -1774,14 +1692,7 @@ class LocalTablePayload final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -1801,7 +1712,6 @@ class LocalTablePayload final {
     uint16_t value;
   };
   ValueUnion_a a_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using LocalTablePayloadPtr = ::std::unique_ptr<LocalTablePayload>;
@@ -3169,7 +3079,7 @@ struct Equality<
     } else if (_rhs.has_a()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -3321,7 +3231,7 @@ struct Equality<
     } else if (_rhs.has_a()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -3350,7 +3260,7 @@ struct Equality<::test::protocollayouts::MainProtocolTwoWayAnonResponse> {
     } else if (_rhs.has_a()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -3451,7 +3361,7 @@ struct Equality<::test::protocollayouts::MainProtocolOneWayAnonRequest> {
     } else if (_rhs.has_a()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -3749,7 +3659,7 @@ struct Equality<::test::protocollayouts::LocalTablePayload> {
     } else if (_rhs.has_a()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>

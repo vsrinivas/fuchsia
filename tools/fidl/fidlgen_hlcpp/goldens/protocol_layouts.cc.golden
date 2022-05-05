@@ -1154,7 +1154,6 @@ MainProtocol_OnAnonWithError_Response::MainProtocol_OnAnonWithError_Response(
   if (field_presence_.IsSet<0>()) {
     Construct(&a_value_.value, std::move(other.a_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 MainProtocol_OnAnonWithError_Response::
@@ -1178,12 +1177,11 @@ MainProtocol_OnAnonWithError_Response::operator=(
     field_presence_.Clear<0>();
     Destruct(&a_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
 bool MainProtocol_OnAnonWithError_Response::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+  return field_presence_.IsEmpty();
 }
 
 void MainProtocol_OnAnonWithError_Response::Encode(
@@ -1192,19 +1190,9 @@ void MainProtocol_OnAnonWithError_Response::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -1234,22 +1222,14 @@ void MainProtocol_OnAnonWithError_Response::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void MainProtocol_OnAnonWithError_Response::Decode(
     ::fidl::Decoder* _decoder, MainProtocol_OnAnonWithError_Response* _value,
     size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -1270,26 +1250,6 @@ void MainProtocol_OnAnonWithError_Response::Decode(
     goto done_1;
   }
 
-  if (count > 1) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -1307,7 +1267,7 @@ zx_status_t MainProtocol_OnAnonWithError_Response::Clone(
   } else {
     result->clear_a();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t
@@ -1623,7 +1583,6 @@ MainProtocolTwoWayAnonWithErrorRequest::MainProtocolTwoWayAnonWithErrorRequest(
   if (field_presence_.IsSet<0>()) {
     Construct(&a_value_.value, std::move(other.a_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 MainProtocolTwoWayAnonWithErrorRequest::
@@ -1647,12 +1606,11 @@ MainProtocolTwoWayAnonWithErrorRequest::operator=(
     field_presence_.Clear<0>();
     Destruct(&a_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
 bool MainProtocolTwoWayAnonWithErrorRequest::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+  return field_presence_.IsEmpty();
 }
 
 void MainProtocolTwoWayAnonWithErrorRequest::Encode(
@@ -1661,19 +1619,9 @@ void MainProtocolTwoWayAnonWithErrorRequest::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -1703,22 +1651,14 @@ void MainProtocolTwoWayAnonWithErrorRequest::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void MainProtocolTwoWayAnonWithErrorRequest::Decode(
     ::fidl::Decoder* _decoder, MainProtocolTwoWayAnonWithErrorRequest* _value,
     size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -1739,26 +1679,6 @@ void MainProtocolTwoWayAnonWithErrorRequest::Decode(
     goto done_1;
   }
 
-  if (count > 1) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -1776,7 +1696,7 @@ zx_status_t MainProtocolTwoWayAnonWithErrorRequest::Clone(
   } else {
     result->clear_a();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t
@@ -1792,7 +1712,6 @@ MainProtocolTwoWayAnonResponse::MainProtocolTwoWayAnonResponse(
   if (field_presence_.IsSet<0>()) {
     Construct(&a_value_.value, std::move(other.a_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 MainProtocolTwoWayAnonResponse::~MainProtocolTwoWayAnonResponse() {
@@ -1814,12 +1733,11 @@ MainProtocolTwoWayAnonResponse& MainProtocolTwoWayAnonResponse::operator=(
     field_presence_.Clear<0>();
     Destruct(&a_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
 bool MainProtocolTwoWayAnonResponse::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+  return field_presence_.IsEmpty();
 }
 
 void MainProtocolTwoWayAnonResponse::Encode(
@@ -1828,19 +1746,9 @@ void MainProtocolTwoWayAnonResponse::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -1870,22 +1778,14 @@ void MainProtocolTwoWayAnonResponse::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void MainProtocolTwoWayAnonResponse::Decode(
     ::fidl::Decoder* _decoder, MainProtocolTwoWayAnonResponse* _value,
     size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -1906,26 +1806,6 @@ void MainProtocolTwoWayAnonResponse::Decode(
     goto done_1;
   }
 
-  if (count > 1) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -1943,7 +1823,7 @@ zx_status_t MainProtocolTwoWayAnonResponse::Clone(
   } else {
     result->clear_a();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t
@@ -2155,7 +2035,6 @@ MainProtocolOneWayAnonRequest::MainProtocolOneWayAnonRequest(
   if (field_presence_.IsSet<0>()) {
     Construct(&a_value_.value, std::move(other.a_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 MainProtocolOneWayAnonRequest::~MainProtocolOneWayAnonRequest() {
@@ -2177,12 +2056,11 @@ MainProtocolOneWayAnonRequest& MainProtocolOneWayAnonRequest::operator=(
     field_presence_.Clear<0>();
     Destruct(&a_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
 bool MainProtocolOneWayAnonRequest::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+  return field_presence_.IsEmpty();
 }
 
 void MainProtocolOneWayAnonRequest::Encode(
@@ -2191,19 +2069,9 @@ void MainProtocolOneWayAnonRequest::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2233,22 +2101,14 @@ void MainProtocolOneWayAnonRequest::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void MainProtocolOneWayAnonRequest::Decode(
     ::fidl::Decoder* _decoder, MainProtocolOneWayAnonRequest* _value,
     size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -2269,26 +2129,6 @@ void MainProtocolOneWayAnonRequest::Decode(
     goto done_1;
   }
 
-  if (count > 1) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -2306,7 +2146,7 @@ zx_status_t MainProtocolOneWayAnonRequest::Clone(
   } else {
     result->clear_a();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t
@@ -3004,7 +2844,6 @@ LocalTablePayload::LocalTablePayload(LocalTablePayload&& other) {
   if (field_presence_.IsSet<0>()) {
     Construct(&a_value_.value, std::move(other.a_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 LocalTablePayload::~LocalTablePayload() {
@@ -3025,13 +2864,10 @@ LocalTablePayload& LocalTablePayload::operator=(LocalTablePayload&& other) {
     field_presence_.Clear<0>();
     Destruct(&a_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
-bool LocalTablePayload::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
-}
+bool LocalTablePayload::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void LocalTablePayload::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
@@ -3039,19 +2875,9 @@ void LocalTablePayload::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3081,21 +2907,13 @@ void LocalTablePayload::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void LocalTablePayload::Decode(::fidl::Decoder* _decoder,
                                LocalTablePayload* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -3116,26 +2934,6 @@ void LocalTablePayload::Decode(::fidl::Decoder* _decoder,
     goto done_1;
   }
 
-  if (count > 1) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -3152,7 +2950,7 @@ zx_status_t LocalTablePayload::Clone(LocalTablePayload* result) const {
   } else {
     result->clear_a();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t

@@ -13,9 +13,6 @@ void use_table(const fidl_test::Profile& profile) {
   if (profile.has_temperature_unit()) {
     printf("preferred unit: %s", profile.temperature_unit().c_str());
   }
-  for (const auto& entry : profile.UnknownData()) {
-    printf("unknown ordinal %lu", entry.first);
-  }
 }
 // [END contents]
 

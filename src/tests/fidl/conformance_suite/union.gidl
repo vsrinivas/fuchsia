@@ -295,9 +295,9 @@ decode_failure("StrictUnionUnknownValueWithHandles") {
 }
 
 decode_failure("FlexibleUnionUnknownValueWithHandles") {
-    // C & LLCPP does not store handles, so does not fail when decoding unknown
+    // C, LLCPP and HLCPP do not store handles, so they do not fail when decoding unknown
     // handles for a value type.
-    bindings_denylist = [c, llcpp],
+    bindings_denylist = [c, llcpp, hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),

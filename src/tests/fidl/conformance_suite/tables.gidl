@@ -65,6 +65,8 @@ success("TableFieldInlinedHandle") {
 // A field that would normally be inlined is empty.
 // This tests logic checking that values are inlined in the correct situations.
 success("TableFieldInlinedReserved") {
+    // In HLCPP, unknown data is dropped from objects and can't be encoded.
+    bindings_denylist = [hlcpp],
     value = TableFieldInlinedStruct{
         t: TableFieldInlined{
             2: {
@@ -156,6 +158,8 @@ decode_failure("TableFieldOutOfLineBadOutlinedMarker") {
 
 // Tests a table in which a value is inlined into an unknown field.
 success("TableFieldUnknownInlined") {
+    // In HLCPP, unknown data is dropped from objects and can't be encoded.
+    bindings_denylist = [hlcpp],
     value = TableFieldUnknownStruct{
         t: TableFieldUnknown{
             1: {
@@ -175,6 +179,8 @@ success("TableFieldUnknownInlined") {
 
 // Tests a table in which a handle value is inlined into an unknown field.
 success("TableFieldUnknownInlinedHandle") {
+    // In HLCPP, unknown data is dropped from objects and can't be encoded.
+    bindings_denylist = [hlcpp],
     handle_defs = {
         #0 = channel(),
     },
@@ -201,6 +207,8 @@ success("TableFieldUnknownInlinedHandle") {
 
 // Tests a table in which a value is stored out of line in an unknown field.
 success("TableFieldUnknownOutOfLine") {
+    // In HLCPP, unknown data is dropped from objects and can't be encoded.
+    bindings_denylist = [hlcpp],
     value = TableFieldUnknownStruct{
         t: TableFieldUnknown{
             1: {
@@ -608,8 +616,8 @@ success("TableWithGaps") {
 }
 
 decode_success("ValueTableUnknownReservedDropped") {
-    // LLCPP is the only binding that does not store unknowns.
-    bindings_allowlist = [llcpp],
+    // LLCPP and HLCPP don't store unknowns.
+    bindings_allowlist = [llcpp, hlcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -650,8 +658,8 @@ decode_success("ValueTableUnknownReservedDropped") {
 }
 
 decode_success("ResourceTableUnknownReservedDropped") {
-    // LLCPP is the only binding that does not store unknowns.
-    bindings_allowlist = [llcpp],
+    // LLCPP and HLCPP don't store unknowns.
+    bindings_allowlist = [llcpp, hlcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -692,8 +700,8 @@ decode_success("ResourceTableUnknownReservedDropped") {
 }
 
 success("ValueTableUnknownReservedStored") {
-    // LLCPP is tested in the ValueTableUnknownReservedDropped test
-    bindings_denylist = [llcpp],
+    // LLCPP and HLCPP are tested in the ValueTableUnknownReservedDropped test
+    bindings_denylist = [llcpp, hlcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -737,8 +745,8 @@ success("ValueTableUnknownReservedStored") {
 }
 
 success("ResourceTableUnknownReservedStored") {
-    // LLCPP is tested in the ResourceTableUnknownReservedDropped test
-    bindings_denylist = [llcpp],
+    // LLCPP and HLCPP are tested in the ResourceTableUnknownReservedDropped test
+    bindings_denylist = [llcpp, hlcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -782,8 +790,8 @@ success("ResourceTableUnknownReservedStored") {
 }
 
 decode_success("ValueTableUnknownTrailingDropped") {
-    // LLCPP is the only binding that does not store unknowns.
-    bindings_allowlist = [llcpp],
+    // LLCPP and HLCPP don't store unknowns.
+    bindings_allowlist = [llcpp, hlcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -827,8 +835,8 @@ decode_success("ValueTableUnknownTrailingDropped") {
 }
 
 decode_success("ResourceTableUnknownTrailingDropped") {
-    // LLCPP is the only binding that does not store unknowns.
-    bindings_allowlist = [llcpp],
+    // LLCPP and HLCPP don't store unknowns.
+    bindings_allowlist = [llcpp, hlcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -872,8 +880,8 @@ decode_success("ResourceTableUnknownTrailingDropped") {
 }
 
 success("ValueTableUnknownTrailingStored") {
-    // LLCPP is tested in the ValueTableUnknownTrailingDropped test
-    bindings_denylist = [llcpp],
+    // LLCPP and HLCPP are tested in the ValueTableUnknownTrailingDropped test
+    bindings_denylist = [llcpp, hlcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -920,8 +928,8 @@ success("ValueTableUnknownTrailingStored") {
 }
 
 success("ResourceTableUnknownTrailingStored") {
-    // LLCPP is tested in the ResourceTableUnknownTrailingDropped test
-    bindings_denylist = [llcpp],
+    // LLCPP and HLCPP are tested in the ResourceTableUnknownTrailingDropped test
+    bindings_denylist = [llcpp, hlcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -968,8 +976,8 @@ success("ResourceTableUnknownTrailingStored") {
 }
 
 decode_success("ValueTableUnknownTrailingHandlesDropped") {
-    // LLCPP is the only binding that does not store unknowns.
-    bindings_allowlist = [llcpp],
+    // LLCPP and HLCPP don't store unknowns.
+    bindings_allowlist = [llcpp, hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -1014,8 +1022,8 @@ decode_success("ValueTableUnknownTrailingHandlesDropped") {
 }
 
 decode_success("ResourceTableUnknownTrailingHandlesDropped") {
-    // LLCPP is the only binding that does not store unknowns.
-    bindings_allowlist = [llcpp],
+    // LLCPP and HLCPP don't store unknowns.
+    bindings_allowlist = [llcpp, hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -1060,8 +1068,8 @@ decode_success("ResourceTableUnknownTrailingHandlesDropped") {
 }
 
 decode_failure("ValueTableUnknownTrailingHandlesRejected") {
-    // LLCPP is tested in the ValueTableUnknownTrailingHandlesDropped test
-    bindings_denylist = [c, llcpp],
+    // LLCPP and HLCPP are tested in the ValueTableUnknownTrailingHandlesDropped test
+    bindings_denylist = [c, llcpp, hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -1103,8 +1111,8 @@ decode_failure("ValueTableUnknownTrailingHandlesRejected") {
 }
 
 success("ResourceTableUnknownTrailingHandlesStored") {
-    // LLCPP is tested in the ResourceTableUnknownTrailingHandlesDropped test
-    bindings_denylist = [llcpp],
+    // LLCPP and HLCPP are tested in the ResourceTableUnknownTrailingHandlesDropped test
+    bindings_denylist = [llcpp, hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),

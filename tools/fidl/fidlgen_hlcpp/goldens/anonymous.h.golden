@@ -492,16 +492,6 @@ class TableMember final {
     Destruct(&table_data_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   TableMember();
   TableMember(TableMember&& other);
   ~TableMember();
@@ -530,14 +520,7 @@ class TableMember final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -557,7 +540,6 @@ class TableMember final {
     ::std::vector<::test::anonymous::TableData> value;
   };
   ValueUnion_table_data table_data_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using TableMemberPtr = ::std::unique_ptr<TableMember>;
@@ -719,16 +701,6 @@ class FunctionApplication final {
     Destruct(&flags_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   FunctionApplication();
   FunctionApplication(FunctionApplication&& other);
   ~FunctionApplication();
@@ -757,14 +729,7 @@ class FunctionApplication final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -800,7 +765,6 @@ class FunctionApplication final {
     ::test::anonymous::Flags value;
   };
   ValueUnion_flags flags_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using FunctionApplicationPtr = ::std::unique_ptr<FunctionApplication>;
@@ -1304,7 +1268,7 @@ struct Equality<::test::anonymous::TableMember> {
     } else if (_rhs.has_table_data()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -1521,7 +1485,7 @@ struct Equality<::test::anonymous::FunctionApplication> {
     } else if (_rhs.has_flags()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>

@@ -198,31 +198,18 @@ func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.Record
 
 		if field.Key.IsUnknown() {
 			if isTable {
-				unknownData := field.Value.(gidlir.UnknownData)
-				if decl.IsResourceType() {
-					b.Builder.WriteString(fmt.Sprintf(`::fidl::UnknownData _data = {
-	.bytes=%s,
-	.handles=%s
-};
-%s%sSetUnknownDataEntry(%dlu, std::move(_data));
-`, BuildBytes(unknownData.Bytes), buildHandles(unknownData.Handles, b.handleExtractOp), containerVar, accessor, field.Key.UnknownOrdinal))
-				} else {
-					b.Builder.WriteString(fmt.Sprintf(
-						"%s%sSetUnknownDataEntry(%dlu, %s);\n",
-						containerVar, accessor, field.Key.UnknownOrdinal, BuildBytes(unknownData.Bytes)))
-				}
+				panic("unknown table fields not supported for HLCPP")
+			}
+			unknownData := field.Value.(gidlir.UnknownData)
+			if decl.IsResourceType() {
+				b.Builder.WriteString(fmt.Sprintf(
+					"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s, %s);\n",
+					containerVar, accessor, field.Key.UnknownOrdinal, BuildBytes(unknownData.Bytes),
+					buildHandles(unknownData.Handles, b.handleExtractOp)))
 			} else {
-				unknownData := field.Value.(gidlir.UnknownData)
-				if decl.IsResourceType() {
-					b.Builder.WriteString(fmt.Sprintf(
-						"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s, %s);\n",
-						containerVar, accessor, field.Key.UnknownOrdinal, BuildBytes(unknownData.Bytes),
-						buildHandles(unknownData.Handles, b.handleExtractOp)))
-				} else {
-					b.Builder.WriteString(fmt.Sprintf(
-						"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n",
-						containerVar, accessor, field.Key.UnknownOrdinal, BuildBytes(unknownData.Bytes)))
-				}
+				b.Builder.WriteString(fmt.Sprintf(
+					"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n",
+					containerVar, accessor, field.Key.UnknownOrdinal, BuildBytes(unknownData.Bytes)))
 			}
 			continue
 		}

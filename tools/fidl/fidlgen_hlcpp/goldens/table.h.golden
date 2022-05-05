@@ -61,16 +61,6 @@ class TableWithAttributes final {
     Destruct(&x_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   TableWithAttributes();
   TableWithAttributes(TableWithAttributes&& other);
   ~TableWithAttributes();
@@ -99,14 +89,7 @@ class TableWithAttributes final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -126,7 +109,6 @@ class TableWithAttributes final {
     int64_t value;
   };
   ValueUnion_x x_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using TableWithAttributesPtr = ::std::unique_ptr<TableWithAttributes>;
@@ -197,16 +179,6 @@ class SimpleTable final {
     Destruct(&y_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   SimpleTable();
   SimpleTable(SimpleTable&& other);
   ~SimpleTable();
@@ -235,14 +207,7 @@ class SimpleTable final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -270,7 +235,6 @@ class SimpleTable final {
     int64_t value;
   };
   ValueUnion_y y_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
@@ -371,16 +335,6 @@ class ReverseOrdinalTable final {
     Destruct(&x_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   ReverseOrdinalTable();
   ReverseOrdinalTable(ReverseOrdinalTable&& other);
   ~ReverseOrdinalTable();
@@ -409,14 +363,7 @@ class ReverseOrdinalTable final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -452,7 +399,6 @@ class ReverseOrdinalTable final {
     int64_t value;
   };
   ValueUnion_x x_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using ReverseOrdinalTablePtr = ::std::unique_ptr<ReverseOrdinalTable>;
@@ -493,16 +439,6 @@ class OlderSimpleTable final {
     Destruct(&x_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   OlderSimpleTable();
   OlderSimpleTable(OlderSimpleTable&& other);
   ~OlderSimpleTable();
@@ -531,14 +467,7 @@ class OlderSimpleTable final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -558,7 +487,6 @@ class OlderSimpleTable final {
     int64_t value;
   };
   ValueUnion_x x_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using OlderSimpleTablePtr = ::std::unique_ptr<OlderSimpleTable>;
@@ -659,16 +587,6 @@ class NewerSimpleTable final {
     Destruct(&z_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   NewerSimpleTable();
   NewerSimpleTable(NewerSimpleTable&& other);
   ~NewerSimpleTable();
@@ -697,14 +615,7 @@ class NewerSimpleTable final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -740,7 +651,6 @@ class NewerSimpleTable final {
     int64_t value;
   };
   ValueUnion_z z_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
@@ -750,16 +660,6 @@ class ExtensionTable final {
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
   bool IsEmpty() const;
-
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
 
   ExtensionTable();
   ExtensionTable(ExtensionTable&& other);
@@ -789,14 +689,7 @@ class ExtensionTable final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -808,7 +701,6 @@ class ExtensionTable final {
   }
 
   ::fidl::internal::BitSet<0> field_presence_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using ExtensionTablePtr = ::std::unique_ptr<ExtensionTable>;
@@ -2739,16 +2631,6 @@ class SixtyFourOrdinalTable final {
     Destruct(&v64_value_.value);
   }
 
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
-
   SixtyFourOrdinalTable();
   SixtyFourOrdinalTable(SixtyFourOrdinalTable&& other);
   ~SixtyFourOrdinalTable();
@@ -2777,14 +2659,7 @@ class SixtyFourOrdinalTable final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -3308,7 +3183,6 @@ class SixtyFourOrdinalTable final {
     ::test::table::ExtensionTable value;
   };
   ValueUnion_v64 v64_value_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using SixtyFourOrdinalTablePtr = ::std::unique_ptr<SixtyFourOrdinalTable>;
@@ -3318,16 +3192,6 @@ class EmptyTable final {
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
   bool IsEmpty() const;
-
-  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
-    return _unknown_data;
-  }
-
-  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
-    auto ord = static_cast<uint64_t>(ordinal);
-    ZX_ASSERT(!IsOrdinalKnown(ord));
-    _unknown_data.insert({ord, std::move(data)});
-  }
 
   EmptyTable();
   EmptyTable(EmptyTable&& other);
@@ -3357,14 +3221,7 @@ class EmptyTable final {
   }
 
   size_t MaxOrdinal() const {
-    size_t max_ordinal =
-        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-    for (const auto& data : _unknown_data) {
-      if (data.first > max_ordinal) {
-        max_ordinal = data.first;
-      }
-    }
-    return max_ordinal;
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
   }
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
@@ -3376,7 +3233,6 @@ class EmptyTable final {
   }
 
   ::fidl::internal::BitSet<0> field_presence_;
-  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using EmptyTablePtr = ::std::unique_ptr<EmptyTable>;
@@ -3406,7 +3262,7 @@ struct Equality<::test::table::TableWithAttributes> {
     } else if (_rhs.has_x()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -3441,7 +3297,7 @@ struct Equality<::test::table::SimpleTable> {
     } else if (_rhs.has_y()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -3486,7 +3342,7 @@ struct Equality<::test::table::ReverseOrdinalTable> {
     } else if (_rhs.has_x()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -3511,7 +3367,7 @@ struct Equality<::test::table::OlderSimpleTable> {
     } else if (_rhs.has_x()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -3556,7 +3412,7 @@ struct Equality<::test::table::NewerSimpleTable> {
     } else if (_rhs.has_z()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -3571,7 +3427,7 @@ template <>
 struct Equality<::test::table::ExtensionTable> {
   bool operator()(const ::test::table::ExtensionTable& _lhs,
                   const ::test::table::ExtensionTable& _rhs) const {
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -4226,7 +4082,7 @@ struct Equality<::test::table::SixtyFourOrdinalTable> {
     } else if (_rhs.has_v64()) {
       return false;
     }
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 template <>
@@ -4241,7 +4097,7 @@ template <>
 struct Equality<::test::table::EmptyTable> {
   bool operator()(const ::test::table::EmptyTable& _lhs,
                   const ::test::table::EmptyTable& _rhs) const {
-    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+    return true;
   }
 };
 

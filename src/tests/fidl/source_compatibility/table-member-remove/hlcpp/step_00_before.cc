@@ -16,9 +16,6 @@ void use_table(const fidl_test::Profile& profile) {
   if (profile.has_dark_mode()) {
     printf("dark mode on: %s", profile.dark_mode() ? "true" : "false");
   }
-  for (const auto& entry : profile.UnknownData()) {
-    printf("unknown ordinal %lu", entry.first);
-  }
 }
 // [END contents]
 

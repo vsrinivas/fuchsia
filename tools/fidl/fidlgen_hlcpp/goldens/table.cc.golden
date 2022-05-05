@@ -20,7 +20,6 @@ TableWithAttributes::TableWithAttributes(TableWithAttributes&& other) {
   if (field_presence_.IsSet<0>()) {
     Construct(&x_value_.value, std::move(other.x_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 TableWithAttributes::~TableWithAttributes() {
@@ -42,13 +41,10 @@ TableWithAttributes& TableWithAttributes::operator=(
     field_presence_.Clear<0>();
     Destruct(&x_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
-bool TableWithAttributes::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
-}
+bool TableWithAttributes::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void TableWithAttributes::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
@@ -56,19 +52,9 @@ void TableWithAttributes::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -98,21 +84,13 @@ void TableWithAttributes::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void TableWithAttributes::Decode(::fidl::Decoder* _decoder,
                                  TableWithAttributes* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -133,26 +111,6 @@ void TableWithAttributes::Decode(::fidl::Decoder* _decoder,
     goto done_1;
   }
 
-  if (count > 1) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -169,7 +127,7 @@ zx_status_t TableWithAttributes::Clone(TableWithAttributes* result) const {
   } else {
     result->clear_x();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_table_SimpleTableTable;
@@ -185,7 +143,6 @@ SimpleTable::SimpleTable(SimpleTable&& other) {
   if (field_presence_.IsSet<4>()) {
     Construct(&y_value_.value, std::move(other.y_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 SimpleTable::~SimpleTable() {
@@ -220,13 +177,10 @@ SimpleTable& SimpleTable::operator=(SimpleTable&& other) {
     field_presence_.Clear<4>();
     Destruct(&y_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
-bool SimpleTable::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
-}
+bool SimpleTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void SimpleTable::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
@@ -234,19 +188,9 @@ void SimpleTable::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -277,16 +221,6 @@ void SimpleTable::Encode(
     }
   }
   if (field_presence_.IsSet<4>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 5) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -316,21 +250,13 @@ void SimpleTable::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value,
                          size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -364,26 +290,6 @@ void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value,
     goto done_5;
   }
 
-  if (count > 2) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -408,7 +314,7 @@ zx_status_t SimpleTable::Clone(SimpleTable* result) const {
   } else {
     result->clear_y();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
@@ -428,7 +334,6 @@ ReverseOrdinalTable::ReverseOrdinalTable(ReverseOrdinalTable&& other) {
   if (field_presence_.IsSet<2>()) {
     Construct(&x_value_.value, std::move(other.x_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 ReverseOrdinalTable::~ReverseOrdinalTable() {
@@ -478,13 +383,10 @@ ReverseOrdinalTable& ReverseOrdinalTable::operator=(
     field_presence_.Clear<2>();
     Destruct(&x_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
-bool ReverseOrdinalTable::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
-}
+bool ReverseOrdinalTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void ReverseOrdinalTable::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
@@ -492,19 +394,9 @@ void ReverseOrdinalTable::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -535,16 +427,6 @@ void ReverseOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<1>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 2) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -575,16 +457,6 @@ void ReverseOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<2>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 3) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -614,21 +486,13 @@ void ReverseOrdinalTable::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder,
                                  ReverseOrdinalTable* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -675,26 +539,6 @@ void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_3;
   }
 
-  if (count > 3) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -727,7 +571,7 @@ zx_status_t ReverseOrdinalTable::Clone(ReverseOrdinalTable* result) const {
   } else {
     result->clear_x();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_table_OlderSimpleTableTable;
@@ -741,7 +585,6 @@ OlderSimpleTable::OlderSimpleTable(OlderSimpleTable&& other) {
   if (field_presence_.IsSet<0>()) {
     Construct(&x_value_.value, std::move(other.x_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 OlderSimpleTable::~OlderSimpleTable() {
@@ -762,13 +605,10 @@ OlderSimpleTable& OlderSimpleTable::operator=(OlderSimpleTable&& other) {
     field_presence_.Clear<0>();
     Destruct(&x_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
-bool OlderSimpleTable::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
-}
+bool OlderSimpleTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void OlderSimpleTable::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
@@ -776,19 +616,9 @@ void OlderSimpleTable::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -818,21 +648,13 @@ void OlderSimpleTable::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void OlderSimpleTable::Decode(::fidl::Decoder* _decoder,
                               OlderSimpleTable* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -853,26 +675,6 @@ void OlderSimpleTable::Decode(::fidl::Decoder* _decoder,
     goto done_1;
   }
 
-  if (count > 1) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -889,7 +691,7 @@ zx_status_t OlderSimpleTable::Clone(OlderSimpleTable* result) const {
   } else {
     result->clear_x();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_table_NewerSimpleTableTable;
@@ -909,7 +711,6 @@ NewerSimpleTable::NewerSimpleTable(NewerSimpleTable&& other) {
   if (field_presence_.IsSet<5>()) {
     Construct(&z_value_.value, std::move(other.z_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 NewerSimpleTable::~NewerSimpleTable() {
@@ -958,13 +759,10 @@ NewerSimpleTable& NewerSimpleTable::operator=(NewerSimpleTable&& other) {
     field_presence_.Clear<5>();
     Destruct(&z_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
-bool NewerSimpleTable::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
-}
+bool NewerSimpleTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void NewerSimpleTable::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
@@ -972,19 +770,9 @@ void NewerSimpleTable::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -1015,16 +803,6 @@ void NewerSimpleTable::Encode(
     }
   }
   if (field_presence_.IsSet<4>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 5) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -1055,16 +833,6 @@ void NewerSimpleTable::Encode(
     }
   }
   if (field_presence_.IsSet<5>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 6) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -1094,21 +862,13 @@ void NewerSimpleTable::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void NewerSimpleTable::Decode(::fidl::Decoder* _decoder,
                               NewerSimpleTable* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -1155,26 +915,6 @@ void NewerSimpleTable::Decode(::fidl::Decoder* _decoder,
     goto done_6;
   }
 
-  if (count > 3) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -1207,7 +947,7 @@ zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
   } else {
     result->clear_z();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_table_ExtensionTableTable;
@@ -1217,19 +957,15 @@ ExtensionTable::ExtensionTable() {}
 
 ExtensionTable::ExtensionTable(ExtensionTable&& other) {
   field_presence_ = other.field_presence_;
-  _unknown_data = std::move(other._unknown_data);
 }
 
 ExtensionTable::~ExtensionTable() {}
 
 ExtensionTable& ExtensionTable::operator=(ExtensionTable&& other) {
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
-bool ExtensionTable::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
-}
+bool ExtensionTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void ExtensionTable::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
@@ -1237,49 +973,21 @@ void ExtensionTable::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
 }
 
 void ExtensionTable::Decode(::fidl::Decoder* _decoder, ExtensionTable* _value,
                             size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
 
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
-
-  if (count > 0) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
 
   return;
 
@@ -1289,7 +997,7 @@ clear_all:
 }
 
 zx_status_t ExtensionTable::Clone(ExtensionTable* result) const {
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_table_SixtyFourOrdinalTableTable;
@@ -1492,7 +1200,6 @@ SixtyFourOrdinalTable::SixtyFourOrdinalTable(SixtyFourOrdinalTable&& other) {
   if (field_presence_.IsSet<63>()) {
     Construct(&v64_value_.value, std::move(other.v64_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 SixtyFourOrdinalTable::~SixtyFourOrdinalTable() {
@@ -2396,12 +2103,11 @@ SixtyFourOrdinalTable& SixtyFourOrdinalTable::operator=(
     field_presence_.Clear<63>();
     Destruct(&v64_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
 bool SixtyFourOrdinalTable::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+  return field_presence_.IsEmpty();
 }
 
 void SixtyFourOrdinalTable::Encode(
@@ -2410,19 +2116,9 @@ void SixtyFourOrdinalTable::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2453,16 +2149,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<1>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 2) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2493,16 +2179,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<2>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 3) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2533,16 +2209,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<3>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 4) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2573,16 +2239,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<4>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 5) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2613,16 +2269,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<5>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 6) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2653,16 +2299,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<6>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 7) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2693,16 +2329,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<7>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 8) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2733,16 +2359,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<8>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 9) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2773,16 +2389,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<9>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 10) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2813,16 +2419,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<10>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 11) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2853,16 +2449,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<11>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 12) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2893,16 +2479,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<12>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 13) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2933,16 +2509,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<13>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 14) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -2973,16 +2539,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<14>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 15) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3013,16 +2569,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<15>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 16) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3053,16 +2599,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<16>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 17) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3093,16 +2629,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<17>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 18) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3133,16 +2659,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<18>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 19) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3173,16 +2689,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<19>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 20) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3213,16 +2719,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<20>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 21) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3253,16 +2749,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<21>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 22) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3293,16 +2779,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<22>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 23) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3333,16 +2809,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<23>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 24) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3373,16 +2839,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<24>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 25) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3413,16 +2869,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<25>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 26) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3453,16 +2899,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<26>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 27) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3493,16 +2929,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<27>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 28) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3533,16 +2959,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<28>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 29) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3573,16 +2989,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<29>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 30) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3613,16 +3019,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<30>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 31) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3653,16 +3049,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<31>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 32) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3693,16 +3079,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<32>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 33) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3733,16 +3109,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<33>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 34) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3773,16 +3139,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<34>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 35) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3813,16 +3169,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<35>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 36) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3853,16 +3199,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<36>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 37) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3893,16 +3229,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<37>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 38) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3933,16 +3259,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<38>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 39) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -3973,16 +3289,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<39>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 40) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4013,16 +3319,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<40>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 41) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4053,16 +3349,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<41>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 42) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4093,16 +3379,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<42>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 43) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4133,16 +3409,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<43>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 44) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4173,16 +3439,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<44>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 45) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4213,16 +3469,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<45>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 46) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4253,16 +3499,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<46>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 47) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4293,16 +3529,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<47>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 48) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4333,16 +3559,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<48>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 49) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4373,16 +3589,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<49>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 50) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4413,16 +3619,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<50>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 51) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4453,16 +3649,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<51>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 52) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4493,16 +3679,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<52>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 53) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4533,16 +3709,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<53>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 54) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4573,16 +3739,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<54>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 55) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4613,16 +3769,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<55>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 56) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4653,16 +3799,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<56>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 57) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4693,16 +3829,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<57>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 58) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4733,16 +3859,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<58>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 59) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4773,16 +3889,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<59>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 60) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4813,16 +3919,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<60>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 61) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4853,16 +3949,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<61>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 62) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4893,16 +3979,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<62>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 63) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4933,16 +4009,6 @@ void SixtyFourOrdinalTable::Encode(
     }
   }
   if (field_presence_.IsSet<63>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 64) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -4973,22 +4039,14 @@ void SixtyFourOrdinalTable::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder,
                                    SixtyFourOrdinalTable* _value,
                                    size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -5828,26 +4886,6 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder,
     goto done_64;
   }
 
-  if (count > 64) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -6423,7 +5461,7 @@ zx_status_t SixtyFourOrdinalTable::Clone(SixtyFourOrdinalTable* result) const {
   } else {
     result->clear_v64();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_table_EmptyTableTable;
@@ -6433,19 +5471,13 @@ EmptyTable::EmptyTable() {}
 
 EmptyTable::EmptyTable(EmptyTable&& other) {
   field_presence_ = other.field_presence_;
-  _unknown_data = std::move(other._unknown_data);
 }
 
 EmptyTable::~EmptyTable() {}
 
-EmptyTable& EmptyTable::operator=(EmptyTable&& other) {
-  _unknown_data = std::move(other._unknown_data);
-  return *this;
-}
+EmptyTable& EmptyTable::operator=(EmptyTable&& other) { return *this; }
 
-bool EmptyTable::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
-}
+bool EmptyTable::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void EmptyTable::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
@@ -6453,49 +5485,21 @@ void EmptyTable::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
 }
 
 void EmptyTable::Decode(::fidl::Decoder* _decoder, EmptyTable* _value,
                         size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
 
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
-
-  if (count > 0) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
 
   return;
 
@@ -6504,9 +5508,7 @@ clear_all:
   return;
 }
 
-zx_status_t EmptyTable::Clone(EmptyTable* result) const {
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
-}
+zx_status_t EmptyTable::Clone(EmptyTable* result) const { return ZX_OK; }
 
 //
 // Proxies and stubs definitions

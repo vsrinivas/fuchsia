@@ -19,7 +19,6 @@ Table::Table(Table&& other) {
   if (field_presence_.IsSet<0>()) {
     Construct(&Field_value_.value, std::move(other.Field_value_.value));
   }
-  _unknown_data = std::move(other._unknown_data);
 }
 
 Table::~Table() {
@@ -40,13 +39,10 @@ Table& Table::operator=(Table&& other) {
     field_presence_.Clear<0>();
     Destruct(&Field_value_.value);
   }
-  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
-bool Table::IsEmpty() const {
-  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
-}
+bool Table::IsEmpty() const { return field_presence_.IsEmpty(); }
 
 void Table::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
@@ -54,19 +50,9 @@ void Table::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  auto next_unknown = _unknown_data.begin();
+  __attribute__((__unused__)) size_t base =
+      _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   if (field_presence_.IsSet<0>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
@@ -96,20 +82,12 @@ void Table::Encode(
       envelope->flags = 0;
     }
   }
-
-  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
-  // the range of known ordinals)
-  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base =
-        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
-    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
-  }
 }
 
 void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  size_t base;
-  size_t count;
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
@@ -130,26 +108,6 @@ void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
     goto done_1;
   }
 
-  if (count > 1) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) continue;
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope =
-          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
-        auto result = _value->_unknown_data.emplace(
-            std::piecewise_construct, std::forward_as_tuple(ordinal),
-            std::forward_as_tuple());
-        auto iter = result.first;
-        iter->second.resize(unknown_info.num_bytes);
-        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
-                                           unknown_info.value_offset);
-      }
-    }
-  }
-
   return;
 
   // Clear unset values.
@@ -167,7 +125,7 @@ zx_status_t Table::Clone(Table* result) const {
   } else {
     result->clear_Field();
   }
-  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_doccomments_StructTable;

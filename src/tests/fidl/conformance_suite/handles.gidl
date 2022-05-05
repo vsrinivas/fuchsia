@@ -450,8 +450,8 @@ success("ChannelMaxHandles") {
 
 // There should be support for at least 64 handles in unknown fields.
 decode_success("ChannelMaxUnknownHandlesDropped") {
-    // LLCPP is the only binding that does not store unknowns.
-    bindings_allowlist = [llcpp],
+    // LLCPP and HLCPP don't store unknowns.
+    bindings_allowlist = [llcpp, hlcpp],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),
@@ -503,8 +503,8 @@ decode_success("ChannelMaxUnknownHandlesDropped") {
 // that the unknown data is stored in the value instead of discarded
 success("ChannelMaxUnknownHandlesStored") {
     // TODO(fxbug.dev/88707) Fix on C. (Unknown failure reason).
-    // LLCPP is tested in the ChannelMaxUnknownHandlesDropped test
-    bindings_denylist = [llcpp, c],
+    // LLCPP and HLCPP tested in the ChannelMaxUnknownHandlesDropped test
+    bindings_denylist = [llcpp, hlcpp, c],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),

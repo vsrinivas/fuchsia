@@ -177,25 +177,9 @@ func (b *equalityCheckBuilder) visitTable(actualExpr string, expectedValue gidli
 	expectedFieldValues := map[string]gidlir.Value{}
 	for _, field := range expectedValue.Fields {
 		if field.Key.IsUnknown() {
-			unknownData := fmt.Sprintf("%s.UnknownData()", actualVar)
-			b.assertNotEquals(
-				fmt.Sprintf("%s.find(%d)", unknownData, field.Key.UnknownOrdinal),
-				fmt.Sprintf("%s.end()", unknownData))
-			if decl.IsResourceType() {
-				b.visitUnknownBytes(
-					fmt.Sprintf("%s.at(%d).bytes", unknownData, field.Key.UnknownOrdinal),
-					field.Value.(gidlir.UnknownData).Bytes)
-				b.visitUnknownHandles(
-					fmt.Sprintf("%s.at(%d).handles", unknownData, field.Key.UnknownOrdinal),
-					field.Value.(gidlir.UnknownData).Handles)
-			} else {
-				b.visitUnknownBytes(
-					fmt.Sprintf("%s.at(%d)", unknownData, field.Key.UnknownOrdinal),
-					field.Value.(gidlir.UnknownData).Bytes)
-			}
-		} else {
-			expectedFieldValues[field.Key.Name] = field.Value
+			panic("unknown table fields not supported for HLCPP")
 		}
+		expectedFieldValues[field.Key.Name] = field.Value
 	}
 	for _, fieldName := range decl.FieldNames() {
 		fieldDecl, ok := decl.Field(fieldName)

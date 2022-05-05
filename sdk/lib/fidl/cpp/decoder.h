@@ -47,6 +47,13 @@ class Decoder final {
   zx::handle ClaimUnknownHandle() {
     return zx::handle(body_.handles().data()[handle_index_++].handle);
   }
+
+  void CloseUnknownHandlesInEnvelope(const fidl_envelope_v2_t* envelope) {
+    EnvelopeUnknownDataInfoResult info = EnvelopeUnknownDataInfo(envelope);
+    for (uint32_t i = 0; i < info.num_handles; i++) {
+      ClaimUnknownHandle();
+    }
+  }
 #endif
 
   size_t EnvelopeValueOffset(const fidl_envelope_v2_t* envelope) const {

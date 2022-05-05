@@ -348,14 +348,6 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
         handle_idx_ += envelope_copy.num_handles;
         return Status::kSuccess;
       }
-      // Receiving unknown handles for a resource type is only an error if
-      // hlcpp_mode_ is true, i.e. the walker itself is not
-      // automatically closing all unknown handles (making it impossible for
-      // the domain object to store the unknown handles).
-      if (unlikely(hlcpp_mode_ && is_resource == kFidlIsResource_NotResource)) {
-        SetError("received unknown handles for a non-resource type");
-        return Status::kConstraintViolationError;
-      }
       memcpy(&unknown_handles_[unknown_handle_idx_], &handles_[handle_idx_],
              envelope_copy.num_handles * sizeof(fidl_handle_t));
       handle_idx_ = end_incoming_handle;
