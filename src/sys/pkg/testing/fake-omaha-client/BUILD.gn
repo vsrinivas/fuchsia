@@ -1,0 +1,28 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("fake-omaha-client") {
+  output_name = "fake-omaha-client"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-hyper",
+    "//src/sys/pkg/lib/omaha-client:omaha-client",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:hyper-rustls",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+group("fake-omaha-client-host") {
+  deps = [ ":fake-omaha-client($host_toolchain)" ]
+}
