@@ -65,7 +65,7 @@ pub async fn log_session_launch_time(
         .log_integer(
             metrics::SESSION_LAUNCH_TIME_MIGRATED_METRIC_ID,
             elapsed_time,
-            &[metrics::SessionLaunchTimeMetricDimensionStatus::Success as u32],
+            &[metrics::SessionLaunchTimeMigratedMetricDimensionStatus::Success as u32],
         )
         .await
         .context("Could not log session launch time.")?;
