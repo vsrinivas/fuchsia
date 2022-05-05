@@ -19,7 +19,7 @@ namespace ftl {
 namespace {
 
 // Many of the NDM driver functions and tests require that these constants match. If they ever
-// are updated to be unique constants, the various API contacts need to be updated accordingly.
+// are updated to be unique constants, the various API contracts need to be updated accordingly.
 static_assert(kNdmUncorrectableEcc == kNdmError, "kNdmUncorrectableEcc should map to kNdmError!");
 
 bool g_init_performed = false;
