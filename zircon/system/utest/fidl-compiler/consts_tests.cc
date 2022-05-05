@@ -509,6 +509,30 @@ TEST(ConstsTests, BadConstTestAssignTypeName) {
   }
 }
 
+TEST(ConstsTests, BadConstTestAssignBuiltinType) {
+  for (auto builtin : {"bool", "uint32", "box", "vector", "byte"}) {
+    std::ostringstream ss;
+    ss << "library example;\n";
+    ss << "const FOO uint32 = " << builtin << ";\n";
+
+    TestLibrary library(ss.str());
+    // TODO(fxbug.dev/99665): Should have a better error message.
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotResolveConstantValue);
+  }
+}
+
+TEST(ConstsTests, BadConstTestAssignBuiltinNonType) {
+  for (auto builtin : {"MAX", "HEAD", "optional"}) {
+    std::ostringstream ss;
+    ss << "library example;\n";
+    ss << "const FOO uint32 = " << builtin << ";\n";
+
+    TestLibrary library(ss.str());
+    // TODO(fxbug.dev/99665): Should have a better error message.
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotResolveConstantValue);
+  }
+}
+
 TEST(ConstsTests, BadNameCollision) {
   TestLibrary library(R"FIDL(
 library example;

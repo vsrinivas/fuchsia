@@ -316,8 +316,9 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
   const ConstantValue* const_val = nullptr;
   switch (target->kind) {
     case Element::Kind::kBuiltin: {
-      // If we get here, we're trying to resolve a builtin constraint like
-      // `optional` when a regular constant was expected.
+      // TODO(fxbug.dev/99665): In some cases we want to return a more specific
+      // error message from here, but right now we can't due to the way
+      // TypeResolver::ResolveConstraintAs tries multiple interpretations.
       return false;
     }
     case Element::Kind::kConst: {
