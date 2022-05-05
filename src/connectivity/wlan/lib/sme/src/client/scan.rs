@@ -185,6 +185,14 @@ fn maybe_insert_bss(
     match bss_map.entry(Bssid(fidl_bss.bssid)) {
         hash_map::Entry::Occupied(mut entry) => {
             let (ref mut existing_bss, ref mut ies_merger) = entry.get_mut();
+
+            if (fidl_bss.channel.primary != existing_bss.channel.primary)
+                && (fidl_bss.rssi_dbm < existing_bss.rssi_dbm)
+            {
+                // Assume `fidl_bss` is from an "echo" Beacon frame from the same BSSID
+                return;
+            }
+
             ies_merger.merge(&ies[..]);
             if ies_merger.buffer_overflow() {
                 warn!(
@@ -348,8 +356,9 @@ mod tests {
     use ieee80211::MacAddr;
     use itertools;
     use std::convert::TryFrom;
+    use test_case::test_case;
     use wlan_common::{
-        assert_variant, fake_fidl_bss_description,
+        assert_variant, fake_bss_description, fake_fidl_bss_description,
         hasher::WlanHasher,
         test_utils::{
             fake_capabilities::fake_5ghz_band_capability,
@@ -435,41 +444,60 @@ mod tests {
         assert_eq!(vec![Ssid::try_from("foo").unwrap(), Ssid::try_from("qux").unwrap()], ssid_list);
     }
 
-    #[test]
-    fn discovery_scan_deduplicate_bssid() {
+    #[test_case(vec![
+        fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap()),
+        fake_fidl_bss_description!(Open, ssid: Ssid::try_from("baz").unwrap()),
+    ], vec![fake_bss_description!(Open, ssid: Ssid::try_from("baz").unwrap())] ;
+                "when latest BSS Description is new")]
+    #[test_case(vec![
+        fake_fidl_bss_description!(Open, rssi_dbm: -36, channel: Channel::new(149, Cbw::Cbw20)),
+        fake_fidl_bss_description!(Open, rssi_dbm: -84, channel: Channel::new(165, Cbw::Cbw20)),
+    ], vec![fake_bss_description!(Open, rssi_dbm: -36, channel: Channel::new(149, Cbw::Cbw20))] ;
+                "when strong signal is first")]
+    #[test_case(vec![
+        fake_fidl_bss_description!(Open, rssi_dbm: -84, channel: Channel::new(64, Cbw::Cbw20)),
+        fake_fidl_bss_description!(Open, rssi_dbm: -36, channel: Channel::new(50, Cbw::Cbw20)),
+        fake_fidl_bss_description!(Open, rssi_dbm: -80, channel: Channel::new(36, Cbw::Cbw20)),
+    ], vec![fake_bss_description!(Open, rssi_dbm: -36, channel: Channel::new(50, Cbw::Cbw20))];
+                "when strong signal is middle")]
+    #[test_case(vec![
+        fake_fidl_bss_description!(Open, rssi_dbm: -84, channel: Channel::new(64, Cbw::Cbw20)),
+        fake_fidl_bss_description!(Open, rssi_dbm: -80, channel: Channel::new(36, Cbw::Cbw20)),
+        fake_fidl_bss_description!(Open, rssi_dbm: -36, channel: Channel::new(50, Cbw::Cbw20)),
+    ], vec![fake_bss_description!(Open, rssi_dbm: -36, channel: Channel::new(50, Cbw::Cbw20))];
+                "when strong signal is last")]
+    #[test_case(vec![
+        fake_fidl_bss_description!(Open, rssi_dbm: -84, ssid: Ssid::try_from("bar").unwrap(),
+                                   channel: Channel::new(149, Cbw::Cbw20)),
+        fake_fidl_bss_description!(Open, rssi_dbm: -36, ssid: Ssid::try_from("bar").unwrap(),
+                                   channel: Channel::new(165, Cbw::Cbw20)),
+        fake_fidl_bss_description!(Open, rssi_dbm: -40, ssid: Ssid::try_from("baz").unwrap(),
+                                   channel: Channel::new(165, Cbw::Cbw20)),
+    ], vec![fake_bss_description!(Open, rssi_dbm: -40, ssid: Ssid::try_from("baz").unwrap(),
+                                  channel: Channel::new(165, Cbw::Cbw20))];
+                "overwrite latest chosen channel")]
+    fn deduplicate_by_bssid(
+        bss_description_list_from_mlme: Vec<fidl_internal::BssDescription>,
+        returned_bss_description_list: Vec<BssDescription>,
+    ) {
         let mut sched = create_sched();
         let (_inspector, sme_inspect) = sme_inspect();
         let req = sched
             .enqueue_scan_to_discover(passive_discovery_scan(10))
             .expect("expected a ScanRequest");
         let txn_id = req.txn_id;
-        sched
-            .on_mlme_scan_result(
-                fidl_mlme::ScanResult {
-                    txn_id,
-                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                    bss: fidl_internal::BssDescription {
-                        bssid: [1; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap())
+        for bss in bss_description_list_from_mlme {
+            sched
+                .on_mlme_scan_result(
+                    fidl_mlme::ScanResult {
+                        txn_id,
+                        timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                        bss,
                     },
-                },
-                &sme_inspect,
-            )
-            .expect("expect scan result received");
-        // A new scan result with the same BSSID replaces the previous result.
-        sched
-            .on_mlme_scan_result(
-                fidl_mlme::ScanResult {
-                    txn_id,
-                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                    bss: fidl_internal::BssDescription {
-                        bssid: [1; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("baz").unwrap())
-                    },
-                },
-                &sme_inspect,
-            )
-            .expect("expect scan result received");
+                    &sme_inspect,
+                )
+                .expect("expect scan result received");
+        }
         let (scan_end, mlme_req) = assert_variant!(
             sched.on_mlme_scan_end(
                 fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCode::Success },
@@ -488,10 +516,7 @@ mod tests {
             "expected discovery scan to be completed successfully"
         );
         assert_eq!(vec![10], tokens);
-        let mut ssid_list =
-            bss_description_list.into_iter().map(|bss| bss.ssid).collect::<Vec<_>>();
-        ssid_list.sort();
-        assert_eq!(vec![Ssid::try_from("baz").unwrap()], ssid_list);
+        assert_eq!(bss_description_list, returned_bss_description_list);
     }
 
     #[test]
