@@ -662,34 +662,32 @@ func (i *Instance) StartPiped(piped *exec.Cmd) error {
 	return startErr
 }
 
-func printWhileWait(r *bufio.Reader, proc *os.Process) (*os.ProcessState, error) {
+// Wait for the emulator instance to terminate
+func (i *Instance) Wait() (*os.ProcessState, error) {
 	stop := make(chan struct{})
 	defer close(stop)
 	go func() {
-		for {
+		// Line-buffer writes to stdout to avoid messy interleaving.
+		scanner := bufio.NewScanner(i.stdout)
+		for scanner.Scan() {
 			select {
 			case <-stop:
 				return
 			default:
-				if line, err := r.ReadString('\n'); err == nil {
-					fmt.Print(line)
-				}
+				fmt.Println(scanner.Text())
 			}
+		}
+		if err := scanner.Err(); err != nil {
+			fmt.Printf("%T.stdout: %s\n", i, err)
 		}
 	}()
 
-	ps, err := proc.Wait()
-	return ps, err
-}
-
-// Wait for the emulator instance to terminate
-func (i *Instance) Wait() (*os.ProcessState, error) {
-	if i.piped != nil {
-		if ps, err := printWhileWait(i.stdout, i.piped.Process); err != nil {
-			return ps, err
+	return func() *os.Process {
+		if i.piped != nil {
+			return i.piped.Process
 		}
-	}
-	return printWhileWait(i.stdout, i.cmd.Process)
+		return i.cmd.Process
+	}().Wait()
 }
 
 // RunCommand runs the given command in the serial console for the emulator
