@@ -507,7 +507,7 @@ TEST_F(DriverTest, Start_CheckCompatService) {
   ShutdownDriverDispatcher();
 }
 
-TEST_F(DriverTest, Start_RootResourceIsConstant) {
+TEST_F(DriverTest, DISABLED_Start_RootResourceIsConstant) {
   // Set the root resource before the test starts.
   zx_handle_t resource;
   {
