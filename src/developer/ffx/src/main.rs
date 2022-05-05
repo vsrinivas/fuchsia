@@ -249,9 +249,9 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
 
     // TODO(fxb/67400) Create an e2e test.
     #[cfg(test)]
-    let build_id: String = "testcurrenthash".to_owned();
+    let hash: String = "testcurrenthash".to_owned();
     #[cfg(not(test))]
-    let build_id: String =
+    let hash: String =
         match ffx_config::get((CURRENT_EXE_BUILDID, ffx_config::ConfigLevel::Runtime)).await {
             Ok(str) => str,
             Err(err) => {
@@ -261,36 +261,12 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
             }
         };
 
-    let daemon_version_info = timeout(proxy_timeout().await?, proxy.get_version_info())
+    let daemon_hash = timeout(proxy_timeout().await?, proxy.get_hash())
         .await
         .context("timeout")
-        .map_err(|_| {
-            ffx_error!(
-                "ffx was unable to query the version of the running ffx daemon. \
-                                 Run `ffx doctor --restart-daemon` and try again."
-            )
-        })?
+        .map_err(|_| ffx_error!("ffx was unable to query the version of the running ffx daemon. Run `ffx doctor --restart-daemon` and try again."))?
         .context("Getting hash from daemon")?;
-    match daemon_version_info.exec_path {
-        None => log::warn!("Daemon version info did not contain an executable path."),
-        Some(p) => {
-            let path = std::env::current_exe().map(|x| x.to_string_lossy().to_string()).ok();
-
-            if let Some(path) = path {
-                if path != p {
-                    ffx_bail!(
-                        "Running daemon is from a different copy of ffx. Make sure you are \
-                               using the right copy of ffx for the tree you are in and run \
-                               `ffx doctor --restart-daemon` to continue."
-                    );
-                }
-            } else {
-                log::warn!("Could not get path of ffx executable");
-            }
-        }
-    };
-
-    if Some(build_id) == daemon_version_info.build_id {
+    if hash == daemon_hash {
         link_task.detach();
         return Ok(proxy);
     }
@@ -576,12 +552,7 @@ mod test {
         assert!(str.contains("ffx doctor"));
     }
 
-    async fn test_daemon(sockpath: PathBuf, build_id: &str, sleep_secs: u64) {
-        let version_info = VersionInfo {
-            exec_path: Some(std::env::current_exe().unwrap().to_string_lossy().to_string()),
-            build_id: Some(build_id.to_owned()),
-            ..VersionInfo::EMPTY
-        };
+    async fn test_daemon(sockpath: PathBuf, hash: &str, sleep_secs: u64) {
         let daemon_hoist = Arc::new(hoist::Hoist::new().unwrap());
 
         let (s, p) = fidl::Channel::create().unwrap();
@@ -624,9 +595,7 @@ mod test {
                 DaemonRequestStream::from_channel(fidl::AsyncChannel::from_channel(chan).unwrap());
             while let Some(request) = stream.try_next().await.unwrap_or(None) {
                 match request {
-                    DaemonRequest::GetVersionInfo { responder, .. } => {
-                        responder.send(version_info.clone()).unwrap()
-                    }
+                    DaemonRequest::GetHash { responder, .. } => responder.send(hash).unwrap(),
                     DaemonRequest::Quit { responder, .. } => {
                         std::fs::remove_file(sockpath).unwrap();
                         listen_task.cancel().await;

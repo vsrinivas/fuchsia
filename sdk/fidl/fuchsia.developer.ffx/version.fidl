@@ -5,7 +5,6 @@ library fuchsia.developer.ffx;
 
 const MAX_GIT_COMMIT_LENGTH uint16 = 40;
 const MAX_BUILD_VERSION_LENGTH uint16 = 100;
-const MAX_EXEC_PATH_LENGTH uint16 = 4096;
 
 type VersionInfo = table {
     /// Git commit hash of HEAD at build time.
@@ -28,11 +27,4 @@ type VersionInfo = table {
     /// means newer.
     /// Can be mapped to an abi_revision using //sdk/version_history.json.
     5: api_level uint64;
-
-    /// Path of the actual FFX executable. This allows us to make absolutely
-    /// sure commands match the daemon they're communicating with.
-    6: exec_path string:MAX_EXEC_PATH_LENGTH;
-
-    /// Build ID of the FFX executable.
-    7: build_id string:64;
 };
