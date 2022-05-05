@@ -29,6 +29,7 @@
 using fuchsia::math::RectF;
 using fuchsia::math::SizeU;
 using fuchsia::math::Vec;
+using fuchsia::math::VecF;
 using fuchsia::ui::composition::ChildViewStatus;
 using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::FlatlandError;
@@ -535,6 +536,39 @@ void Flatland::SetOrientation(TransformId transform_id, Orientation orientation)
   matrices_[transform_kv->second].SetOrientation(orientation);
 }
 
+void Flatland::SetScale(TransformId transform_id, VecF scale) {
+  if (transform_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "SetScale called with transform_id 0";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto transform_kv = transforms_.find(transform_id.value);
+
+  if (transform_kv == transforms_.end()) {
+    error_reporter_->ERROR() << "SetScale failed, transform_id " << transform_id.value
+                             << " not found";
+    ReportBadOperationError();
+    return;
+  }
+
+  if (scale.x == 0.f || scale.y == 0.f) {
+    error_reporter_->ERROR() << "SetScale failed, zero values not allowed (" << scale.x << ", "
+                             << scale.y << " ).";
+    ReportBadOperationError();
+    return;
+  }
+
+  if (isinf(scale.x) || isinf(scale.y) || isnan(scale.x) || isnan(scale.y)) {
+    error_reporter_->ERROR() << "SetScale failed, invalid scale values (" << scale.x << ", "
+                             << scale.y << " ).";
+    ReportBadOperationError();
+    return;
+  }
+
+  matrices_[transform_kv->second].SetScale(scale);
+}
+
 void Flatland::SetClipBoundary(TransformId transform_id,
                                std::unique_ptr<fuchsia::math::Rect> bounds_ptr) {
   if (transform_id.value == kInvalidId) {
@@ -916,8 +950,8 @@ void Flatland::SetImageDestinationSize(ContentId image_id, SizeU size) {
     return;
   }
 
-  // TODO(fxbug.dev/77993): Remove matrices from flatland and make this a vec.
-  matrices_[content_kv->second].SetScale(size);
+  matrices_[content_kv->second].SetScale(
+      {.x = static_cast<float>(size.width), .y = static_cast<float>(size.height)});
 }
 
 void Flatland::SetImageBlendingFunction(ContentId image_id,
@@ -992,13 +1026,14 @@ void Flatland::SetSolidFill(ContentId rect_id, fuchsia::ui::composition::ColorRg
 
   auto image_kv = image_metadatas_.find(content_kv->second);
   if (image_kv == image_metadatas_.end()) {
-    error_reporter_->ERROR() << "Missing medatada for rect with id  " << rect_id.value;
+    error_reporter_->ERROR() << "Missing metadada for rect with id  " << rect_id.value;
     ReportBadOperationError();
     return;
   }
 
   image_kv->second.multiply_color = {color.red, color.green, color.blue, color.alpha};
-  matrices_[content_kv->second].SetScale(size);
+  matrices_[content_kv->second].SetScale(
+      {.x = static_cast<float>(size.width), .y = static_cast<float>(size.height)});
 }
 
 void Flatland::ReleaseFilledRect(ContentId rect_id) {
@@ -1429,8 +1464,6 @@ float Flatland::MatrixData::GetOrientationAngle(fuchsia::ui::composition::Orient
 }
 
 void Flatland::MatrixData::SetTranslation(Vec translation) {
-  // TODO(fxbug.dev/77993): Remove these casts once we remove the floating
-  // point matrices and replace with integer vectors.
   translation_.x = static_cast<float>(translation.x);
   translation_.y = static_cast<float>(translation.y);
   RecomputeMatrix();
@@ -1442,10 +1475,9 @@ void Flatland::MatrixData::SetOrientation(fuchsia::ui::composition::Orientation 
   RecomputeMatrix();
 }
 
-void Flatland::MatrixData::SetScale(SizeU scale) {
-  scale_.x = static_cast<float>(scale.width);
-  scale_.y = static_cast<float>(scale.height);
-
+void Flatland::MatrixData::SetScale(VecF scale) {
+  scale_.x = scale.x;
+  scale_.y = scale.y;
   RecomputeMatrix();
 }
 

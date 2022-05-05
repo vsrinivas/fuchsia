@@ -520,9 +520,20 @@ protocol Flatland {
     /// All Transform objects support all attributes.
     ///
     /// Geometric attributes are applied in the following order:
-    /// 1. Translation (relative to the parent's coordinate space)
-    /// 2. Orientation (around the new origin as defined by the translation)
-    /// 3. Clipping (performed in pixel space to constrain the transform's render region)
+    /// 1. Scale (relative to the parent transform's coordinate space)
+    /// 2. Orientation (relative to the parent transform's coordinate space)
+    /// 3. Translation (relative to the parent transforms's coordinate space,
+    ///    unaffected by scale applied to the current transform).
+    /// 4. Clipping (relative to the current transform's coordinate space)
+    ///
+    /// The effects of each of these attributes are cumulative. This means the transform's position
+    /// in the view space, and its clip boundary, will be calculated based on that chain of
+    /// geometric attributes going up to the root transform.
+    ///
+    /// For instance, in a nested hierarchy such as the following:
+    ///     [Root-Transform -> Transform1 -> Transform2 -> CurrentTransform]
+    /// If Transform1 is translated by [2,0] and Transform2 is translated by [0,1] then the
+    /// view-space position of CurrentTransform will be [2,1].
     ///
     /// Sets the translation on a Transform. The order of geometric attribute application is
     /// addressed above.
@@ -536,6 +547,15 @@ protocol Flatland {
     SetOrientation(struct {
         transform_id TransformId;
         orientation Orientation;
+    });
+
+    /// Sets the scale on a transform. The order of geometric attribute application is
+    /// addressed above. The (x,y) values in the VecF |scale| refer to the scale factor in the
+    /// x-axis (width) and y-axis (height) respectively. Scale values must be normal 32-bit
+    /// floating point values: https://en.wikipedia.org/wiki/Normal_number_%28computing%29
+    SetScale(struct {
+        transform_id TransformId;
+        scale fuchsia.math.VecF;
     });
 
     /// Sets the bounds, expressed in the local coordinate space of the transform, that

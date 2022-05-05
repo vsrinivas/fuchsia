@@ -1429,6 +1429,24 @@ TEST_F(FlatlandTest, SetOrientationErrorCases) {
   }
 }
 
+TEST_F(FlatlandTest, SetScaleErrorCases) {
+  const TransformId kIdNotCreated = {1};
+
+  // Zero is not a valid transform ID.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetScale({0}, {1, 2});
+    PRESENT(flatland, false);
+  }
+
+  // Transform does not exist.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetScale(kIdNotCreated, {1, 2});
+    PRESENT(flatland, false);
+  }
+}
+
 TEST_F(FlatlandTest, SetImageDestinationSizeErrorCases) {
   const ContentId kIdNotCreated = {1};
 
@@ -1575,33 +1593,47 @@ TEST_F(FlatlandTest, SetGeometricTransformProperties) {
   uber_struct = GetUberStruct(flatland.get());
   EXPECT_TRUE(uber_struct->local_matrices.empty());
 
-  // Set up one property per transform.
+  // Set one transform property for each node.
+  // Set translation on first transform.
   flatland->SetTranslation(kId1, {1, 2});
+
+  // Set scale on second transform.
+  flatland->SetScale(kId2, {2.f, 3.f});
   PRESENT(flatland, true);
 
   // The two handles should have the expected matrices.
   uber_struct = GetUberStruct(flatland.get());
   EXPECT_MATRIX(uber_struct, handle1, glm::translate(glm::mat3(), {1, 2}));
+  EXPECT_MATRIX(uber_struct, handle2, glm::scale(glm::mat3(), {2.f, 3.f}));
 
   // Fill out the remaining properties on both transforms.
+  flatland->SetScale(kId1, {4.f, 5.f});
   flatland->SetOrientation(kId1, Orientation::CCW_90_DEGREES);
 
-  flatland->SetTranslation(kId2, {6, 7});
   flatland->SetOrientation(kId2, Orientation::CCW_270_DEGREES);
+  flatland->SetTranslation(kId2, {6, 7});
 
   PRESENT(flatland, true);
 
   // Verify the new properties were applied in the correct orders.
   uber_struct = GetUberStruct(flatland.get());
 
+  // The way the glm function calls handle translation/scale/rotation is
+  // a bit unintuitive. If you call glm::scale(translation_matrix, vec2),
+  // this may appear as if we are incorrectly translating first and scaling
+  // second, but glm will apply them in the order (translation * scale * (point))
+  // which is indeed the ordering that we want. In other words, the built-in glm
+  // calls *right multiply* instead of *left multiply*.
   glm::mat3 matrix1 = glm::mat3();
   matrix1 = glm::translate(matrix1, {1, 2});
   matrix1 = glm::rotate(matrix1, GetOrientationAngle(Orientation::CCW_90_DEGREES));
+  matrix1 = glm::scale(matrix1, {4.f, 5.f});
   EXPECT_MATRIX(uber_struct, handle1, matrix1);
 
   glm::mat3 matrix2 = glm::mat3();
   matrix2 = glm::translate(matrix2, {6, 7});
   matrix2 = glm::rotate(matrix2, GetOrientationAngle(Orientation::CCW_270_DEGREES));
+  matrix2 = glm::scale(matrix2, {2.f, 3.f});
   EXPECT_MATRIX(uber_struct, handle2, matrix2);
 }
 
@@ -3180,9 +3212,7 @@ TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
   }
 }
 
-// TODO(fxbug.dev/77887): Reintroduce this test once the effects API is able to handle
-// floating point scaling.
-TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
+TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
@@ -3201,11 +3231,8 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
   UpdateLinks(parent->GetRoot());
 
   // Set a scale on the parent transform.
-  const SizeU scale = {2, 3};
-
-  // TODO(fxbug.dev/77887): Reintroduce this once the effects API is able to handle
-  // floating point scaling.
-  // parent->SetScale(kTransformId, scale);
+  const fuchsia::math::VecF scale = {2.f, 3.f};
+  parent->SetScale(kTransformId, scale);
   PRESENT(parent, true);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.
@@ -3219,14 +3246,12 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
     EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
     EXPECT_TRUE(layout.has_value());
-    EXPECT_FLOAT_EQ(scale.width, layout->pixel_scale().width);
-    EXPECT_FLOAT_EQ(scale.height, layout->pixel_scale().height);
+    EXPECT_FLOAT_EQ(scale.x, layout->pixel_scale().width);
+    EXPECT_FLOAT_EQ(scale.y, layout->pixel_scale().height);
   }
 
   // Set a negative scale, but confirm that pixel scale is still positive.
-  // TODO(fxbug.dev/77887): Reintroduce this once the effects API is able to handle
-  // floating point scaling.
-  // parent->SetScale(kTransformId, {-scale.x, -scale.y});
+  parent->SetScale(kTransformId, {-scale.x, -scale.y});
   PRESENT(parent, true);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.
@@ -3253,8 +3278,8 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
   {
     std::optional<LayoutInfo> layout;
     parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
-      EXPECT_FLOAT_EQ(scale.width, info.pixel_scale().width);
-      EXPECT_FLOAT_EQ(scale.height, info.pixel_scale().height);
+      EXPECT_FLOAT_EQ(scale.x, info.pixel_scale().width);
+      EXPECT_FLOAT_EQ(scale.y, info.pixel_scale().height);
       layout = std::move(info);
     });
 

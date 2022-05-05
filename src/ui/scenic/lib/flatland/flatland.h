@@ -106,6 +106,8 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   void SetOrientation(TransformId transform_id,
                       fuchsia::ui::composition::Orientation orientation) override;
   // |fuchsia::ui::composition::Flatland|
+  void SetScale(TransformId transform_id, fuchsia::math::VecF scale) override;
+  // |fuchsia::ui::composition::Flatland|
   void SetClipBoundary(TransformId transform_id,
                        std::unique_ptr<fuchsia::math::Rect> bounds) override;
   // |fuchsia::ui::composition::Flatland|
@@ -333,7 +335,7 @@ class Flatland : public fuchsia::ui::composition::Flatland,
    public:
     void SetTranslation(fuchsia::math::Vec translation);
     void SetOrientation(fuchsia::ui::composition::Orientation orientation);
-    void SetScale(fuchsia::math::SizeU scale);
+    void SetScale(fuchsia::math::VecF scale);
 
     // Returns this geometric transformation as a single 3x3 matrix using the order of operations
     // above: translation, orientation, then scale.
@@ -345,11 +347,6 @@ class Flatland : public fuchsia::ui::composition::Flatland,
     // Applies the translation, then orientation, then scale to the identity matrix.
     void RecomputeMatrix();
 
-    // TODO(fxbug.dev/77993) Figure out how we want to handle matrices going forward. Do we replace
-    // the matrices wholesale and just have a freestanding translation vector since we don't scale
-    // directly in the Flatland API anymore? Or do we keep it because we might have the Effects API
-    // integrate directly with these matrices (i.e. when the Effects API scales a node - we update
-    // these matrices here, or do we keep that separate?).
     glm::vec2 translation_ = glm::vec2(0.f, 0.f);
     glm::vec2 scale_ = glm::vec2(1.f, 1.f);
 
@@ -364,7 +361,6 @@ class Flatland : public fuchsia::ui::composition::Flatland,
 
   // A geometric transform for each TransformHandle. If not present, that TransformHandle has the
   // identity matrix for its transform.
-  // TODO(fxbug.dev/77993): Remove matrices from flatland and make this a translation + size.
   std::unordered_map<TransformHandle, MatrixData> matrices_;
 
   // A map of transform handles to clip regions, where each clip region is a rect to which

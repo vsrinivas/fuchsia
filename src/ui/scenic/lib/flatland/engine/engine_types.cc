@@ -8,7 +8,7 @@ namespace flatland {
 
 DisplaySrcDstFrames DisplaySrcDstFrames::New(escher::Rectangle2D rectangle,
                                              allocation::ImageMetadata image) {
-  // TODO(fxbug.dev/77993): This will not produce the correct results for the display
+  // TODO(fxbug.dev/95624): This will not produce the correct results for the display
   // controller rendering pathway if a rotation has been applied to the rectangle already.
   // Please see comment with same bug number in display_compositor.cc for more details.
   fuchsia::hardware::display::Frame src_frame = {
