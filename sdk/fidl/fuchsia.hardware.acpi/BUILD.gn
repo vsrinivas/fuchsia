@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.acpi") {
+  sdk_category = "experimental"
+
   sources = [
     "acpi.fidl",
     "address_space.fidl",
