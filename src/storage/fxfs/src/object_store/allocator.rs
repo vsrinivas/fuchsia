@@ -697,8 +697,10 @@ impl Allocator for SimpleAllocator {
             AllocatorKey { device_range: result.clone() },
             AllocatorValue::Abs { count: 1, owner_object_id },
         );
-        self.reserved_allocations.insert(item.clone()).await;
-        assert!(transaction.add(self.object_id(), Mutation::allocation(item)).is_none());
+        let mutation =
+            AllocatorMutation::Allocate { device_range: result.clone(), owner_object_id };
+        self.reserved_allocations.insert(item).await;
+        assert!(transaction.add(self.object_id(), Mutation::Allocator(mutation)).is_none());
 
         Ok(result)
     }
@@ -726,11 +728,12 @@ impl Allocator for SimpleAllocator {
             inner.uncommitted_allocated_bytes += len;
         }
         let item = AllocatorItem::new(
-            AllocatorKey { device_range },
+            AllocatorKey { device_range: device_range.clone() },
             AllocatorValue::Abs { count: 1, owner_object_id },
         );
-        self.reserved_allocations.insert(item.clone()).await;
-        transaction.add(self.object_id(), Mutation::allocation(item));
+        let mutation = AllocatorMutation::Allocate { device_range, owner_object_id };
+        self.reserved_allocations.insert(item).await;
+        transaction.add(self.object_id(), Mutation::Allocator(mutation));
         Ok(())
     }
 
@@ -775,16 +778,13 @@ impl Allocator for SimpleAllocator {
                 debug_assert_eq!(owner_object_id, *store_object_id);
                 match &mut mutation {
                     None => {
-                        mutation = Some(Mutation::allocation(Item::new(
-                            AllocatorKey { device_range: dealloc_range.start..end },
-                            AllocatorValue::None,
-                        )));
+                        mutation = Some(AllocatorMutation::Deallocate {
+                            device_range: dealloc_range.start..end,
+                            owner_object_id,
+                        });
                     }
-                    Some(Mutation::Allocator(AllocatorMutation::Item(AllocatorItem {
-                        key,
-                        ..
-                    }))) => {
-                        key.device_range.end = end;
+                    Some(AllocatorMutation::Deallocate { device_range, .. }) => {
+                        device_range.end = end;
                     }
                     _ => unreachable!(),
                 }
@@ -799,7 +799,7 @@ impl Allocator for SimpleAllocator {
             iter.advance().await?;
         }
         if let Some(mutation) = mutation {
-            transaction.add(self.object_id(), mutation);
+            transaction.add(self.object_id(), Mutation::Allocator(mutation));
         }
         Ok(deallocated)
     }
@@ -900,21 +900,51 @@ impl Mutations for SimpleAllocator {
             Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
                 self.inner.lock().unwrap().marked_for_deletion.insert(owner_object_id);
             }
-            Mutation::Allocator(AllocatorMutation::Item(mut item)) => {
-                item.sequence = context.checkpoint.file_offset;
+            Mutation::Allocator(AllocatorMutation::Allocate { device_range, owner_object_id }) => {
+                let item = AllocatorItem {
+                    key: AllocatorKey { device_range },
+                    value: AllocatorValue::Abs { count: 1, owner_object_id },
+                    sequence: context.checkpoint.file_offset,
+                };
                 // We currently rely on barriers here between inserting/removing from reserved
                 // allocations and merging into the tree.  These barriers are present whilst we use
                 // skip_list_layer's commit_and_wait method, rather than just commit.
                 let len = item.key.device_range.length().unwrap();
-                if item.value == AllocatorValue::None {
-                    if context.mode.is_live() {
-                        let mut item = item.clone();
-                        // Note that the point of this reservation is to avoid premature reuse.
-                        item.value =
-                            AllocatorValue::Abs { count: 1, owner_object_id: INVALID_OBJECT_ID };
-                        self.reserved_allocations.insert(item).await;
+                let lower_bound = item.key.lower_bound_for_merge_into();
+                self.tree.merge_into(item.clone(), &lower_bound).await;
+                if context.mode.is_live() {
+                    self.reserved_allocations.erase(&item.key).await;
+                }
+                let mut inner = self.inner.lock().unwrap();
+                inner.allocated_bytes = inner.allocated_bytes.saturating_add(len as i64);
+                if let ApplyMode::Live(transaction) = context.mode {
+                    inner.uncommitted_allocated_bytes -= len;
+                    if let Some(reservation) = transaction.allocator_reservation {
+                        reservation.commit(len);
                     }
+                }
+            }
+            Mutation::Allocator(AllocatorMutation::Deallocate {
+                device_range,
+                owner_object_id,
+            }) => {
+                let item = AllocatorItem {
+                    key: AllocatorKey { device_range },
+                    value: AllocatorValue::None,
+                    sequence: context.checkpoint.file_offset,
+                };
+                // We currently rely on barriers here between inserting/removing from reserved
+                // allocations and merging into the tree.  These barriers are present whilst we use
+                // skip_list_layer's commit_and_wait method, rather than just commit.
+                let len = item.key.device_range.length().unwrap();
+                if context.mode.is_live() {
+                    let mut item = item.clone();
+                    // Note that the point of this reservation is to avoid premature reuse.
+                    item.value = AllocatorValue::Abs { count: 1, owner_object_id };
+                    self.reserved_allocations.insert(item).await;
+                }
 
+                {
                     let mut inner = self.inner.lock().unwrap();
                     inner.allocated_bytes = inner.allocated_bytes.saturating_sub(len as i64);
 
@@ -926,7 +956,6 @@ impl Mutations for SimpleAllocator {
                         inner.committed_deallocated_bytes +=
                             item.key.device_range.length().unwrap();
                     }
-
                     if let ApplyMode::Live(Transaction {
                         allocator_reservation: Some(reservation),
                         ..
@@ -937,20 +966,7 @@ impl Mutations for SimpleAllocator {
                     }
                 }
                 let lower_bound = item.key.lower_bound_for_merge_into();
-                self.tree.merge_into(item.clone(), &lower_bound).await;
-                if let AllocatorValue::Abs { count: 1, .. } = item.value {
-                    if context.mode.is_live() {
-                        self.reserved_allocations.erase(&item.key).await;
-                    }
-                    let mut inner = self.inner.lock().unwrap();
-                    inner.allocated_bytes = inner.allocated_bytes.saturating_add(len as i64);
-                    if let ApplyMode::Live(transaction) = context.mode {
-                        inner.uncommitted_allocated_bytes -= len;
-                        if let Some(reservation) = transaction.allocator_reservation {
-                            reservation.commit(len);
-                        }
-                    }
-                }
+                self.tree.merge_into(item, &lower_bound).await;
             }
             Mutation::BeginFlush => {
                 {
@@ -985,17 +1001,19 @@ impl Mutations for SimpleAllocator {
 
     fn drop_mutation(&self, mutation: Mutation, transaction: &Transaction<'_>) {
         match mutation {
-            Mutation::Allocator(AllocatorMutation::Item(item)) => {
-                if let AllocatorValue::Abs { count: 1, .. } = item.value {
-                    let mut inner = self.inner.lock().unwrap();
-                    let len = item.key.device_range.length().unwrap();
-                    inner.uncommitted_allocated_bytes -= len;
-                    if let Some(reservation) = transaction.allocator_reservation {
-                        reservation.release_reservation(len);
-                        inner.reserved_bytes += len;
-                    }
-                    inner.dropped_allocations.push(item);
+            Mutation::Allocator(AllocatorMutation::Allocate { device_range, owner_object_id }) => {
+                let mut inner = self.inner.lock().unwrap();
+                let len = device_range.length().unwrap();
+                inner.uncommitted_allocated_bytes -= len;
+                if let Some(reservation) = transaction.allocator_reservation {
+                    reservation.release_reservation(len);
+                    inner.reserved_bytes += len;
                 }
+                let item = AllocatorItem::new(
+                    AllocatorKey { device_range },
+                    AllocatorValue::Abs { count: 1, owner_object_id },
+                );
+                inner.dropped_allocations.push(item);
             }
             _ => {}
         }

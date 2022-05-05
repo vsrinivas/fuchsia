@@ -8,7 +8,7 @@ use {
         lsm_tree::types::Item,
         object_handle::INVALID_OBJECT_ID,
         object_store::{
-            allocator::{AllocatorItem, Reservation},
+            allocator::{AllocatorItem, AllocatorKey, AllocatorValue, Reservation},
             object_manager::{reserved_space_from_journal_usage, ObjectManager},
             object_record::{ObjectItem, ObjectKey, ObjectValue},
         },
@@ -25,6 +25,7 @@ use {
             hash_map::{Entry, HashMap},
             BTreeSet,
         },
+        ops::Range,
         sync::{Arc, Mutex},
         task::{Poll, Waker},
         vec::Vec,
@@ -124,23 +125,43 @@ pub enum MutationV1 {
     ObjectStore(ObjectStoreMutation),
     EncryptedObjectStore(Box<[u8]>),
     Allocator(AllocatorMutationV1),
-    // Indicates the beginning of a flush.  This would typically involve sealing a tree.
     BeginFlush,
-    // Indicates the end of a flush.  This would typically involve replacing the immutable layers
-    // with compacted ones.
     EndFlush,
     UpdateBorrowed(u64),
 }
 
-impl From<MutationV1> for Mutation {
+impl From<MutationV1> for MutationV2 {
     fn from(other: MutationV1) -> Self {
         match other {
-            MutationV1::ObjectStore(x) => Mutation::ObjectStore(x.into()),
-            MutationV1::EncryptedObjectStore(x) => Mutation::EncryptedObjectStore(x.into()),
-            MutationV1::Allocator(x) => Mutation::Allocator(x.into()),
-            MutationV1::BeginFlush => Mutation::BeginFlush,
-            MutationV1::EndFlush => Mutation::EndFlush,
-            MutationV1::UpdateBorrowed(x) => Mutation::UpdateBorrowed(x),
+            MutationV1::ObjectStore(x) => Self::ObjectStore(x.into()),
+            MutationV1::EncryptedObjectStore(x) => Self::EncryptedObjectStore(x.into()),
+            MutationV1::Allocator(x) => Self::Allocator(x.into()),
+            MutationV1::BeginFlush => Self::BeginFlush,
+            MutationV1::EndFlush => Self::EndFlush,
+            MutationV1::UpdateBorrowed(x) => Self::UpdateBorrowed(x),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Versioned)]
+pub enum MutationV2 {
+    ObjectStore(ObjectStoreMutation),
+    EncryptedObjectStore(Box<[u8]>),
+    Allocator(AllocatorMutationV2),
+    BeginFlush,
+    EndFlush,
+    UpdateBorrowed(u64),
+}
+
+impl From<MutationV2> for Mutation {
+    fn from(other: MutationV2) -> Self {
+        match other {
+            MutationV2::ObjectStore(x) => Self::ObjectStore(x.into()),
+            MutationV2::EncryptedObjectStore(x) => Self::EncryptedObjectStore(x.into()),
+            MutationV2::Allocator(x) => Self::Allocator(x.into()),
+            MutationV2::BeginFlush => Self::BeginFlush,
+            MutationV2::EndFlush => Self::EndFlush,
+            MutationV2::UpdateBorrowed(x) => Self::UpdateBorrowed(x),
         }
     }
 }
@@ -182,10 +203,6 @@ impl Mutation {
             item: Item::new(key, value),
             op: Operation::Merge,
         })
-    }
-
-    pub fn allocation(item: AllocatorItem) -> Self {
-        Mutation::Allocator(AllocatorMutation::Item(item))
     }
 }
 
@@ -250,14 +267,14 @@ impl PartialEq for AllocatorMutationV1 {
 
 impl Eq for AllocatorMutationV1 {}
 
-impl From<AllocatorMutationV1> for AllocatorMutation {
+impl From<AllocatorMutationV1> for AllocatorMutationV2 {
     fn from(other: AllocatorMutationV1) -> Self {
         Self::Item(other.0)
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
-pub enum AllocatorMutation {
+#[derive(Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+pub enum AllocatorMutationV2 {
     /// A mutation to some piece of allocator-managed extent space.
     Item(AllocatorItem),
     /// Marks all extents with a given owner_object_id for deletion.
@@ -266,6 +283,90 @@ pub enum AllocatorMutation {
     /// ObjectStore is still in use due to a high risk of corruption. Similarly, owner_object_id
     /// should never be reused for the same reasons.
     MarkForDeletion(u64),
+}
+
+impl From<AllocatorMutationV2> for AllocatorMutation {
+    fn from(other: AllocatorMutationV2) -> Self {
+        match other {
+            AllocatorMutationV2::Item(AllocatorItem {
+                key: AllocatorKey { device_range },
+                value: AllocatorValue::None,
+                ..
+            }) => Self::Deallocate { device_range, owner_object_id: INVALID_OBJECT_ID },
+            AllocatorMutationV2::Item(AllocatorItem {
+                key: AllocatorKey { device_range },
+                value: AllocatorValue::Abs { count: 1, owner_object_id },
+                ..
+            }) => Self::Allocate { device_range, owner_object_id },
+            AllocatorMutationV2::MarkForDeletion(owner_object_id) => {
+                Self::MarkForDeletion(owner_object_id)
+            }
+            _ => {
+                // Implies a reference count other than one or zero which we don't yet support.
+                unreachable!()
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum AllocatorMutation {
+    Allocate {
+        device_range: Range<u64>,
+        owner_object_id: u64,
+    },
+    Deallocate {
+        device_range: Range<u64>,
+        owner_object_id: u64,
+    },
+    /// Marks all extents with a given owner_object_id for deletion.
+    /// Used to free space allocated to encrypted ObjectStore where we may not have the key.
+    /// Note that the actual deletion time is undefined so this should never be used where an
+    /// ObjectStore is still in use due to a high risk of corruption. Similarly, owner_object_id
+    /// should never be reused for the same reasons.
+    MarkForDeletion(u64),
+}
+
+/// We need Ord and PartialOrd to support deduplication in the associative map used in handling
+/// transactions. Range<> doesn't provide a default for this.
+impl Ord for AllocatorMutation {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self {
+            Self::Allocate { device_range, owner_object_id } => match other {
+                Self::Allocate {
+                    device_range: device_range2,
+                    owner_object_id: owner_object_id2,
+                } => device_range
+                    .start
+                    .cmp(&device_range2.start)
+                    .then(device_range.end.cmp(&device_range2.end))
+                    .then(owner_object_id.cmp(owner_object_id2)),
+                _ => Ordering::Less,
+            },
+            Self::Deallocate { device_range, owner_object_id } => match other {
+                Self::Allocate { .. } => Ordering::Greater,
+                Self::Deallocate {
+                    device_range: device_range2,
+                    owner_object_id: owner_object_id2,
+                } => device_range
+                    .start
+                    .cmp(&device_range2.start)
+                    .then(device_range.end.cmp(&device_range2.end))
+                    .then(owner_object_id.cmp(owner_object_id2)),
+                _ => Ordering::Less,
+            },
+            Self::MarkForDeletion(owner_object_id) => match other {
+                Self::MarkForDeletion(owner_object_id2) => owner_object_id.cmp(owner_object_id2),
+                _ => Ordering::Greater,
+            },
+        }
+    }
+}
+
+impl PartialOrd for AllocatorMutation {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 /// When creating a transaction, locks typically need to be held to prevent two or more writers

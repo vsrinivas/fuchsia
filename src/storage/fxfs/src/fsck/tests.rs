@@ -17,8 +17,8 @@ use {
         object_handle::{ObjectHandle, Writer, INVALID_OBJECT_ID},
         object_store::{
             allocator::{
-                filter_tombstones, Allocator, AllocatorItem, AllocatorKey, AllocatorValue,
-                CoalescingIterator, SimpleAllocator,
+                filter_tombstones, AllocatorKey, AllocatorValue, CoalescingIterator,
+                SimpleAllocator,
             },
             directory::Directory,
             transaction::{self, Options, TransactionHandler},
@@ -462,20 +462,15 @@ async fn test_allocation_mismatch() {
                 iter.get().expect("missing item");
             device_range.clone()
         };
-        // This should just change the delta.
-        let mut transaction = fs
-            .clone()
-            .new_transaction(&[], Options::default())
-            .await
-            .expect("new_transaction failed");
-        transaction.add(
-            allocator.object_id(),
-            Mutation::allocation(AllocatorItem::new(
-                AllocatorKey { device_range: range },
-                AllocatorValue::Abs { count: 2, owner_object_id: 9 },
-            )),
-        );
-        transaction.commit().await.expect("commit failed");
+        // Replace owner_object_id with a different owner and bump count to something impossible.
+        allocator
+            .tree()
+            .replace_or_insert(Item::new(
+                AllocatorKey { device_range: range.clone() },
+                AllocatorValue::Abs { count: 2, owner_object_id: 10 },
+            ))
+            .await;
+        allocator.flush().await.expect("flush failed");
     }
 
     test.remount().await.expect("Remount failed");

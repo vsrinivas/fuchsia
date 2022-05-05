@@ -29,7 +29,7 @@ use {
         metrics::{traits::Metric as _, UintMetric},
         object_handle::{BootstrapObjectHandle, ObjectHandle},
         object_store::{
-            allocator::{Allocator, AllocatorItem, AllocatorKey, AllocatorValue, SimpleAllocator},
+            allocator::{Allocator, SimpleAllocator},
             extent_record::{Checksums, ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
             graveyard::Graveyard,
             journal::{
@@ -41,11 +41,11 @@ use {
             object_manager::ObjectManager,
             object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue},
             transaction::{
-                AllocatorMutation, Mutation, MutationV1, ObjectStoreMutation, Options, Transaction,
-                TxnMutation, TRANSACTION_MAX_JOURNAL_USAGE,
+                AllocatorMutation, Mutation, MutationV1, MutationV2, ObjectStoreMutation, Options,
+                Transaction, TxnMutation, TRANSACTION_MAX_JOURNAL_USAGE,
             },
             HandleOptions, Item, ItemRef, LockState, NewChildStoreOptions, ObjectStore,
-            StoreObjectHandle,
+            StoreObjectHandle, INVALID_OBJECT_ID,
         },
         range::RangeExt,
         round::{round_down, round_up},
@@ -139,20 +139,42 @@ pub enum JournalRecordV1 {
     DidFlushDevice(u64),
 }
 
-impl From<JournalRecordV1> for JournalRecord {
+impl From<JournalRecordV1> for JournalRecordV2 {
     fn from(other: JournalRecordV1) -> Self {
         match other {
-            JournalRecordV1::EndBlock => JournalRecord::EndBlock,
+            JournalRecordV1::EndBlock => Self::EndBlock,
             JournalRecordV1::Mutation { object_id, mutation } => {
-                JournalRecord::Mutation { object_id, mutation: mutation.into() }
+                Self::Mutation { object_id, mutation: mutation.into() }
             }
-            JournalRecordV1::Commit => JournalRecord::Commit,
-            JournalRecordV1::Discard(x) => JournalRecord::Discard(x),
-            JournalRecordV1::DidFlushDevice(x) => JournalRecord::DidFlushDevice(x),
+            JournalRecordV1::Commit => Self::Commit,
+            JournalRecordV1::Discard(x) => Self::Discard(x),
+            JournalRecordV1::DidFlushDevice(x) => Self::DidFlushDevice(x),
         }
     }
 }
 
+#[derive(Serialize, Deserialize, Versioned)]
+pub enum JournalRecordV2 {
+    EndBlock,
+    Mutation { object_id: u64, mutation: MutationV2 },
+    Commit,
+    Discard(u64),
+    DidFlushDevice(u64),
+}
+
+impl From<JournalRecordV2> for JournalRecord {
+    fn from(other: JournalRecordV2) -> Self {
+        match other {
+            JournalRecordV2::EndBlock => Self::EndBlock,
+            JournalRecordV2::Mutation { object_id, mutation } => {
+                Self::Mutation { object_id, mutation: mutation.into() }
+            }
+            JournalRecordV2::Commit => Self::Commit,
+            JournalRecordV2::Discard(x) => Self::Discard(x),
+            JournalRecordV2::DidFlushDevice(x) => Self::DidFlushDevice(x),
+        }
+    }
+}
 #[derive(Clone, Debug, Serialize, Deserialize, Versioned)]
 pub enum JournalRecord {
     // Indicates no more records in this block.
@@ -366,15 +388,17 @@ impl Journal {
             }
             Mutation::ObjectStore(_) => {}
             Mutation::EncryptedObjectStore(_) => {}
-            Mutation::Allocator(AllocatorMutation::Item(AllocatorItem {
-                key: AllocatorKey { device_range },
-                ..
-            })) => {
-                if !device_range.valid() {
-                    return Ok(false);
-                }
+            Mutation::Allocator(AllocatorMutation::Allocate { device_range, .. }) => {
+                // TODO(https://fxbug.dev/99477): Add validation of owner_object_id
+                return Ok(device_range.valid());
             }
-            Mutation::Allocator(AllocatorMutation::MarkForDeletion(_)) => {}
+            Mutation::Allocator(AllocatorMutation::Deallocate { device_range, .. }) => {
+                // TODO(https://fxbug.dev/99477): Add validation of owner_object_id
+                return Ok(device_range.valid());
+            }
+            Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
+                return Ok(*owner_object_id != INVALID_OBJECT_ID);
+            }
             Mutation::BeginFlush => {}
             Mutation::EndFlush => {}
             Mutation::UpdateBorrowed(_) => {}
@@ -418,16 +442,9 @@ impl Journal {
                 );
             }
             Mutation::ObjectStore(_) => {}
-            Mutation::Allocator(AllocatorMutation::Item(AllocatorItem {
-                key: AllocatorKey { device_range },
-                value,
-                ..
-            })) => match value {
-                AllocatorValue::None => {
-                    checksum_list.mark_deallocated(journal_offset, device_range.clone());
-                }
-                _ => {}
-            },
+            Mutation::Allocator(AllocatorMutation::Deallocate { device_range, .. }) => {
+                checksum_list.mark_deallocated(journal_offset, device_range.clone());
+            }
             _ => {}
         }
         Ok(())
