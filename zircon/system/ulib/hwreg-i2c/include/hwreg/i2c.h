@@ -6,6 +6,7 @@
 #define HWREG_I2C_H_
 
 #include <endian.h>
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <zircon/types.h>
@@ -67,6 +68,46 @@ class I2cRegisterBase : public RegisterBase<DerivedType, IntType, PrinterState> 
     return status;
   }
 
+  zx_status_t ReadFrom(const fidl::ClientEnd<fuchsia_hardware_i2c::Device>& client) {
+    uint32_t addr = RegisterBaseType::reg_addr();
+
+    addr = ConvertToI2cByteOrder(addr, AddrIntSize);
+
+    auto* buf = reinterpret_cast<uint8_t*>(&addr);
+
+    fidl::Arena arena;
+    fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction> transactions(arena, 2);
+    transactions[0] = fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+                          .data_transfer(fuchsia_hardware_i2c::wire::DataTransfer::WithWriteData(
+                              arena, fidl::VectorView<uint8_t>::FromExternal(buf, AddrIntSize)))
+                          .Build();
+    transactions[1] =
+        fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+            .data_transfer(fuchsia_hardware_i2c::wire::DataTransfer::WithReadSize(sizeof(IntType)))
+            .Build();
+
+    auto response = fidl::WireCall(client)->Transfer(transactions);
+    if (!response.ok()) {
+      return response.status();
+    }
+    if (response.value().result.is_err()) {
+      return response.value().result.err();
+    }
+
+    if (response.value().result.response().read_data.count() != 1) {
+      return ZX_ERR_BAD_STATE;
+    }
+    if (response.value().result.response().read_data[0].count() != sizeof(IntType)) {
+      return ZX_ERR_BAD_STATE;
+    }
+
+    IntType value;
+    memcpy(&value, response.value().result.response().read_data[0].data(), sizeof(value));
+    value = ConvertFromI2cByteOrder(value);
+    RegisterBaseType::set_reg_value(value);
+    return ZX_OK;
+  }
+
   zx_status_t WriteTo(ddk::I2cProtocolClient& i2c) {
     uint32_t addr = RegisterBaseType::reg_addr();
     IntType value = RegisterBaseType::reg_value();
@@ -82,6 +123,36 @@ class I2cRegisterBase : public RegisterBase<DerivedType, IntType, PrinterState> 
     i2c.GetProto(&proto);
     auto status = i2c_write_read_sync(&proto, &buf, AddrIntSize + sizeof(IntType), nullptr, 0);
     return status;
+  }
+
+  zx_status_t WriteTo(const fidl::ClientEnd<fuchsia_hardware_i2c::Device>& client) {
+    uint32_t addr = RegisterBaseType::reg_addr();
+    IntType value = RegisterBaseType::reg_value();
+
+    addr = ConvertToI2cByteOrder(addr, AddrIntSize);
+    value = ConvertToI2cByteOrder(value, sizeof(IntType));
+
+    uint8_t buf[AddrIntSize + sizeof(IntType)] = {};
+    std::memcpy(buf, &addr, AddrIntSize);
+    std::memcpy(buf + AddrIntSize, &value, sizeof(IntType));
+
+    auto write_data = fidl::VectorView<uint8_t>::FromExternal(buf, AddrIntSize + sizeof(IntType));
+
+    fidl::Arena arena;
+    fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction> transactions(arena, 1);
+    transactions[0] = fuchsia_hardware_i2c::wire::Transaction::Builder(arena)
+                          .data_transfer(fuchsia_hardware_i2c::wire::DataTransfer::WithWriteData(
+                              arena, write_data))
+                          .Build();
+
+    auto response = fidl::WireCall(client)->Transfer(transactions);
+    if (!response.ok()) {
+      return response.status();
+    }
+    if (response.value().result.is_err()) {
+      return response.value().result.err();
+    }
+    return ZX_OK;
   }
 
  private:
