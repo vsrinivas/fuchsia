@@ -240,7 +240,7 @@ impl PartialEq for Cover {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct CoverCarry {
+pub struct CoverCarry {
     cover: Cover,
     layer_id: u32,
 }

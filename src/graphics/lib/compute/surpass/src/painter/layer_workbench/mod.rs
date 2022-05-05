@@ -8,14 +8,17 @@ use std::{
     ops::{ControlFlow, RangeInclusive},
 };
 
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use crate::{
     painter::{
-        BlendMode, Color, Cover, CoverCarry, Fill, FillRule, Func, LayerProps, Props, Style,
+        layer_workbench::passes::PassesSharedState, Color, Cover, CoverCarry, FillRule, Func,
+        LayerProps, Props, Style,
     },
     rasterizer::{self, PixelSegment},
 };
+
+mod passes;
 
 pub(crate) trait LayerPainter {
     fn clear_cells(&mut self);
@@ -34,7 +37,7 @@ pub(crate) trait LayerPainter {
 
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
-struct Index(usize);
+pub struct Index(usize);
 
 #[derive(Debug)]
 struct MaskedCell<T> {
@@ -43,7 +46,7 @@ struct MaskedCell<T> {
 }
 
 #[derive(Debug, Default)]
-struct MaskedVec<T> {
+pub struct MaskedVec<T> {
     vals: Vec<MaskedCell<T>>,
     skipped: Cell<usize>,
 }
@@ -116,41 +119,16 @@ pub struct Context<'c, P: LayerProps> {
     pub clear_color: Color,
 }
 
-#[derive(Debug)]
-pub(crate) struct LayerWorkbench {
-    ids: MaskedVec<u32>,
-    segment_ranges: FxHashMap<u32, RangeInclusive<usize>>,
-    queue_indices: FxHashMap<u32, usize>,
-    skip_clipping: FxHashSet<u32>,
-    layers_were_removed: bool,
-    queue: Vec<CoverCarry>,
+#[derive(Debug, Default)]
+pub struct LayerWorkbenchState {
+    pub ids: MaskedVec<u32>,
+    pub segment_ranges: FxHashMap<u32, RangeInclusive<usize>>,
+    pub queue_indices: FxHashMap<u32, usize>,
+    pub queue: Vec<CoverCarry>,
     next_queue: Vec<CoverCarry>,
 }
 
-impl LayerWorkbench {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn init(&mut self, cover_carries: impl IntoIterator<Item = CoverCarry>) {
-        self.queue.clear();
-        self.queue.extend(cover_carries);
-    }
-
-    fn next_tile(&mut self) {
-        self.ids.clear();
-        self.segment_ranges.clear();
-        self.queue_indices.clear();
-        self.skip_clipping.clear();
-
-        mem::swap(&mut self.queue, &mut self.next_queue);
-
-        self.next_queue.clear();
-
-        // Start by assuming that layers might have been removed until proven otherwise.
-        self.layers_were_removed = true;
-    }
-
+impl LayerWorkbenchState {
     fn segments<'c, P: LayerProps>(
         &self,
         context: &'c Context<'_, P>,
@@ -163,7 +141,7 @@ impl LayerWorkbench {
         self.queue_indices.get(&id).map(|&i| &self.queue[i].cover)
     }
 
-    fn layer_is_full<'c, P: LayerProps>(
+    pub(crate) fn layer_is_full<'c, P: LayerProps>(
         &self,
         context: &'c Context<'_, P>,
         id: u32,
@@ -171,6 +149,35 @@ impl LayerWorkbench {
     ) -> bool {
         self.segments(context, id).is_none()
             && self.cover(id).map(|cover| cover.is_full(fill_rule)).unwrap_or_default()
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct LayerWorkbench {
+    state: LayerWorkbenchState,
+    passes_shared_state: PassesSharedState,
+}
+
+impl LayerWorkbench {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn init(&mut self, cover_carries: impl IntoIterator<Item = CoverCarry>) {
+        self.state.queue.clear();
+        self.state.queue.extend(cover_carries);
+    }
+
+    fn next_tile(&mut self) {
+        self.state.ids.clear();
+        self.state.segment_ranges.clear();
+        self.state.queue_indices.clear();
+
+        mem::swap(&mut self.state.queue, &mut self.state.next_queue);
+
+        self.state.next_queue.clear();
+
+        self.passes_shared_state.reset();
     }
 
     fn cover_carry<'c, P: LayerProps>(
@@ -180,13 +187,13 @@ impl LayerWorkbench {
     ) -> Option<CoverCarry> {
         let mut acc_cover = Cover::default();
 
-        if let Some(segments) = self.segments(context, id) {
+        if let Some(segments) = self.state.segments(context, id) {
             for segment in segments {
                 acc_cover.as_slice_mut()[segment.local_y() as usize] += segment.cover();
             }
         }
 
-        if let Some(cover) = self.cover(id) {
+        if let Some(cover) = self.state.cover(id) {
             cover.add_cover_to(&mut acc_cover.covers);
         }
 
@@ -194,195 +201,16 @@ impl LayerWorkbench {
             .then(|| CoverCarry { cover: acc_cover, layer_id: id })
     }
 
-    fn tile_unchanged_pass<'c, P: LayerProps>(
-        &mut self,
-        context: &'c Context<'_, P>,
-    ) -> ControlFlow<TileWriteOp> {
-        let clear_color_is_unchanged = context
-            .previous_clear_color
-            .map(|previous_clear_color| previous_clear_color == context.clear_color)
-            .unwrap_or_default();
-
-        let tile_paint = context.previous_layers.take().and_then(|previous_layers| {
-            let layers = self.ids.len() as u32;
-
-            let is_unchanged = if let Some(previous_layers) = previous_layers {
-                let old_layers = mem::replace(previous_layers, layers);
-                self.layers_were_removed = layers < old_layers;
-
-                old_layers == layers && self.ids.iter().all(|&id| context.props.is_unchanged(id))
-            } else {
-                *previous_layers = Some(layers);
-                false
-            };
-
-            (clear_color_is_unchanged && is_unchanged).then(|| TileWriteOp::None)
-        });
-
-        match tile_paint {
-            Some(tile_paint) => ControlFlow::Break(tile_paint),
-            None => ControlFlow::Continue(()),
-        }
-    }
-
-    fn skip_trivial_clips_pass<'c, P: LayerProps>(
-        &mut self,
-        context: &'c Context<'_, P>,
-    ) -> ControlFlow<TileWriteOp> {
-        struct Clip {
-            is_full: bool,
-            last_layer_id: u32,
-            i: Index,
-            is_used: bool,
-        }
-
-        let mut clip = None;
-
-        for (i, &id) in self.ids.iter_masked() {
-            let props = context.props.get(id);
-
-            if let Func::Clip(layers) = props.func {
-                let is_full = self.layer_is_full(context, id, props.fill_rule);
-
-                clip = Some(Clip { is_full, last_layer_id: id + layers as u32, i, is_used: false });
-
-                if is_full {
-                    // Skip full clips.
-                    self.ids.set_mask(i, false);
-                }
-            }
-
-            if let Func::Draw(Style { is_clipped: true, .. }) = props.func {
-                match clip {
-                    Some(Clip { is_full, last_layer_id, ref mut is_used, .. })
-                        if id <= last_layer_id =>
-                    {
-                        if is_full {
-                            // Skip clipping when clip is full.
-                            self.skip_clipping.insert(id);
-                        } else {
-                            *is_used = true;
-                        }
-                    }
-                    _ => {
-                        // Skip layer outside of clip.
-                        self.ids.set_mask(i, false);
-                    }
-                }
-            }
-
-            if let Some(Clip { last_layer_id, i, is_used, .. }) = clip {
-                if id > last_layer_id {
-                    clip = None;
-
-                    if !is_used {
-                        // Remove unused clips.
-                        self.ids.set_mask(i, false);
-                    }
-                }
-            }
-        }
-
-        // Clip layer might be last layer.
-        if let Some(Clip { i, is_used, .. }) = clip {
-            if !is_used {
-                // Remove unused clips.
-                self.ids.set_mask(i, false);
-            }
-        }
-
-        ControlFlow::Continue(())
-    }
-
-    fn skip_fully_covered_layers<'c, P: LayerProps>(
-        &mut self,
-        context: &'c Context<'_, P>,
-    ) -> ControlFlow<TileWriteOp> {
-        #[derive(Debug)]
-        enum InterestingCover {
-            Opaque(Color),
-            Incomplete,
-        }
-
-        let mut first_interesting_cover = None;
-        // If layers were removed, we cannot assume anything because a visible layer
-        // might have been removed since last frame.
-        let mut visible_layers_are_unchanged = !self.layers_were_removed;
-        for (i, &id) in self.ids.iter_masked().rev() {
-            let props = context.props.get(id);
-
-            if !context.props.is_unchanged(id) {
-                visible_layers_are_unchanged = false;
-            }
-
-            let is_clipped = || {
-                matches!(props.func, Func::Draw(Style { is_clipped: true, .. }))
-                    && !self.skip_clipping.contains(&id)
-            };
-
-            if is_clipped() || !self.layer_is_full(context, id, props.fill_rule) {
-                if first_interesting_cover.is_none() {
-                    first_interesting_cover = Some(InterestingCover::Incomplete);
-                    // The loop does not break here in order to try to cull some layers that are
-                    // completely covered.
-                }
-            } else if let Func::Draw(Style {
-                fill: Fill::Solid(color),
-                blend_mode: BlendMode::Over,
-                ..
-            }) = props.func
-            {
-                if color.a == 1.0 {
-                    if first_interesting_cover.is_none() {
-                        first_interesting_cover = Some(InterestingCover::Opaque(color));
-                    }
-
-                    self.ids.skip_until(i);
-
-                    break;
-                }
-            }
-        }
-
-        let (i, bottom_color) = match first_interesting_cover {
-            // First opaque layer is skipped when blending.
-            Some(InterestingCover::Opaque(color)) => {
-                // All visible layers are unchanged so we can skip drawing altogether.
-                if visible_layers_are_unchanged {
-                    return ControlFlow::Break(TileWriteOp::None);
-                }
-
-                (1, color)
-            }
-            // The clear color is used as a virtual first opqaue layer.
-            None => (0, context.clear_color),
-            // Visible incomplete cover makes full optimization impossible.
-            Some(InterestingCover::Incomplete) => return ControlFlow::Continue(()),
-        };
-
-        let color = self.ids.iter_masked().skip(i).try_fold(bottom_color, |dst, (_, &id)| {
-            match context.props.get(id).func {
-                Func::Draw(Style { fill: Fill::Solid(color), blend_mode, .. }) => {
-                    Some(blend_mode.blend(dst, color))
-                }
-                // Fill is not solid.
-                _ => None,
-            }
-        });
-
-        match color {
-            Some(color) => ControlFlow::Break(TileWriteOp::Solid(color)),
-            None => ControlFlow::Continue(()),
-        }
-    }
-
     fn optimization_passes<'c, P: LayerProps>(
         &mut self,
         context: &'c Context<'_, P>,
     ) -> ControlFlow<TileWriteOp> {
-        self.tile_unchanged_pass(context)?;
-        self.skip_trivial_clips_pass(context)?;
-        self.skip_fully_covered_layers(context)?;
+        let state = &mut self.state;
+        let passes_shared_state = &mut self.passes_shared_state;
+
+        passes::tile_unchanged_pass(state, passes_shared_state, context)?;
+        passes::skip_trivial_clips_pass(state, passes_shared_state, context)?;
+        passes::skip_fully_covered_layers_pass(state, passes_shared_state, context)?;
 
         ControlFlow::Continue(())
     }
@@ -394,19 +222,24 @@ impl LayerWorkbench {
                 rasterizer::search_last_by_key(&context.segments[start..], id, |s| s.layer_id())
                     .unwrap();
 
-            self.segment_ranges.insert(id, start..=start + diff);
+            self.state.segment_ranges.insert(id, start..=start + diff);
 
             start += diff + 1;
         }
 
-        self.queue_indices.extend(
-            self.queue.iter().enumerate().map(|(i, cover_carry)| (cover_carry.layer_id, i)),
+        self.state.queue_indices.extend(
+            self.state.queue.iter().enumerate().map(|(i, cover_carry)| (cover_carry.layer_id, i)),
         );
 
-        self.ids
-            .extend(self.segment_ranges.keys().copied().chain(self.queue_indices.keys().copied()));
+        self.state.ids.extend(
+            self.state
+                .segment_ranges
+                .keys()
+                .copied()
+                .chain(self.state.queue_indices.keys().copied()),
+        );
 
-        self.ids.sort_and_dedup();
+        self.state.ids.sort_and_dedup();
     }
 
     pub fn drive_tile_painting<'c, P: LayerProps>(
@@ -417,9 +250,9 @@ impl LayerWorkbench {
         self.populate_layers(context);
 
         if let ControlFlow::Break(tile_op) = self.optimization_passes(context) {
-            for &id in self.ids.iter() {
+            for &id in self.state.ids.iter() {
                 if let Some(cover_carry) = self.cover_carry(context, id) {
-                    self.next_queue.push(cover_carry);
+                    self.state.next_queue.push(cover_carry);
                 }
             }
 
@@ -430,17 +263,17 @@ impl LayerWorkbench {
 
         painter.clear(context.clear_color);
 
-        for (&id, mask) in self.ids.iter_with_masks() {
+        for (&id, mask) in self.state.ids.iter_with_masks() {
             if mask {
                 painter.clear_cells();
 
-                if let Some(segments) = self.segments(context, id) {
+                if let Some(segments) = self.state.segments(context, id) {
                     for &segment in segments {
                         painter.acc_segment(segment);
                     }
                 }
 
-                if let Some(&cover) = self.cover(id) {
+                if let Some(&cover) = self.state.cover(id) {
                     painter.acc_cover(cover);
                 }
 
@@ -448,17 +281,18 @@ impl LayerWorkbench {
                 let mut apply_clip = false;
 
                 if let Func::Draw(Style { is_clipped, .. }) = props.func {
-                    apply_clip = is_clipped && !self.skip_clipping.contains(&id);
+                    apply_clip =
+                        is_clipped && !self.passes_shared_state.skip_clipping.contains(&id);
                 }
 
                 let cover =
                     painter.paint_layer(context.tile_x, context.tile_y, id, &props, apply_clip);
 
                 if !cover.is_empty(props.fill_rule) {
-                    self.next_queue.push(CoverCarry { cover, layer_id: id });
+                    self.state.next_queue.push(CoverCarry { cover, layer_id: id });
                 }
             } else if let Some(cover_carry) = self.cover_carry(context, id) {
-                self.next_queue.push(cover_carry);
+                self.state.next_queue.push(cover_carry);
             }
         }
 
@@ -471,13 +305,8 @@ impl LayerWorkbench {
 impl Default for LayerWorkbench {
     fn default() -> Self {
         Self {
-            ids: MaskedVec::default(),
-            segment_ranges: FxHashMap::default(),
-            queue_indices: FxHashMap::default(),
-            skip_clipping: FxHashSet::default(),
-            layers_were_removed: true,
-            queue: Vec::new(),
-            next_queue: Vec::new(),
+            state: LayerWorkbenchState::default(),
+            passes_shared_state: PassesSharedState::default(),
         }
     }
 }
@@ -489,7 +318,7 @@ mod tests {
     use std::borrow::Cow;
 
     use crate::{
-        painter::{style::Color, Props},
+        painter::{layer_workbench::passes, style::Color, BlendMode, Fill, Props},
         simd::{i8x16, Simd},
         PIXEL_WIDTH, TILE_HEIGHT,
     };
@@ -601,23 +430,26 @@ mod tests {
 
         workbench.populate_layers(&context);
 
-        assert_eq!(workbench.ids, [0, 1, 2, 3, 4, 5]);
+        let segment_ranges = workbench.state.segment_ranges;
+        let queue_indices = workbench.state.queue_indices;
 
-        assert_eq!(workbench.segment_ranges.len(), 4);
-        assert_eq!(workbench.segment_ranges.get(&0).cloned(), Some(0..=0));
-        assert_eq!(workbench.segment_ranges.get(&1).cloned(), Some(1..=2));
-        assert_eq!(workbench.segment_ranges.get(&2).cloned(), Some(3..=3));
-        assert_eq!(workbench.segment_ranges.get(&3).cloned(), None);
-        assert_eq!(workbench.segment_ranges.get(&4).cloned(), None);
-        assert_eq!(workbench.segment_ranges.get(&5).cloned(), Some(4..=6));
+        assert_eq!(workbench.state.ids, [0, 1, 2, 3, 4, 5]);
 
-        assert_eq!(workbench.queue_indices.len(), 3);
-        assert_eq!(workbench.queue_indices.get(&0).cloned(), Some(0));
-        assert_eq!(workbench.queue_indices.get(&1).cloned(), None);
-        assert_eq!(workbench.queue_indices.get(&2).cloned(), None);
-        assert_eq!(workbench.queue_indices.get(&3).cloned(), Some(1));
-        assert_eq!(workbench.queue_indices.get(&4).cloned(), Some(2));
-        assert_eq!(workbench.queue_indices.get(&5).cloned(), None);
+        assert_eq!(segment_ranges.len(), 4);
+        assert_eq!(segment_ranges.get(&0).cloned(), Some(0..=0));
+        assert_eq!(segment_ranges.get(&1).cloned(), Some(1..=2));
+        assert_eq!(segment_ranges.get(&2).cloned(), Some(3..=3));
+        assert_eq!(segment_ranges.get(&3).cloned(), None);
+        assert_eq!(segment_ranges.get(&4).cloned(), None);
+        assert_eq!(segment_ranges.get(&5).cloned(), Some(4..=6));
+
+        assert_eq!(queue_indices.len(), 3);
+        assert_eq!(queue_indices.get(&0).cloned(), Some(0));
+        assert_eq!(queue_indices.get(&1).cloned(), None);
+        assert_eq!(queue_indices.get(&2).cloned(), None);
+        assert_eq!(queue_indices.get(&3).cloned(), Some(1));
+        assert_eq!(queue_indices.get(&4).cloned(), Some(2));
+        assert_eq!(queue_indices.get(&5).cloned(), None);
     }
 
     #[test]
@@ -651,7 +483,14 @@ mod tests {
         workbench.populate_layers(&context);
 
         // Optimization should fail because the number of layers changed.
-        assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Continue(()));
+        assert_eq!(
+            passes::tile_unchanged_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context
+            ),
+            ControlFlow::Continue(())
+        );
         assert_eq!(layers, Some(5));
 
         let context = Context {
@@ -665,7 +504,14 @@ mod tests {
         };
 
         // Skip should occur because the previous pass updated the number of layers.
-        assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Break(TileWriteOp::None));
+        assert_eq!(
+            passes::tile_unchanged_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context
+            ),
+            ControlFlow::Break(TileWriteOp::None)
+        );
         assert_eq!(layers, Some(5));
 
         let context = Context {
@@ -682,7 +528,14 @@ mod tests {
         workbench.populate_layers(&context);
 
         // Optimization should fail because at least one layer changed.
-        assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Continue(()));
+        assert_eq!(
+            passes::tile_unchanged_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context
+            ),
+            ControlFlow::Continue(())
+        );
         assert_eq!(layers, Some(5));
 
         let context = Context {
@@ -699,7 +552,14 @@ mod tests {
         workbench.populate_layers(&context);
 
         // Optimization should fail because the clear color changed.
-        assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Continue(()));
+        assert_eq!(
+            passes::tile_unchanged_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context
+            ),
+            ControlFlow::Continue(())
+        );
         assert_eq!(layers, Some(5));
     }
 
@@ -744,11 +604,17 @@ mod tests {
 
         workbench.populate_layers(&context);
 
-        workbench.skip_trivial_clips_pass(&context);
+        passes::skip_trivial_clips_pass(
+            &mut workbench.state,
+            &mut workbench.passes_shared_state,
+            &context,
+        );
 
-        assert_eq!(workbench.ids, [0, 2]);
-        assert!(!workbench.skip_clipping.contains(&0));
-        assert!(workbench.skip_clipping.contains(&2));
+        let skip_clipping = workbench.passes_shared_state.skip_clipping;
+
+        assert_eq!(workbench.state.ids, [0, 2]);
+        assert!(!skip_clipping.contains(&0));
+        assert!(skip_clipping.contains(&2));
     }
 
     #[test]
@@ -784,9 +650,13 @@ mod tests {
 
         workbench.populate_layers(&context);
 
-        workbench.skip_trivial_clips_pass(&context);
+        passes::skip_trivial_clips_pass(
+            &mut workbench.state,
+            &mut workbench.passes_shared_state,
+            &context,
+        );
 
-        assert_eq!(workbench.ids, []);
+        assert_eq!(workbench.state.ids, []);
     }
 
     #[test]
@@ -827,9 +697,13 @@ mod tests {
 
         workbench.populate_layers(&context);
 
-        workbench.skip_trivial_clips_pass(&context);
+        passes::skip_trivial_clips_pass(
+            &mut workbench.state,
+            &mut workbench.passes_shared_state,
+            &context,
+        );
 
-        assert_eq!(workbench.ids, [0, 3]);
+        assert_eq!(workbench.state.ids, [0, 3]);
     }
 
     #[test]
@@ -866,9 +740,16 @@ mod tests {
 
         workbench.populate_layers(&context);
 
-        assert_eq!(workbench.skip_fully_covered_layers(&context), ControlFlow::Continue(()));
+        assert_eq!(
+            passes::skip_fully_covered_layers_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context,
+            ),
+            ControlFlow::Continue(())
+        );
 
-        assert_eq!(workbench.ids, [2, 3]);
+        assert_eq!(workbench.state.ids, [2, 3]);
     }
 
     #[test]
@@ -913,7 +794,11 @@ mod tests {
         workbench.populate_layers(&context);
 
         assert_eq!(
-            workbench.skip_fully_covered_layers(&context),
+            passes::skip_fully_covered_layers_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context,
+            ),
             ControlFlow::Break(TileWriteOp::Solid(Color {
                 r: 0.28125,
                 g: 0.28125,
@@ -961,7 +846,11 @@ mod tests {
         workbench.populate_layers(&context);
 
         assert_eq!(
-            workbench.skip_fully_covered_layers(&context),
+            passes::skip_fully_covered_layers_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context,
+            ),
             ControlFlow::Break(TileWriteOp::Solid(Color {
                 r: 0.5625,
                 g: 0.5625,
@@ -1011,7 +900,14 @@ mod tests {
 
         workbench.populate_layers(&context);
 
-        assert_eq!(workbench.skip_fully_covered_layers(&context), ControlFlow::Continue(()));
+        assert_eq!(
+            passes::skip_fully_covered_layers_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context,
+            ),
+            ControlFlow::Continue(())
+        );
     }
 
     #[test]
@@ -1134,10 +1030,21 @@ mod tests {
         workbench.populate_layers(&context);
 
         // Tile has changed because layer 0 changed.
-        assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Continue(()));
+        assert_eq!(
+            passes::tile_unchanged_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context
+            ),
+            ControlFlow::Continue(())
+        );
         // However, we can still skip drawing because everything visible is unchanged.
         assert_eq!(
-            workbench.skip_fully_covered_layers(&context),
+            passes::skip_fully_covered_layers_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context,
+            ),
             ControlFlow::Break(TileWriteOp::None)
         );
 
@@ -1156,10 +1063,21 @@ mod tests {
         workbench.populate_layers(&context);
 
         // Tile has changed because layer 0 changed and number of layers has changed.
-        assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Continue(()));
+        assert_eq!(
+            passes::tile_unchanged_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context
+            ),
+            ControlFlow::Continue(())
+        );
         // We can still skip the tile because any newly added layer is covered by an opaque layer.
         assert_eq!(
-            workbench.skip_fully_covered_layers(&context),
+            passes::skip_fully_covered_layers_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context,
+            ),
             ControlFlow::Break(TileWriteOp::None)
         );
 
@@ -1178,11 +1096,22 @@ mod tests {
         workbench.populate_layers(&context);
 
         // Tile has changed because layer 0 changed and number of layers has changed.
-        assert_eq!(workbench.tile_unchanged_pass(&context), ControlFlow::Continue(()));
+        assert_eq!(
+            passes::tile_unchanged_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context
+            ),
+            ControlFlow::Continue(())
+        );
         // This time we cannot skip because there might have been a visible layer
         // last frame that is now removed.
         assert_eq!(
-            workbench.skip_fully_covered_layers(&context),
+            passes::skip_fully_covered_layers_pass(
+                &mut workbench.state,
+                &mut workbench.passes_shared_state,
+                &context,
+            ),
             ControlFlow::Break(TileWriteOp::Solid(RED))
         );
     }
