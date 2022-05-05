@@ -110,7 +110,7 @@ func TestDelRouteErrors(t *testing.T) {
 	want := routes.ExtendedRoute{
 		Route:                 rt,
 		Prf:                   routes.MediumPreference,
-		Metric:                metricNotSet,
+		Metric:                defaultInterfaceMetric,
 		MetricTracksInterface: true,
 	}
 	if diff := cmp.Diff(ns.DelRoute(rt), []routes.ExtendedRoute{want}); diff != "" {
@@ -191,7 +191,7 @@ func TestStackNICRemove(t *testing.T) {
 		&noopEndpoint{},
 		&noopController{},
 		&obs,
-		0, /* metric */
+		defaultInterfaceMetric, /* metric */
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -538,7 +538,7 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 		linkEP,
 		&noopController{},
 		nil,
-		0, /* metric */
+		defaultInterfaceMetric, /* metric */
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -780,8 +780,8 @@ func TestNotStartedByDefault(t *testing.T) {
 		func(tcpip.NICID) string { return t.Name() },
 		&noopEndpoint{},
 		&controller,
-		nil, /* observer */
-		0,   /* metric */
+		nil,                    /* observer */
+		defaultInterfaceMetric, /* metric */
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -874,8 +874,8 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 		func(tcpip.NICID) string { return t.Name() },
 		&ep,
 		&noopController{},
-		nil, /* observer */
-		0,   /* metric */
+		nil,                    /* observer */
+		defaultInterfaceMetric, /* metric */
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -1162,8 +1162,8 @@ func TestListInterfaceAddresses(t *testing.T) {
 		func(tcpip.NICID) string { return t.Name() },
 		&ep,
 		&noopController{},
-		nil, /* observer */
-		0,   /* metric */
+		nil,                    /* observer */
+		defaultInterfaceMetric, /* metric */
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -1455,7 +1455,7 @@ func TestDHCPAcquired(t *testing.T) {
 						NIC:         1,
 					},
 					Prf:                   routes.MediumPreference,
-					Metric:                0,
+					Metric:                defaultInterfaceMetric,
 					MetricTracksInterface: true,
 					Dynamic:               true,
 					Enabled:               false,
@@ -1467,7 +1467,7 @@ func TestDHCPAcquired(t *testing.T) {
 						NIC:         1,
 					},
 					Prf:                   routes.MediumPreference,
-					Metric:                0,
+					Metric:                defaultInterfaceMetric,
 					MetricTracksInterface: true,
 					Dynamic:               true,
 					Enabled:               false,
@@ -1479,7 +1479,7 @@ func TestDHCPAcquired(t *testing.T) {
 						NIC:         1,
 					},
 					Prf:                   routes.MediumPreference,
-					Metric:                0,
+					Metric:                defaultInterfaceMetric,
 					MetricTracksInterface: true,
 					Dynamic:               true,
 					Enabled:               false,
@@ -1501,7 +1501,7 @@ func TestDHCPAcquired(t *testing.T) {
 						NIC:         1,
 					},
 					Prf:                   routes.MediumPreference,
-					Metric:                0,
+					Metric:                defaultInterfaceMetric,
 					MetricTracksInterface: true,
 					Dynamic:               true,
 					Enabled:               false,
@@ -1519,11 +1519,11 @@ func TestDHCPAcquired(t *testing.T) {
 			// effect.
 			ifState.dhcpAcquired(context.Background(), test.oldAddr, test.newAddr, test.config)
 
-			if diff := cmp.Diff(ifState.dns.mu.servers, test.config.DNS); diff != "" {
+			if diff := cmp.Diff(test.config.DNS, ifState.dns.mu.servers); diff != "" {
 				t.Errorf("ifState.mu.dnsServers mismatch (-want +got):\n%s", diff)
 			}
 
-			if diff := cmp.Diff(ifState.ns.GetExtendedRouteTable(), test.expectedRouteTable, cmp.AllowUnexported(tcpip.Subnet{})); diff != "" {
+			if diff := cmp.Diff(test.expectedRouteTable, ifState.ns.GetExtendedRouteTable(), cmp.AllowUnexported(tcpip.Subnet{})); diff != "" {
 				t.Errorf("GetExtendedRouteTable() mismatch (-want +got):\n%s", diff)
 			}
 
@@ -1552,7 +1552,7 @@ func TestDHCPAcquired(t *testing.T) {
 			remAddr := test.newAddr
 			ifState.dhcpAcquired(context.Background(), remAddr, tcpip.AddressWithPrefix{}, dhcp.Config{})
 
-			if diff := cmp.Diff(ifState.dns.mu.servers, ifState.dns.mu.servers[:0]); diff != "" {
+			if diff := cmp.Diff([]tcpip.Address(nil), ifState.dns.mu.servers); diff != "" {
 				t.Errorf("ifState.mu.dnsServers mismatch (-want +got):\n%s", diff)
 			}
 

@@ -195,7 +195,7 @@ protocol DeviceControl {
             1: name fuchsia.net.interfaces.name;
             /// The default metric value used for routes through this interface.
             ///
-            /// If not set, interpreted as 0.
+            /// If not set, the server will use a sensible default.
             // TODO(...) alias this type from fuchsia.net.routes
             // when it exists or remove if we decide against it?
             2: metric uint32;

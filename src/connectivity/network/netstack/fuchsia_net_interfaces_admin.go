@@ -805,12 +805,16 @@ func (d *interfacesAdminDeviceControlImpl) CreateInterface(_ fidl.Context, portI
 			panic(fmt.Sprintf("unknown port mode %d", mode))
 		}
 
+		metric := defaultInterfaceMetric
+		if options.HasMetric() {
+			metric = routes.Metric(options.GetMetric())
+		}
 		ifs, err := d.ns.addEndpoint(
 			makeEndpointName(namePrefix, options.GetNameWithDefault("")),
 			linkEndpoint,
 			port,
 			port,
-			routes.Metric(options.GetMetricWithDefault(0)),
+			metric,
 		)
 		if err != nil {
 			_ = syslog.WarnTf(deviceControlName, "addEndpoint failed: %s", err)

@@ -175,9 +175,7 @@ type ifState struct {
 	mu       struct {
 		sync.RWMutex
 		adminUp, linkOnline, removed bool
-		// metric is used by default for routes that originate from this NIC.
-		metric routes.Metric
-		dhcp   struct {
+		dhcp                         struct {
 			*dhcp.Client
 			// running must not be nil.
 			running func() bool
@@ -190,6 +188,9 @@ type ifState struct {
 		}
 		addressStateProviders addressStateProviderCollection
 	}
+
+	// metric is used by default for routes that originate from this NIC.
+	metric routes.Metric
 
 	adminControls adminControlCollection
 
@@ -327,7 +328,7 @@ func (ifs *ifState) addRoutesWithPreferenceLocked(rs []tcpip.Route, prf routes.P
 
 	enabled := ifs.IsUpLocked()
 	if metricTracksInterface {
-		metric = ifs.mu.metric
+		metric = ifs.metric
 	}
 
 	ifs.ns.routeTable.Lock()
@@ -608,12 +609,6 @@ func (ifs *ifState) onDuplicateAddressDetectionComplete(addr tcpip.Address, succ
 	defer ifs.mu.Unlock()
 
 	ifs.mu.addressStateProviders.onDuplicateAddressDetectionCompleteLocked(ifs.nicid, addr, ifs.IsUpLocked(), success)
-}
-
-func (ifs *ifState) updateMetric(metric routes.Metric) {
-	ifs.mu.Lock()
-	ifs.mu.metric = metric
-	ifs.mu.Unlock()
 }
 
 func (ifs *ifState) dhcpLostLocked(lost tcpip.AddressWithPrefix) {
@@ -1199,6 +1194,7 @@ func (ns *Netstack) addEndpoint(
 		ns:         ns,
 		controller: controller,
 		observer:   observer,
+		metric:     metric,
 	}
 	ifs.dhcpLock = make(chan struct{}, 1)
 	ifs.adminControls.mu.controls = make(map[*adminControlImpl]struct{})
@@ -1208,7 +1204,6 @@ func (ns *Netstack) addEndpoint(
 		observer.SetOnLinkOnlineChanged(ifs.onLinkOnlineChanged)
 	}
 
-	ifs.mu.metric = metric
 	ifs.mu.dhcp.running = func() bool { return false }
 	ifs.mu.dhcp.cancelLocked = func() {}
 

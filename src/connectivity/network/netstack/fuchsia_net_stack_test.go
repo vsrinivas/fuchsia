@@ -91,12 +91,16 @@ func TestFuchsiaNetStack(t *testing.T) {
 			Subnet:   localSubnet,
 			DeviceId: 1,
 		}
+		wantLocalRoute := localRoute
+		wantLocalRoute.Metric = uint32(defaultInterfaceMetric)
 		nextHop := fidlconv.ToNetIpAddress("\xc0\xa8\x20\x01")
 		defaultRoute := stack.ForwardingEntry{
 			Subnet:   defaultSubnet,
 			NextHop:  &nextHop,
 			DeviceId: 1,
 		}
+		wantDefaultRoute := defaultRoute
+		wantDefaultRoute.Metric = uint32(defaultInterfaceMetric)
 
 		// Add an invalid entry.
 		addResult, err := ni.AddForwardingEntry(context.Background(), invalidRoute)
@@ -113,8 +117,8 @@ func TestFuchsiaNetStack(t *testing.T) {
 		}
 		table, err = ni.GetForwardingTable(context.Background())
 		AssertNoError(t, err)
-		expectedTable := []stack.ForwardingEntry{localRoute}
-		if diff := cmp.Diff(table, expectedTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+		expectedTable := []stack.ForwardingEntry{wantLocalRoute}
+		if diff := cmp.Diff(expectedTable, table, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
 			t.Fatalf("forwarding table mismatch (-want +got):\n%s", diff)
 		}
 
@@ -126,7 +130,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 		}
 		table, err = ni.GetForwardingTable(context.Background())
 		AssertNoError(t, err)
-		if diff := cmp.Diff(table, expectedTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+		if diff := cmp.Diff(expectedTable, table, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
 			t.Fatalf("forwarding table mismatch (-want +got):\n%s", diff)
 		}
 
@@ -138,8 +142,8 @@ func TestFuchsiaNetStack(t *testing.T) {
 		}
 		table, err = ni.GetForwardingTable(context.Background())
 		AssertNoError(t, err)
-		expectedTable = append(expectedTable, defaultRoute)
-		if diff := cmp.Diff(table, expectedTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+		expectedTable = append(expectedTable, wantDefaultRoute)
+		if diff := cmp.Diff(expectedTable, table, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
 			t.Fatalf("forwarding table mismatch (-want +got):\n%s", diff)
 		}
 
@@ -165,8 +169,8 @@ func TestFuchsiaNetStack(t *testing.T) {
 		}
 		table, err = ni.GetForwardingTable(context.Background())
 		AssertNoError(t, err)
-		expectedTable = []stack.ForwardingEntry{defaultRoute}
-		if diff := cmp.Diff(table, expectedTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+		expectedTable = []stack.ForwardingEntry{wantDefaultRoute}
+		if diff := cmp.Diff(expectedTable, table, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
 			t.Fatalf("forwarding table mismatch (-want +got):\n%s", diff)
 		}
 
@@ -179,7 +183,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 		table, err = ni.GetForwardingTable(context.Background())
 		AssertNoError(t, err)
 		expectedTable = []stack.ForwardingEntry{}
-		if diff := cmp.Diff(table, expectedTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+		if diff := cmp.Diff(expectedTable, table, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
 			t.Fatalf("forwarding table mismatch (-want +got):\n%s", diff)
 		}
 	})

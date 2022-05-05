@@ -131,8 +131,8 @@ func addNoopEndpoint(t *testing.T, ns *Netstack, name string) *ifState {
 		},
 		&noopEndpoint{},
 		&noopController{},
-		nil, /* observer */
-		0,   /* metric */
+		nil,                    /* observer */
+		defaultInterfaceMetric, /* metric */
 	)
 	if err != nil {
 		t.Fatal(err)

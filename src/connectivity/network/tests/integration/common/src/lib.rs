@@ -288,6 +288,7 @@ pub async fn send_ra_with_router_lifetime<'a>(
 pub async fn setup_network<'a, E>(
     sandbox: &'a netemul::TestSandbox,
     name: &'a str,
+    metric: Option<u32>,
 ) -> Result<(
     netemul::TestNetwork<'a>,
     netemul::TestRealm<'a>,
@@ -298,7 +299,8 @@ pub async fn setup_network<'a, E>(
 where
     E: netemul::Endpoint,
 {
-    setup_network_with::<E, _>(sandbox, name, std::iter::empty::<fnetemul::ChildDef>()).await
+    setup_network_with::<E, _>(sandbox, name, metric, std::iter::empty::<fnetemul::ChildDef>())
+        .await
 }
 
 /// Sets up a realm with required services and a network used for tests
@@ -310,6 +312,7 @@ where
 pub async fn setup_network_with<'a, E, I>(
     sandbox: &'a netemul::TestSandbox,
     name: &'a str,
+    metric: Option<u32>,
     children: I,
 ) -> Result<(
     netemul::TestNetwork<'a>,
@@ -332,7 +335,11 @@ where
     let fake_ep = network.create_fake_endpoint()?;
 
     let iface = realm
-        .join_network::<E, _>(&network, name)
+        .join_network_with_if_config::<E, _>(
+            &network,
+            name,
+            netemul::InterfaceConfig { name: Some(name.into()), metric },
+        )
         .await
         .context("failed to configure networking")?;
 

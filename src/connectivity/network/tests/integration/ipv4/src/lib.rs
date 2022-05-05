@@ -31,7 +31,7 @@ async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) {
 
     let sandbox = netemul::TestSandbox::new().expect("error creating sandbox");
     let (_network, realm, _netstack, iface, fake_ep) =
-        setup_network::<E>(&sandbox, name).await.expect("error setting up network");
+        setup_network::<E>(&sandbox, name, None).await.expect("error setting up network");
 
     let addr = net::Ipv4Address { addr: INTERFACE_ADDR.octets() };
     let _address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
