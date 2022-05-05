@@ -15,7 +15,7 @@ impl KeyType {
     pub const IGTK: Self = Self(3);
     pub const PEER: Self = Self(4);
 }
-// LINT.ThenChange(//zircon/system/banjo/fuchsia.hardware.wlan.associnfo/info.banjo)
+// LINT.ThenChange(//sdk/banjo/fuchsia.hardware.wlan.associnfo/associnfo.fidl)
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

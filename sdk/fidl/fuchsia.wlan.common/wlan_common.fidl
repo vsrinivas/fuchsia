@@ -120,7 +120,7 @@ type WlanBand = flexible enum : uint8 {
     FIVE_GHZ = 1;
 };
 
-// LINT.ThenChange(//zircon/system/banjo/fuchsia.hardware.wlan.associnfo/info.banjo)
+// LINT.ThenChange(//sdk/banjo/fuchsia.hardware.wlan.associnfo/associnfo.fidl)
 
 type ScanType = strict enum {
     ACTIVE = 1;

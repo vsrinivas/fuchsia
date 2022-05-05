@@ -59,7 +59,7 @@ void PrintUsage() {
       "init-partition-tables, and wipe-partition-tables\n");
 }
 
-// Refer to //zircon/system/fidl/fuchsia.paver/paver-fidl for a list of what
+// Refer to //sdk/fidl/fuchsia.paver/paver.fidl for a list of what
 // these commands translate to.
 enum class Command {
   kWipe,

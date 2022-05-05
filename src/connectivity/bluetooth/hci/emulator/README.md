@@ -8,12 +8,12 @@ accomplishes this by publishing two distinct devices:
 
 * A device of class "bt-emulator". This device allows the emulator's behavior to
   be configured using the
-  [fuchsia.bluetooth.test.HciEmulator](//sdk/fidl/fuchsia.bluetooth/test/hci_emulator.fidl)
+  [fuchsia.bluetooth.test.HciEmulator](//sdk/fidl/fuchsia.bluetooth.test/hci_emulator.fidl)
   protocol (also see
-  [fuchsia.bluetooth.hardware.bluetooth.Emulator](//zircon/system/fidl/fuchsia-hardware-bluetooth/hci.fidl)).
+  [fuchsia.hardware.bluetooth.Emulator](//sdk/fidl/fuchsia.hardware.bluetooth/hci.fidl)).
 * A device of class "bt-hci". See
-  [fuchsia.hardware.bluetooth.Hci](//zircon/system/fidl/fuchsia-hardware-bluetooth/hci.fidl)
-  and [fuchsia.hardware.bt-hci](//zircon/system/banjo/fuchsia.hardware.bt.hci/bt-hci.banjo).
+  [fuchsia.hardware.bluetooth.Hci](//sdk/fidl/fuchsia.hardware.bluetooth/hci.fidl)
+  and [fuchsia.hardware.bt.hci](//sdk/banjo/fuchsia.hardware.bt.hci/bt-hci.fidl).
 
 ## Usage
 TODO(fxbug.dev/822): Document the driver's device publishing behavior once implement,

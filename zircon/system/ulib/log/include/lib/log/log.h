@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 // The values following constants must match the values defined in
-// //zircon/system/fidl/fuchsia-logger/logger.fidl
+// //sdk/fidl/fuchsia.logger/logger.fidl
 
 // Max number of tags that can be attached to a message.
 #define LOG_MAX_TAGS (5)

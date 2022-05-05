@@ -38,10 +38,7 @@ allowed_deps = [
     '//garnet/lib/rust',
     '//garnet/public/lib',
     '//garnet/public/rust',
-    '//zircon/public/fidl',
     '//zircon/public/lib',
-    '//zircon/public/banjo',
-    '//zircon/system/fidl',
     '//zircon/system/public',
 
     # Tools

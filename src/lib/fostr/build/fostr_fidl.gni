@@ -12,7 +12,6 @@ import("//build/cpp/fidlmerge_cpp.gni")
 #
 #   fidl_target (required)
 #     Specifies the fidl target from which to read fidl json. For example,
-#     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem_sdk" for fuchsia.mem or
 #     "//sdk/fidl/fuchsia.sys" for fuchsia.sys.
 #
 #   template_path (optional)

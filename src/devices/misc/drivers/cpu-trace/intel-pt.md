@@ -29,7 +29,7 @@ Address filtering is possible, but is still TODO.
 ## FIDL
 
 The interface for driving insntruction tracing is specified by
-`//zircon/system/fidl/fuchsia-hardware-cpu-insntrace/insntrace.fidl`.
+`//sdk/fidl/fuchsia.hardware.cpu.insntrace/insntrace.fidl`.
 
 ## Usage
 

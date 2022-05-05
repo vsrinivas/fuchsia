@@ -26,8 +26,6 @@ fuchsia_driver("registers-driver") {
     ":common",
     ":registers_bind",
     "//src/devices/lib/driver",
-
-    #"//zircon/system/banjo/fuchsia.hardware.platform.device",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

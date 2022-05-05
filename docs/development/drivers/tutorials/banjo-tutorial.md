@@ -901,7 +901,7 @@ tests.
 
 Tests in Zircon get the mock headers automatically. Tests outsize of Zircon must depend on the
 protocol target with a `_mock` suffix, e.g.
-`//zircon/public/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock`.
+`//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock`.
 
 ## Using the mocks
 

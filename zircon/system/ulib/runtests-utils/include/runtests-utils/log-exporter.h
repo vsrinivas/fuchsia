@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // Code for listening to logger service and dumping the logs.
-// This implements LogListener interface for logger fidl @ //zircon/system/fidl/fuchsia-logger.
+// This implements LogListener interface for logger fidl @ //sdk/fidl/fuchsia.logger
 
 #ifndef RUNTESTS_UTILS_LOG_EXPORTER_H_
 #define RUNTESTS_UTILS_LOG_EXPORTER_H_

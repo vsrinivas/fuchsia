@@ -61,7 +61,7 @@ class Paver : public PaverInterface {
  private:
   static constexpr uint32_t kBufferRefWorker = 1 << 0;
   static constexpr uint32_t kBufferRefApi = 1 << 1;
-  // Refer to //zircon/system/fidl/fuchsia.paver/paver.fidl for a list of what
+  // Refer to //sdk/fidl/fuchsia.paver/paver.fidl for a list of what
   // these commands translate to.
   enum class Command {
     kAsset,
