@@ -7,6 +7,7 @@
 package reboottest
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -63,7 +64,9 @@ func RebootWithCommand(t *testing.T, cmd string, eKind ExpectedRebootType, eActi
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.Drive = nil
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	i.WaitForLogMessage("initializing platform")
@@ -98,7 +101,6 @@ func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
-		return ""
 	}
 	return filepath.Dir(ex)
 }

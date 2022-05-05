@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,7 +29,7 @@ var common_args = []string{
 	"zircon.autorun.boot=/boot/bin/sh+-c+k",
 }
 
-func testCommon(t *testing.T, kernel_arg string) (*emulatortest.Instance, emulator.Arch) {
+func testCommon(t *testing.T, ctx context.Context, kernel_arg string) (*emulatortest.Instance, emulator.Arch) {
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
@@ -39,7 +40,7 @@ func testCommon(t *testing.T, kernel_arg string) (*emulatortest.Instance, emulat
 	device.KernelArgs = append(device.KernelArgs, common_args...)
 	// Enable the lockup detector using the specified kernel_arg.
 	device.KernelArgs = append(device.KernelArgs, kernel_arg)
-	i := distro.Create(device)
+	i := distro.CreateContext(ctx, device)
 
 	// Boot.
 	i.Start()
@@ -50,7 +51,9 @@ func testCommon(t *testing.T, kernel_arg string) (*emulatortest.Instance, emulat
 }
 
 func TestKernelLockupDetectorCriticalSection(t *testing.T) {
-	i, _ := testCommon(t, "kernel.lockup-detector.critical-section-threshold-ms=200")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i, _ := testCommon(t, ctx, "kernel.lockup-detector.critical-section-threshold-ms=200")
 
 	// Force a lockup and see that an OOPS is emitted.
 	i.RunCommand("k lockup test_critical_section 1 600")
@@ -61,7 +64,9 @@ func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 }
 
 func TestKernelLockupDetectorHeartbeat(t *testing.T) {
-	i, _ := testCommon(t, "kernel.lockup-detector.heartbeat-age-threshold-ms=200")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i, _ := testCommon(t, ctx, "kernel.lockup-detector.heartbeat-age-threshold-ms=200")
 
 	// Force a lockup and see that a heartbeat OOPS is emitted.
 	i.RunCommand("k lockup test_spinlock 1 1000")
@@ -98,12 +103,16 @@ func testLockupWithCommand(t *testing.T, i *emulatortest.Instance, arch emulator
 }
 
 func TestKernelLockupDetectorFatalCriticalSection(t *testing.T) {
-	i, arch := testCommon(t, "kernel.lockup-detector.critical-section-fatal-threshold-ms=500")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i, arch := testCommon(t, ctx, "kernel.lockup-detector.critical-section-fatal-threshold-ms=500")
 	testLockupWithCommand(t, i, arch, "k lockup test_critical_section 1 1000")
 }
 
 func TestKernelLockupDetectorFatalHeartbeat(t *testing.T) {
-	i, arch := testCommon(t, "kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=500")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i, arch := testCommon(t, ctx, "kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=500")
 	testLockupWithCommand(t, i, arch, "k lockup test_spinlock 1 1000")
 }
 
@@ -111,7 +120,6 @@ func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
-		return ""
 	}
 	return filepath.Dir(ex)
 }

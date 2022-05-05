@@ -51,7 +51,6 @@ func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
-		return ""
 	}
 	return filepath.Dir(ex)
 }

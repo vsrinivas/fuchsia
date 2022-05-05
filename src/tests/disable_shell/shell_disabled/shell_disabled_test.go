@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"os"
@@ -22,7 +23,9 @@ func TestShellDisabled(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, "console.shell=false")
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 	i.WaitForLogMessage("console.shell: disabled")
 	tokenFromSerial := randomTokenAsString(t)
@@ -36,7 +39,9 @@ func TestAutorunDisabled(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, "console.shell=false", "zircon.autorun.boot=foobar")
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 	i.WaitForLogMessage("cannot launch autorun command 'foobar'")
 }

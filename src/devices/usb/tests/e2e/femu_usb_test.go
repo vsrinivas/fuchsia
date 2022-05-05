@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -44,7 +45,9 @@ func TestFemuWithUSBDisk(t *testing.T) {
 		Device:     &fvdpb.Device{Model: "usb-storage"},
 	})
 
-	emu := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	emu := distro.CreateContext(ctx, device)
 	emu.Start()
 
 	// This message indicates that the usb disk was detected.

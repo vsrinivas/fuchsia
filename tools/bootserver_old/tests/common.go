@@ -191,7 +191,9 @@ func StartQemu(t *testing.T, appendCmdline []string, modeString string) *emulato
 		Kind:   "tap",
 		Device: &fvdpb.Device{Model: "virtio-net-pci"},
 	})
-	instance := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	instance := distro.CreateContext(ctx, device)
 	instance.Start()
 
 	// Make sure netsvc in expected mode.

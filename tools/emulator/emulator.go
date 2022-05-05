@@ -258,15 +258,6 @@ func (d *Distribution) buildCommandLine(
 
 }
 
-// Create creates an instance of the emulator with the given parameters.
-func (d *Distribution) Create(fvd *fvdpb.VirtualDevice) (*Instance, error) {
-	return d.create(
-		func(args []string) *exec.Cmd { return exec.Command(args[0], args[1:]...) },
-		fvd,
-		nil,
-	)
-}
-
 // CreateContext creates an instance of the emulator with the given parameters,
 // passing through ctx to the underlying exec.Cmd.
 func (d *Distribution) CreateContext(
@@ -634,7 +625,7 @@ func (i *Instance) StartPiped(piped *exec.Cmd) error {
 		}
 		i.stdout = bufio.NewReader(pipedStderr)
 		i.stderr = bufio.NewReader(stderr)
-		if err = piped.Start(); err != nil {
+		if err := piped.Start(); err != nil {
 			return err
 		}
 		i.piped = piped
@@ -669,18 +660,6 @@ func (i *Instance) StartPiped(piped *exec.Cmd) error {
 	}
 
 	return startErr
-}
-
-// Kill terminates the emulator instance.
-func (i *Instance) Kill() error {
-	var err error
-	if i.piped != nil {
-		err = i.piped.Process.Kill()
-	}
-	if err2 := i.cmd.Process.Kill(); err2 != nil {
-		return err2
-	}
-	return err
 }
 
 func printWhileWait(r *bufio.Reader, proc *os.Process) (*os.ProcessState, error) {

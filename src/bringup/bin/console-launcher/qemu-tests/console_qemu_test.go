@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -32,7 +33,9 @@ func TestConsoleIsLaunched(t *testing.T) {
 	device.Initrd = "fuchsia"
 	device.Drive = nil
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// Wait for the system to finish booting.

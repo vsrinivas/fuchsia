@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -29,7 +30,9 @@ func TestBasicCrash(t *testing.T) {
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// Wait for the system to finish booting.
@@ -57,7 +60,9 @@ func TestReadUserMemoryViolation(t *testing.T) {
 
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// Wait for the system to finish booting.
@@ -82,7 +87,9 @@ func TestExecuteUserMemoryViolation(t *testing.T) {
 
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// Wait for the system to finish booting.
@@ -115,7 +122,9 @@ func TestPmmCheckerOopsAndPanic(t *testing.T) {
 
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// Wait for the system to finish booting.
@@ -171,7 +180,9 @@ func TestCrashAssert(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// Wait for the system to finish booting.
@@ -192,7 +203,6 @@ func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
-		return ""
 	}
 	return filepath.Dir(ex)
 }

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -25,9 +26,9 @@ func execDir(t *testing.T) string {
 	return filepath.Dir(ex)
 }
 
-func startAscendd(t *testing.T, exDir string) *exec.Cmd {
+func startAscendd(ctx context.Context, exDir string) *exec.Cmd {
 	path := fmt.Sprintf("/tmp/ascendd-for-serial-test.%d.sock", rand.Uint64())
-	cmd := exec.Command(filepath.Join(exDir, "ascendd"), "--serial", "-", "--sockpath", path)
+	cmd := exec.CommandContext(ctx, filepath.Join(exDir, "ascendd"), "--serial", "-", "--sockpath", path)
 	cmd.Env = append(os.Environ(), fmt.Sprintf("ASCENDD=%s", path))
 	return cmd
 }
@@ -42,9 +43,11 @@ func TestOvernetSerial(t *testing.T) {
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.Initrd = "overnet"
 	device.KernelArgs = append(device.KernelArgs, "console.shell=false kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true")
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 
-	i.StartPiped(startAscendd(t, exDir))
+	i.StartPiped(startAscendd(ctx, exDir))
 	i.WaitForLogMessage("Established Client Overnet serial connection")
 }
 
@@ -58,7 +61,10 @@ func TestNoSpinningIfNoSerial(t *testing.T) {
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.Initrd = "overnet"
 	device.KernelArgs = append(device.KernelArgs, "console.shell=false", "kernel.enable-debugging-syscalls=false", "kernel.enable-serial-syscalls=false")
-	i := distro.Create(device)
-	i.StartPiped(startAscendd(t, exDir))
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
+
+	i.StartPiped(startAscendd(ctx, exDir))
 	i.WaitForLogMessage("SERIAL LINK Debug completed with failure")
 }

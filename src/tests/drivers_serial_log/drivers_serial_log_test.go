@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -33,7 +34,9 @@ func TestSerialLogsAvailable(t *testing.T) {
 	device.Initrd = "fuchsia"
 	device.Drive = nil
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// Wait for a log from driver framework (driver framework is just one of the many modules
@@ -45,7 +48,6 @@ func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
-		return ""
 	}
 	return filepath.Dir(ex)
 }

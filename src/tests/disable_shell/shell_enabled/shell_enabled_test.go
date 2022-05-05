@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"os"
@@ -21,7 +22,9 @@ func TestShellEnabled(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, "console.shell=true")
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 	i.WaitForLogMessage("console.shell: enabled")
 	tokenFromSerial := randomTokenAsString(t)
@@ -38,7 +41,9 @@ func TestAutorunEnabled(t *testing.T) {
 	device.KernelArgs = append(device.KernelArgs,
 		"console.shell=true",
 		"zircon.autorun.boot=/boot/bin/sh+-c+echo+"+tokenFromSerial)
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// Wait for console-launcher to come up before waiting for the autorun output.

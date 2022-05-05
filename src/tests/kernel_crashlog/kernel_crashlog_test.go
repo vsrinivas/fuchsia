@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -55,7 +56,9 @@ func testCommon(t *testing.T,
 		"kernel.render-dlog-to-crashlog=true",
 		"zircon.autorun.boot=/boot/bin/sh+-c+k")
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 
 	// Boot.
 	i.Start()
@@ -176,7 +179,6 @@ func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
-		return ""
 	}
 	return filepath.Dir(ex)
 }

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -20,7 +21,6 @@ func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
-		return ""
 	}
 	return filepath.Dir(ex)
 }
@@ -33,7 +33,9 @@ func TestFemu(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// This message indicates that FEMU has successfully come up and that the Fuchsia system is fairly functional.
@@ -57,7 +59,9 @@ func TestFemuWithDisk(t *testing.T) {
 		Device:     &fvdpb.Device{Model: "virtio-blk-pci"},
 	})
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// This message indicates that disks have been bound.  This message comes from fshost.

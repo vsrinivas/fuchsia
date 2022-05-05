@@ -30,8 +30,8 @@ func toolPath(t *testing.T, name string) string {
 	return filepath.Join(execDir(t), "test_data", "limited_netsvc", name)
 }
 
-func cmdWithTimeout(t *testing.T, shouldWork bool, name string, arg ...string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func cmdWithTimeout(t *testing.T, ctx context.Context, shouldWork bool, name string, arg ...string) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, name, arg...)
@@ -53,12 +53,15 @@ func cmdWithTimeout(t *testing.T, shouldWork bool, name string, arg ...string) {
 	}
 }
 
-func attemptNetcp(t *testing.T, shouldWork bool) {
+func attemptNetcp(t *testing.T, ctx context.Context, shouldWork bool) {
 	cmdWithTimeout(
-		t, shouldWork,
+		t,
+		ctx,
+		shouldWork,
 		toolPath(t, "netcp"),
 		defaultNodename+":/boot/kernel/vdso/stable",
-		"/tmp/vdso")
+		"/tmp/vdso",
+	)
 }
 
 func randomTokenAsString(t *testing.T) string {
@@ -69,8 +72,8 @@ func randomTokenAsString(t *testing.T) string {
 	return hex.EncodeToString(b[:])
 }
 
-func attemptNetruncmd(t *testing.T, i *emulatortest.Instance, shouldWork bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func attemptNetruncmd(t *testing.T, ctx context.Context, i *emulatortest.Instance, shouldWork bool) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	name := toolPath(t, "netruncmd")
@@ -99,16 +102,16 @@ func attemptNetruncmd(t *testing.T, i *emulatortest.Instance, shouldWork bool) {
 	}
 }
 
-func attemptNetls(t *testing.T, shouldWork bool) {
-	cmdWithTimeout(t, shouldWork, toolPath(t, "netls"))
+func attemptNetls(t *testing.T, ctx context.Context, shouldWork bool) {
+	cmdWithTimeout(t, ctx, shouldWork, toolPath(t, "netls"))
 }
 
-func attemptNetaddr(t *testing.T, shouldWork bool) {
-	cmdWithTimeout(t, shouldWork, toolPath(t, "netaddr"))
+func attemptNetaddr(t *testing.T, ctx context.Context, shouldWork bool) {
+	cmdWithTimeout(t, ctx, shouldWork, toolPath(t, "netaddr"))
 }
 
-func attemptTftp(t *testing.T, shouldWork bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func attemptTftp(t *testing.T, ctx context.Context, shouldWork bool) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	addr, err := netutil.GetNodeAddress(ctx, defaultNodename)
@@ -143,8 +146,8 @@ func attemptTftp(t *testing.T, shouldWork bool) {
 	}
 }
 
-func attemptLoglistener(t *testing.T, shouldWork bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func attemptLoglistener(t *testing.T, ctx context.Context, shouldWork bool) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	name := toolPath(t, "loglistener")
@@ -173,7 +176,7 @@ func attemptLoglistener(t *testing.T, shouldWork bool) {
 	}
 }
 
-func setupQemu(t *testing.T, appendCmdline []string, modeString string) *emulatortest.Instance {
+func setupQemu(t *testing.T, ctx context.Context, appendCmdline []string, modeString string) *emulatortest.Instance {
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
@@ -189,7 +192,7 @@ func setupQemu(t *testing.T, appendCmdline []string, modeString string) *emulato
 		Kind:   "tap",
 		Device: &fvdpb.Device{Model: "virtio-net-pci"},
 	})
-	i := distro.Create(device)
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// Make sure netsvc in expected mode.
@@ -202,51 +205,56 @@ func setupQemu(t *testing.T, appendCmdline []string, modeString string) *emulato
 
 func TestNetsvcAllFeatures(t *testing.T) {
 	cmdline := []string{"netsvc.all-features=true"}
-	i := setupQemu(t, cmdline, "full")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := setupQemu(t, ctx, cmdline, "full")
 
 	// Setting all-features to true means netsvc will work normally, and all
 	// features should work.
-	attemptLoglistener(t, true)
-	attemptNetaddr(t, true)
-	attemptNetcp(t, true)
-	attemptNetls(t, true)
-	attemptNetruncmd(t, i, true)
-	attemptTftp(t, true)
+	attemptLoglistener(t, ctx, true)
+	attemptNetaddr(t, ctx, true)
+	attemptNetcp(t, ctx, true)
+	attemptNetls(t, ctx, true)
+	attemptNetruncmd(t, ctx, i, true)
+	attemptTftp(t, ctx, true)
 }
 
 func TestNetsvcAllFeaturesWithNodename(t *testing.T) {
 	cmdline := []string{"netsvc.all-features=true", "zircon.nodename=" + defaultNodename}
-	i := setupQemu(t, cmdline, "full")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := setupQemu(t, ctx, cmdline, "full")
 
 	// Setting all-features to true means netsvc will work normally, and all
 	// features should work.
-	attemptLoglistener(t, true)
-	attemptNetaddr(t, true)
-	attemptNetcp(t, true)
-	attemptNetls(t, true)
-	attemptNetruncmd(t, i, true)
-	attemptTftp(t, true)
+	attemptLoglistener(t, ctx, true)
+	attemptNetaddr(t, ctx, true)
+	attemptNetcp(t, ctx, true)
+	attemptNetls(t, ctx, true)
+	attemptNetruncmd(t, ctx, i, true)
+	attemptTftp(t, ctx, true)
 }
 
 func TestNetsvcLimited(t *testing.T) {
 	cmdline := []string{"netsvc.all-features=false"}
-	i := setupQemu(t, cmdline, "limited")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := setupQemu(t, ctx, cmdline, "limited")
 
 	// Explicitly setting all-features to false should be the same as default, and
 	// most operations should fail.
-	attemptLoglistener(t, false)
-	attemptNetaddr(t, true)
-	attemptNetcp(t, false)
-	attemptNetls(t, true)
-	attemptNetruncmd(t, i, false)
-	attemptTftp(t, false)
+	attemptLoglistener(t, ctx, false)
+	attemptNetaddr(t, ctx, true)
+	attemptNetcp(t, ctx, false)
+	attemptNetls(t, ctx, true)
+	attemptNetruncmd(t, ctx, i, false)
+	attemptTftp(t, ctx, false)
 }
 
 func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
-		return ""
 	}
 	return filepath.Dir(ex)
 }

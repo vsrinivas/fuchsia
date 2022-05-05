@@ -6,6 +6,7 @@
 package emulatortest
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"testing"
@@ -36,8 +37,8 @@ func UnpackFrom(t *testing.T, path string, distroParams emulator.DistributionPar
 }
 
 // Creates reimplements emulator.Distribution.
-func (d *Distribution) Create(fvd *fvdpb.VirtualDevice) *Instance {
-	i, err := d.d.Create(fvd)
+func (d *Distribution) CreateContext(ctx context.Context, fvd *fvdpb.VirtualDevice) *Instance {
+	i, err := d.d.CreateContext(ctx, fvd)
 	if err != nil {
 		d.t.Fatal(err)
 	}
@@ -80,18 +81,8 @@ func (i *Instance) Start() {
 
 // StartPiped reimplements emulator.Instance.
 func (i *Instance) StartPiped(piped *exec.Cmd) {
-	err := i.i.StartPiped(piped)
-	// A process may have been started even if an error is returned.
-	i.t.Cleanup(i.Kill)
-	if err != nil {
+	if err := i.i.StartPiped(piped); err != nil {
 		i.t.Fatal(err)
-	}
-}
-
-// Kill reimplements emulator.Instance.
-func (i *Instance) Kill() {
-	if err := i.i.Kill(); err != nil && err != os.ErrProcessDone {
-		i.t.Error(err)
 	}
 }
 

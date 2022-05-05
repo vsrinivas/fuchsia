@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,7 +24,9 @@ func TestShutdown(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 	i.WaitForLogMessage("initializing platform")
 
@@ -41,7 +44,7 @@ func TestShutdown(t *testing.T) {
 
 	// Start a timer so we can abort the wait by explicitly killing. This will yield a nice error
 	// from the wait command that we can detect.
-	timer := time.AfterFunc(120*time.Second, i.Kill)
+	timer := time.AfterFunc(120*time.Second, cancel)
 
 	// Cannot check for log messages as we are racing with the shutdown, and if qemu closes first
 	// checking for log messages will panic, so we just wait.
@@ -56,7 +59,6 @@ func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
-		return ""
 	}
 	return filepath.Dir(ex)
 }

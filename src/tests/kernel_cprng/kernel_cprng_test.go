@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"os"
 	"path/filepath"
@@ -57,7 +58,9 @@ func TestMissingCmdlineEntropyPanics(t *testing.T) {
 
 	device.KernelArgs = removeCmdlineEntropy(device.KernelArgs)
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// See that assertion triggered.
@@ -78,7 +81,9 @@ func TestIncompleteCmdlineEntropyPanics(t *testing.T) {
 
 	device.KernelArgs = append(device.KernelArgs, cmdlineEntropy+"aabbcc")
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// See that assertion triggered.
@@ -102,7 +107,9 @@ func TestCmdlineEntropyBoots(t *testing.T) {
 
 	device.KernelArgs = append(device.KernelArgs, cmdlineEntropy+hex.EncodeToString(zeroEntropy))
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	// Wait for the system to finish booting.
@@ -124,7 +131,9 @@ func captureCPRNGDraws(t *testing.T, entropy []byte, extraKernelArgs []string) m
 
 	device.KernelArgs = append(device.KernelArgs, cmdlineEntropy+hex.EncodeToString(entropy))
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 	lines := i.CaptureLinesContaining("cprng-draw{", "-- cprng-draw-end --")
 	if len(lines) != CPRNG_DRAWS {
@@ -251,7 +260,9 @@ func TestDisabledJitterEntropyAndRequiredForReseedDoesntReachUserspace(t *testin
 	device.KernelArgs = append(device.KernelArgs, cmdlineRequireJitterEntropyReseed)
 	device.KernelArgs = append(device.KernelArgs, cmdlineDisableJitterEntropy)
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 
 	// This test only makes sense if we are using KVM, as JitterEntropy is only
 	// available if we have Invalid TSC.
@@ -284,7 +295,9 @@ func TestDisabledJitterEntropyAndRequiredDoesntBoot(t *testing.T) {
 	device.KernelArgs = append(device.KernelArgs, cmdlineRequireJitterEntropy)
 	device.KernelArgs = append(device.KernelArgs, cmdlineDisableJitterEntropy)
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 
 	// This test only makes sense if we are using KVM, as JitterEntropy is only
 	// available if we have Invalid TSC.
@@ -299,7 +312,6 @@ func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
-		return ""
 	}
 	return filepath.Dir(ex)
 }

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,7 +31,9 @@ func TestOOMSignal(t *testing.T) {
 	const driverManagerLogLine = "Successfully waited for VFS exit completion"
 	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true")
 
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	i.WaitForLogMessages([]string{
@@ -68,7 +71,9 @@ func TestOOMSignalBeforeCriticalProcess(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdlineCommon...)
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	i.WaitForLogMessages([]string{
@@ -106,7 +111,9 @@ func testOOMCommon(t *testing.T, cmdline []string, cmd string, msgs ...string) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	i := distro.Create(device)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	i := distro.CreateContext(ctx, device)
 	i.Start()
 
 	i.WaitForLogMessages([]string{
@@ -166,7 +173,6 @@ func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
-		return ""
 	}
 	return filepath.Dir(ex)
 }
