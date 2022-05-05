@@ -20,25 +20,25 @@ const (
 // For information about each build API module, see the corresponding
 // `build_api_module` target in //BUILD.gn.
 type Modules struct {
-	buildDir              string
-	apis                  []string
-	archives              []Archive
-	args                  Args
-	assemblyInputArchives []AssemblyInputArchive
-	binaries              []Binary
-	checkoutArtifacts     []CheckoutArtifact
-	clippyTargets         []ClippyTarget
-	generatedSources      []string
-	images                []Image
-	packageManifests      []string
-	platforms             []DimensionSet
-	prebuiltBinarySets    []PrebuiltBinarySet
-	sdkArchives           []SDKArchive
-	testListLocation      []string
-	testSpecs             []TestSpec
-	testDurations         []TestDuration
-	tools                 Tools
-	zbiTests              []ZBITest
+	buildDir                 string
+	apis                     []string
+	archives                 []Archive
+	args                     Args
+	assemblyInputArchives    []AssemblyInputArchive
+	binaries                 []Binary
+	checkoutArtifacts        []CheckoutArtifact
+	clippyTargets            []ClippyTarget
+	generatedSources         []string
+	images                   []Image
+	packageManifestsLocation []string
+	platforms                []DimensionSet
+	prebuiltBinarySets       []PrebuiltBinarySet
+	sdkArchives              []SDKArchive
+	testListLocation         []string
+	testSpecs                []TestSpec
+	testDurations            []TestDuration
+	tools                    Tools
+	zbiTests                 []ZBITest
 }
 
 // NewModules returns a Modules associated with a given build directory.
@@ -55,7 +55,7 @@ func NewModules(buildDir string) (*Modules, error) {
 		"clippy_target_mapping.json":      &m.clippyTargets,
 		"generated_sources.json":          &m.generatedSources,
 		imageManifestName:                 &m.images,
-		"all_package_manifest_paths.json": &m.packageManifests,
+		"all_package_manifest_paths.json": &m.packageManifestsLocation,
 		"platforms.json":                  &m.platforms,
 		"prebuilt_binaries.json":          &m.prebuiltBinarySets,
 		"sdk_archives.json":               &m.sdkArchives,
@@ -121,8 +121,8 @@ func (m Modules) Images() []Image {
 	return m.images
 }
 
-func (m Modules) PackageManifests() []string {
-	return m.packageManifests
+func (m Modules) PackageManifestsLocation() []string {
+	return m.packageManifestsLocation
 }
 
 // Platforms returns the build API module of available platforms to test on.

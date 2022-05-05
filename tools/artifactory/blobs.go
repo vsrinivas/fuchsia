@@ -23,8 +23,12 @@ func BlobsUpload(mods *tools.Modules, destination string) (Upload, error) {
 
 func blobsUpload(mods pkgManifestsModules, destination string) (Upload, error) {
 	// Obtain the absolute paths.
-	absolutePaths := make([]string, len(mods.PackageManifests()))
-	for _, path := range mods.PackageManifests() {
+	manifests, err := tools.LoadPackageManifests(filepath.Join(mods.BuildDir(), mods.PackageManifestsLocation()[0]))
+	if err != nil {
+		return Upload{}, fmt.Errorf("failed to load list of package manifests: %s", err)
+	}
+	absolutePaths := make([]string, len(manifests))
+	for _, path := range manifests {
 		absolutePaths = append(absolutePaths, filepath.Join(mods.BuildDir(), path))
 	}
 
@@ -83,5 +87,5 @@ func loadBlobsFromPackageManifests(paths []string) ([]pm.PackageBlobInfo, error)
 
 type pkgManifestsModules interface {
 	BuildDir() string
-	PackageManifests() []string
+	PackageManifestsLocation() []string
 }

@@ -36,6 +36,7 @@ go_library("build") {
     "clippy.go",
     "images.go",
     "modules.go",
+    "package_manifest_list.go",
     "prebuilt_binaries.go",
     "sdk_archives.go",
     "test_durations.go",

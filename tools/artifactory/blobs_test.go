@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -17,7 +18,7 @@ import (
 // createBuildDir generates a mock build directory for the tests to use.
 //
 // The tree will be cleaned up automatically.
-func createBuildDir(t *testing.T, files map[string]string) string {
+func createBuildDir(t *testing.T, files map[string]string, manifests []string) (string, string) {
 	dir := t.TempDir()
 	for filename, data := range files {
 		if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(filename)), 0o700); err != nil {
@@ -27,21 +28,29 @@ func createBuildDir(t *testing.T, files map[string]string) string {
 			t.Fatal(err)
 		}
 	}
-	return dir
+
+	// write the newline-delimited file that is produced by a ninja target
+	newlineLocation := "manifests.list"
+	manifestPaths := strings.Join(manifests[:], "\n")
+	if err := ioutil.WriteFile(filepath.Join(dir, newlineLocation), []byte(manifestPaths), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	return dir, newlineLocation
 }
 
 // Implements pkgManifestModules
 type mockPkgManifestModules struct {
-	pkgManifests []string
-	buildDir     string
+	pkgManifestsLocation []string
+	buildDir             string
 }
 
 func (m mockPkgManifestModules) BuildDir() string {
 	return m.buildDir
 }
 
-func (m mockPkgManifestModules) PackageManifests() []string {
-	return m.pkgManifests
+func (m mockPkgManifestModules) PackageManifestsLocation() []string {
+	return m.pkgManifestsLocation
 }
 
 // Verifies we can parse the build dir to produce a blobs Upload.
@@ -77,7 +86,7 @@ func TestBlobsUpload(t *testing.T) {
 					]
 				}`,
 			},
-			packageManifests:  []string{"a", "b", "c"},
+			packageManifests:  []string{"a", "b"},
 			uploadDestination: "namespace/all_blobs.json",
 			expectedUpload: Upload{
 				Compress:    true,
@@ -112,12 +121,12 @@ func TestBlobsUpload(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Generate test env based on input.
-			tempDirPath := createBuildDir(t, tc.buildDirContents)
+			tempDirPath, manifestLocation := createBuildDir(t, tc.buildDirContents, tc.packageManifests)
 
 			// Now that we're set up, we can actually determine the blobs Upload.
 			mockModules := mockPkgManifestModules{
-				pkgManifests: tc.packageManifests,
-				buildDir:     tempDirPath,
+				pkgManifestsLocation: []string{manifestLocation},
+				buildDir:             tempDirPath,
 			}
 			actualUpload, err := blobsUpload(mockModules, tc.uploadDestination)
 
@@ -235,7 +244,7 @@ func TestLoadBlobsFromPackageManifests(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Generate test env based on input.
-			tempDirPath := createBuildDir(t, tc.buildDirContents)
+			tempDirPath, _ := createBuildDir(t, tc.buildDirContents, tc.packageManifests)
 			paths := make([]string, len(tc.packageManifests))
 			for _, path := range tc.packageManifests {
 				paths = append(paths, filepath.Join(tempDirPath, path))
