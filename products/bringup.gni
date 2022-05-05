@@ -43,10 +43,13 @@ product_bootfs_labels +=
 meta_package_labels = []
 
 base_driver_package_labels = []
+legacy_base_driver_package_labels = []
 
 base_package_labels = []
+legacy_base_package_labels = []
 
 cache_package_labels = []
+legacy_cache_package_labels = []
 
 universe_package_labels = [
   "//tools/net/device-finder:host",
@@ -54,6 +57,7 @@ universe_package_labels = [
   # For flash workflows (remove when flash is only ffx-based).
   "//build/images:fastboot",
 ]
+legacy_universe_package_labels = []
 
 host_labels = [
   "//tools/devshell:fx",

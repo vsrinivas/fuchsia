@@ -1202,15 +1202,12 @@ group("default") {
 #
 # For any target in this file, but only in this file.
 #
-#
-# NOTE: These are not yet usable, but here for reference with visibility, see
-#       http://fxbug.dev/99024 for more information.
 
 # Base driver packages added by the developer, using `fx set` or `fx args`
 group("developer_base_driver_packages") {
   testonly = base_cache_packages_testonly
   visibility = [ "//build/images/*" ]
-  public_deps = []
+  public_deps = base_driver_package_labels
 }
 
 # Base packages added by the developer, using `fx set` or `fx args`
@@ -1220,7 +1217,7 @@ group("developer_base_packages") {
     "//build/assembly/*",
     "//build/images/*",
   ]
-  public_deps = []
+  public_deps = base_package_labels
 }
 
 # Cache packages added by the developer, using `fx set --with <foo>` or
@@ -1231,14 +1228,14 @@ group("developer_cache_packages") {
     "//build/assembly/*",
     "//build/images/*",
   ]
-  public_deps = []
+  public_deps = cache_package_labels
 }
 
 # Universe packages added by the developer, using `fx set` or `fx args`
 group("developer_universe_packages") {
   testonly = fuchsia_zbi_testonly
   visibility = [ "//build/images/*" ]
-  public_deps = []
+  public_deps = universe_package_labels
 }
 
 ##
@@ -1246,14 +1243,12 @@ group("developer_universe_packages") {
 # product definitions, not changed by developer options like
 # `fx set --with <foo>` or `fx args`
 #
-# NOTE: These are not yet usable, but here for reference with visibility, see
-#       http://fxbug.dev/99024 for more information.
-#
 # Product+Board base driver packages
 group("legacy_base_driver_packages") {
   testonly = base_cache_packages_testonly
   visibility = [ "//build/images/*" ]
-  public_deps = []
+  public_deps = legacy_base_driver_package_labels +
+                board_driver_package_labels + base_driver_package_labels
 }
 
 # Product+Board base packages
@@ -1263,7 +1258,8 @@ group("legacy_base_packages") {
     "//build/assembly/*",
     "//build/images/*",
   ]
-  public_deps = []
+  public_deps =
+      legacy_base_package_labels + board_package_labels + base_package_labels
 }
 
 # Product+Board cache packages
@@ -1273,14 +1269,14 @@ group("legacy_cache_packages") {
     "//build/assembly/*",
     "//build/images/*",
   ]
-  public_deps = []
+  public_deps = legacy_cache_package_labels + cache_package_labels
 }
 
 # Product+Board universe packages
 group("legacy_universe_packages") {
   testonly = fuchsia_zbi_testonly
   visibility = [ "//build/images/*" ]
-  public_deps = []
+  public_deps = legacy_universe_package_labels + universe_package_labels
 }
 
 ##
