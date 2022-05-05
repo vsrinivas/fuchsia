@@ -397,14 +397,15 @@ async fn run() -> Result<()> {
 
     // Since this is invoking the config, this must be run _after_ ffx_config::init.
     let log_level = app.log_level().await?;
-    let _ = simplelog::LevelFilter::from_str(log_level.as_str()).with_context(||
+    let _:  simplelog::LevelFilter = simplelog::LevelFilter::from_str(log_level.as_str()).with_context(||
         ffx_error!("'{}' is not a valid log level. Supported log levels are 'Off', 'Error', 'Warn', 'Info', 'Debug', and 'Trace'", log_level))?;
 
-    // HACK(64402): hoist uses a lazy static initializer obfuscating access to inject
-    // this value by other means, so:
-    let _ = ffx_config::get("overnet.socket").await.map(|sockpath: String| {
-        std::env::set_var("ASCENDD", sockpath);
-    });
+    // TODO(https://fxbug.dev/64499): hoist uses a lazy static initializer
+    // obfuscating access to inject this value by other means, so:
+    let () = match ffx_config::get::<String, _>("overnet.socket").await {
+        Ok(sockpath) => std::env::set_var("ASCENDD", sockpath),
+        Err(ffx_config::api::ConfigError { .. }) => (),
+    };
 
     let analytics_disabled = ffx_config::get("ffx.analytics.disabled").await.unwrap_or(false);
 
