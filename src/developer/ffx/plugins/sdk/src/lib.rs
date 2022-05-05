@@ -13,7 +13,6 @@ use {
         ListCommand, ListSubCommand, SdkCommand, SetCommand, SetRootCommand, SetSubCommand,
         SubCommand,
     },
-    pbms::{product_bundle_urls, update_metadata},
     std::io::{stdout, Write},
 };
 
@@ -61,11 +60,9 @@ async fn exec_list<W: Write + Sync>(writer: &mut W, _sdk: Sdk, cmd: &ListCommand
 ///
 /// The list will be written to `writer`.
 async fn exec_list_pbms<W: Write + Sync>(writer: &mut W) -> Result<()> {
-    update_metadata(/*verbose=*/ false, writer).await?;
-    let entries = product_bundle_urls().await.context("get pbms entries")?;
-    for entry in entries.iter() {
-        writeln!(writer, "{}", entry)?;
-    }
+    // TODO(fxbug.dev/99678): Removed this after some reasonable cooling period.
+    writeln!(writer, "[Deprecated]")?;
+    writeln!(writer, "Please use `ffx product-bundle list` instead.")?;
     Ok(())
 }
 
