@@ -1177,7 +1177,13 @@ static zx_status_t iwl_mvm_scan_uid_by_status(struct iwl_mvm* mvm, uint32_t stat
       return ZX_OK;
     }
 
-  IWL_WARN(mvm, "Scan uid list is full");
+  IWL_WARN(
+      mvm,
+      "Cannot find a slot in the list that match the input status. List: [%u, %u, %u, %u, %u, %u, "
+      "%u, %u], input: %u\n",
+      mvm->scan_uid_status[0], mvm->scan_uid_status[1], mvm->scan_uid_status[2],
+      mvm->scan_uid_status[3], mvm->scan_uid_status[4], mvm->scan_uid_status[5],
+      mvm->scan_uid_status[6], mvm->scan_uid_status[7], status);
   return ZX_ERR_NOT_FOUND;
 }
 
@@ -1561,7 +1567,7 @@ void iwl_mvm_scan_timeout_wk(void* data) {
 
   mvm->scan_status &= ~IWL_MVM_SCAN_REGULAR;
   // TODO(fxbug.dev/98929): Support multiple scan instances.
-  mvm->scan_uid_status[0] &= ~(IWL_MVM_SCAN_REGULAR);
+  mvm->scan_uid_status[0] = 0;
 
   if (mvm->scan_vif) {
     notify_mlme_scan_completion(mvm->scan_vif, ZX_ERR_TIMED_OUT);
@@ -1924,6 +1930,7 @@ static zx_status_t iwl_mvm_umac_scan_abort(struct iwl_mvm* mvm, int type) {
   status = iwl_mvm_send_cmd_pdu(mvm, iwl_cmd_id(SCAN_ABORT_UMAC, IWL_ALWAYS_LONG_GROUP, 0), 0,
                                 sizeof(cmd), &cmd);
   if (status != ZX_OK) {
+    IWL_WARN(mvm, "Failed to send command to firmware to abort the scan.\n");
     mvm->scan_uid_status[uid] = type << IWL_MVM_SCAN_STOPPING_SHIFT;
   }
 
