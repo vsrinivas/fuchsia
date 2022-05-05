@@ -26,10 +26,10 @@ func execDir(t *testing.T) string {
 }
 
 func startAscendd(t *testing.T, exDir string) *exec.Cmd {
-	n := rand.Uint64()
-	path := fmt.Sprintf("/tmp/ascendd-for-serial-test.%v.sock", n)
-	os.Setenv("ASCENDD", path)
-	return exec.Command(filepath.Join(exDir, "ascendd"), "--serial", "-", "--sockpath", path)
+	path := fmt.Sprintf("/tmp/ascendd-for-serial-test.%d.sock", rand.Uint64())
+	cmd := exec.Command(filepath.Join(exDir, "ascendd"), "--serial", "-", "--sockpath", path)
+	cmd.Env = append(os.Environ(), fmt.Sprintf("ASCENDD=%s", path))
+	return cmd
 }
 
 // Test that ascendd can connect to overnetstack via serial.
