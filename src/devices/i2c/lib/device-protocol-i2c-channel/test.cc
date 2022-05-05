@@ -40,7 +40,7 @@ class FlakyI2cDevice : public fake_i2c::FakeI2c {
   size_t count_ = 0;
 };
 
-class I2cDevice : public fake_i2c::FakeI2c, public fidl::WireServer<fuchsia_hardware_i2c::Device> {
+class I2cDevice : public fake_i2c::FakeI2c {
  public:
   size_t banjo_count() const { return banjo_count_; }
   size_t fidl_count() const { return fidl_count_; }

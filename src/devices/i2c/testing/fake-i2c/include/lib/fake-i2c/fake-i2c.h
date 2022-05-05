@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/zx/interrupt.h>
@@ -34,7 +35,8 @@ namespace fake_i2c {
 //   }
 // }
 //
-class FakeI2c : public ddk::I2cProtocol<FakeI2c> {
+class FakeI2c : public ddk::I2cProtocol<FakeI2c>,
+                public fidl::WireServer<fuchsia_hardware_i2c::Device> {
  public:
   FakeI2c() : proto_({&i2c_protocol_ops_, this}) {}
 
@@ -92,6 +94,48 @@ class FakeI2c : public ddk::I2cProtocol<FakeI2c> {
   void SetInterrupt(zx::interrupt irq) { irq_ = std::move(irq); }
 
   i2c_protocol_t* GetProto() { return &proto_; }
+
+  void Transfer(TransferRequestView request, TransferCompleter::Sync& completer) override {
+    // Serialize the write information.
+    uint8_t write_buffer[I2C_MAX_TOTAL_TRANSFER];
+    size_t write_buffer_index = 0;
+    for (const auto& transaction : request->transactions) {
+      if (!transaction.has_data_transfer()) {
+        completer.ReplyError(ZX_ERR_INVALID_ARGS);
+        return;
+      }
+
+      if (transaction.data_transfer().is_write_data()) {
+        const auto& write_data = transaction.data_transfer().write_data();
+        if (write_buffer_index + write_data.count() > I2C_MAX_TOTAL_TRANSFER) {
+          completer.ReplyError(ZX_ERR_NO_MEMORY);
+          return;
+        }
+        memcpy(write_buffer + write_buffer_index, write_data.data(), write_data.count());
+        write_buffer_index += write_data.count();
+      }
+    }
+
+    // Process the serialized ops.
+    uint8_t read_buffer[I2C_MAX_TOTAL_TRANSFER];
+    size_t read_buffer_size = 0;
+    zx_status_t status = Transact(write_buffer, write_buffer_index, read_buffer, &read_buffer_size);
+    if (status != ZX_OK) {
+      completer.ReplyError(status);
+      return;
+    }
+
+    fidl::Arena arena;
+    fidl::ObjectView<fuchsia_hardware_i2c::wire::DeviceTransferResponse> response(arena);
+
+    if (read_buffer_size > 0) {
+      response->read_data = {arena, 1};
+      response->read_data[0] = {arena, read_buffer_size};
+      memcpy(response->read_data[0].mutable_data(), read_buffer, read_buffer_size);
+    }
+
+    completer.Reply(fuchsia_hardware_i2c::wire::DeviceTransferResult::WithResponse(response));
+  }
 
  protected:
   // The main function to be overriden for a specific fake. This is called on each
