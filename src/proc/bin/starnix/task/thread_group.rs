@@ -6,6 +6,7 @@ use fuchsia_zircon::sys;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use std::collections::BTreeMap;
 use std::ffi::CStr;
+use std::fmt;
 use std::sync::{Arc, Weak};
 
 use crate::auth::Credentials;
@@ -92,6 +93,12 @@ pub struct ThreadGroup {
     mutable_state: RwLock<ThreadGroupMutableState>,
 }
 
+impl fmt::Debug for ThreadGroup {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.leader)
+    }
+}
+
 impl PartialEq for ThreadGroup {
     fn eq(&self, other: &Self) -> bool {
         self.leader == other.leader
@@ -170,8 +177,6 @@ impl ThreadGroup {
         process_group: Arc<ProcessGroup>,
         signal_actions: Arc<SignalActions>,
     ) -> Arc<ThreadGroup> {
-        process_group.thread_groups.write().insert(leader);
-
         let result = Arc::new(ThreadGroup {
             kernel,
             process,
@@ -181,7 +186,7 @@ impl ThreadGroup {
                 parent: parent.as_ref().map(|p| Arc::clone(p.base())),
                 tasks: BTreeMap::new(),
                 children: BTreeMap::new(),
-                process_group: process_group,
+                process_group: Arc::clone(&process_group),
                 itimers: Default::default(),
                 zombie_children: vec![],
                 did_exec: false,
@@ -191,6 +196,7 @@ impl ThreadGroup {
                 terminating: false,
             }),
         });
+        process_group.write().insert(&result);
 
         if let Some(parent) = parent {
             parent.children.insert(leader, Arc::downgrade(&result));
@@ -456,11 +462,13 @@ impl ThreadGroup {
         let state = self.read();
         let process_group = &state.process_group;
         let mut controlling_session = terminal.get_controlling_session_mut(is_main);
-        let mut controlling_terminal = process_group.session.controlling_terminal.write();
+        let mut session_writer = process_group.session.write();
 
         // "The calling process must be a session leader and not have a
         // controlling terminal already." - tty_ioctl(4)
-        if process_group.session.leader != self.leader || controlling_terminal.is_some() {
+        if process_group.session.leader != self.leader
+            || session_writer.controlling_terminal.is_some()
+        {
             return error!(EINVAL);
         }
 
@@ -480,7 +488,7 @@ impl ThreadGroup {
                         }
 
                         // Steal the TTY away. Unlike TIOCNOTTY, don't send signals.
-                        *other_session.controlling_terminal.write() = None;
+                        other_session.write().controlling_terminal = None;
                     }
                 }
             }
@@ -491,7 +499,8 @@ impl ThreadGroup {
             return error!(EPERM);
         }
 
-        *controlling_terminal = Some(ControllingTerminal::new(terminal.clone(), is_main));
+        session_writer.controlling_terminal =
+            Some(ControllingTerminal::new(terminal.clone(), is_main));
         *controlling_session = ControllingSession::new(&process_group.session);
         Ok(())
     }
@@ -506,7 +515,7 @@ impl ThreadGroup {
         let state = self.read();
         let process_group = &state.process_group;
         let mut controlling_session = terminal.get_controlling_session_mut(is_main);
-        let mut controlling_terminal = process_group.session.controlling_terminal.write();
+        let mut session_writer = process_group.session.write();
 
         // tty must be the controlling terminal.
         if !Self::is_controlling_session(&process_group.session, &controlling_session) {
@@ -522,7 +531,7 @@ impl ThreadGroup {
 
         let _foreground_process_group_id =
             controlling_session.as_ref().unwrap().foregound_process_group;
-        *controlling_terminal = None;
+        session_writer.controlling_terminal = None;
         *controlling_session = None;
 
         if process_group.session.leader == self.leader {
@@ -563,12 +572,13 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         }
         self.leave_process_group(pids);
         self.process_group = process_group;
-        self.process_group.thread_groups.write().insert(self.leader());
+        self.process_group.write().insert(self.base());
     }
 
     pub fn leave_process_group(&self, pids: &mut PidTable) {
-        if self.process_group.remove(self.leader()) {
-            if self.process_group.session.remove(self.process_group.leader) {
+        let process_group_empty = self.process_group.write().remove(self.leader());
+        if process_group_empty {
+            if self.process_group.session.write().remove(self.process_group.leader) {
                 // TODO(qsr): Handle signals ?
             }
             pids.remove_process_group(self.process_group.leader);
@@ -767,6 +777,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
 mod test {
     use super::*;
     use crate::testing::*;
+    use itertools::Itertools;
     use std::ffi::CString;
 
     #[::fuchsia::test]
@@ -819,7 +830,7 @@ mod test {
             child_task.thread_group.read().process_group.session.leader,
             child_task.get_pid()
         );
-        assert!(!old_process_group.thread_groups.read().contains(&child_task.thread_group.leader));
+        assert!(!old_process_group.read().thread_groups().contains(&child_task.thread_group));
     }
 
     #[::fuchsia::test]
@@ -864,7 +875,7 @@ mod test {
         let old_process_group = child_task2.thread_group.read().process_group.clone();
         assert_eq!(current_task.thread_group.setpgid(&child_task2, child_task1.id), Ok(()));
         assert_eq!(child_task2.thread_group.read().process_group.leader, child_task1.id);
-        assert!(!old_process_group.thread_groups.read().contains(&child_task2.thread_group.leader));
+        assert!(!old_process_group.read().thread_groups().contains(&child_task2.thread_group));
     }
 
     #[::fuchsia::test]

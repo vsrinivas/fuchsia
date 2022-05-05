@@ -2,23 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashSet;
-use std::sync::Arc;
+use std::collections::BTreeMap;
+use std::sync::{Arc, Weak};
 
 use crate::device::terminal::*;
 use crate::lock::RwLock;
+use crate::mutable_state::*;
+use crate::task::*;
 use crate::types::*;
+
+#[derive(Debug)]
+pub struct SessionMutableState {
+    /// The process groups in the session
+    ///
+    /// The references to ProcessGroup is weak to prevent cycles as ProcessGroup have a Arc reference to their
+    /// session.
+    /// It is still expected that these weak references are always valid, as process groups must unregister
+    /// themselves before they are deleted.
+    process_groups: BTreeMap<pid_t, Weak<ProcessGroup>>,
+
+    /// The controlling terminal of the session.
+    pub controlling_terminal: Option<ControllingTerminal>,
+}
 
 #[derive(Debug)]
 pub struct Session {
     /// The leader of the session
     pub leader: pid_t,
 
-    /// The process groups in the session
-    pub process_groups: RwLock<HashSet<pid_t>>,
-
-    /// The controlling terminal of the session.
-    pub controlling_terminal: RwLock<Option<ControllingTerminal>>,
+    /// The mutable state of the Session.
+    mutable_state: RwLock<SessionMutableState>,
 }
 
 impl PartialEq for Session {
@@ -29,23 +42,29 @@ impl PartialEq for Session {
 
 impl Session {
     pub fn new(leader: pid_t) -> Arc<Session> {
-        let mut process_groups = HashSet::new();
-        process_groups.insert(leader);
-
         Arc::new(Session {
             leader,
-            process_groups: RwLock::new(process_groups),
-            controlling_terminal: RwLock::new(None),
+            mutable_state: RwLock::new(SessionMutableState {
+                process_groups: BTreeMap::new(),
+                controlling_terminal: None,
+            }),
         })
     }
 
-    /// Removes the process group from the session. Returns whether the session is empty.
-    pub fn remove(&self, pid: pid_t) -> bool {
-        let mut process_groups = self.process_groups.write();
-        process_groups.remove(&pid);
-        return process_groups.is_empty();
-    }
+    state_accessor!(Session, mutable_state);
 }
+
+state_implementation!(Session, SessionMutableState, {
+    /// Removes the process group from the session. Returns whether the session is empty.
+    pub fn remove(&mut self, pid: pid_t) -> bool {
+        self.process_groups.remove(&pid);
+        return self.process_groups.is_empty();
+    }
+
+    pub fn insert(&mut self, process_group: &Arc<ProcessGroup>) {
+        self.process_groups.insert(process_group.leader, Arc::downgrade(process_group));
+    }
+});
 
 /// The controlling terminal of a session.
 #[derive(Debug)]

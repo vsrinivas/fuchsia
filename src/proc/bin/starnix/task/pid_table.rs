@@ -40,10 +40,6 @@ impl PidTable {
         self.get_entry(pid).and_then(|entry| entry.task.as_ref()).and_then(|task| task.upgrade())
     }
 
-    pub fn get_thread_group(&self, pid: pid_t) -> Option<Arc<ThreadGroup>> {
-        self.get_entry(pid).and_then(|entry| entry.group.as_ref()).and_then(|group| group.upgrade())
-    }
-
     pub fn get_process_group(&self, pid: pid_t) -> Option<Arc<ProcessGroup>> {
         self.get_entry(pid)
             .and_then(|entry| entry.process_group.as_ref())

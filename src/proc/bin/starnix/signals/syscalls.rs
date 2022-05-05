@@ -257,13 +257,7 @@ pub fn sys_kill(
                 let process_group = pids.get_process_group(process_group_id);
                 process_group
                     .iter()
-                    .flat_map(|pg| {
-                        pg.thread_groups
-                            .read()
-                            .iter()
-                            .flat_map(|p| pids.get_thread_group(*p))
-                            .collect::<Vec<_>>()
-                    })
+                    .flat_map(|pg| pg.read().thread_groups().collect::<Vec<_>>())
                     .collect::<Vec<_>>()
             };
             signal_thread_groups(&current_task, &unchecked_signal, thread_groups.into_iter())?;

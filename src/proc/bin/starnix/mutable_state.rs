@@ -88,9 +88,11 @@
 //!             mutable_state: RwLock::new(FooMutableState { y: 3 }),
 //!         }
 //!     }
+//!     #[allow(dead_code)]
 //!     pub fn read<'a>(self: &'a Arc<Foo>) -> FooReadGuardImpl<'a> {
 //!         FooReadGuardImpl::new(self, self.mutable_state.read())
 //!     }
+//!     #[allow(dead_code)]
 //!     pub fn write<'a>(self: &'a Arc<Foo>) -> FooWriteGuard<'a> {
 //!         FooWriteGuard::new(self, self.mutable_state.write())
 //!     }
@@ -150,9 +152,11 @@ use crate::lock::*;
 macro_rules! state_accessor {
     ($base_name:ident, $field_name:ident) => {
         paste::paste! {
+        #[allow(dead_code)]
         pub fn read<'a>(self: &'a Arc<$base_name>) -> [<$base_name ReadGuardImpl>]<'a> {
             [<$base_name ReadGuardImpl>]::new(self, self.$field_name.read())
         }
+        #[allow(dead_code)]
         pub fn write<'a>(self: &'a Arc<$base_name>) -> [<$base_name WriteGuard>]<'a> {
             [<$base_name WriteGuard>]::new(self, self.$field_name.write())
         }

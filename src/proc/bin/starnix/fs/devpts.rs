@@ -590,8 +590,8 @@ mod tests {
             .read()
             .process_group
             .session
-            .controlling_terminal
             .read()
+            .controlling_terminal
             .is_none());
         // Opening the terminal should not set the terminal of the session with the NOCTTY flag.
         let _opened_replica2 =
@@ -602,8 +602,8 @@ mod tests {
             .read()
             .process_group
             .session
-            .controlling_terminal
             .read()
+            .controlling_terminal
             .is_none());
 
         // Opening the replica terminal should set the terminal of the session.
@@ -614,8 +614,8 @@ mod tests {
             .read()
             .process_group
             .session
-            .controlling_terminal
             .read()
+            .controlling_terminal
             .is_some());
     }
 
@@ -694,8 +694,8 @@ mod tests {
             .read()
             .process_group
             .session
-            .controlling_terminal
             .read()
+            .controlling_terminal
             .is_none());
     }
 
@@ -746,8 +746,8 @@ mod tests {
                 .read()
                 .process_group
                 .session
-                .controlling_terminal
                 .read()
+                .controlling_terminal
                 .as_ref()
                 .unwrap()
                 .terminal,
@@ -783,8 +783,8 @@ mod tests {
             .read()
             .process_group
             .session
-            .controlling_terminal
             .read()
+            .controlling_terminal
             .is_none());
     }
 }
