@@ -12,10 +12,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
@@ -228,8 +229,8 @@ func TestRecordingOfOutputs(t *testing.T) {
 
 	// Verify that the summary as expected.
 	actualSummary := o.Summary
-	if !reflect.DeepEqual(actualSummary, expectedSummary) {
-		t.Errorf("unexpected summary:\nexpected: %v\nactual: %v\n", expectedSummary, actualSummary)
+	if diff := cmp.Diff(expectedSummary, actualSummary); diff != "" {
+		t.Errorf("Diff in test summary (-want +got):\n%s", diff)
 	}
 
 	// Verify that the TAP output is as expected.
@@ -240,8 +241,8 @@ not ok 1 fuchsia-pkg://foo#test_a (5ms)
 ok 2 test_b (10ms)
 `)
 	actualTAPOutput := strings.TrimSpace(buf.String())
-	if actualTAPOutput != expectedTAPOutput {
-		t.Errorf("unexpected TAP output:\nexpected: %v\nactual: %v\n", expectedTAPOutput, actualTAPOutput)
+	if diff := cmp.Diff(expectedTAPOutput, actualTAPOutput); diff != "" {
+		t.Errorf("TAP output diff (-want +got):\n%s", diff)
 	}
 
 	// Verify that the outDir's contents are as expected.
@@ -255,7 +256,7 @@ ok 2 test_b (10ms)
 		outDirContents[name] = string(b)
 	}
 
-	if !reflect.DeepEqual(expectedContents, outDirContents) {
-		t.Fatalf("unexpected contents from out dir:\nexpected: %#v\nactual: %#v\n", expectedContents, outDirContents)
+	if diff := cmp.Diff(expectedContents, outDirContents); diff != "" {
+		t.Errorf("Diff in out dir contents (-want +got):\n%s", diff)
 	}
 }

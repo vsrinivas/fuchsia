@@ -14,7 +14,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -183,8 +182,8 @@ func TestSubprocessTester(t *testing.T) {
 			}
 
 			sinks := testResult.DataSinks.Sinks
-			if !reflect.DeepEqual(sinks, c.wantDataSinks) {
-				t.Fatalf("expected: %#v;\nactual: %#v", c.wantDataSinks, sinks)
+			if diff := cmp.Diff(c.wantDataSinks, sinks); diff != "" {
+				t.Errorf("Diff in data sinks (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -1046,8 +1045,8 @@ func TestCommandForTest(t *testing.T) {
 			} else if !c.wantErr {
 				t.Errorf("commandForTest returned error: %s, want nil", err)
 			}
-			if !reflect.DeepEqual(command, c.expected) {
-				t.Errorf("unexpected command:\nexpected: %q\nactual: %q\n", c.expected, command)
+			if diff := cmp.Diff(c.expected, command); diff != "" {
+				t.Errorf("unexpected command (-want +got):\n%s", diff)
 			}
 		})
 	}
