@@ -39,6 +39,9 @@ async fn find_nvram_device() -> Result<fnvram::DeviceProxy, anyhow::Error> {
     if contents.len() > 1 {
         return Err(anyhow!("Too many rtc devices"));
     }
+    if contents.is_empty() {
+        return Err(anyhow!("No rtc devices found"));
+    }
 
     Ok(connect_to_protocol_at_path::<fnvram::DeviceMarker>(
         &(nvram_path.to_owned() + "/" + &contents[0].name),
@@ -58,6 +61,9 @@ async fn find_flashmap_device() -> Result<FlashmapProxy, anyhow::Error> {
     let contents = files_async::readdir(&proxy).await.context("Reading /dev/class/nand")?;
     if contents.len() > 1 {
         return Err(anyhow!("Too many nand devices"));
+    }
+    if contents.is_empty() {
+        return Err(anyhow!("No nand devices found"));
     }
 
     // Connect to the driver manager and try to bind the broker.
