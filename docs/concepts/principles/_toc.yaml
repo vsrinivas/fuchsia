@@ -8,9 +8,9 @@
 toc:
 - title: "Simple"
   path: /docs/concepts/principles/simple.md
-- title: "Performant"
-  path: /docs/concepts/principles/performant.md
 - title: "Secure"
   path: /docs/concepts/principles/secure.md
 - title: "Updatable"
   path: /docs/concepts/principles/updatable.md
+- title: "Performant"
+  path: /docs/concepts/principles/performant.md
