@@ -300,13 +300,7 @@ impl<T: Sensor<T>> SensorLogger<T> {
             SensorType::Temperature => "TemperatureLogger",
             SensorType::Power => "PowerLogger",
         };
-        let inspect = InspectData::new(
-            client_inspect,
-            logger_name,
-            &T::unit(),
-            driver_names,
-            statistics_interval_ms.is_some(),
-        );
+        let inspect = InspectData::new(client_inspect, logger_name, driver_names, T::unit());
 
         SensorLogger {
             drivers,
@@ -460,9 +454,11 @@ impl<T: Sensor<T>> SensorLogger<T> {
                 }
             }
         }
-        // Reset timestamp if current statistics interval ends.
+        // Reset timestamp to the calculated theoretical start time of next cycle.
         if is_last_sample_for_statistics {
-            self.statistics_tracker.as_mut().map(|t| t.statistics_start_time = time_stamp);
+            self.statistics_tracker
+                .as_mut()
+                .map(|t| t.statistics_start_time += t.statistics_interval);
         }
     }
 }
@@ -983,70 +979,73 @@ struct InspectData {
     data: Vec<inspect::DoubleProperty>,
     statistics: Vec<Vec<inspect::DoubleProperty>>,
     statistics_periods: Vec<inspect::IntArrayProperty>,
-    elapsed_millis: inspect::IntProperty,
-    _logger_root: inspect::Node,
-    _sensor_nodes: Vec<inspect::Node>,
-    _statistics_nodes: Vec<inspect::Node>,
+    elapsed_millis: Option<inspect::IntProperty>,
+    sensor_nodes: Vec<inspect::Node>,
+    statistics_nodes: Vec<inspect::Node>,
+    logger_root: inspect::Node,
+    sensor_names: Vec<String>,
+    unit: String,
 }
 
 impl InspectData {
     fn new(
         parent: &inspect::Node,
         logger_name: &str,
-        unit: &str,
         sensor_names: Vec<String>,
-        statistics_enabled: bool,
+        unit: String,
     ) -> Self {
-        let root = parent.create_child(logger_name);
-        let elapsed_millis = root.create_int("elapsed time (ms)", std::i64::MIN);
-        let sensor_nodes: Vec<inspect::Node> =
-            sensor_names.into_iter().map(|name| root.create_child(name)).collect();
-
-        let mut data = Vec::new();
-        let mut statistics_nodes = Vec::new();
-        let mut statistics = Vec::new();
-        let mut statistics_periods = Vec::new();
-
-        sensor_nodes.iter().for_each(|node| {
-            data.push(node.create_double(format!("data ({})", unit), f64::MIN));
-
-            if statistics_enabled {
-                let statistics_node = node.create_child("statistics");
-
-                let statistics_period = statistics_node.create_int_array("(start ms, end ms]", 2);
-                statistics_period.set(0, std::i64::MIN);
-                statistics_period.set(1, std::i64::MIN);
-                statistics_periods.push(statistics_period);
-
-                // The indices of the statistics child nodes match the sequence defined in
-                // `Statistics`.
-                statistics.push(vec![
-                    statistics_node.create_double(format!("min ({})", unit), f64::MIN),
-                    statistics_node.create_double(format!("max ({})", unit), f64::MIN),
-                    statistics_node.create_double(format!("average ({})", unit), f64::MIN),
-                ]);
-                statistics_nodes.push(statistics_node);
-            }
-        });
-
         Self {
-            data,
-            statistics,
-            statistics_periods,
-            elapsed_millis,
-            _logger_root: root,
-            _sensor_nodes: sensor_nodes,
-            _statistics_nodes: statistics_nodes,
+            data: Vec::new(),
+            statistics: Vec::new(),
+            statistics_periods: Vec::new(),
+            statistics_nodes: Vec::new(),
+            elapsed_millis: None,
+            sensor_nodes: Vec::new(),
+            sensor_names,
+            unit,
+            logger_root: parent.create_child(logger_name),
         }
     }
 
-    fn log_data(&self, index: usize, value: f32, elapsed_millis: i64) {
-        self.elapsed_millis.set(elapsed_millis);
+    fn init_nodes_for_logging_data(&mut self) {
+        self.elapsed_millis = Some(self.logger_root.create_int("elapsed time (ms)", std::i64::MIN));
+        self.sensor_nodes =
+            self.sensor_names.iter().map(|name| self.logger_root.create_child(name)).collect();
+        for node in self.sensor_nodes.iter() {
+            self.data.push(node.create_double(format!("data ({})", self.unit), f64::MIN));
+        }
+    }
+
+    fn init_stats_nodes(&mut self) {
+        for node in self.sensor_nodes.iter() {
+            let statistics_node = node.create_child("statistics");
+
+            let statistics_period = statistics_node.create_int_array("(start ms, end ms]", 2);
+            statistics_period.set(0, std::i64::MIN);
+            statistics_period.set(1, std::i64::MIN);
+            self.statistics_periods.push(statistics_period);
+
+            // The indices of the statistics child nodes match the sequence defined in
+            // `Statistics`.
+            self.statistics.push(vec![
+                statistics_node.create_double(format!("min ({})", self.unit), f64::MIN),
+                statistics_node.create_double(format!("max ({})", self.unit), f64::MIN),
+                statistics_node.create_double(format!("average ({})", self.unit), f64::MIN),
+            ]);
+            self.statistics_nodes.push(statistics_node);
+        }
+    }
+
+    fn log_data(&mut self, index: usize, value: f32, elapsed_millis: i64) {
+        if self.data.is_empty() {
+            self.init_nodes_for_logging_data();
+        }
+        self.elapsed_millis.as_ref().map(|e| e.set(elapsed_millis));
         self.data[index].set(value as f64);
     }
 
     fn log_statistics(
-        &self,
+        &mut self,
         index: usize,
         start_time: i64,
         end_time: i64,
@@ -1054,6 +1053,9 @@ impl InspectData {
         max: f32,
         avg: f32,
     ) {
+        if self.statistics_nodes.is_empty() {
+            self.init_stats_nodes();
+        }
         self.statistics_periods[index].set(0, start_time);
         self.statistics_periods[index].set(1, end_time);
         self.statistics[index][Statistics::Min as usize].set(min as f64);
@@ -1359,13 +1361,6 @@ mod tests {
                 MetricsLogger: {
                     test: {
                         TemperatureLogger: {
-                            "elapsed time (ms)": std::i64::MIN,
-                            "cpu": {
-                                "data (°C)": f64::MIN,
-                            },
-                            "/dev/fake/gpu_temperature": {
-                                "data (°C)": f64::MIN,
-                            }
                         }
                     }
                 }
@@ -1592,21 +1587,13 @@ mod tests {
         );
         runner.run_server_task_until_stalled();
 
-        // Check logger added to client with default values before first temperature poll.
+        // Check logger added to client before first temperature poll.
         assert_data_tree!(
             runner.inspector,
             root: {
                 MetricsLogger: {
                     test: {
                         TemperatureLogger: {
-                            "elapsed time (ms)": std::i64::MIN,
-                            "cpu": {
-                                "data (°C)": f64::MIN,
-                            },
-                            "/dev/fake/gpu_temperature": {
-                                "data (°C)": f64::MIN,
-                            }
-
                         }
                     }
                 }
@@ -1647,20 +1634,13 @@ mod tests {
         );
         runner.run_server_task_until_stalled();
 
-        // Check logger added to client with default values before first temperature poll.
+        // Check logger added to client before first temperature poll.
         assert_data_tree!(
             runner.inspector,
             root: {
                 MetricsLogger: {
                     test: {
                         TemperatureLogger: {
-                            "elapsed time (ms)": std::i64::MIN,
-                            "cpu": {
-                                "data (°C)": f64::MIN,
-                            },
-                            "/dev/fake/gpu_temperature": {
-                                "data (°C)": f64::MIN,
-                            }
                         }
                     }
                 }
@@ -1744,31 +1724,17 @@ mod tests {
         );
         runner.run_server_task_until_stalled();
 
-        // Check default values before first temperature poll.
+        // Check TemperatureLogger added before first temperature poll.
         assert_data_tree!(
             runner.inspector,
             root: {
                 MetricsLogger: {
                     test1: {
                         TemperatureLogger: {
-                            "elapsed time (ms)": std::i64::MIN,
-                            "cpu": {
-                                "data (°C)": f64::MIN,
-                            },
-                            "/dev/fake/gpu_temperature": {
-                                "data (°C)": f64::MIN,
-                            }
                         }
                     },
                     test2: {
                         TemperatureLogger: {
-                            "elapsed time (ms)": std::i64::MIN,
-                            "cpu": {
-                                "data (°C)": f64::MIN,
-                            },
-                            "/dev/fake/gpu_temperature": {
-                                "data (°C)": f64::MIN,
-                            }
                         }
                     }
                 }
@@ -1799,13 +1765,6 @@ mod tests {
                     },
                     test2: {
                         TemperatureLogger: {
-                            "elapsed time (ms)": std::i64::MIN,
-                            "cpu": {
-                                "data (°C)": f64::MIN,
-                            },
-                            "/dev/fake/gpu_temperature": {
-                                "data (°C)": f64::MIN,
-                            }
                         }
                     }
                 }
@@ -2197,20 +2156,13 @@ mod tests {
         );
         runner.run_server_task_until_stalled();
 
-        // Check default values before first temperature poll.
+        // Check TemperatureLogger added before first temperature poll.
         assert_data_tree!(
             runner.inspector,
             root: {
                 MetricsLogger: {
                     test: {
                         TemperatureLogger: {
-                            "elapsed time (ms)": std::i64::MIN,
-                            "cpu": {
-                                "data (°C)": f64::MIN,
-                            },
-                            "/dev/fake/gpu_temperature": {
-                                "data (°C)": f64::MIN,
-                            }
                         }
                     }
                 }
@@ -2286,23 +2238,9 @@ mod tests {
                                     "elapsed time (ms)": 100 * (1 + i as i64),
                                     "cpu": {
                                         "data (°C)": runner.cpu_temperature.get() as f64,
-                                        "statistics": {
-                                            "(start ms, end ms]":
-                                                vec![std::i64::MIN, std::i64::MIN],
-                                            "max (°C)": f64::MIN,
-                                            "min (°C)": f64::MIN,
-                                            "average (°C)": f64::MIN,
-                                        }
                                     },
                                     "/dev/fake/gpu_temperature": {
                                         "data (°C)": runner.gpu_temperature.get() as f64,
-                                        "statistics": {
-                                            "(start ms, end ms]":
-                                                vec![std::i64::MIN, std::i64::MIN],
-                                            "max (°C)": f64::MIN,
-                                            "min (°C)": f64::MIN,
-                                            "average (°C)": f64::MIN,
-                                        }
                                     }
                                 }
                             }
@@ -2379,32 +2317,13 @@ mod tests {
         );
         runner.run_server_task_until_stalled();
 
-        // Check default values before first power sensor poll.
+        // Check PowerLogger added before first power sensor poll.
         assert_data_tree!(
             runner.inspector,
             root: {
                 MetricsLogger: {
                     test: {
                         PowerLogger: {
-                            "elapsed time (ms)": std::i64::MIN,
-                            "power_1": {
-                                "data (W)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (W)": f64::MIN,
-                                    "min (W)": f64::MIN,
-                                    "average (W)": f64::MIN,
-                                }
-                            },
-                            "/dev/fake/power_2": {
-                                "data (W)": f64::MIN,
-                                "statistics": {
-                                    "(start ms, end ms]": vec![std::i64::MIN, std::i64::MIN],
-                                    "max (W)": f64::MIN,
-                                    "min (W)": f64::MIN,
-                                    "average (W)": f64::MIN,
-                                }
-                            }
                         }
                     }
                 }
