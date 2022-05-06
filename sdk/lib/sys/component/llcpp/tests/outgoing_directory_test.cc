@@ -11,9 +11,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/llcpp/client.h>
-#include <lib/fidl/llcpp/string_view.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/stdcompat/string_view.h>
 #include <lib/sys/component/llcpp/constants.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <lib/zx/channel.h>
@@ -300,6 +298,61 @@ TEST_F(OutgoingDirectoryTest, AddProtocolCanServeMultipleProtocols) {
 
     auto expected_reply = reversed ? kTestStringReversed : kTestString;
     EXPECT_EQ(reply_received, expected_reply);
+  }
+}
+
+// Test that after removing protocol, all clients are unable to make a call on
+// the channel.
+TEST_F(OutgoingDirectoryTest, RemoveProtocolClosesAllConnections) {
+  // For this test case, 3 clients will connect to one Echo protocol.
+  static constexpr size_t kNumClients = 3;
+
+  class EventHandler : public fidl::AsyncEventHandler<fuchsia_examples::Echo> {
+   public:
+    EventHandler() = default;
+
+    void on_fidl_error(fidl::UnbindInfo error) override { errors_.emplace_back(error); }
+
+    std::vector<fidl::UnbindInfo> GetErrors() { return errors_; }
+
+   private:
+    std::vector<fidl::UnbindInfo> errors_;
+  };
+
+  EventHandler event_handler;
+  EchoImpl regular_impl(/*reversed=*/false);
+  ASSERT_EQ(
+      GetOutgoingDirectory()->AddProtocol<fuchsia_examples::Echo>(&regular_impl).status_value(),
+      ZX_OK);
+
+  fidl::ClientEnd<fuchsia_io::Directory> svc_directory = TakeSvcClientEnd(TakeRootClientEnd());
+  std::vector<fidl::Client<fuchsia_examples::Echo>> clients = {};
+  for (size_t i = 0; i < kNumClients; ++i) {
+    auto client_end = service::ConnectAt<fuchsia_examples::Echo>(svc_directory.borrow());
+
+    ASSERT_EQ(client_end.status_value(), ZX_OK);
+
+    fidl::Client<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher(),
+                                                &event_handler);
+    client->EchoString(std::string(kTestString))
+        .ThenExactlyOnce([quit_loop = QuitLoopClosure()](
+                             fidl::Result<fuchsia_examples::Echo::EchoString>& result) {
+          ASSERT_TRUE(result.is_ok());
+          ASSERT_EQ(result->response(), kTestString);
+          quit_loop();
+        });
+    RunLoop();
+
+    clients.emplace_back(std::move(client));
+  }
+
+  ASSERT_EQ(GetOutgoingDirectory()->RemoveProtocol<fuchsia_examples::Echo>().status_value(), ZX_OK);
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(event_handler.GetErrors().size(), kNumClients);
+  for (auto& error : event_handler.GetErrors()) {
+    EXPECT_TRUE(error.is_peer_closed())
+        << "Expected peer_closed. Got : " << error.FormatDescription();
   }
 }
 

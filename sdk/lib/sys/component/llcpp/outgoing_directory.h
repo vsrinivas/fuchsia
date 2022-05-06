@@ -109,6 +109,12 @@ class OutgoingDirectory final {
   // be hosted under the path /svc/{name} where name is the discoverable name
   // of the protocol.
   //
+  // Note, if and when |RemoveProtocol| is called for the provided |name|, this
+  // object will asynchronously close down the associated server end channel and
+  // stop receiving requests. This method provides no facilities for waiting
+  // until teardown is complete. If such control is desired, then the
+  // |TypedHandler| overload of this method listed below ought to be used.
+  //
   // # Errors
   //
   // ZX_ERR_ALREADY_EXISTS: An entry already exists for this protocol.
@@ -128,9 +134,13 @@ class OutgoingDirectory final {
 
     return AddProtocol<Protocol>(
         [=](fidl::ServerEnd<Protocol> request) {
-          // This object is safe to drop. Server will still begin to operate
-          // past its lifetime.
-          auto _server = fidl::BindServer(dispatcher_, std::move(request), impl);
+          fidl::ServerBindingRef<Protocol> server =
+              fidl::BindServer(dispatcher_, std::move(request), impl);
+
+          auto cb = [server = std::move(server)]() mutable { server.Unbind(); };
+          // We don't have to check for entry existing because the |AddProtocol|
+          // overload being invoked here will do that internally.
+          AppendUnbindConnectionCallback(name, std::move(cb));
         },
         name);
   }
@@ -159,6 +169,12 @@ class OutgoingDirectory final {
   // protocol. |name| is used to determine where to host the protocol.
   // This protocol will be hosted under the path /svc/{name} where name
   // is the discoverable name of the protocol.
+  //
+  // # Note
+  //
+  // Active connections are never torn down when/if |RemoveProtocol| is invoked
+  // with the same |name|. Users of this method should manage teardown of
+  // all active connections.
   //
   // # Errors
   //
@@ -308,6 +324,14 @@ class OutgoingDirectory final {
   // Internally, it calls the |AnyMemberHandler| instance populated via |AddAnyMember|.
   static void OnConnect(void* context, const char* service_name, zx_handle_t handle);
 
+  // Callback invoked during teardown of a FIDL protocol entry. This callback
+  // will close all active connections on the associated channel.
+  using UnbindConnectionCallback = fit::callback<void()>;
+
+  void AppendUnbindConnectionCallback(cpp17::string_view name, UnbindConnectionCallback callback);
+
+  void UnbindAllConnections(cpp17::string_view name);
+
   static std::string MakePath(cpp17::string_view service, cpp17::string_view instance);
 
   async_dispatcher_t* dispatcher_ = nullptr;
@@ -330,6 +354,12 @@ class OutgoingDirectory final {
   // The OnConnectContext has to be stored in the heap because its pointer
   // is used by |OnConnect|, a static function, during channel connection attempt.
   std::map<std::string, std::map<std::string, OnConnectContext>> registered_handlers_ = {};
+
+  // Protocol bindings used to initiate teardown when protocol is removed. We
+  // store this in a callback as opposed to a map of fidl::ServerBindingRef<T>
+  // because that object is template parameterized and therefore can't be
+  // stored in a homogeneous container.
+  std::map<std::string, std::vector<UnbindConnectionCallback>> unbind_protocol_callbacks_ = {};
 };
 
 }  // namespace component

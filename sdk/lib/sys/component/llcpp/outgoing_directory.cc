@@ -90,6 +90,7 @@ zx::status<> OutgoingDirectory::AddNamedProtocol(AnyHandler handler, cpp17::stri
 
   zx_status_t status =
       svc_dir_add_service(root_, kServiceDirectory, name.data(), &context, OnConnect);
+
   return zx::make_status(status);
 }
 
@@ -157,6 +158,19 @@ zx::status<> OutgoingDirectory::RemoveNamedProtocol(cpp17::string_view name) {
     return zx::make_status(ZX_ERR_NOT_FOUND);
   }
 
+  // Remove svc_dir_t entry first so that no new connections are attempted on
+  // handler after we remove the pointer to it in |svc_root_handlers|.
+  zx_status_t status = svc_dir_remove_service(root_, kServiceDirectory, name.data());
+  if (status != ZX_OK) {
+    return zx::make_status(status);
+  }
+
+  // If teardown is managed, e.g. through |AddProtocol| overload for `fidl::Server<T>*`,
+  // then close all active connections.
+  UnbindAllConnections(name);
+
+  // Now that all active connections have been closed, and no new connections
+  // are being accepted under |name|, it's safe to remove the handlers.
   svc_root_handlers.erase(entry_key);
 
   return zx::ok();
@@ -189,6 +203,24 @@ zx::status<> OutgoingDirectory::RemoveDirectory(cpp17::string_view directory_nam
 void OutgoingDirectory::OnConnect(void* raw_context, const char* service_name, zx_handle_t handle) {
   OnConnectContext* context = reinterpret_cast<OnConnectContext*>(raw_context);
   (context->handler)(zx::channel(handle));
+}
+
+void OutgoingDirectory::AppendUnbindConnectionCallback(cpp17::string_view name,
+                                                       UnbindConnectionCallback callback) {
+  auto key = std::string(name);
+  unbind_protocol_callbacks_[key].emplace_back(std::move(callback));
+}
+
+void OutgoingDirectory::UnbindAllConnections(cpp17::string_view name) {
+  auto key = std::string(name);
+  auto iterator = unbind_protocol_callbacks_.find(key);
+  if (iterator != unbind_protocol_callbacks_.end()) {
+    std::vector<UnbindConnectionCallback>& callbacks = iterator->second;
+    for (auto& cb : callbacks) {
+      cb();
+    }
+    unbind_protocol_callbacks_.erase(iterator);
+  }
 }
 
 std::string OutgoingDirectory::MakePath(cpp17::string_view service, cpp17::string_view instance) {
