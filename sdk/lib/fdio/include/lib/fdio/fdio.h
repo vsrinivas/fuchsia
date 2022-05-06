@@ -75,20 +75,22 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) ZX_AVAILABLE_SINCE(1);
 // referenced by multiple entries in the file descriptor table.
 zx_status_t fdio_unbind_from_fd(int fd, fdio_t** io_out) ZX_AVAILABLE_SINCE(1);
 
-// If this fd represents a "service" (an rpc channel speaking
-// an unknown fidl protocol or a fuchsia.io.* protocol),
-// this call will return ZX_OK and return the underlying handle.
-// On both success and failure, the fd is effectively closed.
+// Returns a handle to the channel backing a file descriptor.
 //
-// ZX_ERR_NOT_SUPPORTED is returned if this fd does not represent
-// a FIDL transport
+// Upon success, a handle to the backing channel is returned in |out|, and the
+// caller receives ownership of that handle.
 //
-// ZX_ERR_UNAVAILABLE is returned if this fd has been dup()'d and
-// duplicates are sharing the FIDL transport
+// Always removes the file descriptor from the file descriptor table for this
+// process.
 //
-// TODO: Can also return ZX_ERR_NOT_FOUND. Maybe should be ZX_ERR_INVALID_ARGS?
-// TODO: This function appears to work only for |fuchsia.io| protocols now.
-// Should we rename it to something like |fdio_take_remote|?
+// # Errors
+//
+// ZX_ERR_NOT_FOUND: |fd| is not a valid file descriptor.
+//
+// ZX_ERR_NOT_SUPPORTED: |fd| is not backed by a channel.
+//
+// ZX_ERR_UNAVAILABLE: |fd| is busy or has been dup'ed and therefore is
+// referenced by multiple entries in the file descriptor table.
 zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) ZX_AVAILABLE_SINCE(1);
 
 // Storage for a ZXIO object.
