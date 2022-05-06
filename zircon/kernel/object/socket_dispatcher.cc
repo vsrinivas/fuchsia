@@ -60,7 +60,7 @@ zx_status_t SocketDispatcher::Create(uint32_t flags, KernelHandle<SocketDispatch
 
   zx_signals_t starting_signals = ZX_SOCKET_WRITABLE;
 
-  auto holder0 = fbl::AdoptRef(new (&ac) PeerHolder<SocketDispatcher>());
+  auto holder0 = fbl::AdoptRef(new (&ac) PeerHolderType());
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
   auto holder1 = holder0;
@@ -84,7 +84,7 @@ zx_status_t SocketDispatcher::Create(uint32_t flags, KernelHandle<SocketDispatch
   return ZX_OK;
 }
 
-SocketDispatcher::SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> holder,
+SocketDispatcher::SocketDispatcher(fbl::RefPtr<PeerHolderType> holder,
                                    zx_signals_t starting_signals, uint32_t flags)
     : PeeredDispatcher(ktl::move(holder), starting_signals),
       flags_(flags),
