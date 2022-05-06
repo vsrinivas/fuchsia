@@ -228,6 +228,11 @@ impl hash::Hash for Gradient {
 }
 
 impl Gradient {
+    #[inline]
+    pub fn colors_with_stops(&self) -> &[(Color, f32)] {
+        &self.stops
+    }
+
     fn get_t(&self, x: f32, y: f32) -> f32x8 {
         let dx = self.end.x - self.start.x;
         let dy = self.end.y - self.start.y;

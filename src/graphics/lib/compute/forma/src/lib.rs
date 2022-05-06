@@ -18,6 +18,8 @@ pub mod buffer;
 mod composition;
 mod utils;
 
+#[cfg(feature = "gpu")]
+pub use composition::GpuBackend;
 pub use composition::{Backend, Composition, CpuBackend, Layer};
 pub use utils::clear_buffer;
 

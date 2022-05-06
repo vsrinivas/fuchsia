@@ -2,13 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(feature = "gpu")]
+use std::mem;
 use std::{
     borrow::Cow,
     cell::{RefCell, RefMut},
     rc::Rc,
 };
 
+#[cfg(feature = "gpu")]
+use renderer::{Renderer, Timings};
 use rustc_hash::FxHashMap;
+#[cfg(feature = "gpu")]
+use surpass::rasterizer::Rasterizer;
 use surpass::{
     layout::Layout,
     painter::{self, Channel, Color, LayerProps, Props, Rect},
@@ -17,18 +23,22 @@ use surpass::{
 
 use crate::buffer::{Buffer, BufferLayerCache};
 
-mod backend;
+mod backends;
 mod interner;
 mod layer;
 mod small_bit_set;
 mod state;
 
-use self::state::{LayerSharedState, LayerSharedStateInner};
 pub use self::{
-    backend::{Backend, CpuBackend},
+    backends::{Backend, CpuBackend},
     layer::Layer,
 };
+#[cfg(feature = "gpu")]
+pub use backends::GpuBackend;
+#[cfg(feature = "gpu")]
+use backends::StyleMap;
 pub(crate) use small_bit_set::SmallBitSet;
+use state::{LayerSharedState, LayerSharedStateInner};
 
 const LINES_GARBAGE_THRESHOLD: usize = 2;
 
@@ -178,6 +188,118 @@ impl Composition<CpuBackend> {
                 layer.set_is_unchanged(buffer_layer_cache.id, layer.inner.is_enabled);
             }
         }
+    }
+}
+
+#[cfg(feature = "gpu")]
+impl Composition<GpuBackend> {
+    pub fn new_gpu(
+        device: &wgpu::Device,
+        swap_chain_format: wgpu::TextureFormat,
+        has_timestamp_query: bool,
+    ) -> Self {
+        Self {
+            backend: GpuBackend {
+                rasterizer: Rasterizer::default(),
+                style_map: StyleMap::default(),
+                renderer: Renderer::new(device, swap_chain_format, has_timestamp_query),
+            },
+            layers: FxHashMap::default(),
+            shared_state: Rc::new(RefCell::new(LayerSharedStateInner::default())),
+            buffers_with_caches: Rc::new(RefCell::new(SmallBitSet::default())),
+        }
+    }
+
+    pub fn render(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        surface: &wgpu::Surface,
+        width: u32,
+        height: u32,
+        clear_color: Color,
+    ) -> Option<Timings> {
+        self.compact_geom();
+        self.shared_state.borrow_mut().props_interner.compact();
+
+        let layers = &self.layers;
+        let rasterizer = &mut self.backend.rasterizer;
+        let shared_state = &mut *self.shared_state.borrow_mut();
+        let lines_builder = &mut shared_state.lines_builder;
+        let geom_id_to_order = &shared_state.geom_id_to_order;
+        let builder = lines_builder.take().expect("lines_builder should not be None");
+
+        struct CompositionContext<'l> {
+            layers: &'l FxHashMap<Order, Layer>,
+            cache_id: Option<u8>,
+        }
+
+        impl LayerProps for CompositionContext<'_> {
+            #[inline]
+            fn get(&self, id: u32) -> Cow<'_, Props> {
+                Cow::Borrowed(
+                    self.layers
+                        .get(&Order::new(id).expect("PixelSegment layer_id cannot overflow Order"))
+                        .map(|layer| &layer.props)
+                        .expect(
+                            "Layers outside of HashMap should not produce visible PixelSegments",
+                        ),
+                )
+            }
+
+            #[inline]
+            fn is_unchanged(&self, id: u32) -> bool {
+                match self.cache_id {
+                    None => false,
+                    Some(cache_id) => self
+                        .layers
+                        .get(&Order::new(id).expect("PixelSegment layer_id cannot overflow Order"))
+                        .map(|layer| layer.is_unchanged(cache_id))
+                        .expect(
+                            "Layers outside of HashMap should not produce visible PixelSegments",
+                        ),
+                }
+            }
+        }
+
+        let context = CompositionContext { layers, cache_id: None };
+
+        *lines_builder = {
+            let lines = builder.build(|id| {
+                geom_id_to_order
+                    .get(&id)
+                    .copied()
+                    .flatten()
+                    .and_then(|order| context.layers.get(&order))
+                    .map(|layer| layer.inner.clone())
+            });
+
+            rasterizer.rasterize(&lines);
+
+            Some(lines.unwrap())
+        };
+
+        self.backend.style_map.populate(&self.layers);
+
+        self.backend
+            .renderer
+            .render(
+                device,
+                queue,
+                surface,
+                width,
+                height,
+                unsafe { mem::transmute(rasterizer.segments()) },
+                self.backend.style_map.style_indices(),
+                self.backend.style_map.styles(),
+                renderer::Color {
+                    r: clear_color.r,
+                    g: clear_color.g,
+                    b: clear_color.b,
+                    a: clear_color.a,
+                },
+            )
+            .unwrap()
     }
 }
 
