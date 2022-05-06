@@ -7,29 +7,10 @@
 
 #include <stdint.h>
 
-#include <limits>
-
 #include <ffl/fixed.h>
 #include <ffl/string.h>
 
 namespace media::audio {
-
-constexpr int32_t kMaxInt24 = std::numeric_limits<int32_t>::max() >> 8;
-constexpr int32_t kMinInt24 = std::numeric_limits<int32_t>::min() >> 8;
-constexpr int32_t kMaxInt24In32 = kMaxInt24 * 0x100;
-constexpr int32_t kMinInt24In32 = kMinInt24 * 0x100;
-
-constexpr int32_t kFloatToInt8 = -std::numeric_limits<int8_t>::min();
-constexpr int32_t kFloatToInt16 = -std::numeric_limits<int16_t>::min();
-constexpr int32_t kFloatToInt24 = -kMinInt24;
-constexpr int64_t kFloatToInt24In32 = -static_cast<int64_t>(kMinInt24In32);
-
-constexpr int32_t kOffsetInt8ToUint8 =
-    std::numeric_limits<uint8_t>::min() - std::numeric_limits<int8_t>::min();
-
-constexpr float kInt8ToFloat = 1.0f / kFloatToInt8;
-constexpr float kInt16ToFloat = 1.0f / kFloatToInt16;
-constexpr double kInt24ToFloat = 1.0 / kFloatToInt24;
 
 // The number of fractional bits used when expressing timestamps (in frame
 // units) as fixed point integers.  Ultimately, this determines the resolution

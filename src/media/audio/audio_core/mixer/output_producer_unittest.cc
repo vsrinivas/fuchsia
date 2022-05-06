@@ -9,7 +9,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/format/constants.h"
+#include "src/media/audio/lib/format2/sample_converter.h"
 
 namespace media::audio {
 namespace {
@@ -167,8 +167,8 @@ TEST_F(OutputProducerTest, PassThruInt24) {
   // The "becomes" values mentioned above.
   auto expect = std::array<int32_t, 12>{
       // clang-format off
-      kMinInt24In32,
-      kMinInt24In32,
+      media_audio::kMinInt24In32,
+      media_audio::kMinInt24In32,
         -0x65432100,
         -0x40808100,
         -0x02345600,
@@ -177,8 +177,8 @@ TEST_F(OutputProducerTest, PassThruInt24) {
          0x02345600,
          0x40808100,
          0x65432100,
-      kMaxInt24In32,
-      kMaxInt24In32,
+      media_audio::kMaxInt24In32,
+      media_audio::kMaxInt24In32,
       // clang-format on
   };
   static_assert(std::size(dest) == std::size(expect));

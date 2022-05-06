@@ -10,64 +10,8 @@
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/mixer/constants.h"
-
 namespace media::audio {
 namespace {
-
-//
-// SampleNormalizer converts between uint8/int16/int24-in-32 and our internal float format.
-//
-// Validate uint8->float format conversion
-TEST(SampleNormalizerTest, UInt8_Basic) {
-  const uint8_t data[] = {0x00, 0x40, 0x80, 0xE0};
-  const float expect[] = {-1.0, -0.5, 0, 0.75};
-
-  for (auto i = 0u; i < std::size(data); ++i) {
-    EXPECT_EQ(mixer::SampleNormalizer<uint8_t>::Read(data + i), expect[i]);
-  }
-
-  const uint8_t max_val = 0xFF;
-  EXPECT_LT(mixer::SampleNormalizer<uint8_t>::Read(&max_val), 1.0f);
-  EXPECT_GT(mixer::SampleNormalizer<uint8_t>::Read(&max_val), 0.99f);
-}
-
-// Validate int16->float format conversion
-TEST(SampleNormalizerTest, Int16_Basic) {
-  const int16_t data[] = {std::numeric_limits<int16_t>::min(), -0x4000, 0, 0x6000};
-  const float expect[] = {-1.0, -0.5, 0, 0.75};
-
-  for (auto i = 0u; i < std::size(data); ++i) {
-    EXPECT_EQ(mixer::SampleNormalizer<int16_t>::Read(data + i), expect[i]);
-  }
-
-  const int16_t max_val = 0x7FFF;
-  EXPECT_LT(mixer::SampleNormalizer<int16_t>::Read(&max_val), 1.0f);
-  EXPECT_GT(mixer::SampleNormalizer<int16_t>::Read(&max_val), 0.9999f);
-}
-
-// Validate int24->float format conversion
-TEST(SampleNormalizerTest, Int24_Basic) {
-  const int32_t data[] = {kMinInt24In32, -0x40000000, 0, 0x60000000};
-  const float expect[] = {-1.0, -0.5, 0, 0.75};
-
-  for (auto i = 0u; i < std::size(data); ++i) {
-    EXPECT_EQ(mixer::SampleNormalizer<int32_t>::Read(data + i), expect[i]);
-  }
-
-  const int32_t max_val = kMaxInt24In32;
-  EXPECT_LT(mixer::SampleNormalizer<int32_t>::Read(&max_val), 1.0f);
-  EXPECT_GT(mixer::SampleNormalizer<int32_t>::Read(&max_val), 0.999999f);
-}
-
-// Validate float->float format conversion
-TEST(SampleNormalizerTest, Float_Basic) {
-  const float data[] = {-1.0, -0.5, 0, 0.75, 1.0};
-
-  for (auto i = 0u; i < std::size(data); ++i) {
-    EXPECT_EQ(mixer::SampleNormalizer<float>::Read(data + i), data[i]);
-  }
-}
 
 //
 // SampleScaler tests (four scale types)

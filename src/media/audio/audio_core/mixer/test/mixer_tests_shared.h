@@ -12,6 +12,7 @@
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 #include "src/media/audio/lib/analysis/analysis.h"
+#include "src/media/audio/lib/format2/sample_converter.h"
 
 namespace media::audio::test {
 
@@ -39,17 +40,17 @@ std::unique_ptr<OutputProducer> SelectOutputProducer(fuchsia::media::AudioSample
 constexpr double kFullScaleInt8InputAmplitude =
     static_cast<double>(std::numeric_limits<int8_t>::max());
 constexpr double kFullScaleInt8AccumAmplitude =  // 0.9921875
-    kFullScaleInt8InputAmplitude / media::audio::kFloatToInt8;
+    kFullScaleInt8InputAmplitude / media_audio::kFloatToInt8;
 
 constexpr double kFullScaleInt16InputAmplitude =
     static_cast<double>(std::numeric_limits<int16_t>::max());
 constexpr double kFullScaleInt16AccumAmplitude =  // 0.999969482421875
-    kFullScaleInt16InputAmplitude / media::audio::kFloatToInt16;
+    kFullScaleInt16InputAmplitude / media_audio::kFloatToInt16;
 
 constexpr double kFullScaleInt24In32InputAmplitude =
-    static_cast<double>(media::audio::kMaxInt24In32);
+    static_cast<double>(media_audio::kMaxInt24In32);
 constexpr double kFullScaleInt24In32AccumAmplitude =  // 0.99999988079071045
-    static_cast<double>(media::audio::kMaxInt24) / media::audio::kFloatToInt24;
+    static_cast<double>(media_audio::kMaxInt24) / media_audio::kFloatToInt24;
 
 constexpr double kFullScaleFloatInputAmplitude = 1.0f;
 constexpr double kFullScaleFloatAccumAmplitude = 1.0f;

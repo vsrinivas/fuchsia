@@ -13,64 +13,9 @@
 #include <limits>
 #include <type_traits>
 
-#include "src/media/audio/audio_core/mixer/constants.h"
+#include "src/media/audio/lib/format2/sample_converter.h"
 
 namespace media::audio {
-
-// Converting audio between float and int is surprisingly controversial.
-// (blog.bjornroche.com/2009/12/int-float-int-its-jungle-out-there.html etc. -- web-search "audio
-// float int convert"). Our float32-based internal pipeline can accommodate float and int Sources
-// without data loss (where Source is a client-submitted stream from AudioRenderer, or an input
-// device), but for non-float Destinations (output device, or AudioCapturer stream to a client) we
-// must clamp +1.0 values in DestConverter::Convert. When translating from float to int16 for
-// example, we can translate -1.0 perfectly to -32768 (negative 0x8000), while +1.0 cannot become
-// +32768 (positive 0x8000, exceeding int16's max) so it is clamped to 32767 (0x7FFF).
-//
-// Having said all this, the "practically clipping" value of +1.0 is rare in WAV
-// files, and other sources should easily be able to reduce their input levels.
-
-// Template to produce destination samples from normalized samples.
-template <typename DType, typename Enable = void>
-class DestConverter;
-
-template <typename DType>
-class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, uint8_t>>> {
- public:
-  static inline constexpr DType Convert(float sample) {
-    return static_cast<uint8_t>(
-        std::clamp<int16_t>(static_cast<int16_t>(round(sample * kFloatToInt8)),
-                            std::numeric_limits<int8_t>::min(),
-                            std::numeric_limits<int8_t>::max()) +
-        kOffsetInt8ToUint8);
-  }
-};
-
-template <typename DType>
-class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, int16_t>>> {
- public:
-  static inline constexpr DType Convert(float sample) {
-    return static_cast<int16_t>(std::clamp<int32_t>(
-        static_cast<int32_t>(round(sample * kFloatToInt16)), std::numeric_limits<int16_t>::min(),
-        std::numeric_limits<int16_t>::max()));
-  }
-};
-
-template <typename DType>
-class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, int32_t>>> {
- public:
-  static inline constexpr DType Convert(float sample) {
-    return std::clamp(static_cast<int32_t>(lroundf(sample * kFloatToInt24)), kMinInt24, kMaxInt24) *
-           256;
-  }
-};
-
-// TODO(fxbug.dev/84260): Consider a mode where we normalize NANs and subnormals.
-template <typename DType>
-class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, float>>> {
- public:
-  // This will emit +1.0 values, which are legal per WAV format custom.
-  static inline constexpr DType Convert(float sample) { return std::clamp(sample, -1.0f, 1.0f); }
-};
 
 // Template to fill samples with silence based on sample type.
 template <typename DType, typename Enable = void>
@@ -91,7 +36,7 @@ template <typename DType>
 class SilenceMaker<DType, typename std::enable_if_t<std::is_same_v<DType, uint8_t>>> {
  public:
   static inline void Fill(void* dest_void_ptr, size_t samples) {
-    memset(dest_void_ptr, kOffsetInt8ToUint8, samples * sizeof(DType));
+    memset(dest_void_ptr, media_audio::kInt8ToUint8, samples * sizeof(DType));
   }
 };
 
@@ -104,14 +49,13 @@ class OutputProducerImpl : public OutputProducer {
 
   void ProduceOutput(const float* source_ptr, void* dest_void_ptr, int64_t frames) const override {
     TRACE_DURATION("audio", "OutputProducerImpl::ProduceOutput");
-    using DC = DestConverter<DType>;
     auto* dest_ptr = static_cast<DType*>(dest_void_ptr);
 
     // Previously we clamped here; because of rounding, this is different for
     // each output type, so it is now handled in Convert() specializations.
     const size_t kNumSamples = frames * channels_;
     for (size_t i = 0; i < kNumSamples; ++i) {
-      dest_ptr[i] = DC::Convert(source_ptr[i]);
+      dest_ptr[i] = media_audio::SampleConverter<DType>::FromFloat(source_ptr[i]);
     }
   }
 

@@ -13,6 +13,7 @@ source_set("format2") {
   sources = [
     "format.cc",
     "format.h",
+    "sample_converter.h",
   ]
 
   public_deps = [
@@ -32,7 +33,10 @@ executable("unittest-bin") {
   testonly = true
   output_name = "audio-libformat2-unittests"
 
-  sources = [ "format_unittest.cc" ]
+  sources = [
+    "format_unittest.cc",
+    "sample_converter_unittest.cc",
+  ]
 
   deps = [
     ":format2",

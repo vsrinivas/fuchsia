@@ -10,6 +10,7 @@
 
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/lib/format2/sample_converter.h"
 
 namespace media::audio {
 
@@ -32,48 +33,6 @@ enum class ScalerType {
   NE_UNITY,  // Non-unity non-zero gain. Scaling is needed.
   EQ_UNITY,  // Unity gain. Scaling is not needed.
   RAMPING,   // Scaling is needed, using a non-constant scaler value
-};
-
-//
-// SampleNormalizer
-//
-// Template to read and normalize samples into float32 [ -1.0 , 1.0 ] format.
-template <typename SourceSampleType, typename Enable = void>
-class SampleNormalizer;
-
-template <typename SourceSampleType>
-class SampleNormalizer<SourceSampleType,
-                       typename std::enable_if_t<std::is_same_v<SourceSampleType, uint8_t>>> {
- public:
-  static inline float Read(const SourceSampleType* source_ptr) {
-    return kInt8ToFloat *
-           static_cast<float>(static_cast<int32_t>(*source_ptr) - kOffsetInt8ToUint8);
-  }
-};
-
-template <typename SourceSampleType>
-class SampleNormalizer<SourceSampleType,
-                       typename std::enable_if_t<std::is_same_v<SourceSampleType, int16_t>>> {
- public:
-  static inline float Read(const SourceSampleType* source_ptr) {
-    return kInt16ToFloat * (*source_ptr);
-  }
-};
-
-template <typename SourceSampleType>
-class SampleNormalizer<SourceSampleType,
-                       typename std::enable_if_t<std::is_same_v<SourceSampleType, int32_t>>> {
- public:
-  static inline float Read(const SourceSampleType* source_ptr) {
-    return static_cast<float>(kInt24ToFloat * ((*source_ptr) >> 8));
-  }
-};
-
-template <typename SourceSampleType>
-class SampleNormalizer<SourceSampleType,
-                       typename std::enable_if_t<std::is_same_v<SourceSampleType, float>>> {
- public:
-  static inline float Read(const SourceSampleType* source_ptr) { return *source_ptr; }
 };
 
 //
@@ -116,7 +75,7 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
                    typename std::enable_if_t<(SourceChanCount == DestChanCount)>> {
  public:
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
-    return SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan);
+    return media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + dest_chan));
   }
 };
 
@@ -127,7 +86,7 @@ class SourceReader<
     typename std::enable_if_t<((SourceChanCount == 1) && (SourceChanCount != DestChanCount))>> {
  public:
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
-    return SampleNormalizer<SourceSampleType>::Read(source_ptr);
+    return media_audio::SampleConverter<SourceSampleType>::ToFloat(*source_ptr);
   }
 };
 
@@ -141,8 +100,8 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
   // This simple 2:1 channel mapping assumes a "LR" stereo configuration for the source channels.
   // Each dest frame's single value is essentially the average of the 2 source chans.
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
-    return 0.5f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + 0) +
-                   SampleNormalizer<SourceSampleType>::Read(source_ptr + 1));
+    return 0.5f * (media_audio::SampleConverter<SourceSampleType>::ToFloat(*source_ptr) +
+                   media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + 1)));
   }
 };
 
@@ -152,9 +111,11 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
                    typename std::enable_if_t<((SourceChanCount == 2) && (DestChanCount == 3))>> {
  public:
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
-    return (dest_chan < 2 ? SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan)
-                          : 0.5f * (SampleNormalizer<SourceSampleType>::Read(source_ptr) +
-                                    SampleNormalizer<SourceSampleType>::Read(source_ptr + 1)));
+    return (dest_chan < 2
+                ? media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + dest_chan))
+                : 0.5f *
+                      (media_audio::SampleConverter<SourceSampleType>::ToFloat(*source_ptr) +
+                       media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + 1))));
   }
 };
 
@@ -164,7 +125,7 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
                    typename std::enable_if_t<((SourceChanCount == 2) && (DestChanCount == 4))>> {
  public:
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
-    return SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan % 2);
+    return media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + dest_chan % 2));
   }
 };
 
@@ -178,9 +139,9 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
   // This simple 3:1 channel mapping assumes an equal weighting of the 3 source channels.
   // Each dest frame's single value is essentially the average of the 3 source chans.
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
-    return (SampleNormalizer<SourceSampleType>::Read(source_ptr + 0) +
-            SampleNormalizer<SourceSampleType>::Read(source_ptr + 1) +
-            SampleNormalizer<SourceSampleType>::Read(source_ptr + 2)) /
+    return (media_audio::SampleConverter<SourceSampleType>::ToFloat(*source_ptr) +
+            media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + 1)) +
+            media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + 2))) /
            3.0f;
   }
 };
@@ -204,8 +165,9 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
   // "divide by 1+sqr(0.5)" is optimized to "multiply by kInverseOnePlusRootHalf".
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
     return kInverseOnePlusRootHalf *
-               SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan) +
-           kInverseRootTwoPlusOne * SampleNormalizer<SourceSampleType>::Read(source_ptr + 2);
+               media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + dest_chan)) +
+           kInverseRootTwoPlusOne *
+               media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + 2));
   }
 };
 
@@ -222,13 +184,13 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
     if constexpr (kResampler4ChannelWorkaround) {
       // As a temporary measure, ignore channels 2 and 3.
       // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
-      return 0.5f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + 0) +
-                     SampleNormalizer<SourceSampleType>::Read(source_ptr + 1));
+      return 0.5f * (media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + 0)) +
+                     media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + 1)));
     } else {
-      return 0.25f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + 0) +
-                      SampleNormalizer<SourceSampleType>::Read(source_ptr + 1) +
-                      SampleNormalizer<SourceSampleType>::Read(source_ptr + 2) +
-                      SampleNormalizer<SourceSampleType>::Read(source_ptr + 3));
+      return 0.25f * (media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + 0)) +
+                      media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + 1)) +
+                      media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + 2)) +
+                      media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + 3)));
     }
   }
 };
@@ -245,10 +207,12 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
     if constexpr (kResampler4ChannelWorkaround) {
       // As a temporary measure, ignore channels 2 and 3.
       // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
-      return SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan);
+      return media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + dest_chan));
     } else {
-      return 0.5f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan) +
-                     SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan + 2));
+      return 0.5f *
+             (media_audio::SampleConverter<SourceSampleType>::ToFloat(*(source_ptr + dest_chan)) +
+              media_audio::SampleConverter<SourceSampleType>::ToFloat(
+                  *(source_ptr + dest_chan + 2)));
     }
   }
 };

@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
+#include "src/media/audio/lib/format2/sample_converter.h"
 
 namespace media::audio::mixer {
 namespace {
@@ -16,6 +17,9 @@ using testing::FloatEq;
 using testing::Pointwise;
 
 using Resampler = ::media::audio::Mixer::Resampler;
+
+constexpr auto kMaxInt24In32 = media_audio::kMaxInt24In32;
+constexpr auto kMinInt24In32 = media_audio::kMinInt24In32;
 
 // TODO(fxbug.dev/70578): Relocate position-related tests here, from audio_fidelity_tests
 // TODO(fxbug.dev/70580): Refactor the set of pass-thru, rechannel, accumulate and gain unittests,

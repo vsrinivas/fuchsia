@@ -20,6 +20,7 @@ source_set("format") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/cpp",
+    "//src/media/audio/lib/format2",
     "//src/media/audio/lib/timeline",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace",
