@@ -23,16 +23,15 @@ rustc_library("forma") {
 
   sources = [
     "src/buffer.rs",
-    "src/composition/backends/cpu.rs",
-    "src/composition/backends/gpu.rs",
-    "src/composition/backends/mod.rs",
     "src/composition/interner.rs",
     "src/composition/layer.rs",
     "src/composition/mod.rs",
-    "src/composition/small_bit_set.rs",
     "src/composition/state.rs",
     "src/layer.rs",
     "src/lib.rs",
+    "src/renderer/cpu.rs",
+    "src/renderer/mod.rs",
+    "src/small_bit_set.rs",
     "src/utils.rs",
   ]
 }

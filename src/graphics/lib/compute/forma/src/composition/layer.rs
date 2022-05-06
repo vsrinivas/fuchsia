@@ -4,7 +4,9 @@
 
 use surpass::{painter::Props, GeomId, GeomPresTransform, Order, Path};
 
-use super::{interner::Interned, small_bit_set::SmallBitSet, state::LayerSharedState};
+use crate::small_bit_set::SmallBitSet;
+
+use super::{interner::Interned, state::LayerSharedState};
 
 const IDENTITY: &[f32; 6] = &[1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
 

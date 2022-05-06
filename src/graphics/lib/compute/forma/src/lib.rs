@@ -16,11 +16,14 @@ macro_rules! duration {
 
 pub mod buffer;
 mod composition;
+mod renderer;
+mod small_bit_set;
 mod utils;
 
+pub use crate::renderer::CpuRenderer;
 #[cfg(feature = "gpu")]
-pub use composition::GpuBackend;
-pub use composition::{Backend, Composition, CpuBackend, Layer};
+pub use crate::renderer::GpuRenderer;
+pub use composition::{Composition, Layer};
 pub use utils::clear_buffer;
 
 pub use surpass::{

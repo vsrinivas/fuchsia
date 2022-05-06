@@ -2,308 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(feature = "gpu")]
-use std::mem;
-use std::{
-    borrow::Cow,
-    cell::{RefCell, RefMut},
-    rc::Rc,
-};
+use std::{cell::RefCell, rc::Rc};
 
-#[cfg(feature = "gpu")]
-use renderer::{Renderer, Timings};
 use rustc_hash::FxHashMap;
-#[cfg(feature = "gpu")]
-use surpass::rasterizer::Rasterizer;
-use surpass::{
-    layout::Layout,
-    painter::{self, Channel, Color, LayerProps, Props, Rect},
-    GeomId, Order,
-};
+use surpass::{painter::Props, GeomId, Order};
 
-use crate::buffer::{Buffer, BufferLayerCache};
+use crate::small_bit_set::SmallBitSet;
 
-mod backends;
 mod interner;
 mod layer;
-mod small_bit_set;
 mod state;
 
-pub use self::{
-    backends::{Backend, CpuBackend},
-    layer::Layer,
-};
-#[cfg(feature = "gpu")]
-pub use backends::GpuBackend;
-#[cfg(feature = "gpu")]
-use backends::StyleMap;
-pub(crate) use small_bit_set::SmallBitSet;
+pub use self::layer::Layer;
 use state::{LayerSharedState, LayerSharedStateInner};
 
 const LINES_GARBAGE_THRESHOLD: usize = 2;
 
 #[derive(Debug, Default)]
-pub struct Composition<B: Backend = CpuBackend> {
-    backend: B,
-    layers: FxHashMap<Order, Layer>,
-    shared_state: Rc<RefCell<LayerSharedStateInner>>,
-    buffers_with_caches: Rc<RefCell<SmallBitSet>>,
+pub struct Composition {
+    pub(crate) layers: FxHashMap<Order, Layer>,
+    pub(crate) shared_state: Rc<RefCell<LayerSharedStateInner>>,
 }
 
-impl Composition<CpuBackend> {
+impl Composition {
     #[inline]
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn render<L>(
-        &mut self,
-        buffer: &mut Buffer<'_, '_, L>,
-        mut channels: [Channel; 4],
-        clear_color: Color,
-        crop: Option<Rect>,
-    ) where
-        L: Layout,
-    {
-        // If `clear_color` has alpha = 1 we can upgrade the alpha channel to `Channel::One`
-        // in order to skip reading the alpha channel.
-        if clear_color.a == 1.0 {
-            channels = channels.map(|c| match c {
-                Channel::Alpha => Channel::One,
-                c => c,
-            });
-        }
-
-        if let Some(buffer_layer_cache) = buffer.layer_cache.as_ref() {
-            let tiles_len = buffer.layout.width_in_tiles() * buffer.layout.height_in_tiles();
-
-            if buffer_layer_cache.cache.borrow().1.len() != tiles_len {
-                buffer_layer_cache.cache.borrow_mut().1.resize(tiles_len, None);
-                buffer_layer_cache.clear();
-            }
-        }
-
-        self.compact_geom();
-        self.shared_state.borrow_mut().props_interner.compact();
-
-        let layers = &self.layers;
-        let shared_state = &mut *self.shared_state.borrow_mut();
-        let lines_builder = &mut shared_state.lines_builder;
-        let geom_id_to_order = &shared_state.geom_id_to_order;
-        let rasterizer = &mut self.backend.rasterizer;
-
-        struct CompositionContext<'l> {
-            layers: &'l FxHashMap<Order, Layer>,
-            cache_id: Option<u8>,
-        }
-
-        impl LayerProps for CompositionContext<'_> {
-            #[inline]
-            fn get(&self, id: u32) -> Cow<'_, Props> {
-                Cow::Borrowed(
-                    self.layers
-                        .get(&Order::new(id).expect("PixelSegment layer_id cannot overflow Order"))
-                        .map(|layer| &layer.props)
-                        .expect(
-                            "Layers outside of HashMap should not produce visible PixelSegments",
-                        ),
-                )
-            }
-
-            #[inline]
-            fn is_unchanged(&self, id: u32) -> bool {
-                match self.cache_id {
-                    None => false,
-                    Some(cache_id) => self
-                        .layers
-                        .get(&Order::new(id).expect("PixelSegment layer_id cannot overflow Order"))
-                        .map(|layer| layer.is_unchanged(cache_id))
-                        .expect(
-                            "Layers outside of HashMap should not produce visible PixelSegments",
-                        ),
-                }
-            }
-        }
-
-        let context = CompositionContext {
-            layers,
-            cache_id: buffer.layer_cache.as_ref().map(|cache| cache.id),
-        };
-
-        // `take()` sets the RefCell's content with `Default::default()` which is cheap for Option.
-        let builder = lines_builder.take().expect("lines_builder should not be None");
-
-        *lines_builder = {
-            let lines = {
-                duration!("gfx", "LinesBuilder::build");
-                builder.build(|id| {
-                    geom_id_to_order
-                        .get(&id)
-                        .copied()
-                        .flatten()
-                        .and_then(|order| context.layers.get(&order))
-                        .map(|layer| layer.inner.clone())
-                })
-            };
-
-            {
-                duration!("gfx", "Rasterizer::rasterize");
-                rasterizer.rasterize(&lines);
-            }
-            {
-                duration!("gfx", "Rasterizer::sort");
-                rasterizer.sort();
-            }
-
-            let previous_clear_color =
-                buffer.layer_cache.as_ref().and_then(|layer_cache| layer_cache.cache.borrow().0);
-
-            let layers_per_tile = buffer.layer_cache.as_ref().map(|layer_cache| {
-                RefMut::map(layer_cache.cache.borrow_mut(), |cache| &mut cache.1)
-            });
-
-            {
-                duration!("gfx", "painter::for_each_row");
-                painter::for_each_row(
-                    buffer.layout,
-                    buffer.buffer,
-                    channels,
-                    buffer.flusher.as_deref(),
-                    previous_clear_color,
-                    layers_per_tile,
-                    rasterizer.segments(),
-                    clear_color,
-                    &crop,
-                    &context,
-                );
-            }
-
-            Some(lines.unwrap())
-        };
-
-        if let Some(buffer_layer_cache) = &buffer.layer_cache {
-            buffer_layer_cache.cache.borrow_mut().0 = Some(clear_color);
-
-            for layer in self.layers.values_mut() {
-                layer.set_is_unchanged(buffer_layer_cache.id, layer.inner.is_enabled);
-            }
-        }
-    }
-}
-
-#[cfg(feature = "gpu")]
-impl Composition<GpuBackend> {
-    pub fn new_gpu(
-        device: &wgpu::Device,
-        swap_chain_format: wgpu::TextureFormat,
-        has_timestamp_query: bool,
-    ) -> Self {
-        Self {
-            backend: GpuBackend {
-                rasterizer: Rasterizer::default(),
-                style_map: StyleMap::default(),
-                renderer: Renderer::new(device, swap_chain_format, has_timestamp_query),
-            },
-            layers: FxHashMap::default(),
-            shared_state: Rc::new(RefCell::new(LayerSharedStateInner::default())),
-            buffers_with_caches: Rc::new(RefCell::new(SmallBitSet::default())),
-        }
-    }
-
-    pub fn render(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        surface: &wgpu::Surface,
-        width: u32,
-        height: u32,
-        clear_color: Color,
-    ) -> Option<Timings> {
-        self.compact_geom();
-        self.shared_state.borrow_mut().props_interner.compact();
-
-        let layers = &self.layers;
-        let rasterizer = &mut self.backend.rasterizer;
-        let shared_state = &mut *self.shared_state.borrow_mut();
-        let lines_builder = &mut shared_state.lines_builder;
-        let geom_id_to_order = &shared_state.geom_id_to_order;
-        let builder = lines_builder.take().expect("lines_builder should not be None");
-
-        struct CompositionContext<'l> {
-            layers: &'l FxHashMap<Order, Layer>,
-            cache_id: Option<u8>,
-        }
-
-        impl LayerProps for CompositionContext<'_> {
-            #[inline]
-            fn get(&self, id: u32) -> Cow<'_, Props> {
-                Cow::Borrowed(
-                    self.layers
-                        .get(&Order::new(id).expect("PixelSegment layer_id cannot overflow Order"))
-                        .map(|layer| &layer.props)
-                        .expect(
-                            "Layers outside of HashMap should not produce visible PixelSegments",
-                        ),
-                )
-            }
-
-            #[inline]
-            fn is_unchanged(&self, id: u32) -> bool {
-                match self.cache_id {
-                    None => false,
-                    Some(cache_id) => self
-                        .layers
-                        .get(&Order::new(id).expect("PixelSegment layer_id cannot overflow Order"))
-                        .map(|layer| layer.is_unchanged(cache_id))
-                        .expect(
-                            "Layers outside of HashMap should not produce visible PixelSegments",
-                        ),
-                }
-            }
-        }
-
-        let context = CompositionContext { layers, cache_id: None };
-
-        *lines_builder = {
-            let lines = builder.build(|id| {
-                geom_id_to_order
-                    .get(&id)
-                    .copied()
-                    .flatten()
-                    .and_then(|order| context.layers.get(&order))
-                    .map(|layer| layer.inner.clone())
-            });
-
-            rasterizer.rasterize(&lines);
-
-            Some(lines.unwrap())
-        };
-
-        self.backend.style_map.populate(&self.layers);
-
-        self.backend
-            .renderer
-            .render(
-                device,
-                queue,
-                surface,
-                width,
-                height,
-                unsafe { mem::transmute(rasterizer.segments()) },
-                self.backend.style_map.style_indices(),
-                self.backend.style_map.styles(),
-                renderer::Color {
-                    r: clear_color.r,
-                    g: clear_color.g,
-                    b: clear_color.b,
-                    a: clear_color.a,
-                },
-            )
-            .unwrap()
-    }
-}
-
-impl<B: Backend> Composition<B> {
     #[inline]
     pub fn create_layer(&mut self) -> Layer {
         let (geom_id, props) = {
@@ -323,15 +49,6 @@ impl<B: Backend> Composition<B> {
             is_unchanged: SmallBitSet::default(),
             lines_count: 0,
         }
-    }
-
-    #[inline]
-    pub fn create_buffer_layer_cache(&mut self) -> Option<BufferLayerCache> {
-        self.buffers_with_caches.borrow_mut().first_empty_slot().map(|id| BufferLayerCache {
-            id,
-            cache: Default::default(),
-            buffers_with_caches: Rc::downgrade(&self.buffers_with_caches),
-        })
     }
 
     #[inline]
@@ -445,7 +162,7 @@ mod tests {
 
     use crate::{
         buffer::{layout::LinearLayout, BufferBuilder},
-        Fill, FillRule, Func, GeomPresTransform, PathBuilder, Point, Style,
+        CpuRenderer, Fill, FillRule, Func, GeomPresTransform, PathBuilder, Point, Style,
     };
 
     const BLACK_SRGB: [u8; 4] = [0x00, 0x00, 0x00, 0xFF];
@@ -501,8 +218,10 @@ mod tests {
         let mut layout = LinearLayout::new(1, 4, 1);
 
         let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             RED,
@@ -518,9 +237,11 @@ mod tests {
         let mut layout = LinearLayout::new(1, 4, 1);
 
         let mut composition = Composition::new();
-        let layer_cache = composition.create_buffer_layer_cache().unwrap();
+        let mut renderer = CpuRenderer::new();
+        let layer_cache = renderer.create_buffer_layer_cache().unwrap();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache.clone())
                 .build(),
@@ -533,7 +254,8 @@ mod tests {
 
         buffer = [GREEN_SRGB].concat();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache.clone())
                 .build(),
@@ -545,7 +267,8 @@ mod tests {
         // Skip clearing if the color is the same.
         assert_eq!(buffer, [GREEN_SRGB].concat());
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache.clone())
                 .build(),
@@ -563,13 +286,15 @@ mod tests {
         let mut layout = LinearLayout::new(3, 3 * 4, 1);
 
         let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
 
         let mut layer = composition.create_layer();
         layer.insert(&pixel_path(1, 0)).set_props(solid(RED));
 
         composition.insert(Order::new(0).unwrap(), layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             GREEN,
@@ -584,13 +309,15 @@ mod tests {
         let mut buffer = [GREEN_SRGB; 3].concat();
         let mut layout = LinearLayout::new(3, 3 * 4, 1);
         let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
 
         let mut layer = composition.create_layer();
         layer.insert(&pixel_path(1, 0)).insert(&pixel_path(2, 0)).set_props(solid(RED));
 
         composition.insert(Order::new(0).unwrap(), layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             GREEN,
@@ -606,6 +333,7 @@ mod tests {
         let mut layout = LinearLayout::new(3, 3 * 4, 1);
 
         let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
 
         let mut layer = composition.create_layer();
         layer
@@ -615,7 +343,8 @@ mod tests {
 
         composition.insert(Order::new(0).unwrap(), layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             GREEN,
@@ -631,6 +360,8 @@ mod tests {
         let mut layout = LinearLayout::new(3, 3 * 4, 1);
 
         let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
+
         let angle = -std::f32::consts::PI / 2.0;
 
         let mut layer = composition.create_layer();
@@ -648,7 +379,8 @@ mod tests {
 
         composition.insert(Order::new(0).unwrap(), layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             GREEN,
@@ -662,6 +394,7 @@ mod tests {
     fn clear_and_resize() {
         let mut buffer = [GREEN_SRGB; 4].concat();
         let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
 
         let order0 = Order::new(0).unwrap();
         let order1 = Order::new(1).unwrap();
@@ -684,7 +417,8 @@ mod tests {
 
         let mut layout = LinearLayout::new(4, 4 * 4, 1);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             GREEN,
@@ -701,7 +435,8 @@ mod tests {
 
         composition.get_mut(order0).unwrap().clear();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             GREEN,
@@ -718,7 +453,8 @@ mod tests {
 
         composition.get_mut(order2).unwrap().clear();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             GREEN,
@@ -758,13 +494,15 @@ mod tests {
         let mut layout = LinearLayout::new(3, 3 * 4, 1);
 
         let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
 
         let mut layer = composition.create_layer();
         layer.insert(&pixel_path(0, 0)).set_props(solid(RED));
 
         composition.insert(Order::new(0).unwrap(), layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             BLACK,
@@ -778,7 +516,8 @@ mod tests {
 
         buffer = [BLACK_SRGB; 3].concat();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             BLACK,
@@ -791,7 +530,8 @@ mod tests {
 
         buffer = [BLACK_SRGB; 3].concat();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             BLACK,
@@ -807,13 +547,15 @@ mod tests {
         let mut layout = LinearLayout::new(3, 3 * 4, 1);
 
         let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
 
         let mut layer = composition.create_layer();
         layer.insert(&pixel_path(0, 0)).set_props(solid(RED));
 
         composition.insert(Order::new(0).unwrap(), layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             BLACK,
@@ -829,7 +571,8 @@ mod tests {
 
         buffer = [BLACK_SRGB; 3].concat();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             BLACK,
@@ -842,7 +585,8 @@ mod tests {
 
         buffer = [BLACK_SRGB; 3].concat();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             BLACK,
@@ -858,6 +602,7 @@ mod tests {
         let mut layout = LinearLayout::new(3, 3 * 4, 1);
 
         let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
 
         let order = Order::new(0).unwrap();
 
@@ -866,7 +611,8 @@ mod tests {
 
         composition.insert(order, layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             BLACK,
@@ -879,7 +625,8 @@ mod tests {
 
         buffer = [BLACK_SRGB; 3].concat();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             BLACK,
@@ -892,7 +639,8 @@ mod tests {
 
         buffer = [BLACK_SRGB; 3].concat();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             BLACK,
@@ -905,7 +653,8 @@ mod tests {
 
         buffer = [BLACK_SRGB; 3].concat();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             BLACK,
@@ -955,6 +704,7 @@ mod tests {
         let mut layout = LinearLayout::new(3, 3 * 4, 1);
 
         let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
 
         let mut layer = composition.create_layer();
         layer.insert(&pixel_path(0, 0)).set_props(solid(BLACK_ALPHA_50));
@@ -967,7 +717,8 @@ mod tests {
 
         composition.insert(Order::new(1).unwrap(), layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             WHITE_TRANSPARENT,
@@ -982,7 +733,8 @@ mod tests {
         let mut buffer = [BLACK_SRGB; 3 * TILE_WIDTH * TILE_HEIGHT].concat();
         let mut layout = LinearLayout::new(3 * TILE_WIDTH, 3 * TILE_WIDTH * 4, TILE_HEIGHT);
         let mut composition = Composition::new();
-        let layer_cache = composition.create_buffer_layer_cache();
+        let mut renderer = CpuRenderer::new();
+        let layer_cache = renderer.create_buffer_layer_cache();
 
         let mut layer = composition.create_layer();
         layer
@@ -1002,7 +754,8 @@ mod tests {
 
         composition.insert(order, layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache.clone().unwrap())
                 .build(),
@@ -1020,7 +773,8 @@ mod tests {
 
         composition.get_mut(order).unwrap().set_props(solid(RED));
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache.unwrap())
                 .build(),
@@ -1041,14 +795,16 @@ mod tests {
         let mut layout = LinearLayout::new(3, 3 * 4, 1);
 
         let mut composition = Composition::new();
-        let layer_cache = composition.create_buffer_layer_cache().unwrap();
+        let mut renderer = CpuRenderer::new();
+        let layer_cache = renderer.create_buffer_layer_cache().unwrap();
 
         let mut layer = composition.create_layer();
         layer.insert(&pixel_path(0, 0)).set_props(solid(RED));
 
         composition.insert(Order::new(0).unwrap(), layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache.clone())
                 .build(),
@@ -1064,7 +820,8 @@ mod tests {
 
         buffer = [BLACK_SRGB; 3].concat();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache.clone())
                 .build(),
@@ -1081,7 +838,8 @@ mod tests {
         let mut buffer = [BLACK_SRGB; 2 * TILE_WIDTH * TILE_HEIGHT].concat();
         let mut layout = LinearLayout::new(2 * TILE_WIDTH, 2 * TILE_WIDTH * 4, TILE_HEIGHT);
         let mut composition = Composition::new();
-        let layer_cache = composition.create_buffer_layer_cache();
+        let mut renderer = CpuRenderer::new();
+        let layer_cache = renderer.create_buffer_layer_cache();
 
         let order = Order::new(0).unwrap();
 
@@ -1093,7 +851,8 @@ mod tests {
 
         composition.insert(order, layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache.clone().unwrap())
                 .build(),
@@ -1108,7 +867,8 @@ mod tests {
             GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, TILE_WIDTH as f32, 0.0]).unwrap(),
         );
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache.clone().unwrap())
                 .build(),
@@ -1123,7 +883,8 @@ mod tests {
             GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, -(TILE_WIDTH as f32), 0.0]).unwrap(),
         );
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache.clone().unwrap())
                 .build(),
@@ -1138,7 +899,8 @@ mod tests {
             GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.0, TILE_HEIGHT as f32]).unwrap(),
         );
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache.unwrap())
                 .build(),
@@ -1155,8 +917,9 @@ mod tests {
         let mut buffer = [BLACK_SRGB; TILE_WIDTH * TILE_HEIGHT].concat();
         let mut layout = LinearLayout::new(TILE_WIDTH, TILE_WIDTH * 4, TILE_HEIGHT);
         let mut composition = Composition::new();
-        let layer_cache0 = composition.create_buffer_layer_cache();
-        let layer_cache1 = composition.create_buffer_layer_cache();
+        let mut renderer = CpuRenderer::new();
+        let layer_cache0 = renderer.create_buffer_layer_cache();
+        let layer_cache1 = renderer.create_buffer_layer_cache();
 
         let order = Order::new(0).unwrap();
 
@@ -1165,7 +928,8 @@ mod tests {
 
         composition.insert(order, layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache0.clone().unwrap())
                 .build(),
@@ -1178,7 +942,8 @@ mod tests {
 
         let mut buffer = [BLACK_SRGB; TILE_WIDTH * TILE_HEIGHT].concat();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache0.clone().unwrap())
                 .build(),
@@ -1189,7 +954,8 @@ mod tests {
 
         assert_eq!(buffer[0..4], BLACK_SRGB);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache1.clone().unwrap())
                 .build(),
@@ -1205,7 +971,8 @@ mod tests {
             .unwrap()
             .set_transform(GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 1.0, 0.0]).unwrap());
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache0.unwrap())
                 .build(),
@@ -1219,7 +986,8 @@ mod tests {
 
         let mut buffer = [BLACK_SRGB; TILE_WIDTH * TILE_HEIGHT].concat();
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout)
                 .layer_cache(layer_cache1.unwrap())
                 .build(),
@@ -1252,6 +1020,7 @@ mod tests {
         let mut layout = LinearLayout::new(3 * TILE_WIDTH, 3 * TILE_WIDTH * 4, TILE_HEIGHT);
 
         let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
 
         let mut layer = composition.create_layer();
         layer.insert(&path).set_props(Props {
@@ -1261,7 +1030,8 @@ mod tests {
 
         composition.insert(Order::new(0).unwrap(), layer);
 
-        composition.render(
+        renderer.render(
+            &mut composition,
             &mut BufferBuilder::new(&mut buffer, &mut layout).build(),
             RGBA,
             BLACK,

@@ -12,7 +12,7 @@ use surpass::painter::Color;
 
 use layout::{Flusher, Layout};
 
-use crate::composition::SmallBitSet;
+use crate::small_bit_set::SmallBitSet;
 
 #[derive(Debug)]
 pub struct Buffer<'b, 'l, L: Layout> {

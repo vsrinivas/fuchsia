@@ -142,6 +142,7 @@ fn copy_region_to_image(
 
 #[derive(Debug)]
 pub struct FormaContext {
+    renderer: forma::CpuRenderer,
     buffer_collection: Option<BufferCollectionSynchronousProxy>,
     size: Size2D<u32>,
     display_rotation: DisplayRotation,
@@ -173,6 +174,7 @@ impl FormaContext {
             .expect("failed to set constraints on sysmem buffer");
 
         Self {
+            renderer: forma::CpuRenderer::new(),
             buffer_collection: Some(buffer_collection),
             size,
             display_rotation,
@@ -184,6 +186,7 @@ impl FormaContext {
 
     pub(crate) fn without_token(size: Size2D<u32>, display_rotation: DisplayRotation) -> Self {
         Self {
+            renderer: forma::CpuRenderer::new(),
             buffer_collection: None,
             size,
             display_rotation,
@@ -309,14 +312,15 @@ impl Context<Forma> for FormaContext {
         }
 
         if image.buffer_layer_cache.as_ref().map(|&(id, _)| id) != composition.id {
-            image.buffer_layer_cache = composition
-                .composition
+            image.buffer_layer_cache = self
+                .renderer
                 .create_buffer_layer_cache()
                 .map(|cache| (composition.id.unwrap(), cache));
         }
 
         duration_begin!("gfx", "render::Context<Forma>::render_composition");
-        composition.composition.render(
+        self.renderer.render(
+            &mut composition.composition,
             &mut image.as_buffer(),
             forma::BGRA,
             forma::Color::from(&composition.background_color),
