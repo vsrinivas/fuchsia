@@ -6,6 +6,7 @@
 package ffxutil
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil/constants"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
@@ -170,6 +172,24 @@ func (f *FFXInstance) Stop() error {
 		if configErr := f.Config.Close(); err == nil {
 			err = configErr
 		}
+	}
+	// Wait to see that the daemon is stopped before exiting this function
+	// because the ffx command returns after it has initiated the shutdown,
+	// but there may be some delay where the daemon can continue to output
+	// logs before it's completely shut down.
+	// TODO(fxbug.dev/92296): Remove this workaround when ffx can ensure that
+	// no more logs are written once the command returns.
+	for i := 0; i < 3; i++ {
+		var b bytes.Buffer
+		if err := runCommand(ctx, f.runner, &b, io.Discard, "pgrep", "ffx"); err != nil {
+			logger.Debugf(ctx, "failed to run \"pgrep ffx\": %s", err)
+			continue
+		}
+		if len(b.Bytes()) == 0 {
+			break
+		}
+		logger.Debugf(ctx, "ffx daemon hasn't completed shutdown. Checking again after 1 second")
+		time.Sleep(time.Second)
 	}
 	return err
 }
