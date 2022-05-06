@@ -7,6 +7,10 @@
 
 zx_status_t pci_configure_interrupt_mode(const pci_protocol_t* pci, uint32_t requested_irq_count,
                                          pci_interrupt_mode_t* out_mode) {
+  if (requested_irq_count == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   pci_interrupt_modes modes{};
   pci_get_interrupt_modes(pci, &modes);
   std::pair<pci_interrupt_mode_t, uint32_t> pairs[] = {
