@@ -15,6 +15,8 @@ ffx_plugin("ffx_profile_memory") {
   ]
   with_unit_tests = true
 
+  plugin_deps = [ "signal:ffx_profile_memory_signal" ]
+
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
