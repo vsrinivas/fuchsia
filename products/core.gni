@@ -43,6 +43,7 @@ core_realm_shards = [
   "//src/recovery/factory_reset:factory_reset_core_shard",
   "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
   "//src/developer/memory/mem:core_shard",
+  "//src/media/audio/audio_core/v2:core_shard",
 
   # TODO(fxbug.dev/80375): only include in eng builds
   "//src/sys/test_manager:test_manager_core_shard",
