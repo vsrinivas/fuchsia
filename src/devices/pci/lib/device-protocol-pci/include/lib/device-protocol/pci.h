@@ -40,12 +40,18 @@ class Pci : public ddk::PciProtocolClient {
 
   explicit Pci(zx_device_t* parent) : ddk::PciProtocolClient(parent) {}
 
+  // Prefer Pci::FromFragment(parent) to construct.
   Pci(zx_device_t* parent, const char* fragment_name)
       : ddk::PciProtocolClient(parent, fragment_name) {}
 
+  // Check Pci.is_valid() (on PriProtocolClient base class) after calling to check for proper
+  // initialization. This can fail if the composite device does not expose the "pci" interface.
   static Pci FromFragment(zx_device_t* parent) { return Pci(parent, kFragmentName); }
 
   ~Pci() = default;
+
+  // This class extends from the Banjo-generated ddk::PciProtocolClient which contains the client
+  // implementation for the fuchsia.hardware.pci.Pci protocol.
 
   zx_status_t ConfigureInterruptMode(uint32_t requested_irq_count, pci_interrupt_mode_t* out_mode);
   zx_status_t MapMmio(uint32_t bar_id, uint32_t cache_policy, std::optional<fdf::MmioBuffer>* mmio);
