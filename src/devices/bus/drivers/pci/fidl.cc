@@ -151,7 +151,15 @@ zx_device_prop_t pci_device_props[] = {
 
 void FidlDevice::GetDeviceInfo(GetDeviceInfoRequestView request,
                                GetDeviceInfoCompleter::Sync& completer) {
-  completer.Reply({});
+  completer.Reply({.vendor_id = device_->vendor_id(),
+                   .device_id = device_->device_id(),
+                   .base_class = device_->class_id(),
+                   .sub_class = device_->subclass(),
+                   .program_interface = device_->prog_if(),
+                   .revision_id = device_->rev_id(),
+                   .bus_id = device_->bus_id(),
+                   .dev_id = device_->dev_id(),
+                   .func_id = device_->func_id()});
 }
 
 void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& completer) {
@@ -160,7 +168,13 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
 
 void FidlDevice::SetBusMastering(SetBusMasteringRequestView request,
                                  SetBusMasteringCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  fbl::AutoLock dev_lock(device_->dev_lock());
+  zx_status_t status = device_->SetBusMastering(request->enabled);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
 }
 
 void FidlDevice::ResetDevice(ResetDeviceRequestView request,
@@ -238,7 +252,14 @@ void FidlDevice::GetNextExtendedCapability(GetNextExtendedCapabilityRequestView 
 }
 
 void FidlDevice::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  fbl::AutoLock dev_lock(device_->dev_lock());
+  zx::bti bti;
+  zx_status_t status = device_->bdi()->GetBti(device_, request->index, &bti);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess(std::move(bti));
 }
 
 }  // namespace pci
