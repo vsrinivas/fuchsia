@@ -67,7 +67,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   const char* name() const { return name_; }
   ArchVmAspace& arch_aspace() { return arch_aspace_; }
   bool is_user() const { return type_ == Type::User; }
-  bool is_aslr_enabled() const { return aslr_enabled_; }
+  bool is_aslr_enabled() const { return aslr_config_.enabled; }
 
   // Get the root VMAR (briefly acquires the aspace lock)
   // May return nullptr if the aspace has been destroyed or is not yet initialized.
@@ -86,7 +86,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   void AttachToThread(Thread* t);
 
   void Dump(bool verbose) const;
-  void DumpLocked(bool verbose) const;
+  void DumpLocked(bool verbose) const TA_REQ(lock_);
 
   static void DropAllUserPageTables();
   void DropUserPageTables();
@@ -187,7 +187,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   uintptr_t vdso_code_address() const;
 
   // Helper function to test for collision with vdso_code_mapping_.
-  bool IntersectsVdsoCode(vaddr_t base, size_t size) const;
+  bool IntersectsVdsoCodeLocked(vaddr_t base, size_t size) const TA_REQ(lock_);
 
  protected:
   // Share the aspace lock with VmAddressRegion/VmMapping so they can serialize
@@ -199,20 +199,30 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   Lock<Mutex>& lock_ref() const TA_RET_CAP(lock_) { return lock_; }
 
   // Expose the PRNG for ASLR to VmAddressRegion
-  crypto::Prng& AslrPrng() {
-    DEBUG_ASSERT(aslr_enabled_);
+  crypto::Prng& AslrPrngLocked() TA_REQ(lock_) {
+    DEBUG_ASSERT(is_aslr_enabled());
     return aslr_prng_;
   }
 
   uint8_t AslrEntropyBits(bool compact) const {
-    return compact ? aslr_compact_entropy_bits_ : aslr_entropy_bits_;
+    return compact ? aslr_config_.compact_entropy_bits : aslr_config_.entropy_bits;
   }
 
  private:
   friend lazy_init::Access;
 
+  // Represents the ALSR configuration for a VmAspace. This is grouped in a struct so it can be
+  // conveniently grouped together as it is const over the lifetime of a VmAspace.
+  struct AslrConfig {
+    bool enabled;
+    uint8_t entropy_bits;
+    uint8_t compact_entropy_bits;
+    // We record the PRNG seed to enable reproducible debugging.
+    uint8_t seed[crypto::Prng::kMinEntropy];
+  };
+
   // can only be constructed via factory or LazyInit
-  VmAspace(vaddr_t base, size_t size, Type type, const char* name);
+  VmAspace(vaddr_t base, size_t size, Type type, AslrConfig aslr_config, const char* name);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmAspace);
 
@@ -224,6 +234,8 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   zx_status_t Init();
 
   void InitializeAslr();
+
+  static AslrConfig CreateAslrConfig(Type type);
 
   // Returns whether this aspace is marked as latency sensitive.
   bool IsLatencySensitive() const;
@@ -248,11 +260,8 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   const vaddr_t base_;
   const size_t size_;
   const Type type_;
-  char name_[32];
-  bool aspace_destroyed_ = false;
-  bool aslr_enabled_ = false;
-  uint8_t aslr_entropy_bits_ = 0;
-  uint8_t aslr_compact_entropy_bits_ = 0;
+  char name_[32] TA_GUARDED(lock_);
+  bool aspace_destroyed_ TA_GUARDED(lock_) = false;
 
   // TODO(fxb/85056): This is a temporary solution and needs to be replaced with something that is
   // formalized.
@@ -276,17 +285,18 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   // root of virtual address space
   // Access to this reference is guarded by lock_.
-  fbl::RefPtr<VmAddressRegion> root_vmar_;
+  fbl::RefPtr<VmAddressRegion> root_vmar_ TA_GUARDED(lock_);
 
-  // PRNG used by VMARs for address choices.  We record the seed to enable
-  // reproducible debugging.
+  // PRNG used by VMARs for address choices. The PRNG is thread safe and does not need to be guarded
+  // by the lock.
   crypto::Prng aslr_prng_;
-  uint8_t aslr_seed_[crypto::Prng::kMinEntropy];
+  const AslrConfig aslr_config_;
 
-  // architecturally specific part of the aspace
+  // architecturally specific part of the aspace. This is internally locked and does not need to be
+  // guarded by lock_.
   ArchVmAspace arch_aspace_;
 
-  fbl::RefPtr<VmMapping> vdso_code_mapping_;
+  fbl::RefPtr<VmMapping> vdso_code_mapping_ TA_GUARDED(lock_);
 
   // The number of page table reclamations attempted since last active. This is used since we need
   // to perform pt reclamation twice in a row (once to clear accessed bits, another time to reclaim

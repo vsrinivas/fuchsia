@@ -110,7 +110,7 @@ uint arch_aspace_flags_from_type(VmAspace::Type type) {
 // lock yet.
 void VmAspace::KernelAspaceInitPreHeap() TA_NO_THREAD_SAFETY_ANALYSIS {
   g_kernel_aspace.Initialize(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::Type::Kernel,
-                             "kernel");
+                             CreateAslrConfig(VmAspace::Type::Kernel), "kernel");
 
 #if LK_DEBUGLEVEL > 1
   g_kernel_aspace->Adopt();
@@ -127,12 +127,13 @@ void VmAspace::KernelAspaceInitPreHeap() TA_NO_THREAD_SAFETY_ANALYSIS {
   aspaces_list_.push_front(kernel_aspace_);
 }
 
-VmAspace::VmAspace(vaddr_t base, size_t size, Type type, const char* name)
+VmAspace::VmAspace(vaddr_t base, size_t size, Type type, AslrConfig aslr_config, const char* name)
     : base_(base),
       size_(size),
       type_(type),
       root_vmar_(nullptr),
       aslr_prng_(nullptr, 0),
+      aslr_config_(aslr_config),
       arch_aspace_(base, size, arch_aspace_flags_from_type(type)) {
   DEBUG_ASSERT(size != 0);
   DEBUG_ASSERT(base + size - 1 >= base);
@@ -154,6 +155,8 @@ zx_status_t VmAspace::Init() {
   }
 
   InitializeAslr();
+
+  Guard<Mutex> guard{&lock_};
 
   if (likely(!root_vmar_)) {
     return VmAddressRegion::CreateRoot(*this, VMAR_FLAG_CAN_MAP_SPECIFIC, &root_vmar_);
@@ -188,7 +191,7 @@ fbl::RefPtr<VmAspace> VmAspace::Create(Type type, const char* name) {
   }
 
   fbl::AllocChecker ac;
-  auto aspace = fbl::AdoptRef(new (&ac) VmAspace(base, size, type, name));
+  auto aspace = fbl::AdoptRef(new (&ac) VmAspace(base, size, type, CreateAslrConfig(type), name));
   if (!ac.check()) {
     return nullptr;
   }
@@ -213,6 +216,8 @@ fbl::RefPtr<VmAspace> VmAspace::Create(Type type, const char* name) {
 
 void VmAspace::Rename(const char* name) {
   canary_.Assert();
+
+  Guard<Mutex> guard{&lock_};
   strlcpy(name_, name ? name : "unnamed", sizeof(name_));
 }
 
@@ -559,7 +564,6 @@ void VmAspace::AttachToThread(Thread* t) {
 zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
   VM_KTRACE_DURATION(2, "VmAspace::PageFault", va, flags);
   canary_.Assert();
-  DEBUG_ASSERT(!aspace_destroyed_);
   LTRACEF("va %#" PRIxPTR ", flags %#x\n", va, flags);
 
   if (type_ == Type::GuestPhys) {
@@ -575,6 +579,7 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
       // which stops any other operations on the address space from moving
       // the region out from underneath it
       Guard<Mutex> guard{&lock_};
+      DEBUG_ASSERT(!aspace_destroyed_);
       // First check if we're faulting on the same mapping as last time to short-circuit the vmar
       // walk.
       if (likely(last_fault_ && last_fault_->is_in_range(va, 1))) {
@@ -689,18 +694,25 @@ size_t VmAspace::AllocatedPages() const {
   return root_vmar_->AllocatedPagesLocked();
 }
 
-void VmAspace::InitializeAslr() {
+VmAspace::AslrConfig VmAspace::CreateAslrConfig(Type type) {
   // As documented in //docs/gen/boot-options.md.
   static constexpr uint8_t kMaxAslrEntropy = 36;
 
-  aslr_enabled_ = is_user() && !gBootOptions->aslr_disabled;
-  if (aslr_enabled_) {
-    aslr_entropy_bits_ = ktl::min(gBootOptions->aslr_entropy_bits, kMaxAslrEntropy);
-    aslr_compact_entropy_bits_ = 8;
+  VmAspace::AslrConfig config = {};
+
+  config.enabled = type == Type::User && !gBootOptions->aslr_disabled;
+  if (config.enabled) {
+    config.entropy_bits = ktl::min(gBootOptions->aslr_entropy_bits, kMaxAslrEntropy);
+    config.compact_entropy_bits = 8;
   }
 
-  crypto::global_prng::GetInstance()->Draw(aslr_seed_, sizeof(aslr_seed_));
-  aslr_prng_.AddEntropy(aslr_seed_, sizeof(aslr_seed_));
+  crypto::global_prng::GetInstance()->Draw(config.seed, sizeof(config.seed));
+
+  return config;
+}
+
+void VmAspace::InitializeAslr() {
+  aslr_prng_.AddEntropy(aslr_config_.seed, sizeof(aslr_config_.seed));
 }
 
 uintptr_t VmAspace::vdso_base_address() const {
@@ -728,7 +740,7 @@ void VmAspace::DropUserPageTables() {
   arch_aspace().Unmap(base(), size() / PAGE_SIZE, ArchVmAspace::EnlargeOperation::Yes, nullptr);
 }
 
-bool VmAspace::IntersectsVdsoCode(vaddr_t base, size_t size) const {
+bool VmAspace::IntersectsVdsoCodeLocked(vaddr_t base, size_t size) const {
   return vdso_code_mapping_ &&
          Intersects(vdso_code_mapping_->base(), vdso_code_mapping_->size(), base, size);
 }

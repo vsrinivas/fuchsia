@@ -575,13 +575,13 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t len,
 
   Guard<Mutex> guard{aspace_->lock()};
   // Capture the validation that we need to do whenever the lock is acquired.
-  auto validate = [this, base, len]() -> zx_status_t {
+  auto validate = [this, base, len]() TA_REQ(aspace_->lock()) -> zx_status_t {
     if (state_ != LifeCycleState::ALIVE) {
       return ZX_ERR_BAD_STATE;
     }
 
     // Don't allow any operations on the vDSO code mapping.
-    if (aspace_->IntersectsVdsoCode(base, len)) {
+    if (aspace_->IntersectsVdsoCodeLocked(base, len)) {
       return ZX_ERR_ACCESS_DENIED;
     }
     return ZX_OK;
@@ -732,7 +732,7 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
   }
 
   // Any unmap spanning the vDSO code mapping is verboten.
-  if (aspace_->IntersectsVdsoCode(base, size)) {
+  if (aspace_->IntersectsVdsoCodeLocked(base, size)) {
     return ZX_ERR_ACCESS_DENIED;
   }
 
@@ -978,7 +978,7 @@ zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, ui
   vaddr_t alloc_spot = 0;
   crypto::Prng* prng = nullptr;
   if (aspace_->is_aslr_enabled()) {
-    prng = &aspace_->AslrPrng();
+    prng = &aspace_->AslrPrngLocked();
   }
 
   zx_status_t status = subregions_.GetAllocSpot(&alloc_spot, align_pow2, entropy, size, base_,
