@@ -219,13 +219,35 @@ static bool RefersToHead(const std::vector<std::string_view>& components, const 
 bool AttributeArgSchema::TryResolveAsHead(CompileStep* step, Reference& reference) const {
   Decl* head_decl =
       step->all_libraries()->root_library()->declarations.LookupBuiltin(Builtin::Identity::kHead);
-  if (RefersToHead(reference.raw_sourced().components, head_decl)) {
-    auto name = head_decl->name;
-    reference.SetKey(Reference::Key(name.library(), name.decl_name()));
-    reference.ResolveTo(Reference::Target(head_decl));
-    return true;
+  switch (reference.state()) {
+    // Usually the reference will be kRawSourced because we are coming here from
+    // the AvailabilityStep via CompileStep::CompileAttributeEarly (i.e. before
+    // the ResolveStep so nothing is resolved yet).
+    case Reference::State::kRawSourced:
+      if (RefersToHead(reference.raw_sourced().components, head_decl)) {
+        auto name = head_decl->name;
+        reference.SetKey(Reference::Key(name.library(), name.decl_name()));
+        reference.ResolveTo(Reference::Target(head_decl));
+        return true;
+      }
+      return false;
+    // However, there is one scenario where the reference is already resolved:
+    //
+    // * The @available attribute occurs (incorrectly) on the library
+    //   declaration in two of the library's .fidl files.
+    // * The AvailabilityStep uses attributes->Get("available"), which just
+    //   returns the first one, and compiles it early.
+    // * The second one, e.g. @available(added=HEAD), gets resolved and compiled
+    //   as normal, so it's already resolved at this point.
+    //
+    // In this case the CompileStep will fail with ErrDuplicateAttribute soon
+    // after returning from here.
+    case Reference::State::kResolved:
+      return reference.resolved().element() == head_decl;
+    default:
+      assert(false && "unexpected reference state");
+      __builtin_unreachable();
   }
-  return false;
 }
 
 void AttributeArgSchema::ResolveArg(CompileStep* step, Attribute* attribute, AttributeArg* arg,

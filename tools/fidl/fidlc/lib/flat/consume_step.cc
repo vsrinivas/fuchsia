@@ -33,8 +33,8 @@ void ConsumeStep::RunImpl() {
       return;
     }
     // Prefer setting arbitrary_name_span to a file which has attributes on the
-    // library declaration, if any do, since it's conventional to put library
-    // attributes and doc comments in a single file.
+    // library declaration, if any do, since it's conventional to put all
+    // library attributes and the doc comment in a single file (overview.fidl).
     if (library()->attributes->Empty() && file_->library_decl->attributes) {
       library()->arbitrary_name_span = file_->library_decl->span();
     }

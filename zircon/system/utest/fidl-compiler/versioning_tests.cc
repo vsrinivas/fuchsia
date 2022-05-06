@@ -61,7 +61,7 @@ library example;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidPlatform);
 }
 
-TEST(VersioningTests, BadAttributeOnMultipleLibraryDeclarations) {
+TEST(VersioningTests, BadAttributeOnMultipleLibraryDeclarationsAgree) {
   TestLibrary library;
   library.AddSource("first.fidl", R"FIDL(
 @available(added=1)
@@ -69,6 +69,32 @@ library example;
 )FIDL");
   library.AddSource("second.fidl", R"FIDL(
 @available(added=1)
+library example;
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
+}
+
+TEST(VersioningTests, BadAttributeOnMultipleLibraryDeclarationsDisagree) {
+  TestLibrary library;
+  library.AddSource("first.fidl", R"FIDL(
+@available(added=1)
+library example;
+)FIDL");
+  library.AddSource("second.fidl", R"FIDL(
+@available(added=2)
+library example;
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
+}
+
+TEST(VersioningTests, BadAttributeOnMultipleLibraryDeclarationsHead) {
+  TestLibrary library;
+  library.AddSource("first.fidl", R"FIDL(
+@available(added=HEAD)
+library example;
+)FIDL");
+  library.AddSource("second.fidl", R"FIDL(
+@available(added=HEAD)
 library example;
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
