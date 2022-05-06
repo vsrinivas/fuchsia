@@ -236,21 +236,41 @@ void FidlDevice::ResetDevice(ResetDeviceRequestView request,
 
 void FidlDevice::AckInterrupt(AckInterruptRequestView request,
                               AckInterruptCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  fbl::AutoLock dev_lock(device_->dev_lock());
+  zx_status_t status = device_->AckLegacyIrq();
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
 }
 
 void FidlDevice::MapInterrupt(MapInterruptRequestView request,
                               MapInterruptCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  zx::status<zx::interrupt> result = device_->MapInterrupt(request->which_irq);
+  if (!result.is_ok()) {
+    completer.ReplyError(result.status_value());
+    return;
+  }
+  completer.ReplySuccess(std::move(result.value()));
 }
+
 void FidlDevice::SetInterruptMode(SetInterruptModeRequestView request,
                                   SetInterruptModeCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  zx_status_t status = device_->SetIrqMode(request->mode, request->requested_irq_count);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
 }
 
 void FidlDevice::GetInterruptModes(GetInterruptModesRequestView request,
                                    GetInterruptModesCompleter::Sync& completer) {
-  completer.Reply({});
+  pci_interrupt_modes_t modes = device_->GetInterruptModes();
+  completer.Reply({.has_legacy = modes.has_legacy,
+                   .msi_count = modes.msi_count,
+                   .msix_count = modes.msix_count});
 }
 
 void FidlDevice::ReadConfig8(ReadConfig8RequestView request,
