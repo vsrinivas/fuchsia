@@ -495,7 +495,7 @@ void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset, page_reques
 }
 
 zx_status_t PageRequest::Wait() {
-  // TOOD(fxb/94078): Enforce no locks held.
+  lockdep::AssertNoLocksHeld();
   VM_KTRACE_DURATION(1, "page_request_wait", offset_, len_);
   zx_status_t status = src_->page_provider_->WaitOnEvent(&event_);
   VM_KTRACE_FLOW_END(1, "page_request_signal", reinterpret_cast<uintptr_t>(this));

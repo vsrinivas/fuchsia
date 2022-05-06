@@ -109,6 +109,10 @@ zx_status_t VmObjectPaged::HintRange(uint64_t offset, uint64_t len, EvictionHint
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  if (can_block_on_page_requests() && hint == EvictionHint::AlwaysNeed) {
+    lockdep::AssertNoLocksHeld();
+  }
+
   Guard<Mutex> guard{lock()};
 
   // Ignore hints for non user-pager-backed VMOs. We choose to silently ignore hints for
@@ -185,7 +189,11 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
 
 zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                                         fbl::RefPtr<VmObjectPaged>* obj) {
-  DEBUG_ASSERT(!(options & kContiguous));
+  DEBUG_ASSERT(!(options & (kContiguous | kCanBlockOnPageRequests)));
+
+  // TODO(fxb/94078): Set kCanBlockOnPageRequests for VMOs that might wait on delayed PMM
+  // allocations.
+
   // make sure size is page aligned
   zx_status_t status = RoundSize(size, &size);
   if (status != ZX_OK) {
@@ -225,7 +233,7 @@ zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t optio
 
 zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                                   fbl::RefPtr<VmObjectPaged>* obj) {
-  if (options & kContiguous) {
+  if (options & (kContiguous | kCanBlockOnPageRequests)) {
     // Force callers to use CreateContiguous() instead.
     return ZX_ERR_INVALID_ARGS;
   }
@@ -366,7 +374,7 @@ zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, b
 
 zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t options,
                                           uint64_t size, fbl::RefPtr<VmObjectPaged>* obj) {
-  if (options & kDiscardable) {
+  if (options & (kDiscardable | kCanBlockOnPageRequests)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -390,6 +398,9 @@ zx_status_t VmObjectPaged::CreateWithSourceCommon(fbl::RefPtr<PageSource> src,
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+
+  // The cow pages will have a page source, so blocking is always possible.
+  options |= kCanBlockOnPageRequests;
 
   VmCowPagesOptions cow_options = VmCowPagesOptions::kNone;
   if (options & kContiguous) {
@@ -453,6 +464,10 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
   uint32_t options = kSlice;
   if (is_contiguous()) {
     options |= kContiguous;
+  }
+
+  if (can_block_on_page_requests()) {
+    options |= kCanBlockOnPageRequests;
   }
 
   fbl::AllocChecker ac;
@@ -529,7 +544,13 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     return status;
   }
 
-  auto options = resizable == Resizability::Resizable ? kResizable : 0u;
+  uint32_t options = 0;
+  if (resizable == Resizability::Resizable) {
+    options |= kResizable;
+  }
+  if (can_block_on_page_requests()) {
+    options |= kCanBlockOnPageRequests;
+  }
   fbl::AllocChecker ac;
   auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(options, hierarchy_state_ptr_));
   if (!ac.check()) {
@@ -651,6 +672,10 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
+  if (can_block_on_page_requests()) {
+    lockdep::AssertNoLocksHeld();
+  }
+
   Guard<Mutex> guard{&lock_};
 
   // Child slices of VMOs are currently not resizable, nor can they be made
@@ -767,6 +792,7 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
     // with ZX_ERR_SHOULD_WAIT after queueing a page request for the absent page.
     // - The second call to VmCowPages::CommitRangeLocked() calls LookupPagesLocked() which copies
     // out the now present page (if required).
+    DEBUG_ASSERT(can_block_on_page_requests());
     guard.CallUnlocked([&page_request, &status]() mutable { status = page_request->Wait(); });
     if (status != ZX_OK) {
       if (status == ZX_ERR_TIMED_OUT) {
@@ -848,6 +874,9 @@ zx_status_t VmObjectPaged::ZeroPartialPage(uint64_t page_base_offset, uint64_t z
 
 zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
   canary_.Assert();
+  if (can_block_on_page_requests()) {
+    lockdep::AssertNoLocksHeld();
+  }
   Guard<Mutex> guard{&lock_};
 
   // Zeroing a range behaves as if it were an efficient zx_vmo_write. As we cannot write to uncached
@@ -1016,6 +1045,7 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
         ktl::min(max_pages, LookupInfo::kMaxPages), nullptr, &page_request, &pages);
     if (status == ZX_ERR_SHOULD_WAIT) {
       // Must block on asynchronous page requests whilst not holding the lock.
+      DEBUG_ASSERT(can_block_on_page_requests());
       guard->CallUnlocked([&status, &page_request]() { status = page_request->Wait(); });
       if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) {
@@ -1092,6 +1122,10 @@ zx_status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len) {
     return ZX_OK;
   };
 
+  if (can_block_on_page_requests()) {
+    lockdep::AssertNoLocksHeld();
+  }
+
   Guard<Mutex> guard{&lock_};
 
   return ReadWriteInternalLocked(offset, len, false, read_routine, &guard);
@@ -1112,6 +1146,10 @@ zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len) 
     memcpy(dst, ptr + offset, len);
     return ZX_OK;
   };
+
+  if (can_block_on_page_requests()) {
+    lockdep::AssertNoLocksHeld();
+  }
 
   Guard<Mutex> guard{&lock_};
 
@@ -1258,6 +1296,10 @@ zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char>
     return ZX_OK;
   };
 
+  if (can_block_on_page_requests()) {
+    lockdep::AssertNoLocksHeld();
+  }
+
   Guard<Mutex> guard{&lock_};
 
   return ReadWriteInternalLocked(offset, len, false, read_routine, &guard);
@@ -1300,6 +1342,10 @@ zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const
     }
     return ZX_OK;
   };
+
+  if (can_block_on_page_requests()) {
+    lockdep::AssertNoLocksHeld();
+  }
 
   Guard<Mutex> guard{&lock_};
 

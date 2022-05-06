@@ -299,13 +299,11 @@ class VmObject : public VmHierarchyBase,
 
   // find physical pages to back the range of the object
   // May block on user pager requests and must be called without locks held.
-  // TOOD(fxb/94078): Enforce no locks held.
   virtual zx_status_t CommitRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
 
   // find physical pages to back the range of the object and pin them.
   // |len| must be non-zero.
   // May block on user pager requests and must be called without locks held.
-  // TOOD(fxb/94078): Enforce no locks held.
   virtual zx_status_t CommitRangePinned(uint64_t offset, uint64_t len) = 0;
 
   // free a range of the vmo back to the default state
@@ -313,7 +311,6 @@ class VmObject : public VmHierarchyBase,
 
   // Zero a range of the VMO. May release physical pages in the process.
   // May block on user pager requests and must be called without locks held.
-  // TOOD(fxb/94078): Enforce no locks held.
   virtual zx_status_t ZeroRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
 
   // Unpin the given range of the vmo.  This asserts if it tries to unpin a
@@ -337,7 +334,7 @@ class VmObject : public VmHierarchyBase,
 
   // read/write operators against kernel pointers only
   // May block on user pager requests and must be called without locks held.
-  // TOOD(fxb/94078): Enforce no locks held.
+
   virtual zx_status_t Read(void* ptr, uint64_t offset, size_t len) { return ZX_ERR_NOT_SUPPORTED; }
   virtual zx_status_t Write(const void* ptr, uint64_t offset, size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -371,7 +368,6 @@ class VmObject : public VmHierarchyBase,
   // error. This allows for callers to still pass on this bytes transferred if a particular
   // error was expected.
   // May block on user pager requests and must be called without locks held.
-  // TOOD(fxb/94078): Enforce no locks held.
   virtual zx_status_t ReadUser(VmAspace* current_aspace, user_out_ptr<char> ptr, uint64_t offset,
                                size_t len, size_t* out_actual) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -439,7 +435,6 @@ class VmObject : public VmHierarchyBase,
   // Hint how the specified range is intended to be used, so that the hint can be taken into
   // consideration when reclaiming pages under memory pressure (if applicable).
   // May block on user pager requests and must be called without locks held.
-  // TOOD(fxb/94078): Enforce no locks held.
   virtual zx_status_t HintRange(uint64_t offset, uint64_t len, EvictionHint hint) {
     // Hinting trivially succeeds for unsupported VMO types.
     return ZX_OK;

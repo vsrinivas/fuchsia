@@ -36,6 +36,7 @@ class VmObjectPaged final : public VmObject {
   static constexpr uint32_t kContiguous = (1u << 1);
   static constexpr uint32_t kSlice = (1u << 3);
   static constexpr uint32_t kDiscardable = (1u << 4);
+  static constexpr uint32_t kCanBlockOnPageRequests = (1u << 31);
 
   static zx_status_t Create(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                             fbl::RefPtr<VmObjectPaged>* vmo);
@@ -330,6 +331,15 @@ class VmObjectPaged final : public VmObject {
   }
 
   uint64_t size_locked() const TA_REQ(lock_) { return cow_pages_locked()->size_locked(); }
+
+  // This is a debug only state that is used to simplify assertions and validations around blocking
+  // on page requests. If false no operations on this VMO will ever fill out the PageRequest
+  // that is passed in, and will never block in ops like Commit that say they might block. This
+  // creates a carve-out that is necessary as kernel internals need to call VMO operations that
+  // might block on VMOs that they know won't block, and not have assertions spuriously trip. This
+  // acts as the union of user pager backed VMOs, as well as VMOs that might wait on internal kernel
+  // page sources.
+  bool can_block_on_page_requests() const { return options_ & kCanBlockOnPageRequests; }
 
   // members
   const uint32_t options_;
