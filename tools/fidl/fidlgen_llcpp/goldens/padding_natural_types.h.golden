@@ -77,11 +77,11 @@ class Padding7ByteMiddle {
 
   bool operator==(const Padding7ByteMiddle& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding7ByteMiddle, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding7ByteMiddle, 16>::Equal(this, &other);
   }
   bool operator!=(const Padding7ByteMiddle& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding7ByteMiddle, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding7ByteMiddle, 16>::Equal(this, &other);
   }
 
   uint8_t a() const { return storage_.a; }
@@ -108,22 +108,17 @@ class Padding7ByteMiddle {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding7ByteMiddle, 16, 16>;
+      ::test_padding::Padding7ByteMiddle, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding7ByteMiddle>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 8, 8});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 0,
-          .mask = 0xffffffffffffff00ull,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 8});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
           .offset = 0,
           .mask = 0xffffffffffffff00ull,
@@ -159,11 +154,11 @@ class Padding7ByteEnd {
 
   bool operator==(const Padding7ByteEnd& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding7ByteEnd, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding7ByteEnd, 16>::Equal(this, &other);
   }
   bool operator!=(const Padding7ByteEnd& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding7ByteEnd, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding7ByteEnd, 16>::Equal(this, &other);
   }
 
   uint64_t a() const { return storage_.a; }
@@ -190,22 +185,17 @@ class Padding7ByteEnd {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding7ByteEnd, 16, 16>;
+      ::test_padding::Padding7ByteEnd, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding7ByteEnd>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 8, 8});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 8,
-          .mask = 0xffffffffffffff00ull,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 8});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
           .offset = 8,
           .mask = 0xffffffffffffff00ull,
@@ -242,11 +232,11 @@ class Padding6ByteMiddle {
 
   bool operator==(const Padding6ByteMiddle& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding6ByteMiddle, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding6ByteMiddle, 16>::Equal(this, &other);
   }
   bool operator!=(const Padding6ByteMiddle& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding6ByteMiddle, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding6ByteMiddle, 16>::Equal(this, &other);
   }
 
   uint16_t a() const { return storage_.a; }
@@ -273,22 +263,17 @@ class Padding6ByteMiddle {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding6ByteMiddle, 16, 16>;
+      ::test_padding::Padding6ByteMiddle, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding6ByteMiddle>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 8, 8});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 0,
-          .mask = 0xffffffffffff0000ull,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 8});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
           .offset = 0,
           .mask = 0xffffffffffff0000ull,
@@ -324,11 +309,11 @@ class Padding6ByteEnd {
 
   bool operator==(const Padding6ByteEnd& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding6ByteEnd, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding6ByteEnd, 16>::Equal(this, &other);
   }
   bool operator!=(const Padding6ByteEnd& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding6ByteEnd, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding6ByteEnd, 16>::Equal(this, &other);
   }
 
   uint64_t a() const { return storage_.a; }
@@ -355,22 +340,17 @@ class Padding6ByteEnd {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding6ByteEnd, 16, 16>;
+      ::test_padding::Padding6ByteEnd, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding6ByteEnd>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 8, 8});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 8,
-          .mask = 0xffffffffffff0000ull,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 8});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
           .offset = 8,
           .mask = 0xffffffffffff0000ull,
@@ -407,11 +387,11 @@ class Padding5ByteMiddle {
 
   bool operator==(const Padding5ByteMiddle& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding5ByteMiddle, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding5ByteMiddle, 16>::Equal(this, &other);
   }
   bool operator!=(const Padding5ByteMiddle& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding5ByteMiddle, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding5ByteMiddle, 16>::Equal(this, &other);
   }
 
   uint16_t a() const { return storage_.a; }
@@ -444,25 +424,20 @@ class Padding5ByteMiddle {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding5ByteMiddle, 16, 16>;
+      ::test_padding::Padding5ByteMiddle, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding5ByteMiddle>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 2, 2},
+          &Storage_::b, 2},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::c, 8, 8});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 0,
-          .mask = 0xffffffffff000000ull,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::c, 8});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
           .offset = 0,
           .mask = 0xffffffffff000000ull,
@@ -498,11 +473,11 @@ class Padding5ByteEnd {
 
   bool operator==(const Padding5ByteEnd& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding5ByteEnd, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding5ByteEnd, 16>::Equal(this, &other);
   }
   bool operator!=(const Padding5ByteEnd& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding5ByteEnd, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding5ByteEnd, 16>::Equal(this, &other);
   }
 
   uint64_t a() const { return storage_.a; }
@@ -535,25 +510,20 @@ class Padding5ByteEnd {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding5ByteEnd, 16, 16>;
+      ::test_padding::Padding5ByteEnd, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding5ByteEnd>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 8, 8},
+          &Storage_::b, 8},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::c, 10, 10});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 8,
-          .mask = 0xffffffffff000000ull,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::c, 10});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
           .offset = 8,
           .mask = 0xffffffffff000000ull,
@@ -590,11 +560,11 @@ class Padding4ByteMiddle {
 
   bool operator==(const Padding4ByteMiddle& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding4ByteMiddle, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding4ByteMiddle, 16>::Equal(this, &other);
   }
   bool operator!=(const Padding4ByteMiddle& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding4ByteMiddle, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding4ByteMiddle, 16>::Equal(this, &other);
   }
 
   uint32_t a() const { return storage_.a; }
@@ -621,22 +591,17 @@ class Padding4ByteMiddle {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding4ByteMiddle, 16, 16>;
+      ::test_padding::Padding4ByteMiddle, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding4ByteMiddle>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 8, 8});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 0,
-          .mask = 0xffffffff00000000ull,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 8});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
           .offset = 0,
           .mask = 0xffffffff00000000ull,
@@ -672,11 +637,11 @@ class Padding4ByteEnd {
 
   bool operator==(const Padding4ByteEnd& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding4ByteEnd, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding4ByteEnd, 16>::Equal(this, &other);
   }
   bool operator!=(const Padding4ByteEnd& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding4ByteEnd, 16, 16>::Equal(this, &other);
+        ::test_padding::Padding4ByteEnd, 16>::Equal(this, &other);
   }
 
   uint64_t a() const { return storage_.a; }
@@ -703,22 +668,17 @@ class Padding4ByteEnd {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding4ByteEnd, 16, 16>;
+      ::test_padding::Padding4ByteEnd, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding4ByteEnd>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 8, 8});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 8,
-          .mask = 0xffffffff00000000ull,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 8});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
           .offset = 8,
           .mask = 0xffffffff00000000ull,
@@ -763,13 +723,11 @@ class Padding4ByteAlignmentLength12 {
 
   bool operator==(const Padding4ByteAlignmentLength12& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding4ByteAlignmentLength12, 12, 12>::Equal(this,
-                                                                      &other);
+        ::test_padding::Padding4ByteAlignmentLength12, 12>::Equal(this, &other);
   }
   bool operator!=(const Padding4ByteAlignmentLength12& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding4ByteAlignmentLength12, 12, 12>::Equal(this,
-                                                                      &other);
+        ::test_padding::Padding4ByteAlignmentLength12, 12>::Equal(this, &other);
   }
 
   uint32_t a() const { return storage_.a; }
@@ -809,32 +767,23 @@ class Padding4ByteAlignmentLength12 {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding4ByteAlignmentLength12, 12, 12>;
+      ::test_padding::Padding4ByteAlignmentLength12, 12>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding4ByteAlignmentLength12>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 4, 4},
+          &Storage_::b, 4},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::c, 6, 6},
+          &Storage_::c, 6},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::d, 8, 8});
-  static constexpr auto kPaddingV1 = std::make_tuple(
-      ::fidl::internal::NaturalStructPadding<uint32_t>{
-          .offset = 4,
-          .mask = 0x0000ff00,
-      },
-      ::fidl::internal::NaturalStructPadding<uint32_t>{
-          .offset = 8,
-          .mask = 0xffff0000,
-      });
-  static constexpr auto kPaddingV2 = std::make_tuple(
+          &Storage_::d, 8});
+  static constexpr auto kPadding = std::make_tuple(
       ::fidl::internal::NaturalStructPadding<uint32_t>{
           .offset = 4,
           .mask = 0x0000ff00,
@@ -875,11 +824,11 @@ class Padding3ByteMiddle {
 
   bool operator==(const Padding3ByteMiddle& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding3ByteMiddle, 8, 8>::Equal(this, &other);
+        ::test_padding::Padding3ByteMiddle, 8>::Equal(this, &other);
   }
   bool operator!=(const Padding3ByteMiddle& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding3ByteMiddle, 8, 8>::Equal(this, &other);
+        ::test_padding::Padding3ByteMiddle, 8>::Equal(this, &other);
   }
 
   uint8_t a() const { return storage_.a; }
@@ -906,22 +855,17 @@ class Padding3ByteMiddle {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding3ByteMiddle, 8, 8>;
+      ::test_padding::Padding3ByteMiddle, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding3ByteMiddle>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 4, 4});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
-          .offset = 0,
-          .mask = 0xffffff00,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 4});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
           .offset = 0,
           .mask = 0xffffff00,
@@ -957,11 +901,11 @@ class Padding3ByteEnd {
 
   bool operator==(const Padding3ByteEnd& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding3ByteEnd, 8, 8>::Equal(this, &other);
+        ::test_padding::Padding3ByteEnd, 8>::Equal(this, &other);
   }
   bool operator!=(const Padding3ByteEnd& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding3ByteEnd, 8, 8>::Equal(this, &other);
+        ::test_padding::Padding3ByteEnd, 8>::Equal(this, &other);
   }
 
   uint32_t a() const { return storage_.a; }
@@ -988,22 +932,17 @@ class Padding3ByteEnd {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding3ByteEnd, 8, 8>;
+      ::test_padding::Padding3ByteEnd, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding3ByteEnd>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 4, 4});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
-          .offset = 4,
-          .mask = 0xffffff00,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 4});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
           .offset = 4,
           .mask = 0xffffff00,
@@ -1040,11 +979,11 @@ class Padding2ByteMiddle {
 
   bool operator==(const Padding2ByteMiddle& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding2ByteMiddle, 8, 8>::Equal(this, &other);
+        ::test_padding::Padding2ByteMiddle, 8>::Equal(this, &other);
   }
   bool operator!=(const Padding2ByteMiddle& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding2ByteMiddle, 8, 8>::Equal(this, &other);
+        ::test_padding::Padding2ByteMiddle, 8>::Equal(this, &other);
   }
 
   uint16_t a() const { return storage_.a; }
@@ -1071,22 +1010,17 @@ class Padding2ByteMiddle {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding2ByteMiddle, 8, 8>;
+      ::test_padding::Padding2ByteMiddle, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding2ByteMiddle>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 4, 4});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
-          .offset = 0,
-          .mask = 0xffff0000,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 4});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
           .offset = 0,
           .mask = 0xffff0000,
@@ -1122,11 +1056,11 @@ class Padding2ByteEnd {
 
   bool operator==(const Padding2ByteEnd& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding2ByteEnd, 8, 8>::Equal(this, &other);
+        ::test_padding::Padding2ByteEnd, 8>::Equal(this, &other);
   }
   bool operator!=(const Padding2ByteEnd& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding2ByteEnd, 8, 8>::Equal(this, &other);
+        ::test_padding::Padding2ByteEnd, 8>::Equal(this, &other);
   }
 
   uint32_t a() const { return storage_.a; }
@@ -1153,22 +1087,17 @@ class Padding2ByteEnd {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding2ByteEnd, 8, 8>;
+      ::test_padding::Padding2ByteEnd, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding2ByteEnd>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 4, 4});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
-          .offset = 4,
-          .mask = 0xffff0000,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 4});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
           .offset = 4,
           .mask = 0xffff0000,
@@ -1209,13 +1138,11 @@ class Padding2ByteAlignmentLength6 {
 
   bool operator==(const Padding2ByteAlignmentLength6& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding2ByteAlignmentLength6, 6, 6>::Equal(this,
-                                                                   &other);
+        ::test_padding::Padding2ByteAlignmentLength6, 6>::Equal(this, &other);
   }
   bool operator!=(const Padding2ByteAlignmentLength6& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding2ByteAlignmentLength6, 6, 6>::Equal(this,
-                                                                   &other);
+        ::test_padding::Padding2ByteAlignmentLength6, 6>::Equal(this, &other);
   }
 
   uint8_t a() const { return storage_.a; }
@@ -1249,29 +1176,20 @@ class Padding2ByteAlignmentLength6 {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding2ByteAlignmentLength6, 6, 6>;
+      ::test_padding::Padding2ByteAlignmentLength6, 6>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding2ByteAlignmentLength6>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 2, 2},
+          &Storage_::b, 2},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::c, 4, 4});
-  static constexpr auto kPaddingV1 = std::make_tuple(
-      ::fidl::internal::NaturalStructPadding<uint16_t>{
-          .offset = 0,
-          .mask = 0xff00,
-      },
-      ::fidl::internal::NaturalStructPadding<uint16_t>{
-          .offset = 4,
-          .mask = 0xff00,
-      });
-  static constexpr auto kPaddingV2 = std::make_tuple(
+          &Storage_::c, 4});
+  static constexpr auto kPadding = std::make_tuple(
       ::fidl::internal::NaturalStructPadding<uint16_t>{
           .offset = 0,
           .mask = 0xff00,
@@ -1312,11 +1230,11 @@ class Padding1ByteMiddle {
 
   bool operator==(const Padding1ByteMiddle& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding1ByteMiddle, 4, 4>::Equal(this, &other);
+        ::test_padding::Padding1ByteMiddle, 4>::Equal(this, &other);
   }
   bool operator!=(const Padding1ByteMiddle& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding1ByteMiddle, 4, 4>::Equal(this, &other);
+        ::test_padding::Padding1ByteMiddle, 4>::Equal(this, &other);
   }
 
   uint8_t a() const { return storage_.a; }
@@ -1343,22 +1261,17 @@ class Padding1ByteMiddle {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding1ByteMiddle, 4, 4>;
+      ::test_padding::Padding1ByteMiddle, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding1ByteMiddle>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 2, 2});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
-          .offset = 0,
-          .mask = 0xff00,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 2});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
           .offset = 0,
           .mask = 0xff00,
@@ -1394,11 +1307,11 @@ class Padding1ByteEnd {
 
   bool operator==(const Padding1ByteEnd& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding1ByteEnd, 4, 4>::Equal(this, &other);
+        ::test_padding::Padding1ByteEnd, 4>::Equal(this, &other);
   }
   bool operator!=(const Padding1ByteEnd& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_padding::Padding1ByteEnd, 4, 4>::Equal(this, &other);
+        ::test_padding::Padding1ByteEnd, 4>::Equal(this, &other);
   }
 
   uint16_t a() const { return storage_.a; }
@@ -1425,22 +1338,17 @@ class Padding1ByteEnd {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_padding::Padding1ByteEnd, 4, 4>;
+      ::test_padding::Padding1ByteEnd, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_padding::Padding1ByteEnd>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 2, 2});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
-          .offset = 2,
-          .mask = 0xff00,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::b, 2});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
           .offset = 2,
           .mask = 0xff00,
@@ -1468,7 +1376,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding7ByteMiddle,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding7ByteMiddle, 16, 16> {};
+                ::test_padding::Padding7ByteMiddle, 16> {};
 
 extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
 
@@ -1487,7 +1395,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding7ByteEnd,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding7ByteEnd, 16, 16> {};
+                ::test_padding::Padding7ByteEnd, 16> {};
 
 extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
 
@@ -1507,7 +1415,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding6ByteMiddle,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding6ByteMiddle, 16, 16> {};
+                ::test_padding::Padding6ByteMiddle, 16> {};
 
 extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
 
@@ -1526,7 +1434,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding6ByteEnd,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding6ByteEnd, 16, 16> {};
+                ::test_padding::Padding6ByteEnd, 16> {};
 
 extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
 
@@ -1546,7 +1454,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding5ByteMiddle,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding5ByteMiddle, 16, 16> {};
+                ::test_padding::Padding5ByteMiddle, 16> {};
 
 extern "C" const fidl_type_t test_padding_Padding5ByteEndTable;
 
@@ -1565,7 +1473,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding5ByteEnd,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding5ByteEnd, 16, 16> {};
+                ::test_padding::Padding5ByteEnd, 16> {};
 
 extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
 
@@ -1585,7 +1493,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding4ByteMiddle,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding4ByteMiddle, 16, 16> {};
+                ::test_padding::Padding4ByteMiddle, 16> {};
 
 extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
 
@@ -1604,7 +1512,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding4ByteEnd,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding4ByteEnd, 16, 16> {};
+                ::test_padding::Padding4ByteEnd, 16> {};
 
 extern "C" const fidl_type_t test_padding_Padding4ByteAlignmentLength12Table;
 
@@ -1626,7 +1534,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding4ByteAlignmentLength12,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding4ByteAlignmentLength12, 12, 12> {};
+                ::test_padding::Padding4ByteAlignmentLength12, 12> {};
 
 extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
 
@@ -1646,7 +1554,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding3ByteMiddle,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding3ByteMiddle, 8, 8> {};
+                ::test_padding::Padding3ByteMiddle, 8> {};
 
 extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
 
@@ -1665,7 +1573,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding3ByteEnd,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding3ByteEnd, 8, 8> {};
+                ::test_padding::Padding3ByteEnd, 8> {};
 
 extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
 
@@ -1685,7 +1593,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding2ByteMiddle,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding2ByteMiddle, 8, 8> {};
+                ::test_padding::Padding2ByteMiddle, 8> {};
 
 extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
 
@@ -1704,7 +1612,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding2ByteEnd,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding2ByteEnd, 8, 8> {};
+                ::test_padding::Padding2ByteEnd, 8> {};
 
 extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
 
@@ -1726,7 +1634,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding2ByteAlignmentLength6,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding2ByteAlignmentLength6, 6, 6> {};
+                ::test_padding::Padding2ByteAlignmentLength6, 6> {};
 
 extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
 
@@ -1746,7 +1654,7 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding1ByteMiddle,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding1ByteMiddle, 4, 4> {};
+                ::test_padding::Padding1ByteMiddle, 4> {};
 
 extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
 
@@ -1765,6 +1673,6 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding1ByteEnd,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_padding::Padding1ByteEnd, 4, 4> {};
+                ::test_padding::Padding1ByteEnd, 4> {};
 
 }  // namespace fidl

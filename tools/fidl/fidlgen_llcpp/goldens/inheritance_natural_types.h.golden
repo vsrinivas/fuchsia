@@ -50,11 +50,11 @@ class SuperFooTopResponse {
 
   bool operator==(const SuperFooTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_inheritance::SuperFooTopResponse, 8, 8>::Equal(this, &other);
+        ::test_inheritance::SuperFooTopResponse, 8>::Equal(this, &other);
   }
   bool operator!=(const SuperFooTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_inheritance::SuperFooTopResponse, 8, 8>::Equal(this, &other);
+        ::test_inheritance::SuperFooTopResponse, 8>::Equal(this, &other);
   }
 
   int64_t y() const { return storage_.y; }
@@ -76,15 +76,14 @@ class SuperFooTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_inheritance::SuperFooTopResponse, 8, 8>;
+      ::test_inheritance::SuperFooTopResponse, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_inheritance::SuperFooTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::y, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::y, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
@@ -115,11 +114,11 @@ class SuperFooRequest {
 
   bool operator==(const SuperFooRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_inheritance::SuperFooRequest, 16, 16>::Equal(this, &other);
+        ::test_inheritance::SuperFooRequest, 16>::Equal(this, &other);
   }
   bool operator!=(const SuperFooRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_inheritance::SuperFooRequest, 16, 16>::Equal(this, &other);
+        ::test_inheritance::SuperFooRequest, 16>::Equal(this, &other);
   }
 
   const ::std::string& s() const { return storage_.s; }
@@ -140,15 +139,14 @@ class SuperFooRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_inheritance::SuperFooRequest, 16, 16>;
+      ::test_inheritance::SuperFooRequest, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_inheritance::SuperFooRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintString<>>{&Storage_::s, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintString<>>{&Storage_::s, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_inheritance
@@ -173,7 +171,7 @@ struct internal::NaturalCodingTraits<
     ::test_inheritance::SuperFooTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_inheritance::SuperFooTopResponse, 8, 8> {};
+                ::test_inheritance::SuperFooTopResponse, 8> {};
 
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
@@ -193,6 +191,6 @@ struct internal::NaturalCodingTraits<
     ::test_inheritance::SuperFooRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_inheritance::SuperFooRequest, 16, 16> {};
+                ::test_inheritance::SuperFooRequest, 16> {};
 
 }  // namespace fidl

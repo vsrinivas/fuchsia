@@ -111,7 +111,6 @@ using {{ .Name }} = {{ .Unified }};
 {{- define "Enum:Traits:NaturalTypesHeader" }}
   template <>
   struct internal::NaturalCodingTraits<{{ . }}, ::fidl::internal::NaturalCodingConstraintEmpty> {
-    static constexpr size_t inline_size_v1_no_ee = sizeof({{ .Type }});
     static constexpr size_t inline_size_v2 = sizeof({{ .Type }});
     static constexpr bool is_memcpy_compatible = {{ not .Strictness }};
 

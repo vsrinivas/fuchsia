@@ -46,13 +46,12 @@ class Simple {
   }
 
   bool operator==(const Simple& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple, 2,
+    return ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple,
                                                        2>::Equal(this, &other);
   }
   bool operator!=(const Simple& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple,
-                                                        2, 2>::Equal(this,
-                                                                     &other);
+                                                        2>::Equal(this, &other);
   }
 
   uint8_t f1() const { return storage_.f1; }
@@ -79,17 +78,16 @@ class Simple {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_struct::Simple, 2, 2>;
+      ::test_struct::Simple, 2>;
   friend struct ::fidl::internal::MemberVisitor<::test_struct::Simple>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::f1, 0, 0},
+          &Storage_::f1, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::f2, 1, 1});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::f2, 1});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_struct_BasicStructTable;
@@ -121,11 +119,11 @@ class BasicStruct {
 
   bool operator==(const BasicStruct& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_struct::BasicStruct, 24, 24>::Equal(this, &other);
+        ::test_struct::BasicStruct, 24>::Equal(this, &other);
   }
   bool operator!=(const BasicStruct& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_struct::BasicStruct, 24, 24>::Equal(this, &other);
+        ::test_struct::BasicStruct, 24>::Equal(this, &other);
   }
 
   uint32_t x() const { return storage_.x; }
@@ -152,21 +150,16 @@ class BasicStruct {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_struct::BasicStruct, 24, 24>;
+      ::test_struct::BasicStruct, 24>;
   friend struct ::fidl::internal::MemberVisitor<::test_struct::BasicStruct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::x, 0, 0},
+          &Storage_::x, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintString<>>{&Storage_::y, 8, 8});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 0,
-          .mask = 0xffffffff00000000ull,
-      });
-  static constexpr auto kPaddingV2 =
+          fidl::internal::NaturalCodingConstraintString<>>{&Storage_::y, 8});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
           .offset = 0,
           .mask = 0xffffffff00000000ull,
@@ -192,7 +185,7 @@ struct internal::NaturalCodingTraits<
     ::test_struct::Simple, ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple,
-                                                         2, 2> {};
+                                                         2> {};
 
 extern "C" const fidl_type_t test_struct_BasicStructTable;
 
@@ -210,6 +203,6 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_struct::BasicStruct, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_struct::BasicStruct, 24, 24> {};
+                ::test_struct::BasicStruct, 24> {};
 
 }  // namespace fidl

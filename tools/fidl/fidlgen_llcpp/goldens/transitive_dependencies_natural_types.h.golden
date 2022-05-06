@@ -46,11 +46,11 @@ class Baz {
 
   bool operator==(const Baz& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_transitivedependencies::Baz, 4, 4>::Equal(this, &other);
+        ::test_transitivedependencies::Baz, 4>::Equal(this, &other);
   }
   bool operator!=(const Baz& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_transitivedependencies::Baz, 4, 4>::Equal(this, &other);
+        ::test_transitivedependencies::Baz, 4>::Equal(this, &other);
   }
 
   const ::test_middle::Bar& g() const { return storage_.g; }
@@ -71,15 +71,14 @@ class Baz {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_transitivedependencies::Baz, 4, 4>;
+      ::test_transitivedependencies::Baz, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_transitivedependencies::Baz>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_middle::Bar,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::g, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::g, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_transitivedependencies
@@ -103,6 +102,6 @@ struct internal::NaturalCodingTraits<
     ::test_transitivedependencies::Baz,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_transitivedependencies::Baz, 4, 4> {};
+                ::test_transitivedependencies::Baz, 4> {};
 
 }  // namespace fidl

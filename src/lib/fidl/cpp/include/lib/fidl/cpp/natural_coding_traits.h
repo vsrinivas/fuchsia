@@ -111,24 +111,14 @@ struct NaturalCodingTraits;
 
 template <typename T, typename Constraint>
 size_t NaturalEncodingInlineSize(NaturalEncoder* encoder) {
-  switch (encoder->wire_format()) {
-    case ::fidl::internal::WireFormatVersion::kV1:
-      return NaturalCodingTraits<T, Constraint>::inline_size_v1_no_ee;
-    case ::fidl::internal::WireFormatVersion::kV2:
-      return NaturalCodingTraits<T, Constraint>::inline_size_v2;
-  }
-  __builtin_unreachable();
+  ZX_DEBUG_ASSERT(encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV2);
+  return NaturalCodingTraits<T, Constraint>::inline_size_v2;
 }
 
 template <typename T, typename Constraint>
 size_t NaturalDecodingInlineSize(NaturalDecoder* decoder) {
-  switch (decoder->wire_format()) {
-    case ::fidl::internal::WireFormatVersion::kV1:
-      return NaturalCodingTraits<T, Constraint>::inline_size_v1_no_ee;
-    case ::fidl::internal::WireFormatVersion::kV2:
-      return NaturalCodingTraits<T, Constraint>::inline_size_v2;
-  }
-  __builtin_unreachable();
+  ZX_DEBUG_ASSERT(decoder->wire_format() == ::fidl::internal::WireFormatVersion::kV2);
+  return NaturalCodingTraits<T, Constraint>::inline_size_v2;
 }
 
 template <typename T, typename Constraint>
@@ -139,7 +129,6 @@ constexpr bool NaturalIsMemcpyCompatible() {
 template <typename T>
 struct NaturalCodingTraits<T, NaturalCodingConstraintEmpty,
                            typename std::enable_if<NaturalIsPrimitive<T>::value>::type> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(T);
   static constexpr size_t inline_size_v2 = sizeof(T);
   static constexpr bool is_memcpy_compatible = true;
 
@@ -153,15 +142,10 @@ struct NaturalCodingTraits<T, NaturalCodingConstraintEmpty,
 
 template <>
 struct NaturalCodingTraits<bool, NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(bool);
   static constexpr size_t inline_size_v2 = sizeof(bool);
   static constexpr bool is_memcpy_compatible = false;
 
   static void Encode(NaturalEncoder* encoder, bool* value, size_t offset, size_t recursion_depth) {
-    if (!(static_cast<uint8_t>(*value) == 0 || static_cast<uint8_t>(*value) == 1)) {
-      encoder->SetError(kCodingErrorInvalidBoolean);
-      return;
-    }
     *encoder->template GetPtr<bool>(offset) = *value;
   }
   static void Encode(NaturalEncoder* encoder, std::vector<bool>::iterator value, size_t offset,
@@ -171,7 +155,7 @@ struct NaturalCodingTraits<bool, NaturalCodingConstraintEmpty> {
   }
   static void Decode(NaturalDecoder* decoder, bool* value, size_t offset, size_t recursion_depth) {
     uint8_t uintval = *decoder->template GetPtr<uint8_t>(offset);
-    if (!(static_cast<uint8_t>(uintval) == 0 || static_cast<uint8_t>(uintval) == 1)) {
+    if (!(uintval == 0 || uintval == 1)) {
       decoder->SetError(kCodingErrorInvalidBoolean);
       return;
     }
@@ -194,7 +178,7 @@ void NaturalEncodeVectorBody(NaturalUseStdCopy<true>, NaturalEncoder* encoder,
                              typename std::vector<T>::iterator in_begin,
                              typename std::vector<T>::iterator in_end, size_t out_offset,
                              size_t recursion_depth) {
-  static_assert(NaturalCodingTraits<T, Constraint>::inline_size_v1_no_ee == sizeof(T),
+  static_assert(NaturalCodingTraits<T, Constraint>::inline_size_v2 == sizeof(T),
                 "stride doesn't match object size");
   std::copy(in_begin, in_end, encoder->template GetPtr<T>(out_offset));
 }
@@ -215,7 +199,7 @@ template <typename T, typename Constraint>
 void NaturalDecodeVectorBody(NaturalUseStdCopy<true>, NaturalDecoder* decoder,
                              size_t in_begin_offset, size_t in_end_offset, std::vector<T>* out,
                              size_t count, size_t recursion_depth) {
-  static_assert(NaturalCodingTraits<T, Constraint>::inline_size_v1_no_ee == sizeof(T),
+  static_assert(NaturalCodingTraits<T, Constraint>::inline_size_v2 == sizeof(T),
                 "stride doesn't match object size");
   *out = std::vector<T>(decoder->template GetPtr<T>(in_begin_offset),
                         decoder->template GetPtr<T>(in_end_offset));
@@ -246,7 +230,6 @@ void NaturalDecodeVectorBody(NaturalUseStdCopy<false>, NaturalDecoder* decoder,
 template <typename T, typename Constraint>
 struct NaturalCodingTraits<::std::vector<T>, Constraint> {
   using InnerConstraint = typename Constraint::Inner;
-  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_vector_t);
   static constexpr bool is_memcpy_compatible = false;
 
@@ -309,8 +292,6 @@ struct NaturalCodingTraits<::std::vector<T>, Constraint> {
 
 template <typename T, size_t N, typename Constraint>
 struct NaturalCodingTraits<::std::array<T, N>, Constraint> {
-  static constexpr size_t inline_size_v1_no_ee =
-      NaturalCodingTraits<T, Constraint>::inline_size_v1_no_ee * N;
   static constexpr size_t inline_size_v2 = NaturalCodingTraits<T, Constraint>::inline_size_v2 * N;
   static constexpr bool is_memcpy_compatible =
       NaturalCodingTraits<T, Constraint>::is_memcpy_compatible;
@@ -345,7 +326,6 @@ struct NaturalCodingTraits<::std::array<T, N>, Constraint> {
 template <typename T, typename Constraint>
 struct NaturalCodingTraits<
     T, Constraint, typename std::enable_if<std::is_base_of<zx::object_base, T>::value>::type> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(zx_handle_t);
   static constexpr size_t inline_size_v2 = sizeof(zx_handle_t);
   static constexpr bool is_memcpy_compatible = false;
 
@@ -374,7 +354,6 @@ struct NaturalCodingTraits<
 
 template <typename T, typename Constraint>
 struct NaturalCodingTraits<cpp17::optional<std::vector<T>>, Constraint> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_vector_t);
   static constexpr bool is_memcpy_compatible = false;
 
@@ -419,7 +398,6 @@ struct NaturalCodingTraits<cpp17::optional<std::vector<T>>, Constraint> {
 template <typename T, typename Constraint>
 struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
                            typename std::enable_if<!IsUnion<T>::value>::type> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uintptr_t);
   static constexpr size_t inline_size_v2 = sizeof(uintptr_t);
   static constexpr bool is_memcpy_compatible = false;
 
@@ -465,7 +443,6 @@ struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
 template <typename T, typename Constraint>
 struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
                            typename std::enable_if<IsUnion<T>::value>::type> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_xunion_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_xunion_v2_t);
   static constexpr bool is_memcpy_compatible = false;
 
@@ -493,7 +470,6 @@ struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
 
 template <typename Constraint>
 struct NaturalCodingTraits<::std::string, Constraint> final {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_string_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_string_t);
   static constexpr bool is_memcpy_compatible = false;
 
@@ -561,7 +537,6 @@ struct NaturalCodingTraits<::std::string, Constraint> final {
 
 template <typename Constraint>
 struct NaturalCodingTraits<cpp17::optional<std::string>, Constraint> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_string_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_string_t);
   static constexpr bool is_memcpy_compatible = false;
 

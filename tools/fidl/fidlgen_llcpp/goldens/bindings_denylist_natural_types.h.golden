@@ -196,13 +196,13 @@ class MemberOnlyAppearsInImportingLibrary {
   bool operator==(
       const MemberOnlyAppearsInImportingLibrary& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1,
+        ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary,
         1>::Equal(this, &other);
   }
   bool operator!=(
       const MemberOnlyAppearsInImportingLibrary& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1,
+        ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary,
         1>::Equal(this, &other);
   }
 
@@ -225,15 +225,14 @@ class MemberOnlyAppearsInImportingLibrary {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1, 1>;
+      ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::a, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -274,12 +273,12 @@ class OnlyAppearsInImportingLibrary {
 
   bool operator==(const OnlyAppearsInImportingLibrary& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1,
+        ::test_bindingsdenylist::OnlyAppearsInImportingLibrary,
         1>::Equal(this, &other);
   }
   bool operator!=(const OnlyAppearsInImportingLibrary& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1,
+        ::test_bindingsdenylist::OnlyAppearsInImportingLibrary,
         1>::Equal(this, &other);
   }
 
@@ -310,7 +309,7 @@ class OnlyAppearsInImportingLibrary {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1, 1>;
+      ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>;
   static constexpr auto kMembers = std::make_tuple(
@@ -318,9 +317,8 @@ class OnlyAppearsInImportingLibrary {
           Storage_,
           ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary,
           fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::member_only_appears_in_importing_library, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::member_only_appears_in_importing_library, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -359,13 +357,13 @@ class DenyEachBindingOnlyDenySyzkallerResponse {
   bool operator==(
       const DenyEachBindingOnlyDenySyzkallerResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse, 4,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse,
         4>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenySyzkallerResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse, 4,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse,
         4>::Equal(this, &other);
   }
 
@@ -388,15 +386,14 @@ class DenyEachBindingOnlyDenySyzkallerResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse, 4, 4>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::b, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -572,13 +569,13 @@ class DenyEachBindingOnlyDenySyzkallerTopResponse {
       const DenyEachBindingOnlyDenySyzkallerTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
         ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenySyzkallerTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
         ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
 
   const ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult&
@@ -606,18 +603,15 @@ class DenyEachBindingOnlyDenySyzkallerTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse, 24,
-      16>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
           ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -656,13 +650,13 @@ class DenyEachBindingOnlyDenyRustResponse {
   bool operator==(
       const DenyEachBindingOnlyDenyRustResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse, 4,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse,
         4>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyRustResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse, 4,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse,
         4>::Equal(this, &other);
   }
 
@@ -685,15 +679,14 @@ class DenyEachBindingOnlyDenyRustResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse, 4, 4>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::b, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -866,13 +859,13 @@ class DenyEachBindingOnlyDenyRustTopResponse {
   bool operator==(
       const DenyEachBindingOnlyDenyRustTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse, 24,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
         16>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyRustTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse, 24,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
         16>::Equal(this, &other);
   }
 
@@ -901,16 +894,14 @@ class DenyEachBindingOnlyDenyRustTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse, 24, 16>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -949,13 +940,13 @@ class DenyEachBindingOnlyDenyLibfuzzerResponse {
   bool operator==(
       const DenyEachBindingOnlyDenyLibfuzzerResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse, 4,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse,
         4>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyLibfuzzerResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse, 4,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse,
         4>::Equal(this, &other);
   }
 
@@ -978,15 +969,14 @@ class DenyEachBindingOnlyDenyLibfuzzerResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse, 4, 4>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::b, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1162,13 +1152,13 @@ class DenyEachBindingOnlyDenyLibfuzzerTopResponse {
       const DenyEachBindingOnlyDenyLibfuzzerTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
         ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyLibfuzzerTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
         ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
 
   const ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult&
@@ -1196,18 +1186,15 @@ class DenyEachBindingOnlyDenyLibfuzzerTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse, 24,
-      16>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1246,13 +1233,13 @@ class DenyEachBindingOnlyDenyGoResponse {
   bool operator==(
       const DenyEachBindingOnlyDenyGoResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse, 4,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse,
         4>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyGoResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse, 4,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse,
         4>::Equal(this, &other);
   }
 
@@ -1275,15 +1262,14 @@ class DenyEachBindingOnlyDenyGoResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse, 4, 4>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::b, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1452,13 +1438,13 @@ class DenyEachBindingOnlyDenyGoTopResponse {
   bool operator==(
       const DenyEachBindingOnlyDenyGoTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse, 24,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
         16>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyGoTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse, 24,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
         16>::Equal(this, &other);
   }
 
@@ -1487,16 +1473,14 @@ class DenyEachBindingOnlyDenyGoTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse, 24, 16>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1535,13 +1519,13 @@ class DenyEachBindingOnlyDenyDartResponse {
   bool operator==(
       const DenyEachBindingOnlyDenyDartResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse, 4,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse,
         4>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyDartResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse, 4,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse,
         4>::Equal(this, &other);
   }
 
@@ -1564,15 +1548,14 @@ class DenyEachBindingOnlyDenyDartResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse, 4, 4>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::b, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1745,13 +1728,13 @@ class DenyEachBindingOnlyDenyDartTopResponse {
   bool operator==(
       const DenyEachBindingOnlyDenyDartTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse, 24,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
         16>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyDartTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse, 24,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
         16>::Equal(this, &other);
   }
 
@@ -1780,16 +1763,14 @@ class DenyEachBindingOnlyDenyDartTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse, 24, 16>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1828,13 +1809,13 @@ class DenyEachBindingOnlyDenySyzkallerRequest {
   bool operator==(
       const DenyEachBindingOnlyDenySyzkallerRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest,
         1>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenySyzkallerRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest,
         1>::Equal(this, &other);
   }
 
@@ -1857,15 +1838,14 @@ class DenyEachBindingOnlyDenySyzkallerRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1, 1>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::a, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1904,13 +1884,13 @@ class DenyEachBindingOnlyDenyRustRequest {
   bool operator==(
       const DenyEachBindingOnlyDenyRustRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest,
         1>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyRustRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest,
         1>::Equal(this, &other);
   }
 
@@ -1933,15 +1913,14 @@ class DenyEachBindingOnlyDenyRustRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1, 1>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::a, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1980,13 +1959,13 @@ class DenyEachBindingOnlyDenyLibfuzzerRequest {
   bool operator==(
       const DenyEachBindingOnlyDenyLibfuzzerRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest,
         1>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyLibfuzzerRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest,
         1>::Equal(this, &other);
   }
 
@@ -2009,15 +1988,14 @@ class DenyEachBindingOnlyDenyLibfuzzerRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1, 1>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::a, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -2056,13 +2034,13 @@ class DenyEachBindingOnlyDenyGoRequest {
   bool operator==(
       const DenyEachBindingOnlyDenyGoRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest,
         1>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyGoRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest,
         1>::Equal(this, &other);
   }
 
@@ -2085,15 +2063,14 @@ class DenyEachBindingOnlyDenyGoRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1, 1>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::a, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -2132,13 +2109,13 @@ class DenyEachBindingOnlyDenyDartRequest {
   bool operator==(
       const DenyEachBindingOnlyDenyDartRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest,
         1>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyDartRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1,
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest,
         1>::Equal(this, &other);
   }
 
@@ -2161,15 +2138,14 @@ class DenyEachBindingOnlyDenyDartRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1, 1>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::a, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 constexpr uint32_t kAllBindings = 0u;
@@ -2199,8 +2175,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1, 1> {
-};
+          ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_OnlyAppearsInImportingLibraryTable;
@@ -2223,8 +2198,7 @@ struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::OnlyAppearsInImportingLibrary,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1, 1> {
-};
+                ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseTable;
@@ -2249,7 +2223,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse, 4,
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse,
           4> {};
 
 extern "C" const fidl_type_t
@@ -2276,7 +2250,7 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
-          24, 16> {};
+          16> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
@@ -2300,8 +2274,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse, 4, 4> {
-};
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse, 4> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
@@ -2324,9 +2297,10 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
-                24, 16> {};
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse, 16> {
+};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseTable;
@@ -2351,7 +2325,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse, 4,
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse,
           4> {};
 
 extern "C" const fidl_type_t
@@ -2378,7 +2352,7 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
-          24, 16> {};
+          16> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
@@ -2400,9 +2374,9 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse, 4, 4> {};
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse, 4> {
+};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
@@ -2424,9 +2398,9 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
-                24, 16> {};
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse, 16> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseTable;
@@ -2450,8 +2424,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse, 4, 4> {
-};
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse, 4> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
@@ -2474,9 +2447,10 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
-                24, 16> {};
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse, 16> {
+};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
@@ -2501,8 +2475,8 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1,
-          1> {};
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1> {
+};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
@@ -2526,7 +2500,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1, 1> {};
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1> {};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
@@ -2551,8 +2525,8 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1,
-          1> {};
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1> {
+};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
@@ -2574,9 +2548,9 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1, 1> {};
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1> {
+};
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
@@ -2600,7 +2574,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1, 1> {};
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1> {};
 
 extern "C" const fidl_type_t test_bindingsdenylist_OnlyLlcppTable;
 

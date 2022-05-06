@@ -54,11 +54,11 @@ class ExampleFooResponse {
 
   bool operator==(const ExampleFooResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooResponse, 8, 8>::Equal(this, &other);
+        ::test_error::ExampleFooResponse, 8>::Equal(this, &other);
   }
   bool operator!=(const ExampleFooResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooResponse, 8, 8>::Equal(this, &other);
+        ::test_error::ExampleFooResponse, 8>::Equal(this, &other);
   }
 
   int64_t y() const { return storage_.y; }
@@ -79,15 +79,14 @@ class ExampleFooResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_error::ExampleFooResponse, 8, 8>;
+      ::test_error::ExampleFooResponse, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_error::ExampleFooResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::y, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::y, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
@@ -234,11 +233,11 @@ class ExampleFooTopResponse {
 
   bool operator==(const ExampleFooTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooTopResponse, 24, 16>::Equal(this, &other);
+        ::test_error::ExampleFooTopResponse, 16>::Equal(this, &other);
   }
   bool operator!=(const ExampleFooTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooTopResponse, 24, 16>::Equal(this, &other);
+        ::test_error::ExampleFooTopResponse, 16>::Equal(this, &other);
   }
 
   const ::test_error::ExampleFooResult& result() const {
@@ -263,16 +262,14 @@ class ExampleFooTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_error::ExampleFooTopResponse, 24, 16>;
+      ::test_error::ExampleFooTopResponse, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_error::ExampleFooTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::test_error::ExampleFooResult,
-                      fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::result, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_error::ExampleFooResult,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
@@ -303,11 +300,11 @@ class ExampleFooRequest {
 
   bool operator==(const ExampleFooRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooRequest, 16, 16>::Equal(this, &other);
+        ::test_error::ExampleFooRequest, 16>::Equal(this, &other);
   }
   bool operator!=(const ExampleFooRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_error::ExampleFooRequest, 16, 16>::Equal(this, &other);
+        ::test_error::ExampleFooRequest, 16>::Equal(this, &other);
   }
 
   const ::std::string& s() const { return storage_.s; }
@@ -328,15 +325,14 @@ class ExampleFooRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_error::ExampleFooRequest, 16, 16>;
+      ::test_error::ExampleFooRequest, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_error::ExampleFooRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintString<>>{&Storage_::s, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintString<>>{&Storage_::s, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_error
@@ -359,7 +355,7 @@ struct internal::NaturalCodingTraits<
     ::test_error::ExampleFooResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_error::ExampleFooResponse, 8, 8> {};
+                ::test_error::ExampleFooResponse, 8> {};
 
 extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
@@ -379,7 +375,7 @@ struct internal::NaturalCodingTraits<
     ::test_error::ExampleFooTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_error::ExampleFooTopResponse, 24, 16> {};
+                ::test_error::ExampleFooTopResponse, 16> {};
 
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
 
@@ -398,7 +394,7 @@ struct internal::NaturalCodingTraits<
     ::test_error::ExampleFooRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_error::ExampleFooRequest, 16, 16> {};
+                ::test_error::ExampleFooRequest, 16> {};
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
 

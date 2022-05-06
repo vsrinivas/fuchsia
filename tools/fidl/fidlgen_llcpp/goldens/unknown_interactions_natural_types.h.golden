@@ -58,12 +58,12 @@ class ExampleFlexibleTwoWayResponse {
 
   bool operator==(const ExampleFlexibleTwoWayResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_unknowninteractions::ExampleFlexibleTwoWayResponse, 1,
+        ::test_unknowninteractions::ExampleFlexibleTwoWayResponse,
         1>::Equal(this, &other);
   }
   bool operator!=(const ExampleFlexibleTwoWayResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_unknowninteractions::ExampleFlexibleTwoWayResponse, 1,
+        ::test_unknowninteractions::ExampleFlexibleTwoWayResponse,
         1>::Equal(this, &other);
   }
 
@@ -86,15 +86,14 @@ class ExampleFlexibleTwoWayResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_unknowninteractions::ExampleFlexibleTwoWayResponse, 1, 1>;
+      ::test_unknowninteractions::ExampleFlexibleTwoWayResponse, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_unknowninteractions::ExampleFlexibleTwoWayResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::__reserved, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::__reserved, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -261,13 +260,13 @@ class ExampleFlexibleTwoWayTopResponse {
   bool operator==(
       const ExampleFlexibleTwoWayTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse, 24,
+        ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse,
         16>::Equal(this, &other);
   }
   bool operator!=(
       const ExampleFlexibleTwoWayTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse, 24,
+        ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse,
         16>::Equal(this, &other);
   }
 
@@ -296,16 +295,14 @@ class ExampleFlexibleTwoWayTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse, 24, 16>;
+      ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_unknowninteractions::ExampleFlexibleTwoWayResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_unknowninteractions
@@ -354,9 +351,9 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse,
-                24, 16> {};
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse, 16> {};
 
 extern "C" const fidl_type_t
     test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;

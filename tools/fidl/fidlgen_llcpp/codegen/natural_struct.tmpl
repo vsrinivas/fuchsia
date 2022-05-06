@@ -53,12 +53,10 @@ class {{ .Name }} {
     }
 
     bool operator==(const {{ .Name }}& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<{{ . }},
-          {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}>::Equal(this, &other);
+      return ::fidl::internal::NaturalStructCodingTraits<{{ . }}, {{ .TypeShapeV2.InlineSize }}>::Equal(this, &other);
     }
     bool operator!=(const {{ .Name }}& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<{{ . }},
-          {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}>::Equal(this, &other);
+      return !::fidl::internal::NaturalStructCodingTraits<{{ . }}, {{ .TypeShapeV2.InlineSize }}>::Equal(this, &other);
     }
   {{- end }}
 
@@ -110,27 +108,17 @@ class {{ .Name }} {
     Storage_ CloneStorage_() const;
   {{- end }}
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<{{ . }},
-      {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<{{ . }}, {{ .TypeShapeV2.InlineSize }}>;
   friend struct ::fidl::internal::MemberVisitor<{{ . }}>;
   static constexpr auto kMembers = std::make_tuple(
     {{- range $i, $m := .Members }}
       {{- if $i }}, {{ end -}}
       ::fidl::internal::NaturalStructMember<Storage_, {{ $m.Type }}, {{ $m.Constraint }}>{
-        &Storage_::{{ $m.Name }}, {{ $m.OffsetV1 }}, {{ $m.OffsetV2 }}
+        &Storage_::{{ $m.Name }}, {{ $m.OffsetV2 }}
       }
     {{- end -}}
   );
-  static constexpr auto kPaddingV1 = std::make_tuple(
-    {{- range $i, $p := .PaddingV1 }}
-      {{- if $i }}, {{ end -}}
-      ::fidl::internal::NaturalStructPadding<{{ $p.MaskType }}>{
-        .offset = {{ $p.Offset }},
-        .mask = {{ $p.Mask }},
-      }
-    {{- end -}}
-  );
-  static constexpr auto kPaddingV2 = std::make_tuple(
+  static constexpr auto kPadding = std::make_tuple(
     {{- range $i, $p := .PaddingV2 }}
       {{- if $i }}, {{ end -}}
       ::fidl::internal::NaturalStructPadding<{{ $p.MaskType }}>{
@@ -173,8 +161,7 @@ class {{ .Name }} {
   {{- if .IsEmpty }}
     : public ::fidl::internal::NaturalEmptyStructCodingTraits<{{ . }}> {};
   {{- else }}
-    : public ::fidl::internal::NaturalStructCodingTraits<{{ . }},
-        {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}> {};
+    : public ::fidl::internal::NaturalStructCodingTraits<{{ . }}, {{ .TypeShapeV2.InlineSize }}> {};
   {{- end }}
 
   {{ if .IsResourceType }}

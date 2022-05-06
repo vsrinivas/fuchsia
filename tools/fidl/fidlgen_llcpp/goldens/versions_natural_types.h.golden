@@ -197,13 +197,11 @@ class Struct {
 
   bool operator==(const Struct& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct,
-                                                       4, 4>::Equal(this,
-                                                                    &other);
+                                                       4>::Equal(this, &other);
   }
   bool operator!=(const Struct& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct,
-                                                        4, 4>::Equal(this,
-                                                                     &other);
+                                                        4>::Equal(this, &other);
   }
 
   uint32_t x() const { return storage_.x; }
@@ -224,14 +222,13 @@ class Struct {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_versions::Struct, 4, 4>;
+      ::test_versions::Struct, 4>;
   friend struct ::fidl::internal::MemberVisitor<::test_versions::Struct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::x, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::x, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 constexpr uint32_t kConst = 0u;
@@ -256,7 +253,7 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_versions::Struct, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_versions::Struct, 4, 4> {};
+                ::test_versions::Struct, 4> {};
 
 extern "C" const fidl_type_t test_versions_TableTable;
 
@@ -297,7 +294,6 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalCodingTraits<
     ::test_versions::Bits, ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
 
@@ -316,7 +312,6 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalCodingTraits<
     ::test_versions::Enum, ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
 

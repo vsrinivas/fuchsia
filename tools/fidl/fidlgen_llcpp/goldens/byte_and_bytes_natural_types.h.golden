@@ -52,11 +52,11 @@ class ByteAndBytes {
 
   bool operator==(const ByteAndBytes& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_byteandbytes::ByteAndBytes, 56, 56>::Equal(this, &other);
+        ::test_byteandbytes::ByteAndBytes, 56>::Equal(this, &other);
   }
   bool operator!=(const ByteAndBytes& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_byteandbytes::ByteAndBytes, 56, 56>::Equal(this, &other);
+        ::test_byteandbytes::ByteAndBytes, 56>::Equal(this, &other);
   }
 
   uint8_t single_byte() const { return storage_.single_byte; }
@@ -105,34 +105,29 @@ class ByteAndBytes {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_byteandbytes::ByteAndBytes, 56, 56>;
+      ::test_byteandbytes::ByteAndBytes, 56>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_byteandbytes::ByteAndBytes>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::single_byte, 0, 0},
+          &Storage_::single_byte, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::vector<uint8_t>,
           fidl::internal::NaturalCodingConstraintVector<
               fidl::internal::NaturalCodingConstraintEmpty>>{
-          &Storage_::many_bytes, 8, 8},
+          &Storage_::many_bytes, 8},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::vector<uint8_t>,
           fidl::internal::NaturalCodingConstraintVector<
               fidl::internal::NaturalCodingConstraintEmpty, 1024>>{
-          &Storage_::only_one_k_bytes, 24, 24},
+          &Storage_::only_one_k_bytes, 24},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::optional<::std::vector<uint8_t>>,
           fidl::internal::NaturalCodingConstraintVector<
               fidl::internal::NaturalCodingConstraintEmpty, 1024>>{
-          &Storage_::opt_only_one_k_bytes, 40, 40});
-  static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 0,
-          .mask = 0xffffffffffffff00ull,
-      });
-  static constexpr auto kPaddingV2 =
+          &Storage_::opt_only_one_k_bytes, 40});
+  static constexpr auto kPadding =
       std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
           .offset = 0,
           .mask = 0xffffffffffffff00ull,
@@ -159,6 +154,6 @@ struct internal::NaturalCodingTraits<
     ::test_byteandbytes::ByteAndBytes,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_byteandbytes::ByteAndBytes, 56, 56> {};
+                ::test_byteandbytes::ByteAndBytes, 56> {};
 
 }  // namespace fidl

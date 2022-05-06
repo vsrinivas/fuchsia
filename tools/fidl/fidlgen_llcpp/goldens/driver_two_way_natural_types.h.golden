@@ -51,11 +51,11 @@ class TwoWayAddTopResponse {
 
   bool operator==(const TwoWayAddTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_drivertwoway::TwoWayAddTopResponse, 2, 2>::Equal(this, &other);
+        ::test_drivertwoway::TwoWayAddTopResponse, 2>::Equal(this, &other);
   }
   bool operator!=(const TwoWayAddTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_drivertwoway::TwoWayAddTopResponse, 2, 2>::Equal(this, &other);
+        ::test_drivertwoway::TwoWayAddTopResponse, 2>::Equal(this, &other);
   }
 
   uint16_t sum() const { return storage_.sum; }
@@ -77,15 +77,14 @@ class TwoWayAddTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_drivertwoway::TwoWayAddTopResponse, 2, 2>;
+      ::test_drivertwoway::TwoWayAddTopResponse, 2>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_drivertwoway::TwoWayAddTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::sum, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::sum, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
@@ -118,11 +117,11 @@ class TwoWayAddRequest {
 
   bool operator==(const TwoWayAddRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_drivertwoway::TwoWayAddRequest, 4, 4>::Equal(this, &other);
+        ::test_drivertwoway::TwoWayAddRequest, 4>::Equal(this, &other);
   }
   bool operator!=(const TwoWayAddRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_drivertwoway::TwoWayAddRequest, 4, 4>::Equal(this, &other);
+        ::test_drivertwoway::TwoWayAddRequest, 4>::Equal(this, &other);
   }
 
   uint16_t addend1() const { return storage_.addend1; }
@@ -149,18 +148,17 @@ class TwoWayAddRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_drivertwoway::TwoWayAddRequest, 4, 4>;
+      ::test_drivertwoway::TwoWayAddRequest, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_drivertwoway::TwoWayAddRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::addend1, 0, 0},
+          &Storage_::addend1, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::addend2, 2, 2});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::addend2, 2});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_drivertwoway
@@ -185,7 +183,7 @@ struct internal::NaturalCodingTraits<
     ::test_drivertwoway::TwoWayAddTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_drivertwoway::TwoWayAddTopResponse, 2, 2> {};
+                ::test_drivertwoway::TwoWayAddTopResponse, 2> {};
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
@@ -206,6 +204,6 @@ struct internal::NaturalCodingTraits<
     ::test_drivertwoway::TwoWayAddRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_drivertwoway::TwoWayAddRequest, 4, 4> {};
+                ::test_drivertwoway::TwoWayAddRequest, 4> {};
 
 }  // namespace fidl

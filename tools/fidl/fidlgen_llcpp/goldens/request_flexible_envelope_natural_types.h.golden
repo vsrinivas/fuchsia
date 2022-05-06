@@ -181,14 +181,14 @@ class ProtocolRequestStrictResponseFlexibleRequest {
     return ::fidl::internal::NaturalStructCodingTraits<
         ::test_requestflexibleenvelope::
             ProtocolRequestStrictResponseFlexibleRequest,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
   bool operator!=(const ProtocolRequestStrictResponseFlexibleRequest& other)
       const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
         ::test_requestflexibleenvelope::
             ProtocolRequestStrictResponseFlexibleRequest,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
 
   const ::test_requestflexibleenvelope::StrictFoo& s() const {
@@ -214,16 +214,15 @@ class ProtocolRequestStrictResponseFlexibleRequest {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleRequest,
-      24, 16>;
+      16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_requestflexibleenvelope::StrictFoo,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -266,14 +265,14 @@ class ProtocolRequestFlexibleResponseStrictTopResponse {
     return ::fidl::internal::NaturalStructCodingTraits<
         ::test_requestflexibleenvelope::
             ProtocolRequestFlexibleResponseStrictTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
   bool operator!=(const ProtocolRequestFlexibleResponseStrictTopResponse& other)
       const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
         ::test_requestflexibleenvelope::
             ProtocolRequestFlexibleResponseStrictTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
 
   const ::test_requestflexibleenvelope::StrictFoo& f() const {
@@ -299,16 +298,15 @@ class ProtocolRequestFlexibleResponseStrictTopResponse {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictTopResponse,
-      24, 16>;
+      16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_requestflexibleenvelope::StrictFoo,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::f, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::f, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
@@ -470,14 +468,14 @@ class ProtocolRequestStrictResponseFlexibleTopResponse {
     return ::fidl::internal::NaturalStructCodingTraits<
         ::test_requestflexibleenvelope::
             ProtocolRequestStrictResponseFlexibleTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
   bool operator!=(const ProtocolRequestStrictResponseFlexibleTopResponse& other)
       const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
         ::test_requestflexibleenvelope::
             ProtocolRequestStrictResponseFlexibleTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
 
   const ::test_requestflexibleenvelope::FlexibleFoo& f() const {
@@ -503,16 +501,15 @@ class ProtocolRequestStrictResponseFlexibleTopResponse {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleTopResponse,
-      24, 16>;
+      16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_requestflexibleenvelope::FlexibleFoo,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::f, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::f, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -554,14 +551,14 @@ class ProtocolRequestFlexibleResponseStrictRequest {
     return ::fidl::internal::NaturalStructCodingTraits<
         ::test_requestflexibleenvelope::
             ProtocolRequestFlexibleResponseStrictRequest,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
   bool operator!=(const ProtocolRequestFlexibleResponseStrictRequest& other)
       const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
         ::test_requestflexibleenvelope::
             ProtocolRequestFlexibleResponseStrictRequest,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
 
   const ::test_requestflexibleenvelope::FlexibleFoo& s() const {
@@ -587,16 +584,15 @@ class ProtocolRequestFlexibleResponseStrictRequest {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictRequest,
-      24, 16>;
+      16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_requestflexibleenvelope::FlexibleFoo,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_requestflexibleenvelope
@@ -628,7 +624,7 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestStrictResponseFlexibleRequest,
-                24, 16> {};
+                16> {};
 
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
@@ -656,7 +652,7 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestFlexibleResponseStrictTopResponse,
-                24, 16> {};
+                16> {};
 
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
@@ -684,7 +680,7 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestStrictResponseFlexibleTopResponse,
-                24, 16> {};
+                16> {};
 
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
@@ -712,7 +708,7 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestFlexibleResponseStrictRequest,
-                24, 16> {};
+                16> {};
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
 

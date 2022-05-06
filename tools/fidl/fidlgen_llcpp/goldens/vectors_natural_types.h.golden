@@ -51,11 +51,11 @@ class ExampleUseOfVectors {
 
   bool operator==(const ExampleUseOfVectors& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_vectors::ExampleUseOfVectors, 32, 32>::Equal(this, &other);
+        ::test_vectors::ExampleUseOfVectors, 32>::Equal(this, &other);
   }
   bool operator!=(const ExampleUseOfVectors& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_vectors::ExampleUseOfVectors, 32, 32>::Equal(this, &other);
+        ::test_vectors::ExampleUseOfVectors, 32>::Equal(this, &other);
   }
 
   const ::std::vector<uint8_t>& vector_of_uint8() const {
@@ -89,7 +89,7 @@ class ExampleUseOfVectors {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_vectors::ExampleUseOfVectors, 32, 32>;
+      ::test_vectors::ExampleUseOfVectors, 32>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_vectors::ExampleUseOfVectors>;
   static constexpr auto kMembers = std::make_tuple(
@@ -97,15 +97,14 @@ class ExampleUseOfVectors {
           Storage_, ::std::vector<uint8_t>,
           fidl::internal::NaturalCodingConstraintVector<
               fidl::internal::NaturalCodingConstraintEmpty>>{
-          &Storage_::vector_of_uint8, 0, 0},
+          &Storage_::vector_of_uint8, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::vector<::std::vector<bool>>,
           fidl::internal::NaturalCodingConstraintVector<
               fidl::internal::NaturalCodingConstraintVector<
                   fidl::internal::NaturalCodingConstraintEmpty>>>{
-          &Storage_::vector_of_vector_of_bool, 16, 16});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::vector_of_vector_of_bool, 16});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_vectors
@@ -129,6 +128,6 @@ struct internal::NaturalCodingTraits<
     ::test_vectors::ExampleUseOfVectors,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_vectors::ExampleUseOfVectors, 32, 32> {};
+                ::test_vectors::ExampleUseOfVectors, 32> {};
 
 }  // namespace fidl

@@ -137,15 +137,14 @@ class HandlesInProtocolSendHandlesRequest {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_driverhandle::HandlesInProtocolSendHandlesRequest, 16, 16>;
+      ::test_driverhandle::HandlesInProtocolSendHandlesRequest, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_driverhandle::HandlesInProtocolSendHandlesRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_driverhandle::T,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::t, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::t, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -195,7 +194,7 @@ class ServerEndWrapper {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_driverhandle::ServerEndWrapper, 4, 4>;
+      ::test_driverhandle::ServerEndWrapper, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_driverhandle::ServerEndWrapper>;
   static constexpr auto kMembers = std::make_tuple(
@@ -203,9 +202,8 @@ class ServerEndWrapper {
           Storage_, ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
               ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::value, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::value, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -255,7 +253,7 @@ class ClientEndWrapper {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_driverhandle::ClientEndWrapper, 4, 4>;
+      ::test_driverhandle::ClientEndWrapper, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_driverhandle::ClientEndWrapper>;
   static constexpr auto kMembers = std::make_tuple(
@@ -263,9 +261,8 @@ class ClientEndWrapper {
           Storage_, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
               ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::value, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::value, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -298,9 +295,9 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_driverhandle::HandlesInProtocolSendHandlesRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_driverhandle::HandlesInProtocolSendHandlesRequest, 16, 16> {};
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_driverhandle::HandlesInProtocolSendHandlesRequest, 16> {
+};
 
 #endif  // __Fuchsia__
 
@@ -328,7 +325,7 @@ struct internal::NaturalCodingTraits<
     ::test_driverhandle::ServerEndWrapper,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_driverhandle::ServerEndWrapper, 4, 4> {};
+                ::test_driverhandle::ServerEndWrapper, 4> {};
 
 #endif  // __Fuchsia__
 
@@ -356,7 +353,7 @@ struct internal::NaturalCodingTraits<
     ::test_driverhandle::ClientEndWrapper,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_driverhandle::ClientEndWrapper, 4, 4> {};
+                ::test_driverhandle::ClientEndWrapper, 4> {};
 
 #endif  // __Fuchsia__
 

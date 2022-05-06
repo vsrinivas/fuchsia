@@ -367,171 +367,170 @@ class Handles {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_handles::Handles, 128, 128>;
+      ::test_handles::Handles, 128>;
   friend struct ::fidl::internal::MemberVisitor<::test_handles::Handles>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::handle,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
                                                         0x80000000, false>>{
-          &Storage_::plain_handle, 0, 0},
+          &Storage_::plain_handle, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::bti,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_BTI,
                                                         0x80000000, false>>{
-          &Storage_::bti_handle, 4, 4},
+          &Storage_::bti_handle, 4},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::channel,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
                                                         0x80000000, false>>{
-          &Storage_::channel_handle, 8, 8},
+          &Storage_::channel_handle, 8},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::clock,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CLOCK,
                                                         0x80000000, false>>{
-          &Storage_::clock_handle, 12, 12},
+          &Storage_::clock_handle, 12},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::debuglog,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_LOG,
                                                         0x80000000, false>>{
-          &Storage_::debuglog_handle, 16, 16},
+          &Storage_::debuglog_handle, 16},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::event,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_EVENT,
                                                         0x80000000, false>>{
-          &Storage_::event_handle, 20, 20},
+          &Storage_::event_handle, 20},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::eventpair,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_EVENTPAIR,
                                                         0x80000000, false>>{
-          &Storage_::eventpair_handle, 24, 24},
+          &Storage_::eventpair_handle, 24},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::exception,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_EXCEPTION,
                                                         0x80000000, false>>{
-          &Storage_::exception_handle, 28, 28},
+          &Storage_::exception_handle, 28},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::fifo,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_FIFO,
                                                         0x80000000, false>>{
-          &Storage_::fifo_handle, 32, 32},
+          &Storage_::fifo_handle, 32},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::guest,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_GUEST,
                                                         0x80000000, false>>{
-          &Storage_::guest_handle, 36, 36},
+          &Storage_::guest_handle, 36},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::interrupt,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_INTERRUPT,
                                                         0x80000000, false>>{
-          &Storage_::interrupt_handle, 40, 40},
+          &Storage_::interrupt_handle, 40},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::iommu,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_IOMMU,
                                                         0x80000000, false>>{
-          &Storage_::iommu_handle, 44, 44},
+          &Storage_::iommu_handle, 44},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::job,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_JOB,
                                                         0x80000000, false>>{
-          &Storage_::job_handle, 48, 48},
+          &Storage_::job_handle, 48},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::pager,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PAGER,
                                                         0x80000000, false>>{
-          &Storage_::pager_handle, 52, 52},
+          &Storage_::pager_handle, 52},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::pmt,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PMT,
                                                         0x80000000, false>>{
-          &Storage_::pmt_handle, 56, 56},
+          &Storage_::pmt_handle, 56},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::port,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PORT,
                                                         0x80000000, false>>{
-          &Storage_::port_handle, 60, 60},
+          &Storage_::port_handle, 60},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::process,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PROCESS,
                                                         0x80000000, false>>{
-          &Storage_::process_handle, 64, 64},
+          &Storage_::process_handle, 64},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::profile,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_PROFILE,
                                                         0x80000000, false>>{
-          &Storage_::profile_handle, 68, 68},
+          &Storage_::profile_handle, 68},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::resource,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_RESOURCE,
                                                         0x80000000, false>>{
-          &Storage_::resource_handle, 72, 72},
+          &Storage_::resource_handle, 72},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::socket,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET,
                                                         0x80000000, false>>{
-          &Storage_::socket_handle, 76, 76},
+          &Storage_::socket_handle, 76},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::suspend_token,
           fidl::internal::NaturalCodingConstraintHandle<
               ZX_OBJ_TYPE_SUSPEND_TOKEN, 0x80000000, false>>{
-          &Storage_::suspendtoken_handle, 80, 80},
+          &Storage_::suspendtoken_handle, 80},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::thread,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_THREAD,
                                                         0x80000000, false>>{
-          &Storage_::thread_handle, 84, 84},
+          &Storage_::thread_handle, 84},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::timer,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_TIMER,
                                                         0x80000000, false>>{
-          &Storage_::timer_handle, 88, 88},
+          &Storage_::timer_handle, 88},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::vcpu,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VCPU,
                                                         0x80000000, false>>{
-          &Storage_::vcpu_handle, 92, 92},
+          &Storage_::vcpu_handle, 92},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::vmar,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMAR,
                                                         0x80000000, false>>{
-          &Storage_::vmar_handle, 96, 96},
+          &Storage_::vmar_handle, 96},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::vmo,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
                                                         0x80000000, false>>{
-          &Storage_::vmo_handle, 100, 100},
+          &Storage_::vmo_handle, 100},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::vmo,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x5,
                                                         false>>{
-          &Storage_::rights_handle, 104, 104},
+          &Storage_::rights_handle, 104},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::handle,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
                                                         0x80000000, false>>{
-          &Storage_::aliased_plain_handle_field, 108, 108},
+          &Storage_::aliased_plain_handle_field, 108},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::vmo,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
                                                         0x80000000, false>>{
-          &Storage_::aliased_subtype_handle_field, 112, 112},
+          &Storage_::aliased_subtype_handle_field, 112},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::zx::vmo,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x1,
                                                         false>>{
-          &Storage_::aliased_rights_handle_field, 116, 116},
+          &Storage_::aliased_rights_handle_field, 116},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_handles::SomeProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
               ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::some_protocol, 120, 120},
+          &Storage_::some_protocol, 120},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_handles::SomeProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
               ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::request_some_protocol, 124, 124});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::request_some_protocol, 124});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -605,26 +604,25 @@ class FdfHandles {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_handles::FdfHandles, 12, 12>;
+      ::test_handles::FdfHandles, 12>;
   friend struct ::fidl::internal::MemberVisitor<::test_handles::FdfHandles>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fdf::Channel,
           fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
                                                         0x80000000, false>>{
-          &Storage_::fdf_channel_handle, 0, 0},
+          &Storage_::fdf_channel_handle, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fdf::ClientEnd<::test_handles::DriverProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
               ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::client_end_driver, 4, 4},
+          &Storage_::client_end_driver, 4},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fdf::ServerEnd<::test_handles::DriverProtocol>,
           fidl::internal::NaturalCodingConstraintHandle<
               ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-          &Storage_::server_end_driver, 8, 8});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::server_end_driver, 8});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 #endif  // __Fuchsia__
@@ -651,7 +649,7 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_handles::Handles, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_handles::Handles, 128, 128> {};
+                ::test_handles::Handles, 128> {};
 
 #endif  // __Fuchsia__
 
@@ -675,7 +673,7 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_handles::FdfHandles, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_handles::FdfHandles, 12, 12> {};
+                ::test_handles::FdfHandles, 12> {};
 
 #endif  // __Fuchsia__
 

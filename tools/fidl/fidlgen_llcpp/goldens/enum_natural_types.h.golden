@@ -19,7 +19,6 @@ namespace fidl {
 template <>
 struct internal::NaturalCodingTraits<
     ::test_enum::MyStrictEnum, ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = false;
 
@@ -54,7 +53,6 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_enum::MyFlexibleEnumWithCustomUnknown,
     ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
 
@@ -76,7 +74,6 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_enum::MyFlexibleEnum,
     ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
 
@@ -95,7 +92,6 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_enum::MyEmptyFlexibleEnum,
     ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
 

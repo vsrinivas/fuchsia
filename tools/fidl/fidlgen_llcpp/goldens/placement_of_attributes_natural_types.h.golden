@@ -307,11 +307,11 @@ class ExampleStruct {
 
   bool operator==(const ExampleStruct& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_placementofattributes::ExampleStruct, 4, 4>::Equal(this, &other);
+        ::test_placementofattributes::ExampleStruct, 4>::Equal(this, &other);
   }
   bool operator!=(const ExampleStruct& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_placementofattributes::ExampleStruct, 4, 4>::Equal(this, &other);
+        ::test_placementofattributes::ExampleStruct, 4>::Equal(this, &other);
   }
 
   uint32_t member() const { return storage_.member; }
@@ -332,15 +332,14 @@ class ExampleStruct {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_placementofattributes::ExampleStruct, 4, 4>;
+      ::test_placementofattributes::ExampleStruct, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_placementofattributes::ExampleStruct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::member, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::member, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -378,12 +377,12 @@ class ExampleProtocolMethodRequest {
 
   bool operator==(const ExampleProtocolMethodRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_placementofattributes::ExampleProtocolMethodRequest, 1,
+        ::test_placementofattributes::ExampleProtocolMethodRequest,
         1>::Equal(this, &other);
   }
   bool operator!=(const ExampleProtocolMethodRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_placementofattributes::ExampleProtocolMethodRequest, 1,
+        ::test_placementofattributes::ExampleProtocolMethodRequest,
         1>::Equal(this, &other);
   }
 
@@ -406,15 +405,14 @@ class ExampleProtocolMethodRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_placementofattributes::ExampleProtocolMethodRequest, 1, 1>;
+      ::test_placementofattributes::ExampleProtocolMethodRequest, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_placementofattributes::ExampleProtocolMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_exampleusing::Empty,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arg, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arg, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 constexpr uint32_t kExampleConst = 0u;
@@ -441,7 +439,7 @@ struct internal::NaturalCodingTraits<
     ::test_placementofattributes::ExampleStruct,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_placementofattributes::ExampleStruct, 4, 4> {};
+                ::test_placementofattributes::ExampleStruct, 4> {};
 
 extern "C" const fidl_type_t
     test_placementofattributes_ExampleProtocolMethodRequestTable;
@@ -463,9 +461,9 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_placementofattributes::ExampleProtocolMethodRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_placementofattributes::ExampleProtocolMethodRequest, 1, 1> {};
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_placementofattributes::ExampleProtocolMethodRequest, 1> {
+};
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleTableTable;
 
@@ -540,7 +538,6 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_placementofattributes::ExampleBits,
     ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = false;
 
@@ -569,7 +566,6 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_placementofattributes::ExampleEnum,
     ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = false;
 

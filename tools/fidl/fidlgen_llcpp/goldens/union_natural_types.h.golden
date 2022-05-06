@@ -342,11 +342,11 @@ class StructWithNullableXUnion {
 
   bool operator==(const StructWithNullableXUnion& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_union::StructWithNullableXUnion, 24, 16>::Equal(this, &other);
+        ::test_union::StructWithNullableXUnion, 16>::Equal(this, &other);
   }
   bool operator!=(const StructWithNullableXUnion& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_union::StructWithNullableXUnion, 24, 16>::Equal(this, &other);
+        ::test_union::StructWithNullableXUnion, 16>::Equal(this, &other);
   }
 
   const ::std::unique_ptr<::test_union::OlderSimpleUnion>& x1() const {
@@ -372,15 +372,14 @@ class StructWithNullableXUnion {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_union::StructWithNullableXUnion, 24, 16>;
+      ::test_union::StructWithNullableXUnion, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_union::StructWithNullableXUnion>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::unique_ptr<::test_union::OlderSimpleUnion>,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::x1, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::x1, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_StrictUnionTable;
@@ -910,7 +909,7 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
     return ::fidl::internal::NaturalStructCodingTraits<
         ::test_union::
             TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
   bool operator!=(
       const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
@@ -918,7 +917,7 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
     return !::fidl::internal::NaturalStructCodingTraits<
         ::test_union::
             TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
 
   const ::test_union::StrictBoundedXUnion& xu() const { return storage_.xu; }
@@ -944,16 +943,15 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_union::
           TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
-      24, 16>;
+      16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_union::
           TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_union::StrictBoundedXUnion,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::xu, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::xu, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_ReverseOrdinalUnionTable;
@@ -1097,11 +1095,11 @@ class Pizza {
   }
 
   bool operator==(const Pizza& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza, 16,
+    return ::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza,
                                                        16>::Equal(this, &other);
   }
   bool operator!=(const Pizza& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza, 16,
+    return !::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza,
                                                         16>::Equal(this,
                                                                    &other);
   }
@@ -1126,16 +1124,15 @@ class Pizza {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza,
-                                                            16, 16>;
+                                                            16>;
   friend struct ::fidl::internal::MemberVisitor<::test_union::Pizza>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::std::vector<::std::string>,
                       fidl::internal::NaturalCodingConstraintVector<
                           fidl::internal::NaturalCodingConstraintString<16>>>{
-          &Storage_::toppings, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::toppings, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_PastaTable;
@@ -1164,11 +1161,11 @@ class Pasta {
   }
 
   bool operator==(const Pasta& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta, 16,
+    return ::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta,
                                                        16>::Equal(this, &other);
   }
   bool operator!=(const Pasta& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta, 16,
+    return !::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta,
                                                         16>::Equal(this,
                                                                    &other);
   }
@@ -1191,15 +1188,14 @@ class Pasta {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta,
-                                                            16, 16>;
+                                                            16>;
   friend struct ::fidl::internal::MemberVisitor<::test_union::Pasta>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::std::string,
                       fidl::internal::NaturalCodingConstraintString<16>>{
-          &Storage_::sauce, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::sauce, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_StrictPizzaOrPastaTable;
@@ -1831,7 +1827,7 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
     return ::fidl::internal::NaturalStructCodingTraits<
         ::test_union::
             TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
   bool operator!=(
       const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
@@ -1839,7 +1835,7 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
     return !::fidl::internal::NaturalStructCodingTraits<
         ::test_union::
             TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
 
   const ::test_union::OlderSimpleUnion& xu() const { return storage_.xu; }
@@ -1865,16 +1861,15 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_union::
           TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
-      24, 16>;
+      16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_union::
           TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_union::OlderSimpleUnion,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::xu, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::xu, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;
@@ -1907,11 +1902,11 @@ class NullableUnionStruct {
 
   bool operator==(const NullableUnionStruct& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_union::NullableUnionStruct, 24, 16>::Equal(this, &other);
+        ::test_union::NullableUnionStruct, 16>::Equal(this, &other);
   }
   bool operator!=(const NullableUnionStruct& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_union::NullableUnionStruct, 24, 16>::Equal(this, &other);
+        ::test_union::NullableUnionStruct, 16>::Equal(this, &other);
   }
 
   const ::std::unique_ptr<::test_union::Union>& the_union() const {
@@ -1937,16 +1932,15 @@ class NullableUnionStruct {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_union::NullableUnionStruct, 24, 16>;
+      ::test_union::NullableUnionStruct, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_union::NullableUnionStruct>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::std::unique_ptr<::test_union::Union>,
                       fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::the_union, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::the_union, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_NewerSimpleUnionTable;
@@ -2586,11 +2580,11 @@ class UnionSandwich {
 
   bool operator==(const UnionSandwich& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_union::UnionSandwich, 40, 32>::Equal(this, &other);
+        ::test_union::UnionSandwich, 32>::Equal(this, &other);
   }
   bool operator!=(const UnionSandwich& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_union::UnionSandwich, 40, 32>::Equal(this, &other);
+        ::test_union::UnionSandwich, 32>::Equal(this, &other);
   }
 
   uint32_t a() const { return storage_.a; }
@@ -2623,28 +2617,19 @@ class UnionSandwich {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_union::UnionSandwich, 40, 32>;
+      ::test_union::UnionSandwich, 32>;
   friend struct ::fidl::internal::MemberVisitor<::test_union::UnionSandwich>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::a, 0, 0},
+          &Storage_::a, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_union::ExplicitXUnion,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::u, 8, 8},
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::u, 8},
       ::fidl::internal::NaturalStructMember<
           Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::b, 32, 24});
-  static constexpr auto kPaddingV1 = std::make_tuple(
-      ::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 0,
-          .mask = 0xffffffff00000000ull,
-      },
-      ::fidl::internal::NaturalStructPadding<uint64_t>{
-          .offset = 32,
-          .mask = 0xffffffff00000000ull,
-      });
-  static constexpr auto kPaddingV2 = std::make_tuple(
+          &Storage_::b, 24});
+  static constexpr auto kPadding = std::make_tuple(
       ::fidl::internal::NaturalStructPadding<uint64_t>{
           .offset = 0,
           .mask = 0xffffffff00000000ull,
@@ -3024,11 +3009,11 @@ class Empty {
   }
 
   bool operator==(const Empty& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_union::Empty, 1,
+    return ::fidl::internal::NaturalStructCodingTraits<::test_union::Empty,
                                                        1>::Equal(this, &other);
   }
   bool operator!=(const Empty& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_union::Empty, 1,
+    return !::fidl::internal::NaturalStructCodingTraits<::test_union::Empty,
                                                         1>::Equal(this, &other);
   }
 
@@ -3050,14 +3035,13 @@ class Empty {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::Empty,
-                                                            1, 1>;
+                                                            1>;
   friend struct ::fidl::internal::MemberVisitor<::test_union::Empty>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::__reserved, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::__reserved, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_union_XUnionContainingEmptyStructTable;
@@ -3185,7 +3169,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::StructWithNullableXUnion,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_union::StructWithNullableXUnion, 24, 16> {};
+                ::test_union::StructWithNullableXUnion, 16> {};
 
 extern "C" const fidl_type_t
     test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
@@ -3215,7 +3199,7 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_union::
               TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
-          24, 16> {};
+          16> {};
 
 extern "C" const fidl_type_t test_union_PizzaTable;
 
@@ -3233,7 +3217,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::Pizza, ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza,
-                                                         16, 16> {};
+                                                         16> {};
 
 extern "C" const fidl_type_t test_union_PastaTable;
 
@@ -3251,7 +3235,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::Pasta, ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta,
-                                                         16, 16> {};
+                                                         16> {};
 
 extern "C" const fidl_type_t
     test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
@@ -3281,7 +3265,7 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_union::
               TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
-          24, 16> {};
+          16> {};
 
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;
 
@@ -3300,7 +3284,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::NullableUnionStruct,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_union::NullableUnionStruct, 24, 16> {};
+                ::test_union::NullableUnionStruct, 16> {};
 
 extern "C" const fidl_type_t test_union_UnionSandwichTable;
 
@@ -3318,7 +3302,7 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_union::UnionSandwich, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_union::UnionSandwich, 40, 32> {};
+                ::test_union::UnionSandwich, 32> {};
 
 extern "C" const fidl_type_t test_union_EmptyTable;
 

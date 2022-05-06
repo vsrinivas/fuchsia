@@ -235,13 +235,13 @@ class MainProtocolTwoWayImportWithErrorTopResponse {
       const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
         ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
   bool operator!=(const MainProtocolTwoWayImportWithErrorTopResponse& other)
       const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
         ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse,
-        24, 16>::Equal(this, &other);
+        16>::Equal(this, &other);
   }
 
   const ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult&
@@ -269,18 +269,15 @@ class MainProtocolTwoWayImportWithErrorTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse, 24,
-      16>;
+      ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
           ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -573,13 +570,13 @@ class MainProtocolTwoWayAnonWithErrorTopResponse {
   bool operator==(
       const MainProtocolTwoWayAnonWithErrorTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse, 24,
+        ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse,
         16>::Equal(this, &other);
   }
   bool operator!=(
       const MainProtocolTwoWayAnonWithErrorTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse, 24,
+        ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse,
         16>::Equal(this, &other);
   }
 
@@ -608,18 +605,15 @@ class MainProtocolTwoWayAnonWithErrorTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse, 24,
-      16>;
+      ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
           ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -793,13 +787,13 @@ class MainProtocolOnImportWithErrorRequest {
   bool operator==(
       const MainProtocolOnImportWithErrorRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocollayouts::MainProtocolOnImportWithErrorRequest, 24,
+        ::test_protocollayouts::MainProtocolOnImportWithErrorRequest,
         16>::Equal(this, &other);
   }
   bool operator!=(
       const MainProtocolOnImportWithErrorRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocollayouts::MainProtocolOnImportWithErrorRequest, 24,
+        ::test_protocollayouts::MainProtocolOnImportWithErrorRequest,
         16>::Equal(this, &other);
   }
 
@@ -828,16 +822,14 @@ class MainProtocolOnImportWithErrorRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocollayouts::MainProtocolOnImportWithErrorRequest, 24, 16>;
+      ::test_protocollayouts::MainProtocolOnImportWithErrorRequest, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocollayouts::MainProtocolOnImportWithErrorRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_protocollayouts::MainProtocolOnImportWithErrorResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1071,13 +1063,13 @@ class MainProtocolOnAnonWithErrorRequest {
   bool operator==(
       const MainProtocolOnAnonWithErrorRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest, 24,
+        ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest,
         16>::Equal(this, &other);
   }
   bool operator!=(
       const MainProtocolOnAnonWithErrorRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest, 24,
+        ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest,
         16>::Equal(this, &other);
   }
 
@@ -1106,16 +1098,14 @@ class MainProtocolOnAnonWithErrorRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest, 24, 16>;
+      ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_protocollayouts::MainProtocolOnAnonWithErrorResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -1787,13 +1777,13 @@ class MainProtocolTwoWayLocalWithErrorTopResponse {
   bool operator==(
       const MainProtocolTwoWayLocalWithErrorTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse, 24,
+        ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse,
         16>::Equal(this, &other);
   }
   bool operator!=(
       const MainProtocolTwoWayLocalWithErrorTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse, 24,
+        ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse,
         16>::Equal(this, &other);
   }
 
@@ -1822,18 +1812,15 @@ class MainProtocolTwoWayLocalWithErrorTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse, 24,
-      16>;
+      ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
           ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
@@ -2057,13 +2044,13 @@ class MainProtocolOnLocalWithErrorRequest {
   bool operator==(
       const MainProtocolOnLocalWithErrorRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest, 24,
+        ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest,
         16>::Equal(this, &other);
   }
   bool operator!=(
       const MainProtocolOnLocalWithErrorRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest, 24,
+        ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest,
         16>::Equal(this, &other);
   }
 
@@ -2092,16 +2079,14 @@ class MainProtocolOnLocalWithErrorRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest, 24, 16>;
+      ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_protocollayouts::MainProtocolOnLocalWithErrorResult,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
-                                                        0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_protocollayouts
@@ -2131,7 +2116,7 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse,
-          24, 16> {};
+          16> {};
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayAnonWithErrorTopResponseTable;
@@ -2157,7 +2142,7 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse,
-          24, 16> {};
+          16> {};
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnImportWithErrorRequestTable;
@@ -2179,9 +2164,9 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_protocollayouts::MainProtocolOnImportWithErrorRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_protocollayouts::MainProtocolOnImportWithErrorRequest,
-                24, 16> {};
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocollayouts::MainProtocolOnImportWithErrorRequest, 16> {};
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnAnonWithErrorRequestTable;
@@ -2205,8 +2190,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest, 24, 16> {
-};
+          ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest, 16> {};
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolTwoWayLocalWithErrorTopResponseTable;
@@ -2232,7 +2216,7 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse,
-          24, 16> {};
+          16> {};
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocolOnLocalWithErrorRequestTable;
@@ -2256,8 +2240,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest, 24, 16> {
-};
+          ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest, 16> {};
 
 extern "C" const fidl_type_t
     test_protocollayouts_MainProtocol_OnAnonWithError_ResponseTable;

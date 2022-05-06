@@ -55,11 +55,11 @@ class Empty {
 
   bool operator==(const Empty& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::Empty, 1, 1>::Equal(this, &other);
+        ::test_emptystruct::Empty, 1>::Equal(this, &other);
   }
   bool operator!=(const Empty& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::Empty, 1, 1>::Equal(this, &other);
+        ::test_emptystruct::Empty, 1>::Equal(this, &other);
   }
 
   uint8_t __reserved() const { return storage_.__reserved; }
@@ -80,14 +80,13 @@ class Empty {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::Empty, 1, 1>;
+      ::test_emptystruct::Empty, 1>;
   friend struct ::fidl::internal::MemberVisitor<::test_emptystruct::Empty>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-          &Storage_::__reserved, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          &Storage_::__reserved, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
@@ -122,13 +121,11 @@ class EmptyProtocolSendRequest {
 
   bool operator==(const EmptyProtocolSendRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendRequest, 1, 1>::Equal(this,
-                                                                   &other);
+        ::test_emptystruct::EmptyProtocolSendRequest, 1>::Equal(this, &other);
   }
   bool operator!=(const EmptyProtocolSendRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendRequest, 1, 1>::Equal(this,
-                                                                   &other);
+        ::test_emptystruct::EmptyProtocolSendRequest, 1>::Equal(this, &other);
   }
 
   const ::test_emptystruct::Empty& e() const { return storage_.e; }
@@ -150,15 +147,14 @@ class EmptyProtocolSendRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolSendRequest, 1, 1>;
+      ::test_emptystruct::EmptyProtocolSendRequest, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolSendRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_emptystruct::Empty,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -197,13 +193,13 @@ class EmptyProtocolSendAndReceiveTopResponse {
   bool operator==(
       const EmptyProtocolSendAndReceiveTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1,
+        ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse,
         1>::Equal(this, &other);
   }
   bool operator!=(
       const EmptyProtocolSendAndReceiveTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1,
+        ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse,
         1>::Equal(this, &other);
   }
 
@@ -226,15 +222,14 @@ class EmptyProtocolSendAndReceiveTopResponse {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1, 1>;
+      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_emptystruct::Empty,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t
@@ -273,13 +268,13 @@ class EmptyProtocolSendAndReceiveRequest {
   bool operator==(
       const EmptyProtocolSendAndReceiveRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1,
+        ::test_emptystruct::EmptyProtocolSendAndReceiveRequest,
         1>::Equal(this, &other);
   }
   bool operator!=(
       const EmptyProtocolSendAndReceiveRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1,
+        ::test_emptystruct::EmptyProtocolSendAndReceiveRequest,
         1>::Equal(this, &other);
   }
 
@@ -302,15 +297,14 @@ class EmptyProtocolSendAndReceiveRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1, 1>;
+      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_emptystruct::Empty,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
@@ -345,13 +339,13 @@ class EmptyProtocolReceiveRequest {
 
   bool operator==(const EmptyProtocolReceiveRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1>::Equal(this,
-                                                                      &other);
+        ::test_emptystruct::EmptyProtocolReceiveRequest, 1>::Equal(this,
+                                                                   &other);
   }
   bool operator!=(const EmptyProtocolReceiveRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1>::Equal(this,
-                                                                      &other);
+        ::test_emptystruct::EmptyProtocolReceiveRequest, 1>::Equal(this,
+                                                                   &other);
   }
 
   const ::test_emptystruct::Empty& e() const { return storage_.e; }
@@ -373,15 +367,14 @@ class EmptyProtocolReceiveRequest {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1>;
+      ::test_emptystruct::EmptyProtocolReceiveRequest, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolReceiveRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_emptystruct::Empty,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
-  static constexpr auto kPaddingV1 = std::make_tuple();
-  static constexpr auto kPaddingV2 = std::make_tuple();
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0});
+  static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_emptystruct
@@ -425,7 +418,7 @@ struct internal::NaturalCodingTraits<
     ::test_emptystruct::EmptyProtocolSendRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_emptystruct::EmptyProtocolSendRequest, 1, 1> {};
+                ::test_emptystruct::EmptyProtocolSendRequest, 1> {};
 
 extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
@@ -447,9 +440,9 @@ template <>
 struct internal::NaturalCodingTraits<
     ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
-    final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1, 1> {};
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1> {
+};
 
 extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
@@ -472,8 +465,7 @@ struct internal::NaturalCodingTraits<
     ::test_emptystruct::EmptyProtocolSendAndReceiveRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1, 1> {
-};
+                ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1> {};
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
 
@@ -495,6 +487,6 @@ struct internal::NaturalCodingTraits<
     ::test_emptystruct::EmptyProtocolReceiveRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1> {};
+                ::test_emptystruct::EmptyProtocolReceiveRequest, 1> {};
 
 }  // namespace fidl
