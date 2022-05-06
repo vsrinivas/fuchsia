@@ -60,33 +60,3 @@ protocol Device {
         read_data vector<ReadData>:MAX_COUNT_TRANSACTIONS;
     }) error zx.status;
 };
-
-// TODO(fxbug.dev/96293): Migrate all clients to Device and delete Device2.
-
-const MAX_COUNT_SEGMENTS uint32 = 8; // Enough for all known transfer configurations.
-@discoverable
-protocol Device2 {
-    /// Write and read segments of data for a particular I2C device.
-    ///
-    /// The `segments_is_write` vector specifies the type (write or read) of each segment.
-    /// The `write_segments_data` vector of segments specifies the data to write for each write
-    /// segment. Each segment itself is a vector of uint8s, so `write_segments_data` is a vector of
-    /// vectors of uint8s.
-    /// The `read_segments_length` vector specifies the length of the read segments. No entry may be
-    /// larger than MAX_TRANSFER_SIZE.
-    /// If there is no error, `read_segments_data` returns a vector of segments, with each segment
-    /// data itself returned in vectors.
-    ///
-    /// For a simple I2C read, for instance 2 bytes write followed by one byte read,
-    /// `segments_is_write` would be a vector with 2 elements: true, false and
-    /// `write_segments_data` would be a vector with 1 element including the 2 bytes address of the
-    /// read. Upon success `read_segments_data` would return a vector with one element, the byte
-    /// read.
-    Transfer(struct {
-        segments_is_write vector<bool>:MAX_COUNT_SEGMENTS;
-        write_segments_data vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS;
-        read_segments_length vector<uint32>:MAX_COUNT_SEGMENTS;
-    }) -> (struct {
-        read_segments_data vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS;
-    }) error zx.status;
-};
