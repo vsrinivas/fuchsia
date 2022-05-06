@@ -15,16 +15,27 @@ namespace {
 
 // Measure the times taken to enqueue and then dequeue some bytes from a
 // Zircon socket, on a single thread.  This does not involve any
-// cross-thread wakeups.
-bool SocketWriteReadTest(perftest::RepeatState* state, uint32_t message_size) {
+// cross-thread wakeups. The |socket_flags| can be used to control whether the
+// socket is a stream or a datagram, and |queued| represents how many messages
+// to write to the socket before beginning the benchmark. Having messages queued
+// on the socket allows for testing scenarios where the socket stays non-empty,
+// versus transitions from empty to non-empty and back on each iteration.
+bool SocketWriteReadTest(perftest::RepeatState* state, uint32_t socket_flags, uint32_t message_size,
+                         uint32_t queued) {
   state->DeclareStep("write");
   state->DeclareStep("read");
   state->SetBytesProcessedPerRun(message_size);
 
   zx::socket socket1;
   zx::socket socket2;
-  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &socket1, &socket2));
+  ASSERT_OK(zx::socket::create(socket_flags, &socket1, &socket2));
   std::vector<char> buffer(message_size);
+
+  for (uint32_t i = 0; i < queued; i++) {
+    size_t bytes_written;
+    ASSERT_OK(socket1.write(0, buffer.data(), buffer.size(), &bytes_written));
+    ZX_ASSERT(bytes_written == buffer.size());
+  }
 
   while (state->KeepRunning()) {
     size_t bytes_written;
@@ -40,15 +51,40 @@ bool SocketWriteReadTest(perftest::RepeatState* state, uint32_t message_size) {
 }
 
 void RegisterTests() {
-  static const unsigned kMessageSizesInBytes[] = {
+  // Since stream payloads can coexist in different MBufChains internally we want to test cases
+  // where messages always sit inside a buffer, will stride across a single buffer boundary, and
+  // require multiple buffers.
+  static const unsigned kStreamMessageSizesInBytes[] = {
       64,
       1 * 1024,
-      32 * 1024,
       64 * 1024,
   };
-  for (auto message_size : kMessageSizesInBytes) {
-    auto name = fbl::StringPrintf("Socket/WriteRead/%ubytes", message_size);
-    perftest::RegisterTest(name.c_str(), SocketWriteReadTest, message_size);
+  // Datagrams always occupy their own MBufChain, so just test a very small and very large message
+  // to show baseline costs versus copying overhead.
+  static const unsigned kDatagramMessageSizesInBytes[] = {
+      64,
+      64 * 1024,
+  };
+  static const unsigned kMessagesToQueue[] = {
+      0,
+      1,
+  };
+
+  for (auto message_size : kStreamMessageSizesInBytes) {
+    for (auto queued_messages : kMessagesToQueue) {
+      auto name = fbl::StringPrintf("Socket/Stream/WriteRead/%ubytes/%uqueued", message_size,
+                                    queued_messages);
+      perftest::RegisterTest(name.c_str(), SocketWriteReadTest, ZX_SOCKET_STREAM, message_size,
+                             queued_messages);
+    }
+  }
+  for (auto message_size : kDatagramMessageSizesInBytes) {
+    for (auto queued_messages : kMessagesToQueue) {
+      auto name = fbl::StringPrintf("Socket/Datagram/WriteRead/%ubytes/%uqueued", message_size,
+                                    queued_messages);
+      perftest::RegisterTest(name.c_str(), SocketWriteReadTest, ZX_SOCKET_DATAGRAM, message_size,
+                             queued_messages);
+    }
   }
 }
 PERFTEST_CTOR(RegisterTests)
