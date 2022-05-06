@@ -144,6 +144,8 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   };
 
   // Templated helpers to assist with differently sized protocol reads and writes.
+  // TODO(91513): Move these back to a .cc after we no longer have both Banjo and FIDL callers for
+  // them.
   template <typename V, typename R>
   zx::status<V> ReadConfig(uint16_t offset) {
     if (offset + sizeof(V) > PCI_EXT_CONFIG_SIZE) {

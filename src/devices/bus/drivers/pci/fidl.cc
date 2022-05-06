@@ -203,32 +203,62 @@ void FidlDevice::GetInterruptModes(GetInterruptModesRequestView request,
 
 void FidlDevice::ReadConfig8(ReadConfig8RequestView request,
                              ReadConfig8Completer::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  auto result = device_->ReadConfig<uint8_t, PciReg8>(request->offset);
+  if (!result.is_ok()) {
+    completer.ReplyError(result.status_value());
+    return;
+  }
+  completer.ReplySuccess(result.value());
 }
 
 void FidlDevice::ReadConfig16(ReadConfig16RequestView request,
                               ReadConfig16Completer::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  auto result = device_->ReadConfig<uint16_t, PciReg16>(request->offset);
+  if (!result.is_ok()) {
+    completer.ReplyError(result.status_value());
+    return;
+  }
+  completer.ReplySuccess(result.value());
 }
 
 void FidlDevice::ReadConfig32(ReadConfig32RequestView request,
                               ReadConfig32Completer::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  auto result = device_->ReadConfig<uint32_t, PciReg32>(request->offset);
+  if (!result.is_ok()) {
+    completer.ReplyError(result.status_value());
+    return;
+  }
+  completer.ReplySuccess(result.value());
 }
 
 void FidlDevice::WriteConfig8(WriteConfig8RequestView request,
                               WriteConfig8Completer::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  zx_status_t status = device_->WriteConfig<uint8_t, PciReg8>(request->offset, request->value);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
 }
 
 void FidlDevice::WriteConfig16(WriteConfig16RequestView request,
                                WriteConfig16Completer::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  zx_status_t status = device_->WriteConfig<uint16_t, PciReg16>(request->offset, request->value);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
 }
 
 void FidlDevice::WriteConfig32(WriteConfig32RequestView request,
                                WriteConfig32Completer::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  zx_status_t status = device_->WriteConfig<uint32_t, PciReg32>(request->offset, request->value);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
 }
 
 void FidlDevice::GetCapabilities(GetCapabilitiesRequestView request,
