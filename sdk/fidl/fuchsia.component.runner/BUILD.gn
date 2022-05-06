@@ -15,6 +15,7 @@ fidl("fuchsia.component.runner") {
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.url",
+    "//zircon/vdso/zx",
   ]
 
   sources = [ "component_runner.fidl" ]

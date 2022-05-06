@@ -16,9 +16,10 @@ use {
     },
     cm_moniker::InstancedExtendedMoniker,
     cm_rust::{CapabilityName, EventMode},
+    cm_util::io::clone_dir,
     fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, HandleBased},
     futures::{lock::Mutex, TryStreamExt},
     log::{error, info, warn},
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
@@ -130,6 +131,9 @@ async fn maybe_create_event_result(
                 ..fsys::StoppedPayload::EMPTY
             }),
         ))),
+        Ok(EventPayload::DebugStarted { runtime_dir, break_on_start }) => {
+            Ok(Some(create_debug_started_payload(runtime_dir, break_on_start)))
+        }
         Ok(payload) => Ok(maybe_create_empty_payload(payload.event_type())),
         Err(EventError {
             source,
@@ -229,6 +233,22 @@ fn create_capability_routed_payload(source: &CapabilitySource) -> fsys::EventRes
     let name = source.source_name().map(|n| n.to_string());
     let payload = fsys::CapabilityRoutedPayload { name, ..fsys::CapabilityRoutedPayload::EMPTY };
     fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(payload))
+}
+
+fn create_debug_started_payload(
+    runtime_dir: &Option<fio::DirectoryProxy>,
+    break_on_start: &Arc<zx::EventPair>,
+) -> fsys::EventResult {
+    fsys::EventResult::Payload(fsys::EventPayload::DebugStarted(fsys::DebugStartedPayload {
+        runtime_dir: clone_dir(runtime_dir.as_ref()).map(|dir| {
+            dir.into_channel()
+                .expect("could not convert directory to channel")
+                .into_zx_channel()
+                .into()
+        }),
+        break_on_start: break_on_start.duplicate_handle(zx::Rights::SAME_RIGHTS).ok(),
+        ..fsys::DebugStartedPayload::EMPTY
+    }))
 }
 
 fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult> {

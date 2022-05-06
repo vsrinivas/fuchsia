@@ -170,6 +170,8 @@ pub enum ModelError {
     VmoCreateFailed(#[source] zx::Status),
     #[error("couldn't write to vmo: {_0}")]
     VmoWriteFailed(#[source] zx::Status),
+    #[error("couldn't create eventpair: {_0}")]
+    EventPairCreateFailed(#[source] zx::Status),
 }
 
 impl ModelError {

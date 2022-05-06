@@ -61,6 +61,11 @@ type EventType = strict enum {
     /// If requested, this event is dispatched on subscription and indicates
     /// that the instance has already started and is still running.
     RUNNING = 10;
+
+    /// Similar to STARTED, except the payload will carry an eventpair that the subscriber
+    /// could use to defer the launch of the component. This allows, e.g., a debugger to
+    /// perform some setup before any processes are created.
+    DEBUG_STARTED = 11;
 };
 
 /// Describes the result of a state transition.
@@ -116,6 +121,9 @@ type EventErrorPayload = flexible union {
 
     /// Payload for Stopped events
    10: stopped StoppedError;
+
+    /// Payload for DebugStarted events
+   11: debug_started DebugStartedError;
 };
 
 /// Error payload for DirectoryReady events
@@ -160,6 +168,9 @@ type StartedError = table {};
 /// Error payload for Stopped events.
 type StoppedError = table {};
 
+/// Error payload for DebugStarted events.
+type DebugStartedError = table {};
+
 /// Encapsulates additional data/protocols for some event types.
 type EventPayload = flexible resource union {
     /// Payload for CapabilityRequested events
@@ -191,6 +202,9 @@ type EventPayload = flexible resource union {
 
     /// Payload for Stopped events
    10: stopped StoppedPayload;
+
+    /// Payload for DebugStarted events
+   11: debug_started DebugStartedPayload;
 };
 
 /// Payload for DirectoryReady events
@@ -246,6 +260,21 @@ type StoppedPayload = table {
     /// possible status values and their meaning are described in the definition
     /// of the ComponentController protocol.
     1: status zx.status;
+};
+
+/// Payload for DebugStarted events.
+type DebugStartedPayload = resource table {
+    /// The directory served by the runner to present runtime and runner-specific information
+    /// about the component. The other side is sent to the runner in ComponentStartInfo.
+    /// For example, it can be queried to know whether the component is an ELF component and
+    /// supports the break_on_start protocol below.
+    1: runtime_dir client_end:fuchsia.io.Directory;
+
+    /// An eventpair that can be used by debuggers to defer the launch of the component,
+    /// e.g., ELF debuggers can setup the exception channel on the job while holding
+    /// the eventpair, then drop the eventpair to notify the runner that processes could
+    /// be created. The other side is sent to the runner in ComponentStartInfo.
+    2: break_on_start zx.handle:EVENTPAIR;
 };
 
 /// A head providing metadata about a target component instance.

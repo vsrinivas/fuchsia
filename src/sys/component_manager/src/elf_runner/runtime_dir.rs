@@ -7,21 +7,58 @@ use {
     fidl_fuchsia_io as fio,
     std::sync::Arc,
     vfs::{
-        directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
-        execution_scope::ExecutionScope, file::vmo::asynchronous::read_only_static,
-        path::Path as fvfsPath, tree_builder::TreeBuilder,
+        directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
+        directory::immutable::simple as pfs, execution_scope::ExecutionScope,
+        file::vmo::asynchronous::read_only_static, path::Path as fvfsPath,
+        tree_builder::TreeBuilder,
     },
 };
 
 // Simple directory type which is used to implement `ComponentStartInfo.runtime_directory`.
-pub type RuntimeDirectory = Arc<pfs::Simple>;
+pub struct RuntimeDirectory(Arc<pfs::Simple>);
+
+impl RuntimeDirectory {
+    pub fn add_process_id(&self, process_id: u64) {
+        self.elf_dir()
+            .add_entry("process_id", read_only_static(process_id.to_string()))
+            .expect("failed to add process_id");
+    }
+
+    pub fn add_process_start_time(&self, process_start_time: i64) {
+        self.elf_dir()
+            .add_entry("process_start_time", read_only_static(process_start_time.to_string()))
+            .expect("failed to add process_start_time");
+    }
+
+    pub fn add_process_start_time_utc_estimate(&self, process_start_time_utc_estimate: String) {
+        self.elf_dir()
+            .add_entry(
+                "process_start_time_utc_estimate",
+                read_only_static(process_start_time_utc_estimate),
+            )
+            .expect("failed to add process_start_time_utc_estimate");
+    }
+
+    // Create an empty runtime directory, for test purpose only.
+    pub fn empty() -> Self {
+        let mut empty = TreeBuilder::empty_dir();
+        empty.add_empty_dir(["elf"]).expect("failed to add elf directory");
+        RuntimeDirectory(empty.build())
+    }
+
+    fn elf_dir(&self) -> Arc<pfs::Simple> {
+        self.0
+            .get_entry("elf")
+            .expect("elf directory should be present")
+            .into_any()
+            .downcast::<pfs::Simple>()
+            .expect("could not downcast elf to a directory")
+    }
+}
 
 pub struct RuntimeDirBuilder {
     args: Vec<String>,
     job_id: Option<u64>,
-    process_id: Option<u64>,
-    process_start_time: Option<i64>,
-    process_start_time_utc_estimate: Option<String>,
     server_end: ServerEnd<fio::NodeMarker>,
 }
 
@@ -29,14 +66,7 @@ impl RuntimeDirBuilder {
     pub fn new(server_end: ServerEnd<fio::DirectoryMarker>) -> Self {
         // Transform the server end to speak Node protocol only
         let server_end = ServerEnd::<fio::NodeMarker>::new(server_end.into_channel());
-        Self {
-            args: vec![],
-            job_id: None,
-            process_id: None,
-            process_start_time: None,
-            process_start_time_utc_estimate: None,
-            server_end,
-        }
+        Self { args: vec![], job_id: None, server_end }
     }
 
     pub fn args(mut self, args: Vec<String>) -> Self {
@@ -46,24 +76,6 @@ impl RuntimeDirBuilder {
 
     pub fn job_id(mut self, job_id: u64) -> Self {
         self.job_id = Some(job_id);
-        self
-    }
-
-    pub fn process_id(mut self, process_id: u64) -> Self {
-        self.process_id = Some(process_id);
-        self
-    }
-
-    pub fn process_start_time(mut self, process_start_time: i64) -> Self {
-        self.process_start_time = Some(process_start_time);
-        self
-    }
-
-    pub fn process_start_time_utc_estimate(
-        mut self,
-        process_start_time_utc_estimate: Option<String>,
-    ) -> Self {
-        self.process_start_time_utc_estimate = process_start_time_utc_estimate;
         self
     }
 
@@ -87,34 +99,13 @@ impl RuntimeDirBuilder {
             count += 1;
         }
 
+        // Always add the "elf" directory so we can add process information later.
+        runtime_tree_builder.add_empty_dir(["elf"]).expect("failed to add elf directory");
+
         if let Some(job_id) = self.job_id {
             runtime_tree_builder
                 .add_entry(["elf", "job_id"], read_only_static(job_id.to_string()))
                 .expect("Failed to add job_id to runtime/elf directory");
-        }
-
-        if let Some(process_id) = self.process_id {
-            runtime_tree_builder
-                .add_entry(["elf", "process_id"], read_only_static(process_id.to_string()))
-                .expect("Failed to add process_id to runtime/elf directory");
-        }
-
-        if let Some(process_start_time) = self.process_start_time {
-            runtime_tree_builder
-                .add_entry(
-                    ["elf", "process_start_time"],
-                    read_only_static(process_start_time.to_string()),
-                )
-                .expect("Failed to add process_start_time to runtime/elf directory");
-        }
-
-        if let Some(process_start_time_utc_estimate) = self.process_start_time_utc_estimate {
-            runtime_tree_builder
-                .add_entry(
-                    ["elf", "process_start_time_utc_estimate"],
-                    read_only_static(process_start_time_utc_estimate),
-                )
-                .expect("Failed to add process_start_time_utc_estimate to runtime/elf directory");
         }
 
         let runtime_directory = runtime_tree_builder.build();
@@ -128,6 +119,6 @@ impl RuntimeDirBuilder {
             self.server_end,
         );
 
-        runtime_directory
+        RuntimeDirectory(runtime_directory)
     }
 }

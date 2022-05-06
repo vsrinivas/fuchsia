@@ -47,6 +47,11 @@ use {
     std::{convert::TryInto, path::Path, sync::Arc},
 };
 
+// Maximum time that the runner will wait for break_on_start eventpair to signal.
+// This is set to prevent debuggers from blocking us for too long, either intentionally
+// or unintentionally.
+const MAX_WAIT_BREAK_ON_START: Duration = Duration::from_millis(300);
+
 // Minimum timer slack amount and default mode. The amount should be large enough to allow for some
 // coalescing of timers, but small enough to ensure applications don't miss deadlines.
 //
@@ -353,7 +358,7 @@ impl ElfRunner {
 
     async fn start_component_helper(
         &self,
-        start_info: fcrunner::ComponentStartInfo,
+        mut start_info: fcrunner::ComponentStartInfo,
         moniker: AbsoluteMoniker,
         resolved_url: String,
         program_config: ElfProgramConfig,
@@ -370,7 +375,7 @@ impl ElfRunner {
 
         crash_handler::run_exceptions_server(
             &component_job,
-            moniker,
+            moniker.clone(),
             resolved_url.clone(),
             self.crash_records.clone(),
         )
@@ -438,6 +443,8 @@ impl ElfRunner {
             ElfRunnerError::component_job_duplication_error(resolved_url.clone(), e)
         })?;
 
+        let break_on_start = start_info.break_on_start.take();
+
         let (utc_clock_xform, mut launch_info, runtime_dir_builder, tasks) = match self
             .configure_launcher(
                 &resolved_url,
@@ -463,6 +470,17 @@ impl ElfRunner {
             .get_koid()
             .map_err(|e| ElfRunnerError::component_job_id_error(resolved_url.clone(), e))?
             .raw_koid();
+
+        let runtime_dir = runtime_dir_builder.job_id(job_koid).serve();
+
+        // Wait on break_on_start with a timeout and don't fail.
+        if let Some(break_on_start) = break_on_start {
+            fasync::OnSignals::new(&break_on_start, Signals::OBJECT_PEER_CLOSED)
+                .on_timeout(MAX_WAIT_BREAK_ON_START, || Err(Status::TIMED_OUT))
+                .await
+                .err()
+                .map(|e| log::warn!("Failed to wait break_on_start on {}: {}", &moniker, e));
+        }
 
         // Launch the component
         let (status, process) = launcher
@@ -491,32 +509,26 @@ impl ElfRunner {
                 .expect("failed to set process as critical");
         }
 
-        let process_koid = process
-            .get_koid()
-            .map_err(|e| ElfRunnerError::component_process_id_error(resolved_url.clone(), e))?
-            .raw_koid();
+        runtime_dir.add_process_id(
+            process
+                .get_koid()
+                .map_err(|e| ElfRunnerError::component_process_id_error(resolved_url.clone(), e))?
+                .raw_koid(),
+        );
 
         let process_start_time = process
             .info()
             .map_err(|e| ElfRunnerError::component_process_id_error(resolved_url.clone(), e))?
             .start_time;
+        runtime_dir.add_process_start_time(process_start_time);
 
-        let process_start_time_utc_estimate = if let Some(utc_clock_xform) = utc_clock_xform {
+        if let Some(utc_clock_xform) = utc_clock_xform {
             let utc_timestamp = utc_clock_xform.apply(process_start_time);
             let seconds = (utc_timestamp / 1_000_000_000) as i64;
             let nanos = (utc_timestamp % 1_000_000_000) as u32;
             let dt = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(seconds, nanos), Utc);
-            Some(dt.to_string())
-        } else {
-            None
+            runtime_dir.add_process_start_time_utc_estimate(dt.to_string())
         };
-
-        let runtime_dir = runtime_dir_builder
-            .job_id(job_koid)
-            .process_id(process_koid)
-            .process_start_time(process_start_time)
-            .process_start_time_utc_estimate(process_start_time_utc_estimate)
-            .serve();
 
         Ok(Some(ElfComponent::new(
             runtime_dir,
@@ -676,6 +688,7 @@ impl Runner for ScopedElfRunner {
 #[cfg(test)]
 mod tests {
     use {
+        super::runtime_dir::RuntimeDirectory,
         super::*,
         crate::{
             builtin::runner::BuiltinRunnerFactory,
@@ -712,7 +725,6 @@ mod tests {
             sync::{Arc, Mutex},
             task::Poll,
         },
-        vfs::tree_builder::TreeBuilder,
     };
 
     fn new_elf_runner_for_test(config: &RuntimeConfig) -> Arc<ElfRunner> {
@@ -874,7 +886,7 @@ mod tests {
                 .expect("job handle duplication failed"),
         );
         let component = ElfComponent::new(
-            TreeBuilder::empty_dir().build(),
+            RuntimeDirectory::empty(),
             job_copy,
             dummy_process,
             lifecycle_client,

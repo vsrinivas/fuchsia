@@ -136,6 +136,25 @@ rustc_test("lifecycle_timeout_unresponsive") {
   sources = [ "lifecycle_timeout_unresponsive.rs" ]
 }
 
+rustc_test("debug_started") {
+  source_root = "debug_started.rs"
+  name = "debug_started_integration_test"
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/lib/component-events",
+  ]
+
+  sources = [ "debug_started.rs" ]
+}
+
 rustc_binary("unresponsive_component") {
   source_root = "unresponsive_component.rs"
   name = "unresponsive_component"
@@ -180,6 +199,12 @@ fuchsia_component("component_exit_integration_test") {
   manifest = "meta/component_exit.cml"
 }
 
+fuchsia_component("debug_started_integration_test") {
+  testonly = true
+  deps = [ ":debug_started" ]
+  manifest = "meta/debug_started.cml"
+}
+
 fuchsia_component("lifecycle_timeout_unresponsive_root") {
   testonly = true
   manifest = "meta/lifecycle_timeout_unresponsive_root.cml"
@@ -214,6 +239,7 @@ fuchsia_test_package("elf_runner_lifecycle_test") {
     ":lifecycle_timeout_integration_test",
     ":lifecycle_timeout_unresponsive_integration_test",
     ":component_exit_integration_test",
+    ":debug_started_integration_test",
   ]
 
   deps = [

@@ -11,6 +11,7 @@ using fuchsia.io;
 using fuchsia.mem;
 using fuchsia.process;
 using fuchsia.url;
+using zx;
 
 const MAX_NAMESPACE_COUNT uint32 = 32;
 const MAX_HANDLE_COUNT uint32 = 128;
@@ -111,6 +112,16 @@ type ComponentStartInfo = resource table {
     /// fields match the configuration fields of the component's compiled manifest
     /// in the same order.
     7: encoded_config fuchsia.mem.Data;
+
+    /// An eventpair that debuggers can use to defer the launch of the component.
+    ///
+    /// For example, ELF runners hold off from creating processes in the component
+    /// until ZX_EVENTPAIR_PEER_CLOSED is signaled on this eventpair. They also
+    /// ensure that runtime_dir is served before waiting on this eventpair.
+    /// ELF debuggers can query the runtime_dir to decide whether to attach before
+    /// they drop the other side of the eventpair, which is sent in the payload of
+    /// the DebugStarted event in fuchsia.sys2.events.
+    8: break_on_start zx.handle:EVENTPAIR;
 };
 
 /// A protocol for binding and controlling the lifetime of a component instance

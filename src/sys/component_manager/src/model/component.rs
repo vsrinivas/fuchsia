@@ -2485,6 +2485,7 @@ pub mod tests {
                     EventType::Discovered.into(),
                     EventType::Resolved.into(),
                     EventType::Started.into(),
+                    EventType::DebugStarted.into(),
                 ]
                 .into_iter()
                 .map(|event| EventSubscription::new(event, EventMode::Async))
@@ -2505,9 +2506,12 @@ pub mod tests {
             wait_until_event_get_timestamp(&mut event_stream, EventType::Resolved).await;
         let started_timestamp =
             wait_until_event_get_timestamp(&mut event_stream, EventType::Started).await;
+        let debug_started_timestamp =
+            wait_until_event_get_timestamp(&mut event_stream, EventType::DebugStarted).await;
 
         assert!(discovered_timestamp < resolved_timestamp);
         assert!(resolved_timestamp < started_timestamp);
+        assert!(started_timestamp == debug_started_timestamp);
 
         let component = bind_handle.await;
         let component_timestamp =

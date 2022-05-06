@@ -1,0 +1,35 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/debug_started_integration_test",
+    },
+    collections: [
+        {
+            name: "test-collection",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+        },
+        {
+            event: [
+                "debug_started",
+                "stopped",
+            ],
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#test-collection",
+        },
+    ],
+}

@@ -33,6 +33,7 @@ pub fn event_name(event_type: &fsys::EventType) -> String {
         fsys::EventType::Started => "started",
         fsys::EventType::Stopped => "stopped",
         fsys::EventType::Running => "running",
+        fsys::EventType::DebugStarted => "debug_started",
     }
     .to_string()
 }
@@ -535,4 +536,24 @@ create_event!(
             ty: String,
         }
     }
+);
+create_event!(
+    event_type: DebugStarted,
+    event_name: debug_started,
+    payload: {
+        data: {
+            {
+                name: break_on_start,
+                ty: zx::EventPair,
+            }
+        },
+        client_protocols: {
+            {
+                name: runtime_dir,
+                ty: fio::DirectoryProxy,
+            }
+        },
+        server_protocols: {},
+    },
+    error_payload: {}
 );

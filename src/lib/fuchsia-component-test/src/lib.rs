@@ -1838,7 +1838,11 @@ impl ScopedInstanceFactory {
             .open_exposed_dir(&mut child_ref, server)
             .await
             .context("OpenExposedDir FIDL failed.")?
-            .map_err(|e| format_err!("Failed to open exposed dir of child: {:?}", e))?;
+            .map_err(|e|
+                // NOTE: There could be a flake here that if the collection is single-run, and the
+                // child we created is short-lived, it's possible that the child has already run
+                // and terminated, and "open_exposed_dir" would fail with an Internal error.
+                format_err!("Failed to open exposed dir of child: {:?}", e))?;
         Ok(ScopedInstance {
             realm,
             child_name,

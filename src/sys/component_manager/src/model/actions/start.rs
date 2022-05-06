@@ -86,16 +86,17 @@ async fn do_start(
 
         // Generate the Runtime which will be set in the Execution.
         let checker = component.try_get_policy_checker()?;
-        let (pending_runtime, start_info, controller_server_end) = make_execution_runtime(
-            &component,
-            &checker,
-            component_info.resolved_url.clone(),
-            component_info.package,
-            &component_info.decl,
-            component_info.config,
-            start_reason.clone(),
-        )
-        .await?;
+        let (pending_runtime, start_info, controller_server_end, break_on_start) =
+            make_execution_runtime(
+                &component,
+                &checker,
+                component_info.resolved_url.clone(),
+                component_info.package,
+                &component_info.decl,
+                component_info.config,
+                start_reason.clone(),
+            )
+            .await?;
 
         Ok((
             StartContext {
@@ -106,32 +107,58 @@ async fn do_start(
                 controller_server_end,
             },
             pending_runtime,
+            break_on_start,
         ))
     }
     .await;
 
+    // Dispatch the Started and the DebugStarted event.
     let (start_context, pending_runtime) = match result {
-        Ok((start_context, mut pending_runtime)) => {
-            let event = Event::new_with_timestamp(
-                component,
-                Ok(EventPayload::Started {
-                    component: component.into(),
-                    runtime: RuntimeInfo::from_runtime(
-                        &mut pending_runtime,
-                        start_context.resolved_url.clone(),
-                    ),
-                    component_decl: start_context.component_decl.clone(),
-                    start_reason: start_reason.clone(),
-                }),
-                pending_runtime.timestamp,
-            );
-
-            component.hooks.dispatch(&event).await?;
+        Ok((start_context, mut pending_runtime, break_on_start)) => {
+            component
+                .hooks
+                .dispatch(&Event::new_with_timestamp(
+                    component,
+                    Ok(EventPayload::Started {
+                        component: component.into(),
+                        runtime: RuntimeInfo::from_runtime(
+                            &mut pending_runtime,
+                            start_context.resolved_url.clone(),
+                        ),
+                        component_decl: start_context.component_decl.clone(),
+                        start_reason: start_reason.clone(),
+                    }),
+                    pending_runtime.timestamp,
+                ))
+                .await?;
+            component
+                .hooks
+                .dispatch(&Event::new_with_timestamp(
+                    component,
+                    Ok(EventPayload::DebugStarted {
+                        runtime_dir: pending_runtime.runtime_dir.clone(),
+                        break_on_start: Arc::new(break_on_start),
+                    }),
+                    pending_runtime.timestamp,
+                ))
+                .await?;
             (start_context, pending_runtime)
         }
         Err(e) => {
-            let event = Event::new(component, Err(EventError::new(&e, EventErrorPayload::Started)));
-            component.hooks.dispatch(&event).await?;
+            component
+                .hooks
+                .dispatch(&Event::new(
+                    component,
+                    Err(EventError::new(&e, EventErrorPayload::Started)),
+                ))
+                .await?;
+            component
+                .hooks
+                .dispatch(&Event::new(
+                    component,
+                    Err(EventError::new(&e, EventErrorPayload::DebugStarted)),
+                ))
+                .await?;
             return Err(e);
         }
     };
@@ -220,7 +247,12 @@ async fn make_execution_runtime(
     config: Option<ConfigFields>,
     start_reason: StartReason,
 ) -> Result<
-    (Runtime, fcrunner::ComponentStartInfo, ServerEnd<fcrunner::ComponentControllerMarker>),
+    (
+        Runtime,
+        fcrunner::ComponentStartInfo,
+        ServerEnd<fcrunner::ComponentControllerMarker>,
+        zx::EventPair,
+    ),
     ModelError,
 > {
     match component.on_terminate {
@@ -274,6 +306,8 @@ async fn make_execution_runtime(
         start_reason,
     )?;
     let numbered_handles = component.numbered_handles.lock().await.take();
+    let (break_on_start_left, break_on_start_right) =
+        zx::EventPair::create().map_err(ModelError::EventPairCreateFailed)?;
     let start_info = fcrunner::ComponentStartInfo {
         resolved_url: Some(url),
         program: decl.program.as_ref().map(|p| p.info.clone()),
@@ -282,10 +316,11 @@ async fn make_execution_runtime(
         runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
         numbered_handles,
         encoded_config,
+        break_on_start: Some(break_on_start_left),
         ..fcrunner::ComponentStartInfo::EMPTY
     };
 
-    Ok((runtime, start_info, controller_server))
+    Ok((runtime, start_info, controller_server, break_on_start_right))
 }
 
 #[cfg(test)]

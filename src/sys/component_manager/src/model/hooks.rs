@@ -175,6 +175,9 @@ events!([
     (Stopped, stopped),
     /// A component is running.
     (Running, running),
+    /// Similar to the Started event, except the payload will carry an eventpair
+    /// that the subscriber could use to defer the launch of the component.
+    (DebugStarted, debug_started),
 ]);
 
 impl Into<CapabilityName> for EventType {
@@ -210,6 +213,7 @@ pub enum EventErrorPayload {
     Started,
     Stopped,
     Running { started_timestamp: zx::Time },
+    DebugStarted,
 }
 
 impl HasEventType for EventError {
@@ -235,7 +239,8 @@ impl fmt::Debug for EventErrorPayload {
             | EventErrorPayload::Resolved
             | EventErrorPayload::Started
             | EventErrorPayload::Stopped
-            | EventErrorPayload::Running { .. } => formatter.finish(),
+            | EventErrorPayload::Running { .. }
+            | EventErrorPayload::DebugStarted => formatter.finish(),
         }
     }
 }
@@ -310,6 +315,10 @@ pub enum EventPayload {
     Running {
         started_timestamp: zx::Time,
     },
+    DebugStarted {
+        runtime_dir: Option<fio::DirectoryProxy>,
+        break_on_start: Arc<zx::EventPair>,
+    },
 }
 
 /// Information about a component's runtime provided to `Started`.
@@ -368,7 +377,8 @@ impl fmt::Debug for EventPayload {
             EventPayload::Purged
             | EventPayload::Discovered
             | EventPayload::Destroyed
-            | EventPayload::Running { .. } => formatter.finish(),
+            | EventPayload::Running { .. }
+            | EventPayload::DebugStarted { .. } => formatter.finish(),
         }
     }
 }
@@ -524,7 +534,8 @@ impl fmt::Display for Event {
                     | EventPayload::Discovered
                     | EventPayload::Destroyed
                     | EventPayload::Resolved { .. }
-                    | EventPayload::Running { .. } => "".to_string(),
+                    | EventPayload::Running { .. }
+                    | EventPayload::DebugStarted { .. } => "".to_string(),
                 };
                 format!("[{}] '{}' {}", self.event_type().to_string(), self.target_moniker, payload)
             }
