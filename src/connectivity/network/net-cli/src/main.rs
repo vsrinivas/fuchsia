@@ -15,7 +15,6 @@ use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol_at;
-use fuchsia_zircon as zx;
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 /// Logger which prints levels at or below info to stdout and levels at or
 /// above warn to stderr.
@@ -137,10 +136,7 @@ impl net_cli::NetCliDepsConnector for Connector {
         let topological_path =
             fdio::device_get_topo_path(&dev).context("failed to get topological path")?;
         let client = fdio::get_service_handle(dev)?;
-        let dev = fidl::endpoints::ClientEnd::<fethernet::DeviceMarker>::new(
-            // Safe because we checked the return status above.
-            zx::Channel::from(unsafe { zx::Handle::from_raw(client) }),
-        );
+        let dev = fidl::endpoints::ClientEnd::<fethernet::DeviceMarker>::new(client);
         Ok(net_cli::Device { topological_path, dev })
     }
 }

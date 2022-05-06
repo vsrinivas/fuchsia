@@ -739,7 +739,7 @@ impl Namespace {
 /// ownership of 'service' because the File is released when acquiring the service handle.
 ///
 /// This corresponds with fdio_get_service_handle in C.
-pub fn get_service_handle(service: File) -> Result<zx_handle_t, zx::Status> {
+pub fn get_service_handle(service: File) -> Result<zx::Channel, zx::Status> {
     let fd = std::os::unix::io::IntoRawFd::into_raw_fd(service);
     let mut handle = 0;
     // Safety: fdio_get_service_handle() is an unsafe function because its 'out' parameter is a raw
@@ -748,7 +748,9 @@ pub fn get_service_handle(service: File) -> Result<zx_handle_t, zx::Status> {
     // 2) fdio_get_service_handle() does not retain a copy of `out`, and
     // 3) 'fd' is not used following this invocation.
     zx::Status::ok(unsafe { fdio_sys::fdio_get_service_handle(fd, &mut handle) })?;
-    Ok(handle)
+    // Safety: from_raw() is an unsafe function because it assumes the given raw handle is valid.
+    // Above, fdio_get_service_handle()'s return value was ok, so 'handle' must be valid.
+    Ok(zx::Channel::from(unsafe { zx::Handle::from_raw(handle) }))
 }
 
 #[cfg(test)]
@@ -943,7 +945,7 @@ mod tests {
     fn fdio_get_service_handle() {
         // Verify get_service_handle succeeds against a valid FIDL service.
         let service = File::open("/svc").expect("Failed to open /svc.");
-        let _: zx_handle_t =
+        let _: zx::Channel =
             get_service_handle(service).expect("failed to get fdio service handle");
 
         // Safety: 0 is not a valid FD; it has no other references and is safe to close.

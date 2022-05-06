@@ -99,11 +99,7 @@ impl Client {
         name: &str,
     ) -> Result<Self, anyhow::Error> {
         let client = fdio::get_service_handle(dev)?;
-        let dev = fidl::endpoints::ClientEnd::<sys::DeviceMarker>::new(
-            // Safe because we checked the return status above.
-            fuchsia_zircon::Channel::from(unsafe { fuchsia_zircon::Handle::from_raw(client) }),
-        )
-        .into_proxy()?;
+        let dev = fidl::endpoints::ClientEnd::<sys::DeviceMarker>::new(client).into_proxy()?;
         Client::new(dev, buf, buf_size, name).await
     }
 
