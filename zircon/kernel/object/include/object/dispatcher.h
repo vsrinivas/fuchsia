@@ -392,7 +392,7 @@ class SoloDispatcher : public Dispatcher {
 // TODO(kulakowski) We should investigate turning this into one
 // allocation. This would mean PeerHolder would have two EndPoint
 // members, and that PeeredDispatcher would have custom refcounting.
-template <typename Endpoint>
+template <typename Endpoint, lockdep::LockFlags Flags = lockdep::LockFlagsNone>
 class PeerHolder : public fbl::RefCounted<PeerHolder<Endpoint>> {
  public:
   PeerHolder() = default;
@@ -400,16 +400,17 @@ class PeerHolder : public fbl::RefCounted<PeerHolder<Endpoint>> {
 
   Lock<Mutex>* get_lock() const { return &lock_; }
 
-  mutable DECLARE_MUTEX(PeerHolder) lock_;
+  mutable DECLARE_MUTEX(PeerHolder, Flags) lock_;
 };
 
-template <typename Self, zx_rights_t def_rights, zx_signals_t extra_signals = 0u>
+template <typename Self, zx_rights_t def_rights, zx_signals_t extra_signals = 0u,
+          lockdep::LockFlags Flags = lockdep::LockFlagsNone>
 class PeeredDispatcher : public Dispatcher {
  public:
   static constexpr zx_rights_t default_rights() { return def_rights; }
 
   // At construction, the object is asserting |signals|.
-  explicit PeeredDispatcher(fbl::RefPtr<PeerHolder<Self>> holder, zx_signals_t signals = 0u)
+  explicit PeeredDispatcher(fbl::RefPtr<PeerHolder<Self, Flags>> holder, zx_signals_t signals = 0u)
       : Dispatcher(signals), holder_(ktl::move(holder)) {}
   virtual ~PeeredDispatcher() = default;
 
@@ -493,7 +494,7 @@ class PeeredDispatcher : public Dispatcher {
   // After InitPeer is called, this field is logically const.
   zx_koid_t peer_koid_{ZX_KOID_INVALID};
 
-  const fbl::RefPtr<PeerHolder<Self>> holder_;
+  const fbl::RefPtr<PeerHolder<Self, Flags>> holder_;
 };
 
 // DownCastDispatcher checks if a RefPtr<Dispatcher> points to a
