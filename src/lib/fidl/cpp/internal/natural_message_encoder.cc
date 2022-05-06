@@ -15,22 +15,8 @@ NaturalMessageEncoder::NaturalMessageEncoder(const TransportVTable* vtable, uint
 }
 
 fidl::OutgoingMessage NaturalMessageEncoder::GetMessage() {
-  fitx::result result = std::move(body_encoder_).GetBodyView();
-  if (result.is_error()) {
-    return fidl::OutgoingMessage(result.error_value());
-  }
-
-  NaturalBodyEncoder::BodyView& chunk = result.value();
-  return fidl::OutgoingMessage::Create_InternalMayBreak(
-      fidl::OutgoingMessage::InternalByteBackedConstructorArgs{
-          .transport_vtable = chunk.vtable,
-          .bytes = chunk.bytes.data(),
-          .num_bytes = static_cast<uint32_t>(chunk.bytes.size()),
-          .handles = chunk.handles,
-          .handle_metadata = chunk.handle_metadata,
-          .num_handles = chunk.num_handles,
-          .is_transactional = true,
-      });
+  return std::move(body_encoder_)
+      .GetOutgoingMessage(NaturalBodyEncoder::MessageType::kTransactional);
 }
 
 void NaturalMessageEncoder::Reset(uint64_t ordinal, MessageDynamicFlags dynamic_flags) {

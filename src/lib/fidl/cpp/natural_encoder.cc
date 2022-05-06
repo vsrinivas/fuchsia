@@ -76,40 +76,23 @@ void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, s
 
 NaturalBodyEncoder::~NaturalBodyEncoder() { Reset(); }
 
-fidl::OutgoingMessage NaturalBodyEncoder::GetBody() && {
-  fitx::result result = std::move(*this).GetBodyView();
-  if (result.is_error()) {
-    return fidl::OutgoingMessage(result.error_value());
+fidl::OutgoingMessage NaturalBodyEncoder::GetOutgoingMessage(MessageType type) && {
+  if (status_ != ZX_OK) {
+    Reset();
+    return fidl::OutgoingMessage(fidl::Status::EncodeError(status_, error_));
   }
 
-  BodyView& chunk = result.value();
+  handles_staging_area_ = std::move(handles_);
   return fidl::OutgoingMessage::Create_InternalMayBreak(
       fidl::OutgoingMessage::InternalByteBackedConstructorArgs{
           .transport_vtable = vtable_,
-          .bytes = chunk.bytes.data(),
-          .num_bytes = static_cast<uint32_t>(chunk.bytes.size()),
-          .handles = chunk.handles,
-          .handle_metadata = chunk.handle_metadata,
-          .num_handles = chunk.num_handles,
-          .is_transactional = false,
+          .bytes = bytes_.data(),
+          .num_bytes = static_cast<uint32_t>(bytes_.size()),
+          .handles = handles_staging_area_.data(),
+          .handle_metadata = static_cast<fidl_handle_metadata_t*>(handle_metadata_.get()),
+          .num_handles = static_cast<uint32_t>(handles_staging_area_.size()),
+          .is_transactional = type == MessageType::kTransactional,
       });
-}
-
-fitx::result<fidl::Error, NaturalBodyEncoder::BodyView> NaturalBodyEncoder::GetBodyView() && {
-  if (status_ != ZX_OK) {
-    Reset();
-    return fitx::error(fidl::Status::EncodeError(status_, error_));
-  }
-
-  BodyView chunk = {
-      .bytes = cpp20::span<uint8_t>(bytes_),
-      .handles = handles_.data(),
-      .handle_metadata = static_cast<fidl_handle_metadata_t*>(handle_metadata_.get()),
-      .num_handles = static_cast<uint32_t>(handles_.size()),
-      .vtable = vtable_,
-  };
-  handles_staging_area_ = std::move(handles_);
-  return fitx::ok(chunk);
 }
 
 void NaturalBodyEncoder::Reset() {

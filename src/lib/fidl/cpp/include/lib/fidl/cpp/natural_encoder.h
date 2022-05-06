@@ -88,10 +88,12 @@ class NaturalBodyEncoder final : public NaturalEncoder {
 
   ~NaturalBodyEncoder();
 
-  // Return an outgoing message representing the encoded body.
-  // Handle ownership will be transferred to the outgoing message.
+  enum class MessageType { kTransactional, kStandalone };
+
+  // Return a view representing the encoded body.
+  // Caller takes ownership of the handles.
   // Do not encode another value until the previous message is sent.
-  fidl::OutgoingMessage GetBody() &&;
+  fidl::OutgoingMessage GetOutgoingMessage(MessageType type) &&;
 
   // Free memory and close owned handles.
   void Reset();
@@ -106,11 +108,6 @@ class NaturalBodyEncoder final : public NaturalEncoder {
     uint32_t num_handles;
     const TransportVTable* vtable;
   };
-
-  // Return a view representing the encoded body.
-  // Caller takes ownership of the handles.
-  // Do not encode another value until the previous message is sent.
-  fitx::result<fidl::Error, BodyView> GetBodyView() &&;
 
   const TransportVTable* vtable_;
 };

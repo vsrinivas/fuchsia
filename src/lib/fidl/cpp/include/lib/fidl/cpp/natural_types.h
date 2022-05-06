@@ -113,7 +113,9 @@ class UnionMemberView final {
 class EncodeResult {
  public:
   explicit EncodeResult(::fidl::internal::NaturalBodyEncoder&& storage)
-      : storage_(std::move(storage)), message_(std::move(storage_).GetBody()) {}
+      : storage_(std::move(storage)),
+        message_(
+            std::move(storage_).GetOutgoingMessage(NaturalBodyEncoder::MessageType::kStandalone)) {}
 
   ::fidl::OutgoingMessage& message() { return message_; }
 
