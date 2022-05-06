@@ -357,7 +357,7 @@ std::unique_ptr<VulkanContext> VulkanContext::Builder::Unique() const {
       debug_callback_user_data_, allocator_, validation_layers_enabled_,
       validation_errors_ignored_);
   if (!context->Init()) {
-    RTN_MSG(nullptr, "Failed to initialize VulkanContext.\n")
+    RTN_MSG(nullptr, "Failed to initialize VulkanContext.\n");
   }
   return context;
 }

@@ -131,7 +131,7 @@ void VkReadbackTest::VerifyExpectedImageFormats() const {
 
 bool VkReadbackTest::InitVulkan(uint32_t vk_api_version) {
   if (vulkan_initialized_) {
-    RTN_MSG(false, "InitVulkan failed.  Already initialized.\n")
+    RTN_MSG(false, "InitVulkan failed.  Already initialized.\n");
   }
   std::vector<const char*> enabled_extension_names;
 #ifdef __Fuchsia__

@@ -18,7 +18,8 @@
     fprintf(stderr, __VA_ARGS__);                  \
     fflush(stderr);                                \
     return err;                                    \
-  }
+  }                                                \
+  static_assert(true, "no-op to require trailing semicolon")
 
 // Log and return based on VkResult |r|.
 #define RTN_IF_VK_ERR(err, r, ...)                                      \
@@ -29,7 +30,8 @@
     fprintf(stderr, "\n");                                              \
     fflush(stderr);                                                     \
     return err;                                                         \
-  }
+  }                                                                     \
+  static_assert(true, "no-op to require trailing semicolon")
 
 // Log and return based on vk::Result |r|.
 #define RTN_IF_VKH_ERR(err, r, ...)                                                                \
@@ -39,7 +41,8 @@
     fprintf(stderr, "\n");                                                                         \
     fflush(stderr);                                                                                \
     return err;                                                                                    \
-  }
+  }                                                                                                \
+  static_assert(true, "no-op to require trailing semicolon")
 
 enum class VulkanExtensionSupportState {
   kNotSupported,
