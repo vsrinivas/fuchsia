@@ -57,6 +57,7 @@ sdk://pkg/fidl_base
 sdk://pkg/fit
 sdk://pkg/fit-promise
 sdk://pkg/fitx-experimental-driver-only
+sdk://pkg/hwreg
 sdk://pkg/mmio
 sdk://pkg/mmio-ptr
 sdk://pkg/stdcompat

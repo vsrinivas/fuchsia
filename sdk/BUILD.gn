@@ -621,6 +621,7 @@ sdk("ddk") {
     "//sdk/lib/driver_runtime:driver_runtime_sdk",
     "//sdk/lib/sys/component/llcpp:llcpp_sdk",
     "//src/devices/lib/mmio:mmio_sdk",
+    "//zircon/system/ulib/hwreg:hwreg_sdk_sdk",
 
     # V1 APIs, to be removed before updating category to partner:
     ":banjo",
