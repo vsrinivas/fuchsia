@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/test.gni")
 
 group("test") {
@@ -32,4 +33,28 @@ test("firmware_zircon_boot_test") {
     "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/cksum",
   ]
+}
+
+# The factory bootfs zbi util implementation is tested directly with the
+# "customer" library src/sys/lib/fuchsia-bootfs, which is used by the factory
+# item service implementation to extract the bootfs files. The library is only
+# available in the fuchisa tool chain. Therefore we need to write the test as a
+# fuchsia test package to run on device directly.
+#
+# Additionally, the library is written in rust. In order to use it for our cpp
+# unittest, we write a rust static library in rust/factory_bootfs_util that
+# exposes a C wrapper for the interface.
+test("factory-bootfs-test") {
+  sources = [ "factory_bootfs_zbi.cc" ]
+  deps = [
+    "rust/factory_bootfs_util:factory-bootfs-util",
+    "//src/firmware/lib/zircon_boot:in_tree",
+    "//zircon/system/ulib/zxc",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+# Run with `fx test bootfs-factory-test-package`.
+fuchsia_unittest_package("factory-bootfs-test-package") {
+  deps = [ ":factory-bootfs-test" ]
 }

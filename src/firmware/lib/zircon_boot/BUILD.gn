@@ -18,7 +18,7 @@ common_vars = {
     "zircon_vboot.c",
     "zircon_vboot.h",
   ]
-  deps = [
+  public_deps = [
     "//src/firmware/lib/abr",
     "//src/firmware/lib/zbi",
     "//third_party/android/platform/external/avb",
@@ -37,5 +37,5 @@ zx_library("zircon_boot") {
 # targets.
 zx_library("in_tree") {
   forward_variables_from(common_vars, "*")
-  deps += [ "//zircon/system/public" ]
+  deps = [ "//zircon/system/public" ]
 }
