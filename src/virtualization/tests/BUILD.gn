@@ -265,8 +265,6 @@ source_set("lib") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-
-  defines = [ "USE_VMM_CFV1" ]
 }
 
 fuchsia_unittest_package("guest_unit_tests") {
