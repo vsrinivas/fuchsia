@@ -1,18 +1,12 @@
-# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_profile") {
+ffx_plugin("ffx_power") {
   version = "0.1.0"
   edition = "2018"
-  plugin_deps = [
-    "cpu:ffx_cpu",
-    "memory:ffx_profile_memory",
-    "power:ffx_power",
-    "temperature:ffx_temperature",
-  ]
-
+  plugin_deps = [ "logger:ffx_power_logger" ]
   args_sources = [ "src/args.rs" ]
 }
