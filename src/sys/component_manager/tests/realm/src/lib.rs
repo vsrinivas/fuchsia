@@ -82,7 +82,14 @@ pub async fn query_echo_server_child() {
         io_util::directory::open_directory(&runtime_dir, "elf", io_util::OpenFlags::RIGHT_READABLE)
             .await
             .unwrap();
-    let entries = files_async::readdir(&elf_dir).await.unwrap();
+    let mut entries = files_async::readdir(&elf_dir).await.unwrap();
+
+    // TODO(http://fxbug.dev/99823): The existence of "process_start_time_utc_estimate" is flaky.
+    if let Some(position) = entries.iter().position(|e| e.name == "process_start_time_utc_estimate")
+    {
+        entries.remove(position);
+    }
+
     assert_eq!(
         entries,
         vec![
@@ -96,10 +103,6 @@ pub async fn query_echo_server_child() {
             },
             files_async::DirEntry {
                 name: "process_start_time".to_string(),
-                kind: files_async::DirentKind::File,
-            },
-            files_async::DirEntry {
-                name: "process_start_time_utc_estimate".to_string(),
                 kind: files_async::DirentKind::File,
             },
         ]
