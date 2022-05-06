@@ -118,6 +118,9 @@ impl SocketOps for VsockSocket {
     }
 
     fn remote_connection(&self, socket: &Socket, file: FileHandle) -> Result<(), Errno> {
+        // we only allow non-blocking files here, so that
+        // read and write on file can return EAGAIN.
+        assert!(file.flags().contains(OpenFlags::NONBLOCK));
         match socket.socket_type {
             SocketType::Datagram | SocketType::Raw | SocketType::SeqPacket => {
                 return error!(ENOTSUP);
@@ -355,7 +358,8 @@ mod tests {
             .abstract_vsock_namespace
             .lookup(&VSOCK_PORT)
             .expect("Failed to look up listening socket.");
-        let remote = create_fuchsia_pipe(&kernel, fs2).unwrap();
+        let remote =
+            create_fuchsia_pipe(&kernel, fs2, OpenFlags::RDWR | OpenFlags::NONBLOCK).unwrap();
         listen_socket.remote_connection(remote).unwrap();
 
         let server_socket = listen_socket.accept(current_task.as_ucred()).unwrap();
@@ -399,5 +403,39 @@ mod tests {
 
         server_socket.close();
         listen_socket.close();
+    }
+
+    #[::fuchsia::test]
+    fn test_vsock_write_while_read() {
+        let (kernel, current_task) = create_kernel_and_task();
+        let (fs1, fs2) = fidl::Socket::create(ZirconSocketOpts::STREAM).unwrap();
+        let socket = Socket::new(SocketDomain::Vsock, SocketType::Stream);
+        let remote =
+            create_fuchsia_pipe(&kernel, fs2, OpenFlags::RDWR | OpenFlags::NONBLOCK).unwrap();
+        downcast_socket_to_vsock(&socket).lock().state = VsockSocketState::Connected(remote);
+        let socket_file = Socket::new_file(&kernel, socket, OpenFlags::RDWR);
+
+        let current_task_2 = create_task(&kernel, "task2");
+        const XFER_SIZE: usize = 42;
+
+        let socket_clone = socket_file.clone();
+        let thread = std::thread::spawn(move || {
+            let address = map_memory(&current_task_2, UserAddress::default(), *PAGE_SIZE);
+            let bytes_read = socket_clone
+                .read(&current_task_2, &[UserBuffer { address, length: XFER_SIZE }])
+                .unwrap();
+            assert_eq!(XFER_SIZE, bytes_read);
+        });
+
+        // Wait for the thread to become blocked on the read.
+        zx::Duration::from_seconds(2).sleep();
+
+        let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        socket_file.write(&current_task, &[UserBuffer { address, length: XFER_SIZE }]).unwrap();
+
+        let mut buffer = [0u8; 1024];
+        assert_eq!(XFER_SIZE, fs1.read(&mut buffer).unwrap());
+        assert_eq!(XFER_SIZE, fs1.write(&buffer[..XFER_SIZE]).unwrap());
+        let _ = thread.join();
     }
 }

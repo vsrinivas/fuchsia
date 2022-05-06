@@ -20,7 +20,9 @@ pub use timer::*;
 pub fn create_file_from_handle(kern: &Kernel, handle: zx::Handle) -> Result<FileHandle, Errno> {
     let info = handle.basic_info().map_err(|status| from_status_like_fdio!(status))?;
     match info.object_type {
-        zx::ObjectType::SOCKET => create_fuchsia_pipe(kern, zx::Socket::from_handle(handle)),
+        zx::ObjectType::SOCKET => {
+            create_fuchsia_pipe(kern, zx::Socket::from_handle(handle), OpenFlags::RDWR)
+        }
         _ => error!(ENOSYS),
     }
 }

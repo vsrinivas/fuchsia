@@ -55,9 +55,13 @@ impl RemoteNode {
     }
 }
 
-pub fn create_fuchsia_pipe(kern: &Kernel, socket: zx::Socket) -> Result<FileHandle, Errno> {
+pub fn create_fuchsia_pipe(
+    kern: &Kernel,
+    socket: zx::Socket,
+    flags: OpenFlags,
+) -> Result<FileHandle, Errno> {
     let ops = Box::new(RemotePipeObject::new(socket.into_handle())?);
-    Ok(Anon::new_file(anon_fs(kern), ops, OpenFlags::RDWR))
+    Ok(Anon::new_file(anon_fs(kern), ops, flags))
 }
 
 fn update_into_from_attrs(info: &mut FsNodeInfo, attrs: zxio_node_attributes_t) {
@@ -552,7 +556,7 @@ mod test {
 
         let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         let (client, server) = zx::Socket::create(zx::SocketOpts::empty())?;
-        let pipe = create_fuchsia_pipe(&kernel, client)?;
+        let pipe = create_fuchsia_pipe(&kernel, client, OpenFlags::RDWR)?;
 
         let thread = std::thread::spawn(move || {
             assert_eq!(
