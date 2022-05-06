@@ -16,7 +16,8 @@
         },
     ],
     capabilities: [
-        { protocol: "fuchsia.gpu.agis.Session" },
+        { protocol: "fuchsia.gpu.agis.ComponentRegistry" },
+        { protocol: "fuchsia.gpu.agis.Observer" },
     ],
     use: [
         {
@@ -34,14 +35,19 @@
             to: "#vulkan-trace",
         },
         {
-            protocol: [ "fuchsia.gpu.agis.Session" ],
+            protocol: [ "fuchsia.gpu.agis.ComponentRegistry" ],
             from: "self",
             to: "#vulkan-trace",
         },
     ],
     expose: [
         {
-            protocol: "fuchsia.gpu.agis.Session",
+            protocol: "fuchsia.gpu.agis.ComponentRegistry",
+            from: "self",
+            to: "parent",
+        },
+        {
+            protocol: "fuchsia.gpu.agis.Observer",
             from: "self",
             to: "parent",
         },

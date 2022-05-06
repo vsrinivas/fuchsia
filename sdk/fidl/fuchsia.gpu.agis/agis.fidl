@@ -29,11 +29,10 @@ type Status = strict enum {
     UNIMPLEMENTED = 5;
 };
 
-/// The AGIS Session protocol allows traceable components to register their
-/// presence upon launch and to retrieve sockets for communication to
-/// gapis, the host service module of AGI.
+/// The AGIS ComponentRegistry protocol allows traceable components to register as
+/// Vulkan traceable.
 @discoverable
-protocol Session {
+protocol ComponentRegistry {
     /// Register a process as traceable and retrieve its bound socket.
     /// For AGI, gapii will be the only client of this Register interface.
     Register(struct {
@@ -47,8 +46,14 @@ protocol Session {
     Unregister(struct {
         process_id zx.koid;
     }) -> (struct {}) error Status;
+};
 
-    /// gapis-side interface to retrieve available connections.
+/// The AGIS Observer protocol provides the interface to retrieve registered
+/// Vulkan traceable components aka "connections".
+@discoverable
+protocol Observer {
+    /// Retrieve registered components.
+    /// For AGI, gapis will be the only client of this Connections interface.
     Connections() -> (resource struct {
         connections vector<Connection>:MAX_CONNECTIONS;
     }) error Status;

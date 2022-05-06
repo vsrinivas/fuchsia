@@ -22,7 +22,11 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.gpu.agis.Session" ],
+            protocol: [ "fuchsia.gpu.agis.ComponentRegistry" ],
+            from: "#agis",
+        },
+        {
+            protocol: [ "fuchsia.gpu.agis.Observer" ],
             from: "#agis",
         },
         {

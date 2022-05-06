@@ -7,7 +7,8 @@ use {
     errors::ffx_error,
     ffx_agis_args::{AgisCommand, Operation, RegisterOp, UnregisterOp},
     ffx_core::ffx_plugin,
-    fidl_fuchsia_gpu_agis::SessionProxy,
+    fidl_fuchsia_gpu_agis::ComponentRegistryProxy,
+    fidl_fuchsia_gpu_agis::ObserverProxy,
     serde::Serialize,
 };
 
@@ -36,20 +37,27 @@ impl Connection {
     }
 }
 
-#[ffx_plugin(SessionProxy = "core/agis:expose:fuchsia.gpu.agis.Session")]
-pub async fn agis(session: SessionProxy, cmd: AgisCommand) -> Result<(), anyhow::Error> {
-    println!("{}", agis_impl(session, cmd).await?);
+#[ffx_plugin(
+    ComponentRegistryProxy = "core/agis:expose:fuchsia.gpu.agis.ComponentRegistry",
+    ObserverProxy = "core/agis:expose:fuchsia.gpu.agis.Observer"
+)]
+pub async fn agis(
+    component_registry: ComponentRegistryProxy,
+    observer: ObserverProxy,
+    cmd: AgisCommand,
+) -> Result<(), anyhow::Error> {
+    println!("{}", agis_impl(component_registry, observer, cmd).await?);
     Ok(())
 }
 
-async fn agis_register(
-    session: SessionProxy,
+async fn component_registry_register(
+    component_registry: ComponentRegistryProxy,
     op: RegisterOp,
 ) -> Result<serde_json::Value, anyhow::Error> {
     if op.process_name.is_empty() {
         return Err(anyhow!(ffx_error!("The \"register\" command requires a process name")));
     }
-    let result = session.register(op.process_id, &op.process_name).await?;
+    let result = component_registry.register(op.process_id, &op.process_name).await?;
     match result {
         Ok(_) => {
             let connection =
@@ -63,11 +71,11 @@ async fn agis_register(
     }
 }
 
-async fn agis_unregister(
-    session: SessionProxy,
+async fn component_registry_unregister(
+    component_registry: ComponentRegistryProxy,
     op: UnregisterOp,
 ) -> Result<serde_json::Value, anyhow::Error> {
-    let result = session.unregister(op.process_id).await?;
+    let result = component_registry.unregister(op.process_id).await?;
     match result {
         Ok(_) => return Ok(serde_json::json!([{}])),
         Err(e) => {
@@ -79,8 +87,8 @@ async fn agis_unregister(
     }
 }
 
-async fn agis_connections(session: SessionProxy) -> Result<serde_json::Value, anyhow::Error> {
-    let result = session.connections().await?;
+async fn observer_connections(observer: ObserverProxy) -> Result<serde_json::Value, anyhow::Error> {
+    let result = observer.connections().await?;
     match result {
         Ok(_fidl_connections) => {
             let mut connections = vec![];
@@ -100,13 +108,14 @@ async fn agis_connections(session: SessionProxy) -> Result<serde_json::Value, an
 }
 
 async fn agis_impl(
-    session: SessionProxy,
+    component_registry: ComponentRegistryProxy,
+    observer: ObserverProxy,
     cmd: AgisCommand,
 ) -> Result<serde_json::Value, anyhow::Error> {
     match cmd.operation {
-        Operation::Register(op) => agis_register(session, op).await,
-        Operation::Unregister(op) => agis_unregister(session, op).await,
-        Operation::Connections(_) => agis_connections(session).await,
+        Operation::Register(op) => component_registry_register(component_registry, op).await,
+        Operation::Unregister(op) => component_registry_unregister(component_registry, op).await,
+        Operation::Connections(_) => observer_connections(observer).await,
     }
 }
 
@@ -114,17 +123,17 @@ async fn agis_impl(
 mod test {
     use {
         super::*, ffx_agis_args::ConnectionsOp, fidl::HandleBased,
-        fidl_fuchsia_gpu_agis::SessionRequest,
+        fidl_fuchsia_gpu_agis::ComponentRegistryRequest, fidl_fuchsia_gpu_agis::ObserverRequest,
     };
 
     const PORT: u16 = 100;
     const PROCESS_ID: u64 = 999;
     const PROCESS_NAME: &str = "agis-connections-test";
 
-    fn fake_session() -> SessionProxy {
+    fn fake_component_registry() -> ComponentRegistryProxy {
         let callback = move |req| {
             match req {
-                SessionRequest::Register { responder, .. } => {
+                ComponentRegistryRequest::Register { responder, .. } => {
                     // Create an arbitrary, valid handle to test as a return value.
                     let h = {
                         let (s, _) = fidl::Channel::create().unwrap();
@@ -132,10 +141,18 @@ mod test {
                     };
                     responder.send(&mut Ok(Some(h))).unwrap();
                 }
-                SessionRequest::Unregister { responder, .. } => {
+                ComponentRegistryRequest::Unregister { responder, .. } => {
                     responder.send(&mut Ok(())).unwrap();
                 }
-                SessionRequest::Connections { responder, .. } => {
+            };
+        };
+        setup_fake_component_registry(callback)
+    }
+
+    fn fake_observer() -> ObserverProxy {
+        let callback = move |req| {
+            match req {
+                ObserverRequest::Connections { responder, .. } => {
                     let mut connections = vec![];
                     connections.push(fidl_fuchsia_gpu_agis::Connection {
                         process_id: Some(PROCESS_ID),
@@ -149,7 +166,7 @@ mod test {
                 }
             };
         };
-        return setup_fake_session(callback);
+        return setup_fake_observer(callback);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -161,8 +178,9 @@ mod test {
             }),
         };
 
-        let session = fake_session();
-        let mut result = agis_impl(session, cmd).await;
+        let component_registry = fake_component_registry();
+        let observer = fake_observer();
+        let mut result = agis_impl(component_registry, observer, cmd).await;
         result.unwrap();
 
         let no_name_cmd = AgisCommand {
@@ -171,25 +189,28 @@ mod test {
                 process_name: "".to_string(),
             }),
         };
-        let no_name_session = fake_session();
-        result = agis_impl(no_name_session, no_name_cmd).await;
-        assert!(!result.is_ok());
+        let no_name_component_registry = fake_component_registry();
+        let observer = fake_observer();
+        result = agis_impl(no_name_component_registry, observer, no_name_cmd).await;
+        assert!(result.is_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     pub async fn unregister() {
         let cmd =
             AgisCommand { operation: Operation::Unregister(UnregisterOp { process_id: 0u64 }) };
-        let session = fake_session();
-        let result = agis_impl(session, cmd).await;
+        let component_registry = fake_component_registry();
+        let observer = fake_observer();
+        let result = agis_impl(component_registry, observer, cmd).await;
         assert_eq!(result.unwrap(), serde_json::json!([{}]));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     pub async fn connections() {
         let cmd = AgisCommand { operation: Operation::Connections(ConnectionsOp {}) };
-        let session = fake_session();
-        let result = agis_impl(session, cmd).await;
+        let component_registry = fake_component_registry();
+        let observer = fake_observer();
+        let result = agis_impl(component_registry, observer, cmd).await;
         let expected_output = serde_json::json!([{
             "process_id": PROCESS_ID,
             "process_name": PROCESS_NAME,

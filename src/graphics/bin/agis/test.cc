@@ -44,10 +44,16 @@ class AgisTest : public testing::Test {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
 
     std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
-    context->svc()->Connect(session_.NewRequest(loop_->dispatcher()));
 
-    session_.set_error_handler([this](zx_status_t status) {
-      FX_LOG(ERROR, "agis-test", "AgisTest::ErrHandler");
+    context->svc()->Connect(component_registry_.NewRequest(loop_->dispatcher()));
+    component_registry_.set_error_handler([this](zx_status_t status) {
+      FX_LOG(ERROR, "agis-test", "AgisTest::ErrHandler ComponentRegistry");
+      loop_->Quit();
+    });
+
+    context->svc()->Connect(observer_.NewRequest(loop_->dispatcher()));
+    observer_.set_error_handler([this](zx_status_t status) {
+      FX_LOG(ERROR, "agis-test", "AgisTest::ErrHandler Observer");
       loop_->Quit();
     });
 
@@ -71,10 +77,11 @@ class AgisTest : public testing::Test {
 
   void Register(zx_koid_t process_id, std::string process_name) {
     outstanding++;
-    session_->Register(
+    component_registry_->Register(
         process_id, std::move(process_name),
-        [&](fuchsia::gpu::agis::Session_Register_Result result) {
-          fuchsia::gpu::agis::Session_Register_Response response(std::move(result.response()));
+        [&](fuchsia::gpu::agis::ComponentRegistry_Register_Result result) {
+          fuchsia::gpu::agis::ComponentRegistry_Register_Response response(
+              std::move(result.response()));
           const auto status = result.err();
           EXPECT_EQ(status, fuchsia::gpu::agis::Status::OK);
           zx::handle socket = response.ResultValue_();
@@ -88,16 +95,17 @@ class AgisTest : public testing::Test {
 
   void Unregister(zx_koid_t process_id) {
     outstanding++;
-    session_->Unregister(process_id, [&](fuchsia::gpu::agis::Session_Unregister_Result result) {
-      EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
-      outstanding--;
-    });
+    component_registry_->Unregister(
+        process_id, [&](fuchsia::gpu::agis::ComponentRegistry_Unregister_Result result) {
+          EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
+          outstanding--;
+        });
   }
 
   void Connections() {
     outstanding++;
-    session_->Connections([&](fuchsia::gpu::agis::Session_Connections_Result result) {
-      fuchsia::gpu::agis::Session_Connections_Response response(std::move(result.response()));
+    observer_->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
+      fuchsia::gpu::agis::Observer_Connections_Response response(std::move(result.response()));
       const auto status = result.err();
       EXPECT_EQ(status, fuchsia::gpu::agis::Status::OK);
       switch (status) {
@@ -119,7 +127,8 @@ class AgisTest : public testing::Test {
   }
 
   std::unique_ptr<async::Loop> loop_;
-  fuchsia::gpu::agis::SessionPtr session_;
+  fuchsia::gpu::agis::ComponentRegistryPtr component_registry_;
+  fuchsia::gpu::agis::ObserverPtr observer_;
   size_t num_connections_;
   zx_koid_t process_id_;
   std::string process_name_;
@@ -128,31 +137,35 @@ class AgisTest : public testing::Test {
 TEST_F(AgisTest, Register) {
   Register(process_id_, process_name_);
   outstanding++;
-  session_->Register(process_id_, process_name_,
-                     [&](fuchsia::gpu::agis::Session_Register_Result result) {
-                       EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::ALREADY_REGISTERED);
-                       outstanding--;
-                     });
+  component_registry_->Register(process_id_, process_name_,
+                                [&](fuchsia::gpu::agis::ComponentRegistry_Register_Result result) {
+                                  EXPECT_EQ(result.err(),
+                                            fuchsia::gpu::agis::Status::ALREADY_REGISTERED);
+                                  outstanding--;
+                                });
   Unregister(process_id_);
 }
 
 TEST_F(AgisTest, Unregister) {
   Register(process_id_, process_name_);
   Unregister(process_id_);
-  session_->Unregister(process_id_, [&](fuchsia::gpu::agis::Session_Unregister_Result result) {
-    const auto status = result.err();
-    EXPECT_EQ(status, fuchsia::gpu::agis::Status::NOT_FOUND);
-  });
+  component_registry_->Unregister(
+      process_id_, [&](fuchsia::gpu::agis::ComponentRegistry_Unregister_Result result) {
+        const auto status = result.err();
+        EXPECT_EQ(status, fuchsia::gpu::agis::Status::NOT_FOUND);
+      });
 }
 
 TEST_F(AgisTest, Connections) {
   Register(process_id_, process_name_);
   Register(process_id_ + 1, process_name_ + "+1");
+  LoopWait();
   Connections();
   LoopWait();
   EXPECT_EQ(num_connections_, 2ul);
   Unregister(process_id_);
   Unregister(process_id_ + 1);
+  LoopWait();
   Connections();
   LoopWait();
   EXPECT_EQ(num_connections_, 0ul);
@@ -164,11 +177,12 @@ TEST_F(AgisTest, MaxConnections) {
     Register(process_id_ + i, process_name_ + "+" + std::to_string(i));
   }
   outstanding++;
-  session_->Register(process_id_ + i, process_name_ + "+" + std::to_string(i),
-                     [&](fuchsia::gpu::agis::Session_Register_Result result) {
-                       EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::CONNECTIONS_EXCEEDED);
-                       outstanding--;
-                     });
+  component_registry_->Register(process_id_ + i, process_name_ + "+" + std::to_string(i),
+                                [&](fuchsia::gpu::agis::ComponentRegistry_Register_Result result) {
+                                  EXPECT_EQ(result.err(),
+                                            fuchsia::gpu::agis::Status::CONNECTIONS_EXCEEDED);
+                                  outstanding--;
+                                });
   for (i = 0; i < fuchsia::gpu::agis::MAX_CONNECTIONS; i++) {
     Unregister(process_id_ + i);
   }
@@ -178,14 +192,15 @@ TEST_F(AgisTest, UsableSocket) {
   // Register and retrieve the socket for the server.
   int server_fd = -1;
   outstanding++;
-  session_->Register(
-      process_id_, process_name_, [&](fuchsia::gpu::agis::Session_Register_Result result) {
-        fuchsia::gpu::agis::Session_Register_Response response(std::move(result.response()));
-        EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
-        zx::handle socket = response.ResultValue_();
-        EXPECT_EQ(ZX_OK, fdio_fd_create(socket.release(), &server_fd));
-        outstanding--;
-      });
+  component_registry_->Register(process_id_, process_name_,
+                                [&](fuchsia::gpu::agis::ComponentRegistry_Register_Result result) {
+                                  fuchsia::gpu::agis::ComponentRegistry_Register_Response response(
+                                      std::move(result.response()));
+                                  EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
+                                  zx::handle socket = response.ResultValue_();
+                                  EXPECT_EQ(ZX_OK, fdio_fd_create(socket.release(), &server_fd));
+                                  outstanding--;
+                                });
   LoopWait();
   EXPECT_NE(server_fd, -1);
 
@@ -193,8 +208,8 @@ TEST_F(AgisTest, UsableSocket) {
   outstanding++;
   uint16_t port = 0;
   std::string process_name;
-  session_->Connections([&](fuchsia::gpu::agis::Session_Connections_Result result) {
-    fuchsia::gpu::agis::Session_Connections_Response response(std::move(result.response()));
+  observer_->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
+    fuchsia::gpu::agis::Observer_Connections_Response response(std::move(result.response()));
     EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
     std::vector<fuchsia::gpu::agis::Connection> connections(response.ResultValue_());
     EXPECT_EQ(connections.size(), 1ul);
@@ -280,28 +295,37 @@ TEST(AgisDisconnect, Main) {
     }
   };
 
-  // Create a Session, register |process_id| and verify its presence.
+  // Create a component_registry, register |process_id| and verify its presence.
   {
-    fuchsia::gpu::agis::SessionPtr session;
-    context->svc()->Connect(session.NewRequest(loop->dispatcher()));
-    session.set_error_handler([&loop](zx_status_t status) {
-      FX_LOGF(ERROR, "agis-test", "Register Disconnect ErrHandler - status %d", status);
+    fuchsia::gpu::agis::ComponentRegistryPtr component_registry;
+    context->svc()->Connect(component_registry.NewRequest(loop->dispatcher()));
+    component_registry.set_error_handler([&loop](zx_status_t status) {
+      FX_LOGF(ERROR, "agis-test", "Register Disconnect ComponentRegistry ErrHandler - status %d",
+              status);
       if (loop) {
         loop->Quit();
       }
     });
 
     disconnect_outstanding = true;
-    session->Register(process_id, process_name,
-                      [&](fuchsia::gpu::agis::Session_Register_Result result) {
-                        EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
-                        disconnect_outstanding = false;
-                      });
+    component_registry->Register(process_id, process_name,
+                                 [&](fuchsia::gpu::agis::ComponentRegistry_Register_Result result) {
+                                   EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
+                                   disconnect_outstanding = false;
+                                 });
     loop_wait();
 
+    fuchsia::gpu::agis::ObserverPtr observer;
+    context->svc()->Connect(observer.NewRequest(loop->dispatcher()));
+    observer.set_error_handler([&loop](zx_status_t status) {
+      FX_LOGF(ERROR, "agis-test", "Register Disconnect Observer ErrHandler - status %d", status);
+      if (loop) {
+        loop->Quit();
+      }
+    });
     disconnect_outstanding = true;
-    session->Connections([&](fuchsia::gpu::agis::Session_Connections_Result result) {
-      fuchsia::gpu::agis::Session_Connections_Response response(std::move(result.response()));
+    observer->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
+      fuchsia::gpu::agis::Observer_Connections_Response response(std::move(result.response()));
       EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
       std::vector<fuchsia::gpu::agis::Connection> connections(response.ResultValue_());
       EXPECT_EQ(connections.size(), 1ul);
@@ -319,11 +343,11 @@ TEST(AgisDisconnect, Main) {
     loop_wait();
   }
 
-  // Create a new Session and verify that |process_id| is no longer registered.
-  fuchsia::gpu::agis::SessionPtr session;
-  context->svc()->Connect(session.NewRequest(loop->dispatcher()));
-  session.set_error_handler([&loop](zx_status_t status) {
-    FX_LOGF(ERROR, "agis-test", "Verify Disconnect ErrHandler - status %d", status);
+  // Create a new observer and verify that |process_id| is no longer registered.
+  fuchsia::gpu::agis::ObserverPtr observer;
+  context->svc()->Connect(observer.NewRequest(loop->dispatcher()));
+  observer.set_error_handler([&loop](zx_status_t status) {
+    FX_LOGF(ERROR, "agis-test", "Verify Disconnect Observer ErrHandler - status %d", status);
     if (loop) {
       loop->Quit();
     }
@@ -332,7 +356,7 @@ TEST(AgisDisconnect, Main) {
   bool found = true;
   while (found) {
     disconnect_outstanding = true;
-    session->Connections([&](fuchsia::gpu::agis::Session_Connections_Result result) {
+    observer->Connections([&](fuchsia::gpu::agis::Observer_Connections_Result result) {
       EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
       auto connections(result.response().ResultValue_());
       bool component_found = false;
