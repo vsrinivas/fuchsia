@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/zx/fifo.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 #include <zxtest/zxtest.h>
 
@@ -257,6 +259,124 @@ TEST(FifoTest, NonPowerOfTwoCountSupported) {
   ASSERT_EQ(actual_count, 9u);
   ASSERT_OK(fifo_b.read(kElementSize, actual_elements, std::size(actual_elements), &actual_count));
   ASSERT_EQ(actual_count, 9u);
+}
+
+TEST(FifoTest, ReadNullBuffer) {
+  zx::fifo fifo_a, fifo_b;
+  ASSERT_OK(zx::fifo::create(4, kElementSize, 0, &fifo_a, &fifo_b));
+
+  size_t actual_count;
+
+  ElementType element[] = {1};
+  EXPECT_OK(fifo_a.write(kElementSize, &element, std::size(element), &actual_count));
+
+  EXPECT_STATUS(fifo_b.read(kElementSize, nullptr, std::size(element), &actual_count),
+                ZX_ERR_INVALID_ARGS);
+}
+
+TEST(FifoTest, WriteNullBuffer) {
+  zx::fifo fifo_a, fifo_b;
+  ASSERT_OK(zx::fifo::create(4, kElementSize, 0, &fifo_a, &fifo_b));
+
+  size_t actual_count;
+
+  ElementType element[] = {1};
+  EXPECT_STATUS(fifo_a.write(kElementSize, nullptr, std::size(element), &actual_count),
+                ZX_ERR_INVALID_ARGS);
+}
+
+TEST(FifoTest, ReadBadBuffer) {
+  const size_t kVmoSize = zx_system_get_page_size();
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+
+  zx_vaddr_t addr;
+
+  // Note, no options means the buffer is not readable.
+  ASSERT_OK(zx::vmar::root_self()->map(0, 0, vmo, 0, kVmoSize, &addr));
+
+  void* buffer = reinterpret_cast<void*>(addr);
+
+  zx::fifo fifo_a, fifo_b;
+  ASSERT_OK(zx::fifo::create(4, kElementSize, 0, &fifo_a, &fifo_b));
+
+  size_t actual_count;
+
+  ElementType element[] = {1};
+  EXPECT_OK(fifo_a.write(kElementSize, &element, std::size(element), &actual_count));
+
+  EXPECT_STATUS(fifo_b.read(kElementSize, buffer, std::size(element), &actual_count),
+                ZX_ERR_INVALID_ARGS);
+}
+
+TEST(FifoTest, WriteBadBuffer) {
+  const size_t kVmoSize = zx_system_get_page_size();
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+
+  zx_vaddr_t addr;
+
+  // Note, no options means the buffer is not readable.
+  ASSERT_OK(zx::vmar::root_self()->map(0, 0, vmo, 0, kVmoSize, &addr));
+
+  void* buffer = reinterpret_cast<void*>(addr);
+
+  zx::fifo fifo_a, fifo_b;
+  ASSERT_OK(zx::fifo::create(4, kElementSize, 0, &fifo_a, &fifo_b));
+
+  size_t actual_count;
+
+  ElementType element[] = {1};
+  EXPECT_STATUS(fifo_a.write(kElementSize, buffer, std::size(element), &actual_count),
+                ZX_ERR_INVALID_ARGS);
+}
+
+TEST(FifoTest, ReadPartialBadBuffer) {
+  const size_t kVmoSize = zx_system_get_page_size();
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+
+  zx_vaddr_t addr;
+
+  ASSERT_OK(
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, kVmoSize, &addr));
+
+  // Calculate buffer such that 1 element will fit, and the next will be out of bounds.
+  void* buffer = reinterpret_cast<void*>(addr + kVmoSize - sizeof(ElementType));
+
+  zx::fifo fifo_a, fifo_b;
+  ASSERT_OK(zx::fifo::create(4, kElementSize, 0, &fifo_a, &fifo_b));
+
+  size_t actual_count;
+
+  ElementType element[] = {1, 2};
+  EXPECT_OK(fifo_a.write(kElementSize, &element, std::size(element), &actual_count));
+
+  EXPECT_STATUS(fifo_b.read(kElementSize, buffer, std::size(element), &actual_count),
+                ZX_ERR_INVALID_ARGS);
+}
+
+TEST(FifoTest, WritePartialBadBuffer) {
+  const size_t kVmoSize = zx_system_get_page_size();
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+
+  zx_vaddr_t addr;
+
+  ASSERT_OK(
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, kVmoSize, &addr));
+
+  // Calculate buffer such that 1 element will fit, and the next will be out of bounds.
+  void* buffer = reinterpret_cast<void*>(addr + kVmoSize - sizeof(ElementType));
+
+  zx::fifo fifo_a, fifo_b;
+  ASSERT_OK(zx::fifo::create(4, kElementSize, 0, &fifo_a, &fifo_b));
+
+  size_t actual_count;
+
+  ElementType element[] = {1, 2};
+  EXPECT_STATUS(fifo_a.write(kElementSize, buffer, std::size(element), &actual_count),
+                ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace
