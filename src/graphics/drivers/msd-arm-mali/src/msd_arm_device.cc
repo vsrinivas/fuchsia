@@ -1429,7 +1429,7 @@ magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out) {
       return MAGMA_STATUS_OK;
 
     default:
-      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
+      return MAGMA_STATUS_INVALID_ARGS;
   }
 }
 
@@ -1449,7 +1449,7 @@ magma_status_t MsdArmDevice::QueryReturnsBuffer(uint64_t id, uint32_t* buffer_ou
       return QueryTimestamp(std::move(buffer)).get();
     }
     default:
-      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
+      return MAGMA_STATUS_INVALID_ARGS;
   }
 }
 
@@ -1662,6 +1662,10 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id,
 
     if (status == MAGMA_STATUS_OK && result_buffer_out)
       *result_buffer_out = magma::PlatformHandle::kInvalidHandle;
+  }
+
+  if (status == MAGMA_STATUS_INVALID_ARGS) {
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
   }
 
   return status;
