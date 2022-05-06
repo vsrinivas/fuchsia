@@ -241,9 +241,7 @@ protocol VirtioVsock {
     Start(resource struct {
         start_info StartInfo;
         guest_cid uint32;
-    }) -> (struct {
-        status zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 };
 
 /// Sufficient to contain the opaque image info.
