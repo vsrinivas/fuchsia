@@ -229,6 +229,23 @@ protocol VirtioSound {
     });
 };
 
+@discoverable
+protocol VirtioVsock {
+    compose VirtioDevice;
+
+    /// Start the vsock device, setting the guest_cid to the provided value.
+    ///
+    /// Returns:
+    ///   - ZX_OK if device startup succeeded
+    ///   - ZX_ERR_INVALID_ARGS if guest_cid is a reserved value
+    Start(resource struct {
+        start_info StartInfo;
+        guest_cid uint32;
+    }) -> (struct {
+        status zx.status;
+    });
+};
+
 /// Sufficient to contain the opaque image info.
 const VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE uint32 = 128;
 
