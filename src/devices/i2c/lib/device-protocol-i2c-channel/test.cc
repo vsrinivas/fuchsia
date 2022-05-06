@@ -84,9 +84,14 @@ class I2cDevice : public fake_i2c::FakeI2c {
     auto stop_it = stop_.begin();
     for (const auto& transaction : transactions) {
       if (transaction.data_transfer().is_read_size()) {
+        // If this is a write/read, pass back all of the expected read data, regardless of how much
+        // the client requested. This allows the truncation behavior to be tested.
+        const size_t read_size =
+            read_count == 1 ? rx_data_.size() : transaction.data_transfer().read_size();
+
         // Copy the expected RX data to each read transaction.
         auto& read_data = response->read_data[rx_transaction++];
-        read_data = {arena, transaction.data_transfer().read_size()};
+        read_data = {arena, read_size};
 
         if (rx_offset + read_data.count() > rx_data_.size()) {
           completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
@@ -103,12 +108,6 @@ class I2cDevice : public fake_i2c::FakeI2c {
       }
 
       *stop_it++ = transaction.has_stop() ? transaction.stop() : false;
-    }
-
-    // Make sure the transactions consumed exactly as much data as was provided.
-    if (rx_offset != rx_data_.size()) {
-      completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
-      return;
     }
 
     completer.Reply(fuchsia_hardware_i2c::wire::DeviceTransferResult::WithResponse(response));
@@ -220,8 +219,19 @@ TEST_F(I2cChannelTest, FidlRead) {
   EXPECT_EQ(i2c_dev.tx_data()[0], 0x89);
   EXPECT_BYTES_EQ(buf, expected_rx_data.data(), expected_rx_data.size());
 
-  // Make sure the library propagates errors.
-  EXPECT_NOT_OK(client.ReadSync(0x89, buf, 3));
+  uint8_t buf1[5];
+  // I2cChannel will copy as much data as it receives, even if it is less than the amount requested.
+  EXPECT_OK(client.ReadSync(0x98, buf1, sizeof(buf1)));
+  ASSERT_EQ(i2c_dev.tx_data().size(), 1);
+  EXPECT_EQ(i2c_dev.tx_data()[0], 0x98);
+  EXPECT_BYTES_EQ(buf1, expected_rx_data.data(), expected_rx_data.size());
+
+  uint8_t buf2[3];
+  // I2cChannel will copy no more than the amount requested.
+  EXPECT_OK(client.ReadSync(0x18, buf2, sizeof(buf2)));
+  ASSERT_EQ(i2c_dev.tx_data().size(), 1);
+  EXPECT_EQ(i2c_dev.tx_data()[0], 0x18);
+  EXPECT_BYTES_EQ(buf2, expected_rx_data.data(), sizeof(buf2));
 }
 
 TEST_F(I2cChannelTest, FidlWrite) {
@@ -260,7 +270,17 @@ TEST_F(I2cChannelTest, FidlWriteRead) {
   EXPECT_BYTES_EQ(i2c_dev.tx_data().data(), expected_tx_data.data(), expected_tx_data.size());
   EXPECT_BYTES_EQ(buf, expected_rx_data.data(), expected_rx_data.size());
 
-  EXPECT_NOT_OK(client.WriteReadSync(expected_tx_data.data(), expected_tx_data.size(), buf, 3));
+  uint8_t buf1[5];
+  EXPECT_OK(
+      client.WriteReadSync(expected_tx_data.data(), expected_tx_data.size(), buf1, sizeof(buf1)));
+  EXPECT_BYTES_EQ(i2c_dev.tx_data().data(), expected_tx_data.data(), expected_tx_data.size());
+  EXPECT_BYTES_EQ(buf1, expected_rx_data.data(), expected_rx_data.size());
+
+  uint8_t buf2[3];
+  EXPECT_OK(
+      client.WriteReadSync(expected_tx_data.data(), expected_tx_data.size(), buf2, sizeof(buf2)));
+  EXPECT_BYTES_EQ(i2c_dev.tx_data().data(), expected_tx_data.data(), expected_tx_data.size());
+  EXPECT_BYTES_EQ(buf2, expected_rx_data.data(), sizeof(buf2));
 
   EXPECT_OK(client.WriteReadSync(nullptr, 0, buf, expected_rx_data.size()));
   EXPECT_EQ(i2c_dev.tx_data().size(), 0);

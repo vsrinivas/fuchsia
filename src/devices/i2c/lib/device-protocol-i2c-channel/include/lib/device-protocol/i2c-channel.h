@@ -130,11 +130,12 @@ class I2cFidlChannel : public I2cChannelBase {
 
     if (rx_len > 0) {
       const auto& read_data = reply->result.response().read_data;
-      if (read_data.count() != 1 || read_data[0].count() != rx_len) {
+      // Truncate the returned buffer to match the behavior of the Banjo version.
+      if (read_data.count() != 1) {
         return ZX_ERR_IO;
       }
 
-      memcpy(rx_buf, read_data[0].data(), rx_len);
+      memcpy(rx_buf, read_data[0].data(), std::min(rx_len, read_data[0].count()));
     }
 
     return ZX_OK;
@@ -194,7 +195,7 @@ class I2cFidlChannel : public I2cChannelBase {
       return;
     }
 
-    i2c_op_t read_ops[fuchsia_hardware_i2c::wire::kMaxCountSegments];
+    i2c_op_t read_ops[fuchsia_hardware_i2c::wire::kMaxCountTransactions];
     for (size_t i = 0; i < read_count; i++) {
       read_ops[i] = {
           .data_buffer = read_data[i].data(),
@@ -217,6 +218,9 @@ class I2cChannel : public I2cChannelBase {
   I2cChannel() = default;
 
   I2cChannel(const i2c_protocol_t* proto) : banjo_client_(proto) {}
+
+  I2cChannel(fidl::ClientEnd<fuchsia_hardware_i2c::Device> client)
+      : fidl_client_(std::move(client)) {}
 
   I2cChannel(zx_device_t* parent) : banjo_client_(parent) { ConnectFidlIfNeeded(parent, nullptr); }
 
