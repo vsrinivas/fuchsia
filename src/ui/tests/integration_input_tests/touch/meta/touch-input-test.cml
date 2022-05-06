@@ -3,6 +3,7 @@
         "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/touch-input-test",
@@ -34,6 +35,7 @@
             protocol: [
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
+                "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sys.Environment",
                 "fuchsia.sysmem.Allocator",

@@ -18,6 +18,7 @@
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/observation/test/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -30,8 +31,7 @@
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/ui/scenic/cpp/resources.h>
-#include <lib/ui/scenic/cpp/session.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
@@ -68,11 +68,10 @@
 // - Test program's injection -> Root Presenter -> Scenic -> Child view
 //
 // Setup sequence
-// - The test sets up a view hierarchy with three views:
+// - The test sets up a view hierarchy with two views:
 //   - Top level scene, owned by Root Presenter.
-//   - Middle view, owned by this test.
 //   - Bottom view, owned by the child view.
-// - The test waits for a Scenic event that verifies the child has UI content in the scene graph.
+// - The test waits for geometry observer to return a view tree with one more view in it.
 // - The test injects input into Root Presenter, emulating a display's touch report.
 // - Root Presenter dispatches the touch event to Scenic, which in turn dispatches it to the child.
 // - The child receives the touch event and reports back to the test over a custom test-only FIDL.
@@ -185,6 +184,10 @@ void AddBaseRoutes(RealmBuilder* realm_builder) {
   realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
                                 .source = ChildRef{kScenicTestRealm},
                                 .targets = {ParentRef()}});
+  realm_builder->AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::ui::observation::test::Registry::Name_}},
+            .source = ChildRef{kScenicTestRealm},
+            .targets = {ParentRef()}});
 }
 
 // Combines all vectors in `vecs` into one.
@@ -195,6 +198,54 @@ std::vector<T> merge(std::initializer_list<std::vector<T>> vecs) {
     result.insert(result.end(), v.begin(), v.end());
   }
   return result;
+}
+
+bool CheckViewExistsInSnapshot(const fuchsia::ui::observation::geometry::ViewTreeSnapshot& snapshot,
+                               zx_koid_t view_ref_koid) {
+  if (!snapshot.has_views()) {
+    return false;
+  }
+
+  auto snapshot_count = std::count_if(
+      snapshot.views().begin(), snapshot.views().end(),
+      [view_ref_koid](const auto& view) { return view.view_ref_koid() == view_ref_koid; });
+
+  return snapshot_count > 0;
+}
+
+bool CheckViewExistsInUpdates(
+    const std::vector<fuchsia::ui::observation::geometry::ViewTreeSnapshot>& updates,
+    zx_koid_t view_ref_koid) {
+  auto update_count =
+      std::count_if(updates.begin(), updates.end(), [view_ref_koid](auto& snapshot) {
+        return CheckViewExistsInSnapshot(snapshot, view_ref_koid);
+      });
+
+  return update_count > 0;
+}
+
+zx_koid_t ExtractKoid(const zx::object_base& object) {
+  zx_info_handle_basic_t info{};
+  if (object.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) != ZX_OK) {
+    return ZX_KOID_INVALID;  // no info
+  }
+
+  return info.koid;
+}
+
+zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
+  return ExtractKoid(view_ref.reference);
+}
+
+// Returns the iterator to the first fuchsia::ui::observation::geometry::ViewTreeSnapshot in
+// |updates| having |view_ref_koid| present.
+std::vector<fuchsia::ui::observation::geometry::ViewTreeSnapshot>::const_iterator
+GetFirstSnapshotWithView(
+    const std::vector<fuchsia::ui::observation::geometry::ViewTreeSnapshot>& updates,
+    zx_koid_t view_ref_koid) {
+  return std::find_if(updates.begin(), updates.end(), [view_ref_koid](auto& snapshot) {
+    return CheckViewExistsInSnapshot(snapshot, view_ref_koid);
+  });
 }
 
 // This component implements the test.touch.ResponseListener protocol
@@ -256,15 +307,11 @@ class TouchInputBase : public gtest::RealLoopFixture {
 
     BuildRealm(this->GetTestComponents(), this->GetTestRoutes(), this->GetTestV2Components());
 
-    // Get the display dimensions
-    scenic_ = realm()->Connect<fuchsia::ui::scenic::Scenic>();
-    scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
-      display_width_ = display_info.width_in_px;
-      display_height_ = display_info.height_in_px;
-      FX_LOGS(INFO) << "Got display_width = " << display_width_
-                    << " and display_height = " << display_height_;
+    observer_registry_ptr_ = realm()->Connect<fuchsia::ui::observation::test::Registry>();
+
+    observer_registry_ptr_.set_error_handler([](zx_status_t status) {
+      FAIL() << "Lost connection to Observer Registry Protocol: " << zx_status_get_string(status);
     });
-    RunLoopUntil([this] { return display_width_ != 0 && display_height_ != 0; });
   }
 
   // Subclass should implement this method to add components to the test realm
@@ -281,58 +328,24 @@ class TouchInputBase : public gtest::RealLoopFixture {
 
   // Launches the test client by connecting to fuchsia.ui.app.ViewProvider protocol.
   // This method should only be invoked if this protocol has been exposed from
-  // the root of the test realm. After establishing a connection, this method
-  // listens for the client is_rendering signal and calls |on_is_rendering| when it arrives.
+  // the root of the test realm. After establishing a connection, this method uses
+  // |fuchsia.ui.observation.geometry.Provider| to get notified when the client view gets attached
+  // to the view tree.
   void LaunchClient(std::string debug_name) {
-    auto tokens_rt = scenic::ViewTokenPair::New();  // Root Presenter -> Test
-    auto tokens_tf = scenic::ViewTokenPair::New();  // Test -> Client
+    // Use |fuchsia.ui.observation.test.Registry| to register the view observer endpoint with
+    // scenic.
+    fuchsia::ui::observation::geometry::ProviderPtr geometry_provider;
+    std::optional<bool> geometry_available;
+    observer_registry_ptr_->RegisterGlobalGeometryProvider(
+        geometry_provider.NewRequest(), [&geometry_available] { geometry_available = true; });
+    RunLoopUntil([&geometry_available] { return geometry_available.has_value(); });
+
+    auto tokens = scenic::ViewTokenPair::New();  // Root Presenter -> Client
 
     // Instruct Root Presenter to present test's View.
     auto root_presenter = realm()->Connect<fuchsia::ui::policy::Presenter>();
-    root_presenter->PresentOrReplaceView(std::move(tokens_rt.view_holder_token),
+    root_presenter->PresentOrReplaceView(std::move(tokens.view_holder_token),
                                          /* presentation */ nullptr);
-
-    // Set up test's View, to harvest the client view's view_state.is_rendering signal.
-    auto session_pair = scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get());
-    session_ = std::make_unique<scenic::Session>(std::move(session_pair.first),
-                                                 std::move(session_pair.second));
-    session_->SetDebugName(debug_name);
-    bool is_rendering = false;
-    session_->set_event_handler([this, debug_name, &is_rendering](
-                                    const std::vector<fuchsia::ui::scenic::Event>& events) {
-      for (const auto& event : events) {
-        if (!event.is_gfx())
-          continue;  // skip non-gfx events
-
-        if (event.gfx().is_view_properties_changed()) {
-          const auto properties = event.gfx().view_properties_changed().properties;
-          FX_VLOGS(1) << "Test received its view properties; transfer to child view: "
-                      << properties;
-          FX_CHECK(view_holder_) << "Expect that view holder is already set up.";
-          view_holder_->SetViewProperties(properties);
-          session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
-
-        } else if (event.gfx().is_view_state_changed()) {
-          is_rendering = event.gfx().view_state_changed().state.is_rendering;
-          FX_VLOGS(1) << "Child's view content is rendering: " << std::boolalpha << is_rendering;
-        } else if (event.gfx().is_view_disconnected()) {
-          // Save time, terminate the test immediately if we know that client's view is borked.
-          FX_CHECK(injection_count_ > 0) << "Expected to have completed input injection, but "
-                                         << debug_name << " view terminated early.";
-        }
-      }
-    });
-
-    view_holder_ = std::make_unique<scenic::ViewHolder>(
-        session_.get(), std::move(tokens_tf.view_holder_token), "test's view holder");
-    view_ = std::make_unique<scenic::View>(session_.get(), std::move(tokens_rt.view_token),
-                                           "test's view");
-    view_->AddChild(*view_holder_);
-
-    // Request to make test's view; this will trigger dispatch of view properties.
-    session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {
-      FX_VLOGS(1) << "test's view and view holder created by Scenic.";
-    });
 
     // Start client app inside the test environment.
     // Note well. There is a significant difference in how ViewProvider is
@@ -343,33 +356,29 @@ class TouchInputBase : public gtest::RealLoopFixture {
     // component P launches a child component C directly, and P connects to C's
     // ViewProvider directly. However, this difference does not impact the
     // testing logic.
+    auto [view_ref_control, view_ref] = scenic::ViewRefPair::New();
+    const auto view_ref_koid = ExtractKoid(view_ref);
     auto view_provider = realm()->Connect<fuchsia::ui::app::ViewProvider>();
-    view_provider->CreateView(std::move(tokens_tf.view_token.value), /* in */ nullptr,
-                              /* out */ nullptr);
+    view_provider->CreateViewWithViewRef(std::move(tokens.view_token.value),
+                                         std::move(view_ref_control), std::move(view_ref));
 
-    RunLoopUntil([&is_rendering] { return is_rendering; });
-
-    // Reset the event handler without capturing the is_rendering stack variable.
-    session_->set_event_handler([this, debug_name](
-                                    const std::vector<fuchsia::ui::scenic::Event>& events) {
-      for (const auto& event : events) {
-        if (!event.is_gfx())
-          continue;  // skip non-gfx events
-
-        if (event.gfx().is_view_properties_changed()) {
-          const auto properties = event.gfx().view_properties_changed().properties;
-          FX_VLOGS(1) << "Test received its view properties; transfer to child view: "
-                      << properties;
-          FX_CHECK(view_holder_) << "Expect that view holder is already set up.";
-          view_holder_->SetViewProperties(properties);
-          session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
-        } else if (event.gfx().is_view_disconnected()) {
-          // Save time, terminate the test immediately if we know that client's view is borked.
-          FX_CHECK(injection_count_ > 0) << "Expected to have completed input injection, but "
-                                         << debug_name << " view terminated early.";
-        }
-      }
+    // Wait for the client view to get attached to the view tree.
+    std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse> watch_response;
+    RunLoopUntil([this, &geometry_provider, &watch_response, &view_ref_koid] {
+      return HasViewConnected(geometry_provider, watch_response, view_ref_koid);
     });
+
+    // Get the display height and width from the view's extent in context as the bounding box of the
+    // view in root view's coordinate system will be the same as the display size.
+    auto snapshot_iter = GetFirstSnapshotWithView(watch_response->updates(), view_ref_koid);
+    auto view_descriptor = std::find_if(
+        snapshot_iter->views().begin(), snapshot_iter->views().end(),
+        [&view_ref_koid](const auto& view) { return view.view_ref_koid() == view_ref_koid; });
+
+    // As the view is rotated by 90 degrees, the width of the bounding box is actually the height of
+    // the physical display and vici versa.
+    display_height_ = static_cast<uint32_t>(view_descriptor->extent_in_context().width);
+    display_width_ = static_cast<uint32_t>(view_descriptor->extent_in_context().height);
   }
 
   // Helper method for checking the test.touch.ResponseListener response from the client app.
@@ -409,14 +418,6 @@ class TouchInputBase : public gtest::RealLoopFixture {
     bool child_launched = false;
     test_app_launcher->Launch(debug_name, [&child_launched] { child_launched = true; });
     RunLoopUntil([&child_launched] { return child_launched; });
-
-    // Waits an extra frame to avoid any flakes from the child launching signal firing slightly
-    // early.
-    bool frame_presented = false;
-    session_->set_on_frame_presented_handler([&frame_presented](auto) { frame_presented = true; });
-    session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
-    RunLoopUntil([&frame_presented] { return frame_presented; });
-    session_->set_on_frame_presented_handler([](auto) {});
   }
 
   // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
@@ -480,6 +481,22 @@ class TouchInputBase : public gtest::RealLoopFixture {
     FX_LOGS(INFO) << "*** Tap injected, count: " << injection_count_;
 
     return injection_time;
+  }
+
+  // Checks whether the view with |view_ref_koid| has connected to the view tree. The response of a
+  // f.u.o.g.Provider.Watch call is stored in |watch_response| if it contains |view_ref_koid|.
+  bool HasViewConnected(
+      const fuchsia::ui::observation::geometry::ProviderPtr& geometry_provider,
+      std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse>& watch_response,
+      zx_koid_t view_ref_koid) {
+    std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse> geometry_result;
+    geometry_provider->Watch(
+        [&geometry_result](auto response) { geometry_result = std::move(response); });
+    RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
+    if (CheckViewExistsInUpdates(geometry_result->updates(), view_ref_koid)) {
+      watch_response = std::move(geometry_result);
+    };
+    return watch_response.has_value();
   }
 
   // Guaranteed to be initialized after SetUp().
@@ -554,17 +571,11 @@ class TouchInputBase : public gtest::RealLoopFixture {
 
   std::unique_ptr<ResponseListenerServer> response_listener_;
 
-  std::unique_ptr<scenic::Session> session_;
-
   int injection_count_ = 0;
 
-  fuchsia::ui::scenic::ScenicPtr scenic_;
+  fuchsia::ui::observation::test::RegistryPtr observer_registry_ptr_;
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
-
-  // Test view and child view's ViewHolder.
-  std::unique_ptr<scenic::ViewHolder> view_holder_;
-  std::unique_ptr<scenic::View> view_;
 
   fuchsia::sys::ComponentControllerPtr client_component_;
   std::shared_ptr<sys::ServiceDirectory> child_services_;
@@ -717,14 +728,14 @@ class WebEngineTest : public TouchInputBase {
   // * The WebEngine must have installed its `render_node_`, and
   // * The WebEngine must have set the shape of its `input_node_`
   //
-  // The problem we have is that the `is_rendering` signal that we monitor only guarantees us
+  // The problem we have is that the fuchsia.ui.observation.Provider gives a guarantee that
   // the `render_node_` is ready. If the `input_node_` is not ready at that time, Scenic will
   // find that no node was hit by the touch, and drop the touch event.
   //
-  // As for why `is_rendering` triggers before there's any hittable element, that falls out of
-  // the way WebEngine constructs its scene graph. Namely, the `render_node_` has a shape, so
-  // that node `is_rendering` as soon as it is `Present()`-ed. Walking transitively up the
-  // scene graph, that causes our `Session` to receive the `is_rendering` signal.
+  // As for why f.u.o.g.Provider notifies that the view is connected before there's any hittable
+  // element, that falls out of the way WebEngine constructs its scene graph. Namely, the
+  // `render_node_` has a shape, so that node renders content as soon as it is `Present()`-ed
+  // causing it to be present in f.u.o.g.Provider's response.
   //
   // For more detals, see fxbug.dev/57268.
   //
