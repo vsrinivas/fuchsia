@@ -33,15 +33,20 @@ driver_bind_rules("bind") {
 
 fuchsia_driver("driver") {
   output_name = "da7219"
-  sources = [ "da7219.cc" ]
+  sources = [
+    "da7219-regs.h",
+    "da7219.cc",
+    "da7219.h",
+  ]
   deps = [
     ":bind",
-    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//src/devices/lib/acpi",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg-i2c",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
   ]
@@ -67,8 +72,8 @@ test("da7219-unit-tests") {
   ]
   deps = [
     ":bind",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//sdk/lib/inspect/testing/cpp:zxtest",
-    "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/lib/acpi",
     "//src/devices/lib/driver",
@@ -76,6 +81,7 @@ test("da7219-unit-tests") {
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg-i2c",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

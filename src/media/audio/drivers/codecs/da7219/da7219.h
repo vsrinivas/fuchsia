@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_DA7219_DA7219_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_DA7219_DA7219_H_
 
-#include <lib/device-protocol/i2c-channel.h>
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/simple-codec/simple-codec-server.h>
 
@@ -15,7 +15,7 @@ namespace audio {
 
 class Da7219 : public SimpleCodecServer {
  public:
-  explicit Da7219(zx_device_t* parent, ddk::I2cChannel i2c)
+  explicit Da7219(zx_device_t* parent, fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c)
       : SimpleCodecServer(parent), i2c_(std::move(i2c)) {}
   ~Da7219() override = default;
 
@@ -45,7 +45,7 @@ class Da7219 : public SimpleCodecServer {
   zx_status_t UpdateReg(uint8_t reg, uint8_t mask, uint8_t value);
 
   inspect::Inspector inspect_;
-  ddk::I2cChannel i2c_;
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
 };
 
 }  // namespace audio
