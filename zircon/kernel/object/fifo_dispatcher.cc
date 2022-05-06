@@ -13,6 +13,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <object/handle.h>
+#include <object/process_dispatcher.h>
 
 KCOUNTER(dispatcher_fifo_create_count, "dispatcher.fifo.create")
 KCOUNTER(dispatcher_fifo_destroy_count, "dispatcher.fifo.destroy")
@@ -88,34 +89,65 @@ zx_status_t FifoDispatcher::WriteFromUser(size_t elem_size, user_in_ptr<const ui
                                           size_t count, size_t* actual) {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
-  if (!peer())
-    return ZX_ERR_PEER_CLOSED;
-  AssertHeld(*peer()->get_lock());
-  return peer()->WriteSelfLocked(elem_size, ptr, count, actual);
+  while (true) {
+    ktl::variant<zx_status_t, UserCopyCaptureFaultsResult> write_result;
+    {
+      Guard<Mutex> guard{get_lock()};
+      if (!peer()) {
+        return ZX_ERR_PEER_CLOSED;
+      }
+      AssertHeld(*peer()->get_lock());
+      write_result = peer()->WriteSelfLocked(elem_size, ptr, count, actual);
+    }
+    // Check for any regular error and return it.
+    if (ktl::holds_alternative<zx_status_t>(write_result)) {
+      return ktl::get<zx_status_t>(write_result);
+    }
+    // Copy failed, need to check for and handle any page faults.
+    UserCopyCaptureFaultsResult copy_result = ktl::get<UserCopyCaptureFaultsResult>(write_result);
+    zx_status_t result = copy_result.status;
+    if (auto fault = copy_result.fault_info) {
+      // If we have a fault the original status is irrelevant and we replace it with the result of
+      // the fault.
+      result = ProcessDispatcher::GetCurrent()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
+    } else {
+      // If there's no fault information then the assumption is that the original copy cannot have
+      // succeeded.
+      DEBUG_ASSERT(result != ZX_OK);
+    }
+    if (result != ZX_OK) {
+      // Regardless of why the copy or fault failed it means the underlying pointer is somehow bad,
+      // which we report to the user as an invalid argument.
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
 }
 
-zx_status_t FifoDispatcher::WriteSelfLocked(size_t elem_size, user_in_ptr<const uint8_t> ptr,
-                                            size_t count, size_t* actual) {
+ktl::variant<zx_status_t, UserCopyCaptureFaultsResult> FifoDispatcher::WriteSelfLocked(
+    size_t elem_size, user_in_ptr<const uint8_t> ptr, size_t count, size_t* actual) {
   canary_.Assert();
 
-  if (elem_size != elem_size_)
+  if (elem_size != elem_size_) {
     return ZX_ERR_OUT_OF_RANGE;
-  if (count == 0)
+  }
+  if (count == 0) {
     return ZX_ERR_OUT_OF_RANGE;
+  }
 
   uint32_t old_head = head_;
 
   // total number of available empty slots in the fifo
   size_t avail = elem_count_ - (head_ - tail_);
 
-  if (avail == 0)
+  if (avail == 0) {
     return ZX_ERR_SHOULD_WAIT;
+  }
 
   bool was_empty = (avail == elem_count_);
 
-  if (count > avail)
+  if (count > avail) {
     count = avail;
+  }
 
   while (count > 0) {
     uint32_t offset = (head_ % elem_count_);
@@ -126,12 +158,12 @@ zx_status_t FifoDispatcher::WriteSelfLocked(size_t elem_size, user_in_ptr<const 
     // number of slots we can actually copy
     size_t to_copy = (count > n) ? n : count;
 
-    zx_status_t status =
-        ptr.copy_array_from_user(&data_[offset * elem_size_], to_copy * elem_size_);
-    if (status != ZX_OK) {
+    UserCopyCaptureFaultsResult result =
+        ptr.copy_array_from_user_capture_faults(&data_[offset * elem_size_], to_copy * elem_size_);
+    if (result.status != ZX_OK) {
       // roll back, in case this is the second copy
       head_ = old_head;
-      return ZX_ERR_INVALID_ARGS;
+      return result;
     }
 
     // adjust head and count
@@ -142,8 +174,9 @@ zx_status_t FifoDispatcher::WriteSelfLocked(size_t elem_size, user_in_ptr<const 
   }
 
   // if was empty, we've become readable
-  if (was_empty)
+  if (was_empty) {
     UpdateStateLocked(0u, ZX_FIFO_READABLE);
+  }
 
   // if now full, we're no longer writable
   if (elem_count_ == (head_ - tail_)) {
@@ -158,26 +191,61 @@ zx_status_t FifoDispatcher::WriteSelfLocked(size_t elem_size, user_in_ptr<const 
 zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> ptr, size_t count,
                                        size_t* actual) {
   canary_.Assert();
+  while (true) {
+    ktl::variant<zx_status_t, UserCopyCaptureFaultsResult> read_result;
+    {
+      Guard<Mutex> guard{get_lock()};
+      read_result = ReadToUserLocked(elem_size, ptr, count, actual);
+    }
+    // Check for any regular error and return it.
+    if (ktl::holds_alternative<zx_status_t>(read_result)) {
+      return ktl::get<zx_status_t>(read_result);
+    }
+    // Copy failed, need to check for and handle any page faults.
+    UserCopyCaptureFaultsResult copy_result = ktl::get<UserCopyCaptureFaultsResult>(read_result);
+    zx_status_t result = copy_result.status;
+    if (auto fault = copy_result.fault_info) {
+      // If we have a fault the original status is irrelevant and we replace it with the result of
+      // the fault.
+      result = ProcessDispatcher::GetCurrent()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
+    } else {
+      // If there's no fault information then the assumption is that the original copy cannot have
+      // succeeded.
+      DEBUG_ASSERT(result != ZX_OK);
+    }
+    if (result != ZX_OK) {
+      // Regardless of why the copy or fault failed it means the underlying pointer is somehow bad,
+      // which we report to the user as an invalid argument.
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+}
 
-  if (elem_size != elem_size_)
-    return ZX_ERR_OUT_OF_RANGE;
-  if (count == 0)
-    return ZX_ERR_OUT_OF_RANGE;
+ktl::variant<zx_status_t, UserCopyCaptureFaultsResult> FifoDispatcher::ReadToUserLocked(
+    size_t elem_size, user_out_ptr<uint8_t> ptr, size_t count, size_t* actual) {
+  canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  if (elem_size != elem_size_) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  if (count == 0) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
   uint32_t old_tail = tail_;
 
   // total number of available entries to read from the fifo
   size_t avail = (head_ - tail_);
 
-  if (avail == 0)
+  if (avail == 0) {
     return peer() ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
+  }
 
   bool was_full = (avail == elem_count_);
 
-  if (count > avail)
+  if (count > avail) {
     count = avail;
+  }
 
   while (count > 0) {
     uint32_t offset = (tail_ % elem_count_);
@@ -188,11 +256,12 @@ zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> p
     // number of slots we can actually copy
     size_t to_copy = (count > n) ? n : count;
 
-    zx_status_t status = ptr.copy_array_to_user(&data_[offset * elem_size_], to_copy * elem_size_);
-    if (status != ZX_OK) {
+    UserCopyCaptureFaultsResult result =
+        ptr.copy_array_to_user_capture_faults(&data_[offset * elem_size_], to_copy * elem_size_);
+    if (result.status != ZX_OK) {
       // roll back, in case this is the second copy
       tail_ = old_tail;
-      return ZX_ERR_INVALID_ARGS;
+      return result;
     }
 
     // adjust tail and count
@@ -209,8 +278,9 @@ zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> p
   }
 
   // if we've become empty, we're no longer readable
-  if ((head_ - tail_) == 0)
+  if ((head_ - tail_) == 0) {
     UpdateStateLocked(ZX_FIFO_READABLE, 0u);
+  }
 
   *actual = (tail_ - old_tail);
   return ZX_OK;
