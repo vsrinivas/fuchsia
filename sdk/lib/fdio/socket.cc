@@ -998,14 +998,14 @@ struct BaseSocket {
                               [](const auto& response) { return response.domain; });
         }
       case SO_TIMESTAMP:
-        return proc.Process(client()->GetTimestamp2(), [](const auto& response) {
+        return proc.Process(client()->GetTimestamp(), [](const auto& response) {
           return PartialCopy{
               .value = response.value == fsocket::wire::TimestampOption::kMicrosecond,
               .allow_char = false,
           };
         });
       case SO_TIMESTAMPNS:
-        return proc.Process(client()->GetTimestamp2(), [](const auto& response) {
+        return proc.Process(client()->GetTimestamp(), [](const auto& response) {
           return PartialCopy{
               .value = response.value == fsocket::wire::TimestampOption::kNanosecond,
               .allow_char = false,
@@ -1122,13 +1122,13 @@ struct BaseSocket {
         return proc.Process<bool>([this](bool value) {
           using fsocket::wire::TimestampOption;
           TimestampOption opt = value ? TimestampOption::kMicrosecond : TimestampOption::kDisabled;
-          return client()->SetTimestamp2(opt);
+          return client()->SetTimestamp(opt);
         });
       case SO_TIMESTAMPNS:
         return proc.Process<bool>([this](bool value) {
           using fsocket::wire::TimestampOption;
           TimestampOption opt = value ? TimestampOption::kNanosecond : TimestampOption::kDisabled;
-          return client()->SetTimestamp2(opt);
+          return client()->SetTimestamp(opt);
         });
       case SO_SNDBUF:
         return proc.Process<int32_t>([this](int32_t value) {
@@ -1136,8 +1136,8 @@ struct BaseSocket {
           return client()->SetSendBuffer(static_cast<uint64_t>(value));
         });
       case SO_RCVBUF:
-        // NB: RCVBUF treated as unsigned, we just cast the value to skip sign check.
         return proc.Process<int32_t>([this](int32_t value) {
+          // NB: RCVBUF treated as unsigned, we just cast the value to skip sign check.
           return client()->SetReceiveBuffer(static_cast<uint64_t>(value));
         });
       case SO_REUSEADDR:
