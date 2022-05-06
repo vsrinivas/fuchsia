@@ -18,7 +18,6 @@ fidl("fuchsia.stash") {
   # Please don't add entries to this visibility list without approval
   # from the people listed in OWNERS.
   visibility = [
-    "//garnet/bin/setui/*",
     "//src/connectivity/bluetooth/core/bt-gap/*",
     "//src/connectivity/bluetooth/testing/*",
     "//src/connectivity/bluetooth/tests/bt-manifest-integration-tests/*",
@@ -30,6 +29,7 @@ fidl("fuchsia.stash") {
     "//src/identity/*",
     "//src/modular/lib/modular_test_harness/*",
     "//src/modular/tests/*",
+    "//src/settings/service/*",
     "//src/sys/pkg/bin/omaha-client/*",
     "//src/sys/stash/*",
     "//src/sys/tools/stash_ctl/*",

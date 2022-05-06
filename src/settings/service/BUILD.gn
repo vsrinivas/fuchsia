@@ -1,0 +1,454 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+group("service") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":lib",
+    ":setui_service",
+    ":setui_service_tests",
+  ]
+}
+
+rustc_library("lib") {
+  name = "settings"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3-rustc",
+    "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
+    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light-rustc",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio-rustc",
+    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
+    "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds-rustc",
+    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.settings.policy:fuchsia.settings.policy-rustc",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
+    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
+    "//src/lib/diagnostics/inspect/derive",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/icu_data/rust/icu_data",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/trace/rust:trace",
+    "//src/lib/trace/rust:trace-provider",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:bitflags",
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:glob",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:paste",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:rust_icu_ucal",
+    "//third_party/rust_crates:rust_icu_uenum",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [
+    "//src/lib/storage/vfs/rust:vfs",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:pin-utils",
+  ]
+
+  # TODO(fxbug.dev/61386): Fix the leaks and remove this
+  test_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  sources = [
+    "src/accessibility.rs",
+    "src/accessibility/accessibility_controller.rs",
+    "src/accessibility/accessibility_fidl_handler.rs",
+    "src/accessibility/types.rs",
+    "src/agent.rs",
+    "src/agent/authority.rs",
+    "src/agent/camera_watcher.rs",
+    "src/agent/earcons.rs",
+    "src/agent/earcons/agent.rs",
+    "src/agent/earcons/bluetooth_handler.rs",
+    "src/agent/earcons/sound_ids.rs",
+    "src/agent/earcons/utils.rs",
+    "src/agent/earcons/volume_change_handler.rs",
+    "src/agent/inspect.rs",
+    "src/agent/inspect/policy_values.rs",
+    "src/agent/inspect/setting_proxy.rs",
+    "src/agent/inspect/setting_values.rs",
+    "src/agent/inspect/usage_counts.rs",
+    "src/agent/media_buttons.rs",
+    "src/agent/restore_agent.rs",
+    "src/agent/storage.rs",
+    "src/agent/storage/device_storage.rs",
+    "src/agent/storage/fidl_storage.rs",
+    "src/agent/storage/storage_agent.rs",
+    "src/agent/storage/storage_factory.rs",
+    "src/audio.rs",
+    "src/audio/audio_controller.rs",
+    "src/audio/audio_default_settings.rs",
+    "src/audio/audio_fidl_handler.rs",
+    "src/audio/policy.rs",
+    "src/audio/policy/audio_policy_handler.rs",
+    "src/audio/policy/volume_policy_fidl_handler.rs",
+    "src/audio/stream_volume_control.rs",
+    "src/audio/types.rs",
+    "src/audio/utils.rs",
+    "src/base.rs",
+    "src/clock.rs",
+    "src/config.rs",
+    "src/config/base.rs",
+    "src/config/default_settings.rs",
+    "src/display.rs",
+    "src/display/display_configuration.rs",
+    "src/display/display_controller.rs",
+    "src/display/display_fidl_handler.rs",
+    "src/display/light_sensor.rs",
+    "src/display/light_sensor_config.rs",
+    "src/display/light_sensor_controller.rs",
+    "src/display/types.rs",
+    "src/do_not_disturb.rs",
+    "src/do_not_disturb/do_not_disturb_controller.rs",
+    "src/do_not_disturb/do_not_disturb_fidl_handler.rs",
+    "src/do_not_disturb/types.rs",
+    "src/event.rs",
+    "src/factory_reset.rs",
+    "src/factory_reset/factory_reset_controller.rs",
+    "src/factory_reset/factory_reset_fidl_handler.rs",
+    "src/factory_reset/types.rs",
+    "src/fidl_common.rs",
+    "src/fidl_processor.rs",
+    "src/fidl_processor/policy.rs",
+    "src/fidl_processor/processor.rs",
+    "src/fidl_processor/settings.rs",
+    "src/handler.rs",
+    "src/handler/base.rs",
+    "src/handler/setting_handler.rs",
+    "src/handler/setting_handler_factory_impl.rs",
+    "src/handler/setting_proxy.rs",
+    "src/handler/setting_proxy_inspect_info.rs",
+    "src/hanging_get_handler.rs",
+    "src/ingress.rs",
+    "src/ingress/fidl.rs",
+    "src/ingress/request.rs",
+    "src/ingress/watch.rs",
+    "src/input.rs",
+    "src/input/common.rs",
+    "src/input/input_controller.rs",
+    "src/input/input_device_configuration.rs",
+    "src/input/input_fidl_handler.rs",
+    "src/input/types.rs",
+    "src/inspect.rs",
+    "src/inspect/config_logger.rs",
+    "src/inspect/stash_logger.rs",
+    "src/inspect/utils.rs",
+    "src/inspect/utils/enums.rs",
+    "src/inspect/utils/inspect_map.rs",
+    "src/inspect/utils/inspect_queue.rs",
+    "src/intl.rs",
+    "src/intl/intl_controller.rs",
+    "src/intl/intl_fidl_handler.rs",
+    "src/intl/types.rs",
+    "src/job.rs",
+    "src/job/manager.rs",
+    "src/job/source.rs",
+    "src/keyboard.rs",
+    "src/keyboard/keyboard_controller.rs",
+    "src/keyboard/keyboard_fidl_handler.rs",
+    "src/keyboard/types.rs",
+    "src/lib.rs",
+    "src/light.rs",
+    "src/light/light_controller.rs",
+    "src/light/light_fidl_handler.rs",
+    "src/light/light_hardware_configuration.rs",
+    "src/light/types.rs",
+    "src/message.rs",
+    "src/message/action_fuse.rs",
+    "src/message/base.rs",
+    "src/message/beacon.rs",
+    "src/message/delegate.rs",
+    "src/message/message_builder.rs",
+    "src/message/message_client.rs",
+    "src/message/message_hub.rs",
+    "src/message/messenger.rs",
+    "src/message/receptor.rs",
+    "src/migration.rs",
+    "src/monitor.rs",
+    "src/monitor/base.rs",
+    "src/monitor/environment.rs",
+    "src/night_mode.rs",
+    "src/night_mode/night_mode_controller.rs",
+    "src/night_mode/night_mode_fidl_handler.rs",
+    "src/night_mode/types.rs",
+    "src/policy.rs",
+    "src/policy/policy_handler.rs",
+    "src/policy/policy_handler_factory_impl.rs",
+    "src/policy/policy_proxy.rs",
+    "src/privacy.rs",
+    "src/privacy/privacy_controller.rs",
+    "src/privacy/privacy_fidl_handler.rs",
+    "src/privacy/types.rs",
+    "src/service.rs",
+    "src/service_context.rs",
+    "src/setup.rs",
+    "src/setup/setup_controller.rs",
+    "src/setup/setup_fidl_handler.rs",
+    "src/setup/types.rs",
+    "src/storage.rs",
+    "src/task.rs",
+    "src/tests.rs",
+    "src/tests/accessibility_tests.rs",
+    "src/tests/agent_tests.rs",
+    "src/tests/audio_policy_handler_tests.rs",
+    "src/tests/audio_policy_tests.rs",
+    "src/tests/audio_tests.rs",
+    "src/tests/bluetooth_earcons_tests.rs",
+    "src/tests/camera_watcher_agent_tests.rs",
+    "src/tests/display_tests.rs",
+    "src/tests/do_not_disturb_tests.rs",
+    "src/tests/environment_tests.rs",
+    "src/tests/event_tests.rs",
+    "src/tests/factory_reset_tests.rs",
+    "src/tests/fakes.rs",
+    "src/tests/fakes/audio_core_service.rs",
+    "src/tests/fakes/base.rs",
+    "src/tests/fakes/brightness_service.rs",
+    "src/tests/fakes/camera3_service.rs",
+    "src/tests/fakes/discovery_service.rs",
+    "src/tests/fakes/hardware_light_service.rs",
+    "src/tests/fakes/hardware_power_statecontrol_service.rs",
+    "src/tests/fakes/input_device_registry_service.rs",
+    "src/tests/fakes/recovery_policy_service.rs",
+    "src/tests/fakes/service_registry.rs",
+    "src/tests/fakes/sound_player_service.rs",
+    "src/tests/fidl_processor_tests.rs",
+    "src/tests/hanging_get_tests.rs",
+    "src/tests/helpers.rs",
+    "src/tests/input_test_environment.rs",
+    "src/tests/input_tests.rs",
+    "src/tests/intl_tests.rs",
+    "src/tests/keyboard_tests.rs",
+    "src/tests/light_sensor_tests.rs",
+    "src/tests/light_tests.rs",
+    "src/tests/media_buttons_agent_tests.rs",
+    "src/tests/message_tests.rs",
+    "src/tests/message_utils.rs",
+    "src/tests/night_mode_tests.rs",
+    "src/tests/policy_handler_tests.rs",
+    "src/tests/policy_proxy_tests.rs",
+    "src/tests/privacy_tests.rs",
+    "src/tests/resource_monitor_tests.rs",
+    "src/tests/restore_agent_tests.rs",
+    "src/tests/scaffold.rs",
+    "src/tests/scaffold/agent.rs",
+    "src/tests/scaffold/event.rs",
+    "src/tests/scaffold/workload.rs",
+    "src/tests/service_configuration_tests.rs",
+    "src/tests/setting_handler_tests.rs",
+    "src/tests/setting_proxy_tests.rs",
+    "src/tests/setup_tests.rs",
+    "src/tests/storage_agent_tests.rs",
+    "src/tests/stream_volume_tests.rs",
+    "src/tests/test_failure_utils.rs",
+    "src/tests/volume_change_earcons_tests.rs",
+    "src/trace.rs",
+  ]
+
+  # -Copt-level=1 makes building the _test OOM on RBE with core.arm64-asan
+  # TODO(fxbug.dev/86896, fxbug.dev/85921): split this crate up to prevent OOM on RBE
+  disable_rbe = true
+}
+
+fuchsia_unittest_package("setui_service_tests") {
+  component_name = "settings_lib_test"
+  manifest = "meta/settings_lib_test.cml"
+  deps = [
+    ":lib_test",
+    ":setui_service_tests_resources",
+    ":tests_config",
+    "//src/intl:icudtl",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+resource("setui_service_tests_resources") {
+  sources = [ "src/tests/testdata/test_store_data.store" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+config_data("tests_config") {
+  for_pkg = "setui_service_tests"
+  sources = [
+    "src/tests/testdata/agent_configuration.json",
+    "src/tests/testdata/audio_config_data.json",
+    "src/tests/testdata/bluetooth-connected.wav",
+    "src/tests/testdata/bluetooth-disconnected.wav",
+    "src/tests/testdata/display_configuration.json",
+    "src/tests/testdata/fake_config_data.json",
+    "src/tests/testdata/fake_invalid_config_data.json",
+    "src/tests/testdata/interface_configuration.json",
+    "src/tests/testdata/service_flags.json",
+    "src/tests/testdata/volume-changed.wav",
+    "src/tests/testdata/volume-max.wav",
+  ]
+}
+
+rustc_binary("bin") {
+  name = "setui_service"
+  with_unit_tests = true
+
+  edition = "2018"
+
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:parking_lot",
+  ]
+
+  # TODO(fxbug.dev/61386): Fix the leaks and remove this
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  sources = [ "src/main.rs" ]
+}
+
+# TODO(fxbug.dev/83213) Retain v1 component while out of tree tests need it.
+fuchsia_component("setui_service_v1") {
+  component_name = "setui_service"
+  manifest = "meta/setui_service.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("setui_service_v2") {
+  component_name = "setui_service"
+  manifest = "meta/setui_service.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("setui_service_with_camera") {
+  component_name = "setui_service_with_camera"
+  manifest = "meta/setui_service_with_camera.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("setui_service") {
+  package_name = "setui_service"
+  deps = [
+    ":setui_service_v1",
+    ":setui_service_v2",
+    ":setui_service_with_camera",
+    "//src/intl:icudtl",
+  ]
+}
+
+rustc_binary("setui-config-test") {
+  testonly = true
+  edition = "2018"
+  output_name = "setui_config_test"
+  deps = [
+    ":lib",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  source_root = "src/setui_config_test.rs"
+
+  sources = [ "src/setui_config_test.rs" ]
+}
+
+resource("sample-setui-config-test-resources") {
+  sources = [
+    "src/tests/testdata/agent_configuration.json",
+    "src/tests/testdata/audio_policy_configuration.json",
+    "src/tests/testdata/display_configuration.json",
+    "src/tests/testdata/input_device_configuration.json",
+    "src/tests/testdata/interface_configuration.json",
+    "src/tests/testdata/light_hardware_configuration.json",
+    "src/tests/testdata/light_sensor_configuration.json",
+    "src/tests/testdata/service_flags.json",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_unittest_component("sample-setui-config-test-all-args") {
+  manifest = "meta/sample_setui_config_test_all_args.cml"
+  deps = [ ":setui-config-test" ]
+}
+
+fuchsia_unittest_component("sample-setui-config-test-multiple-args") {
+  manifest = "meta/sample_setui_config_test_multiple_args.cml"
+  deps = [ ":setui-config-test" ]
+}
+
+fuchsia_unittest_component("sample-setui-config-test-no-args") {
+  manifest = "meta/sample_setui_config_test_no_args.cml"
+  deps = [ ":setui-config-test" ]
+}
+
+fuchsia_unittest_component("sample-setui-config-test-short-args") {
+  manifest = "meta/sample_setui_config_test_short_args.cml"
+  deps = [ ":setui-config-test" ]
+}
+
+fuchsia_test_package("sample-setui-config-test") {
+  test_components = [
+    ":sample-setui-config-test-all-args",
+    ":sample-setui-config-test-multiple-args",
+    ":sample-setui-config-test-no-args",
+    ":sample-setui-config-test-short-args",
+  ]
+  deps = [ ":sample-setui-config-test-resources" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":sample-setui-config-test",
+    ":setui-config-test",
+    ":setui_service_tests",
+  ]
+}

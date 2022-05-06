@@ -91,7 +91,6 @@ sanitizer_default_options("lsan_default_options") {
 # scripts/gn/trim_visibility.py --target="//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS"
 sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
   visibility = [
-    "//garnet/bin/setui/*",
     "//src/cobalt/bin/system-metrics/*",
     "//src/developer/shell/josh/*",
     "//src/devices/usb/drivers/xhci/*",
@@ -100,6 +99,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//src/graphics/lib/compute/surpass/*",
     "//src/lib/scoped_task/*",
     "//src/media/audio/drivers/intel-hda/controller/*",
+    "//src/settings/*",
     "//third_party/alacritty/alacritty_terminal/*",
     "//third_party/crashpad/*",
     "//zircon/third_party/uapp/dash/*",

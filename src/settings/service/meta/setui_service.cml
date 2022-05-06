@@ -1,0 +1,90 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/setui_service",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.settings.Accessibility",
+                "fuchsia.settings.Audio",
+                "fuchsia.settings.Display",
+                "fuchsia.settings.DoNotDisturb",
+                "fuchsia.settings.FactoryReset",
+                "fuchsia.settings.Input",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
+                "fuchsia.settings.Light",
+                "fuchsia.settings.NightMode",
+                "fuchsia.settings.policy.VolumePolicyController",
+                "fuchsia.settings.Privacy",
+                "fuchsia.settings.Setup",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sounds.Player",
+                "fuchsia.media.UsageReporter",
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.stash.Store",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.brightness.Control",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
+        },
+
+        // Device directories.
+        {
+            directory: "dev-input-report",
+            rights: [ "r*" ],
+            path: "/dev/class/input-report",
+        },
+        {
+            directory: "dev-light",
+            rights: [ "r*" ],
+            path: "/dev/class/light",
+        },
+
+        // Features: config-data.
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+
+        // Features: isolated-persistent-storage.
+        {
+            storage: "data",
+            path: "/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.settings.Accessibility",
+                "fuchsia.settings.Audio",
+                "fuchsia.settings.Display",
+                "fuchsia.settings.DoNotDisturb",
+                "fuchsia.settings.FactoryReset",
+                "fuchsia.settings.Input",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
+                "fuchsia.settings.Light",
+                "fuchsia.settings.NightMode",
+                "fuchsia.settings.policy.VolumePolicyController",
+                "fuchsia.settings.Privacy",
+                "fuchsia.settings.Setup",
+            ],
+            from: "self",
+        },
+    ],
+}
