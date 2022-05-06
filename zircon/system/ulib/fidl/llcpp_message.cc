@@ -7,7 +7,6 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/trace.h>
-#include <lib/fidl/transformer.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
@@ -22,6 +21,22 @@
 #else
 #include <lib/fidl/llcpp/internal/transport_channel_host.h>
 #endif  // __Fuchsia__
+
+namespace {
+
+bool ContainsEnvelope(const fidl_type_t* type) {
+  switch (type->type_tag()) {
+    case kFidlTypeTable:
+    case kFidlTypeXUnion:
+      return true;
+    case kFidlTypeStruct:
+      return type->coded_struct().contains_envelope;
+    default:
+      ZX_PANIC("unexpected top-level type");
+  }
+}
+
+}  // namespace
 
 namespace fidl {
 
@@ -230,28 +245,14 @@ void OutgoingMessage::DecodeImplForCall(const internal::CodingConfig& coding_con
     return;
   }
 
+  // Old versions of the C bindings will send wire format V1 payloads that are compatible
+  // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
+  // contain envelopes and are compatible with V2.
   if ((header.at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) == 0 &&
-      response_type != nullptr &&
-      !internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V1_TO_V2, response_type)) {
-    auto transformed_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
-    uint32_t transformed_num_bytes = *in_out_num_bytes;
-
-    zx_status_t status = internal__fidl_transform__may_break(
-        FIDL_TRANSFORMATION_V1_TO_V2, response_type, true, bytes, *in_out_num_bytes,
-        transformed_bytes.get(), ZX_CHANNEL_MAX_MSG_BYTES, &transformed_num_bytes, error_address());
-    if (status != ZX_OK) {
-      SetStatus(fidl::Status::DecodeError(status, *error_address()));
-      return;
-    }
-
-    if (transformed_num_bytes > *in_out_num_bytes) {
-      SetStatus(fidl::Status::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
-                                          "transformed bytes exceeds message buffer capacity"));
-      return;
-    }
-
-    memcpy(bytes, transformed_bytes.get(), transformed_num_bytes);
-    *in_out_num_bytes = transformed_num_bytes;
+      ContainsEnvelope(response_type)) {
+    SetStatus(fidl::Status::DecodeError(
+        ZX_ERR_INVALID_ARGS, "wire format v1 header received with unsupported envelope"));
+    return;
   }
 
   uint8_t* trimmed_result_bytes;
@@ -425,15 +426,20 @@ IncomingMessage IncomingMessage::SkipTransactionHeader() {
                          ::fidl::IncomingMessage::kSkipMessageHeaderValidation);
 }
 
-void IncomingMessage::Decode(const fidl_type_t* message_type,
-                             std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
+void IncomingMessage::Decode(const fidl_type_t* message_type) {
   ZX_ASSERT(is_transactional_);
-  Decode(internal::WireFormatVersion::kV2, message_type, true, out_transformed_buffer);
+  // Old versions of the C bindings will send wire format V1 payloads that are compatible
+  // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
+  // contain envelopes and are compatible with V2.
+  // TODO(fxbug.dev/99738) Remove this logic.
+  ZX_DEBUG_ASSERT(
+      !ContainsEnvelope(message_type) ||
+      (header()->at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) != 0);
+  Decode(internal::WireFormatVersion::kV2, message_type, true);
 }
 
 void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
-                             const fidl_type_t* message_type, bool is_transactional,
-                             std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
+                             const fidl_type_t* message_type, bool is_transactional) {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
   if (wire_format_version != internal::WireFormatVersion::kV2) {
     SetStatus(fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, "only wire format v2 supported"));

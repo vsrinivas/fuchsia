@@ -512,14 +512,14 @@ class IncomingMessage : public ::fidl::Status {
   //
   // This method should be used after a read.
   template <typename FidlType>
-  void Decode(std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
+  void Decode() {
     ZX_ASSERT(is_transactional_);
 
     // If this is an empty message, there is nothing to decode, so exit early.
     if (fidl::TypeTraits<FidlType>::kType == nullptr) {
       return;
     }
-    Decode(fidl::TypeTraits<FidlType>::kType, out_transformed_buffer);
+    Decode(fidl::TypeTraits<FidlType>::kType);
   }
 
   // Decodes the message using |FidlType| for the specified |wire_format_version|. If this
@@ -529,25 +529,21 @@ class IncomingMessage : public ::fidl::Status {
   //
   // This method should be used after a read.
   template <typename FidlType>
-  void Decode(internal::WireFormatVersion wire_format_version,
-              std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
+  void Decode(internal::WireFormatVersion wire_format_version) {
     ZX_ASSERT(!is_transactional_);
     ZX_ASSERT(fidl::TypeTraits<FidlType>::kType != nullptr);
     Decode(wire_format_version, fidl::TypeTraits<FidlType>::kType,
-           fidl::IsFidlTransactionalMessage<FidlType>::value, out_transformed_buffer);
+           fidl::IsFidlTransactionalMessage<FidlType>::value);
   }
 
   // Decodes the message using |message_type| for the specified |wire_format_version|. If this
   // operation succeed, |status()| is ok and |bytes()| contains the decoded object.
   //
   // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
-  // If a buffer needs to be allocated during decode, |out_transformed_buffer| will contain that
-  // buffer. This buffer will be stored on DecodedMessageBase and stays in scope for the lifetime
-  // of the decoded message, which is responsible for freeing it.
   //
   // This method should be used after a read.
   void Decode(internal::WireFormatVersion wire_format_version, const fidl_type_t* message_type,
-              bool is_transactional, std::unique_ptr<uint8_t[]>* out_transformed_buffer);
+              bool is_transactional);
 
   // Release the handle ownership after the message has been converted to its
   // decoded form. When used standalone and not as part of a |Decode|, this
@@ -573,7 +569,7 @@ class IncomingMessage : public ::fidl::Status {
   // of the decoded message, which is responsible for freeing it.
   //
   // This method should be used after a read.
-  void Decode(const fidl_type_t* message_type, std::unique_ptr<uint8_t[]>* out_transformed_buffer);
+  void Decode(const fidl_type_t* message_type);
 
   // Performs basic transactional message header validation and sets the |fidl::Status| fields
   // accordingly.
@@ -627,7 +623,7 @@ class DecodedMessageBase : public ::fidl::Status {
   // for determining the wire format version for decoding.
   explicit DecodedMessageBase(::fidl::IncomingMessage&& msg) {
     static_assert(fidl::IsFidlTransactionalMessage<FidlType>::value);
-    msg.Decode<FidlType>(&allocated_buffer_);
+    msg.Decode<FidlType>();
     bytes_ = msg.bytes();
     SetStatus(msg);
   }
@@ -638,7 +634,7 @@ class DecodedMessageBase : public ::fidl::Status {
   explicit DecodedMessageBase(internal::WireFormatVersion wire_format_version,
                               ::fidl::IncomingMessage&& msg) {
     static_assert(!fidl::IsFidlTransactionalMessage<FidlType>::value);
-    msg.Decode<FidlType>(wire_format_version, &allocated_buffer_);
+    msg.Decode<FidlType>(wire_format_version);
     bytes_ = msg.bytes();
     SetStatus(msg);
   }
@@ -666,7 +662,6 @@ class DecodedMessageBase : public ::fidl::Status {
 
  private:
   uint8_t* bytes_ = nullptr;
-  std::unique_ptr<uint8_t[]> allocated_buffer_;
 };
 
 }  // namespace internal
