@@ -14,6 +14,7 @@
 
 #include "src/devices/bus/drivers/pci/device.h"
 
+namespace fpci = ::fuchsia_hardware_pci;
 namespace pci {
 
 void FidlDevice::Bind(fidl::ServerEnd<fuchsia_hardware_pci::Device> request) {
@@ -163,7 +164,58 @@ void FidlDevice::GetDeviceInfo(GetDeviceInfoRequestView request,
 }
 
 void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  if (request->bar_id >= fpci::wire::kMaxBarCount) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  fbl::AutoLock dev_lock(device_->dev_lock());
+  auto& bar = device_->bars()[request->bar_id];
+  size_t bar_size = bar.size;
+  if (bar_size == 0) {
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
+#ifdef ENABLE_MSIX
+  // If this device shares BAR data with either of the MSI-X tables then we need
+  // to determine what portions of the BAR the driver can be permitted to
+  // access. If the MSI-X bar exists in the only page present in the BAR then we
+  // need to deny all access to the BAR.
+  if (device_->capabilities().msix) {
+    zx::status<size_t> result = device_->capabilities().msix->GetBarDataSize(bar);
+    if (!result.is_ok()) {
+      completer.ReplyError(result.status_value());
+      return;
+    }
+    bar_size = result.value();
+  }
+#endif
+
+  zx_status_t status = ZX_OK;
+  if (bar.is_mmio) {
+    zx::status<zx::vmo> result = bar.allocation->CreateVmo();
+    if (result.is_ok()) {
+      completer.ReplySuccess({.bar_id = request->bar_id,
+                              .size = bar_size,
+                              .result = fpci::wire::BarResult::WithVmo(std::move(result.value()))});
+      return;
+    }
+    completer.ReplyError(result.status_value());
+  } else {
+    zx::status<zx::resource> result = bar.allocation->CreateResource();
+    if (status == ZX_OK) {
+      fidl::Arena arena;
+      completer.ReplySuccess(
+          {.bar_id = request->bar_id,
+           .size = bar_size,
+           .result = fpci::wire::BarResult::WithIo(
+               arena, fuchsia_hardware_pci::wire::IoBar{.address = bar.address,
+                                                        .resource = std::move(result.value())})});
+      return;
+    }
+    completer.ReplyError(result.status_value());
+  }
 }
 
 void FidlDevice::SetBusMastering(SetBusMasteringRequestView request,
