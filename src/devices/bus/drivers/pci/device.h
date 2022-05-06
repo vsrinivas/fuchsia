@@ -469,14 +469,10 @@ class FidlDevice : public FidlDeviceType, public fidl::WireServer<fuchsia_hardwa
                      WriteConfig16Completer::Sync& completer) override;
   void WriteConfig32(WriteConfig32RequestView request,
                      WriteConfig32Completer::Sync& completer) override;
-  void GetFirstCapability(GetFirstCapabilityRequestView request,
-                          GetFirstCapabilityCompleter::Sync& completer) override;
-  void GetNextCapability(GetNextCapabilityRequestView request,
-                         GetNextCapabilityCompleter::Sync& completer) override;
-  void GetFirstExtendedCapability(GetFirstExtendedCapabilityRequestView request,
-                                  GetFirstExtendedCapabilityCompleter::Sync& completer) override;
-  void GetNextExtendedCapability(GetNextExtendedCapabilityRequestView request,
-                                 GetNextExtendedCapabilityCompleter::Sync& completer) override;
+  void GetCapabilities(GetCapabilitiesRequestView request,
+                       GetCapabilitiesCompleter::Sync& completer) override;
+  void GetExtendedCapabilities(GetExtendedCapabilitiesRequestView request,
+                               GetExtendedCapabilitiesCompleter::Sync& completer) override;
   void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override;
   pci::Device* device() { return device_; }
   zx_device_t* zxdev_ptr() { return zxdev_; }

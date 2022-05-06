@@ -476,71 +476,29 @@ protocol Device {
     }) -> (struct {}) error zx.status;
 
 
-    /// Returns the offset into the device's configuration space of the first
-    /// capability matching the capability id.
+    /// Returns a vector of offsets in configuration space corresponding to
+    /// capabilities matching the provided capability |id|.  If no corresponding
+    /// match is found then the vector will be empty.
     ///
     /// Parameters:
     /// |id|: the capability id to search for.
-    ///
-    /// Errors:
-    /// |ZX_ERR_NOT_FOUND|: A capability of id |id| was not found.
-    GetFirstCapability(struct {
+    GetCapabilities(struct {
         id CapabilityId;
     }) -> (struct {
-        offset ConfigOffset;
-    }) error zx.status;
+        offsets vector<ConfigOffset>:MAX_CAPABILITIES;
+    });
 
-    // TODO(96829): Update these interfaces post-FIDL to be easier to use.
-    /// Returns the offset into the device's configuration space of the next
-    /// capability matching the provided capability id, starting at |offset|.
-    ///
-    /// Parameters:
-    /// |id|: the capability id to search for.
-    /// |start_offset|: the configuration space offset of the previous
-    /// capability to start searching from.
-    ///
-    /// Errors:
-    /// |ZX_ERR_NOT_FOUND|: A capability of id |id| was not found in a scan
-    /// starting from |offset|
-    GetNextCapability(struct {
-        id CapabilityId;
-        start_offset ConfigOffset;
-    }) -> (struct {
-        offset ConfigOffset;
-    }) error zx.status;
-
-    /// Returns the offset into the device's configuration space of first
-    /// extended capability matching the provided extended capability id.
+    /// Returns a vector of offsets in configuration space corresponding to
+    /// extended capabilities matching the provided extended capability |id|.
+    /// If no corresponding match is found then the vector will be empty.
     ///
     /// Parameters:
     /// |id|: the capability id to search for
-    ///
-    /// Errors:
-    /// |ZX_ERR_NOT_FOUND|: A extended capability of id |id| was not found.
-    GetFirstExtendedCapability(struct {
+    GetExtendedCapabilities(struct {
         id ExtendedCapabilityId;
     }) -> (struct {
-        offset ExtendedConfigOffset;
-    }) error zx.status;
-
-    /// Returns the offset into the device's configuration space of the next
-    /// extended capability matching the provided extended capability id,
-    /// starting at |offset|.
-    ///
-    /// Parameters:
-    /// |id|: the capability id to search for.
-    /// |start_offset|: the configuration space offset of the previous extended
-    /// capability to start searching from.
-    ///
-    /// Errors
-    /// |ZX_ERR_NOT_FOUND|: A extended capability of id |id| was not found in a
-    /// scan starting from |offset|.
-    GetNextExtendedCapability(struct {
-        id ExtendedCapabilityId;
-        start_offset ExtendedConfigOffset;
-    }) -> (struct {
-        offset ExtendedConfigOffset;
-    }) error zx.status;
+        offsets vector<ExtendedConfigOffset>:MAX_EXT_CAPABILITIES;
+    });
 
     /// Returns the Bus Transaction Intiator (BTI) at a given index for the device.
     ///

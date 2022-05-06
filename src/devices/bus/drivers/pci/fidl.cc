@@ -231,24 +231,34 @@ void FidlDevice::WriteConfig32(WriteConfig32RequestView request,
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void FidlDevice::GetFirstCapability(GetFirstCapabilityRequestView request,
-                                    GetFirstCapabilityCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+void FidlDevice::GetCapabilities(GetCapabilitiesRequestView request,
+                                 GetCapabilitiesCompleter::Sync& completer) {
+  std::vector<uint8_t> capabilities;
+  {
+    fbl::AutoLock dev_lock(device_->dev_lock());
+    for (auto& capability : device_->capabilities().list) {
+      if (capability.id() == request->id) {
+        capabilities.push_back(capability.base());
+      }
+    }
+  }
+
+  completer.Reply(::fidl::VectorView<uint8_t>::FromExternal(capabilities));
 }
 
-void FidlDevice::GetNextCapability(GetNextCapabilityRequestView request,
-                                   GetNextCapabilityCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-}
+void FidlDevice::GetExtendedCapabilities(GetExtendedCapabilitiesRequestView request,
+                                         GetExtendedCapabilitiesCompleter::Sync& completer) {
+  std::vector<uint16_t> ext_capabilities;
+  {
+    fbl::AutoLock dev_lock(device_->dev_lock());
+    for (auto& ext_capability : device_->capabilities().ext_list) {
+      if (ext_capability.id() == request->id) {
+        ext_capabilities.push_back(ext_capability.base());
+      }
+    }
+  }
 
-void FidlDevice::GetFirstExtendedCapability(GetFirstExtendedCapabilityRequestView request,
-                                            GetFirstExtendedCapabilityCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-}
-
-void FidlDevice::GetNextExtendedCapability(GetNextExtendedCapabilityRequestView request,
-                                           GetNextExtendedCapabilityCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  completer.Reply(::fidl::VectorView<uint16_t>::FromExternal(ext_capabilities));
 }
 
 void FidlDevice::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) {
