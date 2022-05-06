@@ -9,6 +9,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <random>
 
@@ -444,8 +445,8 @@ void CodecClient::OnFreeInputPacket(fuchsia::media::PacketHeader free_input_pack
 
 std::unique_ptr<fuchsia::media::Packet> CodecClient::BlockingGetFreeInputPacket() {
   // This should be significantly longer than kWatchdogTimeoutMs in amlogic_decoder watchdog.cc.
-  const uint32_t kBlockingGetFreeInputPacketTimeoutMs = 20000;
-  auto now = std::chrono::system_clock::now();
+  constexpr uint32_t kBlockingGetFreeInputPacketTimeoutMs = 20000;
+  auto now = std::chrono::steady_clock::now();
   auto wait_until_time = now + std::chrono::milliseconds(kBlockingGetFreeInputPacketTimeoutMs);
   uint32_t free_packet_index;
   {  // scope lock
