@@ -2,16 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/svc/dir.h>
-#include <lib/vfs/cpp/pseudo_dir.h>
-#include <lib/vfs/cpp/remote_dir.h>
-#include <lib/vfs/cpp/service.h>
+#include <lib/zx/channel.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <algorithm>
 #include <memory>
+#include <utility>
+
+#include <fbl/ref_ptr.h>
+#include <src/lib/storage/vfs/cpp/pseudo_dir.h>
+#include <src/lib/storage/vfs/cpp/remote_dir.h>
+#include <src/lib/storage/vfs/cpp/service.h>
+#include <src/lib/storage/vfs/cpp/synchronous_vfs.h>
+#include <src/lib/storage/vfs/cpp/vnode.h>
 
 namespace {
 
@@ -19,12 +26,12 @@ constexpr char kPathDelimiter = '/';
 constexpr size_t kPathDelimiterSize = 1;
 
 // Adds a new empty directory |name| to |dir| and sets |out| to new directory.
-zx_status_t AddNewEmptyDirectory(vfs::PseudoDir* dir, std::string name, vfs::PseudoDir** out) {
-  auto subdir = std::make_unique<vfs::PseudoDir>();
-  auto ptr = subdir.get();
-  zx_status_t status = dir->AddEntry(std::move(name), std::move(subdir));
+zx_status_t AddNewEmptyDirectory(fbl::RefPtr<fs::PseudoDir> dir, const std::string& name,
+                                 fbl::RefPtr<fs::PseudoDir>* out) {
+  auto subdir = fbl::MakeRefCounted<fs::PseudoDir>();
+  zx_status_t status = dir->AddEntry(name, subdir);
   if (status == ZX_OK) {
-    *out = ptr;
+    *out = subdir;
   }
   return status;
 }
@@ -34,29 +41,30 @@ bool IsPathValid(const std::string& path) {
   return !path.empty() && !std::all_of(path.cbegin(), path.cend(), [](char c) { return c == '.'; });
 }
 
-zx_status_t GetDirectory(vfs::PseudoDir* dir, std::string name, bool create_if_empty,
-                         vfs::PseudoDir** out) {
+zx_status_t GetDirectory(fbl::RefPtr<fs::PseudoDir> dir, const std::string& name,
+                         bool create_if_empty, fbl::RefPtr<fs::PseudoDir>* out) {
   if (!IsPathValid(name)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  vfs::internal::Node* node = nullptr;
+  fbl::RefPtr<fs::Vnode> node = nullptr;
   zx_status_t status = dir->Lookup(name, &node);
   if (status != ZX_OK) {
     if (!create_if_empty) {
       return status;
     }
 
-    return AddNewEmptyDirectory(dir, std::move(name), out);
+    return AddNewEmptyDirectory(dir, name, out);
   }
 
-  *out = static_cast<vfs::PseudoDir*>(node);
+  *out = fbl::RefPtr<fs::PseudoDir>::Downcast(node);
+
   return ZX_OK;
 }
 
-zx_status_t GetDirectoryByPath(vfs::PseudoDir* root, std::string path, bool create_if_empty,
-                               vfs::PseudoDir** out) {
-  *out = root;
+zx_status_t GetDirectoryByPath(fbl::RefPtr<fs::PseudoDir> root, const std::string& path,
+                               bool create_if_empty, fbl::RefPtr<fs::PseudoDir>* out) {
+  *out = std::move(root);
 
   // If empty, return root directory.
   if (path.empty()) {
@@ -85,24 +93,22 @@ zx_status_t GetDirectoryByPath(vfs::PseudoDir* root, std::string path, bool crea
   return GetDirectory(*out, path.substr(start_pos), create_if_empty, out);
 }
 
-zx_status_t AddServiceEntry(vfs::PseudoDir* node, const std::string& service_name, void* context,
-                            svc_connector_t handler) {
-  return node->AddEntry(
-      service_name,
-      std::make_unique<vfs::Service>([service_name = std::string(service_name), context, handler](
-                                         zx::channel channel, async_dispatcher_t* dispatcher) {
-        // We drop |dispatcher| on the floor because the libsvc.so
-        // declaration of |svc_connector_t| doesn't receive a
-        // |dispatcher|. Callees are likely to use the default
-        // |async_dispatcher_t| for the current thread.
-        handler(context, service_name.c_str(), channel.release());
-      }));
+zx_status_t AddServiceEntry(fbl::RefPtr<fs::PseudoDir> node, const std::string& service_name,
+                            void* context, svc_connector_t handler) {
+  return node->AddEntry(service_name,
+                        fbl::MakeRefCounted<fs::Service>([service_name = std::string(service_name),
+                                                          context, handler](zx::channel channel) {
+                          handler(context, service_name.c_str(), channel.release());
+
+                          return ZX_OK;
+                        }));
 }
 
 }  // namespace
 
 struct svc_dir {
-  std::unique_ptr<vfs::PseudoDir> impl = std::make_unique<vfs::PseudoDir>();
+  std::unique_ptr<fs::SynchronousVfs> vfs = nullptr;
+  fbl::RefPtr<fs::PseudoDir> root = fbl::MakeRefCounted<fs::PseudoDir>();
 };
 
 zx_status_t svc_dir_create(async_dispatcher_t* dispatcher, zx_handle_t dir_request,
@@ -127,9 +133,11 @@ zx_status_t svc_dir_serve(svc_dir_t* dir, async_dispatcher_t* dispatcher, zx_han
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return dir->impl->Serve(
-      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-      zx::channel(request), dispatcher);
+  if (dir->vfs == nullptr) {
+    dir->vfs = std::make_unique<fs::SynchronousVfs>(dispatcher);
+  }
+
+  return dir->vfs->Serve(dir->root, zx::channel(request), fs::VnodeConnectionOptions::ReadWrite());
 }
 
 zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type, const char* service_name,
@@ -140,8 +148,8 @@ zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type, const char* se
 
 zx_status_t svc_dir_add_service_by_path(svc_dir_t* dir, const char* path, const char* service_name,
                                         void* context, svc_connector_t* handler) {
-  vfs::PseudoDir* node = nullptr;
-  zx_status_t status = GetDirectoryByPath(dir->impl.get(), path, /*create_if_empty=*/true, &node);
+  fbl::RefPtr<fs::PseudoDir> node;
+  zx_status_t status = GetDirectoryByPath(dir->root, path, /*create_if_empty=*/true, &node);
   if (status != ZX_OK) {
     return status;
   }
@@ -154,8 +162,9 @@ zx_status_t svc_dir_add_directory(svc_dir_t* dir, const char* name, zx_handle_t 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto remote_dir = std::make_unique<vfs::RemoteDir>(zx::channel(subdir));
-  return dir->impl->AddEntry(name, std::move(remote_dir));
+  fidl::ClientEnd<fuchsia_io::Directory> client_end((zx::channel(subdir)));
+  auto remote_dir = fbl::MakeRefCounted<fs::RemoteDir>(std::move(client_end));
+  return dir->root->AddEntry(name, std::move(remote_dir));
 }
 
 zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type, const char* service_name) {
@@ -165,13 +174,24 @@ zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type, const char*
 
 zx_status_t svc_dir_remove_service_by_path(svc_dir_t* dir, const char* path,
                                            const char* service_name) {
-  vfs::PseudoDir* node = nullptr;
-  zx_status_t status = GetDirectoryByPath(dir->impl.get(), path, /*create_if_empty=*/false, &node);
+  fbl::RefPtr<fs::PseudoDir> parent_directory;
+  zx_status_t status =
+      GetDirectoryByPath(dir->root, path, /*create_if_empty=*/false, &parent_directory);
   if (status != ZX_OK) {
     return status;
   }
 
-  return node->RemoveEntry(service_name);
+  fbl::RefPtr<fs::Vnode> service_node;
+  status = parent_directory->Lookup(service_name, &service_node);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = parent_directory->RemoveEntry(service_name, service_node.get());
+  if (status == ZX_OK) {
+    dir->vfs->CloseAllConnectionsForVnode(*service_node, nullptr);
+  }
+
+  return status;
 }
 
 zx_status_t svc_dir_remove_directory(svc_dir_t* dir, const char* name) {
@@ -179,7 +199,7 @@ zx_status_t svc_dir_remove_directory(svc_dir_t* dir, const char* name) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return dir->impl->RemoveEntry(name);
+  return dir->root->RemoveEntry(name);
 }
 
 zx_status_t svc_dir_destroy(svc_dir_t* dir) {
