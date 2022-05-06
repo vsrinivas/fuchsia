@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::super::{
-    handle::{Message, Proxyable, ProxyableHandle, ReadValue},
+    handle::{Message, ProxyableHandle, ProxyableRW, ReadValue},
     stream::{Frame, StreamReader, StreamWriter, StreamWriterBinder},
     Proxy, ProxyTransferInitiationReceiver, StreamRefSender,
 };
@@ -20,7 +20,7 @@ use futures::{
 use std::sync::{Arc, Weak};
 
 // Follow a transfer that was initated elsewhere to the destination.
-pub(crate) async fn follow<Hdl: 'static + Proxyable>(
+pub(crate) async fn follow<Hdl: 'static + for<'a> ProxyableRW<'a>>(
     mut proxy: Proxy<Hdl>,
     initiate_transfer: ProxyTransferInitiationReceiver,
     stream_writer: StreamWriter<Hdl::Message>,
@@ -60,7 +60,7 @@ pub(crate) async fn follow<Hdl: 'static + Proxyable>(
 }
 
 // This needs to be split out to avoid the compiler infinite looping.
-fn make_boxed_main_loop<Hdl: 'static + Proxyable>(
+fn make_boxed_main_loop<Hdl: 'static + for<'a> ProxyableRW<'a>>(
     proxy: Arc<Proxy<Hdl>>,
     initiate_transfer: ProxyTransferInitiationReceiver,
     stream_writer: FramedStreamWriter,
@@ -80,7 +80,7 @@ fn make_boxed_main_loop<Hdl: 'static + Proxyable>(
 // Initiate a transfer. The other end of a handle we're already proxying (`pair`) has been sent
 // to a new endpoint. A drain stream has been established to flush already received messages to the
 // new endpoint.
-pub(crate) async fn initiate<Hdl: 'static + Proxyable>(
+pub(crate) async fn initiate<Hdl: 'static + for<'a> ProxyableRW<'a>>(
     proxy: Proxy<Hdl>,
     pair: fidl::Handle,
     mut stream_writer: StreamWriter<Hdl::Message>,
@@ -144,7 +144,7 @@ pub(crate) async fn initiate<Hdl: 'static + Proxyable>(
     Ok(())
 }
 
-async fn drain_handle_to_stream<Hdl: 'static + Proxyable>(
+async fn drain_handle_to_stream<Hdl: 'static + for<'a> ProxyableRW<'a>>(
     hdl: ProxyableHandle<Hdl>,
     mut stream_writer: StreamWriter<Hdl::Message>,
 ) -> Result<(), Error> {
@@ -168,7 +168,7 @@ enum FlushOutgoingMsg<'a, Msg: Message> {
     FromStream(Frame<'a, Msg>),
 }
 
-async fn flush_outgoing_messages<Hdl: 'static + Proxyable>(
+async fn flush_outgoing_messages<Hdl: 'static + for<'a> ProxyableRW<'a>>(
     proxy: &Proxy<Hdl>,
     original_transfer_key: TransferKey,
     stream_writer: &mut StreamWriter<Hdl::Message>,
@@ -246,7 +246,7 @@ async fn flush_outgoing_messages<Hdl: 'static + Proxyable>(
     }
 }
 
-async fn drain_original_stream<Hdl: 'static + Proxyable>(
+async fn drain_original_stream<Hdl: 'static + for<'a> ProxyableRW<'a>>(
     proxy: &Proxy<Hdl>,
     original_transfer_key: TransferKey,
     stream_writer: StreamWriter<Hdl::Message>,

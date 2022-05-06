@@ -23,6 +23,7 @@ use std::task::{Context, Poll};
 
 pub(crate) use self::handle::IntoProxied;
 pub(crate) use self::handle::Proxyable;
+pub(crate) use self::handle::ProxyableRW;
 pub(crate) use self::run::spawn::recv as spawn_recv;
 pub(crate) use self::run::spawn::send as spawn_send;
 
@@ -129,7 +130,10 @@ impl<Hdl: 'static + Proxyable> Proxy<Hdl> {
         self.hdl.as_ref().unwrap()
     }
 
-    async fn write_to_handle(&self, msg: &mut Hdl::Message) -> Result<(), zx_status::Status> {
+    async fn write_to_handle(&self, msg: &mut Hdl::Message) -> Result<(), zx_status::Status>
+    where
+        Hdl: for<'a> ProxyableRW<'a>,
+    {
         self.hdl().write(msg).await
     }
 
@@ -140,14 +144,20 @@ impl<Hdl: 'static + Proxyable> Proxy<Hdl> {
     fn read_from_handle<'a>(
         &'a self,
         msg: &'a mut Hdl::Message,
-    ) -> impl 'a + Future<Output = Result<ReadValue, zx_status::Status>> + Unpin {
+    ) -> impl 'a + Future<Output = Result<ReadValue, zx_status::Status>> + Unpin
+    where
+        Hdl: ProxyableRW<'a>,
+    {
         self.hdl().read(msg)
     }
 
     async fn drain_handle_to_stream(
         &self,
         stream_writer: &mut StreamWriter<Hdl::Message>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Error>
+    where
+        Hdl: for<'a> ProxyableRW<'a>,
+    {
         self.hdl().drain_to_stream(stream_writer).await
     }
 }

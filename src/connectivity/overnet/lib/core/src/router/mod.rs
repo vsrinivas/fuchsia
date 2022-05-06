@@ -855,7 +855,7 @@ impl Router {
         rights: CreateType::Rights,
     ) -> Result<Handle, Error>
     where
-        Hdl: 'static + crate::proxy::Proxyable,
+        Hdl: 'static + for<'a> crate::proxy::ProxyableRW<'a>,
         CreateType: 'static
             + fidl::HandleBased
             + IntoProxied<Proxied = Hdl>

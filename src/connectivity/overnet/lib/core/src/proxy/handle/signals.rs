@@ -22,15 +22,15 @@ const POLLED_SIGNALS: Signals = Signals::from_bits_truncate(
 );
 
 #[derive(Default)]
-pub(crate) struct Collector {
-    on_signals: Option<OnSignals<'static>>,
+pub(crate) struct Collector<'a> {
+    on_signals: Option<OnSignals<'a>>,
 }
 
-impl Collector {
-    pub(crate) fn after_read<'a, 'b>(
+impl<'h> Collector<'h> {
+    pub(crate) fn after_read<'ctx>(
         &mut self,
-        ctx: &mut Context<'a>,
-        hdl: HandleRef<'b>,
+        ctx: &mut Context<'ctx>,
+        hdl: HandleRef<'h>,
         read_result: Poll<Result<(), zx_status::Status>>,
     ) -> Poll<Result<ReadValue, zx_status::Status>> {
         match read_result {
@@ -40,7 +40,7 @@ impl Collector {
                 let mut on_signals = self
                     .on_signals
                     .take()
-                    .unwrap_or_else(|| OnSignals::new(&hdl, POLLED_SIGNALS).extend_lifetime());
+                    .unwrap_or_else(|| OnSignals::from_ref(hdl.clone(), POLLED_SIGNALS));
                 match on_signals.poll_unpin(ctx) {
                     Poll::Ready(Ok(signals)) => {
                         hdl.signal(signals, Signals::empty())?;

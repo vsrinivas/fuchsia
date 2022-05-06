@@ -54,14 +54,14 @@ impl<'a> RouterHolder<'a> {
 }
 
 /// Perform some IO operation on a handle.
-pub(crate) trait IO: Send {
+pub(crate) trait IO<'a>: Send {
     type Proxyable: Proxyable;
     type Output;
     fn new() -> Self;
     fn poll_io(
         &mut self,
         msg: &mut <Self::Proxyable as Proxyable>::Message,
-        proxyable: &Self::Proxyable,
+        proxyable: &'a Self::Proxyable,
         fut_ctx: &mut Context<'_>,
     ) -> Poll<Result<Self::Output, zx_status::Status>>;
 }
@@ -106,10 +106,6 @@ pub(crate) trait Proxyable: Send + Sync + Sized + std::fmt::Debug {
     /// This transitively also brings in types encoding how to parse/serialize messages to the
     /// wire.
     type Message: Message;
-    /// A type that can be used for communicating messages from the handle to the proxy code.
-    type Reader: IO<Proxyable = Self, Output = ReadValue>;
-    /// A type that can be used for communicating messages from the proxy code to the handle.
-    type Writer: IO<Proxyable = Self, Output = ()>;
 
     /// Convert a FIDL handle into a proxyable instance (or fail).
     fn from_fidl_handle(hdl: fidl::Handle) -> Result<Self, Error>;
@@ -117,6 +113,13 @@ pub(crate) trait Proxyable: Send + Sync + Sized + std::fmt::Debug {
     fn into_fidl_handle(self) -> Result<fidl::Handle, Error>;
     /// Clear/set signals on this handle's peer.
     fn signal_peer(&self, clear: Signals, set: Signals) -> Result<(), Error>;
+}
+
+pub(crate) trait ProxyableRW<'a>: Proxyable {
+    /// A type that can be used for communicating messages from the handle to the proxy code.
+    type Reader: 'a + IO<'a, Proxyable = Self, Output = ReadValue>;
+    /// A type that can be used for communicating messages from the proxy code to the handle.
+    type Writer: 'a + IO<'a, Proxyable = Self, Output = ()>;
 }
 
 pub(crate) trait IntoProxied {
@@ -147,8 +150,14 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
     }
 
     /// Write `msg` to the handle.
-    pub(crate) async fn write(&self, msg: &mut Hdl::Message) -> Result<(), zx_status::Status> {
-        self.handle_io(msg, Hdl::Writer::new()).await
+    pub(crate) fn write<'a>(
+        &'a self,
+        msg: &'a mut Hdl::Message,
+    ) -> impl 'a + Future<Output = Result<(), zx_status::Status>> + Unpin
+    where
+        Hdl: ProxyableRW<'a>,
+    {
+        self.handle_io(msg, Hdl::Writer::new())
     }
 
     /// Attempt to read one `msg` from the handle.
@@ -158,7 +167,10 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
     pub(crate) fn read<'a>(
         &'a self,
         msg: &'a mut Hdl::Message,
-    ) -> impl 'a + Future<Output = Result<ReadValue, zx_status::Status>> + Unpin {
+    ) -> impl 'a + Future<Output = Result<ReadValue, zx_status::Status>> + Unpin
+    where
+        Hdl: ProxyableRW<'a>,
+    {
         self.handle_io(msg, Hdl::Reader::new())
     }
 
@@ -180,11 +192,11 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         Ok(())
     }
 
-    fn handle_io<'a, I: 'a + IO<Proxyable = Hdl>>(
+    fn handle_io<'a, I: 'a + IO<'a, Proxyable = Hdl>>(
         &'a self,
         msg: &'a mut Hdl::Message,
         mut io: I,
-    ) -> impl 'a + Future<Output = Result<I::Output, zx_status::Status>> + Unpin {
+    ) -> impl 'a + Future<Output = Result<<I as IO<'a>>::Output, zx_status::Status>> + Unpin {
         poll_fn(move |fut_ctx| io.poll_io(msg, &self.hdl, fut_ctx))
     }
 
@@ -194,7 +206,10 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
     pub(crate) async fn drain_to_stream(
         &self,
         stream_writer: &mut StreamWriter<Hdl::Message>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Error>
+    where
+        Hdl: for<'a> ProxyableRW<'a>,
+    {
         let mut message = Default::default();
         let mut ctx = Context::from_waker(noop_waker_ref());
         loop {
@@ -216,7 +231,10 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
     pub(crate) async fn drain_stream_to_handle(
         self,
         drain_stream: FramedStreamReader,
-    ) -> Result<fidl::Handle, Error> {
+    ) -> Result<fidl::Handle, Error>
+    where
+        Hdl: for<'a> ProxyableRW<'a>,
+    {
         let mut drain_stream = drain_stream.bind(&self);
         loop {
             match drain_stream.next().await? {

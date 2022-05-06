@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use super::{
-    signals::Collector, IntoProxied, Message, Proxyable, ReadValue, RouterHolder, Serializer, IO,
+    signals::Collector, IntoProxied, Message, Proxyable, ProxyableRW, ReadValue, RouterHolder,
+    Serializer, IO,
 };
 use crate::coding;
 use crate::peer::{MessageStats, PeerConnRef};
@@ -12,13 +13,12 @@ use fidl::{AsHandleRef, AsyncSocket, HandleBased, Peered, Signals};
 use fuchsia_zircon_status as zx_status;
 use futures::io::{AsyncRead, AsyncWrite};
 use futures::ready;
-use parking_lot::Mutex;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
 pub(crate) struct Socket {
-    socket: Mutex<AsyncSocket>,
+    socket: AsyncSocket,
 }
 
 impl std::fmt::Debug for Socket {
@@ -29,37 +29,38 @@ impl std::fmt::Debug for Socket {
 
 impl Proxyable for Socket {
     type Message = SocketMessage;
-    type Reader = SocketReader;
-    type Writer = SocketWriter;
 
     fn from_fidl_handle(hdl: fidl::Handle) -> Result<Self, Error> {
         Ok(fidl::Socket::from_handle(hdl).into_proxied()?)
     }
 
     fn into_fidl_handle(self) -> Result<fidl::Handle, Error> {
-        Ok(self.socket.into_inner().into_zx_socket().into_handle())
+        Ok(self.socket.into_zx_socket().into_handle())
     }
 
     fn signal_peer(&self, clear: Signals, set: Signals) -> Result<(), Error> {
-        let socket = self.socket.lock();
-        let socket: &fidl::Socket = socket.as_ref();
-        socket.signal_peer(clear, set)?;
+        self.socket.as_ref().signal_peer(clear, set)?;
         Ok(())
     }
+}
+
+impl<'a> ProxyableRW<'a> for Socket {
+    type Reader = SocketReader<'a>;
+    type Writer = SocketWriter;
 }
 
 impl IntoProxied for fidl::Socket {
     type Proxied = Socket;
     fn into_proxied(self) -> Result<Socket, Error> {
-        Ok(Socket { socket: Mutex::new(AsyncSocket::from_socket(self)?) })
+        Ok(Socket { socket: AsyncSocket::from_socket(self)? })
     }
 }
 
-pub(crate) struct SocketReader {
-    collector: Collector,
+pub(crate) struct SocketReader<'a> {
+    collector: Collector<'a>,
 }
 
-impl IO for SocketReader {
+impl<'a> IO<'a> for SocketReader<'a> {
     type Proxyable = Socket;
     type Output = ReadValue;
     fn new() -> Self {
@@ -68,29 +69,28 @@ impl IO for SocketReader {
     fn poll_io(
         &mut self,
         msg: &mut SocketMessage,
-        socket: &Socket,
+        socket: &'a Socket,
         fut_ctx: &mut Context<'_>,
     ) -> Poll<Result<ReadValue, zx_status::Status>> {
         const MIN_READ_LEN: usize = 65536;
         if msg.0.len() < MIN_READ_LEN {
             msg.0.resize(MIN_READ_LEN, 0u8);
         }
-        let mut socket = socket.socket.lock();
         let read_result = (|| {
-            let n = ready!(Pin::new(&mut *socket).poll_read(fut_ctx, &mut msg.0))?;
+            let n = ready!(Pin::new(&mut &socket.socket).poll_read(fut_ctx, &mut msg.0))?;
             if n == 0 {
                 return Poll::Ready(Err(zx_status::Status::PEER_CLOSED));
             }
             msg.0.truncate(n);
             Poll::Ready(Ok(()))
         })();
-        self.collector.after_read(fut_ctx, socket.as_handle_ref(), read_result)
+        self.collector.after_read(fut_ctx, socket.socket.as_handle_ref(), read_result)
     }
 }
 
 pub(crate) struct SocketWriter;
 
-impl IO for SocketWriter {
+impl IO<'_> for SocketWriter {
     type Proxyable = Socket;
     type Output = ();
     fn new() -> Self {
@@ -102,8 +102,7 @@ impl IO for SocketWriter {
         socket: &Socket,
         fut_ctx: &mut Context<'_>,
     ) -> Poll<Result<(), zx_status::Status>> {
-        let mut socket = socket.socket.lock();
-        let n = ready!(Pin::new(&mut *socket).poll_write(fut_ctx, &mut msg.0))?;
+        let n = ready!(Pin::new(&mut &socket.socket).poll_write(fut_ctx, &mut msg.0))?;
         if n == msg.0.len() {
             Poll::Ready(Ok(()))
         } else {

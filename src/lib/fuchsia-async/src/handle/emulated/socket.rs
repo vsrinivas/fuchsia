@@ -6,12 +6,10 @@
 
 // TODO(ctiller): merge this implementation with the implementation in zircon_handle?
 
-use super::{Handle, HandleBased};
 use fuchsia_zircon_status as zx_status;
 use futures::future::poll_fn;
 use futures::prelude::*;
 use futures::ready;
-use std::borrow::BorrowMut;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
@@ -101,15 +99,55 @@ impl AsyncWrite for Socket {
     }
 
     fn poll_close(
-        mut self: Pin<&mut Self>,
+        self: Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
     ) -> Poll<Result<(), std::io::Error>> {
-        self.borrow_mut().socket = super::Socket::from_handle(Handle::invalid());
         Poll::Ready(Ok(()))
     }
 }
 
 impl AsyncRead for Socket {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        bytes: &mut [u8],
+    ) -> Poll<Result<usize, std::io::Error>> {
+        match ready!(self.socket.poll_read(bytes, cx)) {
+            Err(zx_status::Status::PEER_CLOSED) => Poll::Ready(Ok(0)),
+            Ok(x) => {
+                assert_ne!(x, 0);
+                Poll::Ready(Ok(x))
+            }
+            Err(x) => Poll::Ready(Err(x.into())),
+        }
+    }
+}
+
+impl AsyncWrite for &'_ Socket {
+    fn poll_write(
+        self: Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+        bytes: &[u8],
+    ) -> Poll<Result<usize, std::io::Error>> {
+        Poll::Ready(self.socket.write(bytes).map_err(|e| e.into()))
+    }
+
+    fn poll_flush(
+        self: Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+    ) -> Poll<Result<(), std::io::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_close(
+        self: Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+    ) -> Poll<Result<(), std::io::Error>> {
+        Poll::Ready(Ok(()))
+    }
+}
+
+impl AsyncRead for &'_ Socket {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,

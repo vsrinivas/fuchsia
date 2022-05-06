@@ -5,7 +5,7 @@
 //! Factory functions for proxies - one each for sending a handle and receiving a handle.
 
 use super::super::{
-    handle::{IntoProxied, Proxyable, ProxyableHandle},
+    handle::{IntoProxied, ProxyableHandle, ProxyableRW},
     Proxy, ProxyTransferInitiationReceiver,
 };
 use crate::handle_info::WithRights;
@@ -16,7 +16,7 @@ use fidl_fuchsia_overnet_protocol::{StreamId, StreamRef, TransferInitiator, Tran
 use std::future::Future;
 use std::sync::{Arc, Weak};
 
-pub(crate) async fn send<Hdl: 'static + Proxyable>(
+pub(crate) async fn send<Hdl: 'static + for<'a> ProxyableRW<'a>>(
     hdl: Hdl,
     initiate_transfer: ProxyTransferInitiationReceiver,
     stream_writer: FramedStreamWriter,
@@ -46,7 +46,7 @@ pub(crate) async fn recv<Hdl, CreateType>(
     router: Weak<Router>,
 ) -> Result<(fidl::Handle, Option<impl Send + Future<Output = Result<(), Error>>>), Error>
 where
-    Hdl: 'static + Proxyable,
+    Hdl: 'static + for<'a> ProxyableRW<'a>,
     CreateType: fidl::HandleBased + IntoProxied<Proxied = Hdl> + std::fmt::Debug + WithRights,
 {
     Ok(match stream_ref {

@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{IntoProxied, Message, Proxyable, ReadValue, RouterHolder, Serializer, IO};
+use super::{
+    IntoProxied, Message, Proxyable, ProxyableRW, ReadValue, RouterHolder, Serializer, IO,
+};
 use crate::coding::{self, decode_fidl_with_context, encode_fidl_with_context};
 use crate::peer::{MessageStats, PeerConnRef};
 use anyhow::{Context as _, Error};
@@ -26,8 +28,6 @@ impl std::fmt::Debug for Channel {
 
 impl Proxyable for Channel {
     type Message = ChannelMessage;
-    type Reader = ChannelReader;
-    type Writer = ChannelWriter;
 
     fn from_fidl_handle(hdl: fidl::Handle) -> Result<Self, Error> {
         Ok(fidl::Channel::from_handle(hdl).into_proxied()?)
@@ -44,6 +44,11 @@ impl Proxyable for Channel {
     }
 }
 
+impl<'a> ProxyableRW<'a> for Channel {
+    type Reader = ChannelReader<'a>;
+    type Writer = ChannelWriter;
+}
+
 impl IntoProxied for fidl::Channel {
     type Proxied = Channel;
     fn into_proxied(self) -> Result<Channel, Error> {
@@ -51,20 +56,20 @@ impl IntoProxied for fidl::Channel {
     }
 }
 
-pub(crate) struct ChannelReader {
-    collector: super::signals::Collector,
+pub(crate) struct ChannelReader<'a> {
+    collector: super::signals::Collector<'a>,
 }
 
-impl IO for ChannelReader {
+impl<'a> IO<'a> for ChannelReader<'a> {
     type Proxyable = Channel;
     type Output = ReadValue;
-    fn new() -> ChannelReader {
+    fn new() -> ChannelReader<'a> {
         ChannelReader { collector: Default::default() }
     }
     fn poll_io(
         &mut self,
         msg: &mut ChannelMessage,
-        channel: &Channel,
+        channel: &'a Channel,
         fut_ctx: &mut Context<'_>,
     ) -> Poll<Result<ReadValue, zx_status::Status>> {
         let read_result = channel.chan.read(fut_ctx, &mut msg.bytes, &mut msg.handles);
@@ -74,7 +79,7 @@ impl IO for ChannelReader {
 
 pub(crate) struct ChannelWriter;
 
-impl IO for ChannelWriter {
+impl IO<'_> for ChannelWriter {
     type Proxyable = Channel;
     type Output = ();
     fn new() -> ChannelWriter {

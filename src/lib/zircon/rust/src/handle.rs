@@ -97,7 +97,7 @@ unsafe impl PropertyQuerySet for NameProperty {}
 /// A borrowed value of type `T`.
 ///
 /// This is primarily used for working with borrowed values of `HandleBased` types.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Unowned<'a, T> {
     inner: ManuallyDrop<T>,
@@ -109,6 +109,12 @@ impl<'a, T> ::std::ops::Deref for Unowned<'a, T> {
 
     fn deref(&self) -> &Self::Target {
         &*self.inner
+    }
+}
+
+impl<T: HandleBased> Clone for Unowned<'_, T> {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw_handle(self.inner.as_handle_ref().raw_handle()) }
     }
 }
 

@@ -52,7 +52,7 @@ impl ObjectType {
 }
 
 /// A borrowed reference to an underlying handle
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct HandleRef<'a>(u32, std::marker::PhantomData<&'a u32>);
 
 impl<'a> HandleRef<'a> {
@@ -905,7 +905,16 @@ pub mod on_signals {
     impl<'a> OnSignals<'a> {
         /// Construct a new OnSignals
         pub fn new<T: AsHandleRef>(handle: &'a T, signals: Signals) -> Self {
-            let h = handle.as_handle_ref().0;
+            Self::from_ref(handle.as_handle_ref(), signals)
+        }
+
+        /// Creates a new `OnSignals` using a HandleRef instead of an AsHandleRef.
+        ///
+        /// Passing a HandleRef to OnSignals::new is likely to lead to borrow check errors, since
+        /// the resulting OnSignals is tied to the lifetime of the HandleRef itself and not the
+        /// handle it refers to. Use this instead when you need to pass a HandleRef.
+        pub fn from_ref(handle: HandleRef<'a>, signals: Signals) -> Self {
+            let h = handle.0;
             with_handle(h, |mut hdl, side| Self {
                 h,
                 koid: hdl.as_hdl_data().koids(side).0,

@@ -8,7 +8,8 @@
 use super::super::{
     handle::ReadValue,
     stream::{Frame, StreamReader, StreamReaderBinder, StreamWriter, StreamWriterBinder},
-    Proxy, ProxyTransferInitiationReceiver, Proxyable, RemoveFromProxyTable, StreamRefSender,
+    Proxy, ProxyTransferInitiationReceiver, Proxyable, ProxyableRW, RemoveFromProxyTable,
+    StreamRefSender,
 };
 use crate::labels::{NodeId, TransferKey};
 use crate::peer::{FramedStreamReader, FramedStreamWriter};
@@ -97,7 +98,7 @@ fn new_task_joiner<Hdl: Proxyable>() -> (FinishProxyLoopSender<Hdl>, FinishProxy
 }
 
 // Spawn a proxy (two tasks, one for each direction of proxying).
-pub(crate) async fn run_main_loop<Hdl: 'static + Proxyable>(
+pub(crate) async fn run_main_loop<Hdl: 'static + for<'a> ProxyableRW<'a>>(
     proxy: Arc<Proxy<Hdl>>,
     initiate_transfer: ProxyTransferInitiationReceiver,
     stream_writer: FramedStreamWriter,
@@ -136,7 +137,7 @@ pub(crate) async fn run_main_loop<Hdl: 'static + Proxyable>(
     .await
 }
 
-async fn handle_to_stream<Hdl: 'static + Proxyable>(
+async fn handle_to_stream<Hdl: 'static + for<'a> ProxyableRW<'a>>(
     proxy: Arc<Proxy<Hdl>>,
     mut stream: StreamWriter<Hdl::Message>,
     mut finish_proxy_loop: FinishProxyLoopReceiver<Hdl>,
@@ -224,7 +225,7 @@ async fn join_shutdown<Hdl: 'static + Proxyable>(
     Ok(())
 }
 
-async fn drain<Hdl: 'static + Proxyable>(
+async fn drain<Hdl: 'static + for<'a> ProxyableRW<'a>>(
     proxy: Arc<Proxy<Hdl>>,
     mut drain_stream: StreamReader<Hdl::Message>,
 ) -> Result<(), Error> {
@@ -243,7 +244,7 @@ async fn drain<Hdl: 'static + Proxyable>(
     Ok(())
 }
 
-async fn stream_to_handle<Hdl: 'static + Proxyable>(
+async fn stream_to_handle<Hdl: 'static + for<'a> ProxyableRW<'a>>(
     proxy: Arc<Proxy<Hdl>>,
     mut initiate_transfer: ProxyTransferInitiationReceiver,
     mut stream: StreamReader<Hdl::Message>,

@@ -1243,11 +1243,7 @@ mod tests {
                 OutputCapability::Display,
             ))
             .expect("cannot get proxy");
-        let proxy_close_fut = proxy.on_closed();
-        pin_mut!(proxy_close_fut);
-
-        // Verify that our pairing delegate client proxy is open.
-        assert!(exec.run_until_stalled(&mut proxy_close_fut).is_pending());
+        assert!(!proxy.is_closed());
 
         // Force closing of the proxy.
         std::mem::drop(proxy);

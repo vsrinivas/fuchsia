@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use super::{
-    signals::Collector, IntoProxied, Message, Proxyable, ReadValue, RouterHolder, Serializer, IO,
+    signals::Collector, IntoProxied, Message, Proxyable, ProxyableRW, ReadValue, RouterHolder,
+    Serializer, IO,
 };
 use crate::coding;
 use crate::peer::{MessageStats, PeerConnRef};
@@ -25,8 +26,6 @@ impl std::fmt::Debug for EventPair {
 
 impl Proxyable for EventPair {
     type Message = EventPairMessage;
-    type Reader = EventPairReader;
-    type Writer = EventPairWriter;
 
     fn from_fidl_handle(hdl: fidl::Handle) -> Result<Self, Error> {
         Ok(fidl::EventPair::from_handle(hdl).into_proxied()?)
@@ -39,6 +38,11 @@ impl Proxyable for EventPair {
     fn signal_peer(&self, clear: Signals, set: Signals) -> Result<(), Error> {
         self.event_pair.signal_peer(clear, set).map_err(Into::into)
     }
+}
+
+impl<'a> ProxyableRW<'a> for EventPair {
+    type Reader = EventPairReader<'a>;
+    type Writer = EventPairWriter;
 }
 
 impl IntoProxied for fidl::EventPair {
@@ -56,11 +60,11 @@ impl Message for EventPairMessage {
     type Serializer = EventPairSerializer;
 }
 
-pub(crate) struct EventPairReader {
-    collector: Collector,
+pub(crate) struct EventPairReader<'a> {
+    collector: Collector<'a>,
 }
 
-impl IO for EventPairReader {
+impl<'a> IO<'a> for EventPairReader<'a> {
     type Proxyable = EventPair;
     type Output = ReadValue;
     fn new() -> Self {
@@ -69,7 +73,7 @@ impl IO for EventPairReader {
     fn poll_io(
         &mut self,
         _: &mut EventPairMessage,
-        event_pair: &EventPair,
+        event_pair: &'a EventPair,
         fut_ctx: &mut Context<'_>,
     ) -> Poll<Result<ReadValue, zx_status::Status>> {
         // There's no such thing as an event pair message, so we just pretend to be waiting forever
@@ -80,7 +84,7 @@ impl IO for EventPairReader {
 
 pub(crate) struct EventPairWriter;
 
-impl IO for EventPairWriter {
+impl IO<'_> for EventPairWriter {
     type Proxyable = EventPair;
     type Output = ();
     fn new() -> Self {
