@@ -7,6 +7,8 @@
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fake-hidbus-ifc/fake-hidbus-ifc.h>
 #include <lib/mock-i2c/mock-i2c.h>
@@ -34,7 +36,7 @@ static const touch_button_config_t touch_buttons[] = {
 namespace cypress {
 class Cy8cmbr3108Test : public Cy8cmbr3108 {
  public:
-  Cy8cmbr3108Test() : Cy8cmbr3108(nullptr) {}
+  Cy8cmbr3108Test() : Cy8cmbr3108(nullptr), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   zx_status_t Init() {
     zx::interrupt dup_irq;
@@ -50,11 +52,17 @@ class Cy8cmbr3108Test : public Cy8cmbr3108 {
   }
 
   zx_status_t InitializeProtocols() override {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    EXPECT_TRUE(endpoints.is_ok());
+
+    EXPECT_OK(loop_.StartThread());
+
+    i2c_ = std::move(endpoints->client);
+    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
+                                        &mock_i2c_);
+
     auto gpio_proto = ddk::GpioProtocolClient(mock_touch_gpio_.GetProto());
     touch_gpio_ = std::move(gpio_proto);
-
-    auto i2c_proto = ddk::I2cProtocolClient(mock_i2c_.GetProto());
-    i2c_ = std::move(i2c_proto);
 
     const size_t n_buttons = std::size(touch_buttons);
     buttons_ = fbl::Array(new touch_button_config_t[n_buttons], n_buttons);
@@ -77,6 +85,7 @@ class Cy8cmbr3108Test : public Cy8cmbr3108 {
   ddk::MockGpio mock_touch_gpio_;
   mock_i2c::MockI2c mock_i2c_;
   zx::interrupt mock_irq_;
+  async::Loop loop_;
 };
 
 TEST(Cy8cmbr3108Test, Init) {
