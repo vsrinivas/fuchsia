@@ -296,6 +296,9 @@ pub enum LockState {
     Locked,
     Unencrypted,
     Unlocked(Arc<dyn Crypt>),
+    // Before we've read the StoreInfo we might not know whether the store is Locked or Unencrypted.
+    // This can happen when lazily opening stores (ObjectManager::lazy_open_store).
+    Unknown,
 }
 
 /// An object store supports a file like interface for objects.  Objects are keyed by a 64 bit
@@ -550,6 +553,9 @@ impl ObjectStore {
             LockState::Locked => panic!("Store is locked"),
             LockState::Unencrypted => None,
             LockState::Unlocked(crypt) => Some(crypt.clone()),
+            LockState::Unknown => {
+                panic!("Store is of unknown lock state; has the journal been replayed yet?")
+            }
         }
     }
 
@@ -909,6 +915,12 @@ impl ObjectStore {
             result
         };
 
+        if encrypted.is_some() {
+            *self.lock_state.lock().unwrap() = LockState::Locked;
+        } else {
+            *self.lock_state.lock().unwrap() = LockState::Unencrypted;
+        }
+
         // TODO(fxbug.dev/95978): the layer size here could be bad and cause overflow.
 
         // If the store is encrypted, we can't open the object tree layers now, but we need to
@@ -977,8 +989,12 @@ impl ObjectStore {
     pub async fn unlock(&self, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
         let store_info = self.store_info();
 
-        // The store should be locked.
-        assert!(self.is_locked());
+        match *self.lock_state.lock().unwrap() {
+            LockState::Locked => {}
+            LockState::Unencrypted => bail!(FxfsError::InvalidArgs),
+            LockState::Unlocked(_) => bail!(FxfsError::Internal),
+            LockState::Unknown => panic!("Store was unlocked before replay"),
+        }
 
         self.tree
             .append_layers(
@@ -1355,10 +1371,10 @@ mod tests {
         device.reopen();
         let fs = FxFilesystem::open(device).await.expect("open failed");
 
-        fs.object_manager()
-            .open_store(store_id, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("open_store failed");
+        {
+            let store = fs.object_manager().store(store_id).expect("store not found");
+            store.unlock(Arc::new(InsecureCrypt::new())).await.expect("unlock failed");
+        }
         fs.close().await.expect("Close failed");
     }
 

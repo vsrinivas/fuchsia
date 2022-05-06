@@ -206,7 +206,7 @@ impl ObjectManager {
                     fs,
                     None,
                     None,
-                    LockState::Locked,
+                    LockState::Unknown,
                 );
                 if let Some(on_new_store) = &self.on_new_store {
                     on_new_store(&store);

@@ -74,21 +74,36 @@ protocol CryptManagement {
 };
 
 protocol Volume {
-    /// Unlocks the volume identified by name.  `crypt` should provide all key access for the given
-    /// volume.  `outgoing_directory` will contain the root and other services exposed by the
-    /// volume.
-    Unlock(resource struct {
-        name string:fuchsia.io.MAX_FILENAME;
-        crypt client_end:Crypt;
-        outgoing_directory server_end:fuchsia.io.Directory;
+    /// Mounts the volume.  If the volume is encrypted, `crypt` should provide all key access for
+    /// the given volume.  `outgoing_directory` will contain the root and other services exposed by
+    /// the volume.  To lock the volume, call fuchsia.fs.Admin.Shutdown on the returned handle.
+    // TODO(fxbug.dev/99182): Try to share options with fuchsia.fs_startup StartOptions.
+    Mount(resource struct {
+        crypt client_end:<Crypt, optional>;
+        outgoing_directory server_end:fuchsia.io.Node;
     }) -> (struct {}) error zx.status;
+};
 
-    /// Creates a new volume identified by name.  `crypt` should provide all key access for the
-    /// given volume.  `outgoing_directory` will contain the root and other services exposed by the
-    /// volume.
+/// fuchsia.fxfs.Volumes is only used for creating volumes.  Other operations (e.g. enumeration and
+/// deletion) are serviced by the `volumes` directory offered by Fxfs in its export root.  Volumes
+/// appear as files within this directory, and these files should also speak the
+/// `fuchsia.fxfs.Volume` protocol.
+///
+/// `crypt` should provide all key access for the given volume.  If it is not provided, then the
+/// volume is unencrypted.  `outgoing_directory` will be connected to the root directory of the
+/// volume.
+@discoverable
+protocol Volumes {
+    /// Creates a new volume identified by `name`.  `crypt` should provide all key access for the
+    /// given volume.  `outgoing_directory` will be connected to the root directory of the volume.
     Create(resource struct {
         name string:fuchsia.io.MAX_FILENAME;
-        crypt client_end:Crypt;
-        outgoing_directory server_end:fuchsia.io.Directory;
+        crypt client_end:<Crypt, optional>;
+        outgoing_directory server_end:fuchsia.io.Node;
+    }) -> (struct {}) error zx.status;
+    /// Permanently deletes a volume identified by `name`.  If the volume is mounted, this call will
+    /// fail.
+    Remove(resource struct {
+        name string:fuchsia.io.MAX_FILENAME;
     }) -> (struct {}) error zx.status;
 };

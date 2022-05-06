@@ -11,6 +11,7 @@
 //! information is reported correctly. See `src/storage/fs_test/inspect.cc` for details.
 
 use {
+    async_trait::async_trait,
     fuchsia_inspect::{LazyNode, Node},
     futures::FutureExt,
     std::{string::String, sync::Weak},
@@ -24,9 +25,10 @@ const VOLUME_NODE_NAME: &'static str = "fs.volume";
 ///
 /// Once implemented, a filesystem can attach the Inspect data to a given root node by calling
 /// `FsInspectTree::new` which will return ownership of the attached nodes/properties.
+#[async_trait]
 pub trait FsInspect {
     fn get_info_data(&self) -> InfoData;
-    fn get_usage_data(&self) -> UsageData;
+    async fn get_usage_data(&self) -> UsageData;
     // TODO(fxbug.dev/85419): Provide default impl for non-FVM based filesystems.
     fn get_volume_data(&self) -> VolumeData;
 }
@@ -62,7 +64,7 @@ impl FsInspectTree {
             async move {
                 let inspector = fuchsia_inspect::Inspector::new();
                 if let Some(fs) = fs_clone.upgrade() {
-                    fs.get_usage_data().record_into(inspector.root());
+                    fs.get_usage_data().await.record_into(inspector.root());
                 }
                 Ok(inspector)
             }

@@ -13,6 +13,7 @@ mod remote_crypt;
 mod runtime;
 pub mod vmo_data_buffer;
 mod volume;
+mod volumes_directory;
 
 #[cfg(test)]
 mod testing;

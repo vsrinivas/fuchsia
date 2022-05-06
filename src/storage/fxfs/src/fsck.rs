@@ -356,6 +356,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
                 // Use the crypt associated with the store.
                 crypt = Some(c)
             }
+            LockState::Unknown => panic!("Unknown lock state; has the journal been replayed yet?"),
         }
 
         // Manually open the store so we can do our own validation.  Later, we will call open_store

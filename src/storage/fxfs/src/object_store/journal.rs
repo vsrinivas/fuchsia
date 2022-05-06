@@ -457,7 +457,7 @@ impl Journal {
             filesystem.clone(),
             None,
             None,
-            LockState::Locked,
+            LockState::Unencrypted,
         );
         self.objects.set_root_store(root_store);
 

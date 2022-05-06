@@ -32,6 +32,20 @@ pub struct RootVolume {
     filesystem: Arc<FxFilesystem>,
 }
 
+pub enum OpenOrCreateResult {
+    Created(Arc<ObjectStore>),
+    Opened(Arc<ObjectStore>),
+}
+
+impl From<OpenOrCreateResult> for Arc<ObjectStore> {
+    fn from(result: OpenOrCreateResult) -> Self {
+        match result {
+            OpenOrCreateResult::Created(store) => store,
+            OpenOrCreateResult::Opened(store) => store,
+        }
+    }
+}
+
 impl RootVolume {
     pub fn volume_directory(&self) -> &Directory<ObjectStore> {
         self.filesystem.object_manager().volume_directory()
@@ -103,21 +117,20 @@ impl RootVolume {
         &self,
         volume_name: &str,
         crypt: Option<Arc<dyn Crypt>>,
-    ) -> Result<Arc<ObjectStore>, Error> {
-        let volume = match self.volume(volume_name, crypt.clone()).await {
-            Ok(volume) => volume,
+    ) -> Result<OpenOrCreateResult, Error> {
+        let result = match self.volume(volume_name, crypt.clone()).await {
+            Ok(volume) => OpenOrCreateResult::Opened(volume),
             Err(e) => {
                 let cause = e.root_cause().downcast_ref::<FxfsError>().cloned();
                 if let Some(FxfsError::NotFound) = cause {
                     // Create a new volume with a randomly generated GUID.
-                    self.new_volume(volume_name, crypt).await?
+                    OpenOrCreateResult::Created(self.new_volume(volume_name, crypt).await?)
                 } else {
                     return Err(e);
                 }
             }
         };
-        volume.record_metrics(volume_name);
-        Ok(volume)
+        Ok(result)
     }
 }
 

@@ -147,6 +147,7 @@ if (is_fuchsia) {
     "src/platform/fuchsia/testing.rs",
     "src/platform/fuchsia/vmo_data_buffer.rs",
     "src/platform/fuchsia/volume.rs",
+    "src/platform/fuchsia/volumes_directory.rs",
   ]
 }
 

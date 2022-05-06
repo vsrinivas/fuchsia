@@ -360,6 +360,7 @@ impl Filesystem for FxVolume {
     }
 }
 
+#[derive(Clone)]
 pub struct FxVolumeAndRoot {
     volume: Arc<FxVolume>,
     root: Arc<dyn FxNode>,

@@ -7,16 +7,20 @@ use {
         crypt::Crypt,
         filesystem::{Filesystem, Info, OpenFxFilesystem},
         object_store::volume::root_volume,
-        platform::fuchsia::volume::{FxVolumeAndRoot, DEFAULT_FLUSH_PERIOD},
+        platform::fuchsia::{volumes_directory::VolumesDirectory, RemoteCrypt},
         serialized_types::LATEST_VERSION,
     },
     anyhow::{Context, Error},
+    async_trait::async_trait,
     fidl_fuchsia_fs::{AdminRequest, AdminRequestStream},
+    fidl_fuchsia_fxfs::{VolumesRequest, VolumesRequestStream},
     fidl_fuchsia_io as fio,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::stream::{StreamExt, TryStreamExt},
-    futures::TryFutureExt,
+    futures::{
+        stream::{StreamExt, TryStreamExt},
+        TryFutureExt,
+    },
     inspect_runtime::service::{TreeServerSendPreference, TreeServerSettings},
     std::sync::{
         atomic::{self, AtomicBool},
@@ -49,15 +53,16 @@ const FXFS_INFO_NAME_FIDL: [i8; 32] = [
 
 enum Services {
     Admin(AdminRequestStream),
+    Volumes(VolumesRequestStream),
 }
 
 pub struct FxfsServer {
     /// Ensure the filesystem is closed when this object is dropped.
     fs: OpenFxFilesystem,
 
-    /// Encapsulates the root volume and the root directory.
-    /// TODO(fxbug.dev/89443): Support multiple volumes.
-    volume: FxVolumeAndRoot,
+    /// The volumes directory, which manages currently opened volumes and implements
+    /// fuchsia.fxfs.Volumes.
+    volumes: VolumesDirectory,
 
     /// Set to true once the associated ExecutionScope associated with the server is shut down.
     closed: AtomicBool,
@@ -67,35 +72,33 @@ pub struct FxfsServer {
     unique_id: zx::Event,
 }
 
+const DEFAULT_VOLUME_NAME: &str = "default";
+
 impl FxfsServer {
-    /// Creates a new FxfsServer by opening or creating |volume_name| in |fs|.
-    pub async fn new(
-        fs: OpenFxFilesystem,
-        volume_name: &str,
-        crypt: Option<Arc<dyn Crypt>>,
-    ) -> Result<Arc<Self>, Error> {
-        let root_volume = root_volume(&fs).await?;
+    pub async fn new(fs: OpenFxFilesystem) -> Result<Arc<Self>, Error> {
         let unique_id = zx::Event::create().expect("Failed to create event");
-        let volume = FxVolumeAndRoot::new(
-            root_volume
-                .open_or_create_volume(volume_name, crypt)
-                .await
-                .expect("Open or create volume failed"),
-            unique_id.get_koid()?.raw_koid(),
-        )
-        .await?;
-        Ok(Arc::new(Self { fs, volume, closed: AtomicBool::new(false), unique_id }))
+        let volumes = VolumesDirectory::new(root_volume(&fs).await?).await?;
+        Ok(Arc::new(Self { fs, volumes, closed: AtomicBool::new(false), unique_id }))
     }
 
-    pub async fn run(self: Arc<Self>, outgoing_chan: zx::Channel) -> Result<(), Error> {
+    pub async fn run(
+        self: Arc<Self>,
+        outgoing_chan: zx::Channel,
+        crypt: Option<Arc<dyn Crypt>>,
+    ) -> Result<(), Error> {
         // VFS initialization.
         let registry = token_registry::Simple::new();
         let scope = ExecutionScope::build().token_registry(registry).new();
         let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
 
-        self.volume.volume().start_flush_task(DEFAULT_FLUSH_PERIOD);
-
-        self.volume.root().clone().open(
+        // TODO(fxbug.dev/99182): We should eventually not open any volumes initially.  For now, to
+        // avoid changes to fs_management, keep this behaviour.
+        let volume = self
+            .volumes
+            .open_or_create_volume(DEFAULT_VOLUME_NAME, crypt, false)
+            .await
+            .expect("open_or_create failed");
+        volume.root().clone().open(
             scope.clone(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             0,
@@ -113,9 +116,10 @@ impl FxfsServer {
             FsInspectTree::new(self_weak, &crate::metrics::FXFS_ROOT_NODE.lock().unwrap());
 
         // Export the root directory in our outgoing directory.
+        // TODO(fxbug.dev/99182): Export the volumes directory.
         let mut fs = ServiceFs::new();
         fs.add_remote("root", proxy);
-        fs.add_fidl_service(Services::Admin);
+        fs.add_fidl_service(Services::Admin).add_fidl_service(Services::Volumes);
         // Serve static Inspect instance from fuchsia_inspect::component to diagnostic directory.
         // We fall back to DeepCopy mode instead of Live mode (the default) if we could not create a
         // child copy of the backing VMO. This helps prevent issues with the reader acquiring a lock
@@ -143,7 +147,7 @@ impl FxfsServer {
         scope.wait().await;
 
         if !self.closed.load(atomic::Ordering::SeqCst) {
-            self.volume.volume().terminate().await;
+            volume.volume().terminate().await;
             self.fs.close().await.unwrap_or_else(|e| log::error!("Failed to shutdown fxfs: {}", e));
         }
 
@@ -154,22 +158,63 @@ impl FxfsServer {
     async fn handle_admin(&self, scope: &ExecutionScope, req: AdminRequest) -> Result<bool, Error> {
         match req {
             AdminRequest::Shutdown { responder } => {
-                log::info!("Received shutdown request");
                 scope.shutdown();
                 if self.closed.swap(true, atomic::Ordering::SeqCst) {
                     return Ok(true);
                 }
-                self.volume.volume().terminate().await;
-                log::info!("Volume terminated");
+                self.volumes.terminate().await;
                 self.fs
                     .close()
                     .await
                     .unwrap_or_else(|e| log::error!("Failed to shutdown fxfs: {}", e));
-                log::info!("Filesystem instance terminated");
                 responder
                     .send()
                     .unwrap_or_else(|e| log::warn!("Failed to send shutdown response: {}", e));
                 return Ok(true);
+            }
+        }
+    }
+
+    async fn handle_volumes(
+        &self,
+        scope: &ExecutionScope,
+        req: VolumesRequest,
+    ) -> Result<(), Error> {
+        match req {
+            VolumesRequest::Create { name, crypt, outgoing_directory, responder } => {
+                log::info!("Create volume {:?}", name);
+                let crypt = crypt.map(|crypt| {
+                    Arc::new(RemoteCrypt::new(crypt.into_proxy().unwrap())) as Arc<dyn Crypt>
+                });
+                match self.volumes.open_or_create_volume(&name, crypt, true).await {
+                    Ok(volume) => {
+                        volume.root().clone().open(
+                            scope.clone(),
+                            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                            0,
+                            Path::dot(),
+                            outgoing_directory,
+                        );
+                        responder.send(&mut Ok(())).unwrap_or_else(|e| {
+                            log::warn!("Failed to send volume creation response: {}", e)
+                        });
+                    }
+                    Err(status) => {
+                        responder
+                            .send_no_shutdown_on_err(&mut Err(status.into_raw()))
+                            .unwrap_or_else(|e| {
+                                log::warn!("Failed to send volume creation response: {}", e)
+                            });
+                    }
+                };
+                Ok(())
+            }
+            VolumesRequest::Remove { name: _, responder } => {
+                // TODO(fxbug.dev/99182)
+                responder
+                    .send_no_shutdown_on_err(&mut Err(zx::Status::INTERNAL.into_raw()))
+                    .unwrap();
+                Ok(())
             }
         }
     }
@@ -181,6 +226,11 @@ impl FxfsServer {
                     if self.handle_admin(scope, request).await? {
                         break;
                     }
+                }
+            }
+            Services::Volumes(mut stream) => {
+                while let Some(request) = stream.try_next().await.context("Reading request")? {
+                    self.handle_volumes(scope, request).await?;
                 }
             }
         }
@@ -210,6 +260,7 @@ pub fn info_to_filesystem_info(
     }
 }
 
+#[async_trait]
 impl FsInspect for FxfsServer {
     fn get_info_data(&self) -> InfoData {
         InfoData {
@@ -224,9 +275,11 @@ impl FsInspect for FxfsServer {
         }
     }
 
-    fn get_usage_data(&self) -> UsageData {
+    async fn get_usage_data(&self) -> UsageData {
+        // TODO(fxbug.dev/99792): Figure out how to work with multiple volumes
         let info = self.fs.get_info();
-        let object_count = self.volume.volume().store().object_count();
+        let object_count =
+            self.volumes.get_volume(DEFAULT_VOLUME_NAME).await.unwrap().store().object_count();
         UsageData {
             total_bytes: info.total_bytes,
             used_bytes: info.used_bytes,
@@ -250,11 +303,7 @@ impl FsInspect for FxfsServer {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{
-            crypt::insecure::InsecureCrypt, filesystem::FxFilesystem,
-            platform::fuchsia::runtime::FxfsServer,
-        },
-        anyhow::Error,
+        crate::{crypt::insecure::InsecureCrypt, filesystem::FxFilesystem, platform::FxfsServer},
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
         std::sync::Arc,
@@ -262,14 +311,14 @@ mod tests {
     };
 
     #[fasync::run(2, test)]
-    async fn test_lifecycle() -> Result<(), Error> {
+    async fn test_lifecycle() {
         let device = DeviceHolder::new(FakeDevice::new(16384, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let server = FxfsServer::new(filesystem, "root", Some(Arc::new(InsecureCrypt::new())))
-            .await
-            .expect("Create server failed");
+        let filesystem =
+            FxFilesystem::new_empty(device).await.expect("FxFilesystem::new_empty failed");
+        let server = FxfsServer::new(filesystem).await.expect("FxfsServer::new failed");
 
-        let (client_end, server_end) = fidl::endpoints::create_endpoints::<fio::DirectoryMarker>()?;
+        let (client_end, server_end) =
+            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
         let client_proxy = client_end.into_proxy().expect("Create DirectoryProxy failed");
         fasync::Task::spawn(async move {
             let admin_proxy = fuchsia_component::client::connect_to_protocol_at_dir_root::<
@@ -280,7 +329,9 @@ mod tests {
         })
         .detach();
 
-        server.run(server_end.into_channel()).await.expect("Run returned an error");
-        Ok(())
+        server
+            .run(server_end.into_channel(), Some(Arc::new(InsecureCrypt::new())))
+            .await
+            .expect("Run returned an error");
     }
 }
