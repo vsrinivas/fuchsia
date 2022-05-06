@@ -31,7 +31,6 @@ _developer_packages = [
   "//src/media/audio/bundles:services",
   "//src/power:battery",
   "//src/ui:workstation",
-  "//src/ui/bin/text:text_manager",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/screensaver",
   "//src/ui/bin/shortcut",

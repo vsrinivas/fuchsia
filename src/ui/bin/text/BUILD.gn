@@ -13,7 +13,6 @@ group("text") {
     ":ime_service",
     ":tests",
     ":text_manager",
-    ":text_manager_v2",
   ]
 }
 
@@ -26,7 +25,6 @@ group("tests") {
     ":keyboard_test_parallel",
     ":text_manager",
     ":text_manager_test",
-    ":text_manager_v2",
   ]
 }
 
@@ -94,10 +92,6 @@ fuchsia_component("text_manager_comp_v2") {
   deps = [ ":bin" ]
 }
 
-fuchsia_package("text_manager_v2") {
-  deps = [ ":text_manager_comp_v2" ]
-}
-
 # This is the same component as `text_manager_comp`, with the legacy name.
 # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to text_manager.
 fuchsia_component("ime_service_comp") {
@@ -107,7 +101,16 @@ fuchsia_component("ime_service_comp") {
 }
 
 fuchsia_package("text_manager") {
-  deps = [ ":text_manager_comp" ]
+  deps = [
+    ":text_manager_comp",
+    ":text_manager_comp_v2",
+  ]
+}
+
+# TODO(fxbug.dev/90441): I mistakenly added this target - can't remove it
+# just yet, so will need to make it a separate change.
+fuchsia_package("text_manager_v2") {
+  deps = [ ":text_manager_comp_v2" ]
 }
 
 # This is the same package as `text_manager`, with the legacy name.

@@ -564,4 +564,9 @@
         label: "SSHD Host",
         moniker: "core/sshd-host",
     },
+    {
+        id: 214,
+        label: "Text Manager CFv2",
+        moniker: "core/text_manager",
+    },
 ]

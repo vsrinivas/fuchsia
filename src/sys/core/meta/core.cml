@@ -52,6 +52,10 @@
             name: "sysmem_connector",
             url: "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cm",
         },
+        {
+            name: "text_manager",
+            url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
+        },
 
         // Children below this line may be present on some but not all product configurations.
         // Children above this line are expected to be present on all configs that include
@@ -471,6 +475,7 @@
                 "#system-metrics-logger",
                 "#system-update-committer",
                 "#temperature-logger",
+                "#text_manager",
                 "#universe-resolver",
                 "#vulkan_loader",
             ],
@@ -499,12 +504,16 @@
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
             ],
             from: "self",
             to: "#starnix_manager",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.ui.input3.Keyboard" ],
+            from: "#text_manager",
+            to: "#starnix_manager",
         },
         {
             protocol: [ "fuchsia.sysmem.Allocator" ],
@@ -823,10 +832,6 @@
                 "fuchsia.ui.composition.ScreenCapture",
                 "fuchsia.ui.display.internal.DisplayPower",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.lifecycle.LifecycleController",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.policy.Presenter",
@@ -834,6 +839,16 @@
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "self",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.keyboard.focus.Controller",
+            ],
+            from: "#text_manager",
             to: "#session-manager",
         },
         {
@@ -956,6 +971,7 @@
                 "#pkg-cache",
                 "#pkg-resolver",
                 "#sampler",
+
                 // TODO(fxbug.dev/96053): remove once basemgr has migrated to
                 // Cobalt 1.1.
                 "#session-manager",

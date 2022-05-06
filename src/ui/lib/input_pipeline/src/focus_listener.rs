@@ -93,14 +93,20 @@ impl FocusListener {
                     if let Some(ref focus_chain) = focus_chain.focus_chain {
                         if let Some(ref view_ref) = focus_chain.last() {
                             let mut view_ref_dup = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
-                            self.text_manager.notify(&mut view_ref_dup).await?;
+                            self.text_manager
+                                .notify(&mut view_ref_dup)
+                                .await
+                                .context("while notifying text_manager")?;
                         }
                     };
 
                     // Dispatch to shortcut manager.
-                    self.shortcut_manager.handle_focus_change(focus_chain).await?;
+                    self.shortcut_manager
+                        .handle_focus_change(focus_chain)
+                        .await
+                        .context("while notifying shortcut_manager")?;
 
-                    responder.send()?;
+                    responder.send().context("while sending focus chain listener response")?;
                 }
                 Err(e) => fx_log_err!("FocusChainListenerRequest has error: {}.", e),
             }
