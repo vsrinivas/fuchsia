@@ -65,13 +65,13 @@ some `ffx` commands (such as `ffx log` and `ffx target show`) require that
 To check if your host machine already has Fuchsia-specific SSH keys, run the following command:
 
 ```posix-terminal
-ls ~/.ssh | grep fuchsia
+ls $HOME/.ssh | grep fuchsia
 ```
 
 This command should print output displaying the `fuchsia_*` files, similar to the following:
 
 ```none {:.devsite-disable-click-to-copy}
-$ ls ~/.ssh | grep fuchsia
+$ ls $HOME/.ssh | grep fuchsia
 fuchsia_authorized_keys
 fuchsia_ed25519
 fuchsia_ed25519.pub
@@ -98,13 +98,13 @@ SSH settings.
 1. Verify that Fuchsia-specific SSH keys are generated:
 
    ```posix-terminal
-   ls ~/.ssh | grep fuchsia
+   ls $HOME/.ssh | grep fuchsia
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ ls ~/.ssh | grep fuchsia
+   $ ls $HOME/.ssh | grep fuchsia
    fuchsia_authorized_keys
    fuchsia_ed25519
    fuchsia_ed25519.pub
@@ -127,32 +127,32 @@ Do the following:
 1. In a terminal, change to your home directory:
 
    Note: This guide uses the home directory (`$HOME`) as a base directory. This is where a new work
-   directory (`getting-started`) will be created for this guide. You may also select a different
+   directory (`fuchsia-getting-started`) will be created for this guide. You may also select a different
    base directory (for instance, `cd $HOME/my-fuchsia-project`).
 
    ```posix-terminal
-   cd ~
+   cd $HOME 
    ```
 
 1. Clone the Fuchsia samples repository:
 
    ```posix-terminal
-   git clone https://fuchsia.googlesource.com/sdk-samples/getting-started --recurse-submodules
+   git clone https://fuchsia.googlesource.com/sdk-samples/getting-started fuchsia-getting-started --recurse-submodules
    ```
 
-   This creates a new directory named `getting-started`, which clones the content of the SDK samples
+   This creates a new directory named `fuchsia-getting-started`, which clones the content of the SDK samples
    repository.
 
 1. Go to the new directory:
 
    ```posix-terminal
-   cd getting-started
+   cd $HOME/fuchsia-getting-started
    ```
 
 1. To verify the Fuchsia SDK environment setup, build the sample components:
 
    Note: If it doesn't exist already, the `bazel build` command below creates the
-   `~/.package_repos/sdk-samples` directory on your host machine. This directory is used
+   `$HOME/.package_repos/sdk-samples` directory on your host machine. This directory is used
    for storing and serving Fuchsia packages in this guide.
 
    ```posix-terminal
@@ -205,7 +205,7 @@ Do the following:
    Note: To ensure that you’re using the right version of `ffx` (which needs to
    match the version of the SDK), consider updating your `PATH` to include the
    SDK's `tools` directory where `ffx` is located (for instance,
-   `export PATH="$PATH:$HOME/getting-started/tools"`). However, if you don't
+   `export PATH="$PATH:$HOME/fuchsia-getting-started/tools"`). However, if you don't
    wish to update your `PATH`, ensure that you specify the relative path to
    this `ffx` tool (`tools/ffx`) whenever you run `ffx` commands.
 
@@ -382,14 +382,14 @@ The tasks include:
 Do the following:
 
 1. Create a new Fuchsia package repository (and map it to the
-   `~/.package_repos/sdk-samples` directory):
+   `$HOME/.package_repos/sdk-samples` directory):
 
-   Note: The `~/.package_repos/sdk-samples` directory is created on your host
+   Note: The `$HOME/.package_repos/sdk-samples` directory is created on your host
    machine when you run the `bazel build` command for the first time in the
    [Clone the SDK samples repository](#clone-the-sdk-samples-repository) section.
 
    ```posix-terminal
-   tools/ffx repository add-from-pm -r fuchsiasamples.com ~/.package_repos/sdk-samples
+   tools/ffx repository add-from-pm -r fuchsiasamples.com $HOME/.package_repos/sdk-samples
    ```
 
    This command exits silently without output.
@@ -492,7 +492,7 @@ Do the following:
    ```
 
    When the build is successful, it publishes the build artifacts to the
-   `~/.package_repos/sdk-samples` directory, which is associated with
+   `$HOME/.package_repos/sdk-samples` directory, which is associated with
    your new [local Fuchsia package repository](#create-a-local-package-repository).
 
 1. Run the sample component:
@@ -742,7 +742,7 @@ Do the following:
 1. In a different terminal, run the sample component:
 
    Note: In this new terminal, make sure that you change to the same work
-   directory (for instance,  `cd $HOME/getting-started`).
+   directory (for instance,  `cd $HOME/fuchsia-getting-started`).
 
    ```posix-terminal
    tools/ffx component run "fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm" --recreate
@@ -1096,23 +1096,23 @@ tools/ffx repository server stop
 ```
 
 ```posix-terminal
-rm -rf ~/.package_repos/sdk-samples
+rm -rf $HOME/.package_repos/sdk-samples
 ```
 
-Remove the `getting-started` directory and its artifacts:
+Remove the `fuchsia-getting-started` directory and its artifacts:
 
 Caution: If the SDK samples repository is cloned to a different location
-than `~/getting-started`, adjust the directory path in the command below.
+than `$HOME/fuchsia-getting-started`, adjust the directory path in the command below.
 Be extremely careful with the directory path when you run the `rm -rf
 <DIR>` command.
 
 ```posix-terminal
-rm -rf ~/getting-started
+rm -rf $HOME/fuchsia-getting-started
 ```
 
 When Bazel fails to build, try the commands below:
 
-Caution: Running `bazel clean` or deleting the `~/.cache/bazel` directory
+Caution: Running `bazel clean` or deleting the `$HOME/.cache/bazel` directory
 deletes all the artifacts downloaded by Bazel, which can be around 4 GB.
 This means Bazel will need to download those dependencies again
 the next time you run `bazel build`.
@@ -1122,7 +1122,7 @@ bazel clean --expunge
 ```
 
 ```posix-terminal
-bazel shutdown && rm -rf ~/.cache/bazel
+bazel shutdown && rm -rf $HOME/.cache/bazel
 ```
 
 Other clean up commands:
