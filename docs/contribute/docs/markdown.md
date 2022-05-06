@@ -153,8 +153,7 @@ are visible to readers in the HTML page source.
 ### Single-line comments
 
 <pre class="prettyprint lang-html">{% verbatim %}
-{# To see the fully rendered MathJax equations on this page,
-  see the published page at https://fuchsia.dev/<YOUR_PUBLISHED_PAGE>#}{% endverbatim %}
+{# This is a single line comment #}{% endverbatim %}
 </pre>
 
 ### Multi-line comments
