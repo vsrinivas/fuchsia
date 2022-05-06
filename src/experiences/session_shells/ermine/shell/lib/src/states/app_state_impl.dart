@@ -285,6 +285,7 @@ class AppStateImpl with Disposable implements AppState {
   @override
   void showOverlay() => _showOverlay();
   late final _showOverlay = () {
+    appIsLaunching.value = false;
     overlayVisibility.value = true;
     setFocusToShellView();
   }.asAction();
