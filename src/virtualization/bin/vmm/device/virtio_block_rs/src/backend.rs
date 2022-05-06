@@ -37,6 +37,14 @@ impl Sector {
     }
 }
 
+impl std::ops::Add for Sector {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Sector(self.0 + other.0)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeviceAttrs {
     /// The capacity of this device.
@@ -117,6 +125,55 @@ pub struct Request<'a, 'b> {
 impl<'a, 'b> Request<'a, 'b> {
     pub fn from_ref(ranges: &'b [DeviceRange<'a>], sector: Sector) -> Self {
         Self { ranges: Cow::Borrowed(ranges), sector }
+    }
+
+    #[cfg(test)]
+    pub fn split_at<'c>(&self, offset: Sector) -> Option<(Request<'a, 'c>, Request<'a, 'c>)> {
+        let offset_bytes = offset.to_bytes().unwrap();
+        let mut range_bytes = 0;
+        for (i, range) in self.ranges.iter().enumerate() {
+            let new_range_bytes = range_bytes + range.len() as u64;
+
+            if new_range_bytes == offset_bytes {
+                // If we have a split at a range boundary, we can just split the request slice.
+                //
+                // A further improvement here would involve just using a direct reference to our
+                // slice in this situation instead of making a copy into a vector. This requires
+                // some improvements to our bucketing algorithm in the CopyOnWriteBackend, however.
+                let bound = i + 1;
+                let v1 = self.ranges[0..bound].to_vec();
+                let v2 = self.ranges[bound..].to_vec();
+                let r1 = Request { sector: self.sector, ranges: Cow::Owned(v1) };
+                let r2 = Request { sector: self.sector + offset, ranges: Cow::Owned(v2) };
+                return Some((r1, r2));
+            } else if new_range_bytes >= offset_bytes {
+                // If this range spans the range boundary then we need to split this range.
+                //
+                // First we split the range that spans the request boundary.
+                let (fragment1, fragment2) =
+                    self.ranges[i].split_at((offset_bytes - range_bytes) as usize).unwrap();
+
+                // Now create the two vectors. Note that we include the split index in both of the
+                // split vectors since we need to update that with a partial range in both vectors.
+                let bound = i + 1;
+                let mut v1 = self.ranges[0..bound].to_vec();
+                let mut v2 = self.ranges[i..].to_vec();
+
+                // Now overwrite the range that spans the split point.
+                let v1_last = v1.len() - 1;
+                v1[v1_last] = fragment1;
+                v2[0] = fragment2;
+
+                let r1 = Request { sector: self.sector, ranges: Cow::Owned(v1) };
+                let r2 = Request { sector: self.sector + offset, ranges: Cow::Owned(v2) };
+                return Some((r1, r2));
+            }
+
+            range_bytes = new_range_bytes;
+        }
+
+        // If we haven't split then the offset is not valid.
+        None
     }
 
     /// Returns an unbounded iterator of the ranges in a Request that includes an accumulated
@@ -282,5 +339,126 @@ mod tests {
         assert_eq!(None, iter.next_with_bound(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize));
         assert_eq!(None, iter.next_with_bound(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize));
         assert_eq!(None, iter.next_with_bound(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize));
+    }
+
+    #[test]
+    fn test_request_split_at_large_range() {
+        // Create a Request with a single 4-sector range.
+        let mem = IdentityDriverMem::new();
+        let ranges = vec![mem.new_range(4 * wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap()];
+        let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
+
+        // Split this at the first sector. This should yield a 1-sector request followed by a
+        // 3-sector request.
+        let (r1, r2) = request.split_at(Sector::from_raw_sector(1)).unwrap();
+        assert_eq!(r1.sector, Sector::from_raw_sector(0));
+        assert_eq!(r1.ranges.len(), 1);
+        assert_eq!(r1.ranges[0].get().start, ranges[0].get().start);
+        assert_eq!(r1.ranges[0].len(), wire::VIRTIO_BLOCK_SECTOR_SIZE as usize);
+
+        assert_eq!(r2.sector, Sector::from_raw_sector(1));
+        assert_eq!(r2.ranges.len(), 1);
+        assert_eq!(
+            r2.ranges[0].get().start,
+            ranges[0].get().start + wire::VIRTIO_BLOCK_SECTOR_SIZE as usize
+        );
+        assert_eq!(r2.ranges[0].len(), 3 * wire::VIRTIO_BLOCK_SECTOR_SIZE as usize);
+    }
+
+    #[test]
+    fn test_request_split_at_range_boundary() {
+        // Create a Request with 3 ranges.
+        let mem = IdentityDriverMem::new();
+        let ranges = vec![
+            mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
+            mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
+            mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
+        ];
+        let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
+
+        // Split this at the first sector. This should yield a 1-sector request followed by a
+        // 2-sector request.
+        let (r1, r2) = request.split_at(Sector::from_raw_sector(1)).unwrap();
+        assert_eq!(r1.sector, Sector::from_raw_sector(0));
+        assert_eq!(r1.ranges.len(), 1);
+        assert_eq!(r1.ranges[0].get().start, ranges[0].get().start);
+        assert_eq!(r1.ranges[0].len(), wire::VIRTIO_BLOCK_SECTOR_SIZE as usize);
+
+        assert_eq!(r2.sector, Sector::from_raw_sector(1));
+        assert_eq!(r2.ranges.len(), 2);
+        assert_eq!(r2.ranges[0].get().start, ranges[1].get().start);
+        assert_eq!(r2.ranges[0].len(), wire::VIRTIO_BLOCK_SECTOR_SIZE as usize);
+
+        let (r3, r4) = r2.split_at(Sector::from_raw_sector(1)).unwrap();
+        assert_eq!(r3.sector, Sector::from_raw_sector(1));
+        assert_eq!(r3.ranges.len(), 1);
+        assert_eq!(r3.ranges[0].get().start, ranges[1].get().start);
+        assert_eq!(r3.ranges[0].len(), wire::VIRTIO_BLOCK_SECTOR_SIZE as usize);
+
+        assert_eq!(r4.sector, Sector::from_raw_sector(2));
+        assert_eq!(r4.ranges.len(), 1);
+        assert_eq!(r4.ranges[0].get().start, ranges[2].get().start);
+        assert_eq!(r4.ranges[0].len(), wire::VIRTIO_BLOCK_SECTOR_SIZE as usize);
+    }
+
+    #[test]
+    fn test_request_split_at_mixed_ranges() {
+        // We have a request that spans 2 full sectors (half sector, full sector, half sector).
+        let mem = IdentityDriverMem::new();
+        let ranges = vec![
+            mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 2).unwrap(),
+            mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
+            mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 2).unwrap(),
+        ];
+        let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
+
+        // Split it in the middle to produce two 1-sector requests.
+        let (r1, r2) = request.split_at(Sector::from_raw_sector(1)).unwrap();
+        assert_eq!(r1.sector, Sector::from_raw_sector(0));
+        assert_eq!(r1.ranges.len(), 2);
+        assert_eq!(r1.ranges[0].get().start, ranges[0].get().start);
+        assert_eq!(r1.ranges[0].len(), wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 2);
+        assert_eq!(r1.ranges[1].get().start, ranges[1].get().start);
+        assert_eq!(r1.ranges[1].len(), wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 2);
+
+        assert_eq!(r2.sector, Sector::from_raw_sector(1));
+        assert_eq!(r2.ranges.len(), 2);
+        assert_eq!(r2.ranges[0].get().end, ranges[1].get().end);
+        assert_eq!(r2.ranges[0].len(), wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 2);
+        assert_eq!(r2.ranges[1].get().start, ranges[2].get().start);
+        assert_eq!(r2.ranges[1].len(), wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 2);
+    }
+
+    #[test]
+    fn test_request_split_at_end() {
+        let mem = IdentityDriverMem::new();
+        let ranges = vec![mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap()];
+        let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
+
+        // Split the at the end of the request.
+        let (r1, r2) = request.split_at(Sector::from_raw_sector(1)).unwrap();
+
+        // The first request should equal the input request.
+        assert_eq!(r1.sector, Sector::from_raw_sector(0));
+        assert_eq!(r1.ranges.len(), 1);
+        assert_eq!(r1.ranges[0].get().start, ranges[0].get().start);
+        assert_eq!(r1.ranges[0].len(), wire::VIRTIO_BLOCK_SECTOR_SIZE as usize);
+
+        // The second request should be empty.
+        assert_eq!(r2.sector, Sector::from_raw_sector(1));
+        assert_eq!(r2.ranges.len(), 0);
+    }
+
+    #[test]
+    fn test_request_split_at_out_of_range() {
+        let mem = IdentityDriverMem::new();
+        let ranges = vec![mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap()];
+        let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
+
+        // Split the at the end of the request.
+        let result = request.split_at(Sector::from_raw_sector(2));
+
+        // The first request should equal the input request.
+        assert!(result.is_none());
     }
 }
