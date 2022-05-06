@@ -38,6 +38,11 @@ extern "C" Arm64UserCopyRet _arm64_user_copy(void* dst, const void* src, size_t 
 zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(arch_num_spinlocks_held() == 0);
+  // The copy might trigger a page fault that needs to block on a user pager request, in which case
+  // it is not permitted to be holding locks. To ensure this doesn't accidentally work if a copy
+  // does not happen to trigger a pager, we insist that all copies do not hold locks. This method is
+  // an empty inline function if lockdep is not enabled.
+  lockdep::AssertNoLocksHeld();
 
   // The assembly code just does memcpy with fault handling.  This is
   // the security check that an address from the user is actually a
@@ -57,6 +62,8 @@ zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
 zx_status_t arch_copy_to_user(void* dst, const void* src, size_t len) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(arch_num_spinlocks_held() == 0);
+  // See comment above.
+  lockdep::AssertNoLocksHeld();
 
   if (!is_user_accessible_range(reinterpret_cast<vaddr_t>(dst), len)) {
     return ZX_ERR_INVALID_ARGS;
