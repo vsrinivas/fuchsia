@@ -65,8 +65,8 @@ class App extends StatelessWidget {
 
                     // Show dialogs above all.
                     if (app.dialogsVisible)
-                      WidgetFactory.create(
-                          () => Dialogs(app.dialogs, onClose: app.hideOverlay)),
+                      WidgetFactory.create(() =>
+                          Dialogs(app.dialogs, onClose: app.dismissDialogs)),
                   ],
                 );
               }),

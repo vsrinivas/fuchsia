@@ -172,7 +172,11 @@ class AppStateImpl with Disposable implements AppState {
     return !isIdle &&
         !appIsLaunching.value &&
         shellHasFocus.value &&
-        (appBarVisible || sideBarVisible || switcherVisible || dialogsVisible);
+        (appBarVisible ||
+            sideBarVisible ||
+            switcherVisible ||
+            dialogsVisible ||
+            userFeedbackVisible);
   }).asComputed();
 
   @override
@@ -551,6 +555,14 @@ class AppStateImpl with Disposable implements AppState {
         }
       },
     ));
+  }
+
+  @override
+  void dismissDialogs() {
+    if (appBarVisible || sideBarVisible || userFeedbackVisible) {
+      return;
+    }
+    hideOverlay();
   }
 
   late final showScreenSaver = () {

@@ -82,6 +82,7 @@ abstract class AppState {
   void userFeedbackSubmit(
       {required String desc, required String username, String summary});
   void setScale(double scale);
+  void dismissDialogs();
 
   factory AppState.fromEnv() {
     // ignore: unnecessary_cast
