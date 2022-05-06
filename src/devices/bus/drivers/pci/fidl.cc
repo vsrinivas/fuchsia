@@ -14,6 +14,18 @@
 
 #include "src/devices/bus/drivers/pci/device.h"
 
+#define RETURN_STATUS(level, status, format, ...)                                   \
+  ({                                                                                \
+    zx_status_t _status = (status);                                                 \
+    zxlogf(level, "[%s] %s(" format ") = %s", device_->config()->addr(),            \
+           __FUNCTION__ __VA_OPT__(, ) __VA_ARGS__, zx_status_get_string(_status)); \
+    _status;                                                                        \
+    return;                                                                         \
+  })
+
+#define RETURN_DEBUG(status, format...) RETURN_STATUS(DEBUG, status, format)
+#define RETURN_TRACE(status, format...) RETURN_STATUS(TRACE, status, format)
+
 namespace fpci = ::fuchsia_hardware_pci;
 namespace pci {
 
@@ -161,12 +173,13 @@ void FidlDevice::GetDeviceInfo(GetDeviceInfoRequestView request,
                    .bus_id = device_->bus_id(),
                    .dev_id = device_->dev_id(),
                    .func_id = device_->func_id()});
+  RETURN_DEBUG(ZX_OK, "");
 }
 
 void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& completer) {
   if (request->bar_id >= fpci::wire::kMaxBarCount) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
-    return;
+    RETURN_DEBUG(ZX_ERR_INVALID_ARGS, "%u", request->bar_id);
   }
 
   fbl::AutoLock dev_lock(device_->dev_lock());
@@ -174,7 +187,7 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
   size_t bar_size = bar.size;
   if (bar_size == 0) {
     completer.ReplyError(ZX_ERR_NOT_FOUND);
-    return;
+    RETURN_DEBUG(ZX_ERR_NOT_FOUND, "%u", request->bar_id);
   }
 
 #ifdef ENABLE_MSIX
@@ -186,7 +199,7 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
     zx::status<size_t> result = device_->capabilities().msix->GetBarDataSize(bar);
     if (!result.is_ok()) {
       completer.ReplyError(result.status_value());
-      return;
+      RETURN_DEBUG(result.status_value(), "%u", request->bar_id);
     }
     bar_size = result.value();
   }
@@ -199,9 +212,9 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
       completer.ReplySuccess({.bar_id = request->bar_id,
                               .size = bar_size,
                               .result = fpci::wire::BarResult::WithVmo(std::move(result.value()))});
-      return;
+      RETURN_DEBUG(ZX_OK, "%u", request->bar_id);
     }
-    completer.ReplyError(result.status_value());
+    status = result.status_value();
   } else {
     zx::status<zx::resource> result = bar.allocation->CreateResource();
     if (status == ZX_OK) {
@@ -212,10 +225,13 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
            .result = fpci::wire::BarResult::WithIo(
                arena, fuchsia_hardware_pci::wire::IoBar{.address = bar.address,
                                                         .resource = std::move(result.value())})});
-      return;
+      RETURN_DEBUG(ZX_OK, "%u", request->bar_id);
     }
-    completer.ReplyError(result.status_value());
+    status = result.status_value();
   }
+
+  completer.ReplyError(status);
+  RETURN_DEBUG(status, "%u", request->bar_id);
 }
 
 void FidlDevice::SetBusMastering(SetBusMasteringRequestView request,
@@ -224,9 +240,11 @@ void FidlDevice::SetBusMastering(SetBusMasteringRequestView request,
   zx_status_t status = device_->SetBusMastering(request->enabled);
   if (status != ZX_OK) {
     completer.ReplyError(status);
-    return;
+    RETURN_DEBUG(status, "");
   }
+
   completer.ReplySuccess();
+  RETURN_DEBUG(status, "");
 }
 
 void FidlDevice::ResetDevice(ResetDeviceRequestView request,
@@ -250,9 +268,11 @@ void FidlDevice::MapInterrupt(MapInterruptRequestView request,
   zx::status<zx::interrupt> result = device_->MapInterrupt(request->which_irq);
   if (!result.is_ok()) {
     completer.ReplyError(result.status_value());
-    return;
+    RETURN_DEBUG(result.status_value(), "%#x", request->which_irq);
   }
+
   completer.ReplySuccess(std::move(result.value()));
+  RETURN_DEBUG(result.status_value(), "%#x", request->which_irq);
 }
 
 void FidlDevice::SetInterruptMode(SetInterruptModeRequestView request,
@@ -260,9 +280,13 @@ void FidlDevice::SetInterruptMode(SetInterruptModeRequestView request,
   zx_status_t status = device_->SetIrqMode(request->mode, request->requested_irq_count);
   if (status != ZX_OK) {
     completer.ReplyError(status);
-    return;
+    RETURN_DEBUG(status, "%u, %#x", static_cast<uint8_t>(request->mode),
+                 request->requested_irq_count);
   }
+
   completer.ReplySuccess();
+  RETURN_DEBUG(status, "%u, %#x", static_cast<uint8_t>(request->mode),
+               request->requested_irq_count);
 }
 
 void FidlDevice::GetInterruptModes(GetInterruptModesRequestView request,
@@ -271,6 +295,7 @@ void FidlDevice::GetInterruptModes(GetInterruptModesRequestView request,
   completer.Reply({.has_legacy = modes.has_legacy,
                    .msi_count = modes.msi_count,
                    .msix_count = modes.msix_count});
+  RETURN_DEBUG(ZX_OK, "");
 }
 
 void FidlDevice::ReadConfig8(ReadConfig8RequestView request,
@@ -278,9 +303,11 @@ void FidlDevice::ReadConfig8(ReadConfig8RequestView request,
   auto result = device_->ReadConfig<uint8_t, PciReg8>(request->offset);
   if (!result.is_ok()) {
     completer.ReplyError(result.status_value());
-    return;
+    RETURN_DEBUG(result.status_value(), "%#x", request->offset);
   }
+
   completer.ReplySuccess(result.value());
+  RETURN_TRACE(result.status_value(), "%#x", request->offset);
 }
 
 void FidlDevice::ReadConfig16(ReadConfig16RequestView request,
@@ -288,9 +315,11 @@ void FidlDevice::ReadConfig16(ReadConfig16RequestView request,
   auto result = device_->ReadConfig<uint16_t, PciReg16>(request->offset);
   if (!result.is_ok()) {
     completer.ReplyError(result.status_value());
-    return;
+    RETURN_DEBUG(result.status_value(), "%#x", request->offset);
   }
+
   completer.ReplySuccess(result.value());
+  RETURN_TRACE(result.status_value(), "%#x", request->offset);
 }
 
 void FidlDevice::ReadConfig32(ReadConfig32RequestView request,
@@ -298,9 +327,11 @@ void FidlDevice::ReadConfig32(ReadConfig32RequestView request,
   auto result = device_->ReadConfig<uint32_t, PciReg32>(request->offset);
   if (!result.is_ok()) {
     completer.ReplyError(result.status_value());
-    return;
+    RETURN_DEBUG(result.status_value(), "%#x", request->offset);
   }
+
   completer.ReplySuccess(result.value());
+  RETURN_TRACE(result.status_value(), "%#x", request->offset);
 }
 
 void FidlDevice::WriteConfig8(WriteConfig8RequestView request,
@@ -308,9 +339,11 @@ void FidlDevice::WriteConfig8(WriteConfig8RequestView request,
   zx_status_t status = device_->WriteConfig<uint8_t, PciReg8>(request->offset, request->value);
   if (status != ZX_OK) {
     completer.ReplyError(status);
-    return;
+    RETURN_DEBUG(status, "%#x, %#x", request->offset, request->value);
   }
+
   completer.ReplySuccess();
+  RETURN_TRACE(status, "%#x, %#x", request->offset, request->value);
 }
 
 void FidlDevice::WriteConfig16(WriteConfig16RequestView request,
@@ -318,9 +351,11 @@ void FidlDevice::WriteConfig16(WriteConfig16RequestView request,
   zx_status_t status = device_->WriteConfig<uint16_t, PciReg16>(request->offset, request->value);
   if (status != ZX_OK) {
     completer.ReplyError(status);
-    return;
+    RETURN_DEBUG(status, "%#x, %#x", request->offset, request->value);
   }
+
   completer.ReplySuccess();
+  RETURN_TRACE(status, "%#x, %#x", request->offset, request->value);
 }
 
 void FidlDevice::WriteConfig32(WriteConfig32RequestView request,
@@ -328,9 +363,11 @@ void FidlDevice::WriteConfig32(WriteConfig32RequestView request,
   zx_status_t status = device_->WriteConfig<uint32_t, PciReg32>(request->offset, request->value);
   if (status != ZX_OK) {
     completer.ReplyError(status);
-    return;
+    RETURN_DEBUG(status, "%#x, %#x", request->offset, request->value);
   }
+
   completer.ReplySuccess();
+  RETURN_TRACE(status, "%#x, %#x", request->offset, request->value);
 }
 
 void FidlDevice::GetCapabilities(GetCapabilitiesRequestView request,
@@ -346,6 +383,7 @@ void FidlDevice::GetCapabilities(GetCapabilitiesRequestView request,
   }
 
   completer.Reply(::fidl::VectorView<uint8_t>::FromExternal(capabilities));
+  RETURN_DEBUG(ZX_OK, "%#x", static_cast<uint8_t>(request->id));
 }
 
 void FidlDevice::GetExtendedCapabilities(GetExtendedCapabilitiesRequestView request,
@@ -361,6 +399,7 @@ void FidlDevice::GetExtendedCapabilities(GetExtendedCapabilitiesRequestView requ
   }
 
   completer.Reply(::fidl::VectorView<uint16_t>::FromExternal(ext_capabilities));
+  RETURN_DEBUG(ZX_OK, "%#x", static_cast<uint16_t>(request->id));
 }
 
 void FidlDevice::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) {
@@ -369,9 +408,11 @@ void FidlDevice::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& comple
   zx_status_t status = device_->bdi()->GetBti(device_, request->index, &bti);
   if (status != ZX_OK) {
     completer.ReplyError(status);
-    return;
+    RETURN_DEBUG(status, "%u", request->index);
   }
+
   completer.ReplySuccess(std::move(bti));
+  RETURN_DEBUG(status, "%u", request->index);
 }
 
 }  // namespace pci
