@@ -105,7 +105,8 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   // prefer to use a separate lock that we can add instrumentation to without needing to change the
   // entire dispatcher lock.
   // TODO: Remove this and use dispatcher lock once content size operations will not block.
-  mutable DECLARE_MUTEX(VmObjectDispatcher) content_size_lock_;
+  mutable DECLARE_MUTEX(VmObjectDispatcher,
+                        lockdep::LockFlagsActiveListDisabled) content_size_lock_;
 
   // The size of the content stored in the VMO in bytes.
   uint64_t content_size_ TA_GUARDED(content_size_lock_) = 0u;
@@ -119,7 +120,7 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
 
   // See the comment above near the shrink_lock() method. Note that this lock might be held whilst
   // waiting for page requests to be fulfilled.
-  mutable DECLARE_MUTEX(VmObjectDispatcher) shrink_lock_;
+  mutable DECLARE_MUTEX(VmObjectDispatcher, lockdep::LockFlagsActiveListDisabled) shrink_lock_;
 };
 
 zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t handle_rights);

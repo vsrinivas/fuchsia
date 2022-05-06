@@ -44,7 +44,7 @@ class StreamDispatcher final : public SoloDispatcher<StreamDispatcher, ZX_DEFAUL
   // being able to block, and so prefer to use a separate lock that we can add instrumentation to
   // without needing to change the entire dispatcher lock.
   // TODO: Remove this and use dispatcher lock once content size operations will not block.
-  mutable DECLARE_MUTEX(StreamDispatcher) seek_lock_;
+  mutable DECLARE_MUTEX(StreamDispatcher, lockdep::LockFlagsActiveListDisabled) seek_lock_;
 
   const uint32_t options_;
   const fbl::RefPtr<VmObjectDispatcher> vmo_;
