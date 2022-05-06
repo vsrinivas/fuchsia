@@ -23,7 +23,16 @@ func BlobsUpload(mods *tools.Modules, destination string) (Upload, error) {
 
 func blobsUpload(mods pkgManifestsModules, destination string) (Upload, error) {
 	// Obtain the absolute paths.
-	manifests, err := tools.LoadPackageManifests(filepath.Join(mods.BuildDir(), mods.PackageManifestsLocation()[0]))
+	packageManifestList := filepath.Join(mods.BuildDir(), mods.PackageManifestsLocation()[0])
+	manifests, err := tools.LoadPackageManifests(packageManifestList)
+	// It's ok for package manifests to not exist, this happens on e.g. SDK-only builders.
+	if _, err := os.Stat(packageManifestList); os.IsNotExist(err) {
+		return Upload{
+			Compress:    true,
+			Contents:    []byte("[]"),
+			Destination: destination,
+		}, nil
+	}
 	if err != nil {
 		return Upload{}, fmt.Errorf("failed to load list of package manifests: %s", err)
 	}
