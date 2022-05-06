@@ -11,7 +11,7 @@ pub mod asynchronous;
 /// pseudo files.
 pub use asynchronous::{
     read_only, read_only_const, read_only_static, read_write,
-    simple_init_vmo_resizable_with_capacity, simple_init_vmo_with_capacity, write_only,
+    simple_init_vmo_resizable_with_capacity, simple_init_vmo_with_capacity,
 };
 
 pub(self) mod connection;

@@ -419,12 +419,10 @@ mod tests {
     async fn if_migration_file_and_up_to_date_no_migrations_run() {
         let fs = mut_pseudo_directory! {
             MIGRATION_FILE_NAME => read_write(
-                simple_init_vmo_resizable_with_capacity(b"1", 1),
-                |_| async move {}
+                simple_init_vmo_resizable_with_capacity(b"1", 1)
             ),
             "test_1.pfidl" => read_write(
-                simple_init_vmo_resizable_with_capacity(b"", 1),
-                |_| async move {}
+                simple_init_vmo_resizable_with_capacity(b"", 1)
             ),
         };
         let directory = serve_vfs_dir(fs);
@@ -459,8 +457,7 @@ mod tests {
     async fn migration_file_exists_but_missing_data() {
         let fs = mut_pseudo_directory! {
             MIGRATION_FILE_NAME => read_write(
-                simple_init_vmo_resizable_with_capacity(b"1", 1),
-                |_| async move {}
+                simple_init_vmo_resizable_with_capacity(b"1", 1)
             ),
         };
         let directory = serve_vfs_dir(fs);

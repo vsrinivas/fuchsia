@@ -23,7 +23,6 @@ use crate::{
         test_utils::{run_server_client, DirentsSameInodeBuilder},
     },
     execution_scope::ExecutionScope,
-    file::vmo::asynchronous::write_only,
     file::vmo::asynchronous::{
         read_only_static, read_write, simple_init_vmo_resizable_with_capacity,
     },
@@ -40,13 +39,9 @@ use {
         sys::{self, ZX_OK},
         Status,
     },
-    futures::future,
     libc::{S_IRUSR, S_IXUSR},
     static_assertions::assert_eq_size,
-    std::sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc, Mutex,
-    },
+    std::sync::{Arc, Mutex},
     vfs_macros::pseudo_directory,
 };
 
@@ -346,14 +341,7 @@ fn open_writable_in_subdir() {
             "etc" => pseudo_directory! {
                 "ssh" => pseudo_directory! {
                     "sshd_config" => read_write(
-                        simple_init_vmo_resizable_with_capacity(&b"# Empty".to_vec(), 100),
-                        move |vmo| {
-                                let expected = b"Port 22";
-                                let mut content = vec![0; expected.len()];
-                                vmo.read(&mut content[..], 0).unwrap();
-                                assert_eq!(&content, expected);
-                                future::ready(())
-                        }
+                        simple_init_vmo_resizable_with_capacity(&b"# Empty".to_vec(), 100)
                     )
                 }
             }
@@ -377,6 +365,8 @@ fn open_writable_in_subdir() {
                 assert_read!(file, expected_content);
                 assert_seek!(file, 0, Start);
                 assert_write!(file, new_content);
+                assert_seek!(file, 0, Start);
+                assert_read!(file, new_content);
                 assert_close!(file);
             }
 
@@ -500,54 +490,6 @@ fn open_subdir_with_posix_flag_rights_expansion() {
                 }
                 assert_close!(root_proxy);
             }
-            assert_close!(root);
-        },
-    );
-}
-
-#[test]
-fn open_write_only() {
-    let write_count = Arc::new(AtomicUsize::new(0));
-    let root = {
-        let write_count = write_count.clone();
-        pseudo_directory! {
-            "dev" => pseudo_directory! {
-                "output" => write_only(simple_init_vmo_resizable_with_capacity(&[], 100),
-                    move |vmo| {
-                        let write_count = write_count.clone();
-                            let count = write_count.fetch_add(1, Ordering::Relaxed);
-                        let expected:String = format!("Message {}", 1 + count);
-                            let mut content = vec![0; expected.len()];
-                            vmo.read(&mut content, 0).unwrap();
-                            assert_eq!(&content, &expected.as_bytes());
-                            future::ready(())
-                    }
-                )
-            }
-        }
-    };
-
-    run_server_client(
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        root,
-        |root| async move {
-            async fn open_write_close<'a>(
-                from_dir: &'a fio::DirectoryProxy,
-                new_content: &'a str,
-                write_count: Arc<AtomicUsize>,
-                expected_count: usize,
-            ) {
-                let flags = fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::DESCRIBE;
-                let file = open_get_vmo_file_proxy_assert_ok!(&from_dir, flags, "dev/output");
-                assert_write!(file, new_content);
-                assert_close!(file);
-
-                assert_eq!(write_count.load(Ordering::Relaxed), expected_count);
-            }
-
-            open_write_close(&root, "Message 1", write_count.clone(), 1).await;
-            open_write_close(&root, "Message 2", write_count.clone(), 2).await;
-
             assert_close!(root);
         },
     );
@@ -758,9 +700,7 @@ fn directories_restrict_nested_read_permissions() {
 fn directories_restrict_nested_write_permissions() {
     let root = pseudo_directory! {
         "dir" => pseudo_directory! {
-            "file" => write_only(simple_init_vmo_resizable_with_capacity(&[], 100), |_vmo| {
-                future::ready(())
-            }),
+            "file" => read_write(simple_init_vmo_resizable_with_capacity(&[], 100))
         },
     };
 
@@ -799,14 +739,7 @@ fn flag_posix_means_writable() {
         pseudo_directory! {
         "nested" => pseudo_directory! {
             "file" => read_write(
-                    simple_init_vmo_resizable_with_capacity(&b"Content".to_vec(), 20),
-                    move |vmo| {
-                                let expected = b"New content";
-                                let mut content = vec![0; expected.len()];
-                                vmo.read(&mut content, 0).unwrap();
-                                assert_eq!(&content, expected);
-                                future::ready(())
-                    }
+                    simple_init_vmo_resizable_with_capacity(&b"Content".to_vec(), 20)
                 )
             }
         }
@@ -855,10 +788,7 @@ fn flag_posix_does_not_add_writable_to_read_only() {
     let root = pseudo_directory! {
         "nested" => pseudo_directory! {
             "file" => read_write(
-                        simple_init_vmo_resizable_with_capacity(&b"Content".to_vec(), 100),
-                        move |_| {
-                            future::ready(())
-                        })
+                        simple_init_vmo_resizable_with_capacity(&b"Content".to_vec(), 100))
         },
     };
 

@@ -2,18 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//!
 //! Implementation of a file backed by a VMO buffer shared by all the file connections.  From the
-//! library user side, these files are backed by asynchronous `init_vmo` and/or `consume_vmo`
-//! callbacks.
+//! library user side, these files are backed by asynchronous `init_vmo` callback.
 //!
 //! Connections to this kind of file synchronize and perform operations on a shared VMO initially
-//! provided by the `init_vmo` callback.   When the last connection is closed, `consume_vmo` is
-//! called.  If `consume_vmo` is not provided, then the VMO is just dropped.
+//! provided by the `init_vmo` callback. `init_vmo` callback is called when the first connection to
+//! the file is established and is responsible for providing a VMO to be used by all future
+//! connections.
 //!
-//! `init_vmo` callback is called when the first connection to the file is established and is
-//! responsible for providing a VMO to be used by all the connection.
-//!
-//! `consume_vmo` callback, if any, is called when the last active connection to the file is closed.
 
 #![warn(missing_docs)]
 
@@ -26,9 +23,7 @@ use crate::{
     common::send_on_open_with_error,
     directory::entry::{DirectoryEntry, EntryInfo},
     execution_scope::ExecutionScope,
-    file::vmo::connection::{
-        io1::VmoFileConnection, AsyncConsumeVmo, AsyncInitVmo, VmoFileInterface,
-    },
+    file::vmo::connection::{io1::VmoFileConnection, AsyncInitVmo, VmoFileInterface},
     path::Path,
 };
 
@@ -38,12 +33,7 @@ use {
     fuchsia_zircon::{Status, Vmo, VmoOptions},
     futures::future::BoxFuture,
     futures::lock::{Mutex, MutexLockFuture},
-    std::{
-        future::Future,
-        pin::Pin,
-        sync::Arc,
-        task::{Context, Poll},
-    },
+    std::{future::Future, sync::Arc},
 };
 
 /// `init_vmo` callback returns an instance of this struct to describe the VMO it has generated, as
@@ -77,41 +67,19 @@ pub struct NewVmo {
 /// an error code.
 pub type InitVmoResult = Result<NewVmo, Status>;
 
-/// `consume_vmo` will be ran in the scope of the last connection to the file, but the connection
-/// itself might be closed by the time `consume_vmo` completes.  This result does not have an
-/// embedded error information in it, as it does not make sense to report errors only on the last
-/// connection, as this introduces race conditions (which connection is the last one?).
-pub type ConsumeVmoResult = ();
-
-/// This is a "stub" type used by [`read_only`] constructor, when it needs to generate type for the
-/// `consume_vmo` callback that is never used.
-pub struct StubConsumeVmoRes;
-
-impl Future for StubConsumeVmoRes {
-    type Output = ConsumeVmoResult;
-
-    fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
-        Poll::Pending
-    }
-}
-
 /// Creates a new read-only `VmoFile` backed by the specified `init_vmo` handler.
 ///
 /// The `init_vmo` handler is called to initialize a VMO for the very first connection to the file.
-/// Should all connections be closed, the VMO will be discarded, and any new connections will
-/// cause `init_vmo` to be called again.
 ///
 /// New connections are only allowed when they specify "read-only" access to the file content.
 ///
 /// For more details on this interaction, see the module documentation.
-pub fn read_only<InitVmo, InitVmoFuture>(
-    init_vmo: InitVmo,
-) -> Arc<VmoFile<InitVmo, InitVmoFuture, fn(Vmo) -> StubConsumeVmoRes, StubConsumeVmoRes>>
+pub fn read_only<InitVmo, InitVmoFuture>(init_vmo: InitVmo) -> Arc<VmoFile<InitVmo, InitVmoFuture>>
 where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, None, true, false, false, fio::INO_UNKNOWN)
+    VmoFile::new(init_vmo, true, false, false)
 }
 
 /// Creates a new read-exec-only `VmoFile` backed by the specified `init_vmo` handler. It is the
@@ -119,20 +87,15 @@ where
 /// (namely, it must have both ZX_RIGHT_READ and ZX_RIGHT_EXECUTE).
 ///
 /// The `init_vmo` handler is called to initialize a VMO for the very first connection to the file.
-/// Should all connections be closed, the VMO will be discarded, and any new connections will
-/// cause `init_vmo` to be called again.
-///
 /// New connections are only allowed when they specify read and/or execute access to the file.
 ///
 /// For more details on this interaction, see the module documentation.
-pub fn read_exec<InitVmo, InitVmoFuture>(
-    init_vmo: InitVmo,
-) -> Arc<VmoFile<InitVmo, InitVmoFuture, fn(Vmo) -> StubConsumeVmoRes, StubConsumeVmoRes>>
+pub fn read_exec<InitVmo, InitVmoFuture>(init_vmo: InitVmo) -> Arc<VmoFile<InitVmo, InitVmoFuture>>
 where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, None, true, false, true, fio::INO_UNKNOWN)
+    VmoFile::new(init_vmo, true, false, true)
 }
 
 fn init_vmo<'a>(content: Arc<[u8]>) -> impl Fn() -> BoxFuture<'a, InitVmoResult> + Send + Sync {
@@ -158,8 +121,6 @@ pub fn read_only_static<Bytes>(
     VmoFile<
         impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
         BoxFuture<'static, InitVmoResult>,
-        fn(Vmo) -> StubConsumeVmoRes,
-        StubConsumeVmoRes,
     >,
 >
 where
@@ -178,28 +139,10 @@ pub fn read_only_const(
     VmoFile<
         impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync,
         BoxFuture<'static, InitVmoResult>,
-        fn(Vmo) -> StubConsumeVmoRes,
-        StubConsumeVmoRes,
     >,
 > {
     let content: Arc<[u8]> = bytes.to_vec().clone().into();
     read_only(init_vmo(content.clone()))
-}
-
-/// Creates new non-writeable `VmoFile` backed by the specified `init_vmo` and `consume_vmo`
-/// handlers. Prefer using the read_only, read_exec, etc. helper functions unless a specific
-/// inode is required.
-pub fn create_immutable_vmo_file<InitVmo, InitVmoFuture>(
-    init_vmo: InitVmo,
-    readable: bool,
-    executable: bool,
-    inode: u64,
-) -> Arc<VmoFile<InitVmo, InitVmoFuture, fn(Vmo) -> StubConsumeVmoRes, StubConsumeVmoRes>>
-where
-    InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
-    InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
-{
-    VmoFile::new(init_vmo, None, readable, false, executable, inode)
 }
 
 /// Just like `simple_init_vmo`, but allows one to specify the capacity explicitly, instead of
@@ -250,86 +193,38 @@ pub fn simple_init_vmo_resizable_with_capacity(
     }
 }
 
-/// Creates a new write-only `VmoFile` backed by the specified `init_vmo` and `consume_vmo`
-/// handlers.
+/// Creates new `VmoFile` backed by the specified `init_vmo` handler.
 ///
 /// The `init_vmo` handler is called to initialize a VMO for the very first connection to the file.
-/// Should all connections be closed, the VMO will be discarded, and any new connections will
-/// cause `init_vmo` to be called again.
-///
-/// The `consume_vmo` handler is called when the last connection to the file is closed and it can
-/// process the VMO in some way.  Should a new connection be opened, `init_vmo` will be invoked to
-/// provide a VMO backing this new connection.
-///
-/// New connections are only allowed when they specify "write-only" access to the file content.
-///
-/// For more details on these interaction, see the module documentation.
-pub fn write_only<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture>(
-    init_vmo: InitVmo,
-    consume_vmo: ConsumeVmo,
-) -> Arc<VmoFile<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture>>
-where
-    InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
-    InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
-    ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
-    ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
-{
-    VmoFile::new(init_vmo, Some(consume_vmo), false, true, false, fio::INO_UNKNOWN)
-}
-
-/// Creates new `VmoFile` backed by the specified `init_vmo` and `consume_vmo` handlers.
-///
-/// The `init_vmo` handler is called to initialize a VMO for the very first connection to the file.
-/// Should all connections be closed, the VMO will be discarded, and any new connections will
-/// cause `init_vmo` to be called again.
-///
-/// The `consume_vmo` handler is called when the last connection to the file is closed and it can
-/// process the VMO in some way.  Should a new connection be opened, `init_vmo` will be invoked to
-/// provide a VMO backing this new connection.
 ///
 /// New connections may specify any kind of access to the file content.
 ///
 /// For more details on these interaction, see the module documentation.
-pub fn read_write<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture>(
-    init_vmo: InitVmo,
-    consume_vmo: ConsumeVmo,
-) -> Arc<VmoFile<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture>>
+pub fn read_write<InitVmo, InitVmoFuture>(init_vmo: InitVmo) -> Arc<VmoFile<InitVmo, InitVmoFuture>>
 where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
-    ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
-    ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
 {
-    VmoFile::new(init_vmo, Some(consume_vmo), true, true, false, fio::INO_UNKNOWN)
+    VmoFile::new(init_vmo, true, true, false)
 }
 
 /// Implementation of an asynchronous VMO-backed file in a virtual file system. This is created by
-/// passing async `init_vmo` and/or `consume_vmo` callbacks to the exported constructor functions.
+/// passing async `init_vmo` callback to the exported constructor functions.
 ///
 /// Futures returned by these callbacks will be executed by the library using connection specific
 /// [`ExecutionScope`].
 ///
 /// See the module documentation for more details.
-pub struct VmoFile<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture>
+pub struct VmoFile<InitVmo, InitVmoFuture>
 where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
-    ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
-    ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
 {
     init_vmo: InitVmo,
-
-    /// When the last connection to the file is gone, this callback will be used to "recycle" the
-    /// VMO.  If the file is writable, then the callback can update the file content.  If the
-    /// callback is absent, the VMO handle is just released.
-    consume_vmo: Option<ConsumeVmo>,
-
     /// Specifies if the file is readable. `init_vmo` is always invoked even for non-readable VMOs.
     readable: bool,
 
-    /// Specifies if the file is writable.  `consume_vmo` might be provided even for a read-only
-    /// file in order to reprocess the VMO when all the connections are gone.  It is an error to
-    /// have a writable file without a `consume_vmo` though.
+    /// Specifies if the file is writable.
     writable: bool,
 
     /// Specifies if the file can be opened as executable.
@@ -366,35 +261,47 @@ pub(super) enum VmoFileState {
         /// Maximum capacity we are allowed to extend the VMO size to.
         capacity: u64,
 
-        /// Number of active connections to the file.  When this drops to 0, we give away the VMO
-        /// to the `consume_vmo` handler (if any), and then switch to the `Uninitialized` state.
+        /// Number of active connections to the file.
         connection_count: u64,
     },
 }
 
-impl<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture>
-    VmoFile<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture>
+impl<InitVmo, InitVmoFuture> VmoFile<InitVmo, InitVmoFuture>
 where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
-    ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
-    ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
 {
-    fn new(
+    /// Create a new VmoFile. The reported inode value will be [`fio::INO_UNKNOWN`].
+    /// See [`VmoFile::new_with_inode()`] to construct a VmoFile with an explicit inode value.
+    ///
+    /// # Arguments
+    ///
+    /// * `init_vmo` - Async callback to create the Vmo backing this file upon first connection.
+    /// * `readable` - If true, allow connections with OpenFlags::RIGHT_READABLE.
+    /// * `writable` - If true, allow connections with OpenFlags::RIGHT_WRITABLE.
+    /// * `executable` - If true, allow connections with OpenFlags::RIGHT_EXECUTABLE.
+    pub fn new(init_vmo: InitVmo, readable: bool, writable: bool, executable: bool) -> Arc<Self> {
+        Self::new_with_inode(init_vmo, readable, writable, executable, fio::INO_UNKNOWN)
+    }
+
+    /// Create a new VmoFile with the specified options and inode value.
+    ///
+    /// # Arguments
+    ///
+    /// * `init_vmo` - Async callback to create the Vmo backing this file upon first connection.
+    /// * `readable` - If true, allow connections with OpenFlags::RIGHT_READABLE.
+    /// * `writable` - If true, allow connections with OpenFlags::RIGHT_WRITABLE.
+    /// * `executable` - If true, allow connections with OpenFlags::RIGHT_EXECUTABLE.
+    /// * `inode` - Inode value to report when getting the VmoFile's attributes.
+    pub fn new_with_inode(
         init_vmo: InitVmo,
-        consume_vmo: Option<ConsumeVmo>,
         readable: bool,
         writable: bool,
         executable: bool,
         inode: u64,
     ) -> Arc<Self> {
-        // A writable file has to have a `consume_vmo` handler.  Otherwise we may lose updates
-        // without realizing it.
-        assert!(!writable || consume_vmo.is_some());
-
         Arc::new(VmoFile {
             init_vmo,
-            consume_vmo,
             readable,
             writable,
             executable,
@@ -404,29 +311,13 @@ where
     }
 }
 
-impl<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture> VmoFileInterface
-    for VmoFile<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture>
+impl<InitVmo, InitVmoFuture> VmoFileInterface for VmoFile<InitVmo, InitVmoFuture>
 where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
-    ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
-    ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
 {
     fn init_vmo(self: Arc<Self>) -> AsyncInitVmo {
         Box::pin((self.init_vmo)())
-    }
-
-    fn consume_vmo(self: Arc<Self>, vmo: Vmo) -> AsyncConsumeVmo {
-        match &self.consume_vmo {
-            None => {
-                if self.writable && cfg!(debug_assertions) {
-                    panic!("`consume_vmo` is None for a writable file")
-                } else {
-                    AsyncConsumeVmo::Immediate(())
-                }
-            }
-            Some(consume_vmo) => AsyncConsumeVmo::Future(Box::pin(consume_vmo(vmo))),
-        }
     }
 
     fn state(&self) -> MutexLockFuture<VmoFileState> {
@@ -450,13 +341,10 @@ where
     }
 }
 
-impl<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture> DirectoryEntry
-    for VmoFile<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture>
+impl<InitVmo, InitVmoFuture> DirectoryEntry for VmoFile<InitVmo, InitVmoFuture>
 where
     InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
-    ConsumeVmo: Fn(Vmo) -> ConsumeVmoFuture + Send + Sync + 'static,
-    ConsumeVmoFuture: Future<Output = ConsumeVmoResult> + Send + 'static,
 {
     fn open(
         self: Arc<Self>,

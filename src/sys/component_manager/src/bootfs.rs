@@ -140,8 +140,7 @@ impl BootfsSvc {
                 vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("Failed to duplicate VMO.");
             async move { Ok(vmo::NewVmo { vmo: vmo_dup, size, capacity: size }) }
         };
-
-        Ok(vmo::create_immutable_vmo_file(init_vmo, true, is_exec, inode))
+        Ok(vmo::VmoFile::new_with_inode(init_vmo, true, false, is_exec, inode))
     }
 
     /// Read configs from the parsed bootfs image before the filesystem has been fully initialized.

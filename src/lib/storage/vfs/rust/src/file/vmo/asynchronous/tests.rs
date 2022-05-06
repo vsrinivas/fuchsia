@@ -4,7 +4,7 @@
 
 //! Tests for the asynchronous files.
 
-use super::{read_only, read_only_const, read_only_static, read_write, write_only, NewVmo};
+use super::{read_only, read_only_const, read_only_static, read_write, NewVmo};
 
 // Macros are exported into the root of the crate.
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
     assert_seek, assert_truncate, assert_truncate_err, assert_vmo_content, assert_write,
     assert_write_at, assert_write_at_err, assert_write_err, assert_write_fidl_err_closed,
     clone_as_file_assert_err, clone_get_proxy_assert, clone_get_vmo_file_proxy_assert_err,
-    clone_get_vmo_file_proxy_assert_ok, report_invalid_vmo_content,
+    clone_get_vmo_file_proxy_assert_ok,
 };
 
 use crate::{
@@ -24,10 +24,9 @@ use crate::{
 };
 
 use super::test_utils::{
-    simple_consume_vmo, simple_init_vmo, simple_init_vmo_resizable,
-    simple_init_vmo_resizable_with_capacity, simple_init_vmo_with_capacity, simple_read_only,
-    simple_read_only_with_inode, simple_read_write, simple_read_write_resizeable,
-    simple_write_only, simple_write_only_with_capacity,
+    simple_init_vmo, simple_init_vmo_resizable, simple_init_vmo_resizable_with_capacity,
+    simple_init_vmo_with_capacity, simple_read_only, simple_read_only_with_inode,
+    simple_read_write, simple_read_write_resizeable,
 };
 
 use {
@@ -35,9 +34,8 @@ use {
     fidl_fuchsia_io as fio,
     fuchsia_async::TestExecutor,
     fuchsia_zircon::{sys::ZX_OK, Status, Vmo},
-    futures::{channel::oneshot, future::join, FutureExt},
+    futures::{channel::oneshot, future::join},
     libc::{S_IRUSR, S_IWUSR},
-    parking_lot::Mutex,
     std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -159,18 +157,6 @@ fn read_only_read_with_describe() {
 }
 
 #[test]
-fn write_only_write() {
-    run_server_client(
-        fio::OpenFlags::RIGHT_WRITABLE,
-        simple_write_only(b"Write only test"),
-        |proxy| async move {
-            assert_write!(proxy, "Write only test");
-            assert_close!(proxy);
-        },
-    );
-}
-
-#[test]
 fn read_twice() {
     let attempts = Arc::new(AtomicUsize::new(0));
 
@@ -199,39 +185,6 @@ fn read_twice() {
             assert_read!(proxy, "State one");
             assert_seek!(proxy, 0, Start);
             assert_read!(proxy, "State one");
-            assert_close!(proxy);
-        },
-    );
-
-    assert_eq!(attempts.load(Ordering::Relaxed), 1);
-}
-
-#[test]
-fn write_twice() {
-    let attempts = Arc::new(AtomicUsize::new(0));
-
-    run_server_client(
-        fio::OpenFlags::RIGHT_WRITABLE,
-        write_only(simple_init_vmo_with_capacity(b"", 100), {
-            let attempts = attempts.clone();
-            move |vmo| {
-                let attempts = attempts.clone();
-                async move {
-                    let write_attempt = attempts.fetch_add(1, Ordering::Relaxed);
-                    match write_attempt {
-                        0 => {
-                            assert_vmo_content!(&vmo, b"Write one and two\0");
-                        }
-                        _ => {
-                            report_invalid_vmo_content!(&vmo, "Second consume_vmo() call");
-                        }
-                    }
-                }
-            }
-        }),
-        |proxy| async move {
-            assert_write!(proxy, "Write one");
-            assert_write!(proxy, " and two");
             assert_close!(proxy);
         },
     );
@@ -312,31 +265,15 @@ fn read_error() {
 
 #[test]
 fn read_write_no_write_flag() {
-    let consume_attempt = Arc::new(AtomicUsize::new(0));
-
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE,
-        read_write(simple_init_vmo_resizable(b"Can read"), {
-            let consume_attempt = consume_attempt.clone();
-            move |vmo| {
-                let consume_attempt = consume_attempt.clone();
-                async move {
-                    let consume_attempt = consume_attempt.fetch_add(1, Ordering::Relaxed);
-                    match consume_attempt {
-                        0 => {
-                            assert_vmo_content!(&vmo, b"Can read\0");
-                        }
-                        _ => {
-                            report_invalid_vmo_content!(&vmo, "Second consume_vmo() call");
-                        }
-                    }
-                }
-            }
-        }),
+        read_write(simple_init_vmo_resizable(b"Can read")),
         |proxy| async move {
             assert_read!(proxy, "Can read");
             assert_write_err!(proxy, "Can write", Status::BAD_HANDLE);
             assert_write_at_err!(proxy, 0, "Can write", Status::BAD_HANDLE);
+            assert_seek!(proxy, 0, Start);
+            assert_read!(proxy, "Can read");
             assert_close!(proxy);
         },
     );
@@ -346,7 +283,7 @@ fn read_write_no_write_flag() {
 fn read_write_no_read_flag() {
     run_server_client(
         fio::OpenFlags::RIGHT_WRITABLE,
-        read_write(simple_init_vmo_resizable(b""), simple_consume_vmo(b"Can write\0\0")),
+        read_write(simple_init_vmo_resizable(b"")),
         |proxy| async move {
             assert_read_err!(proxy, Status::BAD_HANDLE);
             assert_read_at_err!(proxy, 0, Status::BAD_HANDLE);
@@ -363,41 +300,19 @@ fn read_write_no_read_flag() {
 fn read_returns_more_than_capacity() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        read_write(
-            simple_init_vmo_resizable_with_capacity(
-                b"`init_vmo` returns a VMO larger than capacity",
-                10,
-            ),
-            simple_consume_vmo(b"     Write then can write beyond max capacity"),
-        ),
+        read_write(simple_init_vmo_resizable_with_capacity(
+            b"`init_vmo` returns a VMO larger than capacity",
+            10,
+        )),
         |proxy| async move {
             assert_read!(proxy, "`init_vmo` returns");
             assert_read!(proxy, " a VMO larger");
             assert_seek!(proxy, 0, Start);
             assert_write!(proxy, "     Write then can write beyond max");
-            assert_close!(proxy);
-        },
-    );
-}
 
-#[test]
-fn write_and_drop_connection() {
-    let (consume_vmo_call_tx, consume_vmo_call_rx) = oneshot::channel::<()>();
-    let consume_vmo_call_tx = Mutex::new(Some(consume_vmo_call_tx));
-    run_server_client(
-        fio::OpenFlags::RIGHT_WRITABLE,
-        write_only(simple_init_vmo_resizable(b""), move |vmo| {
-            let mut lock = consume_vmo_call_tx.lock();
-            let consume_vmo_call_tx = lock.take().unwrap();
-            Box::pin(async move {
-                assert_vmo_content!(&vmo, b"Updated content");
-                consume_vmo_call_tx.send(()).unwrap();
-            })
-        }),
-        move |proxy| async move {
-            assert_write!(proxy, "Updated content");
-            drop(proxy);
-            consume_vmo_call_rx.await.unwrap();
+            assert_seek!(proxy, 0, Start);
+            assert_read!(proxy, "     Write then can write beyond max capacity");
+            assert_close!(proxy);
         },
     );
 }
@@ -406,15 +321,15 @@ fn write_and_drop_connection() {
 fn open_truncate() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::TRUNCATE,
-        read_write(
-            simple_init_vmo_resizable(b"Will be erased"),
-            simple_consume_vmo(b"File content"),
-        ),
+        read_write(simple_init_vmo_resizable(b"Will be erased")),
         |proxy| {
             async move {
                 // Seek to the end to check the current size.
                 assert_seek!(proxy, 0, End, Ok(0));
                 assert_write!(proxy, "File content");
+                // Ensure remaining contents to not leak out of read call.
+                assert_seek!(proxy, 0, Start);
+                assert_read!(proxy, "File content");
                 assert_close!(proxy);
             }
         },
@@ -469,10 +384,13 @@ fn read_mixed_with_read_at() {
 #[test]
 fn write_at_0() {
     run_server_client(
-        fio::OpenFlags::RIGHT_WRITABLE,
-        simple_write_only(b"File content"),
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        simple_read_write(b"File content"),
         |proxy| async move {
-            assert_write_at!(proxy, 0, "File content");
+            assert_write_at!(proxy, 0, "New content!");
+            assert_seek!(proxy, 0, Start);
+            // Validate contents.
+            assert_read!(proxy, "New content!");
             assert_close!(proxy);
         },
     );
@@ -481,14 +399,15 @@ fn write_at_0() {
 #[test]
 fn write_at_overlapping() {
     run_server_client(
-        fio::OpenFlags::RIGHT_WRITABLE,
-        simple_write_only(b"Whole file content"),
-        //                  0         1
-        //                  012345678901234567
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        simple_read_write(b"012345678901234567"),
         |proxy| async move {
             assert_write_at!(proxy, 8, "le content");
             assert_write_at!(proxy, 6, "file");
             assert_write_at!(proxy, 0, "Whole file");
+            // Validate contents.
+            assert_seek!(proxy, 0, Start);
+            assert_read!(proxy, "Whole file content");
             assert_close!(proxy);
         },
     );
@@ -497,16 +416,17 @@ fn write_at_overlapping() {
 #[test]
 fn write_mixed_with_write_at() {
     run_server_client(
-        fio::OpenFlags::RIGHT_WRITABLE,
-        simple_write_only(b"Whole file content"),
-        //                  0         1
-        //                  012345678901234567
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        simple_read_write(b"012345678901234567"),
         |proxy| async move {
             assert_write!(proxy, "whole");
             assert_write_at!(proxy, 0, "Who");
             assert_write!(proxy, " 1234 ");
             assert_write_at!(proxy, 6, "file");
             assert_write!(proxy, "content");
+            // Validate contents.
+            assert_seek!(proxy, 0, Start);
+            assert_read!(proxy, "Whole file content");
             assert_close!(proxy);
         },
     );
@@ -516,12 +436,7 @@ fn write_mixed_with_write_at() {
 fn seek_read_write() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        simple_read_write(
-            b"Initial",
-            b"Final content",
-            // 0        1
-            // 123456789012
-        ),
+        simple_read_write(b"Initial"),
         |proxy| {
             async move {
                 assert_read!(proxy, "Init");
@@ -532,6 +447,9 @@ fn seek_read_write() {
                 // buffer: "Final con"
                 assert_seek!(proxy, 0, End, Ok(9));
                 assert_write!(proxy, "tent");
+                // Validate contents.
+                assert_seek!(proxy, 0, Start);
+                assert_read!(proxy, "Final content");
                 assert_close!(proxy);
             }
         },
@@ -542,12 +460,15 @@ fn seek_read_write() {
 fn write_after_seek_beyond_capacity_fills_gap_with_zeroes() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        simple_read_write(b"Before gap", b"Before gap\0\0\0\0After gap"),
+        simple_read_write(b"Before gap"),
         |proxy| {
             async move {
                 assert_seek!(proxy, 0, End, Ok(10));
                 assert_seek!(proxy, 4, Current, Ok(14)); // Four byte gap past original content.
                 assert_write!(proxy, "After gap");
+                // Validate contents.
+                assert_seek!(proxy, 0, Start);
+                assert_read!(proxy, "Before gap\0\0\0\0After gap");
                 assert_close!(proxy);
             }
         },
@@ -580,9 +501,6 @@ fn seek_valid_after_size_before_capacity() {
         simple_read_write(
             b"Content",
             // 123456
-            b"Content extended further",
-            // 0        1         2
-            // 12345678901234567890123
         ),
         |proxy| {
             async move {
@@ -603,6 +521,9 @@ fn seek_valid_after_size_before_capacity() {
                 assert_write!(proxy, "end");
                 assert_seek!(proxy, 16, Start);
                 assert_write!(proxy, " fur");
+                // Validate contents.
+                assert_seek!(proxy, 0, Start);
+                assert_read!(proxy, "Content extended further");
                 assert_close!(proxy);
             }
         },
@@ -647,17 +568,14 @@ fn seek_invalid_before_0() {
 fn seek_after_expanding_truncate() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        read_write(
-            simple_init_vmo_resizable(b"Content"),
-            //                          0123456
-            simple_consume_vmo(b"Content\0\0\0end"),
-            //                   0            1
-            //                   01234567 8 9 012
-        ),
+        read_write(simple_init_vmo_resizable(b"Content")),
         |proxy| async move {
             assert_truncate!(proxy, 12); // Increases size of the file to 12, padding with zeroes.
             assert_seek!(proxy, 10, Start);
             assert_write!(proxy, "end");
+            // Validate contents.
+            assert_seek!(proxy, 0, Start);
+            assert_read!(proxy, "Content\0\0\0end");
             assert_close!(proxy);
         },
     );
@@ -667,12 +585,15 @@ fn seek_after_expanding_truncate() {
 fn seek_beyond_size_after_shrinking_truncate() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        read_write(simple_init_vmo_resizable(b"Content"), simple_consume_vmo(b"Cont\0\0\0\0end")),
+        read_write(simple_init_vmo_resizable(b"Content")),
         |proxy| async move {
             assert_truncate!(proxy, 4); // Decrease the size of the file to four.
             assert_seek!(proxy, 0, End, Ok(4));
             assert_seek!(proxy, 4, Current, Ok(8)); // Four bytes beyond the truncated end.
             assert_write!(proxy, "end");
+            // Validate contents.
+            assert_seek!(proxy, 0, Start);
+            assert_read!(proxy, "Cont\0\0\0\0end");
             assert_close!(proxy);
         },
     );
@@ -707,7 +628,7 @@ fn seek_allowed_beyond_capacity() {
 fn truncate_to_0() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        read_write(simple_init_vmo_resizable(b"Content"), simple_consume_vmo(b"Replaced")),
+        read_write(simple_init_vmo_resizable(b"Content")),
         |proxy| {
             async move {
                 assert_read!(proxy, "Content");
@@ -716,33 +637,11 @@ fn truncate_to_0() {
                 assert_seek!(proxy, 0, Current, Ok(7));
                 assert_seek!(proxy, 0, Start);
                 assert_write!(proxy, "Replaced");
+                // Validate contents.
+                assert_seek!(proxy, 0, Start);
+                assert_read!(proxy, "Replaced");
                 assert_close!(proxy);
             }
-        },
-    );
-}
-
-#[test]
-fn write_then_truncate() {
-    run_server_client(
-        fio::OpenFlags::RIGHT_WRITABLE,
-        simple_write_only(b"Replaced"),
-        |proxy| async move {
-            assert_write!(proxy, "Replaced content");
-            assert_truncate!(proxy, 8);
-            assert_close!(proxy);
-        },
-    );
-}
-
-#[test]
-fn truncate_beyond_capacity() {
-    run_server_client(
-        fio::OpenFlags::RIGHT_WRITABLE,
-        simple_write_only_with_capacity(10, b""),
-        |proxy| async move {
-            assert_truncate_err!(proxy, 20, Status::OUT_OF_RANGE);
-            assert_close!(proxy);
         },
     );
 }
@@ -766,23 +665,21 @@ fn truncate_read_only_file() {
 fn truncate_large_file_beyond_capacity() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        read_write(
-            simple_init_vmo_resizable_with_capacity(
-                b"Content is very long",
-                // 0        1
-                // 1234567890123456789
-                10,
-            ),
-            simple_consume_vmo(b"Content is very"),
-            //                   0         1
-            //                   012345678901234
-        ),
+        read_write(simple_init_vmo_resizable_with_capacity(
+            b"Content is very long",
+            // 0        1
+            // 1234567890123456789
+            10,
+        )),
         |proxy| async move {
             assert_read!(proxy, "Content");
             assert_truncate_err!(proxy, 40, Status::OUT_OF_RANGE);
             assert_truncate!(proxy, 16);
             assert_truncate!(proxy, 15);
             assert_truncate_err!(proxy, 16, Status::OUT_OF_RANGE);
+            // Validate contents.
+            assert_seek!(proxy, 0, Start);
+            assert_read!(proxy, "Content is very");
             assert_close!(proxy);
         },
     );
@@ -792,7 +689,7 @@ fn truncate_large_file_beyond_capacity() {
 fn clone_reduce_access() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        simple_read_write_resizeable(b"Initial content", b"As updated"),
+        simple_read_write_resizeable(b"Initial content"),
         |first_proxy| async move {
             assert_read!(first_proxy, "Initial content");
             assert_truncate!(first_proxy, 0);
@@ -819,7 +716,7 @@ fn clone_inherit_access() {
 
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        simple_read_write_resizeable(b"Initial content", b"Overwritten"),
+        simple_read_write_resizeable(b"Initial content"),
         |first_proxy| async move {
             assert_read!(first_proxy, "Initial content");
             assert_truncate!(first_proxy, 0);
@@ -889,29 +786,10 @@ fn get_attr_read_only_with_inode() {
 }
 
 #[test]
-fn get_attr_write_only() {
-    run_server_client(fio::OpenFlags::RIGHT_WRITABLE, simple_write_only(b""), |proxy| async move {
-        assert_get_attr!(
-            proxy,
-            fio::NodeAttributes {
-                mode: fio::MODE_TYPE_FILE | S_IWUSR,
-                id: fio::INO_UNKNOWN,
-                content_size: 0,
-                storage_size: 100,
-                link_count: 1,
-                creation_time: 0,
-                modification_time: 0,
-            }
-        );
-        assert_close!(proxy);
-    });
-}
-
-#[test]
 fn get_attr_read_write() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        simple_read_write(b"Content", b"Content"),
+        simple_read_write(b"Content"),
         |proxy| async move {
             assert_get_attr!(
                 proxy,
@@ -971,7 +849,7 @@ fn node_reference_ignores_read_access() {
 fn node_reference_ignores_write_access() {
     run_server_client(
         fio::OpenFlags::NODE_REFERENCE | fio::OpenFlags::RIGHT_WRITABLE,
-        write_only(simple_init_vmo(b""), simple_consume_vmo(b"")),
+        read_only(simple_init_vmo(b"")),
         |proxy| async move {
             assert_write_err!(proxy, "Can write", Status::BAD_HANDLE);
             assert_close!(proxy);
@@ -983,7 +861,7 @@ fn node_reference_ignores_write_access() {
 fn clone_can_not_remove_node_reference() {
     run_server_client(
         fio::OpenFlags::NODE_REFERENCE | fio::OpenFlags::RIGHT_READABLE,
-        read_write(simple_init_vmo(b""), simple_consume_vmo(b"")),
+        read_write(simple_init_vmo(b"")),
         |first_proxy| {
             async move {
                 // first_proxy would not have OPEN_RIGHT_READABLE, as it will be dropped by the
@@ -1037,7 +915,7 @@ fn mock_directory_with_one_file_and_two_connections() {
     let exec = TestExecutor::new().expect("Executor creation failed");
     let scope = ExecutionScope::new();
 
-    let server = simple_read_write_resizeable(b"Initial", b"Second update");
+    let server = simple_read_write_resizeable(b"Initial");
 
     let create_client = move |initial_content: &'static str,
                               after_wait_content: &'static str,
@@ -1113,142 +991,6 @@ fn mock_directory_with_one_file_and_two_connections() {
     .run();
 }
 
-/// This test uses an `init_vmo` callback that does not immediately return a result and instead
-/// waits for a signal before continuing.  We confirm the behavior we expect from the file -
-/// notably that we are able to send multiple requests to the file before the connection is
-/// actually created and populated, and have them be executed once the buffer is filled with what
-/// we expect.
-#[test]
-fn slow_init_vmo() {
-    let init_vmo_counter = Arc::new(AtomicUsize::new(0));
-    let client_counter = Arc::new(AtomicUsize::new(0));
-    let (finish_init_vmo_tx, finish_init_vmo_rx) = oneshot::channel::<()>();
-    let finish_init_vmo_rx = finish_init_vmo_rx.shared();
-
-    test_server_client(
-        fio::OpenFlags::RIGHT_READABLE,
-        read_only({
-            let init_vmo_counter = init_vmo_counter.clone();
-            move || {
-                let init_vmo_counter = init_vmo_counter.clone();
-                let finish_init_vmo_rx = finish_init_vmo_rx.clone();
-                Box::pin(async move {
-                    init_vmo_counter.fetch_add(1, Ordering::Relaxed);
-                    finish_init_vmo_rx
-                        .await
-                        .expect("finish_init_vmo_tx was not called before been dropped.");
-                    init_vmo_counter.fetch_add(1, Ordering::Relaxed);
-
-                    let content = b"Content";
-
-                    let size = content.len() as u64;
-                    let capacity = 100;
-                    let vmo_size = std::cmp::max(size, capacity);
-                    let vmo = Vmo::create(vmo_size)?;
-                    vmo.write(content, 0)?;
-                    Ok(NewVmo { vmo, size, capacity })
-                })
-            }
-        }),
-        {
-            let client_counter = client_counter.clone();
-            |proxy| async move {
-                client_counter.fetch_add(1, Ordering::Relaxed);
-
-                assert_read!(proxy, "Content");
-
-                assert_seek!(proxy, 4, Start);
-                assert_read!(proxy, "ent");
-                assert_close!(proxy);
-
-                client_counter.fetch_add(1, Ordering::Relaxed);
-            }
-        },
-    )
-    .coordinator(|mut controller| {
-        let check_init_vmo_client_counts = |expected_init_vmo, expected_client| {
-            assert_eq!(init_vmo_counter.load(Ordering::Relaxed), expected_init_vmo);
-            assert_eq!(client_counter.load(Ordering::Relaxed), expected_client);
-        };
-        controller.run_until_stalled();
-
-        // init_vmo is waiting, as well as the client.
-        check_init_vmo_client_counts(1, 1);
-
-        finish_init_vmo_tx.send(()).unwrap();
-        controller.run_until_complete();
-
-        // Both have reached the end.
-        check_init_vmo_client_counts(2, 2);
-    })
-    .run();
-}
-
-/// This test is very similar to the `slow_init_vmo` above, except that it lags the `consume_vmo`
-/// call instead.  We want to observer the client connection been closed before `consume_vmo`
-/// completes.
-#[test]
-fn slow_consume_vmo() {
-    let consume_vmo_counter = Arc::new(AtomicUsize::new(0));
-    let client_counter = Arc::new(AtomicUsize::new(0));
-    let (finish_consume_vmo_tx, finish_consume_vmo_rx) = oneshot::channel::<()>();
-    let finish_consume_vmo_rx = finish_consume_vmo_rx.shared();
-
-    let (finish_client_tx, finish_client_rx) = oneshot::channel::<()>();
-
-    test_server_client(
-        fio::OpenFlags::RIGHT_WRITABLE,
-        write_only(simple_init_vmo(b""), {
-            let consume_vmo_counter = consume_vmo_counter.clone();
-            let finish_consume_vmo_rx = finish_consume_vmo_rx.shared();
-            move |vmo| {
-                let consume_vmo_counter = consume_vmo_counter.clone();
-                let finish_consume_vmo_rx = finish_consume_vmo_rx.clone();
-                async move {
-                    assert_vmo_content!(&vmo, b"Content");
-
-                    consume_vmo_counter.fetch_add(1, Ordering::Relaxed);
-                    finish_consume_vmo_rx.await.expect("finish_consume_vmo_tx was not called.");
-                    consume_vmo_counter.fetch_add(1, Ordering::Relaxed);
-                }
-            }
-        }),
-        {
-            let client_counter = client_counter.clone();
-            |proxy| async move {
-                client_counter.fetch_add(1, Ordering::Relaxed);
-
-                assert_write!(proxy, "Content");
-                assert_close!(proxy);
-
-                client_counter.fetch_add(1, Ordering::Relaxed);
-
-                finish_client_rx.await.expect("finish_client_tx was not called.");
-            }
-        },
-    )
-    .coordinator(|mut controller| {
-        let check_consume_vmo_client_counts = |expected_write, expected_client| {
-            assert_eq!(consume_vmo_counter.load(Ordering::Relaxed), expected_write);
-            assert_eq!(client_counter.load(Ordering::Relaxed), expected_client);
-        };
-
-        controller.run_until_stalled();
-
-        // The server is waiting, but the client is done.
-        check_consume_vmo_client_counts(1, 2);
-
-        finish_consume_vmo_tx.send(()).unwrap();
-        controller.run_until_stalled();
-
-        // The server and the client are done.
-        check_consume_vmo_client_counts(2, 2);
-
-        finish_client_tx.send(()).unwrap();
-    })
-    .run();
-}
-
 #[test]
 fn get_buffer_read_only() {
     run_server_client(
@@ -1288,7 +1030,7 @@ fn get_buffer_read_only() {
 fn get_buffer_private_is_resizable() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        simple_read_write(b"Private is resizable", b"Private is resizable"),
+        simple_read_write(b"Private is resizable"),
         |proxy| async move {
             let buffer =
                 assert_get_buffer!(proxy, fio::VmoFlags::WRITE | fio::VmoFlags::PRIVATE_CLONE);
@@ -1304,44 +1046,10 @@ fn get_buffer_private_is_resizable() {
 }
 
 #[test]
-fn get_buffer_write_only() {
-    run_server_client(
-        fio::OpenFlags::RIGHT_WRITABLE,
-        simple_write_only(b"No shared writable VMOs"),
-        |proxy| {
-            async move {
-                // VMO is not resizable and can not be shared in writeable mode.
-                assert_write!(proxy, "No shared writable VMOs");
-                // Ensure we cannot get a writable VMO without specifying VmoFlags::PRIVATE_CLONE.
-                assert_get_buffer_err!(proxy, fio::VmoFlags::WRITE, Status::NOT_SUPPORTED);
-
-                assert_get_buffer_err!(
-                    proxy,
-                    fio::VmoFlags::WRITE | fio::VmoFlags::SHARED_BUFFER,
-                    Status::NOT_SUPPORTED
-                );
-
-                {
-                    let buffer = assert_get_buffer!(
-                        proxy,
-                        fio::VmoFlags::WRITE | fio::VmoFlags::PRIVATE_CLONE
-                    );
-
-                    assert_eq!(buffer.size, 23);
-                    buffer.vmo.write(b"Private is not shared", 0).unwrap();
-                }
-
-                assert_close!(proxy);
-            }
-        },
-    );
-}
-
-#[test]
 fn get_buffer_read_write() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        simple_read_write(b"Initial", b"No shared writable VMOs"),
+        simple_read_write(b"Initial"),
         |proxy| {
             async move {
                 {
@@ -1393,7 +1101,7 @@ fn get_buffer_read_write() {
 fn get_buffer_two_vmos() {
     run_server_client(
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        simple_read_write(b"Initial", b"Updated content"),
+        simple_read_write(b"Initial"),
         //                  0           0         1
         //                  0123456     012345678901234
         |proxy| async move {
@@ -1413,29 +1121,6 @@ fn get_buffer_two_vmos() {
             assert_vmo_content!(&buffer1.vmo, b"Updated content");
 
             assert_close!(proxy);
-        },
-    );
-}
-
-#[test]
-fn vmo_content_size_after_write() {
-    let (consume_vmo_call_tx, consume_vmo_call_rx) = oneshot::channel::<()>();
-    let consume_vmo_call_tx = Mutex::new(Some(consume_vmo_call_tx));
-    run_server_client(
-        fio::OpenFlags::RIGHT_WRITABLE,
-        write_only(simple_init_vmo_resizable(b""), move |vmo| {
-            let mut lock = consume_vmo_call_tx.lock();
-            let consume_vmo_call_tx = lock.take().unwrap();
-            assert_eq!(vmo.get_content_size().unwrap(), b"Updated content".len() as u64);
-            Box::pin(async move {
-                assert_vmo_content!(&vmo, b"Updated content");
-                consume_vmo_call_tx.send(()).unwrap();
-            })
-        }),
-        move |proxy| async move {
-            assert_write!(proxy, "Updated content");
-            drop(proxy);
-            consume_vmo_call_rx.await.unwrap();
         },
     );
 }

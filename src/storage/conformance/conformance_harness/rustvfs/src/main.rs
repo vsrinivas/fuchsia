@@ -50,8 +50,7 @@ fn new_vmo_file(buffer: &fidl_fuchsia_mem::Range) -> Result<Arc<dyn DirectoryEnt
             vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("Failed to duplicate VMO!").into();
         async move { Ok(vmo::NewVmo { vmo: vmo_clone, size, capacity: size }) }
     };
-    let consume_vmo = move |_vmo| async move {};
-    Ok(vmo::read_write(init_vmo, consume_vmo))
+    Ok(vmo::read_write(init_vmo))
 }
 
 /// Creates and returns a Rust VFS VmoFile-backed executable file using the contents of the
@@ -88,10 +87,8 @@ fn add_entry(
         io_test::DirectoryEntry::File(file) => {
             let name = file.name.as_ref().expect("File must have name");
             let contents = file.contents.as_ref().expect("File must have contents").clone();
-            let new_file = vmo::read_write(
-                vmo::simple_init_vmo_resizable_with_capacity(&contents, 100),
-                |_| future::ready(()),
-            );
+            let new_file =
+                vmo::read_write(vmo::simple_init_vmo_resizable_with_capacity(&contents, 100));
             dest.add_entry(name, new_file)?;
         }
         io_test::DirectoryEntry::VmoFile(vmo_file) => {
@@ -167,10 +164,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
         let scope = ExecutionScope::build()
             .token_registry(token_registry)
             .entry_constructor(simple::tree_constructor(|_parent, _filename| {
-                let entry =
-                    vmo::read_write(vmo::simple_init_vmo_resizable_with_capacity(&[], 100), |_| {
-                        future::ready(())
-                    });
+                let entry = vmo::read_write(vmo::simple_init_vmo_resizable_with_capacity(&[], 100));
                 Ok(entry)
             }))
             .new();

@@ -268,13 +268,12 @@ mod tests {
         super::*,
         fidl::endpoints::{Proxy, ServerEnd},
         fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
-        futures::future,
         std::fs,
         tempfile::{NamedTempFile, TempDir},
         vfs::{
             directory::entry::DirectoryEntry,
             execution_scope::ExecutionScope,
-            file::vmo::{read_only_static, read_write, simple_init_vmo_with_capacity, write_only},
+            file::vmo::{read_only_static, read_write, simple_init_vmo_with_capacity},
             pseudo_directory,
         },
     };
@@ -347,10 +346,8 @@ mod tests {
         let example_dir = pseudo_directory! {
             "read_only" => read_only_static("read_only"),
             "read_write" => read_write(
-                simple_init_vmo_with_capacity("read_write".as_bytes(), 100),
-                |_| future::ready(()),
+                simple_init_vmo_with_capacity("read_write".as_bytes(), 100)
             ),
-            "write_only" => write_only(simple_init_vmo_with_capacity(&[], 100), |_| future::ready(())),
         };
         let (example_dir_proxy, example_dir_service) =
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
@@ -370,9 +367,6 @@ mod tests {
             ("read_write", OpenFlags::RIGHT_READABLE, true),
             ("read_write", OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE, true),
             ("read_write", OpenFlags::RIGHT_WRITABLE, true),
-            ("write_only", OpenFlags::RIGHT_READABLE, false),
-            ("write_only", OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE, false),
-            ("write_only", OpenFlags::RIGHT_WRITABLE, true),
         ] {
             let file_proxy = open_file(&example_dir_proxy, &Path::new(file_name), flags)?;
             match (should_succeed, file_proxy.describe().await) {

@@ -13,7 +13,7 @@ use crate::{
     file::common::{get_buffer_validate_flags, new_connection_validate_flags, vmo_flags_to_rights},
     file::vmo::{
         asynchronous::{NewVmo, VmoFileState},
-        connection::{AsyncConsumeVmo, VmoFileInterface},
+        connection::VmoFileInterface,
     },
 };
 
@@ -30,7 +30,7 @@ use {
     },
     futures::{lock::MutexGuard, stream::StreamExt},
     static_assertions::assert_eq_size,
-    std::{convert::TryInto, mem, sync::Arc},
+    std::{convert::TryInto, sync::Arc},
 };
 
 macro_rules! update_initialized_state {
@@ -584,53 +584,26 @@ impl VmoFileConnection {
         Self::create_connection(self.scope.clone(), self.file.clone(), flags, server_end);
     }
 
-    /// Closes the connection, calling the `consume_vmo` callback with an updated buffer if
-    /// necessary.
     async fn handle_close<R>(&mut self, responder: R) -> Result<(), fidl::Error>
     where
         R: FnOnce(zx::Status) -> Result<(), fidl::Error>,
     {
-        let (status, async_consume_task) = {
+        let status = {
             let state = &mut *self.file.state().await;
             match state {
                 VmoFileState::Uninitialized => {
                     debug_assert!(false, "`handle_close` called for a file with no connections");
-                    (zx::Status::INTERNAL, None)
-                }
-                VmoFileState::Initialized { connection_count: 1, .. } => {
-                    match mem::replace(state, VmoFileState::Uninitialized) {
-                        VmoFileState::Uninitialized => unreachable!(),
-                        VmoFileState::Initialized { vmo, .. } => {
-                            (zx::Status::OK, Some(self.file.clone().consume_vmo(vmo)))
-                        }
-                    }
+                    zx::Status::INTERNAL
                 }
                 VmoFileState::Initialized { connection_count, .. } => {
                     *connection_count -= 1;
 
-                    (zx::Status::OK, None)
+                    zx::Status::OK
                 }
             }
         };
 
-        // Call responder ASAP, as `consume_vmo` might take some time (even though it should not).
-        let responder_res = responder(status);
-
-        if let Some(async_consume_task) = async_consume_task {
-            match async_consume_task {
-                AsyncConsumeVmo::Immediate(()) => (),
-                AsyncConsumeVmo::Future(fut) => {
-                    // If we failed to send the task to the executor, it is probably shut down or
-                    // is in the process of shutting down (this is the only error state currently).
-                    // So there is nothing for us to do, but to ignore the open.  `server_end` will
-                    // be closed when the object will be dropped - there seems to be no error to
-                    // report there.
-                    let _ = self.scope.spawn(fut);
-                }
-            };
-        }
-
-        responder_res
+        responder(status)
     }
 
     async fn handle_get_attr<R>(&mut self, responder: R) -> Result<(), fidl::Error>
@@ -926,7 +899,7 @@ impl VmoFileConnection {
                         //
                         // Minfs and blobfs may require customization.  In particular, they may want to
                         // track not just number of connections to a file, but also the number of
-                        // outstanding child VMOs.  While it is possible with the `init_vmo`/`consume_vmo`
+                        // outstanding child VMOs.  While it is possible with the `init_vmo`
                         // model currently implemented, it is very likely that adding another customization
                         // callback here will make the implementation of those files systems easier.
                         let vmo_rights = vmo_flags_to_rights(flags);

@@ -4,18 +4,12 @@
 
 //! Common utilities used by tests for the VMO backed files.
 
-use super::{
-    create_immutable_vmo_file, read_only, read_write, write_only, ConsumeVmoResult, InitVmoResult,
-    NewVmo, StubConsumeVmoRes, VmoFile,
-};
+use super::{read_only, read_write, InitVmoResult, NewVmo, VmoFile};
 
 use {
     fuchsia_zircon::{Status, Vmo, VmoOptions},
     futures::future::BoxFuture,
-    std::sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
+    std::sync::Arc,
     void::Void,
 };
 
@@ -105,8 +99,6 @@ pub fn simple_read_only(
     VmoFile<
         impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
         BoxFuture<'static, InitVmoResult>,
-        fn(Vmo) -> StubConsumeVmoRes,
-        StubConsumeVmoRes,
     >,
 > {
     read_only(simple_init_vmo(content))
@@ -120,11 +112,9 @@ pub fn simple_read_only_with_inode(
     VmoFile<
         impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
         BoxFuture<'static, InitVmoResult>,
-        fn(Vmo) -> StubConsumeVmoRes,
-        StubConsumeVmoRes,
     >,
 > {
-    create_immutable_vmo_file(simple_init_vmo(content), true, false, inode)
+    VmoFile::new_with_inode(simple_init_vmo(content), true, false, false, inode)
 }
 
 /// Possible errors for the [`assert_vmo_content()`] function.
@@ -217,111 +207,26 @@ macro_rules! report_invalid_vmo_content {
     }};
 }
 
-/// Creates a simple `consume_vmo` callback that will compare the VMO content with the `expected`
-/// value and will panic on any discrepancies.  The VMO is then dropped.
-pub fn simple_consume_vmo(
-    expected: &[u8],
-) -> impl Fn(Vmo) -> BoxFuture<'static, ConsumeVmoResult> + Send + Sync + 'static {
-    let expected = expected.to_vec();
-    move |vmo| {
-        let expected = expected.clone();
-        Box::pin(async move {
-            assert_vmo_content!(&vmo, &expected);
-        })
-    }
-}
-
-/// Similar to [`simple_consume_vmo`], but will also increment the `counter` every time the
-/// callback is invoked and will panic if the counter reaches the `max_count` value.
-/// `failure_context` is included in the error message for the case when the counter has reached
-/// the maximum allowed values.
-pub fn consume_vmo_with_counter(
-    expected: &[u8],
-    counter: Arc<AtomicUsize>,
-    max_count: usize,
-    failure_context: &str,
-) -> impl Fn(Vmo) -> BoxFuture<'static, ConsumeVmoResult> + Send + Sync + 'static {
-    let expected = expected.to_vec();
-    let failure_context = failure_context.to_string();
-    move |vmo| {
-        let expected = expected.clone();
-        let counter = counter.clone();
-        let failure_context = failure_context.clone();
-        Box::pin(async move {
-            let write_attempt = counter.fetch_add(1, Ordering::Relaxed);
-            if write_attempt < max_count {
-                assert_vmo_content!(&vmo, &expected);
-            } else {
-                let failure_context = format!(
-                    "{}.  Called {} time(s).\n\
-                     Expected no more than {} time(s).",
-                    failure_context, write_attempt, max_count
-                );
-                report_invalid_vmo_content!(&vmo, &failure_context);
-            }
-        })
-    }
-}
-
-/// Constructs a write-only file that starts empty, but when the last connection is dropped is
-/// expecting to see the VMO been populated with the `expected` bytes.
-pub fn simple_write_only(
-    expected: &[u8],
-) -> Arc<
-    VmoFile<
-        impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
-        BoxFuture<'static, InitVmoResult>,
-        impl Fn(Vmo) -> BoxFuture<'static, ConsumeVmoResult> + Send + Sync + 'static,
-        BoxFuture<'static, ConsumeVmoResult>,
-    >,
-> {
-    write_only(simple_init_vmo_resizable(b""), simple_consume_vmo(expected))
-}
-
-/// Similar to [`simple_write_only`], except allows the caller to specify the capacity of the
-/// backing VMO.
-pub fn simple_write_only_with_capacity(
-    capacity: u64,
-    expected: &[u8],
-) -> Arc<
-    VmoFile<
-        impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
-        BoxFuture<'static, InitVmoResult>,
-        impl Fn(Vmo) -> BoxFuture<'static, ConsumeVmoResult> + Send + Sync + 'static,
-        BoxFuture<'static, ConsumeVmoResult>,
-    >,
-> {
-    write_only(simple_init_vmo_with_capacity(b"", capacity), simple_consume_vmo(expected))
-}
-
-/// Constructs a read-write files with the specified `initial_content` and that will check that
-/// when the last connection is dropped the VMO content will be equal to `final_content`.
+/// Constructs a read-write files with the specified `initial_content`.
 pub fn simple_read_write(
     initial_content: &[u8],
-    final_content: &[u8],
 ) -> Arc<
     VmoFile<
         impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
         BoxFuture<'static, InitVmoResult>,
-        impl Fn(Vmo) -> BoxFuture<'static, ConsumeVmoResult> + Send + Sync + 'static,
-        BoxFuture<'static, ConsumeVmoResult>,
     >,
 > {
-    read_write(simple_init_vmo(initial_content), simple_consume_vmo(final_content))
+    read_write(simple_init_vmo(initial_content))
 }
 
-/// Similar to [`simple_read_write`], except allows the caller to specify the capacity of the
-/// backing VMO.
+/// Similar to [`simple_read_write`] except allows file to grow.
 pub fn simple_read_write_resizeable(
     initial_content: &[u8],
-    final_content: &[u8],
 ) -> Arc<
     VmoFile<
         impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
         BoxFuture<'static, InitVmoResult>,
-        impl Fn(Vmo) -> BoxFuture<'static, ConsumeVmoResult> + Send + Sync + 'static,
-        BoxFuture<'static, ConsumeVmoResult>,
     >,
 > {
-    read_write(simple_init_vmo_resizable(initial_content), simple_consume_vmo(final_content))
+    read_write(simple_init_vmo_resizable(initial_content))
 }

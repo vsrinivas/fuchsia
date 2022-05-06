@@ -895,7 +895,6 @@ mod test {
                     |_parent, _name| {
                         Ok(vfs::file::vmo::read_write(
                             vfs::file::vmo::simple_init_vmo_resizable_with_capacity(&[], 100),
-                            |_| async {},
                         ))
                     },
                 ))

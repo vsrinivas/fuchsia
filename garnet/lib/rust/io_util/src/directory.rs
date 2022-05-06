@@ -275,7 +275,7 @@ mod tests {
         vfs::{
             directory::entry::DirectoryEntry,
             execution_scope::ExecutionScope,
-            file::vmo::{read_only_static, read_write, simple_init_vmo_with_capacity, write_only},
+            file::vmo::{read_only_static, read_write, simple_init_vmo_with_capacity},
             pseudo_directory,
         },
     };
@@ -488,10 +488,8 @@ mod tests {
         let example_dir = pseudo_directory! {
             "read_only" => read_only_static("read_only"),
             "read_write" => read_write(
-                simple_init_vmo_with_capacity("read_write".as_bytes(), 100),
-                |_| future::ready(()),
+                simple_init_vmo_with_capacity("read_write".as_bytes(), 100)
             ),
-            "write_only" => write_only(simple_init_vmo_with_capacity(&[], 100), |_| future::ready(())),
         };
         let (example_dir_proxy, example_dir_service) =
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
@@ -511,9 +509,6 @@ mod tests {
             ("read_write", fio::OpenFlags::RIGHT_READABLE, true),
             ("read_write", fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE, true),
             ("read_write", fio::OpenFlags::RIGHT_WRITABLE, true),
-            ("write_only", fio::OpenFlags::RIGHT_READABLE, false),
-            ("write_only", fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE, false),
-            ("write_only", fio::OpenFlags::RIGHT_WRITABLE, true),
         ] {
             // open_file_no_describe
 
@@ -532,8 +527,9 @@ mod tests {
                 assert_eq!(crate::file::read_to_string(&file).await.unwrap(), file_name);
             }
             if flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
+                let _ = file.seek(fio::SeekOrigin::Start, 0).await.expect("Seek failed!");
                 let _: u64 = file
-                    .write(b"write_only")
+                    .write(b"read_write")
                     .await
                     .unwrap()
                     .map_err(zx_status::Status::from_raw)
@@ -549,8 +545,9 @@ mod tests {
                         assert_eq!(crate::file::read_to_string(&file).await.unwrap(), file_name);
                     }
                     if flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
+                        let _ = file.seek(fio::SeekOrigin::Start, 0).await.expect("Seek failed!");
                         let _: u64 = file
-                            .write(b"write_only")
+                            .write(b"read_write")
                             .await
                             .unwrap()
                             .map_err(zx_status::Status::from_raw)
