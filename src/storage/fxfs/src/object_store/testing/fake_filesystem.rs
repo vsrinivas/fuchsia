@@ -77,7 +77,7 @@ impl Filesystem for FakeFilesystem {
     }
 
     fn get_info(&self) -> Info {
-        Info { total_bytes: 1024 * 1024, used_bytes: 0, block_size: 4096 }
+        Info { total_bytes: 1024 * 1024, used_bytes: 0 }
     }
 
     fn graveyard(&self) -> &Arc<Graveyard> {

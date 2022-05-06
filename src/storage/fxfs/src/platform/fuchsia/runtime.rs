@@ -18,12 +18,9 @@ use {
     futures::stream::{StreamExt, TryStreamExt},
     futures::TryFutureExt,
     inspect_runtime::service::{TreeServerSendPreference, TreeServerSettings},
-    std::{
-        convert::TryInto,
-        sync::{
-            atomic::{self, AtomicBool},
-            Arc,
-        },
+    std::sync::{
+        atomic::{self, AtomicBool},
+        Arc,
     },
     vfs::{
         directory::entry::DirectoryEntry,
@@ -191,7 +188,12 @@ impl FxfsServer {
     }
 }
 
-pub fn info_to_filesystem_info(info: Info, object_count: u64, fs_id: u64) -> fio::FilesystemInfo {
+pub fn info_to_filesystem_info(
+    info: Info,
+    block_size: u64,
+    object_count: u64,
+    fs_id: u64,
+) -> fio::FilesystemInfo {
     fio::FilesystemInfo {
         total_bytes: info.total_bytes,
         used_bytes: info.used_bytes,
@@ -200,7 +202,7 @@ pub fn info_to_filesystem_info(info: Info, object_count: u64, fs_id: u64) -> fio
         // TODO(fxbug.dev/93770): Support free_shared_pool_bytes.
         free_shared_pool_bytes: 0,
         fs_id,
-        block_size: info.block_size.try_into().unwrap(),
+        block_size: block_size as u32,
         max_filename_size: fio::MAX_FILENAME as u32,
         fs_type: VFS_TYPE_FXFS,
         padding: 0,
@@ -217,7 +219,7 @@ impl FsInspect for FxfsServer {
             version_major: LATEST_VERSION.major.into(),
             version_minor: LATEST_VERSION.minor.into(),
             oldest_minor_version: 0, // TODO(fxbug.dev/93770)
-            block_size: self.fs.get_info().block_size.into(),
+            block_size: self.fs.block_size(),
             max_filename_length: fio::MAX_FILENAME,
         }
     }

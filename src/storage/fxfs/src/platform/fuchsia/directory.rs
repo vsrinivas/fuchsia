@@ -614,6 +614,7 @@ impl Directory for FxDirectory {
         let store = self.directory.store();
         Ok(info_to_filesystem_info(
             store.filesystem().get_info(),
+            store.filesystem().block_size(),
             store.object_count(),
             self.volume().id(),
         ))

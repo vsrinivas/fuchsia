@@ -29,7 +29,6 @@ use {
     fuchsia_async as fasync,
     futures::channel::oneshot::{channel, Sender},
     once_cell::sync::OnceCell,
-    std::convert::TryInto,
     std::sync::{
         atomic::{self, AtomicBool},
         Arc, Mutex,
@@ -39,10 +38,10 @@ use {
 
 pub const MIN_BLOCK_SIZE: u64 = 4096;
 
+/// Holds information on an Fxfs Filesystem
 pub struct Info {
     pub total_bytes: u64,
     pub used_bytes: u64,
-    pub block_size: u32,
 }
 
 #[async_trait]
@@ -426,7 +425,6 @@ impl Filesystem for FxFilesystem {
         Info {
             total_bytes: self.device.get().unwrap().size(),
             used_bytes: self.object_manager().allocator().get_used_bytes(),
-            block_size: self.block_size().try_into().unwrap(),
         }
     }
 

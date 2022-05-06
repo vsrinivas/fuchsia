@@ -519,6 +519,7 @@ impl File for FxFile {
         let store = self.handle.store();
         Ok(info_to_filesystem_info(
             store.filesystem().get_info(),
+            store.filesystem().block_size(),
             store.object_count(),
             self.handle.owner().id(),
         ))
