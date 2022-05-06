@@ -7,7 +7,6 @@
 #include <endian.h>
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fuchsia/hardware/hidbus/c/banjo.h>
-#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -250,7 +249,12 @@ class I2cHidTest : public zxtest::Test {
     ASSERT_OK(client.status_value());
     device_ = new I2cHidbus(fake_ddk::kFakeParent, std::move(client.value()));
 
-    channel_ = ddk::I2cChannel(fake_i2c_hid_.GetProto());
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    EXPECT_TRUE(endpoints.is_ok());
+
+    fidl::BindServer<FakeI2cHid>(loop_.dispatcher(), std::move(endpoints->server), &fake_i2c_hid_);
+
+    i2c_ = std::move(endpoints->client);
     // Each test is responsible for calling Bind().
   }
 
@@ -265,25 +269,25 @@ class I2cHidTest : public zxtest::Test {
   void StartHidBus() { device_->HidbusStart(fake_hid_bus_.GetProto()); }
 
  protected:
-  async::Loop loop_;
   acpi::mock::Device acpi_device_;
   I2cHidbus* device_;
   fake_ddk::Bind ddk_;
   FakeI2cHid fake_i2c_hid_;
   fake_hidbus_ifc::FakeHidbusIfc fake_hid_bus_;
-  ddk::I2cChannel channel_;
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
   zx::interrupt irq_;
+  async::Loop loop_;
 };
 
 TEST_F(I2cHidTest, HidTestBind) {
-  ASSERT_OK(device_->Bind(std::move(channel_)));
+  ASSERT_OK(device_->Bind(std::move(i2c_)));
   ASSERT_OK(ddk_.WaitUntilInitComplete());
   EXPECT_TRUE(ddk_.init_reply().has_value());
   EXPECT_OK(ddk_.init_reply().value());
 }
 
 TEST_F(I2cHidTest, HidTestQuery) {
-  ASSERT_OK(device_->Bind(std::move(channel_)));
+  ASSERT_OK(device_->Bind(std::move(i2c_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -305,7 +309,7 @@ TEST_F(I2cHidTest, HidTestReadReportDesc) {
   report_desc[3] = 5;
 
   fake_i2c_hid_.SetReportDescriptor(report_desc);
-  ASSERT_OK(device_->Bind(std::move(channel_)));
+  ASSERT_OK(device_->Bind(std::move(i2c_)));
 
   ASSERT_OK(device_->HidbusGetDescriptor(HID_DESCRIPTION_TYPE_REPORT, returned_report_desc,
                                          sizeof(returned_report_desc), &returned_report_desc_len));
@@ -341,7 +345,7 @@ TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
 }
 
 TEST_F(I2cHidTest, HidTestReadReport) {
-  ASSERT_OK(device_->Bind(std::move(channel_)));
+  ASSERT_OK(device_->Bind(std::move(i2c_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -364,7 +368,7 @@ TEST_F(I2cHidTest, HidTestReadReport) {
 }
 
 TEST_F(I2cHidTest, HidTestBadReportLen) {
-  ASSERT_OK(device_->Bind(std::move(channel_)));
+  ASSERT_OK(device_->Bind(std::move(i2c_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -394,7 +398,7 @@ TEST_F(I2cHidTest, HidTestReadReportNoIrq) {
   fake_i2c_hid_.SetInterrupt(zx::interrupt());
   irq_.reset();
 
-  ASSERT_OK(device_->Bind(std::move(channel_)));
+  ASSERT_OK(device_->Bind(std::move(i2c_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -421,7 +425,7 @@ TEST_F(I2cHidTest, HidTestDedupeReportsNoIrq) {
   fake_i2c_hid_.SetInterrupt(zx::interrupt());
   irq_.reset();
 
-  ASSERT_OK(device_->Bind(std::move(channel_)));
+  ASSERT_OK(device_->Bind(std::move(i2c_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -489,7 +493,7 @@ TEST_F(I2cHidTest, HidTestDedupeReportsNoIrq) {
 }
 
 TEST_F(I2cHidTest, HidTestSetReport) {
-  ASSERT_OK(device_->Bind(std::move(channel_)));
+  ASSERT_OK(device_->Bind(std::move(i2c_)));
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   // Any arbitrary values or vector length could be used here.
