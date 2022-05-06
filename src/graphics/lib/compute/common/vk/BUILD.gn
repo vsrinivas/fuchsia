@@ -2,15 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("../../gn/build_rules.gni")
+import("//src/graphics/lib/compute/gn/build_rules.gni")
 
-config("vk_common_public_config") {
+config("config") {
   # Unlike the sources here, clients use "common/vk/..." to include the headers.
   include_dirs = [ graphics_compute_dir ]
 }
 
-static_library("vk") {
-  output_name = "compute_common_vk"
+source_set("vk") {
+  public_configs = [ ":config" ]
   public = [
     "assert.h",
     "barrier.h",
@@ -36,11 +36,6 @@ static_library("vk") {
     "shader_info_amd.c",
     "shader_info_amd.h",
   ]
-  deps = [
-    "${graphics_compute_dir}/common",
-    graphics_compute_vulkan_loader_target,
-  ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
+  public_deps = [ graphics_compute_vulkan_loader_target ]
+  deps = [ "${graphics_compute_dir}/common" ]
 }

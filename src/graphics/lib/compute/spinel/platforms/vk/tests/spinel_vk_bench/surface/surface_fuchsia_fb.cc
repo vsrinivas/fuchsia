@@ -11,6 +11,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/trace-provider/provider.h>
+#include <vulkan/vulkan_fuchsia.h>
 
 #include <algorithm>
 #include <array>

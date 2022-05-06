@@ -2,15 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("../gn/build_rules.gni")
+import("//src/graphics/lib/compute/gn/build_rules.gni")
 
-config("common_public_config") {
-  # Unlike the sources, clients use "common/..." to include the headers here.
-  include_dirs = [ ".." ]
+config("config") {
+  # Unlike the sources here, clients use "common/vk/..." to include the headers.
+  include_dirs = [ graphics_compute_dir ]
 }
 
-static_library("common") {
-  output_name = "compute_common"
+source_set("common") {
+  public_configs = [ ":config" ]
   public = [
     "file_utils.h",
     "macros.h",
@@ -22,11 +22,6 @@ static_library("common") {
     "macros.h",
     "util.c",
     "util.h",
-  ]
-  public_configs = [ ":common_public_config" ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
   ]
 }
 
