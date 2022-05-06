@@ -148,8 +148,9 @@ def main():
     files = generate_kazoo_outputs(kazoo, tmp_json, all_styles, tmp_kazoo_dir)
 
     build_golden(files, args.new_golden)
-    rc = subprocess.call(['diff', '-u', GOLDEN, args.new_golden])
-    if rc != 0:
+    result = subprocess.run(['diff', '-u', GOLDEN, args.new_golden], stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    if result.returncode != 0:
         print('CHANGES DETECTED IN SYSCALL OUTPUT')
         print()
         print('Please run:')
@@ -162,6 +163,12 @@ def main():
             'Files can be found locally in %s for inspection.' % tmp_kazoo_dir)
         if args.p4merge:
             subprocess.call(['p4merge', GOLDEN, args.new_golden])
+
+        # Print the diff after the instructions so the instructions are not truncated by the
+        # buildbot if the output is long.
+        print('Diff:')
+        # Need to decode the stdout binary data to a string to write newlines properly.
+        print(result.stdout.decode('ascii'));
     else:
         with open(args.output_touch, 'w') as f:
             f.write(str(datetime.datetime.utcnow()))
@@ -170,7 +177,7 @@ def main():
 
     shutil.rmtree(tmp_kazoo_dir)
 
-    return rc
+    return result.returncode
 
 
 if __name__ == '__main__':
