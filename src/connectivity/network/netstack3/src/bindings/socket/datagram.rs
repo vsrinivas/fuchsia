@@ -1683,6 +1683,17 @@ where
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpv6ReceivePacketInfo {
+                            value: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
+                        fposix_socket::SynchronousDatagramSocketRequest::GetIpv6ReceivePacketInfo {
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpReceiveTtl {
                             value: _,
                             responder,

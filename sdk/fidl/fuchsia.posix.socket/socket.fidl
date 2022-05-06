@@ -374,6 +374,15 @@ protocol BaseNetworkSocket {
     GetIpv6TrafficClass() -> (struct {
         value uint8;
     }) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IPV6` -> `IPV6_RECVPKTINFO`.
+    SetIpv6ReceivePacketInfo(struct {
+        value bool;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    /// Get `SOL_IPV6` -> `IPV6_RECVPKTINFO`.
+    GetIpv6ReceivePacketInfo() -> (struct {
+        value bool;
+    }) error fuchsia.posix.Errno;
 };
 
 /// IPv4 multicast membership options.
@@ -473,6 +482,17 @@ type NetworkSocketRecvControlData = table {
         ///
         /// Present if the `SOL_IPV6` -> `IPV6_RECVHOPLIMIT` option is enabled.
         2: hoplimit uint8;
+
+        /// The packet information of a packet that was received.
+        ///
+        /// Present if the `SOL_IPV6` -> `IPV6_RECVPKTINFO` option is enabled.
+        3: pktinfo @generated_name("Ipv6PktInfoRecvControlData") struct {
+            /// The index of the interface on which the IP packet was received.
+            iface fuchsia.net.interface_id;
+            /// The destination address specified in the received packet's IP
+            /// header.
+            header_destination_addr fuchsia.net.Ipv6Address;
+        };
     };
 };
 

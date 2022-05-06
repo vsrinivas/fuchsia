@@ -1676,6 +1676,11 @@ INSTANTIATE_TEST_SUITE_P(
                              .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_HOPLIMIT),
                              .cmsg_size = sizeof(int),
                              .optname_to_enable_receive = IPV6_RECVHOPLIMIT,
+                         },
+                         CmsgSocketOption{
+                             .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_PKTINFO),
+                             .cmsg_size = sizeof(in6_pktinfo),
+                             .optname_to_enable_receive = IPV6_RECVPKTINFO,
                          }),
                      testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
                                      EnableCmsgReceiveTime::BetweenSendAndRecv)),
@@ -1769,6 +1774,11 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRequestOnSetupOnlyRecvIPv6Tests,
                                                   .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_HOPLIMIT),
                                                   .cmsg_size = sizeof(int),
                                                   .optname_to_enable_receive = IPV6_RECVHOPLIMIT,
+                                              },
+                                              CmsgSocketOption{
+                                                  .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_PKTINFO),
+                                                  .cmsg_size = sizeof(in6_pktinfo),
+                                                  .optname_to_enable_receive = IPV6_RECVPKTINFO,
                                               }),
                                           testing::Values(EnableCmsgReceiveTime::AfterSocketSetup)),
                          SocketDomainAndOptionAndEnableCmsgReceiveTimeToString);
@@ -2589,6 +2599,83 @@ TEST_P(NetDatagramSocketsCmsgIpv6HopLimitTest, SendCmsgInvalidValues) {
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpv6HopLimitTests,
                          NetDatagramSocketsCmsgIpv6HopLimitTest,
+                         testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
+                                         EnableCmsgReceiveTime::BetweenSendAndRecv),
+                         [](const auto info) {
+                           return std::string(enableCmsgReceiveTimeToString(info.param));
+                         });
+
+class NetDatagramSocketsCmsgIpv6PktInfoTest : public NetDatagramSocketsCmsgRecvTestBase,
+                                              public testing::TestWithParam<EnableCmsgReceiveTime> {
+ protected:
+  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6, GetParam())); }
+
+  void EnableReceivingCmsg() const override {
+    // Enable receiving IPV6_PKTINFO control message.
+    constexpr int kOne = 1;
+    ASSERT_EQ(setsockopt(bound().get(), SOL_IPV6, IPV6_RECVPKTINFO, &kOne, sizeof(kOne)), 0)
+        << strerror(errno);
+  }
+
+  void TearDown() override {
+    if (!IsSkipped()) {
+      EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets());
+    }
+  }
+};
+
+TEST_P(NetDatagramSocketsCmsgIpv6PktInfoTest, RecvCmsg) {
+  char control[CMSG_SPACE(sizeof(in6_pktinfo)) + 1];
+  ASSERT_NO_FATAL_FAILURE(SendAndCheckReceivedMessage(control, sizeof(control), [](msghdr& msghdr) {
+    EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(in6_pktinfo)));
+    cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
+    ASSERT_NE(cmsg, nullptr);
+    EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(in6_pktinfo)));
+    EXPECT_EQ(cmsg->cmsg_level, SOL_IPV6);
+    EXPECT_EQ(cmsg->cmsg_type, IPV6_PKTINFO);
+    in6_pktinfo recv_pktinfo;
+    memcpy(&recv_pktinfo, CMSG_DATA(cmsg), sizeof(recv_pktinfo));
+    const unsigned int lo_ifindex = if_nametoindex("lo");
+    EXPECT_NE(lo_ifindex, 0u) << strerror(errno);
+    EXPECT_EQ(recv_pktinfo.ipi6_ifindex, lo_ifindex);
+    char buf[INET6_ADDRSTRLEN];
+    ASSERT_TRUE(IN6_IS_ADDR_LOOPBACK(&recv_pktinfo.ipi6_addr))
+        << inet_ntop(AF_INET6, &recv_pktinfo.ipi6_addr, buf, sizeof(buf));
+    EXPECT_EQ(CMSG_NXTHDR(&msghdr, cmsg), nullptr);
+  }));
+}
+
+TEST_P(NetDatagramSocketsCmsgIpv6PktInfoTest, RecvCmsgUnalignedControlBuffer) {
+  char control[CMSG_SPACE(sizeof(in6_pktinfo)) + 1];
+  ASSERT_NO_FATAL_FAILURE(
+      SendAndCheckReceivedMessage(control + 1, sizeof(control), [](msghdr& msghdr) {
+        EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(in6_pktinfo)));
+
+        // Fetch back the control buffer and confirm it is unaligned.
+        cmsghdr* unaligned_cmsg = CMSG_FIRSTHDR(&msghdr);
+        ASSERT_NE(unaligned_cmsg, nullptr);
+        ASSERT_NE(reinterpret_cast<uintptr_t>(unaligned_cmsg) % alignof(cmsghdr), 0u);
+
+        // Copy the content to a properly aligned variable.
+        char aligned_cmsg[CMSG_SPACE(sizeof(in6_pktinfo))];
+        memcpy(&aligned_cmsg, unaligned_cmsg, sizeof(aligned_cmsg));
+        cmsghdr* cmsg = reinterpret_cast<cmsghdr*>(aligned_cmsg);
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(in6_pktinfo)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_IPV6);
+        EXPECT_EQ(cmsg->cmsg_type, IPV6_PKTINFO);
+        in6_pktinfo recv_pktinfo;
+        memcpy(&recv_pktinfo, CMSG_DATA(cmsg), sizeof(recv_pktinfo));
+        const unsigned int lo_ifindex = if_nametoindex("lo");
+        EXPECT_NE(lo_ifindex, 0u) << strerror(errno);
+        EXPECT_EQ(recv_pktinfo.ipi6_ifindex, lo_ifindex);
+        char buf[INET6_ADDRSTRLEN];
+        ASSERT_TRUE(IN6_IS_ADDR_LOOPBACK(&recv_pktinfo.ipi6_addr))
+            << inet_ntop(AF_INET6, &recv_pktinfo.ipi6_addr, buf, sizeof(buf));
+      }));
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpv6PktInfoTests,
+                         NetDatagramSocketsCmsgIpv6PktInfoTest,
                          testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
                                          EnableCmsgReceiveTime::BetweenSendAndRecv),
                          [](const auto info) {

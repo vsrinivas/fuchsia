@@ -381,6 +381,18 @@ class FidlControlDataProcessor {
       const int hoplimit = static_cast<int>(control_data.hoplimit());
       total += StoreControlMessage(IPPROTO_IPV6, IPV6_HOPLIMIT, &hoplimit, sizeof(hoplimit));
     }
+    if (control_data.has_pktinfo()) {
+      const fsocket::wire::Ipv6PktInfoRecvControlData& fidl_pktinfo = control_data.pktinfo();
+      in6_pktinfo pktinfo = {
+          .ipi6_ifindex = static_cast<unsigned int>(fidl_pktinfo.iface),
+      };
+      static_assert(
+          sizeof(pktinfo.ipi6_addr) == decltype(fidl_pktinfo.header_destination_addr.addr)::size(),
+          "mismatch between size of FIDL and in6_pktinfo IPv6 addresses");
+      memcpy(&pktinfo.ipi6_addr, fidl_pktinfo.header_destination_addr.addr.data(),
+             sizeof(pktinfo.ipi6_addr));
+      total += StoreControlMessage(IPPROTO_IPV6, IPV6_PKTINFO, &pktinfo, sizeof(pktinfo));
+    }
     return total;
   }
 
@@ -1386,6 +1398,13 @@ struct BaseNetworkSocket : public BaseSocket<T> {
                   .allow_char = false,
               };
             });
+          case IPV6_RECVPKTINFO:
+            return proc.Process(client()->GetIpv6ReceivePacketInfo(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = false,
+              };
+            });
           default:
             return SockOptResult::Errno(ENOPROTOOPT);
         }
@@ -1563,6 +1582,9 @@ struct BaseNetworkSocket : public BaseSocket<T> {
           case IPV6_RECVHOPLIMIT:
             return proc.Process<bool>(
                 [this](bool value) { return client()->SetIpv6ReceiveHopLimit(value); });
+          case IPV6_RECVPKTINFO:
+            return proc.Process<bool>(
+                [this](bool value) { return client()->SetIpv6ReceivePacketInfo(value); });
           default:
             return SockOptResult::Errno(ENOPROTOOPT);
         }

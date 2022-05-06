@@ -447,6 +447,13 @@ INSTANTIATE_TEST_SUITE_P(
                              .invalid_values = {},
                          },
                          IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_RECVPKTINFO),
+                             .is_boolean = true,
+                             .default_value = 0,
+                             .valid_values = kBooleanOptionValidValues,
+                             .invalid_values = {},
+                         },
+                         IntSocketOption{
                              .option = STRINGIFIED_SOCKOPT(SOL_SOCKET, SO_NO_CHECK),
                              .is_boolean = true,
                              .default_value = 0,

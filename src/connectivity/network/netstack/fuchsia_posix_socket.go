@@ -1046,6 +1046,16 @@ func (ep *endpoint) GetIpv6ReceiveHopLimit(fidl.Context) (socket.BaseNetworkSock
 	return socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResponse{Value: value}), nil
 }
 
+func (ep *endpoint) SetIpv6ReceivePacketInfo(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResult, error) {
+	ep.ep.SocketOptions().SetIPv6ReceivePacketInfo(value)
+	return socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResultWithResponse(socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResponse{}), nil
+}
+
+func (ep *endpoint) GetIpv6ReceivePacketInfo(fidl.Context) (socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResult, error) {
+	value := ep.ep.SocketOptions().GetIPv6ReceivePacketInfo()
+	return socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResponse{Value: value}), nil
+}
+
 func (ep *endpoint) SetIpReceiveTypeOfService(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResult, error) {
 	ep.ep.SocketOptions().SetReceiveTOS(value)
 	return socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResponse{}), nil
@@ -1886,6 +1896,12 @@ func (s *synchronousDatagramSocket) ipv6ControlMessagesToFIDL(cmsg tcpip.Receiva
 	}
 	if cmsg.HasHopLimit {
 		controlData.SetHoplimit(uint8(cmsg.HopLimit))
+	}
+	if cmsg.HasIPv6PacketInfo {
+		controlData.SetPktinfo(socket.Ipv6PktInfoRecvControlData{
+			Iface:                 uint64(cmsg.IPv6PacketInfo.NIC),
+			HeaderDestinationAddr: fidlconv.ToNetIpAddress(cmsg.IPv6PacketInfo.Addr).Ipv6,
+		})
 	}
 	return controlData
 }
