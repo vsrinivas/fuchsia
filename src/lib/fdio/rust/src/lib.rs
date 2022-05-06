@@ -943,13 +943,14 @@ mod tests {
     // test the underlying FDIO function, as that is tested alongside its C implementation.
     #[test]
     fn fdio_get_service_handle() {
-        // Verify get_service_handle succeeds against a valid FIDL service.
-        let service = File::open("/svc").expect("Failed to open /svc.");
+        // Setup two handles to the same underlying file.
+        let service = File::open("/svc").expect("failed to open /svc");
+        let clone = service.try_clone().expect("failed to clone /svc service");
+
+        // 'service' keeps the file busy during 'get_service_handle(clone)'.
+        assert_eq!(get_service_handle(clone), Err(zx::Status::UNAVAILABLE));
+        // 'clone' released its handle to the file above; 'service' now holds the sole handle.
         let _: zx::Channel =
             get_service_handle(service).expect("failed to get fdio service handle");
-
-        // Safety: 0 is not a valid FD; it has no other references and is safe to close.
-        let nonservice = unsafe { File::from_raw_fd(0) };
-        assert_eq!(get_service_handle(nonservice), Err(zx::Status::NOT_SUPPORTED));
     }
 }
