@@ -176,7 +176,8 @@ class SerialDeviceTest : public zxtest::Test {
       auto connection =
           fidl::BindSyncClient(tester_.ddk().FidlClient<fuchsia_hardware_serial::NewDeviceProxy>());
       auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_serial::NewDevice>();
-      connection->GetChannel(std::move(endpoints->server));
+      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+      (void)connection->GetChannel(std::move(endpoints->server));
       fidl_ = fidl::BindSyncClient(std::move(endpoints->client));
     }
     return fidl_;

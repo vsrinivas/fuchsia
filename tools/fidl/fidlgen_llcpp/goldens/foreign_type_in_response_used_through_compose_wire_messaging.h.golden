@@ -293,7 +293,7 @@ namespace test_foreigntypeinresponseusedthroughcompose {
 #ifdef __Fuchsia__
 }  // namespace test_foreigntypeinresponseusedthroughcompose
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
     final : public ::fidl::Status {
  public:
@@ -370,7 +370,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
     final : public ::fidl::Status {
  public:

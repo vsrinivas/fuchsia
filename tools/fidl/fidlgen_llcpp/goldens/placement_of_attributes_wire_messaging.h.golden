@@ -182,7 +182,8 @@ namespace test_placementofattributes {
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes
 template <>
-class ::fidl::WireResult<::test_placementofattributes::ExampleProtocol::Method>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_placementofattributes::ExampleProtocol::Method>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -200,7 +201,7 @@ class ::fidl::WireResult<::test_placementofattributes::ExampleProtocol::Method>
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_placementofattributes::ExampleProtocol::Method>
     final : public ::fidl::Status {
  public:

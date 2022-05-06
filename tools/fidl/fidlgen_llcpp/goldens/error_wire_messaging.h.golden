@@ -280,7 +280,7 @@ namespace test_error {
 #ifdef __Fuchsia__
 }  // namespace test_error
 template <>
-class ::fidl::WireResult<::test_error::Example::Foo> final
+class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final
     : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_error::Example> client,
@@ -333,7 +333,7 @@ class ::fidl::WireResult<::test_error::Example::Foo> final
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_error::Example::Foo> final
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final
     : public ::fidl::Status {
  public:
   explicit WireUnownedResult(

@@ -13,7 +13,8 @@ void FidlBlobCorruptionNotifier::NotifyCorruptBlob(const digest::Digest& digest)
   FX_LOGS(ERROR) << "Corrupt blob: " << digest.ToString();
 
   if (corruption_handler_.is_valid()) {
-    fidl::WireCall(corruption_handler_)
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)fidl::WireCall(corruption_handler_)
         ->CorruptBlob(fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(digest.get()),
                                                               digest.len()));
   } else {

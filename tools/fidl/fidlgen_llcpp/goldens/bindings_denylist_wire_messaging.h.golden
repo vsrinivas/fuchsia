@@ -416,8 +416,9 @@ namespace test_bindingsdenylist {
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
 template <>
-class ::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                             LibfuzzerNeedsNonemptyProtocol>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+        LibfuzzerNeedsNonemptyProtocol>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -444,8 +445,9 @@ class ::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                                    LibfuzzerNeedsNonemptyProtocol>
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+        LibfuzzerNeedsNonemptyProtocol>
     final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
@@ -1046,7 +1048,7 @@ namespace test_bindingsdenylist {
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
     final : public ::fidl::Status {
  public:
@@ -1066,7 +1068,7 @@ class ::fidl::WireResult<
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
     final : public ::fidl::Status {
  public:
@@ -1086,8 +1088,9 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
-                             AlwaysAppearsInImportingLibrary>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_bindingsdenylist::ImportsSameNameContext::
+        AlwaysAppearsInImportingLibrary>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -1106,7 +1109,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::ImportsSameNameContext::
         AlwaysAppearsInImportingLibrary>
     final : public ::fidl::Status {
@@ -2715,7 +2718,8 @@ namespace test_bindingsdenylist {
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
 template <>
-class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -2783,7 +2787,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
     final : public ::fidl::Status {
  public:
@@ -2868,7 +2872,8 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -2936,7 +2941,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
     final : public ::fidl::Status {
  public:
@@ -3019,7 +3024,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
     final : public ::fidl::Status {
  public:
@@ -3093,7 +3098,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
     final : public ::fidl::Status {
  public:
@@ -3185,7 +3190,8 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -3253,7 +3259,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
     final : public ::fidl::Status {
  public:
@@ -3338,7 +3344,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
     final : public ::fidl::Status {
  public:
@@ -3412,7 +3418,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
     final : public ::fidl::Status {
  public:

@@ -450,7 +450,8 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
     } else {
       dir_path = current_dir;
     }
-    fidl::WireCall(*diagnostics_channel)
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)fidl::WireCall(*diagnostics_channel)
         ->Open(flags, 0, fidl::StringView::FromExternal(dir_path), std::move(ipc));
   } else if (path_view == kNullDevName || path_view == kZeroDevName) {
     BuiltinDevices::Get(dispatcher)->HandleOpen(flags, std::move(ipc), path_view);
@@ -487,7 +488,8 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
       describe(zx::ok(fio::wire::NodeInfo::WithDirectory(directory)));
       DcIostate::Bind(std::move(ios), std::move(ipc));
     } else if (dn->service_dir) {
-      fidl::WireCall(dn->service_dir)
+      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+      (void)fidl::WireCall(dn->service_dir)
           ->Open(flags, 0, fidl::StringView::FromExternal(dn->service_path), std::move(ipc));
     } else {
       __UNUSED auto result = dn->device->device_controller()->Open(flags, 0, ".", std::move(ipc));

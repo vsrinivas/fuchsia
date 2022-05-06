@@ -28,7 +28,8 @@ namespace block = fuchsia_hardware_block;
 
 BlockPartitionClient::~BlockPartitionClient() {
   if (client_) {
-    partition_->CloseFifo();
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)partition_->CloseFifo();
   }
 }
 

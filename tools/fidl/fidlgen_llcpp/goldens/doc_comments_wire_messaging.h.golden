@@ -211,8 +211,8 @@ namespace test_doccomments {
 #ifdef __Fuchsia__
 }  // namespace test_doccomments
 template <>
-class ::fidl::WireResult<::test_doccomments::Interface::Method> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_doccomments::Interface::Method>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_doccomments::Interface> client,
              ::fidl::internal::TransactionalRequest<
@@ -227,8 +227,9 @@ class ::fidl::WireResult<::test_doccomments::Interface::Method> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<::test_doccomments::Interface::Method> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_doccomments::Interface::Method>
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end,

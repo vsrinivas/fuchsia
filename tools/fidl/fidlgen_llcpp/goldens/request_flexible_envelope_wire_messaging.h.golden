@@ -609,7 +609,7 @@ namespace test_requestflexibleenvelope {
 #ifdef __Fuchsia__
 }  // namespace test_requestflexibleenvelope
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final : public ::fidl::Status {
  public:
@@ -686,7 +686,7 @@ class ::fidl::WireResult<
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final : public ::fidl::Status {
  public:
@@ -777,7 +777,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final : public ::fidl::Status {
  public:
@@ -854,7 +854,7 @@ class ::fidl::WireResult<
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final : public ::fidl::Status {
  public:

@@ -245,7 +245,8 @@ zx_status_t SimpleCodecClient::SetAgl(bool agl_enable) {
   }
   fuchsia_hardware_audio_signalprocessing::wire::ElementState state(allocator);
   state.set_enabled(agl_enable);
-  signal_processing_->SetElementState(agl_pe_id_.value(), std::move(state));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)signal_processing_->SetElementState(agl_pe_id_.value(), std::move(state));
   return ZX_OK;
 }
 

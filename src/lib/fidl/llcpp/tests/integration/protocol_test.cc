@@ -133,7 +133,8 @@ TEST(MagicNumberTest, RequestWrite) {
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [local, remote] = std::move(*endpoints);
   std::string s = "hi";
-  fidl::WireCall(local)->Frob(fidl::StringView::FromExternal(s));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall(local)->Frob(fidl::StringView::FromExternal(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
 
@@ -230,7 +231,8 @@ TEST(MagicNumberTest, EventRead) {
 TEST(SyncClientTest, DefaultInitializationError) {
   fidl::WireSyncClient<test::ErrorMethods> client;
   ASSERT_FALSE(client.is_valid());
-  ASSERT_DEATH([&] { client->NoArgsPrimitiveError(false); });
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  ASSERT_DEATH([&] { (void)client->NoArgsPrimitiveError(false); });
 }
 
 TEST(EventSenderTest, SendEvent) {

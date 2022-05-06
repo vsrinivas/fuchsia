@@ -201,7 +201,8 @@ TEST_F(HidDriverTest, BootMouseTestInputReport) {
   ASSERT_OK(reader_endpoints.status_value());
   auto reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
       std::move(reader_endpoints->client));
-  client->GetInputReportsReader(std::move(reader_endpoints->server));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client->GetInputReportsReader(std::move(reader_endpoints->server));
 
   // Check the Descriptor.
   {

@@ -45,7 +45,8 @@ fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
     return {};
   }
   auto [stream_channel_local, stream_channel_remote] = *std::move(endpoints);
-  client_wrap->Connect(std::move(stream_channel_remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote));
   return fidl::WireSyncClient<audio_fidl::StreamConfig>(std::move(stream_channel_local));
 }
 
@@ -642,7 +643,8 @@ TEST(UsbAudioTest, CreateRingBuffer) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
   // To make sure the 1-way Connect call is completed in the StreamConfigConnector server,
   // make a 2-way call. Since StreamConfigConnector does not have a 2-way call, we use

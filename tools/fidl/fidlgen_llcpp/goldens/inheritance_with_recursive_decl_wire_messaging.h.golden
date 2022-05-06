@@ -196,7 +196,8 @@ namespace test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
 template <>
-class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Parent::First>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_inheritancewithrecursivedecl::Parent::First>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -214,7 +215,7 @@ class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Parent::First>
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_inheritancewithrecursivedecl::Parent::First>
     final : public ::fidl::Status {
  public:
@@ -681,7 +682,8 @@ namespace test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
 template <>
-class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::First>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_inheritancewithrecursivedecl::Child::First>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -699,7 +701,7 @@ class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::First>
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_inheritancewithrecursivedecl::Child::First>
     final : public ::fidl::Status {
  public:
@@ -718,7 +720,8 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::Second>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_inheritancewithrecursivedecl::Child::Second>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -736,7 +739,7 @@ class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::Second>
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_inheritancewithrecursivedecl::Child::Second>
     final : public ::fidl::Status {
  public:

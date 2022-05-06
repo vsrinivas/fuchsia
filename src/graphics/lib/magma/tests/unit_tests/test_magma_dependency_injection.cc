@@ -66,7 +66,8 @@ TEST(DependencyInjection, Load) {
   async::PostTask(loop.dispatcher(), [request = std::move(request), &provider]() mutable {
     provider.binding_set().AddBinding(&provider, std::move(request));
   });
-  client->SetMemoryPressureProvider(
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client->SetMemoryPressureProvider(
       fidl::ClientEnd<fuchsia_memorypressure::Provider>(provider_handle.TakeChannel()));
 
   sync_completion_wait(&owner.completion(), ZX_TIME_INFINITE);

@@ -41,7 +41,8 @@ fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
     return {};
   }
   auto [stream_channel_local, stream_channel_remote] = *std::move(endpoints);
-  client_wrap->Connect(std::move(stream_channel_remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote));
   return fidl::WireSyncClient<audio_fidl::StreamConfig>(std::move(stream_channel_local));
 }
 
@@ -270,7 +271,8 @@ TEST_F(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
   // A second watch with no reply since there is no change of gain.
   auto f = [](void* arg) -> int {
     auto stream_client = static_cast<fidl::WireSyncClient<audio_fidl::StreamConfig>*>(arg);
-    (*stream_client)->WatchGainState();
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)(*stream_client)->WatchGainState();
     return 0;
   };
   thrd_t th;
@@ -510,7 +512,8 @@ TEST_F(SimpleAudioTest, CreateRingBuffer1) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
   auto result = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
   ASSERT_OK(result.status());
@@ -556,7 +559,8 @@ TEST_F(SimpleAudioTest, CreateRingBuffer2) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, std::move(pcm_format));
-  stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
   auto result = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
   ASSERT_OK(result.status());
@@ -660,12 +664,14 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   auto endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(endpoints1.is_ok());
   auto [stream_channel_local1, stream_channel_remote1] = *std::move(endpoints1);
-  client_wrap->Connect(std::move(stream_channel_remote1));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote1));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client1(std::move(stream_channel_local1));
   auto endpoints2 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(endpoints2.is_ok());
   auto [stream_channel_local2, stream_channel_remote2] = *std::move(endpoints2);
-  client_wrap->Connect(std::move(stream_channel_remote2));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote2));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client2(std::move(stream_channel_local2));
 
   auto prop1 = stream_client1->GetProperties();
@@ -699,12 +705,14 @@ TEST_F(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   auto stream_endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints1.is_ok());
   auto [stream_channel_local1, stream_channel_remote1] = *std::move(stream_endpoints1);
-  client_wrap->Connect(std::move(stream_channel_remote1));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote1));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client1(std::move(stream_channel_local1));
   auto stream_endpoints2 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints2.is_ok());
   auto [stream_channel_local2, stream_channel_remote2] = *std::move(stream_endpoints2);
-  client_wrap->Connect(std::move(stream_channel_remote2));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote2));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client2(std::move(stream_channel_local2));
 
   auto prop1 = stream_client1->GetProperties();
@@ -728,7 +736,8 @@ TEST_F(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   // Secondary watches with no reply since there is no change of plug detect state.
   auto f = [](void* arg) -> int {
     auto stream_client = static_cast<fidl::WireSyncClient<audio_fidl::StreamConfig>*>(arg);
-    (*stream_client)->WatchPlugState();
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)(*stream_client)->WatchPlugState();
     return 0;
   };
   thrd_t th1;
@@ -761,17 +770,20 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   auto stream_endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints1.is_ok());
   auto [stream_channel_local1, stream_channel_remote1] = *std::move(stream_endpoints1);
-  client_wrap->Connect(std::move(stream_channel_remote1));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote1));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client1(std::move(stream_channel_local1));
   auto stream_endpoints2 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints2.is_ok());
   auto [stream_channel_local2, stream_channel_remote2] = *std::move(stream_endpoints2);
-  client_wrap->Connect(std::move(stream_channel_remote2));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote2));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client2(std::move(stream_channel_local2));
   auto stream_endpoints3 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints3.is_ok());
   auto [stream_channel_local3, stream_channel_remote3] = *std::move(stream_endpoints3);
-  client_wrap->Connect(std::move(stream_channel_remote3));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote3));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client3(std::move(stream_channel_local3));
 
   auto state1a = stream_client1->WatchPlugState();
@@ -809,12 +821,14 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainState) {
   auto stream_endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints1.is_ok());
   auto [stream_channel_local1, stream_channel_remote1] = *std::move(stream_endpoints1);
-  client_wrap->Connect(std::move(stream_channel_remote1));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote1));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client1(std::move(stream_channel_local1));
   auto stream_endpoints2 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints2.is_ok());
   auto [stream_channel_local2, stream_channel_remote2] = *std::move(stream_endpoints2);
-  client_wrap->Connect(std::move(stream_channel_remote2));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote2));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client2(std::move(stream_channel_local2));
 
   auto state1 = stream_client1->WatchGainState();
@@ -837,17 +851,20 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainStateNotify) {
   auto stream_endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints1.is_ok());
   auto [stream_channel_local1, stream_channel_remote1] = *std::move(stream_endpoints1);
-  client_wrap->Connect(std::move(stream_channel_remote1));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote1));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client1(std::move(stream_channel_local1));
   auto stream_endpoints2 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints2.is_ok());
   auto [stream_channel_local2, stream_channel_remote2] = *std::move(stream_endpoints2);
-  client_wrap->Connect(std::move(stream_channel_remote2));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote2));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client2(std::move(stream_channel_local2));
   auto stream_endpoints3 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints3.is_ok());
   auto [stream_channel_local3, stream_channel_remote3] = *std::move(stream_endpoints3);
-  client_wrap->Connect(std::move(stream_channel_remote3));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote3));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client3(std::move(stream_channel_local3));
 
   auto state1a = stream_client1->WatchGainState();
@@ -867,7 +884,8 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainStateNotify) {
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_muted(false).set_agc_enabled(false).set_gain_db(MockSimpleAudio::kTestGain);
-    (*stream_client)->SetGain(std::move(gain_state));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)(*stream_client)->SetGain(std::move(gain_state));
 
     return 0;
   };
@@ -1110,7 +1128,8 @@ TEST_F(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
   // Watch position notifications.
   auto f = [](void* arg) -> int {
     auto ch = static_cast<fidl::ClientEnd<audio_fidl::RingBuffer>*>(arg);
-    fidl::WireCall<audio_fidl::RingBuffer>(*ch)->WatchClockRecoveryPositionInfo();
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)fidl::WireCall<audio_fidl::RingBuffer>(*ch)->WatchClockRecoveryPositionInfo();
     return 0;
   };
   thrd_t th;
@@ -1217,17 +1236,20 @@ TEST_F(SimpleAudioTest, NonPrivileged) {
   auto stream_endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints1.is_ok());
   auto [stream_channel_local1, stream_channel_remote1] = *std::move(stream_endpoints1);
-  client_wrap->Connect(std::move(stream_channel_remote1));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote1));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client1(std::move(stream_channel_local1));
   auto stream_endpoints2 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints2.is_ok());
   auto [stream_channel_local2, stream_channel_remote2] = *std::move(stream_endpoints2);
-  client_wrap->Connect(std::move(stream_channel_remote2));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote2));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client2(std::move(stream_channel_local2));
   auto stream_endpoints3 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints3.is_ok());
   auto [stream_channel_local3, stream_channel_remote3] = *std::move(stream_endpoints3);
-  client_wrap->Connect(std::move(stream_channel_remote3));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote3));
   fidl::WireSyncClient<audio_fidl::StreamConfig> stream_client3(std::move(stream_channel_local3));
 
   auto endpoints1 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();

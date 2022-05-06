@@ -339,7 +339,8 @@ TEST_F(Tcs3400Test, GetInputReports) {
   zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
   ASSERT_OK(reader_client_end.status_value());
   fidl::WireSyncClient reader = fidl::BindSyncClient(std::move(*reader_client_end));
-  client->GetInputReportsReader(std::move(reader_server));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client->GetInputReportsReader(std::move(reader_server));
   device_->WaitForNextReader();
 
   SetLightDataRegisters(0x00f8, 0xe79d, 0xa5e4, 0xfb1b);
@@ -455,7 +456,8 @@ TEST_F(Tcs3400Test, GetMultipleInputReports) {
   zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
   ASSERT_OK(reader_client_end.status_value());
   fidl::WireSyncClient reader = fidl::BindSyncClient(std::move(*reader_client_end));
-  client->GetInputReportsReader(std::move(reader_server));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client->GetInputReportsReader(std::move(reader_server));
   device_->WaitForNextReader();
 
   constexpr uint16_t kExpectedLightValues[][4] = {
@@ -514,7 +516,8 @@ TEST_F(Tcs3400Test, GetInputReportsMultipleReaders) {
     zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
     ASSERT_OK(reader_client_end.status_value());
     reader = fidl::BindSyncClient(std::move(*reader_client_end));
-    client->GetInputReportsReader(std::move(reader_server));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)client->GetInputReportsReader(std::move(reader_server));
     device_->WaitForNextReader();
   }
 
@@ -564,7 +567,8 @@ TEST_F(Tcs3400Test, InputReportSaturated) {
   zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
   ASSERT_OK(reader_client_end.status_value());
   fidl::WireSyncClient reader = fidl::BindSyncClient(std::move(*reader_client_end));
-  client->GetInputReportsReader(std::move(reader_server));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client->GetInputReportsReader(std::move(reader_server));
   device_->WaitForNextReader();
 
   // Set the clear channel to 0xffff to indicate saturation.

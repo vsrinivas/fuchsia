@@ -35,7 +35,8 @@ class ScopedInterpreter {
   }
 
   ~ScopedInterpreter() {
-    client_->Shutdown();
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)client_->Shutdown();
     loop_.Shutdown();
     loop_.JoinThreads();
   }

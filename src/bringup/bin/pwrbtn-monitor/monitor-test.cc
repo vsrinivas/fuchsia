@@ -45,7 +45,8 @@ class EventHandler : public fidl::WireSyncEventHandler<fuchsia_power_button::Mon
 };
 
 TEST_F(MonitorTest, TestSetAction) {
-  client_->SetAction(PwrAction::kIgnore);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_->SetAction(PwrAction::kIgnore);
   auto resp = client_->GetAction();
   ASSERT_OK(resp.status());
   ASSERT_EQ(resp->action, PwrAction::kIgnore);

@@ -149,7 +149,8 @@ void CoreDisplayTest::SetUp() {
 
 void CoreDisplayTest::TearDown() {
   if (collection_) {
-    collection_->Close();
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)collection_->Close();
   }
   sysmem_allocator_ = {};
 }
@@ -190,7 +191,8 @@ void CoreDisplayTest::DuplicateAndImportToken() {
   ASSERT_TRUE(dup_res.ok());
   ASSERT_OK(dup_res.status());
   // sync token
-  token_->Sync();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)token_->Sync();
 
   auto import_resp = dc_client_->ImportBufferCollection(
       kCollectionId, display_token.TakeClientEnd().TakeChannel());
@@ -377,7 +379,8 @@ TEST_F(CoreDisplayTest, CaptureFull) {
   ASSERT_OK(ReleaseCapture(id));
 
   // done. Close sysmem
-  dc_client_->ReleaseBufferCollection(kCollectionId);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, MultipleCaptureFull) {
@@ -403,7 +406,8 @@ TEST_F(CoreDisplayTest, MultipleCaptureFull) {
   ASSERT_OK(ReleaseCapture(id));
 
   // done. Close sysmem
-  dc_client_->ReleaseBufferCollection(kCollectionId);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, CaptureReleaseAfterStart) {
@@ -425,7 +429,8 @@ TEST_F(CoreDisplayTest, CaptureReleaseAfterStart) {
   EXPECT_OK(WaitForEvent());
 
   // done. Close sysmem
-  dc_client_->ReleaseBufferCollection(kCollectionId);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, InvalidStartCaptureId) {
@@ -439,7 +444,8 @@ TEST_F(CoreDisplayTest, InvalidStartCaptureId) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, StartCapture(kInvalidId));
 
   // done. Close sysmem
-  dc_client_->ReleaseBufferCollection(kCollectionId);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, InvalidStartEventId) {
@@ -457,7 +463,8 @@ TEST_F(CoreDisplayTest, InvalidStartEventId) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, StartCapture(id, kInvalidId));
 
   // done. Close sysmem
-  dc_client_->ReleaseBufferCollection(kCollectionId);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, MultipleCapture) {
@@ -475,7 +482,8 @@ TEST_F(CoreDisplayTest, MultipleCapture) {
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, StartCapture(id));
 
   // done. Close sysmem
-  dc_client_->ReleaseBufferCollection(kCollectionId);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, InvalidReleaseCaptureId) {
@@ -489,7 +497,8 @@ TEST_F(CoreDisplayTest, InvalidReleaseCaptureId) {
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, ReleaseCapture(kInvalidId));
 
   // done. Close sysmem
-  dc_client_->ReleaseBufferCollection(kCollectionId);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, CaptureNotSupported) {

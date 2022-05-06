@@ -7,7 +7,7 @@
 {{- define "driver/Method:UnownedResult:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 template<>
-class {{ .WireUnownedResult }} final : public ::fidl::Status {
+class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
  public:
   {{- if .Transport.HasSyncClient }}
   {{- $args := (printf "::%s::UnownedClientEnd<%s> client_end" .Transport.Namespace .Protocol) }}

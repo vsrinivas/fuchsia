@@ -183,7 +183,8 @@ TEST_F(IntelThermalTest, GetInfo) {
   }
 
   /* Try setting a trip point and triggering it. */
-  thermal_client_->SetTripCelsius(0, 22.05f);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)thermal_client_->SetTripCelsius(0, 22.05f);
   cur_temp_dK_ = 2972;
 
   {

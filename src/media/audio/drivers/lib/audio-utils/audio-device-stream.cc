@@ -62,7 +62,8 @@ zx_status_t AudioDeviceStream::Open() {
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ZX_ASSERT(endpoints.is_ok());
   auto [stream_channel_local, stream_channel_remote] = *std::move(endpoints);
-  client->Connect(std::move(stream_channel_remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client->Connect(std::move(stream_channel_remote));
 
   stream_ch_ = std::move(stream_channel_local);
   return ZX_OK;
@@ -122,7 +123,8 @@ zx_status_t AudioDeviceStream::SetGainParams() {
   fidl::Arena allocator;
   audio_fidl::wire::GainState gain_state(allocator);
   gain_state.set_muted(muted_).set_agc_enabled(agc_enabled_).set_gain_db(gain_);
-  fidl::WireCall(stream_ch_)->SetGain(std::move(gain_state));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall(stream_ch_)->SetGain(std::move(gain_state));
   return ZX_OK;
 }
 
@@ -256,7 +258,8 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t ch
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, std::move(pcm_format));
 
-  fidl::WireCall(stream_ch_)->CreateRingBuffer(std::move(format), std::move(remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall(stream_ch_)->CreateRingBuffer(std::move(format), std::move(remote));
   rb_ch_ = std::move(local);
 
   // Stash the FIFO depth, in case users need to know it.

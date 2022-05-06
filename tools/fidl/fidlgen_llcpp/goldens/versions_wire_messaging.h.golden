@@ -270,7 +270,7 @@ namespace test_versions {
 #ifdef __Fuchsia__
 }  // namespace test_versions
 template <>
-class ::fidl::WireResult<::test_versions::Protocol::Foo> final
+class [[nodiscard]] ::fidl::WireResult<::test_versions::Protocol::Foo> final
     : public ::fidl::Status {
  public:
   WireResult(
@@ -287,8 +287,8 @@ class ::fidl::WireResult<::test_versions::Protocol::Foo> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<::test_versions::Protocol::Foo> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_versions::Protocol::Foo>
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_versions::Protocol> client_end,

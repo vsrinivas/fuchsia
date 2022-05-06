@@ -272,7 +272,8 @@ zx_status_t wait_for_vsync(fhd::wire::ConfigStamp expected_stamp) {
     void OnVsync(fidl::WireEvent<fhd::Controller::OnVsync>* event) override {
       // Acknowledge cookie if non-zero
       if (event->cookie) {
-        dc->AcknowledgeVsync(event->cookie);
+        // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+        (void)dc->AcknowledgeVsync(event->cookie);
       }
 
       if (event->applied_config_stamp.value >= expected_stamp_.value) {
@@ -388,7 +389,8 @@ zx_status_t capture_setup() {
     printf("Could not duplicate token: %s\n", dup_res.FormatDescription().c_str());
     return dup_res.status();
   }
-  token->Sync();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)token->Sync();
   auto import_resp =
       dc->ImportBufferCollection(kCollectionId, display_token.TakeClientEnd().TakeChannel());
   if (import_resp.status() != ZX_OK) {
@@ -598,8 +600,10 @@ bool capture_compare(void* input_image_buf, uint32_t height, uint32_t width) {
 }
 
 void capture_release() {
-  dc->ReleaseCapture(capture_id);
-  dc->ReleaseBufferCollection(kCollectionId);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)dc->ReleaseCapture(capture_id);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)dc->ReleaseBufferCollection(kCollectionId);
 }
 
 void usage(void) {

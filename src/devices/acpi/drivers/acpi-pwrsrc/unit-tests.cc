@@ -106,7 +106,8 @@ TEST_F(AcpiPwrsrcTest, TestNotify) {
 
   // Try a spurious notification, where the state doesn't actually change.
   sync_completion_reset(&psr_called_);
-  notify_client_->Handle(kPowerSourceStateChanged);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)notify_client_->Handle(kPowerSourceStateChanged);
 
   sync_completion_wait_deadline(&psr_called_, ZX_TIME_INFINITE);
   loop_.RunUntilIdle();
@@ -114,7 +115,8 @@ TEST_F(AcpiPwrsrcTest, TestNotify) {
                 ZX_ERR_TIMED_OUT);
 
   online_ = true;
-  notify_client_->Handle(kPowerSourceStateChanged);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)notify_client_->Handle(kPowerSourceStateChanged);
   ASSERT_OK(event->handle.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr));
 
   // And calling GetPowerInfo should clear the event.

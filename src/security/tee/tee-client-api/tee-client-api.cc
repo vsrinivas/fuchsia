@@ -982,7 +982,8 @@ void TEEC_CloseSession(TEEC_Session* session) {
   }
 
   // TEEC_CloseSession simply swallows errors, so no need to check here.
-  fidl::WireCall(GetApplicationFromSession(session))->CloseSession(session->imp.session_id);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall(GetApplicationFromSession(session))->CloseSession(session->imp.session_id);
   session->imp.application_channel = ZX_HANDLE_INVALID;
 }
 

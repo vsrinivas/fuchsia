@@ -117,7 +117,8 @@ zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_dr
   }
 
   auto allocator = fidl::BindSyncClient(std::move(allocator_endpoints->client));
-  allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
   return zx::ok(std::move(allocator));
 }
 
@@ -128,7 +129,8 @@ zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_se
     return zx::error(client_end.status_value());
   }
   auto allocator = fidl::BindSyncClient(std::move(client_end.value()));
-  allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
   return zx::ok(std::move(allocator));
 }
 
@@ -180,7 +182,8 @@ static void SetDefaultCollectionName(
     fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>& collection) {
   constexpr uint32_t kPriority = 1000000;
   const char* kName = "sysmem-test";
-  collection->SetName(kPriority, fidl::StringView::FromExternal(kName));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)collection->SetName(kPriority, fidl::StringView::FromExternal(kName));
 }
 
 zx::status<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>>
@@ -1101,7 +1104,8 @@ TEST(Sysmem, AttachLifetimeTracking) {
   for (uint32_t i = 0; i < kNumEventpairs; ++i) {
     auto status = zx::eventpair::create(/*options=*/0, &client[i], &server[i]);
     ASSERT_OK(status, "");
-    collection->AttachLifetimeTracking(std::move(server[i]), i);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)collection->AttachLifetimeTracking(std::move(server[i]), i);
   }
 
   nanosleep_duration(zx::msec(500));
@@ -1199,8 +1203,9 @@ TEST(Sysmem, AttachLifetimeTracking) {
   // logical allocation failure, it'll close as soon as we hit logical allocation failure for the
   // attached token.  The logical allocation failure of the attached token doesn't impact collection
   // in any way.
-  attached_collection->AttachLifetimeTracking(std::move(attached_lifetime_server),
-                                              /*buffers_remaining=*/0);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)attached_collection->AttachLifetimeTracking(std::move(attached_lifetime_server),
+                                                    /*buffers_remaining=*/0);
   fuchsia_sysmem::wire::BufferCollectionConstraints attached_constraints;
   attached_constraints.usage.cpu =
       fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
@@ -1392,8 +1397,10 @@ TEST(Sysmem, BufferName) {
   const char kSysmemName[] = "abcdefghijkl\0mnopqrstuvwxyz";
   const char kLowPrioName[] = "low_pri";
   // Override default set in make_single_participant_collection)
-  collection->SetName(2000000, kSysmemName);
-  collection->SetName(0, kLowPrioName);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)collection->SetName(2000000, kSysmemName);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)collection->SetName(0, kLowPrioName);
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
   constraints.usage.cpu =
@@ -1501,10 +1508,12 @@ TEST(Sysmem, NoSync) {
   ASSERT_OK(allocator_1->AllocateSharedCollection(std::move(token_server_1)));
 
   const char* kAllocatorName = "TestAllocator";
-  allocator_1->SetDebugClientInfo(fidl::StringView::FromExternal(kAllocatorName), 1u);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)allocator_1->SetDebugClientInfo(fidl::StringView::FromExternal(kAllocatorName), 1u);
 
   const char* kClientName = "TestClient";
-  token_1->SetDebugClientInfo(fidl::StringView::FromExternal(kClientName), 2u);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)token_1->SetDebugClientInfo(fidl::StringView::FromExternal(kClientName), 2u);
 
   // Make another token so we can bind it and set a name on the collection.
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection_3;
@@ -1526,7 +1535,8 @@ TEST(Sysmem, NoSync) {
     collection_3 = fidl::BindSyncClient(std::move(collection_client_3));
 
     const char* kCollectionName = "TestCollection";
-    collection_3->SetName(1u, fidl::StringView::FromExternal(kCollectionName));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)collection_3->SetName(1u, fidl::StringView::FromExternal(kCollectionName));
   }
 
   auto token_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
@@ -1540,11 +1550,13 @@ TEST(Sysmem, NoSync) {
   auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
 
   const char* kClient2Name = "TestClient2";
-  token_2->SetDebugClientInfo(fidl::StringView::FromExternal(kClient2Name), 3u);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)token_2->SetDebugClientInfo(fidl::StringView::FromExternal(kClient2Name), 3u);
 
   // Close to prevent Sync on token_client_1 from failing later due to LogicalBufferCollection
   // failure caused by the token handle closing.
-  token_2->Close();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)token_2->Close();
 
   ASSERT_OK(
       allocator_1->BindSharedCollection(token_2.TakeClientEnd(), std::move(collection_server_1)));
@@ -2752,7 +2764,8 @@ TEST(Sysmem, NoneUsageAndOtherUsageFromSingleParticipantFails) {
   auto collection = make_single_participant_collection();
 
   const char* kClientName = "TestClient";
-  collection->SetDebugClientInfo(fidl::StringView::FromExternal(kClientName), 6u);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)collection->SetDebugClientInfo(fidl::StringView::FromExternal(kClientName), 6u);
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
   // Specify both "none" and "cpu" usage from a single participant, which will

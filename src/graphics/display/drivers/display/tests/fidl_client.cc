@@ -351,7 +351,8 @@ zx::status<uint64_t> TestFidlClient::ImportImageWithSysmemLocked(
   if (!set_constraints_result.ok() || set_constraints_result->res != ZX_OK) {
     zxlogf(ERROR, "Setting buffer (%dx%d) collection constraints failed: %s", image_config.width,
            image_config.height, set_constraints_result.FormatDescription().c_str());
-    dc_->ReleaseBufferCollection(display_collection_id);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)dc_->ReleaseBufferCollection(display_collection_id);
     return zx::error(set_constraints_result.ok() ? set_constraints_result->res
                                                  : set_constraints_result.status());
   }
@@ -369,7 +370,8 @@ zx::status<uint64_t> TestFidlClient::ImportImageWithSysmemLocked(
     }
     sysmem_collection = fidl::WireSyncClient<sysmem::BufferCollection>(std::move(client));
   }
-  sysmem_collection->SetName(10000u, "display-client-unittest");
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)sysmem_collection->SetName(10000u, "display-client-unittest");
   sysmem::wire::BufferCollectionConstraints constraints = {};
   constraints.min_buffer_count = 1;
   constraints.usage.none = sysmem::wire::kNoneUsage;
@@ -404,7 +406,8 @@ zx::status<uint64_t> TestFidlClient::ImportImageWithSysmemLocked(
     return zx::error(import_result.ok() ? import_result->res : import_result.status());
   }
 
-  sysmem_collection->Close();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)sysmem_collection->Close();
   return zx::ok(import_result->image_id);
 }
 

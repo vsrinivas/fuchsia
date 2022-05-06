@@ -50,7 +50,8 @@ fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
     return {};
   }
   auto [stream_channel_local, stream_channel_remote] = *std::move(endpoints);
-  client_wrap->Connect(std::move(stream_channel_remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote));
   return fidl::WireSyncClient<audio_fidl::StreamConfig>(std::move(stream_channel_local));
 }
 
@@ -468,7 +469,8 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
   // To make sure we have initialized in the controller driver make a sync call
   // (we know the controller is single threaded, initialization is completed if received a reply).
@@ -536,7 +538,8 @@ TEST(AmlG12Tdm, I2sOutCodecsTurnOnDelay) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
   auto props = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
   ASSERT_OK(props.status());
@@ -598,7 +601,8 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
       // We start with agc false and muted true.
       audio_fidl::wire::GainState gain_state(allocator);
       gain_state.set_muted(true).set_agc_enabled(false).set_gain_db(kTestGain);
-      stream_client->SetGain(std::move(gain_state));
+      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+      (void)stream_client->SetGain(std::move(gain_state));
     }
 
     // Wait until codecs have received a SetGainState call.
@@ -626,7 +630,8 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
       // We switch to agc true and muted false.
       audio_fidl::wire::GainState gain_state(allocator);
       gain_state.set_muted(false).set_agc_enabled(true).set_gain_db(kTestGain);
-      stream_client->SetGain(std::move(gain_state));
+      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+      (void)stream_client->SetGain(std::move(gain_state));
     }
 
     // Wait until codecs have received a SetGainState call.
@@ -658,7 +663,8 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     format.set_pcm_format(allocator, GetDefaultPcmFormat());
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetVmo(8192, 0);
     ASSERT_OK(vmo.status());
@@ -675,7 +681,8 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
       // Change agc from last one, so the Watch below replies.
       audio_fidl::wire::GainState gain_state(allocator);
       gain_state.set_muted(false).set_agc_enabled(false).set_gain_db(kTestGain);
-      stream_client->SetGain(std::move(gain_state));
+      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+      (void)stream_client->SetGain(std::move(gain_state));
     }
 
     // Wait until codecs have received a SetGainState call.
@@ -885,7 +892,8 @@ TEST(AmlG12Tdm, I2sOutCodecsStop) {
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
   pcm_format.number_of_channels = 3;
   format.set_pcm_format(allocator, std::move(pcm_format));
-  stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
   constexpr uint32_t kFramesRequested = 4096;
   auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetVmo(kFramesRequested, 0);
@@ -965,7 +973,8 @@ TEST(AmlG12Tdm, I2sOutCodecsChannelsActive) {
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
   pcm_format.number_of_channels = 3;
   format.set_pcm_format(allocator, std::move(pcm_format));
-  stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
   constexpr uint32_t kFramesRequested = 4096;
   auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetVmo(kFramesRequested, 0);
@@ -1135,7 +1144,8 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
     fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     format.set_pcm_format(allocator, GetDefaultPcmFormat());
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
@@ -1153,7 +1163,8 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.frame_rate = 96'000;  // Change it from the default at 48kHz.
     format.set_pcm_format(allocator, std::move(pcm_format));
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
@@ -1163,7 +1174,8 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
 
   // To make sure we have changed the rate in the codec make a sync call requiring codec reply
   // (we know the codec is single threaded, rate change is completed if received a reply).
-  stream_client->SetGain(audio_fidl::wire::GainState{});
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)stream_client->SetGain(audio_fidl::wire::GainState{});
 
   // Check that we set the codec to the new rate.
   ASSERT_EQ(codec1->last_frame_rate(), 96'000);
@@ -1242,7 +1254,8 @@ TEST(AmlG12Tdm, PcmChangeRates) {
     audio_fidl::wire::Format format(allocator);
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     format.set_pcm_format(allocator, std::move(pcm_format));
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
   }
 
   // Sets 96'000 kHz.
@@ -1256,7 +1269,8 @@ TEST(AmlG12Tdm, PcmChangeRates) {
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.frame_rate = 96'000;  // Change it from the default at 48kHz.
     format.set_pcm_format(allocator, std::move(pcm_format));
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
   }
 
   // Sets 16'000 kHz.
@@ -1270,7 +1284,8 @@ TEST(AmlG12Tdm, PcmChangeRates) {
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.frame_rate = 16'000;  // Change it from the default at 48kHz.
     format.set_pcm_format(allocator, std::move(pcm_format));
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
@@ -1289,7 +1304,8 @@ TEST(AmlG12Tdm, PcmChangeRates) {
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.frame_rate = 8'000;  // Change it from the default at 48kHz.
     format.set_pcm_format(allocator, std::move(pcm_format));
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
@@ -1365,7 +1381,8 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.number_of_channels = 4;
     format.set_pcm_format(allocator, std::move(pcm_format));
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
@@ -1455,7 +1472,8 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.number_of_channels = 4;
     format.set_pcm_format(allocator, std::move(pcm_format));
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
@@ -1531,7 +1549,8 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.number_of_channels = 4;
     format.set_pcm_format(allocator, std::move(pcm_format));
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     // To make sure call initialization in the controller, make a sync call
     // (we know the controller is single threaded, init completed if received a reply).
@@ -1758,7 +1777,8 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     format.set_pcm_format(allocator, GetDefaultPcmFormat());
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     child_dev->UnbindOp();
     EXPECT_TRUE(child_dev->UnbindReplyCalled());
@@ -1798,7 +1818,8 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.number_of_channels = number_of_channels;
     format.set_pcm_format(allocator, std::move(pcm_format));
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetVmo(frames_req, 0);
     ASSERT_OK(vmo.status());
@@ -1916,7 +1937,8 @@ TEST_F(AmlG12TdmTest, Inspect) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
   // Check inspect state.
   ASSERT_NO_FATAL_FAILURE(ReadInspect(test_dev->inspect().DuplicateVmo()));

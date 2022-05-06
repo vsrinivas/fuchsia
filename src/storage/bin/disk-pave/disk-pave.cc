@@ -242,7 +242,8 @@ fitx::result<UseBlockDeviceError<Protocol>> UseBlockDevice(
 
   auto block_device = service::Connect<fuchsia_hardware_block::Block>(block_device_path);
   if (block_device.is_ok()) {
-    paver_client->UseBlockDevice(
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)paver_client->UseBlockDevice(
         std::move(*block_device),
         // Note: manually converting any DataSink protocol into a DynamicDataSink.
         fidl::ServerEnd<fuchsia_paver::DynamicDataSink>(data_sink_remote.TakeChannel()));
@@ -274,7 +275,8 @@ zx_status_t RealMain(Flags flags) {
         return data_sink.status_value();
       }
       auto [data_sink_local, data_sink_remote] = std::move(*data_sink);
-      paver_client->FindDataSink(std::move(data_sink_remote));
+      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+      (void)paver_client->FindDataSink(std::move(data_sink_remote));
 
       auto streamer_endpoints = fidl::CreateEndpoints<fuchsia_paver::PayloadStream>();
       if (streamer_endpoints.is_error()) {
@@ -316,7 +318,8 @@ zx_status_t RealMain(Flags flags) {
 
       // If we do not have a valid block device, use |FindDataSink|.
       if (data_sink_remote) {
-        paver_client->FindDataSink(std::move(data_sink_remote));
+        // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+        (void)paver_client->FindDataSink(std::move(data_sink_remote));
       }
 
       auto result = fidl::BindSyncClient(std::move(data_sink_local))->WipeVolume();
@@ -408,7 +411,8 @@ zx_status_t RealMain(Flags flags) {
   }
   auto [data_sink_local, data_sink_remote] = std::move(*data_sink_endpoints);
 
-  paver_client->FindDataSink(std::move(data_sink_remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)paver_client->FindDataSink(std::move(data_sink_remote));
   auto data_sink = fidl::BindSyncClient(std::move(data_sink_local));
 
   switch (flags.cmd) {

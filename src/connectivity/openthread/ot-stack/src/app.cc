@@ -62,7 +62,8 @@ void OtStackApp::RadioAllowanceInit() {
     return;
   }
   // send inbound allowance
-  device_client_ptr_->ReadyToReceiveFrames(kInboundAllowanceInit);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)device_client_ptr_->ReadyToReceiveFrames(kInboundAllowanceInit);
 }
 
 void OtStackApp::HandleRadioOnReadyForSendFrame(uint32_t allowance) {
@@ -71,7 +72,8 @@ void OtStackApp::HandleRadioOnReadyForSendFrame(uint32_t allowance) {
   uint32_t size = radio_outbound_frame_.size();
   if ((size > 0) && radio_outbound_allowance_ > 0) {
     auto data = fidl::VectorView<uint8_t>::FromExternal(radio_outbound_frame_);
-    device_client_ptr_->SendFrame(std::move(data));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)device_client_ptr_->SendFrame(std::move(data));
     radio_outbound_frame_.clear();
     radio_q_lock.release();
     FX_LOGS(INFO) << "ot-stack: sent pending outbound frame with size:" << size;
@@ -101,7 +103,8 @@ void OtStackApp::UpdateRadioInboundAllowance() {
   radio_inbound_allowance_--;
   radio_inbound_cnt++;
   if (((radio_inbound_allowance_ & 1) == 0) && device_client_ptr_) {
-    device_client_ptr_->ReadyToReceiveFrames(kInboundAllowanceInc);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)device_client_ptr_->ReadyToReceiveFrames(kInboundAllowanceInc);
     radio_inbound_allowance_ += kInboundAllowanceInc;
   }
   FX_LOGS(DEBUG) << "ot-stack: updated radio_inbound_allowance_:" << radio_inbound_allowance_;
@@ -224,7 +227,8 @@ void OtStackApp::OtStackCallBackImpl::SendOneFrameToRadio(uint8_t* buffer, size_
     FX_LOGS(WARNING) << "ot-stack: radio_outbound_allowance_ is 0, cannot send packet";
     return;
   }
-  app_.device_client_ptr_->SendFrame(std::move(data));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)app_.device_client_ptr_->SendFrame(std::move(data));
   radio_q_lock.release();
   app_.UpdateRadioOutboundAllowance();
 }

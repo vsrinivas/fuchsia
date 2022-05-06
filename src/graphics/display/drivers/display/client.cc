@@ -230,9 +230,11 @@ void Client::ReleaseBufferCollection(ReleaseBufferCollectionRequestView request,
     return;
   }
 
-  it->second.driver->Close();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)it->second.driver->Close();
   if (it->second.kernel.is_valid()) {
-    it->second.kernel->Close();
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)it->second.kernel->Close();
   }
   collection_map_.erase(it);
 }
@@ -1532,7 +1534,8 @@ Client::Init(zx::channel server_channel) {
     zxlogf(ERROR, "GetSysmemConnection failed (continuing) - status: %d", status);
   } else {
     sysmem_allocator_ = fidl::WireSyncClient<sysmem::Allocator>(std::move(sysmem_allocator_client));
-    sysmem_allocator_->SetDebugClientInfo(
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)sysmem_allocator_->SetDebugClientInfo(
         fidl::StringView::FromExternal(fsl::GetCurrentProcessName()), fsl::GetCurrentProcessKoid());
   }
 

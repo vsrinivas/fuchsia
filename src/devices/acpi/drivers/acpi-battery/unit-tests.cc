@@ -193,7 +193,8 @@ TEST_F(AcpiBatteryTest, CheckDataUpdated) {
 
   // Percentage point drop!
   battery_capacity_ = 990;
-  notify_client_->Handle(0x80);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)notify_client_->Handle(0x80);
 
   // Expect an event.
   ASSERT_OK(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), &pending));

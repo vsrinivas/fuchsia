@@ -194,7 +194,7 @@ namespace test_driverhandle {
 #ifdef __Fuchsia__
 }  // namespace test_driverhandle
 template <>
-class ::fdf::WireUnownedResult<
+class [[nodiscard]] ::fdf::WireUnownedResult<
     ::test_driverhandle::HandlesInProtocol::SendHandles>
     final : public ::fidl::Status {
  public:

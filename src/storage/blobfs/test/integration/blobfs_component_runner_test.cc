@@ -64,7 +64,8 @@ class BlobfsComponentRunnerTest : public testing::Test {
   fidl::ClientEnd<fuchsia_io::Directory> GetSvcDir() const {
     auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_EQ(svc_endpoints.status_value(), ZX_OK);
-    root_->Open(
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)root_->Open(
         fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightWritable,
         fuchsia_io::wire::kModeTypeDirectory, "svc",
         fidl::ServerEnd<fuchsia_io::Node>(svc_endpoints->server.TakeChannel()));

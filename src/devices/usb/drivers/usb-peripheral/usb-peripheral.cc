@@ -333,7 +333,9 @@ zx_status_t UsbPeripheral::FunctionRegistered() {
   zxlogf(DEBUG, "usb_device_function_registered functions_registered = true");
   functions_registered_ = true;
   if (listener_) {
-    fidl::WireCall<peripheral::Events>(zx::unowned_channel(listener_.get()))->FunctionRegistered();
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)fidl::WireCall<peripheral::Events>(zx::unowned_channel(listener_.get()))
+        ->FunctionRegistered();
   }
   return DeviceStateChanged();
 }
@@ -613,7 +615,9 @@ void UsbPeripheral::ClearFunctionsComplete() {
   DeviceStateChanged();
 
   if (listener_) {
-    fidl::WireCall<peripheral::Events>(zx::unowned_channel(listener_.get()))->FunctionsCleared();
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)fidl::WireCall<peripheral::Events>(zx::unowned_channel(listener_.get()))
+        ->FunctionsCleared();
   }
 }
 

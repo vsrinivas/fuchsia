@@ -803,7 +803,8 @@ namespace test_unknowninteractions {
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
 template <>
-class ::fidl::WireResult<::test_unknowninteractions::Example::StrictOneWay>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_unknowninteractions::Example::StrictOneWay>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -820,7 +821,7 @@ class ::fidl::WireResult<::test_unknowninteractions::Example::StrictOneWay>
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_unknowninteractions::Example::StrictOneWay>
     final : public ::fidl::Status {
  public:
@@ -838,7 +839,8 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleOneWay>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_unknowninteractions::Example::FlexibleOneWay>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -855,7 +857,7 @@ class ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleOneWay>
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_unknowninteractions::Example::FlexibleOneWay>
     final : public ::fidl::Status {
  public:
@@ -873,7 +875,8 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_unknowninteractions::Example::StrictTwoWay>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -896,7 +899,7 @@ class ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_unknowninteractions::Example::StrictTwoWay>
     final : public ::fidl::Status {
  public:
@@ -933,7 +936,8 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_unknowninteractions::Example::FlexibleTwoWay>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -1001,7 +1005,7 @@ class ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_unknowninteractions::Example::FlexibleTwoWay>
     final : public ::fidl::Status {
  public:

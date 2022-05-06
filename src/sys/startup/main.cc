@@ -65,7 +65,8 @@ void start_appmgr() {
   }
 
   fidl::WireSyncClient<fuchsia_appmgr::Startup> client(std::move(local));
-  client->LaunchAppmgr();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client->LaunchAppmgr();
 }
 
 void start_session_manager() {
@@ -84,7 +85,8 @@ void start_session_manager() {
   }
 
   fidl::WireSyncClient<fuchsia_sessionmanager::Startup> client(std::move(local));
-  client->LaunchSessionManager();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client->LaunchSessionManager();
 }
 }  // namespace
 

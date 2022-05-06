@@ -104,8 +104,9 @@ class IntegrationTest : public TestBase, public zxtest::WithParamInterface<bool>
     fidl::UnownedClientEnd<sysmem::DriverConnector> connector{sysmem_fidl()->get()};
     EXPECT_TRUE(fidl::WireCall(connector)->Connect(std::move(server)).ok());
     sysmem_ = fidl::WireSyncClient<sysmem::Allocator>(std::move(client));
-    sysmem_->SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
-                                fsl::GetCurrentProcessKoid());
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)sysmem_->SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
+                                      fsl::GetCurrentProcessKoid());
   }
 
   // |TestBase|
@@ -296,7 +297,8 @@ TEST_F(IntegrationTest, AcknowledgeVsync) {
   // acknowledge
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -331,7 +333,8 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterQueueFull) {
   // now let's acknowledge vsync
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -374,7 +377,8 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
   // now let's acknowledge vsync
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -419,7 +423,8 @@ TEST_F(IntegrationTest, InvalidVSyncCookie) {
   // now let's acknowledge vsync with invalid cookie
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(0xdeadbeef);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->AcknowledgeVsync(0xdeadbeef);
   }
   EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -462,7 +467,8 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   // now let's acknowledge vsync
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -502,7 +508,8 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   // now let's acknowledge vsync with old cookie
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(old_cookie);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->AcknowledgeVsync(old_cookie);
   }
   EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -521,7 +528,8 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   // now let's acknowledge with valid cookie
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -552,7 +560,8 @@ TEST_F(IntegrationTest, ImportGammaTable) {
   ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
   }
@@ -571,10 +580,12 @@ TEST_F(IntegrationTest, ReleaseGammaTable) {
   ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
-    primary_client->dc_->ReleaseGammaTable(gamma_table_id);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->ReleaseGammaTable(gamma_table_id);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 0; }, zx::sec(1)));
   }
@@ -593,10 +604,12 @@ TEST_F(IntegrationTest, ReleaseInvalidGammaTable) {
   ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
-    primary_client->dc_->ReleaseGammaTable(gamma_table_id + 5);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->ReleaseGammaTable(gamma_table_id + 5);
     EXPECT_FALSE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 0; }, zx::sec(1)));
   }
@@ -615,10 +628,12 @@ TEST_F(IntegrationTest, SetGammaTable) {
   ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
-    primary_client->dc_->SetDisplayGammaTable(primary_client->display_id(), gamma_table_id);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->SetDisplayGammaTable(primary_client->display_id(), gamma_table_id);
   }
 }
 
@@ -643,11 +658,13 @@ TEST_F(IntegrationTest, ClampRgb) {
   {
     fbl::AutoLock lock(vc_client.mtx());
     // set mode to Fallback
-    vc_client.dc_->SetVirtconMode(1);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)vc_client.dc_->SetVirtconMode(1);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return virtcon_client_connected(); }, zx::sec(1)));
     // Clamp RGB to a minimum value
-    vc_client.dc_->SetMinimumRgb(32);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)vc_client.dc_->SetMinimumRgb(32);
     EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return display()->GetClampRgbValue() == 32; },
                                           zx::sec(1)));
   }
@@ -661,7 +678,8 @@ TEST_F(IntegrationTest, ClampRgb) {
   {
     fbl::AutoLock lock(primary_client->mtx());
     // Clamp RGB to a new value
-    primary_client->dc_->SetMinimumRgb(1);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)primary_client->dc_->SetMinimumRgb(1);
     EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return display()->GetClampRgbValue() == 1; },
                                           zx::sec(1)));
   }

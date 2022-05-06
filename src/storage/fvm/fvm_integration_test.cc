@@ -353,7 +353,8 @@ VmoClient::VmoClient(int fd) : fd_(fd) {
 
 VmoClient::~VmoClient() {
   fdio_cpp::UnownedFdioCaller disk_connection(fd());
-  fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->CloseFifo();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->CloseFifo();
 }
 
 void VmoClient::CheckWrite(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t len) {

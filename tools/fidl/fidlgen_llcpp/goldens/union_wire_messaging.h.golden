@@ -554,7 +554,7 @@ namespace test_union {
 #ifdef __Fuchsia__
 }  // namespace test_union
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
     final : public ::fidl::Status {
  public:
@@ -629,7 +629,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<72> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
     final : public ::fidl::Status {
  public:
@@ -720,7 +720,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
     final : public ::fidl::Status {
  public:
@@ -799,7 +799,7 @@ class ::fidl::WireResult<
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
     final : public ::fidl::Status {
  public:

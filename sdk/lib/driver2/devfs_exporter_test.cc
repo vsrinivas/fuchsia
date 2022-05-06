@@ -61,7 +61,8 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ServeSvcDir(
   if (svc_endpoints.is_error()) {
     return svc_endpoints.take_error();
   }
-  fidl::WireCall(endpoints->client)
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall(endpoints->client)
       ->Open(fuchsia_io::wire::OpenFlags::kRightReadable, 0, "svc",
              fidl::ServerEnd<fuchsia_io::Node>(svc_endpoints->server.TakeChannel()));
   return zx::ok(std::move(svc_endpoints->client));

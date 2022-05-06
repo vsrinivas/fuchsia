@@ -381,7 +381,8 @@ zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
                         zx::error(data_sink_endpoints.status_value()));
   }
   auto [data_sink_local, data_sink_remote] = std::move(*data_sink_endpoints);
-  paver_client_res.value()->FindDataSink(std::move(data_sink_remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)paver_client_res.value()->FindDataSink(std::move(data_sink_remote));
   auto data_sink = fidl::BindSyncClient(std::move(data_sink_local));
 
   FlashPartitionInfo info = GetPartitionInfo(args[1]);
@@ -588,7 +589,8 @@ zx::status<> Fastboot::OemAddStagedBootloaderFile(const std::string& command,
                         zx::error(data_sink_endpoints.status_value()));
   }
   auto [data_sink_local, data_sink_remote] = std::move(*data_sink_endpoints);
-  paver_client_res.value()->FindDataSink(std::move(data_sink_remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)paver_client_res.value()->FindDataSink(std::move(data_sink_remote));
   auto data_sink = fidl::BindSyncClient(std::move(data_sink_local));
 
   fuchsia_mem::wire::Buffer buf;

@@ -32,7 +32,8 @@ fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
     return {};
   }
   auto [stream_channel_local, stream_channel_remote] = *std::move(endpoints);
-  client_wrap->Connect(std::move(stream_channel_remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)client_wrap->Connect(std::move(stream_channel_remote));
   return fidl::WireSyncClient<audio_fidl::StreamConfig>(std::move(stream_channel_local));
 }
 
@@ -117,7 +118,8 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     audio_fidl::wire::Format format(allocator);
     format.set_pcm_format(allocator, std::move(pcm_format));
 
-    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetVmo(frames_req, 0);
     ASSERT_OK(vmo.status());
@@ -169,7 +171,8 @@ TEST_F(AudioStreamInTest, Inspect) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
 
-  stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
   auto props = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
   ASSERT_OK(props.status());

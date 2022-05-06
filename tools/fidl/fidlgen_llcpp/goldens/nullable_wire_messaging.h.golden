@@ -287,8 +287,8 @@ namespace test_nullable {
 #ifdef __Fuchsia__
 }  // namespace test_nullable
 template <>
-class ::fidl::WireResult<::test_nullable::SimpleProtocol::Add> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_nullable::SimpleProtocol::Add>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client,
              ::fidl::internal::TransactionalRequest<
@@ -345,8 +345,9 @@ class ::fidl::WireResult<::test_nullable::SimpleProtocol::Add> final
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_nullable::SimpleProtocol::Add>
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client_end,

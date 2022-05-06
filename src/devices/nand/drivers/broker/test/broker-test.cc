@@ -73,7 +73,8 @@ class NandDevice {
       ASSERT_TRUE(dir_fd);
       ASSERT_EQ(device_watcher::DirWatcher::Create(std::move(dir_fd), &watcher), ZX_OK);
 
-      fidl::WireCall(controller())->ScheduleUnbind();
+      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+      (void)fidl::WireCall(controller())->ScheduleUnbind();
 
       ASSERT_EQ(watcher->WaitForRemoval(static_cast<std::string_view>(filename_), zx::sec(5)),
                 ZX_OK);

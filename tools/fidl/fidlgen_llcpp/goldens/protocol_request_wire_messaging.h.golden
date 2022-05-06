@@ -768,8 +768,8 @@ namespace test_protocolrequest {
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
 template <>
-class ::fidl::WireResult<::test_protocolrequest::Parent::GetChild> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChild>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
              ::fidl::internal::TransactionalRequest<
@@ -830,8 +830,9 @@ class ::fidl::WireResult<::test_protocolrequest::Parent::GetChild> final
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocolrequest::Parent::GetChild>
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end,
@@ -907,8 +908,9 @@ class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild> final
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocolrequest::Parent::GetChildRequest>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
              ::fidl::internal::TransactionalRequest<
@@ -973,7 +975,8 @@ class ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest> final
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChildRequest>
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocolrequest::Parent::GetChildRequest>
     final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
@@ -1054,8 +1057,9 @@ class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChildRequest>
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocolrequest::Parent::TakeChild> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocolrequest::Parent::TakeChild>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
              ::fidl::internal::TransactionalRequest<
@@ -1070,8 +1074,9 @@ class ::fidl::WireResult<::test_protocolrequest::Parent::TakeChild> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChild> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocolrequest::Parent::TakeChild>
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end,
@@ -1087,8 +1092,9 @@ class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChild> final
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::test_protocolrequest::Parent::TakeChildRequest> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocolrequest::Parent::TakeChildRequest>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
              ::fidl::internal::TransactionalRequest<
@@ -1103,7 +1109,7 @@ class ::fidl::WireResult<::test_protocolrequest::Parent::TakeChildRequest> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolrequest::Parent::TakeChildRequest>
     final : public ::fidl::Status {
  public:

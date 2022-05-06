@@ -455,7 +455,8 @@ bool Image::Import(const fidl::WireSyncClient<fhd::Controller>& dc, image_import
 
     info_out->events[i] = std::move(e1);
     info_out->event_ids[i] = event_id;
-    dc->ImportEvent(std::move(e2), event_id++);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)dc->ImportEvent(std::move(e2), event_id++);
 
     if (i != WAIT_EVENT) {
       info_out->events[i].signal(0, ZX_EVENT_SIGNALED);
@@ -472,7 +473,8 @@ bool Image::Import(const fidl::WireSyncClient<fhd::Controller>& dc, image_import
   info_out->id = import_result->image_id;
 
   // image has been imported. we can close the connection
-  dc->ReleaseBufferCollection(collection_id_);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)dc->ReleaseBufferCollection(collection_id_);
   return true;
 }
 

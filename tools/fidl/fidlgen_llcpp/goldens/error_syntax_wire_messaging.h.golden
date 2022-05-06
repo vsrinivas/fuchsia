@@ -624,7 +624,7 @@ namespace test_errorsyntax {
 #ifdef __Fuchsia__
 }  // namespace test_errorsyntax
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
     final : public ::fidl::Status {
  public:
@@ -703,7 +703,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
     final : public ::fidl::Status {
  public:
@@ -794,7 +794,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
     final : public ::fidl::Status {
  public:
@@ -871,7 +871,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
     final : public ::fidl::Status {
  public:

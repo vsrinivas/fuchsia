@@ -85,7 +85,8 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
   ASSERT_OK(resp2.status());
   ASSERT_EQ(call_status, ZX_ERR_ALREADY_BOUND);
 
-  fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
 TEST(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
@@ -110,7 +111,8 @@ TEST(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
   }
   ASSERT_OK(call_status);
 
-  fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
 TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
@@ -279,7 +281,8 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
   ASSERT_OK(resp2.status());
   ASSERT_EQ(call_status, ZX_ERR_ALREADY_BOUND);
 
-  fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
 TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
@@ -306,7 +309,8 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   }
   ASSERT_OK(call_status);
 
-  fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
 TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
@@ -333,7 +337,8 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   }
   ASSERT_EQ(call_status, ZX_ERR_BAD_STATE);
 
-  fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
 // Test the flag using bind failure as a proxy for "the unit test did run".
@@ -360,7 +365,8 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
     call_status = resp->result.err();
   }
   ASSERT_EQ(call_status, ZX_ERR_BAD_STATE);
-  fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
 // Test the flag using bind success as a proxy for "the unit test didn't run".
@@ -386,7 +392,8 @@ TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
   }
   ASSERT_OK(call_status);
 
-  fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
 // Test the flag using bind success as a proxy for "the unit test didn't run".
@@ -414,7 +421,8 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
     call_status = resp->result.err();
   }
   ASSERT_OK(call_status);
-  fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall<fuchsia_device_test::Device>(zx::unowned_channel{dev_channel})->Destroy();
 }
 
 TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {

@@ -159,8 +159,8 @@ namespace test_driveroneway {
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
 template <>
-class ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send>
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end,

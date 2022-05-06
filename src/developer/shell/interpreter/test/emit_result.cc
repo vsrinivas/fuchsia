@@ -13,7 +13,8 @@
   TEST_F(InterpreterTest, name) {                                                              \
     constexpr uint64_t kFileId = 1;                                                            \
     InterpreterTestContext* context = CreateContext();                                         \
-    shell()->CreateExecutionContext(context->id);                                              \
+    /* TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it. */            \
+    (void)shell()->CreateExecutionContext(context->id);                                        \
                                                                                                \
     shell::console::AstBuilder builder(kFileId);                                               \
     builder.AddVariableDeclaration("x", type,                                                  \
@@ -25,8 +26,10 @@
                                                   ? builder.AddIntegerLiteral(-right, true)    \
                                                   : builder.AddIntegerLiteral(right, false))); \
                                                                                                \
-    shell()->AddNodes(context->id, builder.DefsAsVectorView());                                \
-    shell()->ExecuteExecutionContext(context->id);                                             \
+    /* TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it. */            \
+    (void)shell()->AddNodes(context->id, builder.DefsAsVectorView());                          \
+    /* TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it. */            \
+    (void)shell()->ExecuteExecutionContext(context->id);                                       \
     Finish(kExecute);                                                                          \
                                                                                                \
     ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());                  \
@@ -34,6 +37,7 @@
     CHECK_RESULT(0, result);                                                                   \
   }
 
+// clang-format off
 EmitResultTest(EmitResultInt8, builder.TypeInt8(), 10, -30, "-20")
 EmitResultTest(EmitResultUint8, builder.TypeUint8(), 10, 30, "40")
 
@@ -47,9 +51,11 @@ EmitResultTest(EmitResultInt64, builder.TypeInt64(), 10000000000LL, -30000000000
 EmitResultTest(EmitResultUint64, builder.TypeUint64(), 10000000000LL, 30000000000LL, "40000000000")
 
 TEST_F(InterpreterTest, EmitResultString) {
+  // clang-format on
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  shell()->CreateExecutionContext(context->id);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)shell()->CreateExecutionContext(context->id);
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("good", builder.TypeString(), builder.AddStringLiteral("good"),
@@ -57,8 +63,10 @@ TEST_F(InterpreterTest, EmitResultString) {
   builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/true, builder.AddVariable("good"),
                                             builder.AddStringLiteral(" morning")));
 
-  shell()->AddNodes(context->id, builder.DefsAsVectorView());
-  shell()->ExecuteExecutionContext(context->id);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)shell()->AddNodes(context->id, builder.DefsAsVectorView());
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)shell()->ExecuteExecutionContext(context->id);
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
@@ -98,7 +106,8 @@ TEST_F(InterpreterTest, EmitObject) {
 TEST_F(InterpreterTest, EmitMultipleResults) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  shell()->CreateExecutionContext(context->id);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)shell()->CreateExecutionContext(context->id);
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("x", builder.TypeInt64(), builder.AddIntegerLiteral(1250, false),
@@ -110,8 +119,10 @@ TEST_F(InterpreterTest, EmitMultipleResults) {
   builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/false, builder.AddVariable("x"),
                                             builder.AddIntegerLiteral(1000, true)));
 
-  shell()->AddNodes(context->id, builder.DefsAsVectorView());
-  shell()->ExecuteExecutionContext(context->id);
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)shell()->AddNodes(context->id, builder.DefsAsVectorView());
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)shell()->ExecuteExecutionContext(context->id);
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());

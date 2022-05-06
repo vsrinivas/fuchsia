@@ -369,7 +369,8 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
  public:
   ~ZirconPlatformBufferCollection() override {
     if (collection_)
-      collection_->Close();
+      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+      (void)collection_->Close();
   }
 
   Status Bind(fidl::WireSyncClient<fuchsia_sysmem::Allocator>& allocator, uint32_t token_handle) {
@@ -468,7 +469,8 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
  public:
   ZirconPlatformSysmemConnection(fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator)
       : sysmem_allocator_(std::move(allocator)) {
-    sysmem_allocator_->SetDebugClientInfo(
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)sysmem_allocator_->SetDebugClientInfo(
         fidl::StringView::FromExternal(magma::PlatformProcessHelper::GetCurrentProcessName()),
         magma::PlatformProcessHelper::GetCurrentProcessId());
   }
@@ -590,7 +592,8 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(h1));
 
     if (!name.empty()) {
-      collection->SetName(10, fidl::StringView::FromExternal(name));
+      // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+      (void)collection->SetName(10, fidl::StringView::FromExternal(name));
     }
     status = collection->SetConstraints(true, std::move(constraints)).status();
     if (status != ZX_OK)
@@ -599,7 +602,8 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     auto result = collection->WaitForBuffersAllocated();
 
     // Ignore failure - this just prevents unnecessary logged errors.
-    collection->Close();
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)collection->Close();
 
     if (result.status() != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",

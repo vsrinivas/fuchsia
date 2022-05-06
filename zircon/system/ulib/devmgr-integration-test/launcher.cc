@@ -234,7 +234,8 @@ struct IsolatedDevmgr::ExceptionLoopState {
     einfo.process_koid = info.pid;
     einfo.thread_koid = info.tid;
     einfo.type = static_cast<fuchsia_exception::wire::ExceptionType>(info.type);
-    handler->OnException(std::move(exception), einfo);
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)handler->OnException(std::move(exception), einfo);
 
     if (exception_callback_) {
       exception_callback_(info);

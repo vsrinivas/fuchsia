@@ -283,8 +283,8 @@ namespace test_drivertwoway {
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway
 template <>
-class ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end,

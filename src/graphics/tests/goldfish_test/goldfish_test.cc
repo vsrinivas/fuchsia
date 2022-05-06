@@ -28,8 +28,9 @@ fidl::WireSyncClient<fuchsia_sysmem::Allocator> CreateSysmemAllocator() {
     return {};
   }
   fidl::WireSyncClient allocator(std::move(*client_end));
-  allocator->SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
-                                fsl::GetCurrentProcessKoid());
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)allocator->SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
+                                      fsl::GetCurrentProcessKoid());
   return allocator;
 }
 
@@ -374,9 +375,11 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible_MultiClients) {
   EXPECT_EQ(zx::channel::create(0, &token_client[1], &token_server[1]), ZX_OK);
   EXPECT_TRUE(allocator->AllocateSharedCollection(std::move(token_server[0])).ok());
 
-  fidl::WireCall<fuchsia_sysmem::BufferCollectionToken>(token_client[0].borrow())
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall<fuchsia_sysmem::BufferCollectionToken>(token_client[0].borrow())
       ->Duplicate(0, std::move(token_server[1]));
-  fidl::WireCall<fuchsia_sysmem::BufferCollectionToken>(token_client[0].borrow())->Sync();
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall<fuchsia_sysmem::BufferCollectionToken>(token_client[0].borrow())->Sync();
 
   for (size_t i = 0; i < kNumClients; i++) {
     EXPECT_EQ(zx::channel::create(0, &collection_client[i], &collection_server[i]), ZX_OK);

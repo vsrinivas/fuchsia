@@ -222,7 +222,8 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
 #endif
 
 TEST_F(LifecycleTest, CloseAllConnectionsOnUnbind) {
-  fidl::WireCall<Controller>(fidl::UnownedClientEnd<Controller>(chan_.channel().borrow()))
+  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+  (void)fidl::WireCall<Controller>(fidl::UnownedClientEnd<Controller>(chan_.channel().borrow()))
       ->ScheduleUnbind();
   zx_signals_t closed;
   ASSERT_OK(chan_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &closed));

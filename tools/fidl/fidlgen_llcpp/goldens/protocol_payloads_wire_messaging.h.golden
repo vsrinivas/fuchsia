@@ -3593,7 +3593,8 @@ namespace test_protocolpayloads {
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
 template <>
-class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayComposed>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocolpayloads::MainProtocol::OneWayComposed>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -3610,7 +3611,7 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayComposed>
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::OneWayComposed>
     final : public ::fidl::Status {
  public:
@@ -3629,7 +3630,8 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -3697,7 +3699,7 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>
     final : public ::fidl::Status {
  public:
@@ -3782,7 +3784,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
     final : public ::fidl::Status {
  public:
@@ -3857,7 +3859,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
     final : public ::fidl::Status {
  public:
@@ -3951,7 +3953,8 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayLocal>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocolpayloads::MainProtocol::OneWayLocal>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -3968,7 +3971,7 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayLocal>
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::OneWayLocal>
     final : public ::fidl::Status {
  public:
@@ -3987,7 +3990,8 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -4055,7 +4059,7 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::TwoWayLocal>
     final : public ::fidl::Status {
  public:
@@ -4138,7 +4142,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
     final : public ::fidl::Status {
  public:
@@ -4212,7 +4216,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
     final : public ::fidl::Status {
  public:
@@ -4304,7 +4308,8 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayImport>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocolpayloads::MainProtocol::OneWayImport>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -4321,7 +4326,7 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayImport>
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::OneWayImport>
     final : public ::fidl::Status {
  public:
@@ -4340,7 +4345,8 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayImport>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -4408,7 +4414,7 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayImport>
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::TwoWayImport>
     final : public ::fidl::Status {
  public:
@@ -4491,7 +4497,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
     final : public ::fidl::Status {
  public:
@@ -4566,7 +4572,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
     final : public ::fidl::Status {
  public:
@@ -4660,7 +4666,8 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayAnon>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocolpayloads::MainProtocol::OneWayAnon>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -4677,7 +4684,7 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayAnon>
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::OneWayAnon>
     final : public ::fidl::Status {
  public:
@@ -4696,7 +4703,8 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -4760,7 +4768,7 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::TwoWayAnon>
     final : public ::fidl::Status {
  public:
@@ -4839,7 +4847,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
     final : public ::fidl::Status {
  public:
@@ -4912,7 +4920,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
     final : public ::fidl::Status {
  public:

@@ -1462,7 +1462,7 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
     final : public ::fidl::Status {
  public:
@@ -1482,7 +1482,7 @@ class ::fidl::WireResult<
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
     final : public ::fidl::Status {
  public:
@@ -1502,7 +1502,7 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
     final : public ::fidl::Status {
  public:
@@ -1530,7 +1530,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
     final : public ::fidl::Status {
  public:
@@ -1570,7 +1570,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
     final : public ::fidl::Status {
  public:
@@ -1649,7 +1649,7 @@ class ::fidl::WireResult<
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
     final : public ::fidl::Status {
  public:
@@ -1740,7 +1740,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>
     final : public ::fidl::Status {
  public:
@@ -1760,7 +1760,7 @@ class ::fidl::WireResult<
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>
     final : public ::fidl::Status {
  public:
@@ -1780,7 +1780,7 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
     final : public ::fidl::Status {
  public:
@@ -1808,7 +1808,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
     final : public ::fidl::Status {
  public:
@@ -1848,7 +1848,7 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
     final : public ::fidl::Status {
  public:
@@ -1927,7 +1927,7 @@ class ::fidl::WireResult<
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
     final : public ::fidl::Status {
  public:
@@ -3001,8 +3001,8 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 template <>
-class ::fidl::WireResult<::test_protocols::Transitional::Request> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_protocols::Transitional::Request>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::Transitional> client,
              ::fidl::internal::TransactionalRequest<
@@ -3059,8 +3059,9 @@ class ::fidl::WireResult<::test_protocols::Transitional::Request> final
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::Transitional::Request> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::Transitional::Request>
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end,
@@ -3131,8 +3132,8 @@ class ::fidl::WireUnownedResult<::test_protocols::Transitional::Request> final
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocols::Transitional::OneWay> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_protocols::Transitional::OneWay>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::Transitional> client,
              ::fidl::internal::TransactionalRequest<
@@ -3147,8 +3148,9 @@ class ::fidl::WireResult<::test_protocols::Transitional::OneWay> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::Transitional::OneWay> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::Transitional::OneWay>
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end,
@@ -3526,8 +3528,9 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 template <>
-class ::fidl::WireResult<::test_protocols::MethodWithUnion::UnionMethod> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::MethodWithUnion::UnionMethod>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client,
              ::fidl::internal::TransactionalRequest<
@@ -3542,7 +3545,8 @@ class ::fidl::WireResult<::test_protocols::MethodWithUnion::UnionMethod> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::MethodWithUnion::UnionMethod>
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::MethodWithUnion::UnionMethod>
     final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
@@ -4581,8 +4585,9 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 template <>
-class ::fidl::WireResult<::test_protocols::WithProtocolEnds::ClientEnds> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::WithProtocolEnds::ClientEnds>
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client,
@@ -4649,7 +4654,8 @@ class ::fidl::WireResult<::test_protocols::WithProtocolEnds::ClientEnds> final
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ClientEnds>
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::WithProtocolEnds::ClientEnds>
     final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
@@ -4730,8 +4736,9 @@ class ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ClientEnds>
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocols::WithProtocolEnds::ServerEnds> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::WithProtocolEnds::ServerEnds>
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client,
@@ -4798,7 +4805,8 @@ class ::fidl::WireResult<::test_protocols::WithProtocolEnds::ServerEnds> final
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ServerEnds>
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::WithProtocolEnds::ServerEnds>
     final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
@@ -4879,7 +4887,7 @@ class ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ServerEnds>
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::WithProtocolEnds::StructContainingEnds>
     final : public ::fidl::Status {
  public:
@@ -4956,7 +4964,7 @@ class ::fidl::WireResult<
   ::fidl::internal::InlineMessageBuffer<32> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::WithProtocolEnds::StructContainingEnds>
     final : public ::fidl::Status {
  public:
@@ -5576,8 +5584,9 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 template <>
-class ::fidl::WireResult<::test_protocols::ManyParameters::Fifteen> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::ManyParameters::Fifteen>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::ManyParameters> client,
              ::fidl::internal::TransactionalRequest<
@@ -5592,8 +5601,9 @@ class ::fidl::WireResult<::test_protocols::ManyParameters::Fifteen> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::ManyParameters::Fifteen> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::ManyParameters::Fifteen>
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> client_end,
@@ -6341,7 +6351,7 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 template <>
-class ::fidl::WireResult<
+class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::HandleRightsProtocol::NoResponseMethod>
     final : public ::fidl::Status {
  public:
@@ -6359,7 +6369,7 @@ class ::fidl::WireResult<
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::HandleRightsProtocol::NoResponseMethod>
     final : public ::fidl::Status {
  public:
@@ -6378,7 +6388,8 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::test_protocols::HandleRightsProtocol::ResponseMethod>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::HandleRightsProtocol::ResponseMethod>
     final : public ::fidl::Status {
  public:
   WireResult(
@@ -6450,7 +6461,7 @@ class ::fidl::WireResult<::test_protocols::HandleRightsProtocol::ResponseMethod>
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::HandleRightsProtocol::ResponseMethod>
     final : public ::fidl::Status {
  public:
@@ -7719,7 +7730,8 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 template <>
-class ::fidl::WireResult<::test_protocols::WithErrorSyntax::ResponseAsStruct>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::WithErrorSyntax::ResponseAsStruct>
     final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client,
@@ -7785,7 +7797,7 @@ class ::fidl::WireResult<::test_protocols::WithErrorSyntax::ResponseAsStruct>
   ::fidl::internal::InlineMessageBuffer<64> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>
     final : public ::fidl::Status {
  public:
@@ -7867,7 +7879,8 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
     final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client,
@@ -7933,7 +7946,7 @@ class ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
     final : public ::fidl::Status {
  public:
@@ -8015,8 +8028,9 @@ class ::fidl::WireUnownedResult<
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorAsEnum> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::WithErrorSyntax::ErrorAsEnum>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client,
              ::fidl::internal::TransactionalRequest<
@@ -8077,7 +8091,8 @@ class ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorAsEnum> final
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ErrorAsEnum>
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::WithErrorSyntax::ErrorAsEnum>
     final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
@@ -8154,7 +8169,8 @@ class ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ErrorAsEnum>
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocols::WithErrorSyntax::HandleInResult>
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::WithErrorSyntax::HandleInResult>
     final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client,
@@ -8220,7 +8236,7 @@ class ::fidl::WireResult<::test_protocols::WithErrorSyntax::HandleInResult>
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<
+class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_protocols::WithErrorSyntax::HandleInResult>
     final : public ::fidl::Status {
  public:
@@ -8843,8 +8859,9 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 template <>
-class ::fidl::WireResult<::test_protocols::DiscoverableProtocol::Method> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::DiscoverableProtocol::Method>
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> client,
@@ -8860,7 +8877,8 @@ class ::fidl::WireResult<::test_protocols::DiscoverableProtocol::Method> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::DiscoverableProtocol::Method>
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::DiscoverableProtocol::Method>
     final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
@@ -10008,8 +10026,9 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 template <>
-class ::fidl::WireResult<::test_protocols::ChannelProtocol::MethodA> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::ChannelProtocol::MethodA>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client,
              ::fidl::internal::TransactionalRequest<
@@ -10024,7 +10043,8 @@ class ::fidl::WireResult<::test_protocols::ChannelProtocol::MethodA> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MethodA>
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::ChannelProtocol::MethodA>
     final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
@@ -10041,8 +10061,9 @@ class ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MethodA>
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::test_protocols::ChannelProtocol::MethodB> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::ChannelProtocol::MethodB>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client,
              ::fidl::internal::TransactionalRequest<
@@ -10101,7 +10122,8 @@ class ::fidl::WireResult<::test_protocols::ChannelProtocol::MethodB> final
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MethodB>
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::ChannelProtocol::MethodB>
     final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
@@ -10176,8 +10198,9 @@ class ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MethodB>
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocols::ChannelProtocol::TakeHandle> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::ChannelProtocol::TakeHandle>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client,
              ::fidl::internal::TransactionalRequest<
@@ -10197,7 +10220,8 @@ class ::fidl::WireResult<::test_protocols::ChannelProtocol::TakeHandle> final
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::TakeHandle>
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::ChannelProtocol::TakeHandle>
     final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
@@ -10233,8 +10257,9 @@ class ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::TakeHandle>
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::test_protocols::ChannelProtocol::MutateSocket> final
-    : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<
+    ::test_protocols::ChannelProtocol::MutateSocket>
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client,
              ::fidl::internal::TransactionalRequest<
@@ -10299,7 +10324,8 @@ class ::fidl::WireResult<::test_protocols::ChannelProtocol::MutateSocket> final
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MutateSocket>
+class [[nodiscard]] ::fidl::WireUnownedResult<
+    ::test_protocols::ChannelProtocol::MutateSocket>
     final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
