@@ -21,16 +21,22 @@ import("//sdk/cts/build/write_cts_file.gni")
 #   test_components = [ ":my-test-component" ]
 # }
 # ```
+#
+# Parameters
+#   uses_experimental_fidl (optional)
+#     Package contains a test component using an "experimental" sdk_category FIDL.
+#     Use this flag when writing tests while a FIDL interface is still under
+#     development. Prevents the CTS from releasing this test.
+#     Type: bool
 template("cts_fuchsia_test_package") {
-  # This parameter is a hack to skip the driver test realm tests until
-  # fxb/87160 is fixed. DO NOT add more uses of internal_only_skip_on_cq.
-  not_needed(invoker, [ "internal_only_skip_on_cq" ])
-
   if (current_toolchain == default_toolchain) {
     assert(defined(invoker.package_name), "package_name must be defined.")
     if (cts_version != "") {
       invoker.package_name += "_$cts_version"
     }
+
+    uses_experimental_fidl = defined(invoker.uses_experimental_fidl) &&
+                             invoker.uses_experimental_fidl
 
     # Ensure that deps and test_components are CTS targets.
     invoker_deps = []
@@ -60,7 +66,7 @@ template("cts_fuchsia_test_package") {
     # Generate the test_manifest.json metadata entry for this test.
     # This json file controls how this test's test_spec will be
     # defined in the prebuilt_test_manifest GN template.
-    if (!defined(invoker.internal_only_skip_on_cq)) {
+    if (!uses_experimental_fidl) {
       _test_components = invoker.test_components
       _manifest_name = get_target_outputs(_test_components[0])
       _manifest_name = get_path_info(_manifest_name[0], "file")
@@ -90,17 +96,19 @@ template("cts_fuchsia_test_package") {
       deps += [ ":$write_file_target" ]
     }
 
-    archive_target_name = "${target_name}_archive"
-    fuchsia_package_archive(archive_target_name) {
-      testonly = true
-      package = ":${invoker.target_name}"
-    }
+    if (!uses_experimental_fidl) {
+      archive_target_name = "${target_name}_archive"
+      fuchsia_package_archive(archive_target_name) {
+        testonly = true
+        package = ":${invoker.target_name}"
+      }
 
-    cts_copy_to_sdk(target_name) {
-      testonly = true
-      dest = ""  # the root directory
-      sources = get_target_outputs(":$archive_target_name")
-      non_sdk_deps = [ ":$archive_target_name" ]
+      cts_copy_to_sdk(target_name) {
+        testonly = true
+        dest = ""  # the root directory
+        sources = get_target_outputs(":$archive_target_name")
+        non_sdk_deps = [ ":$archive_target_name" ]
+      }
     }
   } else {
     group(target_name) {

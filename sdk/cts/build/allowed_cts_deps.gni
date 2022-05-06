@@ -43,6 +43,9 @@ ALLOWED_RUST_DEPS = [
   "//src/developer/ffx:ffx_bin",
 ]
 
+ALLOWED_EXPERIMENTAL_FIDL =
+    [ "//sdk/cts/examples/experimental_fidl:fuchsia.cts.experimental" ]
+
 # All targets in these directories and their subdirectories are approved for use in CTS.
 ALLOWED_CTS_DIRS = [
   "//prebuilt/cts/*",

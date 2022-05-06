@@ -1,0 +1,9 @@
+{
+    include: [
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/experimental-fidl",
+    },
+}
