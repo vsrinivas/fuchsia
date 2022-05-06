@@ -4,7 +4,6 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/clock.h>
@@ -26,14 +25,18 @@
 #include "src/devices/bus/drivers/pci/test/fakes/fake_pciroot.h"
 #include "src/devices/bus/drivers/pci/test/fakes/fake_upstream_node.h"
 #include "src/devices/bus/drivers/pci/upstream_node.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace pci {
 
 class PciBusTests : public zxtest::Test {
  public:
-  PciBusTests() : pciroot_(0, 1) { bind_.SetProtocol(ZX_PROTOCOL_PCIROOT, pciroot_.proto()); }
+  PciBusTests() : pciroot_(0, 1), parent_(MockDevice::FakeRootParent()) {
+    parent_->AddProtocol(ZX_PROTOCOL_PCIROOT, pciroot_.proto()->ops, pciroot_.proto()->ctx);
+  }
 
  protected:
+  zx_device_t* parent() { return parent_.get(); }
   // Sets up 5 devices, including two under a bridge.
   uint32_t SetupTopology() {
     uint8_t idx = 1;
@@ -78,7 +81,7 @@ class PciBusTests : public zxtest::Test {
 
  private:
   FakePciroot pciroot_;
-  fake_ddk::Bind bind_;
+  std::shared_ptr<MockDevice> parent_;
 };
 
 // An encapsulated pci::Bus to allow inspection of some internal state.
@@ -114,26 +117,28 @@ class TestBus : public pci::Bus {
 // TODO(66253): disabled until fake_ddk handles the device lifecycle contract
 // better and provides a method so we can force the unbind. As it is now, ASAN
 // will notice the allocation leaks from the Bus construction.
-TEST_F(PciBusTests, DISABLED_Bind) {
+TEST_F(PciBusTests, Bind) {
   SetupTopology();
-  ASSERT_OK(pci_bus_bind(nullptr, fake_ddk::kFakeParent));
+  ASSERT_OK(pci_bus_bind(nullptr, parent()));
 }
 
 // The lifecycle test is done through Proxy configs to ensure we don't need to worry
 // about ownership of the vmo the MmioBuffers would share.
 TEST_F(PciBusTests, Lifecycle) {
   uint32_t dev_cnt = SetupTopology();
-  auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
-                                       std::nullopt);
-  ASSERT_OK(bus->Initialize());
+  auto owned_bus =
+      std::make_unique<TestBus>(parent(), pciroot().proto(), pciroot().info(), std::nullopt);
+  ASSERT_OK(owned_bus->Initialize());
+  auto* bus = owned_bus.release();
   ASSERT_EQ(bus->GetDeviceCount(), dev_cnt);
 }
 
 TEST_F(PciBusTests, BdiGetBti) {
   pciroot().ecam().get(pci_bdf_t{}).device.set_vendor_id(8086).set_device_id(8086);
-  auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
-                                       pciroot().ecam().CopyEcam());
-  ASSERT_OK(bus->Initialize());
+  auto owned_bus = std::make_unique<TestBus>(parent(), pciroot().proto(), pciroot().info(),
+                                             pciroot().ecam().CopyEcam());
+  ASSERT_OK(owned_bus->Initialize());
+  auto* bus = owned_bus.release();
   ASSERT_EQ(bus->GetDeviceCount(), 1);
 
   zx::bti bti = {};
@@ -151,9 +156,10 @@ TEST_F(PciBusTests, BdiGetBti) {
 }
 
 TEST_F(PciBusTests, BdiAllocateMsi) {
-  auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
-                                       pciroot().ecam().CopyEcam());
-  ASSERT_OK(bus->Initialize());
+  auto owned_bus = std::make_unique<TestBus>(parent(), pciroot().proto(), pciroot().info(),
+                                             pciroot().ecam().CopyEcam());
+  ASSERT_OK(owned_bus->Initialize());
+  auto* bus = owned_bus.release();
 
   for (uint32_t cnt = 1; cnt <= 32; cnt *= 2) {
     zx::msi msi = {};
@@ -167,9 +173,10 @@ TEST_F(PciBusTests, BdiAllocateMsi) {
 
 TEST_F(PciBusTests, BdiLinkUnlinkDevice) {
   pciroot().ecam().get(pci_bdf_t{}).device.set_vendor_id(8086).set_device_id(8086);
-  auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
-                                       pciroot().ecam().CopyEcam());
-  ASSERT_OK(bus->Initialize());
+  auto owned_bus = std::make_unique<TestBus>(parent(), pciroot().proto(), pciroot().info(),
+                                             pciroot().ecam().CopyEcam());
+  ASSERT_OK(owned_bus->Initialize());
+  auto* bus = owned_bus.release();
   ASSERT_EQ(bus->GetDeviceCount(), 1);
 
   auto device = bus->GetDevice(pci_bdf_t{});
@@ -208,9 +215,10 @@ TEST_F(PciBusTests, IrqRoutingEntries) {
                               .device_id = 0,
                               .pins = {1, 2, 3, 4}});
 
-  auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
-                                       pciroot().ecam().CopyEcam());
-  ASSERT_OK(bus->Initialize());
+  auto owned_bus = std::make_unique<TestBus>(parent(), pciroot().proto(), pciroot().info(),
+                                             pciroot().ecam().CopyEcam());
+  ASSERT_OK(owned_bus->Initialize());
+  auto* bus = owned_bus.release();
   ASSERT_EQ(int_mod, bus->GetSharedIrqCount());
 }
 
@@ -227,9 +235,10 @@ TEST_F(PciBusTests, LegacyIrqSignalTest) {
   // These devices need interrupt pins mapped before Bus scans the topology.
   pciroot().ecam().get({0, 0, 0}).device.set_interrupt_pin(0x1);
   pciroot().ecam().get({0, 0, 1}).device.set_interrupt_pin(0x2);
-  auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
-                                       pciroot().ecam().CopyEcam());
-  ASSERT_OK(bus->Initialize());
+  auto owned_bus = std::make_unique<TestBus>(parent(), pciroot().proto(), pciroot().info(),
+                                             pciroot().ecam().CopyEcam());
+  ASSERT_OK(owned_bus->Initialize());
+  auto* bus = owned_bus.release();
   ASSERT_EQ(1, bus->GetSharedIrqCount());
 
   zx::interrupt dev_interrupt[2];
@@ -284,9 +293,10 @@ TEST_F(PciBusTests, LegacyIrqNoAckTest) {
   zx::interrupt bus_interrupt = AddLegacyIrqToBus(vector);
   AddRoutingEntryToBus(/*p_dev=*/std::nullopt, /*p_func=*/std::nullopt, /*dev_id=*/0, /*a=*/vector,
                        /*b=*/0, /*c=*/0, /*d=*/0);
-  auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
-                                       pciroot().ecam().CopyEcam());
-  ASSERT_OK(bus->Initialize());
+  auto owned_bus = std::make_unique<TestBus>(parent(), pciroot().proto(), pciroot().info(),
+                                             pciroot().ecam().CopyEcam());
+  ASSERT_OK(owned_bus->Initialize());
+  auto* bus = owned_bus.release();
   ASSERT_OK(bus->GetDevice(device)->SetIrqMode(PCI_INTERRUPT_MODE_LEGACY_NOACK, 1));
 
   auto* bus_device = bus->GetDevice(device);

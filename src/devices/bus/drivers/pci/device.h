@@ -17,6 +17,7 @@
 #include <limits>
 
 #include <ddktl/device.h>
+#include <ddktl/unbind-txn.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_double_list.h>
@@ -53,11 +54,7 @@ struct SharedIrqListTag {};
 // during creation. One of the biggest responsibilities of the pci::Device class
 // is fulfill the PCI protocol for the driver downstream operating the PCI
 // device this corresponds to.
-class Device;
-using PciDeviceType = ddk::Device<pci::Device, ddk::GetProtocolable>;
-class Device : public PciDeviceType,
-               public ddk::PciProtocol<pci::Device>,
-               public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
+class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
                public fbl::ContainableBaseClasses<
                    fbl::TaggedDoublyLinkedListable<Device*, DownstreamListTag>,
                    fbl::TaggedDoublyLinkedListable<Device*, SharedIrqListTag>>
@@ -143,41 +140,33 @@ class Device : public PciDeviceType,
 
   // Templated helpers to assist with differently sized protocol reads and writes.
   template <typename V, typename R>
-  zx_status_t WriteConfig(uint16_t offset, V value);
-  template <typename V, typename R>
-  zx_status_t ReadConfig(uint16_t offset, V* value);
-  // ddk::PciProtocol implementations.
-  zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_bar);
-  zx_status_t PciSetBusMastering(bool enable);
-  zx_status_t PciResetDevice();
-  zx_status_t PciAckInterrupt();
-  zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle);
-  void PciGetInterruptModes(pci_interrupt_modes_t* out_modes);
-  zx_status_t PciSetInterruptMode(pci_interrupt_mode_t mode, uint32_t requested_irq_count);
-  zx_status_t PciGetDeviceInfo(pci_device_info_t* out_info);
-  zx_status_t PciReadConfig8(uint16_t offset, uint8_t* out_value);
-  zx_status_t PciReadConfig16(uint16_t offset, uint16_t* out_value);
-  zx_status_t PciReadConfig32(uint16_t offset, uint32_t* out_value);
-  zx_status_t PciWriteConfig8(uint16_t offset, uint8_t value);
-  zx_status_t PciWriteConfig16(uint16_t offset, uint16_t value);
-  zx_status_t PciWriteConfig32(uint16_t offset, uint32_t value);
-  zx_status_t PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset);
-  zx_status_t PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset);
-  zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset);
-  zx_status_t PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset, uint16_t* out_offset);
-  zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
+  zx::status<V> ReadConfig(uint16_t offset) {
+    if (offset + sizeof(V) > PCI_EXT_CONFIG_SIZE) {
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
+    }
 
-  // DDK mix-in impls
-  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
-  void DdkRelease() { delete this; }
+    return zx::ok(cfg_->Read(R(offset)));
+  }
+
+  template <typename V, typename R>
+  zx_status_t WriteConfig(uint16_t offset, V value) {
+    // Don't permit writes inside the config header.
+    if (offset < PCI_CONFIG_HDR_SIZE) {
+      return ZX_ERR_ACCESS_DENIED;
+    }
+
+    if (offset + sizeof(V) > PCI_EXT_CONFIG_SIZE) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    cfg_->Write(R(offset), value);
+    return ZX_OK;
+  }
 
   // Create, but do not initialize, a device.
   static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Config>&& config,
                             UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node,
                             bool has_acpi);
-  // Does the work necessary to create a ddk Composite device representing the
-  // pci::Device.
-  zx_status_t CreateCompositeDevice();
   virtual ~Device();
 
   // Bridge or DeviceImpl will need to implement refcounting
@@ -297,6 +286,10 @@ class Device : public PciDeviceType,
 
   // Provide Irq information to the Bus for handling situations with no ack.
   Irqs& irqs() __TA_REQUIRES(dev_lock_) { return irqs_; }
+  // Info about the BARs computed and cached during the initial setup/probe,
+  // indexed by starting BAR register index.
+  std::array<Bar, PCI_MAX_BAR_REGS>& bars() __TA_REQUIRES(dev_lock_) { return bars_; }
+  BusDeviceInterface* bdi() __TA_REQUIRES(dev_lock_) { return bdi_; }
 
   // Devices need to exist in both the top level bus driver class, as well
   // as in a list for roots/bridges to track their downstream children. These
@@ -327,11 +320,6 @@ class Device : public PciDeviceType,
   zx_status_t ProbeCapabilities() __TA_REQUIRES(dev_lock_);
   zx_status_t ParseCapabilities() __TA_REQUIRES(dev_lock_);
   zx_status_t ParseExtendedCapabilities() __TA_REQUIRES(dev_lock_);
-
-  // Info about the BARs computed and cached during the initial setup/probe,
-  // indexed by starting BAR register index.
-  std::array<Bar, PCI_MAX_BAR_REGS>& bars() __TA_REQUIRES(dev_lock_) { return bars_; }
-  BusDeviceInterface* bdi() __TA_REQUIRES(dev_lock_) { return bdi_; }
 
  private:
   // Allow UpstreamNode implementations to Probe/Allocate/Configure/Disable.
@@ -393,8 +381,53 @@ class Device : public PciDeviceType,
   Capabilities caps_ __TA_GUARDED(dev_lock_){};
   Irqs irqs_ __TA_GUARDED(dev_lock_){.mode = PCI_INTERRUPT_MODE_DISABLED};
 
+  zx_device_t* parent_;
+
   // Diagnostics
   mutable Inspect metrics_;
+};
+
+class BanjoDevice;
+using BanjoDeviceType = ddk::Device<pci::BanjoDevice, ddk::GetProtocolable, ddk::Unbindable>;
+class BanjoDevice : public BanjoDeviceType, public ddk::PciProtocol<pci::BanjoDevice> {
+ public:
+  BanjoDevice(zx_device_t* parent, pci::Device* device)
+      : BanjoDeviceType(parent), device_(device) {}
+
+  // ddk::PciProtocol implementations.
+  zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_bar);
+  zx_status_t PciSetBusMastering(bool enable);
+  zx_status_t PciResetDevice();
+  zx_status_t PciAckInterrupt();
+  zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle);
+  void PciGetInterruptModes(pci_interrupt_modes_t* out_modes);
+  zx_status_t PciSetInterruptMode(pci_interrupt_mode_t mode, uint32_t requested_irq_count);
+  zx_status_t PciGetDeviceInfo(pci_device_info_t* out_info);
+  zx_status_t PciReadConfig8(uint16_t offset, uint8_t* out_value);
+  zx_status_t PciReadConfig16(uint16_t offset, uint16_t* out_value);
+  zx_status_t PciReadConfig32(uint16_t offset, uint32_t* out_value);
+  zx_status_t PciWriteConfig8(uint16_t offset, uint8_t value);
+  zx_status_t PciWriteConfig16(uint16_t offset, uint16_t value);
+  zx_status_t PciWriteConfig32(uint16_t offset, uint32_t value);
+  zx_status_t PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset);
+  zx_status_t PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset);
+  zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset);
+  zx_status_t PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset, uint16_t* out_offset);
+  zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
+
+  // Does the work necessary to create a ddk Composite device representing the
+  // pci::Device.
+  static zx_status_t Create(zx_device_t* parent, pci::Device* device);
+
+  // DDK mix-in impls
+  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
+  void DdkRelease() { delete this; }
+  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
+  pci::Device* device() { return device_; }
+  zx_device_t* zxdev_ptr() { return zxdev_; }
+
+ private:
+  pci::Device* device_;
 };
 
 }  // namespace pci

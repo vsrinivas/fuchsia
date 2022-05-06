@@ -19,8 +19,6 @@
 #include <array>
 #include <optional>
 
-#include <bind/fuchsia/acpi/cpp/fidl.h>
-#include <bind/fuchsia/pci/cpp/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -37,14 +35,6 @@
 #include "src/devices/bus/drivers/pci/upstream_node.h"
 
 namespace pci {
-
-static const zx_bind_inst_t sysmem_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
-};
-
-static const device_fragment_part_t sysmem_fragment[] = {
-    {std::size(sysmem_match), sysmem_match},
-};
 
 namespace {  // anon namespace.  Externals do not need to know about DeviceImpl
 
@@ -94,13 +84,13 @@ zx_status_t DeviceImpl::Create(zx_device_t* parent, std::unique_ptr<Config>&& cf
 
 Device::Device(zx_device_t* parent, std::unique_ptr<Config>&& config, UpstreamNode* upstream,
                BusDeviceInterface* bdi, inspect::Node node, bool is_bridge, bool has_acpi)
-    : PciDeviceType(parent),
-      cfg_(std::move(config)),
+    : cfg_(std::move(config)),
       upstream_(upstream),
       bdi_(bdi),
       bar_count_(is_bridge ? PCI_BAR_REGS_PER_BRIDGE : PCI_BAR_REGS_PER_DEVICE),
       is_bridge_(is_bridge),
-      has_acpi_(has_acpi) {
+      has_acpi_(has_acpi),
+      parent_(parent) {
   metrics_.node = std::move(node);
   metrics_.legacy.node = metrics_.node.CreateChild(kInspectLegacyInterrupt);
   metrics_.msi.node = metrics_.node.CreateChild(kInspectMsi);
@@ -143,85 +133,6 @@ Device::~Device() {
   ModifyCmd(/*clr_bits=*/PCI_CONFIG_COMMAND_IO_EN | PCI_CONFIG_COMMAND_MEM_EN, /*set_bits=*/0);
   // TODO(cja/fxbug.dev/32979): Remove this after porting is finished.
   zxlogf(TRACE, "%s [%s] dtor finished", is_bridge() ? "bridge" : "device", cfg_->addr());
-}
-
-zx_status_t Device::CreateCompositeDevice() {
-  auto pci_bind_topo = static_cast<uint32_t>(BIND_PCI_TOPO_PACK(bus_id(), dev_id(), func_id()));
-  // clang-format off
-  zx_device_prop_t pci_device_props[] = {
-      {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
-      {BIND_PCI_VID, 0, vendor_id_},
-      {BIND_PCI_DID, 0, device_id_},
-      {BIND_PCI_CLASS, 0, class_id_},
-      {BIND_PCI_SUBCLASS, 0, subclass_},
-      {BIND_PCI_INTERFACE, 0, prog_if_},
-      {BIND_PCI_REVISION, 0, rev_id_},
-      {BIND_PCI_TOPO, 0, pci_bind_topo},
-  };
-  // clang-format on
-
-  // Create an isolated devhost to load the proxy pci driver containing the PciProxy
-  // instance which will talk to this device.
-  zx_status_t status = DdkAdd(
-      ddk::DeviceAddArgs(cfg_->addr()).set_props(pci_device_props).set_proto_id(ZX_PROTOCOL_PCI));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to create pci fragment %s: %s", cfg_->addr(),
-           zx_status_get_string(status));
-  }
-
-  // TODO(fxbug.dev/93333): Remove this once DFv2 is stabilised.
-  bool is_dfv2 = device_is_dfv2(zxdev_);
-  if (is_dfv2) {
-    return ZX_OK;
-  }
-
-  const zx_bind_inst_t pci_fragment_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-      BI_ABORT_IF(NE, BIND_PCI_VID, vendor_id_),
-      BI_ABORT_IF(NE, BIND_PCI_DID, device_id_),
-      BI_ABORT_IF(NE, BIND_PCI_CLASS, class_id_),
-      BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, subclass_),
-      BI_ABORT_IF(NE, BIND_PCI_INTERFACE, prog_if_),
-      BI_ABORT_IF(NE, BIND_PCI_REVISION, rev_id_),
-      BI_ABORT_IF(EQ, BIND_COMPOSITE, 1),
-      BI_MATCH_IF(EQ, BIND_PCI_TOPO, pci_bind_topo),
-
-  };
-
-  const device_fragment_part_t pci_fragment[] = {
-      {std::size(pci_fragment_match), pci_fragment_match},
-  };
-
-  const zx_bind_inst_t acpi_fragment_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ACPI),
-      BI_ABORT_IF(NE, BIND_ACPI_BUS_TYPE, bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_PCI),
-      BI_MATCH_IF(EQ, BIND_PCI_TOPO, pci_bind_topo),
-  };
-
-  const device_fragment_part_t acpi_fragment[] = {
-      {std::size(acpi_fragment_match), acpi_fragment_match},
-  };
-
-  // These are laid out so that ACPI can be optionally included via the number
-  // of fragments specified.
-  const device_fragment_t fragments[] = {
-      {"pci", std::size(pci_fragment), pci_fragment},
-      {"sysmem", std::size(sysmem_fragment), sysmem_fragment},
-      {"acpi", std::size(acpi_fragment), acpi_fragment},
-  };
-
-  composite_device_desc_t composite_desc = {
-      .props = pci_device_props,
-      .props_count = std::size(pci_device_props),
-      .fragments = fragments,
-      .fragments_count = (has_acpi_) ? std::size(fragments) : std::size(fragments) - 1,
-      .primary_fragment = "pci",
-      .spawn_colocated = false,
-  };
-
-  char composite_name[ZX_DEVICE_NAME_MAX];
-  snprintf(composite_name, sizeof(composite_name), "pci-%s", cfg_->addr());
-  return DdkAddComposite(composite_name, &composite_desc);
 }
 
 zx_status_t Device::Create(zx_device_t* parent, std::unique_ptr<Config>&& config,
@@ -306,9 +217,8 @@ zx_status_t Device::InitLocked() {
     return st;
   }
 
-  st = CreateCompositeDevice();
+  st = BanjoDevice::Create(parent_, this);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "device %s couldn't spawn its proxy driver_host: %d", cfg_->addr(), st);
     return st;
   }
 

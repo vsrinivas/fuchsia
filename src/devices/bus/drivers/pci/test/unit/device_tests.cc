@@ -4,7 +4,6 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/inspect/testing/cpp/zxtest/inspect.h>
@@ -22,42 +21,34 @@
 #include "src/devices/bus/drivers/pci/test/fakes/fake_pciroot.h"
 #include "src/devices/bus/drivers/pci/test/fakes/fake_upstream_node.h"
 #include "src/devices/bus/drivers/pci/test/fakes/test_device.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
+
 namespace pci {
 
 // Creates a test device with a given device config using test defaults)
 
-using inspect::InspectTestHelper;
 class PciDeviceTests : protected inspect::InspectTestHelper, public zxtest::Test {
  public:
   static constexpr char kTestNodeName[] = "Test";
-  FakePciroot& pciroot_proto() { return *pciroot_; }
-  ddk::PcirootProtocolClient& pciroot_client() { return *client_; }
+  FakePciroot& pciroot_proto() { return pciroot_; }
+  ddk::PcirootProtocolClient& pciroot_client() { return client_; }
   FakeBus& bus() { return bus_; }
   FakeUpstreamNode& upstream() { return upstream_; }
   pci_bdf_t default_bdf() { return default_bdf_; }
-  Device& CreateTestDevice(const uint8_t* cfg_buf, size_t cfg_size) {
-    // Copy the config dump into a device entry in the ecam.
-    memcpy(pciroot_proto().ecam().get(default_bdf()).config, cfg_buf, cfg_size);
-    // Create the config object for the device.
-    std::unique_ptr<Config> cfg;
-    EXPECT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
-    // Create and initialize the fake device.
-    EXPECT_OK(Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus(),
-                             GetInspectNode(), /*has_acpi=*/false));
-    return bus().get_device(default_bdf());
-  }
+  Device& CreateTestDevice(zx_device_t* parent, const uint8_t* cfg_buf, size_t cfg_size);
+  zx_device_t* parent() { return parent_.get(); }
 
   zx::vmo& inspect_vmo() { return inspect_vmo_; }
   inspect::Inspector& inspector() { return inspector_; }
 
  protected:
   PciDeviceTests()
-      : upstream_(UpstreamNode::Type::ROOT, 0), inspect_vmo_(inspector_.DuplicateVmo()) {}
-  void SetUp() override {
-    pciroot_ = std::make_unique<FakePciroot>(0, 1);
-    client_ = std::make_unique<ddk::PcirootProtocolClient>(pciroot_->proto());
-  }
-  void TearDown() override {
+      : pciroot_(0, 1),
+        client_(pciroot_.proto()),
+        parent_(MockDevice::FakeRootParent()),
+        upstream_(UpstreamNode::Type::ROOT, 0),
+        inspect_vmo_(inspector_.DuplicateVmo()) {}
+  ~PciDeviceTests() override {
     upstream_.DisableDownstream();
     upstream_.UnplugDownstream();
   }
@@ -65,8 +56,11 @@ class PciDeviceTests : protected inspect::InspectTestHelper, public zxtest::Test
   inspect::Node GetInspectNode() { return inspector_.GetRoot().CreateChild(kTestNodeName); }
 
  private:
-  std::unique_ptr<FakePciroot> pciroot_;
-  std::unique_ptr<ddk::PcirootProtocolClient> client_;
+  // These are wiped out for each test
+  FakePciroot pciroot_;
+  ddk::PcirootProtocolClient client_;
+  std::shared_ptr<MockDevice> parent_;
+
   FakeBus bus_;
   FakeUpstreamNode upstream_;
   const pci_bdf_t default_bdf_ = {1, 2, 3};
@@ -74,7 +68,33 @@ class PciDeviceTests : protected inspect::InspectTestHelper, public zxtest::Test
   zx::vmo inspect_vmo_;
 };
 
+Device& PciDeviceTests::CreateTestDevice(zx_device_t* parent, const uint8_t* cfg_buf,
+                                         size_t cfg_size) {
+  // Copy the config dump into a device entry in the ecam.
+  memcpy(pciroot_proto().ecam().get(default_bdf()).config, cfg_buf, cfg_size);
+  // Create the config object for the device.
+  std::unique_ptr<Config> cfg;
+  EXPECT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
+  // Create and initialize the fake device.
+  EXPECT_OK(Device::Create(parent, std::move(cfg), &upstream(), &bus(), GetInspectNode(),
+                           /*has_acpi=*/false));
+  return bus().get_device(default_bdf());
+}
+
+extern "C" {
+// MockDevice does not cover adding composite devices within a driver, but
+// BanjoDevice:Create only needs to think it succeeded.
+__EXPORT
+zx_status_t device_add_composite(zx_device_t* dev, const char* name,
+                                 const composite_device_desc_t* comp_desc) {
+  return ZX_OK;
+}
+}
+
+// All tests below
+
 TEST_F(PciDeviceTests, CreationTest) {
+  device_add_composite(nullptr, nullptr, nullptr);
   std::unique_ptr<Config> cfg;
 
   // This test creates a device, goes through its init sequence, links it into
@@ -83,8 +103,8 @@ TEST_F(PciDeviceTests, CreationTest) {
   // asserts happen following the test it means the fakes are built properly
   // enough and the basic interface is fulfilled.
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
-  ASSERT_OK(Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus(),
-                           GetInspectNode(), /*has_acpi=*/false));
+  ASSERT_OK(Device::Create(parent(), std::move(cfg), &upstream(), &bus(), GetInspectNode(),
+                           /*has_acpi=*/false));
 
   // Verify the created device's BDF.
   auto& dev = bus().get_device(default_bdf());
@@ -101,8 +121,8 @@ TEST_F(PciDeviceTests, StdCapabilityTest) {
   memcpy(pciroot_proto().ecam().get(default_bdf()).config, kFakeVirtioInputDeviceConfig.data(),
          kFakeVirtioInputDeviceConfig.max_size());
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
-  ASSERT_OK(Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus(),
-                           GetInspectNode(), /*has_acpi=*/false));
+  ASSERT_OK(Device::Create(parent(), std::move(cfg), &upstream(), &bus(), GetInspectNode(),
+                           /*has_acpi=*/false));
   auto& dev = bus().get_device(default_bdf());
 
   // Ensure our faked Keyboard exists.
@@ -128,7 +148,8 @@ TEST_F(PciDeviceTests, StdCapabilityTest) {
 
 // Test an extended capability chain
 TEST_F(PciDeviceTests, ExtendedCapabilityTest) {
-  auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
+  auto& dev = CreateTestDevice(parent(), kFakeQuadroDeviceConfig.data(),
+                               kFakeQuadroDeviceConfig.max_size());
   ASSERT_EQ(false, CURRENT_TEST_HAS_FAILURES());
 
   // Since this is a dump of an emulated device we that it should have:
@@ -177,8 +198,8 @@ TEST_F(PciDeviceTests, InvalidPtrCapabilityTest) {
 
   std::unique_ptr<Config> cfg;
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(),
-                                                &bus(), GetInspectNode(), /*has_acpi=*/false));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, Device::Create(parent(), std::move(cfg), &upstream(), &bus(),
+                                                GetInspectNode(), /*has_acpi=*/false));
 
   // Ensure no device was added.
   EXPECT_TRUE(bus().devices().is_empty());
@@ -211,8 +232,8 @@ TEST_F(PciDeviceTests, PtrCycleCapabilityTest) {
   raw_cfg[kCap3 + 1] = kCap1;
 
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
-  EXPECT_EQ(ZX_ERR_BAD_STATE, Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(),
-                                             &bus(), GetInspectNode(), /*has_acpi=*/false));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, Device::Create(parent(), std::move(cfg), &upstream(), &bus(),
+                                             GetInspectNode(), /*has_acpi=*/false));
 
   // Ensure no device was added.
   EXPECT_TRUE(bus().devices().is_empty());
@@ -246,8 +267,8 @@ TEST_F(PciDeviceTests, DuplicateFixedCapabilityTest) {
   raw_cfg[kCap3 + 1] = 0;
 
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
-  EXPECT_EQ(ZX_ERR_BAD_STATE, Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(),
-                                             &bus(), GetInspectNode(), /*has_acpi=*/false));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, Device::Create(parent(), std::move(cfg), &upstream(), &bus(),
+                                             GetInspectNode(), /*has_acpi=*/false));
 
   // Ensure no device was added.
   EXPECT_TRUE(bus().devices().is_empty());
@@ -256,7 +277,8 @@ TEST_F(PciDeviceTests, DuplicateFixedCapabilityTest) {
 // Ensure we parse MSI capabilities properly in the Quadro device.
 // lspci output: Capabilities: [68] MSI: Enable+ Count=1/4 Maskable- 64bit+
 TEST_F(PciDeviceTests, MsiCapabilityTest) {
-  auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
+  auto& dev = CreateTestDevice(parent(), kFakeQuadroDeviceConfig.data(),
+                               kFakeQuadroDeviceConfig.max_size());
   ASSERT_EQ(false, CURRENT_TEST_HAS_FAILURES());
   ASSERT_NE(nullptr, dev.capabilities().msi);
 
@@ -274,7 +296,7 @@ TEST_F(PciDeviceTests, MsiCapabilityTest) {
 
 // Ensure we parse MSIX capabilities properly in the Virtio-input device.
 TEST_F(PciDeviceTests, MsixCapabilityTest) {
-  auto& dev = CreateTestDevice(kFakeVirtioInputDeviceConfig.data(),
+  auto& dev = CreateTestDevice(parent(), kFakeVirtioInputDeviceConfig.data(),
                                kFakeVirtioInputDeviceConfig.max_size());
   ASSERT_EQ(false, CURRENT_TEST_HAS_FAILURES());
   ASSERT_NE(nullptr, dev.capabilities().msix);
@@ -294,7 +316,9 @@ TEST_F(PciDeviceTests, MsixCapabilityTest) {
 }
 
 TEST_F(PciDeviceTests, InspectIrqMode) {
-  auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
+  auto dev = std::make_unique<BanjoDevice>(
+      parent(), &CreateTestDevice(parent(), kFakeQuadroDeviceConfig.data(),
+                                  kFakeQuadroDeviceConfig.max_size()));
   {
     pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_DISABLED;
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
@@ -304,7 +328,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
   }
   {
     pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY;
-    ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
+    ASSERT_OK(dev->PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
     ASSERT_NO_FATAL_FAILURE(
@@ -313,7 +337,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
   }
   {
     pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY_NOACK;
-    ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
+    ASSERT_OK(dev->PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
     ASSERT_NO_FATAL_FAILURE(
@@ -322,7 +346,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
   }
   {
     pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_MSI;
-    ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
+    ASSERT_OK(dev->PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
     ASSERT_NO_FATAL_FAILURE(
@@ -333,7 +357,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
 #ifdef ENABLE_MSIX
   {
     pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_MSI_X;
-    ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
+    ASSERT_OK(dev->PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
     ASSERT_NO_FATAL_FAILURE(
@@ -346,7 +370,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
 TEST_F(PciDeviceTests, InspectLegacyNoPin) {
   auto quadro_copy = kFakeQuadroDeviceConfig;
   quadro_copy[PCI_CONFIG_INTERRUPT_PIN] = 0;
-  CreateTestDevice(quadro_copy.data(), quadro_copy.max_size());
+  CreateTestDevice(parent(), quadro_copy.data(), quadro_copy.max_size());
   ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
   auto& node = hierarchy().GetByPath({kTestNodeName, Device::kInspectLegacyInterrupt})->node();
   ASSERT_NULL(node.get_property<inspect::StringPropertyValue>(Device::kInspectLegacyInterruptLine));
@@ -355,12 +379,14 @@ TEST_F(PciDeviceTests, InspectLegacyNoPin) {
 
 TEST_F(PciDeviceTests, InspectLegacy) {
   // Signal and Ack the legacy IRQ once each to ensure add is happening.
-  auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
-  ASSERT_OK(dev.PciSetInterruptMode(PCI_INTERRUPT_MODE_LEGACY, 1));
+  auto dev = std::make_unique<BanjoDevice>(
+      parent(), &CreateTestDevice(parent(), kFakeQuadroDeviceConfig.data(),
+                                  kFakeQuadroDeviceConfig.max_size()));
+  ASSERT_OK(dev->PciSetInterruptMode(PCI_INTERRUPT_MODE_LEGACY, 1));
   {
-    fbl::AutoLock _(dev.dev_lock());
-    ASSERT_OK(dev.SignalLegacyIrq(0x10000));
-    ASSERT_OK(dev.AckLegacyIrq());
+    fbl::AutoLock _(dev->device()->dev_lock());
+    ASSERT_OK(dev->device()->SignalLegacyIrq(0x10000));
+    ASSERT_OK(dev->device()->AckLegacyIrq());
   }
 
   // Verify properties in the general case.
@@ -369,8 +395,9 @@ TEST_F(PciDeviceTests, InspectLegacy) {
     auto& node = hierarchy().GetByPath({kTestNodeName, Device::kInspectLegacyInterrupt})->node();
     ASSERT_NO_FATAL_FAILURE(
         CheckProperty(node, Device::kInspectLegacyInterruptPin, inspect::StringPropertyValue("A")));
-    ASSERT_NO_FATAL_FAILURE(CheckProperty(node, Device::kInspectLegacyInterruptLine,
-                                          inspect::UintPropertyValue(dev.legacy_vector())));
+    ASSERT_NO_FATAL_FAILURE(
+        CheckProperty(node, Device::kInspectLegacyInterruptLine,
+                      inspect::UintPropertyValue(dev->device()->legacy_vector())));
     ASSERT_NO_FATAL_FAILURE(
         CheckProperty(node, Device::kInspectLegacyAckCount, inspect::UintPropertyValue(1)));
     ASSERT_NO_FATAL_FAILURE(
@@ -380,8 +407,8 @@ TEST_F(PciDeviceTests, InspectLegacy) {
   }
 
   {
-    fbl::AutoLock _(dev.dev_lock());
-    dev.DisableLegacyIrq();
+    fbl::AutoLock _(dev->device()->dev_lock());
+    dev->device()->DisableLegacyIrq();
   }
 
   {
@@ -395,13 +422,15 @@ TEST_F(PciDeviceTests, InspectLegacy) {
 #ifdef ENABLE_MSIX
 TEST_F(PciDeviceTests, InspectMSI) {
   uint32_t irq_cnt = 4;
-  auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
-  ASSERT_OK(dev.PciSetInterruptMode(PCI_INTERRUPT_MODE_MSI_X, irq_cnt));
+  auto dev = std::make_unique<BanjoDevice>(
+      parent(), &CreateTestDevice(parent(), kFakeQuadroDeviceConfig.data(),
+                                  kFakeQuadroDeviceConfig.max_size()));
+  ASSERT_OK(dev->PciSetInterruptMode(PCI_INTERRUPT_MODE_MSI_X, irq_cnt));
 
   zx_info_msi_t info{};
   {
-    fbl::AutoLock _(dev.dev_lock());
-    dev.msi_allocation().get_info(ZX_INFO_MSI, &info, sizeof(info), nullptr, nullptr);
+    fbl::AutoLock _(dev->device()->dev_lock());
+    dev->device()->msi_allocation().get_info(ZX_INFO_MSI, &info, sizeof(info), nullptr, nullptr);
   }
 
   ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));

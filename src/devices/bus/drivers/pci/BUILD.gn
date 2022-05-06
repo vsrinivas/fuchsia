@@ -24,6 +24,7 @@ source_set("user_pci") {
 
   sources = [
     "allocation.cc",
+    "banjo.cc",
     "bridge.cc",
     "bus.cc",
     "bus_device_interface.cc",
@@ -32,7 +33,6 @@ source_set("user_pci") {
     "device.cc",
     "device_caps.cc",
     "device_irqs.cc",
-    "device_protocol.cc",
     "device_service.cc",
     "upstream_node.cc",
   ]
@@ -49,6 +49,7 @@ source_set("user_pci") {
     "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
@@ -149,5 +150,6 @@ group("tests") {
     ":pci_bind_test",
     "test:pci-driver-test",
     "test:pci-unit-test",
+    "test:pci-unit-test-fake_ddk",
   ]
 }

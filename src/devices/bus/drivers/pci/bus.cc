@@ -65,13 +65,6 @@ zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  if ((status = bus->DdkAdd(ddk::DeviceAddArgs("bus")
-                                .set_flags(DEVICE_ADD_NON_BINDABLE)
-                                .set_inspect_vmo(bus->GetInspectVmo()))) != ZX_OK) {
-    zxlogf(ERROR, "failed to add bus driver: %s", zx_status_get_string(status));
-    return status;
-  }
-
   if ((status = bus->Initialize()) != ZX_OK) {
     zxlogf(ERROR, "failed to initialize driver: %s", zx_status_get_string(status));
     bus->DdkAsyncRemove();
@@ -84,6 +77,14 @@ zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t Bus::Initialize() {
+  zx_status_t status;
+  if ((status = DdkAdd(ddk::DeviceAddArgs("bus")
+                           .set_flags(DEVICE_ADD_NON_BINDABLE)
+                           .set_inspect_vmo(GetInspectVmo()))) != ZX_OK) {
+    zxlogf(ERROR, "failed to add bus driver: %s", zx_status_get_string(status));
+    return status;
+  }
+
   // Stash the ops/ctx pointers for the pciroot protocol so we can pass
   // them to the allocators provided by Pci(e)Root. The initial root is
   // created to manage the start of the bus id range given to use by the
@@ -102,7 +103,7 @@ zx_status_t Bus::Initialize() {
 
   // Begin our bus scan starting at our root
   ScanDownstream();
-  zx_status_t status = ConfigureLegacyIrqs();
+  status = ConfigureLegacyIrqs();
   if (status != ZX_OK) {
     zxlogf(ERROR, "error configuring legacy IRQs, they will be unavailable: %s",
            zx_status_get_string(status));
@@ -245,11 +246,12 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
       }
 
       // We're at a leaf node in the topology so create a normal device.
+      char addr[ZX_MAX_NAME_LEN];
+      strncpy(addr, config->addr(), sizeof(addr));
       status = pci::Device::Create(zxdev(), std::move(config), upstream, this, std::move(node),
                                    /*has_acpi=*/DeviceHasAcpi(config->bdf()));
       if (status != ZX_OK) {
-        zxlogf(ERROR, "failed to create device at %s: %s", config->addr(),
-               zx_status_get_string(status));
+        zxlogf(ERROR, "failed to create device at %s: %s", addr, zx_status_get_string(status));
       }
     }
 

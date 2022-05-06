@@ -13,13 +13,40 @@ import("//src/devices/bus/drivers/pci/pci.gni")
 # pci_fake.so: A fake bus driver loaded by pci-driver-test to provide a bind
 #              point for pci_test.so
 # pci_test.so: A zxtest driver to test the PCI protocol
+
 test("pci-unit") {
   output_name = "pci-unit-test"
   sources = [
-    "unit/allocation_tests.cc",
     "unit/bus_tests.cc",
-    "unit/config_tests.cc",
     "unit/device_tests.cc",
+  ]
+
+  if (userspace_pci_enable_msi_x) {
+    defines = [ "ENABLE_MSIX" ]
+  }
+
+  deps = [
+    "//sdk/lib/inspect/testing/cpp:zxtest",
+    "//src/devices/bus/drivers/pci:user_pci",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake-msi",
+    "//src/devices/testing/mock-ddk",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zxtest",
+  ]
+
+  public_deps = [ "//src/devices/testing/fake-resource" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
+# For tests that have not yet been migrated to mock-ddk
+test("pci-unit-fake_ddk") {
+  output_name = "pci-unit-test-fake_ddk"
+  sources = [
+    "unit/allocation_tests.cc",
+    "unit/config_tests.cc",
     "unit/fake_pciroot_tests.cc",
     "unit/main.cc",
     "unit/msix_tests.cc",
@@ -132,6 +159,10 @@ fuchsia_driver_component("pci_protocol_test_driver") {
 
 fuchsia_unittest_package("pci-unit-test") {
   deps = [ ":pci-unit" ]
+}
+
+fuchsia_unittest_package("pci-unit-test-fake_ddk") {
+  deps = [ ":pci-unit-fake_ddk" ]
 }
 
 fuchsia_unittest_package("pci-driver-test") {
