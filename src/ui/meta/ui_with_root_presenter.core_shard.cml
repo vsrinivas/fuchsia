@@ -1,0 +1,9 @@
+{
+    children: [
+        {
+            name: "ui_with_root_presenter",
+            url: "fuchsia-pkg://fuchsia.com/ui#meta/ui_with_root_presenter.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+}

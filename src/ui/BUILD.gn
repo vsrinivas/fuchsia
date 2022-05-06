@@ -50,6 +50,21 @@ fuchsia_package("ui_pkg") {
   deps = [ ":ui-component" ]
 }
 
+fuchsia_component("ui-with-root-presenter-component") {
+  component_name = "ui-with-root-presenter"
+  manifest = "meta/ui_with_root_presenter.cml"
+}
+
+core_shard("ui-with-root-presenter-core-shard") {
+  shard_file = "meta/ui_with_root_presenter.core_shard.cml"
+}
+
+fuchsia_package("ui_with_root_presenter_pkg") {
+  package_name = "ui"
+
+  deps = [ ":ui-with-root-presenter-component" ]
+}
+
 # Deprecated. Please use runtime_with_scene_manager instead.
 group("workstation") {
   deps = [ ":runtime_with_scene_manager" ]
@@ -71,6 +86,7 @@ group("runtime_with_scene_manager") {
 # presenter (as opposed to scene manager).
 group("runtime_with_root_presenter") {
   deps = [
+    ":ui_with_root_presenter_pkg",
     "a11y",
     "bin/input-pipeline",
     "bin/input-pipeline:configs",
