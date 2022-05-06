@@ -42,19 +42,14 @@ This guide requires that your host machine meets the following criteria:
 
 ### Install dependencies {:#install-dependencies}
 
-[Bazel][bazel]{:.external} and [Git][git]{:.external} need
-to be installed on the host machine.
+1. **[Install Git][git-install]{:.external}**.
 
-To install these dependencies, do the following:
+1. **[Install Bazel][bazel-install]{:.external}**. You need at least version
+   5.1. The easiest install option is to download the [Bazelisk
+   binary][bazelisk-download]{:.external} and rename it to `bazel` in a
+   convenient place on your path.
 
-Note: You only need to do this once on your host machine.
-
-1. To install Git, visit the [Installing Git][git-install]{:.external} page
-   and follow the installation instructions specific to your host machine.
-
-1. To install Bazel (which needs to be 5.1 or a later version), visit
-   the [Installing Bazel][bazel-install]{:.external} page and follow the
-   installation instructions specific to your host machine.
+You only need to do these steps once on your host machine.
 
 ### Generate Fuchsia-specific SSH keys {:#generate-fuchsia-specific-ssh-keys}
 
@@ -1171,6 +1166,7 @@ is available for the Fuchsia package server.
 [git]: https://git-scm.com/
 [git-install]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
 [bazel-install]: https://bazel.build/install
+[bazelisk-download]: https://github.com/bazelbuild/bazelisk/releases
 [fuchsia-ssh-keys]: /docs/development/sdk/ffx/create-ssh-keys-for-devices.md
 [ticket-01]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=97909
 [clang]: https://clang.llvm.org/
