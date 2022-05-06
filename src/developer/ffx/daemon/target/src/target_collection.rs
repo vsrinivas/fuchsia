@@ -4,6 +4,7 @@
 
 use {
     crate::target::Target,
+    crate::target::TargetAddrType,
     crate::MDNS_MAX_AGE,
     addr::TargetAddr,
     anyhow::Result,
@@ -159,7 +160,7 @@ impl TargetCollection {
                 let is_too_old = Utc::now().signed_duration_since(t.timestamp).num_milliseconds()
                     as i128
                     > MDNS_MAX_AGE.as_millis() as i128;
-                !is_too_old
+                !is_too_old || matches!(t.addr_type, TargetAddrType::Manual(_))
             });
             to_update.update_boot_timestamp(new_target.boot_timestamp_nanos());
 
@@ -445,6 +446,7 @@ mod tests {
         let a2 = IpAddr::V6(Ipv6Addr::new(
             0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
         ));
+        let a3 = IpAddr::V6(Ipv6Addr::new(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1));
         let tae1 = TargetAddrEntry {
             addr: (a1, 1).into(),
             timestamp: Utc.ymd(2014, 10, 31).and_hms(9, 10, 12),
@@ -455,16 +457,23 @@ mod tests {
             timestamp: Utc.ymd(2014, 10, 31).and_hms(9, 10, 12),
             addr_type: TargetAddrType::Ssh,
         };
+        let tae3 = TargetAddrEntry {
+            addr: (a3, 1).into(),
+            timestamp: Utc.ymd(2014, 10, 31).and_hms(9, 10, 12),
+            addr_type: TargetAddrType::Manual(None),
+        };
         t.addrs.borrow_mut().insert(tae1);
         t.addrs.borrow_mut().insert(tae2);
+        t.addrs.borrow_mut().insert(tae3);
         tc.merge_insert(clone_target(&t));
         let t2 = Target::new_with_time(&nodename, Utc.ymd(2014, 11, 2).and_hms(13, 2, 1));
         let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 10));
         t2.addrs_insert((a1.clone(), 1).into());
         let merged_target = tc.merge_insert(t2);
         assert_eq!(merged_target.nodename(), Some(nodename));
-        assert_eq!(merged_target.addrs().len(), 1);
+        assert_eq!(merged_target.addrs().len(), 2);
         assert!(merged_target.addrs().contains(&(a1, 1).into()));
+        assert!(merged_target.addrs().contains(&(a3, 1).into()));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
