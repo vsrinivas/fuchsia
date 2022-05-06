@@ -235,7 +235,6 @@ type InterruptModes = struct {
 
 /// Device specific information from a device's configuration header.
 /// PCI Local Bus Specification v3, chapter 6.1.
-// TODO(33713): Pcie prefix exists due to legacy syscall interactions.
 type DeviceInfo = struct {
     /// Device identification information.
     vendor_id uint16;
@@ -254,12 +253,6 @@ type DeviceInfo = struct {
     padding struct {};
 };
 
-type BarType = flexible enum : uint8 {
-    UNUSED = 0;
-    MMIO = 1;
-    IO = 2;
-};
-
 type IoBar = resource struct {
     address uint64;
     resource zx.handle:RESOURCE;
@@ -275,7 +268,6 @@ type Bar = resource struct {
     /// The BAR id, [0-5).
     bar_id uint32;
     size uint64;
-    type BarType;
     result BarResult;
 };
 

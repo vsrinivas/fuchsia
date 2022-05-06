@@ -8,6 +8,10 @@ extend uint fuchsia.BIND_PROTOCOL {
   DEVICE = 31,
 };
 
+extend uint fuchsia.BIND_FIDL_PROTOCOL {
+  DEVICE = 4,
+};
+
 extend uint fuchsia.BIND_PCI_VID {
   TEST = 0x0eff,
   AMD = 0x1002,

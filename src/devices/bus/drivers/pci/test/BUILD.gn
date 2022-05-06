@@ -28,6 +28,7 @@ test("pci-unit") {
   deps = [
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/bus/drivers/pci:user_pci",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-msi",
     "//src/devices/testing/mock-ddk",
@@ -48,7 +49,6 @@ test("pci-unit-fake_ddk") {
     "unit/allocation_tests.cc",
     "unit/config_tests.cc",
     "unit/fake_pciroot_tests.cc",
-    "unit/main.cc",
     "unit/msix_tests.cc",
   ]
 
@@ -59,6 +59,7 @@ test("pci-unit-fake_ddk") {
   deps = [
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/bus/drivers/pci:user_pci",
+    "//src/devices/testing/driver-runtime-main:zxtest",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-msi",
     "//src/devices/testing/fake_ddk",

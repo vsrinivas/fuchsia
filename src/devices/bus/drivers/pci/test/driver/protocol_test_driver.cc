@@ -27,6 +27,21 @@
 #include "src/devices/bus/drivers/pci/test/driver/pci_protocol_test_driver_bind.h"
 #include "src/devices/bus/drivers/pci/test/fakes/test_device.h"
 
+// A special LogSink that just redirects all output to zxlogf
+class LogSink : public zxtest::LogSink {
+ public:
+  void Write(const char* format, ...) override {
+    std::array<char, 1024> line_buf;
+    va_list args;
+    va_start(args, format);
+    vsnprintf(line_buf.data(), line_buf.size(), format, args);
+    va_end(args);
+    line_buf[line_buf.size() - 1] = 0;
+    zxlogf(INFO, "%s", line_buf.data());
+  }
+  void Flush() override {}
+};
+
 ProtocolTestDriver* ProtocolTestDriver::instance_;
 
 TEST_F(PciProtocolTests, TestResetDeviceUnsupported) {
@@ -601,6 +616,7 @@ void ProtocolTestDriver::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction&
 }
 
 static zx_status_t pci_test_driver_bind(void* ctx, zx_device_t* parent) {
+  zxtest::Runner::GetInstance()->mutable_reporter()->set_log_sink(std::make_unique<LogSink>());
   return ProtocolTestDriver::Create(parent);
 }
 

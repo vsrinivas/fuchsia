@@ -19,5 +19,6 @@
 DDK_FIDL_PROTOCOL_DEF(RPMB,           1, "fuchsia.hardware.rpmb.Rpmb")
 DDK_FIDL_PROTOCOL_DEF(CHROMEOS_EC,    2, "fuchsia.hardware.google.ec.Device")
 DDK_FIDL_PROTOCOL_DEF(I2C,            3, "fuchsia.hardware.i2c.Device")
+DDK_FIDL_PROTOCOL_DEF(PCI,            4, "fuchsia.hardware.pci.Driver")
 #undef DDK_FIDL_PROTOCOL_DEF
 #endif

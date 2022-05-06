@@ -34,6 +34,7 @@ source_set("user_pci") {
     "device_caps.cc",
     "device_irqs.cc",
     "device_service.cc",
+    "fidl.cc",
     "upstream_node.cc",
   ]
 
@@ -46,6 +47,9 @@ source_set("user_pci") {
     ":pci_bind_header",
     "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
@@ -56,6 +60,7 @@ source_set("user_pci") {
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/region-alloc",
+    "//zircon/system/ulib/svc",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",

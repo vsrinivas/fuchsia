@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <err.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/fit/defer.h>
 #include <lib/inspect/cpp/inspector.h>
@@ -218,6 +219,11 @@ zx_status_t Device::InitLocked() {
   }
 
   st = BanjoDevice::Create(parent_, this);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  st = FidlDevice::Create(parent_, this);
   if (st != ZX_OK) {
     return st;
   }
