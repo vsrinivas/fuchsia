@@ -296,7 +296,7 @@ template("fidl_library") {
     ]
 
     # TODO(99710): Delete. See above comment with the same bug number.
-    if (is_sdk_publishable) {
+    if (defined(verify_api_summary_target_name)) {
       deps += [ ":${verify_api_summary_target_name}" ]
     }
   }
