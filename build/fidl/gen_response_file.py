@@ -51,10 +51,12 @@ def main():
         help="The path for the C simple server file to generate, if any")
     parser.add_argument(
         "--target-api-level",
-        help="Compile only APIs available at this API level")
+        help="Compile only APIs available at this API level",
+        default="HEAD")
     parser.add_argument(
         "--target-platform",
-        help="Compile only APIs available on this platform")
+        help="Compile only APIs available on this platform",
+        default="fuchsia")
     parser.add_argument(
         "--name", help="The name for the generated FIDL library, if any")
     parser.add_argument(
@@ -85,16 +87,11 @@ def main():
 
     response_file.append('--experimental new_syntax_only')
 
-    available = ""
-    if args.target_api_level and args.target_platform:
-        available = "{}:{}".format(args.target_platform, args.target_api_level)
-    elif args.target_api_level:
-        available = args.target_api_level
-    elif args.target_platform:
-        available = args.target_platform
-
-    if available:
-        response_file.append("--available %s" % available)
+    response_file.append(
+        "--available {platform}:{api_level}".format(
+            platform=args.target_platform,
+            api_level=args.target_api_level,
+        ))
 
     if args.json:
         response_file.append("--json %s" % args.json)

@@ -52,26 +52,27 @@ template("fidlc") {
     non_fidl_deps += invoker.non_fidl_deps
   }
 
-  main_target_name = target_name
+  gen_dir = target_gen_dir
+  if (defined(invoker.gen_dir)) {
+    gen_dir = invoker.gen_dir
+  }
 
+  main_target_name = target_name
   fidl_target_name = invoker.fidl_target_name
   library_name = invoker.library_name
   json_representation = invoker.json_representation
 
-  fidl_target_gen_dir =
-      get_label_info(":$fidl_target_name($fidl_toolchain)", "target_gen_dir")
-  generated_binding_dir = "$fidl_target_gen_dir/$fidl_target_name/c"
-
   # These paths are expected by the templates in //build/c/fidlc.gni.
+  generated_binding_dir = "$gen_dir/$fidl_target_name/c"
   c_stem = string_replace(invoker.library_name, ".", "/") + "/c/fidl"
   c_client = "$generated_binding_dir/$c_stem.client.c"
   c_header = "$generated_binding_dir/$c_stem.h"
   c_server = "$generated_binding_dir/$c_stem.server.c"
   coding_tables = "$generated_binding_dir/$fidl_target_name.fidl.tables.c"
   fidlc_depfile_path = "$generated_binding_dir/$library_name.d"
-  libraries_file = "$fidl_target_gen_dir/$fidl_target_name.libraries"
 
-  response_file = "$target_gen_dir/$target_name.args"
+  libraries_file = "$gen_dir/$fidl_target_name.libraries"
+  response_file = "$gen_dir/$target_name.args"
   response_file_target_name = "${main_target_name}_response_file"
   action(response_file_target_name) {
     forward_variables_from(invoker,
@@ -127,9 +128,9 @@ template("fidlc") {
     if (defined(invoker.fidl_deps)) {
       dep_libraries = []
       foreach(dep, invoker.fidl_deps) {
-        gen_dir = get_label_info(dep, "target_gen_dir")
-        name = get_label_info(dep, "name")
-        dep_libraries += [ "$gen_dir/$name.libraries" ]
+        dep_gen_dir = get_label_info(dep, "target_gen_dir")
+        dep_name = get_label_info(dep, "name")
+        dep_libraries += [ "$dep_gen_dir/$dep_name.libraries" ]
       }
       args += [ "--dep-libraries" ] + rebase_path(dep_libraries, root_build_dir)
       inputs = dep_libraries
@@ -164,7 +165,7 @@ template("fidlc") {
       json_representation,
     ]
     args = [ "@" + rebase_path(response_file, root_build_dir) ]
-    deps += invoker.non_fidl_deps
+    deps += non_fidl_deps
     public_deps = [ ":$response_file_target_name" ]
     if (defined(invoker.public_deps)) {
       public_deps += invoker.public_deps

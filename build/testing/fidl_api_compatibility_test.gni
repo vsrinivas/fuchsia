@@ -1,0 +1,87 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl_summary.gni")
+import("//build/fidl/fidlc.gni")
+
+template("fidl_api_compatibility_test") {
+  assert(defined(invoker.fidl_target_name), "fidl_target_name is required")
+  assert(defined(invoker.target_api_level), "target_api_level is required")
+  assert(defined(invoker.golden_summary_json),
+         "golden_summary_json is required")
+
+  target_api_level = invoker.target_api_level
+  fidlc_target_name = "${target_name}_fidlc"
+  json_representation = "$target_gen_dir/$target_name.fidl.json"
+
+  # Recompile the library at the target API level.
+  fidlc(fidlc_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "fidl_deps",
+                             "fidl_target_name",
+                             "library_name",
+                             "public_deps",
+                             "sources",
+                             "testonly",
+                           ])
+
+    target_api_platform = "fuchsia"
+    target_api_level = "$target_api_level"
+
+    # Avoid clobbering the generated FIDL sources from HEAD.
+    gen_dir = "$target_gen_dir/$target_api_level"
+    json_representation = json_representation
+  }
+
+  # Generate a new JSON summary to diff against the golden one.
+  summary_file_json = "$target_gen_dir/$target_name.api_summary.json"
+  summarization_target_name = "${target_name}_summary_json"
+  fidl_summary_json(summarization_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    inputs = [ json_representation ]
+    outputs = [ summary_file_json ]
+    dest = "fidl"
+    deps = [ ":$fidlc_target_name" ]
+  }
+
+  # Run the test.
+  action(target_name) {
+    forward_variables_from(invoker, "*")
+
+    script = "//sdk/cts/build/scripts/fidl_api_compatibility_test.py"
+    stamp_file = "$target_gen_dir/$target_name.verified"
+
+    current_summary = summary_file_json
+    golden_summary = golden_summary_json
+
+    inputs = [
+      current_summary,
+      golden_summary,
+      "//sdk/cts/build/scripts/plasa_differ.py",
+    ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--api-level",
+      "$target_api_level",
+      "--golden",
+      rebase_path(golden_summary, root_build_dir),
+      "--current",
+      rebase_path(current_summary, root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+      "--fidl_api_diff_path",
+      rebase_path("$root_build_dir/host_x64/fidl_api_diff", root_build_dir),
+    ]
+
+    deps += [
+      ":$summarization_target_name",
+      "//tools/fidl/fidl_api_diff:host",
+    ]
+  }
+}

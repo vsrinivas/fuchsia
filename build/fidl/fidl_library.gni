@@ -2,17 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/fuchsia/platform_version.gni")
 import("//build/fidl/fidl_summary.gni")
 import("//build/fidl/fidlc.gni")
 import("//build/fidl/linting_exceptions.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
 import("//build/sdk/sdk_atom.gni")
+import("//build/testing/fidl_api_compatibility_test.gni")
 import("//build/testing/golden_file.gni")
 
 declare_args() {
   # Whether libraries under //vendor should be linted.
   vendor_linting = false
+
+  # Whether to run API compatibility tests.
+  api_compatibility_testing = false
 }
 
 # Generates some representation of a FIDL library that's consumable by Language
@@ -54,16 +59,9 @@ template("fidl_library") {
       invoker.sdk_category != "experimental" &&
       invoker.sdk_category != "excluded"
 
-  if (is_sdk_publishable) {
-    verify_api_summary_target_name = "${target_name}_verify_api_summary"
-
-    # A kill switch for API summarization. Set to true to permit compilations
-    # that have summary errors.
-    lenient_api_summary = false
-    if (defined(invoker.lenient_api_summary)) {
-      lenient_api_summary = invoker.lenient_api_summary
-    }
-  }
+  # Additional dependencies to add when this target is published in an SDK.
+  sdk_atom_deps = []
+  not_needed([ "sdk_atom_deps" ])
 
   json_representation = "$target_gen_dir/$target_name.fidl.json"
   lint_stamp_file = "$target_gen_dir/$target_name.linted"
@@ -224,14 +222,45 @@ template("fidl_library") {
     }
   }
 
-  # Enforce summary checks only for the FIDL files in the SDK.
+  # Enforce compatibility checks for all published SDK FIDLs.
   if (is_sdk_publishable) {
-    golden_file(verify_api_summary_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-      warn_on_changes = lenient_api_summary
-      golden = "${library_name}.api_summary"
-      current = "${target_gen_dir}/${library_name}.api_summary"
-      deps = [ ":${summarization_target_name}" ]
+    if (api_compatibility_testing) {
+      # Test for backward compatibility with the current API level.
+      compatibility_test_target_name = "${target_name}_compatibility_test"
+      fidl_api_compatibility_test(compatibility_test_target_name) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "sources",
+                                 "library_name",
+                                 "fidl_deps",
+                                 "public_deps",
+                                 "experimental_flags",
+                                 "testonly",
+                               ])
+        fidl_target_name = main_target_name
+        target_api_level = "HEAD"
+        golden_summary_json = "$library_name.api_summary.json"
+      }
+      sdk_atom_deps += [ ":$compatibility_test_target_name" ]
+    } else {
+      # A kill switch for API summarization. Set to true to permit compilations
+      # that have summary errors.
+      lenient_api_summary = false
+      if (defined(invoker.lenient_api_summary)) {
+        lenient_api_summary = invoker.lenient_api_summary
+      }
+      verify_api_summary_target_name = "${target_name}_verify_api_summary"
+      golden_file(verify_api_summary_target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        warn_on_changes = lenient_api_summary
+        golden = "$library_name.api_summary"
+        current = "$target_gen_dir/$library_name.api_summary"
+        deps = [ ":$summarization_target_name" ]
+      }
+
+      # TODO(99710): Add missing goldens for vendor APIs and uncomment.
+      # sdk_atom_deps += [ ":$verify_api_summary_target_name" ]
     }
   }
 
@@ -266,6 +295,7 @@ template("fidl_library") {
       ":${summarization_target_name}",
     ]
 
+    # TODO(99710): Delete. See above comment with the same bug number.
     if (is_sdk_publishable) {
       deps += [ ":${verify_api_summary_target_name}" ]
     }
@@ -427,12 +457,12 @@ template("fidl_library") {
       }
 
       non_sdk_deps = [
-        ":$api_normalize_target_name",
-        ":$compilation_target_name",
-        ":$meta_target_name",
-        ":${summarization_target_name_json}",
-        ":${summarization_target_name}",
-      ]
+                       ":$api_normalize_target_name",
+                       ":$compilation_target_name",
+                       ":$meta_target_name",
+                       ":$summarization_target_name",
+                       ":$summarization_target_name_json",
+                     ] + sdk_atom_deps
 
       deps = []
       foreach(dep, fidl_deps) {
