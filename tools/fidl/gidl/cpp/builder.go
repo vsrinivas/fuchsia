@@ -284,9 +284,9 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))
 		}
 	case *gidlmixer.ClientEndDecl:
-		return fmt.Sprintf("fidl::ClientEnd<%s>", endpointDeclName(decl))
+		return fmt.Sprintf("fidl::ClientEnd<%s>", EndpointDeclName(decl))
 	case *gidlmixer.ServerEndDecl:
-		return fmt.Sprintf("fidl::ServerEnd<%s>", endpointDeclName(decl))
+		return fmt.Sprintf("fidl::ServerEnd<%s>", EndpointDeclName(decl))
 	case gidlmixer.NamedDeclaration:
 		return declName(decl)
 	default:
@@ -307,7 +307,7 @@ func declName(decl gidlmixer.NamedDeclaration) string {
 	return fmt.Sprintf("%s::%s", strings.ReplaceAll(parts[0], ".", "_"), fidlgen.ToUpperCamelCase(parts[1]))
 }
 
-func endpointDeclName(decl gidlmixer.EndpointDeclaration) string {
+func EndpointDeclName(decl gidlmixer.EndpointDeclaration) string {
 	// TODO(fxbug.dev/62647): Only works in new C++ bindings, not HLCPP.
 	parts := strings.SplitN(decl.ProtocolName(), "/", 2)
 	return fmt.Sprintf("%s::%s", strings.ReplaceAll(parts[0], ".", "_"), fidlgen.ToUpperCamelCase(parts[1]))

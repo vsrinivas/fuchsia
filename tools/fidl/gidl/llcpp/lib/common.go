@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	cpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/cpp"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -33,8 +34,6 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 			return fmt.Sprintf("fidl::ObjectView<%s>", declName(decl))
 		}
 		return declName(decl)
-	case gidlmixer.NamedDeclaration:
-		return declName(decl)
 	case *gidlmixer.ArrayDecl:
 		return fmt.Sprintf("fidl::Array<%s, %d>", typeName(decl.Elem()), decl.Size())
 	case *gidlmixer.VectorDecl:
@@ -50,6 +49,12 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))
 		}
+	case *gidlmixer.ClientEndDecl:
+		return fmt.Sprintf("fidl::ClientEnd<%s>", cpp.EndpointDeclName(decl))
+	case *gidlmixer.ServerEndDecl:
+		return fmt.Sprintf("fidl::ServerEnd<%s>", cpp.EndpointDeclName(decl))
+	case gidlmixer.NamedDeclaration:
+		return declName(decl)
 	default:
 		panic("unhandled case")
 	}

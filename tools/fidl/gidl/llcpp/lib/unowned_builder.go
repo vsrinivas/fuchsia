@@ -53,6 +53,13 @@ func primitiveTypeName(subtype fidlgen.PrimitiveSubtype) string {
 	}
 }
 
+func (b *unownedBuilder) adoptHandle(decl gidlmixer.Declaration, value gidlir.HandleWithRights) string {
+	if b.handleRepr == HandleReprDisposition || b.handleRepr == HandleReprInfo {
+		return fmt.Sprintf("%s(handle_defs[%d].handle)", typeName(decl), value.Handle)
+	}
+	return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
+}
+
 func (b *unownedBuilder) visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool:
@@ -88,10 +95,14 @@ func (b *unownedBuilder) visit(value gidlir.Value, decl gidlmixer.Declaration) s
 	case string:
 		return fmt.Sprintf("fidl::StringView(%s)", strconv.Quote(value))
 	case gidlir.HandleWithRights:
-		if b.handleRepr == HandleReprDisposition || b.handleRepr == HandleReprInfo {
-			return fmt.Sprintf("%s(handle_defs[%d].handle)", typeName(decl), value.Handle)
+		switch decl := decl.(type) {
+		case *gidlmixer.HandleDecl:
+			return b.adoptHandle(decl, value)
+		case *gidlmixer.ClientEndDecl:
+			return fmt.Sprintf("%s(%s)", typeName(decl), b.adoptHandle(decl.UnderlyingHandleDecl(), value))
+		case *gidlmixer.ServerEndDecl:
+			return fmt.Sprintf("%s(%s)", typeName(decl), b.adoptHandle(decl.UnderlyingHandleDecl(), value))
 		}
-		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:

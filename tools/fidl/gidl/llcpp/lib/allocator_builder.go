@@ -55,6 +55,13 @@ func (a *allocatorBuilder) construct(typename string, isPointer bool, fmtStr str
 	return fmt.Sprintf("fidl::ObjectView<%s>(%s, %s)", typename, a.allocatorVar, val)
 }
 
+func (a *allocatorBuilder) adoptHandle(decl gidlmixer.Declaration, value gidlir.HandleWithRights) string {
+	if a.handleRepr == HandleReprDisposition || a.handleRepr == HandleReprInfo {
+		return fmt.Sprintf("%s(handle_defs[%d].handle)", typeName(decl), value.Handle)
+	}
+	return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
+}
+
 func formatPrimitive(value gidlir.Value) string {
 	switch value := value.(type) {
 	case int64:
@@ -102,10 +109,14 @@ func (a *allocatorBuilder) visit(value gidlir.Value, decl gidlmixer.Declaration)
 		}
 		return a.construct(typeNameIgnoreNullable(decl), isPointer, "%q", value)
 	case gidlir.HandleWithRights:
-		if a.handleRepr == HandleReprDisposition || a.handleRepr == HandleReprInfo {
-			return fmt.Sprintf("%s(handle_defs[%d].handle)", typeName(decl), value.Handle)
+		switch decl := decl.(type) {
+		case *gidlmixer.HandleDecl:
+			return a.adoptHandle(decl, value)
+		case *gidlmixer.ClientEndDecl:
+			return fmt.Sprintf("%s(%s)", typeName(decl), a.adoptHandle(decl.UnderlyingHandleDecl(), value))
+		case *gidlmixer.ServerEndDecl:
+			return fmt.Sprintf("%s(%s)", typeName(decl), a.adoptHandle(decl.UnderlyingHandleDecl(), value))
 		}
-		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:
