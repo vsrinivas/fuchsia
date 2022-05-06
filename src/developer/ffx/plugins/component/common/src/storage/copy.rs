@@ -17,11 +17,6 @@ use {
 /// Transfer a file between the host machine and the Fuchsia device.
 /// Can be used to upload a file to or from the Fuchsia device.
 ///
-/// To connect to a StorageAdminProxy, use a RemoteControlProxy with the right selector:
-/// data: "core:expose:fuchsia.sys2.StorageAdmin"
-/// cache: "core:expose:fuchsia.sys2.StorageAdmin.cache"
-/// temp: "core:expose:fuchsia.sys2.StorageAdmin.tmp"
-///
 /// # Arguments
 /// * `storage_admin`: The StorageAdminProxy.
 /// * `source_path`: The path to a file on the host machine to be uploaded to the device or to a file on the device to be downloaded on the host machine

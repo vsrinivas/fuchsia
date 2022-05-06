@@ -10,11 +10,6 @@ use {
 /// List all directories and files in a component's storage.
 /// Returns a vector of names of the directories and files as strings.
 ///
-/// To connect to a StorageAdminProxy, use a RemoteControlProxy with the right selector:
-/// data: "core:expose:fuchsia.sys2.StorageAdmin"
-/// cache: "core:expose:fuchsia.sys2.StorageAdmin.cache"
-/// temp: "core:expose:fuchsia.sys2.StorageAdmin.tmp"
-///
 /// # Arguments
 /// * `storage_admin`: The StorageAdminProxy
 /// * `path`: A path on the target component
@@ -59,7 +54,7 @@ mod test {
             // size: u8
             bytes.push(name.len() as u8);
             // type: u8
-            bytes.push(fio::DirentType::File);
+            bytes.push(fio::DirentType::File as u8);
             // name: [u8]
             for byte in name.bytes() {
                 bytes.push(byte);

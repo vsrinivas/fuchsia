@@ -14,11 +14,6 @@ use {
 
 /// Create a new directory in a component's storage.
 ///
-/// To connect to a StorageAdminProxy, use a RemoteControlProxy with the right selector:
-///     data: "core:expose:fuchsia.sys2.StorageAdmin"
-///     cache: "core:expose:fuchsia.sys2.StorageAdmin.cache"
-///     temp: "core:expose:fuchsia.sys2.StorageAdmin.tmp"
-///
 /// # Arguments
 /// * `storage_admin`: The StorageAdminProxy
 /// * `path`: The name of a new directory on the target component

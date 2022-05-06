@@ -28,10 +28,10 @@ rustc_library("ffx_component") {
 
   sources = [
     "src/lib.rs",
-    "src/storage.rs",
     "src/storage/copy.rs",
     "src/storage/list.rs",
     "src/storage/make_directory.rs",
+    "src/storage/mod.rs",
   ]
 }
 
