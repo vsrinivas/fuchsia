@@ -90,7 +90,7 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
-    # Setup logging / error-printing methods.
+    # Setup logging / error-printing methods and utilities
     output = []
 
     def log(string: str):
@@ -106,6 +106,14 @@ def main():
         if args.output:
             output.append(string)
 
+    def format_path(path: str) -> str:
+        """Format a path for clearer displaying"""
+        path = os.path.relpath(path, args.source_root)
+        if os.path.isabs(path):
+            return path
+        else:
+            return "//" + path
+
     log("Disallowed GN args:")
     for arg in disallowed_gn_args:
         log(f"  {arg}")
@@ -119,20 +127,24 @@ def main():
     # Gather the vendor product definitions (if they exist)
     product_def_paths.extend(find_vendor_product_defs(source_root))
 
-    found_failures = False
     log("Scanning product defs:")
+    results = {}
     for path in sorted(product_def_paths):
         result = validate_product_def(path)
         if result:
-            found_failures = True
-            error(f"  {path} FAIL:")
-            for line_num, error_string in result:
-                error(f"    {line_num}: {error_string}")
+            results[path] = result
+            log(f"  {format_path(path)}: FAIL")
         else:
-            log(f"  {path}: PASS")
+            log(f"  {format_path(path)}: PASS")
 
-    # Bail out after processing, if we've found errors.
-    if found_failures:
+    if results:
+        error(
+            "\nFound use of deprecated / disallowed GN arg in product definition:"
+        )
+        for (path, errors) in results.items():
+            error(f"  {format_path(path)}")
+            for line_num, error_string in errors:
+                error(f"    {line_num}: {error_string}")
         return -1
 
     if args.depfile:
