@@ -155,7 +155,7 @@ impl FsckWarning {
 
 #[derive(Clone, Debug)]
 pub enum FsckError {
-    AllocatedBytesMismatch(u64, u64),
+    AllocatedBytesMismatch(Vec<(u64, i64)>, Vec<(u64, i64)>),
     AllocatedSizeMismatch(u64, u64, u64, u64),
     AllocationMismatch(Allocation, Allocation),
     AttributeOnDirectory(u64, u64),
@@ -190,7 +190,10 @@ impl FsckError {
                 format!("Expected allocation {:?} but found allocation {:?}", expected, actual)
             }
             FsckError::AllocatedBytesMismatch(expected, actual) => {
-                format!("Expected {} bytes allocated, but found {} bytes", expected, actual)
+                format!(
+                    "Expected allocated bytes for each owner to be {:?}, but found {:?}",
+                    expected, actual
+                )
             }
             FsckError::AllocatedSizeMismatch(store_id, oid, expected, actual) => {
                 format!(

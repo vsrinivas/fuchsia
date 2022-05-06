@@ -40,7 +40,7 @@ use {
         any::Any,
         borrow::Borrow,
         cmp::min,
-        collections::{HashSet, VecDeque},
+        collections::{BTreeMap, HashSet, VecDeque},
         convert::TryInto,
         marker::PhantomData,
         ops::{Bound, Range},
@@ -70,7 +70,7 @@ pub trait Allocator: ReservationOwner {
     async fn allocate(
         &self,
         transaction: &mut Transaction<'_>,
-        object_id: u64,
+        owner_object_id: u64,
         len: u64,
     ) -> Result<Range<u64>, Error>;
 
@@ -78,7 +78,7 @@ pub trait Allocator: ReservationOwner {
     async fn deallocate(
         &self,
         transaction: &mut Transaction<'_>,
-        object_id: u64,
+        owner_object_id: u64,
         device_range: Range<u64>,
     ) -> Result<u64, Error>;
 
@@ -87,7 +87,7 @@ pub trait Allocator: ReservationOwner {
     async fn mark_allocated(
         &self,
         transaction: &mut Transaction<'_>,
-        object_id: u64,
+        owner_object_id: u64,
         device_range: Range<u64>,
     ) -> Result<(), Error>;
 
@@ -112,8 +112,13 @@ pub trait Allocator: ReservationOwner {
     /// could be zero bytes.
     fn reserve_at_most(self: Arc<Self>, amount: u64) -> Reservation;
 
-    /// Returns the number of allocated bytes.
+    /// Returns the total number of allocated bytes.
     fn get_allocated_bytes(&self) -> u64;
+
+    /// Returns the total number of allocated bytes per owner_object_id.
+    /// Note that this is quite an expensive operation as it copies the collection.
+    /// This is intended for use in fsck() and friends, not general use code.
+    fn get_owner_allocated_bytes(&self) -> BTreeMap<u64, i64>;
 
     /// Returns the number of allocated and reserved bytes.
     fn get_used_bytes(&self) -> u64;
@@ -353,8 +358,10 @@ pub async fn filter_tombstones(
 }
 #[derive(Debug, Default, Clone, Deserialize, Serialize, Versioned)]
 pub struct AllocatorInfo {
+    /// Holds the set of layer file object_id for the LSM tree (newest first).
     pub layers: Vec<u64>,
-    pub allocated_bytes: u64,
+    /// Maps from owner_object_id to bytes allocated.
+    pub allocated_bytes: BTreeMap<u64, u64>,
 }
 
 const MAX_ALLOCATOR_INFO_SERIALIZED_SIZE: usize = 131_072;
@@ -406,10 +413,10 @@ struct Inner {
     // array of dropped_allocations and update reserved_allocations the next time we try to
     // allocate.
     dropped_allocations: Vec<AllocatorItem>,
-    // This value is the up-to-date count of the number of allocated bytes whereas the value in
-    // `info` is the value as it was when we last flushed.  This is i64 because it can be negative
-    // during replay.
-    allocated_bytes: i64,
+    // This value is the up-to-date count of the number of allocated bytes per owner_object_id
+    // whereas the value in `info` is the value as it was when we last flushed.
+    // This is i64 because it can be negative during replay.
+    allocated_bytes: BTreeMap<u64, i64>,
     // This value is the number of bytes allocated to uncommitted allocations.
     uncommitted_allocated_bytes: u64,
     // This value is the number of bytes allocated to reservations.
@@ -430,7 +437,7 @@ impl Inner {
     // yet, and bytes that have been deallocated, but the device hasn't been flushed yet so we can't
     // reuse those bytes yet.
     fn unavailable_bytes(&self) -> u64 {
-        self.allocated_bytes as u64
+        self.allocated_bytes.values().sum::<i64>() as u64
             + self.uncommitted_allocated_bytes
             + self.committed_deallocated_bytes
     }
@@ -438,7 +445,9 @@ impl Inner {
     // Returns the total number of bytes that are taken either from reservations, allocations or
     // uncommitted allocations.
     fn taken_bytes(&self) -> u64 {
-        self.allocated_bytes as u64 + self.uncommitted_allocated_bytes + self.reserved_bytes
+        self.allocated_bytes.values().sum::<i64>() as u64
+            + self.uncommitted_allocated_bytes
+            + self.reserved_bytes
     }
 }
 
@@ -457,7 +466,7 @@ impl SimpleAllocator {
                 info: AllocatorInfo::default(),
                 opened: false,
                 dropped_allocations: Vec::new(),
-                allocated_bytes: 0,
+                allocated_bytes: BTreeMap::new(),
                 uncommitted_allocated_bytes: 0,
                 reserved_bytes: 0,
                 committed_deallocated: VecDeque::new(),
@@ -527,12 +536,24 @@ impl SimpleAllocator {
                 // After replaying, allocated_bytes should include all the deltas since the time
                 // the allocator was last flushed, so here we just need to add whatever is
                 // recorded in info.
-                let amount: i64 = info.allocated_bytes.try_into().map_err(|_| {
-                    anyhow!(FxfsError::Inconsistent).context("Allocated bytes inconsistent")
-                })?;
-                inner.allocated_bytes += amount;
-                if inner.allocated_bytes < 0 || inner.allocated_bytes as u64 > self.device_size {
-                    bail!(anyhow!(FxfsError::Inconsistent).context("Allocated bytes inconsistent"));
+                for (owner_object_id, bytes) in &info.allocated_bytes {
+                    let amount: i64 = (*bytes).try_into().map_err(|_| {
+                        anyhow!(FxfsError::Inconsistent).context("Allocated bytes inconsistent")
+                    })?;
+                    let entry = inner.allocated_bytes.entry(*owner_object_id).or_insert(0);
+                    match entry.checked_add(amount) {
+                        None => {
+                            bail!(anyhow!(FxfsError::Inconsistent)
+                                .context("Allocated bytes overflow"));
+                        }
+                        Some(value) if value < 0 || value as u64 > self.device_size => {
+                            bail!(anyhow!(FxfsError::Inconsistent)
+                                .context("Allocated bytes inconsistent"));
+                        }
+                        Some(value) => {
+                            *entry = value;
+                        }
+                    };
                 }
                 inner.info = info;
             }
@@ -872,12 +893,16 @@ impl Allocator for SimpleAllocator {
     }
 
     fn get_allocated_bytes(&self) -> u64 {
-        self.inner.lock().unwrap().allocated_bytes as u64
+        self.inner.lock().unwrap().allocated_bytes.values().sum::<i64>() as u64
+    }
+
+    fn get_owner_allocated_bytes(&self) -> BTreeMap<u64, i64> {
+        self.inner.lock().unwrap().allocated_bytes.iter().map(|(k, v)| (*k, *v)).collect()
     }
 
     fn get_used_bytes(&self) -> u64 {
         let inner = self.inner.lock().unwrap();
-        inner.allocated_bytes as u64 + inner.reserved_bytes
+        inner.allocated_bytes.values().sum::<i64>() as u64 + inner.reserved_bytes
     }
 }
 
@@ -916,7 +941,8 @@ impl Mutations for SimpleAllocator {
                     self.reserved_allocations.erase(&item.key).await;
                 }
                 let mut inner = self.inner.lock().unwrap();
-                inner.allocated_bytes = inner.allocated_bytes.saturating_add(len as i64);
+                let entry = inner.allocated_bytes.entry(owner_object_id).or_insert(0);
+                *entry = entry.saturating_add(len as i64);
                 if let ApplyMode::Live(transaction) = context.mode {
                     inner.uncommitted_allocated_bytes -= len;
                     if let Some(reservation) = transaction.allocator_reservation {
@@ -946,8 +972,8 @@ impl Mutations for SimpleAllocator {
 
                 {
                     let mut inner = self.inner.lock().unwrap();
-                    inner.allocated_bytes = inner.allocated_bytes.saturating_sub(len as i64);
-
+                    let entry = inner.allocated_bytes.entry(owner_object_id).or_insert(0);
+                    *entry = entry.saturating_sub(len as i64);
                     if context.mode.is_live() {
                         inner.committed_deallocated.push_back((
                             context.checkpoint.file_offset,
@@ -980,7 +1006,9 @@ impl Mutations for SimpleAllocator {
                 // Transfer our running count for allocated_bytes so that it gets written to the new
                 // info file when flush completes.
                 let mut inner = self.inner.lock().unwrap();
-                inner.info.allocated_bytes = inner.allocated_bytes as u64;
+                let allocated_bytes =
+                    inner.allocated_bytes.iter().map(|(k, v)| (*k, *v as u64)).collect();
+                inner.info.allocated_bytes = allocated_bytes;
             }
             Mutation::EndFlush => {
                 if context.mode.is_replay() {
@@ -990,7 +1018,12 @@ impl Mutations for SimpleAllocator {
                     // that it just covers the delta from that point.  Later, when we properly open
                     // the allocator, we'll add this back.
                     let mut inner = self.inner.lock().unwrap();
-                    inner.allocated_bytes -= inner.info.allocated_bytes as i64;
+                    //let allocated_bytes = inner.info.allocated_bytes;
+                    let allocated_bytes: Vec<(u64, i64)> =
+                        inner.info.allocated_bytes.iter().map(|(k, v)| (*k, *v as i64)).collect();
+                    for (k, v) in allocated_bytes {
+                        *inner.allocated_bytes.entry(k).or_insert(0) -= v as i64;
+                    }
                 }
             }
             // TODO(fxbug.dev/95979): ideally, we'd return an error here instead. This should only
@@ -1061,7 +1094,8 @@ impl Mutations for SimpleAllocator {
             std::mem::replace(&mut self.inner.lock().unwrap().marked_for_deletion, HashSet::new());
 
         // Track the bytes we deallocate due to mark_for_deletion.
-        let deallocated_bytes = std::sync::atomic::AtomicI64::new(0);
+        let deallocated_bytes: Arc<Mutex<BTreeMap<u64, i64>>> =
+            Arc::new(Mutex::new(BTreeMap::new()));
 
         let layer_set = self.tree.immutable_layer_set();
         {
@@ -1075,10 +1109,11 @@ impl Mutations for SimpleAllocator {
                         ..
                     } => {
                         if marked_for_deletion.contains(owner_object_id) {
-                            deallocated_bytes.fetch_add(
-                                device_range.length().unwrap() as i64,
-                                std::sync::atomic::Ordering::SeqCst,
-                            );
+                            *deallocated_bytes
+                                .lock()
+                                .unwrap()
+                                .entry(*owner_object_id)
+                                .or_insert(0) += device_range.length().unwrap() as i64;
                             false
                         } else {
                             true
@@ -1110,8 +1145,9 @@ impl Mutations for SimpleAllocator {
             let mut inner = self.inner.lock().unwrap();
 
             // Reduce allocated bytes associated with any filtered mark_for_deletion extents.
-            let deallocated_bytes = deallocated_bytes.load(std::sync::atomic::Ordering::SeqCst);
-            inner.allocated_bytes -= deallocated_bytes;
+            for (k, v) in deallocated_bytes.lock().unwrap().iter() {
+                *inner.allocated_bytes.entry(*k).or_insert(0) -= *v;
+            }
 
             // Move all the existing layers to the graveyard.
             for object_id in &inner.info.layers {

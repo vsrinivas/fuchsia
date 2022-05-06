@@ -5,10 +5,8 @@
 use crate::{
     lsm_tree::LayerInfo,
     object_store::{
-        transaction::{Mutation, MutationV1, MutationV2},
-        AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations, JournalRecord,
-        JournalRecordV1, JournalRecordV2, ObjectKey, ObjectValue, StoreInfo, SuperBlock,
-        SuperBlockRecord,
+        transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
+        JournalRecord, ObjectKey, ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
     },
     serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
 };
@@ -19,11 +17,11 @@ use crate::{
 /// both rewritten, all versions should match this value.
 ///
 /// Last breaking change:
-///  v13:  Enable wrapping object keys with AES-GCM-SIV.
-pub const LATEST_VERSION: Version = Version { major: 15, minor: 0 };
+///  v16:  Track allocated space on a per object-store basis.
+pub const LATEST_VERSION: Version = Version { major: 16, minor: 0 };
 
 versioned_type! {
-    2.. => AllocatorInfo,
+    16.. => AllocatorInfo,
 }
 versioned_type! {
     1.. => AllocatorKey,
@@ -36,16 +34,12 @@ versioned_type! {
 }
 versioned_type! {
     15.. => JournalRecord,
-    14.. => JournalRecordV2,
-    13.. => JournalRecordV1,
 }
 versioned_type! {
     1.. => LayerInfo,
 }
 versioned_type! {
     15.. => Mutation,
-    14.. => MutationV2,
-    13.. => MutationV1,
 }
 versioned_type! {
     5.. => ObjectKey,
@@ -57,7 +51,7 @@ versioned_type! {
     8.. => StoreInfo,
 }
 versioned_type! {
-    13.. => SuperBlock,
+    16.. => SuperBlock,
 }
 versioned_type! {
     5.. => SuperBlockRecord,

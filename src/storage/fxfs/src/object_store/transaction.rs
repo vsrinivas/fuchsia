@@ -8,7 +8,7 @@ use {
         lsm_tree::types::Item,
         object_handle::INVALID_OBJECT_ID,
         object_store::{
-            allocator::{AllocatorItem, AllocatorKey, AllocatorValue, Reservation},
+            allocator::{AllocatorItem, Reservation},
             object_manager::{reserved_space_from_journal_usage, ObjectManager},
             object_record::{ObjectItem, ObjectKey, ObjectValue},
         },
@@ -120,52 +120,6 @@ pub trait TransactionHandler: Send + Sync {
     async fn write_lock<'a>(&'a self, lock_keys: &[LockKey]) -> WriteGuard<'a>;
 }
 
-#[derive(Serialize, Deserialize, Versioned)]
-pub enum MutationV1 {
-    ObjectStore(ObjectStoreMutation),
-    EncryptedObjectStore(Box<[u8]>),
-    Allocator(AllocatorMutationV1),
-    BeginFlush,
-    EndFlush,
-    UpdateBorrowed(u64),
-}
-
-impl From<MutationV1> for MutationV2 {
-    fn from(other: MutationV1) -> Self {
-        match other {
-            MutationV1::ObjectStore(x) => Self::ObjectStore(x.into()),
-            MutationV1::EncryptedObjectStore(x) => Self::EncryptedObjectStore(x.into()),
-            MutationV1::Allocator(x) => Self::Allocator(x.into()),
-            MutationV1::BeginFlush => Self::BeginFlush,
-            MutationV1::EndFlush => Self::EndFlush,
-            MutationV1::UpdateBorrowed(x) => Self::UpdateBorrowed(x),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Versioned)]
-pub enum MutationV2 {
-    ObjectStore(ObjectStoreMutation),
-    EncryptedObjectStore(Box<[u8]>),
-    Allocator(AllocatorMutationV2),
-    BeginFlush,
-    EndFlush,
-    UpdateBorrowed(u64),
-}
-
-impl From<MutationV2> for Mutation {
-    fn from(other: MutationV2) -> Self {
-        match other {
-            MutationV2::ObjectStore(x) => Self::ObjectStore(x.into()),
-            MutationV2::EncryptedObjectStore(x) => Self::EncryptedObjectStore(x.into()),
-            MutationV2::Allocator(x) => Self::Allocator(x.into()),
-            MutationV2::BeginFlush => Self::BeginFlush,
-            MutationV2::EndFlush => Self::EndFlush,
-            MutationV2::UpdateBorrowed(x) => Self::UpdateBorrowed(x),
-        }
-    }
-}
-
 /// The journal consists of these records which will be replayed at mount time.  Within a
 /// transaction, these are stored as a set which allows some mutations to be deduplicated and found
 /// (and we require custom comparison functions below).  For example, we need to be able to find
@@ -244,9 +198,6 @@ impl PartialEq for ObjectStoreMutation {
 
 impl Eq for ObjectStoreMutation {}
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AllocatorMutationV1(pub AllocatorItem);
-
 impl Ord for AllocatorItem {
     fn cmp(&self, other: &Self) -> Ordering {
         self.key.cmp(&other.key)
@@ -256,56 +207,6 @@ impl Ord for AllocatorItem {
 impl PartialOrd for AllocatorItem {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for AllocatorMutationV1 {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.key.eq(&other.0.key)
-    }
-}
-
-impl Eq for AllocatorMutationV1 {}
-
-impl From<AllocatorMutationV1> for AllocatorMutationV2 {
-    fn from(other: AllocatorMutationV1) -> Self {
-        Self::Item(other.0)
-    }
-}
-
-#[derive(Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
-pub enum AllocatorMutationV2 {
-    /// A mutation to some piece of allocator-managed extent space.
-    Item(AllocatorItem),
-    /// Marks all extents with a given owner_object_id for deletion.
-    /// Used to free space allocated to encrypted ObjectStore where we may not have the key.
-    /// Note that the actual deletion time is undefined so this should never be used where an
-    /// ObjectStore is still in use due to a high risk of corruption. Similarly, owner_object_id
-    /// should never be reused for the same reasons.
-    MarkForDeletion(u64),
-}
-
-impl From<AllocatorMutationV2> for AllocatorMutation {
-    fn from(other: AllocatorMutationV2) -> Self {
-        match other {
-            AllocatorMutationV2::Item(AllocatorItem {
-                key: AllocatorKey { device_range },
-                value: AllocatorValue::None,
-                ..
-            }) => Self::Deallocate { device_range, owner_object_id: INVALID_OBJECT_ID },
-            AllocatorMutationV2::Item(AllocatorItem {
-                key: AllocatorKey { device_range },
-                value: AllocatorValue::Abs { count: 1, owner_object_id },
-                ..
-            }) => Self::Allocate { device_range, owner_object_id },
-            AllocatorMutationV2::MarkForDeletion(owner_object_id) => {
-                Self::MarkForDeletion(owner_object_id)
-            }
-            _ => {
-                // Implies a reference count other than one or zero which we don't yet support.
-                unreachable!()
-            }
-        }
     }
 }
 

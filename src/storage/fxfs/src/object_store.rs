@@ -66,7 +66,7 @@ use {
 // Exposed for serialized_types.
 pub use allocator::{AllocatorInfo, AllocatorKey, AllocatorValue};
 pub use extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID};
-pub use journal::{JournalRecord, JournalRecordV1, JournalRecordV2, SuperBlock, SuperBlockRecord};
+pub use journal::{JournalRecord, SuperBlock, SuperBlockRecord};
 pub use object_record::{
     AttributeKey, EncryptionKeys, ObjectAttributes, ObjectKey, ObjectKeyData, ObjectKind,
     ObjectValue,

@@ -14,6 +14,7 @@ use {
     async_trait::async_trait,
     std::{
         any::Any,
+        collections::BTreeMap,
         ops::Range,
         sync::{Arc, Mutex},
     },
@@ -109,6 +110,10 @@ impl Allocator for FakeAllocator {
     fn get_allocated_bytes(&self) -> u64 {
         let inner = self.0.lock().unwrap();
         (inner.alloc_bytes - inner.dealloc_bytes) as u64
+    }
+
+    fn get_owner_allocated_bytes(&self) -> BTreeMap<u64, i64> {
+        unimplemented!();
     }
 
     fn get_used_bytes(&self) -> u64 {

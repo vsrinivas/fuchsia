@@ -41,8 +41,8 @@ use {
             object_manager::ObjectManager,
             object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue},
             transaction::{
-                AllocatorMutation, Mutation, MutationV1, MutationV2, ObjectStoreMutation, Options,
-                Transaction, TxnMutation, TRANSACTION_MAX_JOURNAL_USAGE,
+                AllocatorMutation, Mutation, ObjectStoreMutation, Options, Transaction,
+                TxnMutation, TRANSACTION_MAX_JOURNAL_USAGE,
             },
             HandleOptions, Item, ItemRef, LockState, NewChildStoreOptions, ObjectStore,
             StoreObjectHandle, INVALID_OBJECT_ID,
@@ -130,51 +130,6 @@ pub fn fletcher64(buf: &[u8], previous: u64) -> u64 {
     (hi as u64) << 32 | lo as u64
 }
 
-#[derive(Serialize, Deserialize, Versioned)]
-pub enum JournalRecordV1 {
-    EndBlock,
-    Mutation { object_id: u64, mutation: MutationV1 },
-    Commit,
-    Discard(u64),
-    DidFlushDevice(u64),
-}
-
-impl From<JournalRecordV1> for JournalRecordV2 {
-    fn from(other: JournalRecordV1) -> Self {
-        match other {
-            JournalRecordV1::EndBlock => Self::EndBlock,
-            JournalRecordV1::Mutation { object_id, mutation } => {
-                Self::Mutation { object_id, mutation: mutation.into() }
-            }
-            JournalRecordV1::Commit => Self::Commit,
-            JournalRecordV1::Discard(x) => Self::Discard(x),
-            JournalRecordV1::DidFlushDevice(x) => Self::DidFlushDevice(x),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Versioned)]
-pub enum JournalRecordV2 {
-    EndBlock,
-    Mutation { object_id: u64, mutation: MutationV2 },
-    Commit,
-    Discard(u64),
-    DidFlushDevice(u64),
-}
-
-impl From<JournalRecordV2> for JournalRecord {
-    fn from(other: JournalRecordV2) -> Self {
-        match other {
-            JournalRecordV2::EndBlock => Self::EndBlock,
-            JournalRecordV2::Mutation { object_id, mutation } => {
-                Self::Mutation { object_id, mutation: mutation.into() }
-            }
-            JournalRecordV2::Commit => Self::Commit,
-            JournalRecordV2::Discard(x) => Self::Discard(x),
-            JournalRecordV2::DidFlushDevice(x) => Self::DidFlushDevice(x),
-        }
-    }
-}
 #[derive(Clone, Debug, Serialize, Deserialize, Versioned)]
 pub enum JournalRecord {
     // Indicates no more records in this block.

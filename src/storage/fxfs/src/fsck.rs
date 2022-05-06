@@ -31,6 +31,8 @@ use {
     anyhow::{anyhow, Context, Error},
     futures::try_join,
     std::{
+        collections::BTreeMap,
+        iter::zip,
         ops::Bound,
         sync::{
             atomic::{AtomicU64, Ordering},
@@ -179,7 +181,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     let mut actual = CoalescingIterator::new(Box::new(iter)).await?;
     let mut expected =
         CoalescingIterator::new(fsck.allocations.seek(Bound::Unbounded).await?).await?;
-    let mut expected_allocated_bytes = 0;
+    let mut expected_owner_allocated_bytes = BTreeMap::new();
     let mut extra_allocations: Vec<errors::Allocation> = vec![];
     let bs = filesystem.block_size();
     while let Some(actual_item) = actual.get() {
@@ -197,8 +199,13 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
                     actual.advance().await?;
                     continue;
                 }
+                let owner_object_id = match expected_item.value {
+                    AllocatorValue::None => INVALID_OBJECT_ID,
+                    AllocatorValue::Abs { owner_object_id, .. } => *owner_object_id,
+                };
                 let r = &expected_item.key.device_range;
-                expected_allocated_bytes += (r.end - r.start) as i64;
+                *expected_owner_allocated_bytes.entry(owner_object_id).or_insert(0) +=
+                    (r.end - r.start) as i64;
                 if expected_item.key.device_range.end <= actual_item.key.device_range.start {
                     fsck.error(FsckError::MissingAllocation(expected_item.into()))?;
                     expected.advance().await?;
@@ -214,6 +221,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         }
         try_join!(actual.advance(), expected.advance())?;
     }
+    let expected_allocated_bytes = expected_owner_allocated_bytes.values().sum::<i64>() as u64;
     fsck.verbose(format!(
         "Found {} bytes allocated (expected {} bytes). Total device size is {} bytes.",
         allocator.get_allocated_bytes(),
@@ -226,12 +234,18 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     if let Some(item) = expected.get() {
         fsck.error(FsckError::MissingAllocation(item.into()))?;
     }
-    if expected_allocated_bytes as u64 != allocator.get_allocated_bytes() {
+    if expected_allocated_bytes != allocator.get_allocated_bytes()
+        || zip(expected_owner_allocated_bytes.iter(), allocator.get_owner_allocated_bytes().iter())
+            .filter(|((k1, v1), (k2, v2))| (*k1, *v1) != (*k2, *v2))
+            .count()
+            != 0
+    {
         fsck.error(FsckError::AllocatedBytesMismatch(
-            expected_allocated_bytes as u64,
-            allocator.get_allocated_bytes(),
+            expected_owner_allocated_bytes.iter().map(|(k, v)| (*k, *v)).collect(),
+            allocator.get_owner_allocated_bytes().iter().map(|(k, v)| (*k, *v)).collect(),
         ))?;
     }
+
     let errors = fsck.errors();
     let warnings = fsck.warnings();
     if errors > 0 || (fsck.options.fail_on_warning && warnings > 0) {

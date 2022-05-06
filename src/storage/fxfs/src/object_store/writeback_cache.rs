@@ -610,6 +610,7 @@ mod tests {
         futures::{channel::oneshot::channel, join},
         std::{
             any::Any,
+            collections::BTreeMap,
             ops::Range,
             sync::{
                 atomic::{AtomicU64, Ordering},
@@ -755,6 +756,10 @@ mod tests {
 
         fn get_allocated_bytes(&self) -> u64 {
             unreachable!();
+        }
+
+        fn get_owner_allocated_bytes(&self) -> BTreeMap<u64, i64> {
+            unimplemented!();
         }
 
         fn get_used_bytes(&self) -> u64 {
