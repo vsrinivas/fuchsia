@@ -17,9 +17,10 @@ zx_library("perftest") {
     "runner.cc",
   ]
   public_deps = [ "//zircon/system/ulib/fbl" ]
+  deps = [ "//third_party/re2" ]
   if (is_fuchsia) {
     sources += [ "trace-provider.cc" ]
-    deps = [
+    deps += [
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/async-loop",
       "//zircon/system/ulib/async-loop:async-loop-cpp",

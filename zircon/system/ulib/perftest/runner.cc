@@ -14,7 +14,6 @@
 
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <regex.h>
 
 #include <algorithm>
 #include <chrono>
@@ -26,6 +25,7 @@
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <perftest/runner.h>
+#include <re2/re2.h>
 
 namespace perftest {
 namespace {
@@ -336,26 +336,11 @@ namespace internal {
 bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
               const char* regex_string, FILE* log_stream, ResultsSet* results_set, bool quiet,
               bool random_order) {
-  std::optional<regex_t> regex;
-  auto cleanup = fit::defer([&regex]() {
-    if (regex.has_value()) {
-      regfree(&regex.value());
-    }
-  });
-  // Compile the regular expression if it's not the empty string.
-  // MacOS returns an error attempting to compile an empty regex.
-  if (strlen(regex_string) != 0) {
-    regex_t init;
-    int err = regcomp(&init, regex_string, REG_EXTENDED | REG_NOSUB);
-    if (err != 0) {
-      char msg[256];
-      msg[0] = '\0';
-      regerror(err, &init, msg, sizeof(msg));
-      fprintf(log_stream, "Compiling the regular expression \"%s\" failed: %s\n", regex_string,
-              msg);
-      return false;
-    }
-    regex = init;
+  re2::RE2 regex(regex_string);
+  if (!regex.ok()) {
+    fprintf(log_stream, "Compiling the regular expression \"%s\" failed: %s\n", regex_string,
+            regex.error().c_str());
+    return false;
   }
 
   // Use either a consistent or randomized order for the test cases,
@@ -386,11 +371,8 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
   bool ok = true;
   for (internal::NamedTest* test_case : test_list_copy) {
     const char* test_name = test_case->name.c_str();
-    if (regex.has_value()) {
-      bool matched_regex = regexec(&regex.value(), test_name, 0, nullptr, 0) == 0;
-      if (!matched_regex) {
-        continue;
-      }
+    if (!re2::RE2::PartialMatch(test_name, regex)) {
+      continue;
     }
     found_regex_match = true;
 
