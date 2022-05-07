@@ -74,6 +74,7 @@ template("core_realm") {
     data_keys = [ "shard_files" ]
     outputs = [ "$target_out_dir/core_shard_list" ]
   }
+  core_shard_list = get_target_outputs(":$generated_file_target")
 
   merged_manifest_target = "${target_name}_merged_manifest"
   cmc_merge(merged_manifest_target) {
@@ -89,9 +90,9 @@ template("core_realm") {
     deps += [ ":${generated_file_target}" ]
 
     sources = [ "//src/sys/core/meta/core.cml" ]
-    from_file = "$target_out_dir/core_shard_list"
+    from_file = core_shard_list[0]
 
-    output_name = "core.cml"
+    output_name = "$target_name.cml"
   }
 
   merge_outputs = get_target_outputs(":${merged_manifest_target}")
