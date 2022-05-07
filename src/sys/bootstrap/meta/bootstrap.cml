@@ -987,6 +987,10 @@
             from: "#miscsvc",
         },
         {
+            protocol: "fuchsia.power.button.Monitor",
+            from: "#pwrbtn-monitor",
+        },
+        {
             protocol: "fuchsia.sysinfo.SysInfo",
             from: "#sysinfo",
         },

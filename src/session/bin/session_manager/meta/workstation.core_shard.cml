@@ -41,6 +41,11 @@
             to: "#session-manager",
         },
         {
+            protocol: "fuchsia.power.button.Monitor",
+            from: "parent",
+            to: "#session-manager",
+        },
+        {
             protocol: "fuchsia.ui.brightness.Control",
             from: "#brightness_manager",
             to: "#session-manager",

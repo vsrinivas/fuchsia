@@ -89,6 +89,7 @@
                 "fuchsia.netstack.Netstack",
                 "fuchsia.paver.Paver",
                 "fuchsia.power.battery.BatteryManager",
+                "fuchsia.power.button.Monitor",
                 "fuchsia.power.profile.Watcher",
                 "fuchsia.power.systemmode.ClientConfigurator",
                 "fuchsia.recovery.FactoryReset",
