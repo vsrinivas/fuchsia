@@ -1644,11 +1644,22 @@ async fn unlink_file_with_sufficient_rights() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.dir_rights.valid_combos_with(fio::OpenFlags::RIGHT_WRITABLE) {
+    for dir_flags in harness
+        .dir_rights
+        .valid_combos_with(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE)
+    {
         let root =
             root_directory(vec![directory("src", vec![file("file.txt", contents.to_vec())])]);
         let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
+
+        let file = open_node::<fio::FileMarker>(
+            &src_dir,
+            fio::OpenFlags::RIGHT_READABLE,
+            fio::MODE_TYPE_FILE,
+            "file.txt",
+        )
+        .await;
 
         src_dir
             .unlink("file.txt", fio::UnlinkOptions::EMPTY)
@@ -1658,6 +1669,16 @@ async fn unlink_file_with_sufficient_rights() {
 
         // Check file is gone.
         assert_file_not_found(&test_dir, "src/file.txt").await;
+
+        // Ensure file connection remains usable.
+        let read_result = file
+            .read(contents.len() as u64)
+            .await
+            .expect("read failed")
+            .map_err(zx::Status::from_raw)
+            .expect("read error");
+
+        assert_eq!(read_result, contents);
     }
 }
 
