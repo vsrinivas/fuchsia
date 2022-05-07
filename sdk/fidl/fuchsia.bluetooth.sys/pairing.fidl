@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.sys;
+
+/// Allows system clients to enable Bluetooth pairing.
+@available(added=HEAD)
+@discoverable
+protocol Pairing {
+    /// Assign a PairingDelegate to respond to pairing procedures. The provided I/O capabilities
+    /// will be used to determine the pairing methods used.
+    ///
+    /// Only one PairingDelegate can be registered at a time. Closing a PairingDelegate aborts all
+    /// ongoing pairing procedures.
+    ///
+    /// + request `input` Bluetooth input capability
+    /// + request `output` Bluetooth output capability
+    /// + request `delegate` The client end of a PairingDelegate channel.
+    SetPairingDelegate(resource struct {
+        input InputCapability;
+        output OutputCapability;
+        delegate client_end:PairingDelegate;
+    });
+};

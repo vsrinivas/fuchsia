@@ -14,6 +14,7 @@ fidl("fuchsia.bluetooth.sys") {
     "host_watcher.fidl",
     "identity.fidl",
     "overview.fidl",
+    "pairing.fidl",
     "pairing_delegate.fidl",
     "pairing_options.fidl",
     "peer.fidl",

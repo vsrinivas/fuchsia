@@ -115,6 +115,8 @@ const fuchsia.bluetooth.sys/MAX_PEER_SERVICES uint16 65535
 enum/member fuchsia.bluetooth.sys/OutputCapability.DISPLAY 2
 enum/member fuchsia.bluetooth.sys/OutputCapability.NONE 1
 strict enum fuchsia.bluetooth.sys/OutputCapability uint32
+protocol/member fuchsia.bluetooth.sys/Pairing.SetPairingDelegate(fuchsia.bluetooth.sys/InputCapability input,fuchsia.bluetooth.sys/OutputCapability output,client_end:fuchsia.bluetooth.sys/PairingDelegate delegate)
+protocol fuchsia.bluetooth.sys/Pairing
 protocol/member fuchsia.bluetooth.sys/PairingDelegate.OnLocalKeypress -> (fuchsia.bluetooth/PeerId id,fuchsia.bluetooth.sys/PairingKeypress keypress)
 protocol/member fuchsia.bluetooth.sys/PairingDelegate.OnPairingComplete(fuchsia.bluetooth/PeerId id,bool success)
 protocol/member fuchsia.bluetooth.sys/PairingDelegate.OnPairingRequest(fuchsia.bluetooth.sys/Peer peer,fuchsia.bluetooth.sys/PairingMethod method,uint32 displayed_passkey) -> (bool accept,uint32 entered_passkey)

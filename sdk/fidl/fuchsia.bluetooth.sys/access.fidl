@@ -55,6 +55,9 @@ protocol Access {
     /// + request `input` Bluetooth input capability
     /// + request `output` Bluetooth output capability
     /// + request `delegate` The client end of a PairingDelegate channel.
+    /// # Deprecation - This method is folded into the fuchsia.bluetooth.sys/Pairing protocol. See
+    ///   fxbug.dev/98413 for more details on the migration.
+    @available(added=7, deprecated=HEAD, note="Use `sys.Pairing/SetPairingDelegate` instead")
     SetPairingDelegate(resource struct {
         input InputCapability;
         output OutputCapability;
