@@ -4,6 +4,7 @@
 library fuchsia.web;
 
 using fuchsia.logger;
+using fuchsia.media;
 using fuchsia.media.sessions2;
 using fuchsia.mem;
 using fuchsia.settings;
@@ -137,6 +138,17 @@ type ContentAreaSettings = table {
     /// scroll bars and default mouse cursor, are not scaled. User may zoom the page further when
     /// pinch-zoom is enabled (see [`InputTypes.GESTURE_PINCH`]).
     4: page_scale float32;
+};
+
+type FrameMediaSettings = table {
+    /// The [`fuchsia.media/AudioRenderUsage`] to set for every [`fuchsia.media/AudioRenderer`]
+    /// instance created by the [`Frame`]. If not set, the usage is `COMMUNICATION` for WebRTC
+    /// streams and `MEDIA` for all other streams.
+    1: renderer_usage fuchsia.media.AudioRenderUsage;
+
+    /// When set, enables usage of [`fuchsia.media/AudioConsumer`] for audio playback. In that
+    /// case the specified value is passed to [`fuchsia.media/SessionAudioConsumerFactory`].
+    2: audio_capturer_session_id uint64;
 };
 
 protocol Frame {
@@ -354,12 +366,19 @@ protocol Frame {
         rules vector<UrlRequestRewriteRule>:MAX_RULE_COUNT;
     }) -> ();
 
-    /// Sets `session_id` to pass to the [`fuchsia.media/AudioConsumer`] when playing audio. The
-    /// specified value is not applied retroactively to audio streams that were started before this
-    /// message is processed. If the caller needs to ensure the value is applied to all streams it
-    /// should call this method before [`Frame.GetNavigationController`].
+    @deprecated("use fuchsia.web.Frame.SetMediaSettings instead")
     SetMediaSessionId(struct {
         session_id uint64;
+    });
+
+    /// Sets [`fuchsia.media/FrameMediaSettings`] for the frame. The specified parameters are
+    /// applied to audio streams that started after this message is processed. Should be called
+    /// before the Frame is navigated to content in order to ensure that the settings applied to
+    /// all media streams. Due to request pipelining, this means doing so before calling
+    /// [`Frame.GetNavigationController()`] and [`NavigationController.LoadUrl()`].
+    @transitional
+    SetMediaSettings(struct {
+        settings FrameMediaSettings;
     });
 
     /// Overrides the dimensions reported to web content. The devicePixelRatio reported to
@@ -422,7 +441,7 @@ protocol Frame {
     /// Specifying `DEFAULT` means using the system settings, and requires that the [`Context`] have
     /// the [`fuchsia.settings.Display`] service. If the service is not available, the [`Frame`]
     /// will disconnect with `ZX_ERR_INVALID_ARGS`.
-    @deprecated("use fuchsia.web.SetContentAreaSettings instead")
+    @deprecated("use fuchsia.web.Frame.SetContentAreaSettings instead")
     SetPreferredTheme(struct {
         theme fuchsia.settings.ThemeType;
     });
@@ -439,14 +458,14 @@ protocol Frame {
     /// resolution at which the view is rendered. Native (non-web) UI elements, such as default
     /// scroll bars and default mouse cursor, are not scaled. User may zoom the page further when
     /// pinch-zoom is enabled (see [`InputTypes.GESTURE_PINCH`]).
-    @deprecated("use fuchsia.web.SetContentAreaSettings instead")
+    @deprecated("use fuchsia.web.Frame.SetContentAreaSettings instead")
     SetPageScale(struct {
         scale float32;
     });
 
     /// Sets various settings for how web content should be run in the Frame. May be called at any
-    /// time, including after the URL has loaded. Each call to SetContentAreaSettings() changes
-    /// only the specified fields, overwriting any prior value.
+    /// time, including after the URL has loaded. Each call changes only the specified fields,
+    /// overwriting any prior value.
     ///
     /// This method will fail with `ZX_ERR_NOT_SUPPORTED` if any value in [`ContentAreaSettings`]
     /// is not supported by the Frame.
@@ -454,7 +473,7 @@ protocol Frame {
         settings ContentAreaSettings;
     });
 
-    /// Reset the Frame's |ContentAreaSettings| to default values.
+    /// Reset the Frame's [`ContentAreaSettings`] to default values.
     ResetContentAreaSettings();
 };
 

@@ -107,6 +107,7 @@ protocol/member fuchsia.web/Frame.SetConsoleLogSink(fuchsia.logger/LogSink:optio
 protocol/member fuchsia.web/Frame.SetContentAreaSettings(fuchsia.web/ContentAreaSettings settings)
 protocol/member fuchsia.web/Frame.SetJavaScriptLogLevel(fuchsia.web/ConsoleLogLevel level)
 protocol/member fuchsia.web/Frame.SetMediaSessionId(uint64 session_id)
+protocol/member fuchsia.web/Frame.SetMediaSettings(fuchsia.web/FrameMediaSettings settings)
 protocol/member fuchsia.web/Frame.SetNavigationEventListener(client_end:<fuchsia.web/NavigationEventListener,optional> listener)
 protocol/member fuchsia.web/Frame.SetNavigationEventListener2(client_end:<fuchsia.web/NavigationEventListener,optional> listener,fuchsia.web/NavigationEventListenerFlags flags)
 protocol/member fuchsia.web/Frame.SetNavigationPolicyProvider(fuchsia.web/NavigationPolicyProviderParams params,client_end:fuchsia.web/NavigationPolicyProvider provider)
@@ -123,6 +124,9 @@ enum/member fuchsia.web/FrameError.NO_DATA_IN_MESSAGE 4
 strict enum fuchsia.web/FrameError int32
 protocol/member fuchsia.web/FrameHost.CreateFrameWithParams(fuchsia.web/CreateFrameParams params,server_end:fuchsia.web/Frame frame)
 protocol fuchsia.web/FrameHost
+table/member fuchsia.web/FrameMediaSettings.audio_capturer_session_id uint64
+table/member fuchsia.web/FrameMediaSettings.renderer_usage fuchsia.media/AudioRenderUsage
+table fuchsia.web/FrameMediaSettings
 struct fuchsia.web/Frame_AddBeforeLoadJavaScript_Response
 union/member fuchsia.web/Frame_AddBeforeLoadJavaScript_Result.err fuchsia.web/FrameError
 union/member fuchsia.web/Frame_AddBeforeLoadJavaScript_Result.response fuchsia.web/Frame_AddBeforeLoadJavaScript_Response
