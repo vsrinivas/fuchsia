@@ -33,20 +33,15 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/fuchsia-vfs-watcher",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:slab",
-    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
 
@@ -80,7 +75,13 @@ rustc_binary("bin") {
     "src/watch_peers.rs",
   ]
 
-  test_deps = [ "//src/lib/test_util" ]
+  test_deps = [
+    "//src/lib/test_util",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:futures-test",
+    "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:tempfile",
+  ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
@@ -126,6 +127,14 @@ fuchsia_test_component("test-component") {
 }
 
 fuchsia_test_package("bt-gap-unittests") {
+  # The max severity is set to ERROR due to expected ERROR messages in:
+  #  - new_stash_fails_with_malformed_key_value_entry (ERROR with malformed string)
+  #  - test_commit_bootstrap_doesnt_fail_from_host_failure (ERROR log is expected, should continue)
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   test_components = [ ":test-component" ]
   deps = [
     ":default-config",

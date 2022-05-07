@@ -46,7 +46,7 @@ fn peer(id: PeerId) -> Peer {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn on_device_changed_inspect_state() {
     // test setup
     let stash = Stash::in_memory_mock();
@@ -107,7 +107,7 @@ async fn on_device_changed_inspect_state() {
     });
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_change_name_no_deadlock() {
     let dispatcher = hd_test::make_simple_test_dispatcher();
     // Call a function that used to use the self.state.write().gas_channel_sender.send().await
@@ -122,17 +122,17 @@ async fn test_change_name_no_deadlock() {
     );
 }
 
-async fn host_is_in_dispatcher(id: &HostId, dispatcher: &HostDispatcher) -> bool {
-    dispatcher.get_adapters().await.iter().map(|i| i.id).collect::<HashSet<_>>().contains(id)
+fn host_is_in_dispatcher(id: &HostId, dispatcher: &HostDispatcher) -> bool {
+    dispatcher.get_adapters().iter().map(|i| i.id).collect::<HashSet<_>>().contains(id)
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn apply_settings_fails_host_removed() {
     let dispatcher = hd_test::make_simple_test_dispatcher();
     let host_id = HostId(42);
     let (mut host_server, _, _gatt_server) =
         hd_test::create_and_add_test_host_to_dispatcher(host_id, &dispatcher).await.unwrap();
-    assert!(host_is_in_dispatcher(&host_id, &dispatcher).await);
+    assert!(host_is_in_dispatcher(&host_id, &dispatcher));
     let run_host = async move {
         match host_server.try_next().await {
             Ok(Some(HostRequest::SetConnectable { responder, .. })) => {
@@ -154,7 +154,7 @@ async fn apply_settings_fails_host_removed() {
         );
     };
     futures::future::join(run_host, disable_connectable_fut).await;
-    assert!(!host_is_in_dispatcher(&host_id, &dispatcher).await);
+    assert!(!host_is_in_dispatcher(&host_id, &dispatcher));
 }
 
 #[fuchsia::test]
@@ -199,7 +199,7 @@ async fn default_name_behavior() {
     assert_eq!(dispatcher.get_name(), replace_name);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_commit_bootstrap_doesnt_fail_from_host_failure() {
     // initiate test host-dispatcher
     let host_dispatcher = hd_test::make_simple_test_dispatcher();
@@ -208,7 +208,7 @@ async fn test_commit_bootstrap_doesnt_fail_from_host_failure() {
     let host_id = HostId(1);
     let (mut host_server, _, _gatt_server) =
         hd_test::create_and_add_test_host_to_dispatcher(host_id, &host_dispatcher).await.unwrap();
-    assert!(host_is_in_dispatcher(&host_id, &host_dispatcher).await);
+    assert!(host_is_in_dispatcher(&host_id, &host_dispatcher));
 
     let run_host = async {
         match host_server.try_next().await {
@@ -233,7 +233,7 @@ async fn test_commit_bootstrap_doesnt_fail_from_host_failure() {
     assert_matches!(result, Ok(()));
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_notify_host_watcher_of_active_hosts() {
     let watch_peers_broker = hanging_get::HangingGetBroker::new(
         HashMap::new(),
@@ -270,7 +270,7 @@ async fn test_notify_host_watcher_of_active_hosts() {
         hd_test::create_and_add_test_host_to_dispatcher(host_id_0, &host_dispatcher)
             .await
             .expect("add test host succeeds");
-    assert!(host_is_in_dispatcher(&host_id_0, &host_dispatcher).await);
+    assert!(host_is_in_dispatcher(&host_id_0, &host_dispatcher));
 
     // The future has a timeout so that tests consistently terminate.
     const HOST_WATCHER_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
@@ -289,7 +289,7 @@ async fn test_notify_host_watcher_of_active_hosts() {
         hd_test::create_and_add_test_host_to_dispatcher(host_id_1, &host_dispatcher)
             .await
             .expect("add test host succeeds");
-    assert!(host_is_in_dispatcher(&host_id_1, &host_dispatcher).await);
+    assert!(host_is_in_dispatcher(&host_id_1, &host_dispatcher));
 
     // The future has a timeout so that tests consistently terminate.
     let mut hosts = host_watcher_proxy

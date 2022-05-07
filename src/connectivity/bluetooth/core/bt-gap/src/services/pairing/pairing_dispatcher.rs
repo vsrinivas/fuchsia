@@ -318,7 +318,7 @@ mod test {
         anyhow::Error,
         assert_matches::assert_matches,
         fidl_fuchsia_bluetooth::Appearance,
-        fidl_fuchsia_bluetooth_sys as sys, fuchsia_async as fasync,
+        fidl_fuchsia_bluetooth_sys as sys,
         fuchsia_bluetooth::types::Address,
         futures::{
             future::{self, BoxFuture, Future, FutureExt},
@@ -344,7 +344,7 @@ mod test {
     }
 
     // Closed upstream delegate causes request to fail
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_no_delegate_rejects() -> Result<(), anyhow::Error> {
         let (proxy, requests) =
             fidl::endpoints::create_proxy_and_stream::<sys::PairingDelegateMarker>()?;
@@ -383,7 +383,7 @@ mod test {
     }
 
     // Upstream error causes dropped stream (i.e. handler returns err)
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_bad_delegate_drops_stream() -> Result<(), Error> {
         let (proxy, requests) =
             fidl::endpoints::create_proxy_and_stream::<sys::PairingDelegateMarker>()?;
@@ -438,7 +438,7 @@ mod test {
     }
 
     // Successful response from Upstream reaches the downstream request
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_success_notifies_responder() -> Result<(), Error> {
         let (proxy, requests) =
             fidl::endpoints::create_proxy_and_stream::<sys::PairingDelegateMarker>()?;
@@ -484,7 +484,7 @@ mod test {
     }
 
     // Adding a host causes its requests to be processed
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_add_host() -> Result<(), Error> {
         let passkey = 42;
         let (dispatcher, handle, run_upstream) = dispatcher_from_handler(move |req| async move {

@@ -23,7 +23,7 @@ use {
 };
 
 #[cfg(test)]
-use {fidl_fuchsia_bluetooth_sys::TechnologyType, fuchsia_bluetooth::inspect::placeholder_node};
+use fidl_fuchsia_bluetooth_sys::TechnologyType;
 
 use crate::{
     build_config,
@@ -366,7 +366,11 @@ impl HostDevice {
             discoverable: false,
             discovering: false,
         };
-        HostDevice::new(path.into(), proxy, Inspectable::new(info, placeholder_node()))
+        HostDevice::new(
+            path.into(),
+            proxy,
+            Inspectable::new(info, fuchsia_inspect::Node::default()),
+        )
     }
 }
 

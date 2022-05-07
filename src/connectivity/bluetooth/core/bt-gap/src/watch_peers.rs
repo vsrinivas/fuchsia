@@ -144,7 +144,7 @@ mod test {
         assert_eq!(removed, expected_removed);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_observe() -> Result<(), anyhow::Error> {
         let (proxy, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<sys::AccessMarker>()?;

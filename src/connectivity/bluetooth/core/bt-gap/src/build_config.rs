@@ -141,7 +141,7 @@ mod tests {
         assert_eq!(override_config, load_internal(override_file.path(), default_file.path()));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn apply_config() {
         let (host_proxy, host_server) =
             fidl::endpoints::create_proxy_and_stream::<HostMarker>().unwrap();

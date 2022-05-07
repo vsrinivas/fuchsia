@@ -241,11 +241,6 @@ impl DataStreamInspect {
     }
 }
 
-/// A placeholder node that can be used in tests that do not care about the `Node` value
-pub fn placeholder_node() -> fuchsia_inspect::Node {
-    fuchsia_inspect::Inspector::new().root().create_child("placeholder")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

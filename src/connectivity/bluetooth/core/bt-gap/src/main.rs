@@ -46,10 +46,8 @@ mod watch_peers;
 
 const BT_GAP_COMPONENT_ID: &'static str = "bt-gap";
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["bt-gap"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["bt-gap"]).expect("Can't init logger");
-
     info!("Starting bt-gap...");
     let bt_gap = BtGap::init().await.context("Error starting bt-gap").map_err(|e| {
         error!("{:?}", e);

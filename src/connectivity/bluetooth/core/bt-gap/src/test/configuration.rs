@@ -53,7 +53,7 @@ macro_rules! handle_host_req_fut {
     };
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn disable_le_privacy() {
     let (host_server, dispatcher, config_client, server) =
         setup_configuration_test().await.unwrap();
@@ -79,7 +79,7 @@ async fn disable_le_privacy() {
     future::try_join3(make_request, run_host, run_configuration).await.unwrap();
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn disable_le_background_scan() {
     let (host_server, dispatcher, config_client, server) =
         setup_configuration_test().await.unwrap();
@@ -102,7 +102,7 @@ async fn disable_le_background_scan() {
     future::try_join3(make_request, run_host, run_configuration).await.unwrap();
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn disable_connectable_mode() {
     let (host_server, dispatcher, config_client, server) =
         setup_configuration_test().await.unwrap();
@@ -132,7 +132,7 @@ async fn disable_connectable_mode() {
     future::try_join3(make_request, run_host, run_configuration).await.unwrap();
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn set_secure_connections_only() {
     let (host_server, dispatcher, config_client, server) =
         setup_configuration_test().await.unwrap();
@@ -161,7 +161,7 @@ async fn set_secure_connections_only() {
     future::try_join3(make_request, run_host, run_configuration).await.unwrap();
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn configure_applies_to_multiple_devices() {
     // `setup_configuration_test` adds the first host, and in this test we add a second
     let (host1_server, dispatcher, config_client, server) =

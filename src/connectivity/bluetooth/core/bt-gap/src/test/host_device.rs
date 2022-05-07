@@ -42,7 +42,7 @@ impl HostListener for () {
 }
 
 // Create a HostDevice with a fake channel, set local name and check it is updated
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn host_device_set_local_name() -> Result<(), Error> {
     let (client, server) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
     let address = Address::Public([0, 0, 0, 0, 0, 0]);
@@ -73,7 +73,7 @@ async fn host_device_set_local_name() -> Result<(), Error> {
 
 // Test that we can establish a host discovery session, then stop discovery on the host when
 // the session token is dropped
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_discovery_session() -> Result<(), Error> {
     let (client, server) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
 
@@ -123,7 +123,7 @@ async fn test_discovery_session() -> Result<(), Error> {
 
 // Create a HostDevice with a fake channel, restore bonds, check that the FIDL method is called
 // over multiple paginated iterations
-#[fuchsia_async::run_until_stalled(test)]
+#[fuchsia::test(allow_stalls = false)]
 async fn host_device_restore_bonds() -> Result<(), Error> {
     let (client, server) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
     let address = Address::Public([0, 0, 0, 0, 0, 0]);

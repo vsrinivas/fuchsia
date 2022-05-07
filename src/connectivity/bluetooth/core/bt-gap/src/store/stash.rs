@@ -487,7 +487,7 @@ mod tests {
         Ok(acc)
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn new_stash_succeeds_with_empty_values() {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
 
@@ -501,7 +501,7 @@ mod tests {
         assert!(stash.bonding_data.is_empty());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn new_stash_fails_with_malformed_key_value_entry() {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
 
@@ -524,7 +524,7 @@ mod tests {
         assert!(StashInner::new(accessor, inspect).await.is_err());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn new_stash_fails_with_malformed_json() {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
 
@@ -756,7 +756,7 @@ mod tests {
         )
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn new_stash_succeeds_with_values() {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
 
@@ -802,7 +802,7 @@ mod tests {
         assert_eq!(&bond_data_3(), bond);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn new_stash_filters_duplicate_bonds() {
         let inspector = fuchsia_inspect::Inspector::new();
         let inspect = inspector.root().create_child(TEST_INSPECT_ROOT);
@@ -867,9 +867,8 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn new_stash_fails_loading_same_addrs_different_bond() {
-        fuchsia_syslog::init().unwrap();
         let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
 
         // Create a Stash service interface.
@@ -893,7 +892,7 @@ mod tests {
         assert!(StashInner::new(accessor.clone(), inspect).await.is_err());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn store_bond_commits_entry() {
         let mut stash = setup_stash("store_bond_commits_entry", vec![]).await;
         let accessor = stash.proxy.clone();
@@ -916,7 +915,7 @@ mod tests {
         assert_eq!(bond_data, Some(bond_entry_1()));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn list_bonds() {
         let initial_data =
             vec![("bonding-data:1", bond_entry_1()), ("bonding-data:2", bond_entry_2())];
@@ -932,7 +931,7 @@ mod tests {
         assert_eq!(ids, set_of(vec![PeerId(1), PeerId(2)]));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn get_host_data() {
         let initial_data = vec![
             ("host-data:00:00:00:00:00:01", host_text_1()),
@@ -954,7 +953,7 @@ mod tests {
         assert_eq!(host_data_2(), host_data);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn rm_peer() {
         let initial_data =
             vec![("bonding-data:1", bond_entry_1()), ("bonding-data:2", bond_entry_2())];
@@ -976,7 +975,7 @@ mod tests {
         assert_eq!(&bond_data_2(), bond);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn store_host_data() {
         let host_address = Address::Public([1, 0, 0, 0, 0, 0]);
         let mut stash = setup_stash("store_host_data", vec![]).await;
@@ -1049,7 +1048,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn request_list_bonds() -> Result<(), Error> {
         let initial_data =
             vec![("bonding-data:1", bond_entry_1()), ("bonding-data:2", bond_entry_2())];
@@ -1072,7 +1071,7 @@ mod tests {
         .await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn request_store_bonds() -> Result<(), Error> {
         let stash = setup_stash("request_store_bonds", vec![]).await;
         let accessor = stash.proxy.clone();
@@ -1091,7 +1090,7 @@ mod tests {
         .await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn request_rm_peer() -> Result<(), Error> {
         let initial_data =
             vec![("bonding-data:1", bond_entry_1()), ("bonding-data:2", bond_entry_2())];
@@ -1115,7 +1114,7 @@ mod tests {
         .await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn request_get_host_data() -> Result<(), Error> {
         let initial_data = vec![
             ("host-data:00:00:00:00:00:01", host_text_1()),
@@ -1138,7 +1137,7 @@ mod tests {
         .await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn request_store_host_data() -> Result<(), Error> {
         let stash = setup_stash("request_store_host_data", vec![]).await;
         let accessor = stash.proxy.clone();

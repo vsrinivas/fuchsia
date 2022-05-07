@@ -255,7 +255,7 @@ mod tests {
         (generic_access_delegate_client, dispatcher)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_change_name() {
         let (delegate_client, host_dispatcher) = setup_generic_access_service();
         let (expected_device_name, _err) =
@@ -274,7 +274,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_appearance() {
         let (delegate_client, _host_dispatcher) = setup_generic_access_service();
         let (read_device_appearance, _err) =
@@ -285,7 +285,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_invalid_request() {
         let (delegate_client, _host_dispatcher) = setup_generic_access_service();
         let error_code = delegate_client
@@ -295,7 +295,7 @@ mod tests {
         assert_eq!(error_code, gatt::ErrorCode::NotPermitted);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_gas_proxy() {
         let (generic_access_delegate_client, delegate_request_stream) =
             create_proxy_and_stream::<LocalServiceDelegateMarker>().unwrap();

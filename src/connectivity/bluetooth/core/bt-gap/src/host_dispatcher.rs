@@ -376,8 +376,8 @@ impl HostDispatcher {
         HostDispatcher { state: Arc::new(RwLock::new(hd)) }
     }
 
-    pub async fn when_hosts_found(&self) -> HostDispatcher {
-        WhenHostsFound::new(self.clone()).await
+    pub fn when_hosts_found(&self) -> impl Future<Output = HostDispatcher> {
+        WhenHostsFound::new(self.clone())
     }
 
     pub fn get_name(&self) -> String {
@@ -588,10 +588,11 @@ impl HostDispatcher {
         }
     }
 
-    pub async fn active_host(&self) -> Option<HostDevice> {
-        let adapter = self.when_hosts_found().await;
-        let mut wstate = adapter.state.write();
-        wstate.get_active_host()
+    pub fn active_host(&self) -> impl Future<Output = Option<HostDevice>> {
+        self.when_hosts_found().map(|adapter| {
+            let mut wstate = adapter.state.write();
+            wstate.get_active_host()
+        })
     }
 
     pub async fn get_all_adapters(&self) -> Vec<HostDevice> {
@@ -600,7 +601,7 @@ impl HostDispatcher {
     }
 
     #[cfg(test)]
-    pub async fn get_adapters(&self) -> Vec<HostInfo> {
+    pub fn get_adapters(&self) -> Vec<HostInfo> {
         let hosts = self.state.read();
         hosts.host_devices.values().map(|host| host.info()).collect()
     }
@@ -1047,7 +1048,6 @@ pub(crate) mod test {
         Server_RequestStream as GattServerRequestStream,
     };
     use fidl_fuchsia_bluetooth_host::{HostRequest, HostRequestStream};
-    use fuchsia_bluetooth::inspect::placeholder_node;
     use futures::{future::join, StreamExt};
 
     pub(crate) fn make_test_dispatcher(
@@ -1060,7 +1060,7 @@ pub(crate) mod test {
         HostDispatcher::new(
             Appearance::Display,
             Stash::in_memory_mock(),
-            placeholder_node(),
+            fuchsia_inspect::Node::default(),
             gas_channel_sender,
             watch_peers_publisher,
             watch_peers_registrar,
