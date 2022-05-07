@@ -1582,7 +1582,7 @@ async fn link_with_sufficient_rights() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.file_rights.valid_combos_with(fio::OpenFlags::RIGHT_WRITABLE) {
+    for dir_flags in harness.dir_rights.valid_combos_with(fio::OpenFlags::RIGHT_WRITABLE) {
         let root = root_directory(vec![
             directory("src", vec![file("old.txt", contents.to_vec())]),
             directory("dest", vec![]),
@@ -1614,7 +1614,7 @@ async fn link_with_insufficient_rights() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.file_rights.valid_combos_without(fio::OpenFlags::RIGHT_WRITABLE) {
+    for dir_flags in harness.dir_rights.valid_combos_without(fio::OpenFlags::RIGHT_WRITABLE) {
         let root = root_directory(vec![
             directory("src", vec![file("old.txt", contents.to_vec())]),
             directory("dest", vec![]),
@@ -1644,7 +1644,7 @@ async fn unlink_file_with_sufficient_rights() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.file_rights.valid_combos_with(fio::OpenFlags::RIGHT_WRITABLE) {
+    for dir_flags in harness.dir_rights.valid_combos_with(fio::OpenFlags::RIGHT_WRITABLE) {
         let root =
             root_directory(vec![directory("src", vec![file("file.txt", contents.to_vec())])]);
         let test_dir = harness.get_directory(root, harness.dir_rights.all());
@@ -1669,7 +1669,7 @@ async fn unlink_file_with_insufficient_rights() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.file_rights.valid_combos_without(fio::OpenFlags::RIGHT_WRITABLE) {
+    for dir_flags in harness.dir_rights.valid_combos_without(fio::OpenFlags::RIGHT_WRITABLE) {
         let root =
             root_directory(vec![directory("src", vec![file("file.txt", contents.to_vec())])]);
         let test_dir = harness.get_directory(root, harness.dir_rights.all());
@@ -1696,7 +1696,7 @@ async fn unlink_directory_with_sufficient_rights() {
         return;
     }
 
-    for dir_flags in harness.file_rights.valid_combos_with(fio::OpenFlags::RIGHT_WRITABLE) {
+    for dir_flags in harness.dir_rights.valid_combos_with(fio::OpenFlags::RIGHT_WRITABLE) {
         let root = root_directory(vec![directory("src", vec![])]);
         let test_dir = harness.get_directory(root, harness.dir_rights.all());
         // Re-open dir with flags being tested.
@@ -1716,7 +1716,7 @@ async fn unlink_directory_with_insufficient_rights() {
         return;
     }
 
-    for dir_flags in harness.file_rights.valid_combos_without(fio::OpenFlags::RIGHT_WRITABLE) {
+    for dir_flags in harness.dir_rights.valid_combos_without(fio::OpenFlags::RIGHT_WRITABLE) {
         let root = root_directory(vec![directory("src", vec![])]);
         let test_dir = harness.get_directory(root, harness.dir_rights.all());
         // Re-open dir with flags being tested.
