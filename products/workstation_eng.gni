@@ -22,7 +22,7 @@ legacy_base_package_labels +=
 
 # Setting service configuration
 legacy_base_package_labels +=
-    [ "//src/settings/config:workstation_interface_config" ]
+    [ "//src/settings/config:workstation_eng_interface_config" ]
 
 # Improve DX by allowing iteration on these packages without and OTA.
 _developer_packages = [

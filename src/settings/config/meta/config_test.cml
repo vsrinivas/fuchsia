@@ -9,7 +9,9 @@
         binary: "bin/setui_config_test",
         args: [
             "-x",
-            "/pkg/data/workstation_interface_configuration.json",
+            "/pkg/data/workstation_eng_interface_configuration.json",
+            "-x",
+            "/pkg/data/workstation_userdebug_interface_configuration.json",
         ],
     },
 }

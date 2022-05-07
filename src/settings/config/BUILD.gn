@@ -8,21 +8,28 @@ import("//build/dist/resource.gni")
 
 group("config") {
   testonly = true
-  deps = [
-    ":tests",
-    ":workstation_interface_config",
-  ]
+  deps = [ ":tests" ]
 }
 
-config_data("workstation_interface_config") {
+config_data("workstation_eng_interface_config") {
   for_pkg = "setui_service"
 
   outputs = [ "interface_configuration.json" ]
-  sources = [ "workstation_interface_configuration.json" ]
+  sources = [ "workstation_eng_interface_configuration.json" ]
+}
+
+config_data("workstation_userdebug_interface_config") {
+  for_pkg = "setui_service"
+
+  outputs = [ "interface_configuration.json" ]
+  sources = [ "workstation_userdebug_interface_configuration.json" ]
 }
 
 resource("test_jsons") {
-  sources = [ "workstation_interface_configuration.json" ]
+  sources = [
+    "workstation_eng_interface_configuration.json",
+    "workstation_userdebug_interface_configuration.json",
+  ]
   outputs = [ "data/{{source_file_part}}" ]
 }
 
