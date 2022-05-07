@@ -12,22 +12,16 @@
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
-namespace {
-
-constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
-
-}
 
 AudioCapturer::AudioCapturer(fuchsia::media::AudioCapturerConfiguration configuration,
                              std::optional<Format> format,
                              fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request,
                              Context* context)
     : BaseCapturer(std::move(format), std::move(request), context),
-      loopback_(configuration.is_loopback()),
-      mute_(false),
-      stream_gain_db_(kInitialCaptureGainDb) {
+      loopback_(configuration.is_loopback()) {
   FX_DCHECK(context);
   if (loopback_) {
     usage_ = CaptureUsage::LOOPBACK;

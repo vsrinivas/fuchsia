@@ -7,15 +7,13 @@
 #include <lib/trace/event.h>
 
 #include "src/media/audio/audio_core/mixer/logging_flags.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 
 void Gain::Control::SetGainWithRamp(float target_gain_db, zx::duration duration,
                                     fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "Gain::Control::SetGainWithRamp");
-  FX_DCHECK(target_gain_db <= kMaxGainDb)
-      << "Gain::Control(" << this << "): " << name_ << ".SetGainWithRamp: target gain ("
-      << target_gain_db << " db) cannot exceed maximum (" << kMaxGainDb << " db)";
 
   if (duration <= zx::nsec(0)) {
     FX_LOGS(WARNING) << "Gain::Control(" << this << "): " << name_
@@ -35,12 +33,12 @@ void Gain::Control::SetGainWithRamp(float target_gain_db, zx::duration duration,
     return;
   }
 
-  if (target_gain_db <= kMinGainDb && gain_db_ <= kMinGainDb) {
+  if (target_gain_db <= media_audio::kMinGainDb && gain_db_ <= media_audio::kMinGainDb) {
     if constexpr (kLogGainSetRamp) {
       FX_LOGS(WARNING) << "Gain::Control(" << this << "): " << name_
                        << ".SetSourceGainWithRamp starts at (" << gain_db_ << " dB) and ends at ("
-                       << target_gain_db << " dB), below min gain (" << kMinGainDb << " dB); "
-                       << duration.to_usecs() << "-usec ramp is ignored";
+                       << target_gain_db << " dB), below min gain (" << media_audio::kMinGainDb
+                       << " dB); " << duration.to_usecs() << "-usec ramp is ignored";
     }
     SetGain(target_gain_db);
     return;
@@ -56,10 +54,10 @@ void Gain::Control::SetGainWithRamp(float target_gain_db, zx::duration duration,
   frames_ramped_so_far_ = 0;
 
   ramp_start_gain_db_ = gain_db_;
-  ramp_start_scale_ = DbToScale(gain_db_);
+  ramp_start_scale_ = media_audio::DbToScale(gain_db_);
 
   ramp_end_gain_db_ = target_gain_db;
-  ramp_end_scale_ = DbToScale(target_gain_db);
+  ramp_end_scale_ = media_audio::DbToScale(target_gain_db);
 }
 
 void Gain::Control::Advance(int64_t num_frames,
@@ -94,7 +92,7 @@ void Gain::Control::Advance(int64_t num_frames,
                         static_cast<double>(ramp_duration_.to_nsecs()) *
                         (ramp_end_scale_ - ramp_start_scale_);
     AScale scale = static_cast<AScale>(scale_offset + ramp_start_scale_);
-    gain_db_ = ScaleToDb(scale);
+    gain_db_ = media_audio::ScaleToDb(scale);
   } else {
     // This advance takes us beyond the end of ramp.
     ramp_duration_ = zx::nsec(0);
@@ -116,7 +114,8 @@ void Gain::Control::AccumulateScaleArrayForRamp(
   TimelineRate output_to_local = destination_frames_per_reference_tick.Inverse();
 
   const auto start_scale = ramp_start_scale_;
-  const auto end_scale = (ramp_end_scale_ <= kMinScale) ? kMuteScale : ramp_end_scale_;
+  const auto end_scale =
+      (ramp_end_scale_ <= media_audio::kMinGainScale) ? kMuteScale : ramp_end_scale_;
   const float inverse_source_ramp_duration = 1.0f / static_cast<float>(ramp_duration_.to_nsecs());
 
   for (int64_t idx = 0; idx < num_frames; ++idx) {
@@ -126,7 +125,7 @@ void Gain::Control::AccumulateScaleArrayForRamp(
     } else {
       auto ramp_fraction = static_cast<float>(frame_time.to_nsecs()) * inverse_source_ramp_duration;
       auto scale_factor = start_scale + (end_scale - start_scale) * ramp_fraction;
-      scale_arr[idx] *= (scale_factor <= kMinScale) ? kMuteScale : scale_factor;
+      scale_arr[idx] *= (scale_factor <= media_audio::kMinGainScale) ? kMuteScale : scale_factor;
     }
   }
 }
@@ -160,7 +159,7 @@ Gain::AScale Gain::CalculateScaleArray(AScale* scale_arr, int64_t num_frames,
                                         destination_frames_per_reference_tick);
   } else {
     auto db = source_.GainDb();
-    auto scale = (db <= kMinGainDb) ? kMuteScale : DbToScale(db);
+    auto scale = media_audio::DbToScale(db);
     for (int64_t idx = 0; idx < num_frames; ++idx) {
       scale_arr[idx] = scale;
     }
@@ -171,7 +170,7 @@ Gain::AScale Gain::CalculateScaleArray(AScale* scale_arr, int64_t num_frames,
     dest_.AccumulateScaleArrayForRamp(scale_arr, num_frames, destination_frames_per_reference_tick);
   } else {
     auto db = dest_.GainDb();
-    auto scale = (db <= kMinGainDb) ? kMuteScale : DbToScale(db);
+    auto scale = media_audio::DbToScale(db);
     if (scale != 1.0f) {
       for (int64_t idx = 0; idx < num_frames; ++idx) {
         scale_arr[idx] *= scale;
@@ -184,10 +183,10 @@ Gain::AScale Gain::CalculateScaleArray(AScale* scale_arr, int64_t num_frames,
   for (int64_t idx = 0; idx < num_frames; ++idx) {
     max_scale = std::max(max_scale, scale_arr[idx]);
   }
-  if (max_scale <= kMinScale) {
-    max_scale = kMuteScale;
-  } else {
+  if (max_scale > media_audio::kMinGainScale) {
     max_scale = std::clamp(max_scale, min_gain_scale_, max_gain_scale_);
+  } else {
+    max_scale = kMuteScale;
   }
 
   // Accumulate from adjustment.
@@ -196,7 +195,7 @@ Gain::AScale Gain::CalculateScaleArray(AScale* scale_arr, int64_t num_frames,
                                             destination_frames_per_reference_tick);
   } else {
     auto db = adjustment_.GainDb();
-    auto scale = (db <= kMinGainDb) ? kMuteScale : DbToScale(db);
+    auto scale = media_audio::DbToScale(db);
     if (scale != 1.0f) {
       for (int64_t idx = 0; idx < num_frames; ++idx) {
         scale_arr[idx] *= scale;
@@ -206,10 +205,10 @@ Gain::AScale Gain::CalculateScaleArray(AScale* scale_arr, int64_t num_frames,
 
   // Apply gain limits and normalize sub-kMinScale values to kMuteScale.
   for (int64_t idx = 0; idx < num_frames; ++idx) {
-    if (scale_arr[idx] <= kMinScale) {
-      scale_arr[idx] = kMuteScale;
-    } else {
+    if (scale_arr[idx] > media_audio::kMinGainScale) {
       scale_arr[idx] = std::clamp(scale_arr[idx], min_gain_scale_, max_gain_scale_);
+    } else {
+      scale_arr[idx] = 0.0f;
     }
   }
 
@@ -234,28 +233,18 @@ Gain::AScale Gain::GetGainScale() {
   auto gain_adjustment_db = adjustment_.GainDb();
   AScale combined_scale;
 
-  if (source_gain_db <= kMinGainDb || dest_gain_db <= kMinGainDb ||
-      gain_adjustment_db <= kMinGainDb) {
+  if (source_gain_db > media_audio::kMinGainDb && dest_gain_db > media_audio::kMinGainDb &&
+      gain_adjustment_db > media_audio::kMinGainDb) {
+    const float effective_gain_db = source_gain_db + dest_gain_db + gain_adjustment_db;
+    if (effective_gain_db == media_audio::kUnityGainDb) {
+      combined_scale = media_audio::kUnityGainScale;
+    } else {
+      combined_scale = media_audio::DbToScale(effective_gain_db);
+    }
+    combined_scale = std::clamp(combined_scale, min_gain_scale_, max_gain_scale_);
+  } else {
     // If any control is below the mute threshold, silence the stream.
     combined_scale = kMuteScale;
-  } else {
-    float effective_gain_db = source_gain_db + dest_gain_db + gain_adjustment_db;
-    // Likewise, silence the stream if the combined gain is at the mute point.
-    if (effective_gain_db <= kMinGainDb) {
-      combined_scale = kMuteScale;
-    } else if (effective_gain_db >= kMaxGainDb) {
-      combined_scale = kMaxScale;
-    } else if (effective_gain_db == kUnityGainDb) {
-      combined_scale = kUnityScale;
-    } else {
-      // Else, we really do need to compute the combined gain-scale.
-      combined_scale = DbToScale(effective_gain_db);
-    }
-  }
-
-  // Apply gain limits.
-  if (combined_scale > kMuteScale) {
-    combined_scale = std::clamp(combined_scale, min_gain_scale_, max_gain_scale_);
   }
 
   if constexpr (kLogGainScaleValues) {
@@ -273,34 +262,24 @@ Gain::AScale Gain::GetUnadjustedGainScale() {
   TRACE_DURATION("audio", "Gain::GetUnadjustedGainScale");
 
   if (source_.IsMuted()) {
-    return kMuteScale;
+    return 0.0f;
   }
 
   auto source_gain_db = source_.GainDb();
   auto dest_gain_db = dest_.GainDb();
   AScale combined_scale;
 
-  if (source_gain_db <= kMinGainDb || dest_gain_db <= kMinGainDb) {
+  if (source_gain_db > media_audio::kMinGainDb && dest_gain_db > media_audio::kMinGainDb) {
+    const float effective_gain_db = source_gain_db + dest_gain_db;
+    if (effective_gain_db == media_audio::kUnityGainDb) {
+      combined_scale = media_audio::kUnityGainScale;
+    } else {
+      combined_scale = media_audio::DbToScale(effective_gain_db);
+    }
+    combined_scale = std::clamp(combined_scale, min_gain_scale_, max_gain_scale_);
+  } else {
     // If any control is below the mute threshold, silence the stream.
     combined_scale = kMuteScale;
-  } else {
-    float effective_gain_db = source_gain_db + dest_gain_db;
-    // Likewise, silence the stream if the combined gain is at the mute point.
-    if (effective_gain_db <= kMinGainDb) {
-      combined_scale = kMuteScale;
-    } else if (effective_gain_db >= kMaxGainDb) {
-      combined_scale = kMaxScale;
-    } else if (effective_gain_db == kUnityGainDb) {
-      combined_scale = kUnityScale;
-    } else {
-      // Else, we really do need to compute the combined gain-scale.
-      combined_scale = DbToScale(effective_gain_db);
-    }
-  }
-
-  // Apply gain limits.
-  if (combined_scale > kMuteScale) {
-    combined_scale = std::clamp(combined_scale, min_gain_scale_, max_gain_scale_);
   }
 
   return combined_scale;

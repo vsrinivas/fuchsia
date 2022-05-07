@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/testing/matchers.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 using media::audio::testing::VolumeMappingEq;
 using testing::Pointwise;
@@ -29,8 +30,8 @@ TEST(ProcessConfigTest, LoudnessTransform) {
 
   auto transform = config.default_loudness_transform();
   EXPECT_NE(transform, nullptr);
-  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{0.}}), Gain::kMinGainDb);
-  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{1.}}), Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{0.}}), media_audio::kMinGainDb);
+  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{1.}}), media_audio::kUnityGainDb);
 }
 
 TEST(ProcessConfigTest, CanCopy) {

@@ -45,6 +45,7 @@ executable("audio_fidelity_test_bin") {
     "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/format",
+    "//src/media/audio/lib/processing",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fbl",
   ]

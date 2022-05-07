@@ -15,10 +15,10 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/schema.h>
 
+#include "fuchsia/media/audio/cpp/fidl.h"
 #include "rapidjson/prettywriter.h"
 #include "src/lib/files/file.h"
 #include "src/media/audio/audio_core/mix_profile_config.h"
-#include "src/media/audio/audio_core/mixer/gain.h"
 
 #include "src/media/audio/audio_core/schema/audio_core_config_schema.inl"
 
@@ -285,7 +285,7 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
   it = value.FindMember(kJsonKeyMinGainDb);
   if (it != value.MemberEnd()) {
     FX_CHECK(it->value.IsNumber());
-    FX_CHECK(it->value.GetFloat() >= Gain::kMinGainDb);
+    FX_CHECK(it->value.GetFloat() >= fuchsia::media::audio::MUTED_GAIN_DB);
     for (auto usage : mix_group.input_streams) {
       FX_CHECK(usage != RenderUsage::ULTRASOUND) << "cannot set gain limits for ultrasound";
     }
@@ -295,7 +295,7 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
   it = value.FindMember(kJsonKeyMaxGainDb);
   if (it != value.MemberEnd()) {
     FX_CHECK(it->value.IsNumber());
-    FX_CHECK(it->value.GetFloat() <= Gain::kMaxGainDb);
+    FX_CHECK(it->value.GetFloat() <= fuchsia::media::audio::MAX_GAIN_DB);
     for (auto usage : mix_group.input_streams) {
       FX_CHECK(usage != RenderUsage::ULTRASOUND) << "cannot set gain limits for ultrasound";
     }

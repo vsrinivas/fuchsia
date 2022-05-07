@@ -15,6 +15,7 @@
 #include "src/media/audio/audio_core/mixer/intersect.h"
 #include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 
@@ -124,7 +125,7 @@ std::optional<ReadableStream::Buffer> PacketQueue::ReadLockImpl(ReadLockContext&
   // an arbitrarily long time. Hence it may take an arbitrarily long time to release the
   // packet. The simplest way to avoid this problem is to not use cached buffers.
   return MakeUncachedBuffer(isect->start, isect->length, isect->payload, usage_mask_,
-                            Gain::kUnityGainDb);
+                            media_audio::kUnityGainDb);
 }
 
 void PacketQueue::ReadUnlock() {

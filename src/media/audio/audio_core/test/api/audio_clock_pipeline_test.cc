@@ -20,13 +20,13 @@
 
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/sinc_sampler.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
+#include "src/media/audio/lib/processing/gain.h"
 #include "src/media/audio/lib/test/comparators.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
@@ -457,7 +457,7 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     // C. We determine the minimal [peak_start, peak_end] range -- including our center output
     // frequency -- such that no frequencies outside it exceed our noise floor.
     // D. Our -75 dB noise floor is chosen somewhat arbitrary (12.5 bits of accurate signal).
-    const double kNoiseFloor = Gain::DbToScale(kExpectedNoiseFloorDb);
+    const double kNoiseFloor = media_audio::DbToScale(kExpectedNoiseFloorDb);
     int32_t peak_start = output_freq;
     double left_max_magn = 0;
     for (int32_t freq = output_freq - 1; freq >= 0; --freq) {

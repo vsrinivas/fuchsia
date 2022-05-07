@@ -9,7 +9,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 static constexpr auto MIN_VOLUME = fuchsia::media::audio::MIN_VOLUME;
 static constexpr auto MAX_VOLUME = fuchsia::media::audio::MAX_VOLUME;
@@ -33,7 +33,7 @@ TEST(VolumeCurveTest, ValidationRejectsOneMapping) {
 TEST(VolumeCurveTest, ValidationRejectsNoMinVolume) {
   auto result = VolumeCurve::FromMappings({
       VolumeCurve::VolumeMapping(0.2, -0.45),
-      VolumeCurve::VolumeMapping(MAX_VOLUME, Gain::kUnityGainDb),
+      VolumeCurve::VolumeMapping(MAX_VOLUME, media_audio::kUnityGainDb),
   });
   ASSERT_TRUE(result.is_error());
 }
@@ -41,7 +41,7 @@ TEST(VolumeCurveTest, ValidationRejectsNoMinVolume) {
 TEST(VolumeCurveTest, ValidationRejectsNoMaxVolume) {
   auto result = VolumeCurve::FromMappings({
       VolumeCurve::VolumeMapping(MIN_VOLUME, MUTED_GAIN_DB),
-      VolumeCurve::VolumeMapping(0.5, Gain::kUnityGainDb),
+      VolumeCurve::VolumeMapping(0.5, media_audio::kUnityGainDb),
   });
   ASSERT_TRUE(result.is_error());
 }
@@ -67,7 +67,7 @@ TEST(VolumeCurveTest, ValidationRejectsDuplicateVolumes) {
       VolumeCurve::VolumeMapping(MIN_VOLUME, MUTED_GAIN_DB),
       VolumeCurve::VolumeMapping(0.2, -34.0),
       VolumeCurve::VolumeMapping(0.2, -31.0),
-      VolumeCurve::VolumeMapping(MAX_VOLUME, Gain::kUnityGainDb),
+      VolumeCurve::VolumeMapping(MAX_VOLUME, media_audio::kUnityGainDb),
   });
   ASSERT_TRUE(result.is_error());
 }
@@ -77,7 +77,7 @@ TEST(VolumeCurveTest, ValidationRejectsVolumesNotIncreasing) {
       VolumeCurve::VolumeMapping(MIN_VOLUME, MUTED_GAIN_DB),
       VolumeCurve::VolumeMapping(0.2, -34.0),
       VolumeCurve::VolumeMapping(0.1, -31.0),
-      VolumeCurve::VolumeMapping(MAX_VOLUME, Gain::kUnityGainDb),
+      VolumeCurve::VolumeMapping(MAX_VOLUME, media_audio::kUnityGainDb),
   });
   ASSERT_TRUE(result.is_error());
 }
@@ -87,7 +87,7 @@ TEST(VolumeCurveTest, ValidationRejectsDuplicateGains) {
       VolumeCurve::VolumeMapping(MIN_VOLUME, MUTED_GAIN_DB),
       VolumeCurve::VolumeMapping(0.2, -0.3),
       VolumeCurve::VolumeMapping(0.3, -0.3),
-      VolumeCurve::VolumeMapping(MAX_VOLUME, Gain::kUnityGainDb),
+      VolumeCurve::VolumeMapping(MAX_VOLUME, media_audio::kUnityGainDb),
   });
   ASSERT_TRUE(result.is_error());
 }
@@ -97,7 +97,7 @@ TEST(VolumeCurveTest, ValidationRejectsGainsNotIncreasing) {
       VolumeCurve::VolumeMapping(MIN_VOLUME, MUTED_GAIN_DB),
       VolumeCurve::VolumeMapping(0.2, -1.0),
       VolumeCurve::VolumeMapping(0.3, -10.0),
-      VolumeCurve::VolumeMapping(MAX_VOLUME, Gain::kUnityGainDb),
+      VolumeCurve::VolumeMapping(MAX_VOLUME, media_audio::kUnityGainDb),
   });
   ASSERT_TRUE(result.is_error());
 }
@@ -106,7 +106,7 @@ TEST(VolumeCurveTest, VolumeToDbBasic) {
   auto curve_result = VolumeCurve::FromMappings({
       VolumeCurve::VolumeMapping(MIN_VOLUME, MUTED_GAIN_DB),
       VolumeCurve::VolumeMapping(FLT_EPSILON, -100.0),
-      VolumeCurve::VolumeMapping(MAX_VOLUME, Gain::kUnityGainDb),
+      VolumeCurve::VolumeMapping(MAX_VOLUME, media_audio::kUnityGainDb),
   });
 
   ASSERT_TRUE(curve_result.is_ok());
@@ -126,8 +126,8 @@ TEST(VolumeCurveTest, VolumeToDbBasic) {
   EXPECT_FLOAT_EQ(curve.VolumeToDb(0.75), -25.0);
   EXPECT_FLOAT_EQ(curve.DbToVolume(-25.0), 0.75);
 
-  EXPECT_FLOAT_EQ(curve.VolumeToDb(MAX_VOLUME), Gain::kUnityGainDb);
-  EXPECT_FLOAT_EQ(curve.DbToVolume(Gain::kUnityGainDb), MAX_VOLUME);
+  EXPECT_FLOAT_EQ(curve.VolumeToDb(MAX_VOLUME), media_audio::kUnityGainDb);
+  EXPECT_FLOAT_EQ(curve.DbToVolume(media_audio::kUnityGainDb), MAX_VOLUME);
 }
 
 TEST(VolumeCurveTest, DefaultCurveWithMinGainDb) {
@@ -140,11 +140,11 @@ TEST(VolumeCurveTest, DefaultCurveWithMinGainDb) {
   EXPECT_FLOAT_EQ(curve50.VolumeToDb(MIN_VOLUME), MUTED_GAIN_DB);
   EXPECT_FLOAT_EQ(curve50.DbToVolume(MUTED_GAIN_DB), MIN_VOLUME);
 
-  EXPECT_FLOAT_EQ(curve100.VolumeToDb(MAX_VOLUME), Gain::kUnityGainDb);
-  EXPECT_FLOAT_EQ(curve100.DbToVolume(Gain::kUnityGainDb), MAX_VOLUME);
+  EXPECT_FLOAT_EQ(curve100.VolumeToDb(MAX_VOLUME), media_audio::kUnityGainDb);
+  EXPECT_FLOAT_EQ(curve100.DbToVolume(media_audio::kUnityGainDb), MAX_VOLUME);
 
-  EXPECT_FLOAT_EQ(curve50.VolumeToDb(MAX_VOLUME), Gain::kUnityGainDb);
-  EXPECT_FLOAT_EQ(curve50.DbToVolume(Gain::kUnityGainDb), MAX_VOLUME);
+  EXPECT_FLOAT_EQ(curve50.VolumeToDb(MAX_VOLUME), media_audio::kUnityGainDb);
+  EXPECT_FLOAT_EQ(curve50.DbToVolume(media_audio::kUnityGainDb), MAX_VOLUME);
 
   const auto middle100 = curve100.VolumeToDb(0.5);
   const auto middle50 = curve50.VolumeToDb(0.5);

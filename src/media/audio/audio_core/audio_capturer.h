@@ -13,6 +13,7 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/base_capturer.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 
@@ -68,8 +69,8 @@ class AudioCapturer : public BaseCapturer,
   fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
 
   const bool loopback_;
-  bool mute_;
-  float stream_gain_db_;
+  bool mute_ = false;
+  float stream_gain_db_ = media_audio::kUnityGainDb;
   CaptureUsage usage_ = CaptureUsage::FOREGROUND;
 
   std::mutex mutex_;

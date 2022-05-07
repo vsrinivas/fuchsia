@@ -144,7 +144,7 @@ inline void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
       std::min<int64_t>(Ceiling(frac_source_end - frac_source_offset), dest_frames - dest_offset);
 
   if constexpr (ScaleType != ScalerType::MUTED) {
-    Gain::AScale amplitude_scale = Gain::kUnityScale;
+    Gain::AScale amplitude_scale = media_audio::kUnityGainScale;
     if constexpr (ScaleType == ScalerType::NE_UNITY) {
       amplitude_scale = info->gain.GetGainScale();
     }
@@ -263,7 +263,7 @@ inline void NxNPointSamplerImpl<SourceSampleType>::Mix(
       std::min<int64_t>(Ceiling(frac_source_end - frac_source_offset), dest_frames - dest_offset);
 
   if constexpr (ScaleType != ScalerType::MUTED) {
-    Gain::AScale amplitude_scale = Gain::kUnityScale;
+    Gain::AScale amplitude_scale = media_audio::kUnityGainScale;
     if constexpr (ScaleType == ScalerType::NE_UNITY) {
       amplitude_scale = info->gain.GetGainScale();
     }

@@ -6,6 +6,7 @@
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio::test {
 
@@ -38,8 +39,8 @@ void MeasureSummaryDynamicRange(float gain_db, double* level_db, double* sinad_d
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   auto result = MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq);
-  *level_db = Gain::DoubleToDb(result.total_magn_signal);
-  *sinad_db = Gain::DoubleToDb(result.total_magn_signal / result.total_magn_other);
+  *level_db = DoubleToDb(result.total_magn_signal);
+  *sinad_db = DoubleToDb(result.total_magn_signal / result.total_magn_other);
 }
 
 // Measure dynamic range at two gain settings: less than 1.0 by the smallest
@@ -144,9 +145,8 @@ TEST(DynamicRange, MonoToStereo) {
 
   // Only need to analyze left side, since we verified that right is identical.
   auto left_result = MeasureAudioFreq(AudioBufferSlice(&left), FrequencySet::kReferenceFreq);
-  auto level_left_db = Gain::DoubleToDb(left_result.total_magn_signal);
-  auto sinad_left_db =
-      Gain::DoubleToDb(left_result.total_magn_signal / left_result.total_magn_other);
+  auto level_left_db = DoubleToDb(left_result.total_magn_signal);
+  auto sinad_left_db = DoubleToDb(left_result.total_magn_signal / left_result.total_magn_other);
 
   EXPECT_NEAR(level_left_db, 0.0, AudioResult::kPrevLevelToleranceSourceFloat);
   AudioResult::LevelToleranceSourceFloat =
@@ -192,9 +192,9 @@ TEST(DynamicRange, StereoToMono) {
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   auto result = MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq);
 
-  AudioResult::LevelStereoMono = Gain::DoubleToDb(result.total_magn_signal);
+  AudioResult::LevelStereoMono = DoubleToDb(result.total_magn_signal);
   AudioResult::FloorStereoMono =
-      Gain::DoubleToDb(kFullScaleFloatAccumAmplitude / result.total_magn_other);
+      DoubleToDb(kFullScaleFloatAccumAmplitude / result.total_magn_other);
 
   // We added identical signals, so accuracy should be high. However, noise
   // floor is doubled as well, so we expect 6dB reduction in sinad.
@@ -254,8 +254,8 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   auto result = MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq);
 
-  *level_mix_db = Gain::DoubleToDb(result.total_magn_signal / expected_amplitude);
-  *sinad_mix_db = Gain::DoubleToDb(expected_amplitude / result.total_magn_other);
+  *level_mix_db = DoubleToDb(result.total_magn_signal / expected_amplitude);
+  *sinad_mix_db = DoubleToDb(expected_amplitude / result.total_magn_other);
 }
 
 // Test our mix level and noise floor, when accumulating 8-bit sources.

@@ -5,11 +5,11 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_PACKET_QUEUE_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_PACKET_QUEUE_H_
 
-#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
 #include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio::testing {
 
@@ -43,7 +43,7 @@ class FakePacketQueue : public ReadableStream {
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_;
   std::unique_ptr<AudioClock> audio_clock_;
   StreamUsageMask usage_mask_;
-  float gain_db_ = Gain::kUnityGainDb;
+  float gain_db_ = media_audio::kUnityGainDb;
 };
 
 }  // namespace media::audio::testing

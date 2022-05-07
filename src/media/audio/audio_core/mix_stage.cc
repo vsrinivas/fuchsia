@@ -20,11 +20,13 @@
 
 #include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/logging_flags.h"
+#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/silence_padding_stream.h"
 #include "src/media/audio/lib/clock/utils.h"
+#include "src/media/audio/lib/processing/gain.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio {
@@ -448,7 +450,7 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
             bookkeeping.scale_arr.get(),
             std::min(dest_frames - dest_offset, Mixer::Bookkeeping::kScaleArrLen),
             dest_frames_per_dest_ref_clock_nsec);
-        gain_db_to_report = Gain::ScaleToDb(scale_arr_max);
+        gain_db_to_report = media_audio::ScaleToDb(scale_arr_max);
       } else {
         gain_db_to_report = bookkeeping.gain.GetUnadjustedGainDb();
       }

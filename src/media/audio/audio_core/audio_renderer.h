@@ -15,6 +15,7 @@
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/lib/analysis/dropout.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 
@@ -101,7 +102,7 @@ class AudioRenderer : public BaseRenderer,
   };
   void PostStreamGainMute(StreamGainCommand gain_command);
 
-  float stream_gain_db_ = 0.0f;
+  float stream_gain_db_ = media_audio::kUnityGainDb;
   bool mute_ = false;
   std::optional<Format> format_;
 

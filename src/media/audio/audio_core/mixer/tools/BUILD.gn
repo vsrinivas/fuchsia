@@ -27,6 +27,7 @@ executable("profiler_bin") {
     "//src/media/audio/audio_core/mixer/test:frequency_set",
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/format",
+    "//src/media/audio/lib/processing",
     "//zircon/system/ulib/perftest",
   ]
 }

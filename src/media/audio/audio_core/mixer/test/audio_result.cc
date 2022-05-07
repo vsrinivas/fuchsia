@@ -7,6 +7,7 @@
 #include <string>
 
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio::test {
 
@@ -635,7 +636,7 @@ void AudioResult::DumpNoiseFloorValues() {
 void AudioResult::DumpDynamicRangeValues() {
   printf("\n\n Dynamic Range");
   printf("\n       Epsilon:  %7.4e  (%10.4le dB)", AudioResult::ScaleEpsilon,
-         Gain::ScaleToDb(1.0f - AudioResult::ScaleEpsilon));
+         media_audio::ScaleToDb(1.0f - AudioResult::ScaleEpsilon));
   printf("  Level: %11.4le dB  Sinad: %8.4lf dB", AudioResult::LevelEpsilonDown,
          AudioResult::SinadEpsilonDown);
 
@@ -654,7 +655,7 @@ void AudioResult::DumpDynamicRangeValues() {
   printf("\n       Gain Accuracy: +/- %9.4le dB", AudioResult::DynRangeTolerance);
 
   printf("\n       MinScale: %8.6f  (%8.5f dB)", AudioResult::MinScaleNonZero,
-         Gain::ScaleToDb(AudioResult::MinScaleNonZero));
+         media_audio::ScaleToDb(AudioResult::MinScaleNonZero));
 
   printf("\n");
 }

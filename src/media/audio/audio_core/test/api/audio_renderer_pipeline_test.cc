@@ -14,10 +14,10 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_tuner_impl.h"
-#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
+#include "src/media/audio/lib/processing/gain.h"
 #include "src/media/audio/lib/test/comparators.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
@@ -730,42 +730,42 @@ class AudioRendererGainLimitsTest : public AudioRendererPipelineTestFloat {
 TEST_F(AudioRendererGainLimitsTest, StreamGainRespectsMinGain) {
   Run({
       .input_stream_gain_db = -30,
-      .expected_output_sample = Gain::DbToScale(-20),
+      .expected_output_sample = media_audio::DbToScale(-20),
   });
 }
 
 TEST_F(AudioRendererGainLimitsTest, StreamGainsRespectsMaxGain) {
   Run({
       .input_stream_gain_db = -1,
-      .expected_output_sample = Gain::DbToScale(-10),
+      .expected_output_sample = media_audio::DbToScale(-10),
   });
 }
 
 TEST_F(AudioRendererGainLimitsTest, StreamGainInRange) {
   Run({
       .input_stream_gain_db = -15,
-      .expected_output_sample = Gain::DbToScale(-15),
+      .expected_output_sample = media_audio::DbToScale(-15),
   });
 }
 
 TEST_F(AudioRendererGainLimitsTest, UsageGainRespectsMinGain) {
   Run({
       .media_gain_db = -30,
-      .expected_output_sample = Gain::DbToScale(-20),
+      .expected_output_sample = media_audio::DbToScale(-20),
   });
 }
 
 TEST_F(AudioRendererGainLimitsTest, UsageGainsRespectsMaxGain) {
   Run({
       .media_gain_db = -1,
-      .expected_output_sample = Gain::DbToScale(-10),
+      .expected_output_sample = media_audio::DbToScale(-10),
   });
 }
 
 TEST_F(AudioRendererGainLimitsTest, UsageGainInRange) {
   Run({
       .media_gain_db = -15,
-      .expected_output_sample = Gain::DbToScale(-15),
+      .expected_output_sample = media_audio::DbToScale(-15),
   });
 }
 

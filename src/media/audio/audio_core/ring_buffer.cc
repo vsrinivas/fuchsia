@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 using SafeReadWriteFrameFn = media::audio::BaseRingBuffer::SafeReadWriteFrameFn;
 
@@ -164,18 +164,18 @@ BaseRingBuffer::Endpoints BaseRingBuffer::AllocateSoftwareBuffer(
 
   // This is a normal producer/consumer ring buffer:
   //
-  //  ----+-+-+----
-  //  ... |R|W| ...
-  //  ----+-+-+----
+  //   ----+-+-+----
+  //   ... |R|W| ...
+  //   ----+-+-+----
   //
   // If the safe_write_frame is at W, then frame W-1 must have been written, therefore the
   // safe_read_frame R = W-1. When this is used as the loopback buffer in an output pipeline,
   // the relationship between R, W and the output presentation frame (PO) is as follows:
   //
   //         |<-- delay -->|
-  //  ----+--+-----------+-+-+----
-  //  ... |PO|           |R|W| ...
-  //  ----+--+-----------+-+-+----
+  //   ----+--+-----------+-+-+----
+  //   ... |PO|           |R|W| ...
+  //   ----+--+-----------+-+-+----
   //
   // Frame PO is the frame currently being played at the output speaker. The delay between
   // W and PO is the "presentation delay" of the output pipeline. When a capture pipeline
@@ -184,10 +184,10 @@ BaseRingBuffer::Endpoints BaseRingBuffer::AllocateSoftwareBuffer(
   // Conceptually, what's actually happening is:
   //
   //         |<-- delay -->|
-  //  ----+--+-----------+-+--+----
-  //  ... |PO|           |R|W | ...
-  //      |  |           | |PC|
-  //  ----+--+-----------+-+--+----
+  //   ----+--+-----------+-+--+----
+  //   ... |PO|           |R|W | ...
+  //       |  |           | |PC|
+  //   ----+--+-----------+-+--+----
   //
   // Where PC is the current presentation frame for the capture pipeline. There's no actual
   // input device; the frame is being "presented" at this software buffer at the moment it
@@ -282,7 +282,7 @@ std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLockImpl(ReadLockC
         // cached buffer representing frames [10,99], but this is incorrect: the ring buffer has
         // wrapped around. Those frames are no longer available (step 4 should return null).
         return MakeUncachedBuffer(Fixed(start), length, payload, StreamUsageMask(),
-                                  Gain::kUnityGainDb);
+                                  media_audio::kUnityGainDb);
       });
 }
 

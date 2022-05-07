@@ -6,7 +6,9 @@
 
 #include <lib/trace/event.h>
 
+#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 
@@ -14,13 +16,15 @@ float UsageGainSettings::GetAdjustedUsageGain(const fuchsia::media::Usage& usage
   TRACE_DURATION("audio", "UsageGainSettings::GetUsageGain");
   if (usage.is_render_usage()) {
     const auto usage_index = fidl::ToUnderlying(usage.render_usage());
-    return Gain::CombineGains(render_usage_gain_[usage_index],
-                              render_usage_gain_adjustment_[usage_index], Gain::kUnityGainDb);
+    return std::min(Gain::CombineGains(render_usage_gain_[usage_index],
+                                       render_usage_gain_adjustment_[usage_index]),
+                    media_audio::kUnityGainDb);
   } else {
     FX_DCHECK(!usage.has_invalid_tag());
     const auto usage_index = fidl::ToUnderlying(usage.capture_usage());
-    return Gain::CombineGains(capture_usage_gain_[usage_index],
-                              capture_usage_gain_adjustment_[usage_index], Gain::kUnityGainDb);
+    return std::min(Gain::CombineGains(capture_usage_gain_[usage_index],
+                                       capture_usage_gain_adjustment_[usage_index]),
+                    media_audio::kUnityGainDb);
   }
 }
 

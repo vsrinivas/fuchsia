@@ -7,7 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 namespace {
@@ -48,7 +48,7 @@ TEST_F(StreamVolumeManagerTest, StreamCanUpdateSelf) {
 
   manager_.NotifyStreamChanged(&mock_);
   EXPECT_FLOAT_EQ(mock_.volume_command_.volume, 1.0);
-  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, media_audio::kUnityGainDb);
   EXPECT_EQ(mock_.volume_command_.ramp, std::nullopt);
 }
 
@@ -58,7 +58,7 @@ TEST_F(StreamVolumeManagerTest, StreamUpdatedOnAdd) {
 
   manager_.AddStream(&mock_);
   EXPECT_FLOAT_EQ(mock_.volume_command_.volume, 1.0);
-  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, media_audio::kUnityGainDb);
   EXPECT_EQ(mock_.volume_command_.ramp, std::nullopt);
 }
 
@@ -67,10 +67,10 @@ TEST_F(StreamVolumeManagerTest, StreamCanIgnorePolicy) {
       fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::INTERRUPTION);
   mock_.usage_ = fidl::Clone(usage);
 
-  manager_.SetUsageGainAdjustment(fidl::Clone(usage), Gain::kMinGainDb);
+  manager_.SetUsageGainAdjustment(fidl::Clone(usage), media_audio::kMinGainDb);
 
   manager_.NotifyStreamChanged(&mock_);
-  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, Gain::kMinGainDb);
+  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, media_audio::kMinGainDb);
 
   mock_.respects_policy_adjustments_ = false;
   manager_.NotifyStreamChanged(&mock_);
@@ -99,7 +99,7 @@ TEST_F(StreamVolumeManagerTest, StreamsCanBeRemoved) {
       fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), 10.0);
 
   EXPECT_FLOAT_EQ(mock_.volume_command_.volume, 1.0);
-  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(mock_.volume_command_.gain_db_adjustment, media_audio::kUnityGainDb);
   EXPECT_EQ(mock_.volume_command_.ramp, std::nullopt);
 }
 

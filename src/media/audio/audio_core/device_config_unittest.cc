@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/process_config.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 namespace {
@@ -25,10 +26,12 @@ TEST(OutputDeviceProfileTest, TransformForDependentVolumeControl) {
                                         /*driver_gain_db=*/0.0, /*software_gain_db=*/0.0)
           .loudness_transform();
 
-  EXPECT_FLOAT_EQ(dependent_volume_tf->Evaluate<1>({GainDbFsValue{Gain::kMinGainDb}}),
-                  default_tf->Evaluate<1>({GainDbFsValue{Gain::kMinGainDb}}));
-  EXPECT_FLOAT_EQ(dependent_volume_tf->Evaluate<1>({GainDbFsValue{Gain::kMaxGainDb}}),
-                  default_tf->Evaluate<1>({GainDbFsValue{Gain::kMaxGainDb}}));
+  EXPECT_FLOAT_EQ(
+      dependent_volume_tf->Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MUTED_GAIN_DB}}),
+      default_tf->Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MUTED_GAIN_DB}}));
+  EXPECT_FLOAT_EQ(
+      dependent_volume_tf->Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MAX_GAIN_DB}}),
+      default_tf->Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MAX_GAIN_DB}}));
 }
 
 TEST(OutputDeviceProfileTest, TransformForIndependentVolumeControl) {
@@ -45,11 +48,13 @@ TEST(OutputDeviceProfileTest, TransformForIndependentVolumeControl) {
   EXPECT_NE(independent_volume_tf, default_tf);
 
   const auto no_op_tf = NoOpLoudnessTransform();
-  EXPECT_FLOAT_EQ(independent_volume_tf->Evaluate<1>({GainDbFsValue{Gain::kMinGainDb}}),
-                  no_op_tf.Evaluate<1>({GainDbFsValue{Gain::kMinGainDb}}));
+  EXPECT_FLOAT_EQ(
+      independent_volume_tf->Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MUTED_GAIN_DB}}),
+      no_op_tf.Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MUTED_GAIN_DB}}));
 
-  EXPECT_FLOAT_EQ(independent_volume_tf->Evaluate<1>({GainDbFsValue{Gain::kMaxGainDb}}),
-                  no_op_tf.Evaluate<1>({GainDbFsValue{Gain::kMaxGainDb}}));
+  EXPECT_FLOAT_EQ(
+      independent_volume_tf->Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MAX_GAIN_DB}}),
+      no_op_tf.Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MAX_GAIN_DB}}));
 }
 
 TEST(DeviceProfileTest, DeviceProfileTransform) {
@@ -59,10 +64,10 @@ TEST(DeviceProfileTest, DeviceProfileTransform) {
                                   /*driver_gain_db=*/0.0, /*software_gain_db=*/0.0)
           .loudness_transform();
 
-  EXPECT_FLOAT_EQ(volume_tf->Evaluate<1>({GainDbFsValue{Gain::kMinGainDb}}),
-                  default_tf->Evaluate<1>({GainDbFsValue{Gain::kMinGainDb}}));
-  EXPECT_FLOAT_EQ(volume_tf->Evaluate<1>({GainDbFsValue{Gain::kMaxGainDb}}),
-                  default_tf->Evaluate<1>({GainDbFsValue{Gain::kMaxGainDb}}));
+  EXPECT_FLOAT_EQ(volume_tf->Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MUTED_GAIN_DB}}),
+                  default_tf->Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MUTED_GAIN_DB}}));
+  EXPECT_FLOAT_EQ(volume_tf->Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MAX_GAIN_DB}}),
+                  default_tf->Evaluate<1>({GainDbFsValue{fuchsia::media::audio::MAX_GAIN_DB}}));
 }
 
 }  // namespace

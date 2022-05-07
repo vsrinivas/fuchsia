@@ -20,6 +20,7 @@
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/effects_loader/testing/test_effects_v1.h"
 #include "src/media/audio/lib/format/driver_format.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 using testing::Each;
 using testing::Eq;
@@ -141,7 +142,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
 
   testing::TestEffectsV1Module test_effects_ = testing::TestEffectsV1Module::Open();
   zx::duration expected_mix_interval_;
-  VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
+  VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(media_audio::kMinGainDb);
   std::unique_ptr<testing::FakeAudioDriver> driver_;
   std::shared_ptr<DriverOutput> output_;
   fzl::VmoMapper ring_buffer_mapper_;

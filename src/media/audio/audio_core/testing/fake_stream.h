@@ -7,11 +7,11 @@
 
 #include <lib/zx/clock.h>
 
-#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
 #include "src/media/audio/lib/clock/audio_clock_factory.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio::testing {
 
@@ -41,7 +41,7 @@ class FakeStream : public ReadableStream {
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   size_t buffer_size_;
   StreamUsageMask usage_mask_;
-  float gain_db_ = Gain::kUnityGainDb;
+  float gain_db_ = media_audio::kUnityGainDb;
   int64_t max_frame_ = std::numeric_limits<int64_t>::max();
   std::unique_ptr<uint8_t[]> buffer_;
 

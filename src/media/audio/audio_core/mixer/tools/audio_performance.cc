@@ -12,6 +12,7 @@
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/traits.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 // Convenience abbreviation within this source file to shorten names
 using Resampler = ::media::audio::Mixer::Resampler;
@@ -442,12 +443,12 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   switch (cfg.gain_type) {
     case GainType::Mute:
       // 0dB, Mute
-      gain_db = Gain::kUnityGainDb;
+      gain_db = media_audio::kUnityGainDb;
       source_mute = true;
       break;
     case GainType::Unity:
       // 0dB
-      gain_db = Gain::kUnityGainDb;
+      gain_db = media_audio::kUnityGainDb;
       break;
     case GainType::Scaled:
       // -42dB
@@ -455,11 +456,11 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
       break;
     case GainType::Ramped:
       // -1dB => -159dB
-      gain_db = Gain::kUnityGainDb - 1.0f;
+      gain_db = media_audio::kUnityGainDb - 1.0f;
       break;
   }
 
-  bk.gain.SetDestGain(Gain::kUnityGainDb);
+  bk.gain.SetDestGain(media_audio::kUnityGainDb);
   auto source_frames_fixed = Fixed(source_frames);
 
   Stats stats(results ? results->AddTestCase("fuchsia.audio.mixing",
@@ -476,7 +477,7 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
     if (cfg.gain_type == GainType::Ramped) {
       // Ramp within the "greater than Mute but less than Unity" range. Ramp duration assumes a mix
       // duration of less than two secs.
-      bk.gain.SetSourceGainWithRamp(Gain::kMinGainDb + 1.0f, zx::sec(2));
+      bk.gain.SetSourceGainWithRamp(media_audio::kMinGainDb + 1.0f, zx::sec(2));
     }
 
     // For repeatability, start each run at exactly the same position.

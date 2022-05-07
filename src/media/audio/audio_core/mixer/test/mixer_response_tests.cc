@@ -10,6 +10,7 @@
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
 #include "src/media/audio/lib/analysis/generators.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio::test {
 
@@ -61,10 +62,10 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
 
   // Convert Signal-to-Noise-And-Distortion (SINAD) to decibels
   // We can directly compare 'signal' and 'other', regardless of source format.
-  *sinad_db = Gain::DoubleToDb(result.total_magn_signal / result.total_magn_other);
+  *sinad_db = DoubleToDb(result.total_magn_signal / result.total_magn_other);
 
   // All sources (8-bit, 16-bit, ...) are normalized to float in accum buffer.
-  return Gain::DoubleToDb(result.total_magn_signal / expected_amplitude);
+  return DoubleToDb(result.total_magn_signal / expected_amplitude);
 }
 
 // Measure level response and noise floor for 1kHz sine from 8-bit source.
@@ -141,9 +142,9 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
 
   // Convert Signal-to-Noise-And-Distortion (SINAD) to decibels.
   // We can directly compare 'signal' and 'other', regardless of output format.
-  *sinad_db = Gain::DoubleToDb(result.total_magn_signal / result.total_magn_other);
+  *sinad_db = DoubleToDb(result.total_magn_signal / result.total_magn_other);
 
-  return Gain::DoubleToDb(result.total_magn_signal / expected_amplitude);
+  return DoubleToDb(result.total_magn_signal / expected_amplitude);
 }
 
 // Measure level response and noise floor for 1kHz sine, to an 8-bit output.
@@ -311,14 +312,14 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
     // Convert Frequency Response and Signal-to-Noise-And-Distortion (SINAD) to decibels.
     if (out_of_band) {
       // This out-of-band frequency should have been entirely rejected -- capture total magnitude.
-      // This is equivalent to Gain::DoubleToDb(1.0 / result.total_magn_other).
-      sinad_db[freq_idx] = -Gain::DoubleToDb(result.total_magn_other);
+      // This is equivalent to DoubleToDb(1.0 / result.total_magn_other).
+      sinad_db[freq_idx] = -DoubleToDb(result.total_magn_other);
     } else {
       // This frequency is in-band -- capture its level/phase and the magnitude of all else.
       auto magn_signal = result.magnitudes[frequency_to_measure];
       auto magn_other = result.total_magn_other;
-      level_db[freq_idx] = Gain::DoubleToDb(magn_signal);
-      sinad_db[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
+      level_db[freq_idx] = DoubleToDb(magn_signal);
+      sinad_db[freq_idx] = DoubleToDb(magn_signal / magn_other);
       phase_rad[freq_idx] = result.phases[frequency_to_measure];
     }
   }
@@ -798,14 +799,14 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
     // Convert Frequency Response and Signal-to-Noise-And-Distortion (SINAD) to decibels.
     if (out_of_band) {
       // This out-of-band frequency should have been entirely rejected -- capture total magnitude.
-      // This is equivalent to Gain::DoubleToDb(1.0 / result.total_magn_other).
-      sinad_db[freq_idx] = -Gain::DoubleToDb(result.total_magn_other);
+      // This is equivalent to DoubleToDb(1.0 / result.total_magn_other).
+      sinad_db[freq_idx] = -DoubleToDb(result.total_magn_other);
     } else {
       // This frequency is in-band -- capture its level/phase and the magnitude of all else.
       auto magn_signal = result.magnitudes[frequency_to_measure];
       auto magn_other = result.total_magn_other;
-      level_db[freq_idx] = Gain::DoubleToDb(magn_signal);
-      sinad_db[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
+      level_db[freq_idx] = DoubleToDb(magn_signal);
+      sinad_db[freq_idx] = DoubleToDb(magn_signal / magn_other);
       phase_rad[freq_idx] = result.phases[frequency_to_measure];
     }
   }

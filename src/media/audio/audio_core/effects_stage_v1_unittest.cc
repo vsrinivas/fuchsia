@@ -14,6 +14,7 @@
 #include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/effects_loader/testing/test_effects_v1.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 using testing::Each;
 using testing::FloatEq;
@@ -635,7 +636,7 @@ TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(first_frame), kRequestedFrames);
     ASSERT_TRUE(buf);
     EXPECT_TRUE(buf->usage_mask().is_empty());
-    EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), Gain::kUnityGainDb);
+    EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), media_audio::kUnityGainDb);
     test_effects_v1_inspect_state effect_state;
     EXPECT_EQ(ZX_OK, test_effects().InspectInstance(
                          effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));

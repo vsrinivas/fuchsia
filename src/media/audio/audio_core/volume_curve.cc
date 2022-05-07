@@ -11,14 +11,14 @@
 #include <algorithm>
 
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
 #include "src/media/audio/audio_core/process_config_loader.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 
 VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
-  FX_DCHECK(min_gain_db < Gain::kUnityGainDb);
+  FX_DCHECK(min_gain_db < media_audio::kUnityGainDb);
   FX_DCHECK(min_gain_db >= fuchsia::media::audio::MUTED_GAIN_DB);
 
   std::vector<VolumeMapping> mappings = {
@@ -26,7 +26,7 @@ VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
   if (min_gain_db != fuchsia::media::audio::MUTED_GAIN_DB) {
     mappings.push_back({FLT_EPSILON, min_gain_db});
   }
-  mappings.push_back({fuchsia::media::audio::MAX_VOLUME, Gain::kUnityGainDb});
+  mappings.push_back({fuchsia::media::audio::MAX_VOLUME, media_audio::kUnityGainDb});
 
   auto curve_result = VolumeCurve::FromMappings(std::move(mappings));
   if (!curve_result.is_ok()) {
@@ -50,11 +50,11 @@ fpromise::result<VolumeCurve, std::string> VolumeCurve::FromMappings(
         fuchsia::media::audio::MUTED_GAIN_DB));
   }
 
-  if (auto& back = mappings.back();
-      back.volume != fuchsia::media::audio::MAX_VOLUME || back.gain_dbfs != Gain::kUnityGainDb) {
+  if (auto& back = mappings.back(); back.volume != fuchsia::media::audio::MAX_VOLUME ||
+                                    back.gain_dbfs != media_audio::kUnityGainDb) {
     return fpromise::error(fxl::StringPrintf(
         "last entry (%.2f -> %.2f) must map volume level %.2f to gain_db = %.2f", back.volume,
-        back.gain_dbfs, fuchsia::media::audio::MAX_VOLUME, Gain::kUnityGainDb));
+        back.gain_dbfs, fuchsia::media::audio::MAX_VOLUME, media_audio::kUnityGainDb));
   }
 
   for (size_t i = 1; i < mappings.size(); ++i) {
@@ -100,7 +100,7 @@ float VolumeCurve::VolumeToDb(float volume) const {
 
 float VolumeCurve::DbToVolume(float gain_dbfs) const {
   const float x =
-      std::clamp<float>(gain_dbfs, fuchsia::media::audio::MUTED_GAIN_DB, Gain::kUnityGainDb);
+      std::clamp<float>(gain_dbfs, fuchsia::media::audio::MUTED_GAIN_DB, media_audio::kUnityGainDb);
 
   const auto bounds = Bounds(x, Attribute::kGain);
   if (!bounds.has_value()) {

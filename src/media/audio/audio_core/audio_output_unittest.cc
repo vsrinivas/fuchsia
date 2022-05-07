@@ -16,6 +16,7 @@
 #include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/effects_loader/testing/test_effects_v1.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 namespace {
@@ -35,9 +36,9 @@ class TestOutputPipeline : public OutputPipeline {
         audio_clock_(clock_factory->CreateClientFixed(clock::AdjustableCloneOfMonotonic())) {}
 
   void EnqueueBuffer(Fixed start_frame, int64_t frame_count, void* payload) {
-    buffers_.push_back(
-        MakeCachedBuffer(start_frame, frame_count, payload, StreamUsageMask(), Gain::kUnityGainDb)
-            .value());
+    buffers_.push_back(MakeCachedBuffer(start_frame, frame_count, payload, StreamUsageMask(),
+                                        media_audio::kUnityGainDb)
+                           .value());
   }
 
   // |media::audio::ReadableStream|
@@ -215,7 +216,7 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
 
   StubDriver* stub_driver() { return static_cast<StubDriver*>(audio_output_->driver()); }
 
-  VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
+  VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(media_audio::kMinGainDb);
   std::shared_ptr<TestAudioOutput> audio_output_ = std::make_shared<TestAudioOutput>(
       context().process_config().device_config(), &threading_model(), &context().device_manager(),
       &context().link_matrix(), context().clock_factory());
@@ -472,8 +473,8 @@ TEST_F(AudioOutputTest, HonorIndpendentVolumeControlLoudnessTransform) {
       zx::msec(1).to_msecs(), kOneFramePerMs);
 
   auto transform = audio_output_->profile().loudness_transform();
-  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{0.}}), Gain::kUnityGainDb);
-  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{1.}}), Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{0.}}), media_audio::kUnityGainDb);
+  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{1.}}), media_audio::kUnityGainDb);
 }
 
 TEST_F(AudioOutputTest, UpdateOutputPipeline) {

@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 namespace {
@@ -154,7 +154,7 @@ TEST(UsageGainSettingsTest, UsageGainCannotExceedUnity) {
   UsageGainSettings under_test;
   under_test.SetUsageGain(fidl::Clone(usage), 10.0);
 
-  EXPECT_FLOAT_EQ(under_test.GetAdjustedUsageGain(std::move(usage)), Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(under_test.GetAdjustedUsageGain(std::move(usage)), media_audio::kUnityGainDb);
 }
 
 TEST(UsageVolumeSettingsTest, RenderUsageVolumePersists) {

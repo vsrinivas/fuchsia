@@ -11,6 +11,7 @@
 
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/volume_curve.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 
@@ -40,7 +41,7 @@ class LoudnessTransform {
   // the stream.
   template <int N>
   float Evaluate(std::array<Stage, N> stages) const {
-    float gain = Gain::kUnityGainDb;
+    float gain = media_audio::kUnityGainDb;
 
     for (const auto& stage : stages) {
       auto next_stage = EvaluateStageGain(stage);

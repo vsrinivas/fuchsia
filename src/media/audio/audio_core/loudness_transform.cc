@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/media/audio/lib/processing/gain.h"
+
 namespace media::audio {
 
 float MappedLoudnessTransform::EvaluateStageGain(const LoudnessTransform::Stage& stage) const {
@@ -17,12 +19,12 @@ float MappedLoudnessTransform::EvaluateStageGain(const LoudnessTransform::Stage&
     return volume_curve_.DbToVolume(gain->value);
   } else {
     FX_LOGS_FIRST_N(ERROR, 10) << "A loudness variant was uninitialized.";
-    return Gain::kUnityGainDb;
+    return media_audio::kUnityGainDb;
   }
 }
 
 float NoOpLoudnessTransform::EvaluateStageGain(const LoudnessTransform::Stage& stages) const {
-  return Gain::kUnityGainDb;
+  return media_audio::kUnityGainDb;
 }
 
 }  // namespace media::audio

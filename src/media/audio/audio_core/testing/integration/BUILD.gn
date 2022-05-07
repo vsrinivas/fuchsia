@@ -35,6 +35,7 @@ source_set("hermetic_audio_test") {
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/format",
+    "//src/media/audio/lib/processing",
     "//src/media/audio/lib/test:comparators",
     "//src/media/audio/lib/test:constants",
     "//src/media/audio/lib/test:test_fixture",

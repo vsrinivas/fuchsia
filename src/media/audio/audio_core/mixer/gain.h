@@ -14,6 +14,7 @@
 
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/logging_flags.h"
+#include "src/media/audio/lib/processing/gain.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio {
@@ -22,60 +23,17 @@ namespace media::audio {
 // Not thread safe.
 class Gain {
  public:
-  // Audio gains for AudioRenderers/AudioCapturers and output devices are
-  // expressed as floating-point values, in decibels. For each signal path, two
-  // gain values are combined and then stored in the API-to-device link (usually
-  // AudioRenderer-to-output), as a 32-bit floating-point amplitude multiplier.
-  //
-  // Playback example: source (renderer) gain + dest (device) gain = total gain.
-  // Capture example: source (device) gain + dest (capturer) gain = total gain.
-  static constexpr float kMaxGainDb = fuchsia::media::audio::MAX_GAIN_DB;
-  static constexpr float kUnityGainDb = 0.0f;
-  static constexpr float kMinGainDb = fuchsia::media::audio::MUTED_GAIN_DB;
-
   // Amplitude scale factors are expressed as 32-bit IEEE-754 floating point.
   using AScale = float;
-
-  // Note: multiply-by-.05 equals divide-by-20 -- and is faster on most
-  // builds. Note: 0.05 must be double (not float) for the required precision.
-  static AScale DbToScale(float gain_db) { return static_cast<AScale>(pow(10.0f, gain_db * 0.05)); }
-  static float ScaleToDb(AScale scale) {
-    return std::clamp(std::log10(scale) * 20.0f, kMinGainDb, kMaxGainDb);
-  }
-  // Higher-precision (but slower) version currently used only by fidelity tests
-  static double DoubleToDb(double val) { return std::log10(val) * 20.0; }
-  static inline float CombineGains(float gain_db_a, float gain_db_b,
-                                   float max_gain_db = kMaxGainDb) {
-    if (gain_db_a <= kMinGainDb || gain_db_b <= kMinGainDb) {
-      return kMinGainDb;
-    }
-
-    return std::clamp(gain_db_a + gain_db_b, kMinGainDb, max_gain_db);
-  }
-
-  // Helper constant values in the gain-scale domain.
-  //
-  // kMinScale is the value at which the amplitude scaler is guaranteed to drive
-  // all sample values to a value of 0 (meaning we waste compute cycles if we
-  // actually scale anything). We normalize all input formats to the same
-  // full-scale bounds, so this value is identical for all input types. The
-  // calculation of this value takes rounding into account.
-  //
-  // kUnityScale is the scale value at which mix inputs are passed bit-for-bit
-  // through the mixer into the accumulation buffer. This is used during the Mix
-  // process as an optimization, to avoid unnecessary multiplications.
-  //
-  // kMaxScale is the scale corresponding to the largest allowed gainDb value,
-  // currently +24.0 decibels. Scales above this value will be clamped to this.
   static constexpr AScale kMuteScale = 0.0f;
-  static constexpr AScale kMinScale = 0.00000001f;  // kMinGainDb is -160.0 dB
-  static constexpr AScale kUnityScale = 1.0f;
-  static constexpr AScale kMaxScale = 15.8489319f;  // kMaxGainDb is +24.0 dB
 
-  // The final (combined) gain is limited to the range [kMinGainDb, kMaxGainDb]
-  // by default, but a more restricted range can be given in this constructor.
-  // No matter the value of min_gain_db, the gain can always be set to MUTED_GAIN_DB,
-  // either explicitly or via Set{Source,Dest}Mute().
+  static inline float CombineGains(float gain_db_a, float gain_db_b) {
+    if (gain_db_a > media_audio::kMinGainDb && gain_db_b > media_audio::kMinGainDb) {
+      return std::max(gain_db_a + gain_db_b, media_audio::kMinGainDb);
+    }
+    return media_audio::kMinGainDb;
+  }
+
   struct Limits {
     std::optional<float> min_gain_db;
     std::optional<float> max_gain_db;
@@ -84,10 +42,11 @@ class Gain {
   Gain() : Gain(Limits{}) {}
 
   explicit Gain(Limits limits)
-      : min_gain_db_(std::max(limits.min_gain_db.value_or(kMinGainDb), kMinGainDb)),
-        max_gain_db_(std::min(limits.max_gain_db.value_or(kMaxGainDb), kMaxGainDb)),
-        min_gain_scale_(DbToScale(min_gain_db_)),
-        max_gain_scale_(DbToScale(max_gain_db_)) {
+      : min_gain_db_(std::max(limits.min_gain_db.value_or(media_audio::kMinGainDb),
+                              media_audio::kMinGainDb)),
+        max_gain_db_(limits.max_gain_db.value_or(std::numeric_limits<float>::max())),
+        min_gain_scale_(media_audio::DbToScale(min_gain_db_)),
+        max_gain_scale_(media_audio::DbToScale(max_gain_db_)) {
     if constexpr (kLogGainScaleCalculation) {
       FX_LOGS(INFO) << "Gain(" << this << ") created with min_gain_scale_: " << min_gain_scale_
                     << ", max_gain_scale_: " << max_gain_scale_;
@@ -96,11 +55,11 @@ class Gain {
 
   // Retrieves the overall gain-scale, combining the Source, Dest, and Adjustment controls.
   AScale GetGainScale();
-  float GetGainDb() { return std::max(ScaleToDb(GetGainScale()), kMinGainDb); }
+  float GetGainDb() { return media_audio::ScaleToDb(GetGainScale()); }
 
   // Retrieves the overall gain-scale, combining the Source and Dest controls only.
   AScale GetUnadjustedGainScale();
-  float GetUnadjustedGainDb() { return std::max(ScaleToDb(GetUnadjustedGainScale()), kMinGainDb); }
+  float GetUnadjustedGainDb() { return media_audio::ScaleToDb(GetUnadjustedGainScale()); }
 
   // Calculates and return an array of gain-scale values for the next `num_frames`.
   //
@@ -111,14 +70,16 @@ class Gain {
 
   // Returns the current gain from each control, including mute effects.
   float GetSourceGainDb() const {
-    return source_.IsMuted() ? kMinGainDb : std::clamp(source_.GainDb(), kMinGainDb, kMaxGainDb);
+    return source_.IsMuted() ? media_audio::kMinGainDb
+                             : std::max(source_.GainDb(), media_audio::kMinGainDb);
   }
   float GetDestGainDb() const {
-    return dest_.IsMuted() ? kMinGainDb : std::clamp(dest_.GainDb(), kMinGainDb, kMaxGainDb);
+    return dest_.IsMuted() ? media_audio::kMinGainDb
+                           : std::max(dest_.GainDb(), media_audio::kMinGainDb);
   }
   float GetGainAdjustmentDb() const {
-    return adjustment_.IsMuted() ? kMinGainDb
-                                 : std::clamp(adjustment_.GainDb(), kMinGainDb, kMaxGainDb);
+    return adjustment_.IsMuted() ? media_audio::kMinGainDb
+                                 : std::max(adjustment_.GainDb(), media_audio::kMinGainDb);
   }
 
   // These functions determine which performance-optimized templatized functions we use for a Mix.
@@ -131,21 +92,23 @@ class Gain {
   bool IsSilent() {
     return source_.IsMuted() || dest_.IsMuted() || adjustment_.IsMuted() ||
            // source is currently silent and not ramping up
-           (source_.GainDb() <= kMinGainDb && !source_.IsRampingUp()) ||
+           (source_.GainDb() <= media_audio::kMinGainDb && !source_.IsRampingUp()) ||
            // or dest is currently silent and not ramping up
-           (dest_.GainDb() <= kMinGainDb && !dest_.IsRampingUp()) ||
+           (dest_.GainDb() <= media_audio::kMinGainDb && !dest_.IsRampingUp()) ||
            // or adjustment is currently silent and not ramping up
-           (adjustment_.GainDb() <= kMinGainDb && !adjustment_.IsRampingUp()) ||
+           (adjustment_.GainDb() <= media_audio::kMinGainDb && !adjustment_.IsRampingUp()) ||
            // or the combination is silent and neither is ramping up
-           (source_.GainDb() + dest_.GainDb() + adjustment_.GainDb() <= kMinGainDb &&
+           (source_.GainDb() + dest_.GainDb() + adjustment_.GainDb() <= media_audio::kMinGainDb &&
             !source_.IsRampingUp() && !dest_.IsRampingUp() && !adjustment_.IsRampingUp());
   }
 
   bool IsUnity() {
     return !source_.IsMuted() && !dest_.IsMuted() && !adjustment_.IsMuted() &&
            !source_.IsRamping() && !dest_.IsRamping() && !adjustment_.IsRamping() &&
-           (source_.GainDb() + dest_.GainDb() + adjustment_.GainDb() == kUnityGainDb) &&
-           (min_gain_db_ <= kUnityGainDb) && (max_gain_db_ >= kUnityGainDb);
+           (source_.GainDb() + dest_.GainDb() + adjustment_.GainDb() ==
+            media_audio::kUnityGainDb) &&
+           (min_gain_db_ <= media_audio::kUnityGainDb) &&
+           (max_gain_db_ >= media_audio::kUnityGainDb);
   }
 
   bool IsRamping() {
@@ -264,14 +227,14 @@ class Gain {
     std::string name_;
 
     // Current gain value.
-    float gain_db_ = kUnityGainDb;
+    float gain_db_ = media_audio::kUnityGainDb;
     bool mute_ = false;
 
     // A linear ramp from ramp_start_scale_ to ramp_end_scale_ over ramp_duration_.
-    float ramp_start_scale_ = kUnityScale;
-    float ramp_start_gain_db_ = kUnityGainDb;
-    float ramp_end_scale_ = kUnityScale;
-    float ramp_end_gain_db_ = kUnityGainDb;
+    float ramp_start_scale_ = media_audio::kUnityGainScale;
+    float ramp_start_gain_db_ = media_audio::kUnityGainDb;
+    float ramp_end_scale_ = media_audio::kUnityGainScale;
+    float ramp_end_gain_db_ = media_audio::kUnityGainDb;
 
     zx::duration ramp_duration_;        // if zero, we are not ramping
     int64_t frames_ramped_so_far_ = 0;  // how many frames ramped so far

@@ -21,6 +21,7 @@
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/format/constants.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 using testing::Each;
 using testing::FloatEq;
@@ -541,7 +542,7 @@ void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
     auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
     ASSERT_TRUE(buf);
     EXPECT_TRUE(buf->usage_mask().contains(kInputStreamUsage));
-    EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), Gain::kUnityGainDb);
+    EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), media_audio::kUnityGainDb);
   }
 
   // Upon any fail, slab_allocator asserts at exit. Clear all allocations, so testing can continue.

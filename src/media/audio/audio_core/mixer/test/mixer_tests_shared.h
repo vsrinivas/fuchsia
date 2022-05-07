@@ -55,6 +55,13 @@ constexpr double kFullScaleInt24In32AccumAmplitude =  // 0.99999988079071045
 constexpr double kFullScaleFloatInputAmplitude = 1.0f;
 constexpr double kFullScaleFloatAccumAmplitude = 1.0f;
 
+// Converts gain `scale` to decibels in double-precision.
+inline double DoubleToDb(double scale) {
+  return (scale > static_cast<double>(media_audio::kMinGainScale))
+             ? std::log10(scale) * 20.0
+             : static_cast<double>(media_audio::kMinGainDb);
+}
+
 // Use supplied mixer to mix (w/out rate conversion) from source to accumulator.
 // TODO(mpuryear): refactor this so that tests just call mixer->Mix directly.
 void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumulate,

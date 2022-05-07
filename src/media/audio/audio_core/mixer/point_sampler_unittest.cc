@@ -9,6 +9,7 @@
 
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
 #include "src/media/audio/lib/format2/sample_converter.h"
+#include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio::mixer {
 namespace {
@@ -71,7 +72,7 @@ class PointSamplerTest : public testing::Test {
   // Use the supplied mixer to mix without SRC. Assumes no accumulation, but can be overridden.
   // Used by tests that do simple mixing and need not inspect the returned position values.
   void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumulate,
-             int64_t num_frames, float gain_db = Gain::kUnityGainDb) {
+             int64_t num_frames, float gain_db = media_audio::kUnityGainDb) {
     ASSERT_NE(mixer, nullptr);
 
     int64_t dest_offset = 0;
@@ -577,13 +578,13 @@ TEST_F(PointSamplerAccumulateTest, NoOpWhenMuted) {
   std::copy(accum.begin(), accum.end(), expect.begin());
 
   auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
-  // Use a gain guaranteed to silence any signal -- Gain::kMinGainDb.
-  DoMix(mixer.get(), source.data(), accum.data(), true, accum.size(), Gain::kMinGainDb);
+  // Use a gain guaranteed to silence any signal -- media_audio::kMinGainDb.
+  DoMix(mixer.get(), source.data(), accum.data(), true, accum.size(), media_audio::kMinGainDb);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // When accumulate = false but gain is sufficiently low, overwriting previous contents is skipped.
   // This should lead to the same results as above.
-  DoMix(mixer.get(), source.data(), accum.data(), false, accum.size(), Gain::kMinGainDb);
+  DoMix(mixer.get(), source.data(), accum.data(), false, accum.size(), media_audio::kMinGainDb);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
@@ -603,7 +604,7 @@ TEST_F(PointSamplerScalingTest, Linearity) {
   std::array<float, 8> accum;
 
   // Validate that +20.0 dB scales values by 10x. We calculate our own gain value rather than use
-  // Gain::ScaleToDb, as Mixer+Gain interactions (via APIs like that) are what we're testing.
+  // media_audio::ScaleToDb, as Mixer+Gain interactions (via APIs like that) are what we're testing.
   float desired_scale_factor = 10.0f;
   float stream_gain_db = DbFromScale(desired_scale_factor);  // 20.0f;
   auto mixer = SelectPointSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::SIGNED_16);
