@@ -27,6 +27,12 @@ using BitsType = ::test_consts::BitsType;
 
 using EnumType = ::test_consts::EnumType;
 
+constexpr zx_rights_t kZxRightsVal = ZX_RIGHT_READ;
+
+constexpr zx_obj_type_t kZxObjVal = ZX_OBJ_TYPE_CHANNEL;
+
+constexpr uint64_t kZxConst = ZX_CHANNEL_MAX_MSG_BYTES;
+
 extern const char* kUsername;
 
 constexpr uint32_t kPopulationUsa2018 = 330000000u;

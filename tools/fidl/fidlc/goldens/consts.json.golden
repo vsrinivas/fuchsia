@@ -1,7 +1,88 @@
 {
   "version": "0.0.1",
   "name": "test.consts",
-  "library_dependencies": [],
+  "library_dependencies": [
+    {
+      "name": "zx",
+      "declarations": {
+        "zx/rights": {
+          "kind": "bits"
+        },
+        "zx/CHANNEL_MAX_MSG_BYTES": {
+          "kind": "const"
+        },
+        "zx/CHANNEL_MAX_MSG_HANDLES": {
+          "kind": "const"
+        },
+        "zx/DEFAULT_CHANNEL_RIGHTS": {
+          "kind": "const"
+        },
+        "zx/DEFAULT_EVENT_RIGHTS": {
+          "kind": "const"
+        },
+        "zx/MAX_CPUS": {
+          "kind": "const"
+        },
+        "zx/MAX_NAME_LEN": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_BASIC": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_IO": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_POLICY": {
+          "kind": "const"
+        },
+        "zx/RIGHTS_PROPERTY": {
+          "kind": "const"
+        },
+        "zx/obj_type": {
+          "kind": "enum"
+        },
+        "zx/handle": {
+          "kind": "experimental_resource"
+        },
+        "zx/duration": {
+          "kind": "type_alias"
+        },
+        "zx/gpaddr": {
+          "kind": "type_alias"
+        },
+        "zx/koid": {
+          "kind": "type_alias"
+        },
+        "zx/off": {
+          "kind": "type_alias"
+        },
+        "zx/paddr": {
+          "kind": "type_alias"
+        },
+        "zx/paddr32": {
+          "kind": "type_alias"
+        },
+        "zx/procarg": {
+          "kind": "type_alias"
+        },
+        "zx/signals": {
+          "kind": "type_alias"
+        },
+        "zx/status": {
+          "kind": "type_alias"
+        },
+        "zx/ticks": {
+          "kind": "type_alias"
+        },
+        "zx/time": {
+          "kind": "type_alias"
+        },
+        "zx/vaddr": {
+          "kind": "type_alias"
+        }
+      }
+    }
+  ],
   "bits_declarations": [
     {
       "name": "test.consts/BitsType",
@@ -10,7 +91,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 23,
+        "line": 29,
         "column": 6,
         "length": 8
       },
@@ -42,7 +123,7 @@
           "name": "VALUE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-            "line": 24,
+            "line": 30,
             "column": 5,
             "length": 5
           },
@@ -61,7 +142,7 @@
           "name": "true",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-            "line": 25,
+            "line": 31,
             "column": 5,
             "length": 4
           },
@@ -85,7 +166,7 @@
       "name": "test.consts/ANSWER",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 5,
+        "line": 7,
         "column": 7,
         "length": 6
       },
@@ -126,7 +207,7 @@
       "name": "test.consts/ANSWER_IN_BINARY",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 6,
+        "line": 8,
         "column": 7,
         "length": 16
       },
@@ -167,7 +248,7 @@
       "name": "test.consts/CONVERSION_FACTOR",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 12,
+        "line": 14,
         "column": 7,
         "length": 17
       },
@@ -208,7 +289,7 @@
       "name": "test.consts/DIAMOND",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 8,
+        "line": 10,
         "column": 7,
         "length": 7
       },
@@ -249,7 +330,7 @@
       "name": "test.consts/ENABLED_FLAG",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 3,
+        "line": 5,
         "column": 7,
         "length": 12
       },
@@ -290,7 +371,7 @@
       "name": "test.consts/FUCHSIA",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 9,
+        "line": 11,
         "column": 7,
         "length": 7
       },
@@ -331,7 +412,7 @@
       "name": "test.consts/MIN_TEMP",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 11,
+        "line": 13,
         "column": 7,
         "length": 8
       },
@@ -372,7 +453,7 @@
       "name": "test.consts/OFFSET",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 4,
+        "line": 6,
         "column": 7,
         "length": 6
       },
@@ -413,7 +494,7 @@
       "name": "test.consts/POPULATION_USA_2018",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 7,
+        "line": 9,
         "column": 7,
         "length": 19
       },
@@ -454,7 +535,7 @@
       "name": "test.consts/USERNAME",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 10,
+        "line": 12,
         "column": 7,
         "length": 8
       },
@@ -492,10 +573,123 @@
       }
     },
     {
+      "name": "test.consts/ZX_CONST",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
+        "line": 18,
+        "column": 7,
+        "length": 8
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64",
+        "type_shape_v1": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "65536",
+        "expression": "zx.CHANNEL_MAX_MSG_BYTES",
+        "identifier": "zx/CHANNEL_MAX_MSG_BYTES"
+      }
+    },
+    {
+      "name": "test.consts/ZX_OBJ_VAL",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
+        "line": 16,
+        "column": 7,
+        "length": 10
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "zx/obj_type",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "4",
+        "expression": "zx.obj_type.CHANNEL",
+        "identifier": "zx/obj_type.CHANNEL"
+      }
+    },
+    {
+      "name": "test.consts/ZX_RIGHTS_VAL",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
+        "line": 17,
+        "column": 7,
+        "length": 13
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "zx/rights",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "4",
+        "expression": "zx.rights.READ",
+        "identifier": "zx/rights.READ"
+      }
+    },
+    {
       "name": "test.consts/bitsPrimitiveTrue",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 30,
+        "line": 36,
         "column": 7,
         "length": 17
       },
@@ -532,7 +726,7 @@
       "name": "test.consts/bitsPrimitiveVal",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 28,
+        "line": 34,
         "column": 7,
         "length": 16
       },
@@ -569,7 +763,7 @@
       "name": "test.consts/bitsTrue",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 29,
+        "line": 35,
         "column": 7,
         "length": 8
       },
@@ -607,7 +801,7 @@
       "name": "test.consts/bitsVal",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 27,
+        "line": 33,
         "column": 7,
         "length": 7
       },
@@ -645,7 +839,7 @@
       "name": "test.consts/enumPrimitiveTrue",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 21,
+        "line": 27,
         "column": 7,
         "length": 17
       },
@@ -682,7 +876,7 @@
       "name": "test.consts/enumPrimitiveVal",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 19,
+        "line": 25,
         "column": 7,
         "length": 16
       },
@@ -719,7 +913,7 @@
       "name": "test.consts/enumTrue",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 20,
+        "line": 26,
         "column": 7,
         "length": 8
       },
@@ -757,7 +951,7 @@
       "name": "test.consts/enumVal",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 18,
+        "line": 24,
         "column": 7,
         "length": 7
       },
@@ -800,7 +994,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-        "line": 14,
+        "line": 20,
         "column": 6,
         "length": 8
       },
@@ -810,7 +1004,7 @@
           "name": "VALUE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-            "line": 15,
+            "line": 21,
             "column": 5,
             "length": 5
           },
@@ -829,7 +1023,7 @@
           "name": "true",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
-            "line": 16,
+            "line": 22,
             "column": 5,
             "length": 4
           },
@@ -857,6 +1051,9 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
+    "test.consts/ZX_RIGHTS_VAL",
+    "test.consts/ZX_OBJ_VAL",
+    "test.consts/ZX_CONST",
     "test.consts/USERNAME",
     "test.consts/POPULATION_USA_2018",
     "test.consts/OFFSET",
@@ -890,6 +1087,9 @@
     "test.consts/OFFSET": "const",
     "test.consts/POPULATION_USA_2018": "const",
     "test.consts/USERNAME": "const",
+    "test.consts/ZX_CONST": "const",
+    "test.consts/ZX_OBJ_VAL": "const",
+    "test.consts/ZX_RIGHTS_VAL": "const",
     "test.consts/bitsPrimitiveTrue": "const",
     "test.consts/bitsPrimitiveVal": "const",
     "test.consts/bitsTrue": "const",

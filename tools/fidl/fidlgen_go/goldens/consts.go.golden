@@ -3,29 +3,33 @@
 package consts
 
 import (
+	zx "fidl/zx"
 	_strings "strings"
 	_bindings "syscall/zx/fidl"
 )
 
 const (
-	Answer            uint16   = 42
-	AnswerInBinary    uint16   = 42
-	ConversionFactor  float64  = 1.41421
-	Diamond           uint64   = 1746410393481133080
-	EnabledFlag       bool     = true
-	Fuchsia           uint64   = 4054509061583223046
-	MinTemp           float32  = -273.15
-	Offset            int8     = -33
-	PopulationUsa2018 uint32   = 330000000
-	Username          string   = "\"squeenze\""
-	BitsPrimitiveTrue uint32   = BitsTypeTrue
-	BitsPrimitiveVal  uint32   = BitsTypeValue
-	BitsTrue          BitsType = BitsTypeTrue
-	BitsVal           BitsType = BitsTypeValue
-	EnumPrimitiveTrue int32    = EnumTypeTrue
-	EnumPrimitiveVal  int32    = EnumTypeValue
-	EnumTrue          EnumType = EnumTypeTrue
-	EnumVal           EnumType = EnumTypeValue
+	Answer            uint16     = 42
+	AnswerInBinary    uint16     = 42
+	ConversionFactor  float64    = 1.41421
+	Diamond           uint64     = 1746410393481133080
+	EnabledFlag       bool       = true
+	Fuchsia           uint64     = 4054509061583223046
+	MinTemp           float32    = -273.15
+	Offset            int8       = -33
+	PopulationUsa2018 uint32     = 330000000
+	Username          string     = "\"squeenze\""
+	ZxConst           uint64     = zx.ChannelMaxMsgBytes
+	ZxObjVal          zx.ObjType = zx.ObjTypeChannel
+	ZxRightsVal       zx.Rights  = zx.RightsRead
+	BitsPrimitiveTrue uint32     = BitsTypeTrue
+	BitsPrimitiveVal  uint32     = BitsTypeValue
+	BitsTrue          BitsType   = BitsTypeTrue
+	BitsVal           BitsType   = BitsTypeValue
+	EnumPrimitiveTrue int32      = EnumTypeTrue
+	EnumPrimitiveVal  int32      = EnumTypeValue
+	EnumTrue          EnumType   = EnumTypeTrue
+	EnumVal           EnumType   = EnumTypeValue
 )
 
 var _ _bindings.Enum = EnumType(0)

@@ -3,6 +3,8 @@
 #include <lib/fidl/internal.h>
 
 
+__LOCAL extern const struct FidlCodedBits zx_rightsTable;
+__LOCAL extern const struct FidlCodedEnum zx_obj_typeTable;
 __LOCAL extern const struct FidlCodedEnum test_consts_EnumTypeTable;
 __LOCAL extern const struct FidlCodedBits test_consts_BitsTypeTable;
 

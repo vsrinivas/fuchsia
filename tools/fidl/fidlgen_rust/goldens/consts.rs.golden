@@ -72,6 +72,12 @@ pub const POPULATION_USA_2018: u32 = 330000000;
 
 pub const USERNAME: &str = r###""squeenze""###;
 
+pub const ZX_CONST: u64 = fidl_zx::CHANNEL_MAX_MSG_BYTES;
+
+pub const ZX_OBJ_VAL: fidl_zx::ObjType = fidl_zx::ObjType::Channel;
+
+pub const ZX_RIGHTS_VAL: fidl_zx::Rights = fidl_zx::Rights::READ;
+
 pub const BITS_PRIMITIVE_TRUE: u32 = BitsType::TRUE_.bits();
 
 pub const BITS_PRIMITIVE_VAL: u32 = BitsType::VALUE.bits();
