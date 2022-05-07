@@ -13,7 +13,6 @@ namespace {
 
 // TODO(fxbug.dev/75983): Read this list from a config file instead of having an array.
 constexpr std::array kDriverAllowlist{
-    "libsyslog-compat.so",
     "libdriver.so",
     "libasync-default.so",
     "libclang_rt.asan.so",

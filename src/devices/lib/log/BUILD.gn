@@ -16,5 +16,5 @@ source_set("log") {
     "//zircon/system/ulib/service:service-llcpp",
   ]
 
-  public_deps = [ "//zircon/system/ulib/syslog:syslog-compat" ]
+  public_deps = [ "//zircon/system/ulib/syslog" ]
 }

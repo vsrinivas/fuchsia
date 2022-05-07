@@ -39,30 +39,6 @@ zx_library("syslog") {
   ]
 }
 
-zx_library("syslog-compat") {
-  sdk = "shared"
-  sdk_publishable = true
-  sdk_headers = syslog_headers
-
-  sources = [
-    "compat.cc",
-    "fx_logger.cc",
-    "global.cc",
-    "logger.cc",
-  ]
-  deps = [
-    ":helpers",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
-    "//sdk/lib/syslog:client_includes",
-    "//sdk/lib/syslog/cpp:backend_fuchsia_compat",
-    "//sdk/lib/syslog/cpp:cpp-macros",
-    "//sdk/lib/syslog/structured_backend",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/service:service-llcpp",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
 # This static library should have no shared library dependencies,
 # except libzircon, so it may be used from magma client driver libraries
 # such as the Vulkan ICD.
