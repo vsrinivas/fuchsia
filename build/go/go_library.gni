@@ -41,12 +41,6 @@ template("go_library") {
   assert(!(defined(invoker.name) && defined(invoker.name_file)),
          "Defining both name and name_file is not allowed")
 
-  assert(
-      defined(invoker.sources) ||
-          # TODO(fxbug.dev/80334): remove syzkaller-go use of `allow_globbing`
-          target_name == "syzkaller-go",
-      "sources is required for go_library")
-
   source_dir = "."
   if (defined(invoker.source_dir)) {
     source_dir = invoker.source_dir
