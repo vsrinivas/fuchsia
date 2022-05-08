@@ -99,6 +99,8 @@ bool PlatformSupportsGuests() {
 // |start| and |end| point to the start and end of the code that will be copied into the guest for
 // execution. If |start| and |end| are null, no code is copied.
 void SetupGuest(TestCase* test, const char* start, const char* end) {
+  ASSERT_GE(VMO_SIZE, end - start);
+
   ASSERT_EQ(zx::vmo::create(VMO_SIZE, 0, &test->vmo), ZX_OK);
   ASSERT_EQ(zx::vmar::root_self()->map(kHostMapFlags, 0, test->vmo, 0, VMO_SIZE, &test->host_addr),
             ZX_OK);

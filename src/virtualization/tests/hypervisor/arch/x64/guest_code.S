@@ -281,8 +281,8 @@ END_FUNCTION
 // Test 32 bit compatibility mode (long mode disabled).
 FUNCTION vcpu_compat_mode
     init_gdt vcpu_compat_mode_start
-    movq $0, %rbx
-    movq $0, %rcx
+    mov $0, %rbx
+    mov $0, %rcx
 
     // Drop into compatibility mode
     pushq $CODE_32_SELECTOR

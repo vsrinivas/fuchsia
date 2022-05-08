@@ -35,11 +35,6 @@
     .type \name\()_start, STT_FUNC
     \name\()_start:
 
-    // Define the symbol "name".
-    .global \name
-    .type \name, STT_FUNC
-    \name:
-
     // Perform any architecture-specific set up.
     arch_function_start \name\()_start \name\()_end
 
