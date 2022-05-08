@@ -1097,6 +1097,7 @@ func (ns *Netstack) addLoopback() error {
 func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	links := make([]*bridge.BridgeableEndpoint, 0, len(nics))
 	ifStates := make([]*ifState, 0, len(nics))
+	metric := defaultInterfaceMetric
 	for _, nicid := range nics {
 		nicInfo, ok := ns.stack.NICInfo()[nicid]
 		if !ok {
@@ -1111,6 +1112,14 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 			}
 		}
 		links = append(links, ifs.bridgeable)
+
+		// TODO(https://fxbug.dev/86661): Replace this with explicit
+		// configuration. For now, take the minimum default route
+		// metric across all the links because there is currently
+		// no way to specify it when creating the bridge.
+		if ifs.metric < metric {
+			metric = ifs.metric
+		}
 	}
 
 	b, err := bridge.New(links)
@@ -1125,7 +1134,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 		b,
 		b,
 		nil, /* observer */
-		defaultInterfaceMetric,
+		metric,
 	)
 	if err != nil {
 		return nil, err
