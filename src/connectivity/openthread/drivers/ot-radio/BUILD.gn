@@ -48,3 +48,9 @@ ot_radio_driver("nelson") {
   firmware_type = "user"
   firmware_config = "rcp"
 }
+
+ot_radio_driver("nelson-mfg") {
+  board = "nelson"
+  firmware_type = "eng"
+  firmware_config = "rcp"
+}

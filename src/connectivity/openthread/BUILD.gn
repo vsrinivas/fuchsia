@@ -13,6 +13,7 @@ group("drivers") {
     "drivers/ot-radio:ot-radio-luis",
     "drivers/ot-radio:ot-radio-luis-mfg",
     "drivers/ot-radio:ot-radio-nelson",
+    "drivers/ot-radio:ot-radio-nelson-mfg",
     "drivers/ot-radio:ot-radio-sherlock",
     "drivers/ot-radio:ot-radio-sherlock-mfg",
     "tests/fake-drivers/fake-ot-radio:fake-ot-radio-driver",
