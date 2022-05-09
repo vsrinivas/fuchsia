@@ -3,26 +3,58 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g., crates.io) dependencies
+# to registry (e.g., crates.io) dependencies.
 #
-# If you believe there's an error in this file please file an
-# issue against the rust-lang/cargo repository. If you're
-# editing this file be aware that the upstream Cargo.toml
-# will likely look very different (and much more reasonable)
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
 
 [package]
-edition = "2018"
+edition = "2021"
 name = "tracing-mutex"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["Bert Peters <bert@bertptrs.nl>"]
 description = "Ensure deadlock-free mutexes by allocating in order, or else."
 documentation = "https://docs.rs/tracing-mutex"
 readme = "README.md"
-keywords = ["mutex", "rwlock", "once", "thread"]
-categories = ["concurrency", "development-tools::debugging"]
+keywords = [
+    "mutex",
+    "rwlock",
+    "once",
+    "thread",
+]
+categories = [
+    "concurrency",
+    "development-tools::debugging",
+]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/bertptrs/tracing-mutex"
+resolver = "2"
+
+[[bench]]
+name = "mutex"
+harness = false
+
 [dependencies.lazy_static]
 version = "1"
+
+[dependencies.lock_api]
+version = "0.4"
+optional = true
+
+[dependencies.parking_lot]
+version = "0.11"
+optional = true
+
+[dev-dependencies.criterion]
+version = "0.3"
+
 [dev-dependencies.rand]
 version = "0.8"
+
+[features]
+lockapi = ["lock_api"]
+parkinglot = [
+    "parking_lot",
+    "lockapi",
+]

@@ -60,10 +60,18 @@ use std::sync::Once;
 use std::sync::PoisonError;
 
 use lazy_static::lazy_static;
+#[cfg(feature = "lockapi")]
+pub use lock_api;
+#[cfg(feature = "parkinglot")]
+pub use parking_lot;
 
 use crate::graph::DiGraph;
 
 mod graph;
+#[cfg(feature = "lockapi")]
+pub mod lockapi;
+#[cfg(feature = "lockapi")]
+pub mod parkinglot;
 pub mod stdsync;
 
 /// Counter for Mutex IDs. Atomic avoids the need for locking.
@@ -120,6 +128,16 @@ impl MutexId {
     ///
     /// This method panics if the new dependency would introduce a cycle.
     pub fn get_borrowed(&self) -> BorrowedMutex {
+        self.mark_held();
+        BorrowedMutex(self)
+    }
+
+    /// Mark this lock as held for the purposes of dependency tracking.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if the new dependency would introduce a cycle.
+    pub fn mark_held(&self) {
         let creates_cycle = HELD_LOCKS.with(|locks| {
             if let Some(&previous) = locks.borrow().last() {
                 let mut graph = get_dependency_graph();
@@ -136,7 +154,22 @@ impl MutexId {
         }
 
         HELD_LOCKS.with(|locks| locks.borrow_mut().push(self.value()));
-        BorrowedMutex(self)
+    }
+
+    pub unsafe fn mark_released(&self) {
+        HELD_LOCKS.with(|locks| {
+            let mut locks = locks.borrow_mut();
+
+            for (i, &lock) in locks.iter().enumerate().rev() {
+                if lock == self.value() {
+                    locks.remove(i);
+                    return;
+                }
+            }
+
+            // Drop impls shouldn't panic but if this happens something is seriously broken.
+            unreachable!("Tried to drop lock for mutex {:?} but it wasn't held", self)
+        });
     }
 }
 
@@ -184,6 +217,12 @@ impl LazyMutexId {
 impl fmt::Debug for LazyMutexId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.deref())
+    }
+}
+
+impl Default for LazyMutexId {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -241,21 +280,8 @@ struct BorrowedMutex<'a>(&'a MutexId);
 /// that is an indication of a serious design flaw in this library.
 impl<'a> Drop for BorrowedMutex<'a> {
     fn drop(&mut self) {
-        let id = self.0;
-
-        HELD_LOCKS.with(|locks| {
-            let mut locks = locks.borrow_mut();
-
-            for (i, &lock) in locks.iter().enumerate().rev() {
-                if lock == id.value() {
-                    locks.remove(i);
-                    return;
-                }
-            }
-
-            // Drop impls shouldn't panic but if this happens something is seriously broken.
-            unreachable!("Tried to drop lock for mutex {:?} but it wasn't held", id)
-        });
+        // Safety: the only way to get a BorrowedMutex is by locking the mutex.
+        unsafe { self.0.mark_released() };
     }
 }
 
@@ -331,7 +357,9 @@ mod tests {
         let mut edges = Vec::with_capacity(NUM_NODES * NUM_NODES);
         for i in 0..NUM_NODES {
             for j in i..NUM_NODES {
-                edges.push((i, j));
+                if i != j {
+                    edges.push((i, j));
+                }
             }
         }
 

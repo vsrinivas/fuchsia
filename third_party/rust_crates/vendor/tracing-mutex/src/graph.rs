@@ -1,4 +1,3 @@
-use std::array::IntoIter;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -99,8 +98,8 @@ where
     /// would introduce a cycle, the edge is rejected and `false` is returned.
     pub(crate) fn add_edge(&mut self, x: V, y: V) -> bool {
         if x == y {
-            // self-edges are not considered cycles
-            return true;
+            // self-edges are always considered cycles
+            return false;
         }
 
         let (_, out_edges, ub) = self.add_node(x);
@@ -116,7 +115,7 @@ where
 
         if lb < ub {
             // This edge might introduce a cycle, need to recompute the topological sort
-            let mut visited = IntoIter::new([x, y]).collect();
+            let mut visited = [x, y].into_iter().collect();
             let mut delta_f = Vec::new();
             let mut delta_b = Vec::new();
 
@@ -228,6 +227,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_no_self_cycle() {
+        // Regression test for https://github.com/bertptrs/tracing-mutex/issues/7
+        let mut graph = DiGraph::default();
+
+        assert!(!graph.add_edge(1, 1));
+    }
+
+    #[test]
     fn test_digraph() {
         let mut graph = DiGraph::default();
 
@@ -259,7 +266,9 @@ mod tests {
 
         for i in 0..NUM_NODES {
             for j in i..NUM_NODES {
-                edges.push((i, j));
+                if i != j {
+                    edges.push((i, j));
+                }
             }
         }
 
