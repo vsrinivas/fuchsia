@@ -668,6 +668,7 @@ pub fn for_each_row<L: Layout, S: LayerProps>(
     }
 }
 
+#[cfg(feature = "bench")]
 pub fn painter_fill_at_bench(width: usize, height: usize, style: &Style) -> f32x8 {
     let mut sum = f32x8::indexed();
     for y in 0..width {
