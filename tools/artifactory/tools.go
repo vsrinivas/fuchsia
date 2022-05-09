@@ -23,6 +23,7 @@ var (
 		// name once the go bootserver has replaced the old c bootserver
 		// and is called bootserver instead of bootserver_new.
 		"bootserver_new": "bootserver",
+		"ffx":            "ffx",
 		"device-finder":  "device-finder",
 		"symbolize":      "symbolize",
 		// Undercoat is used by fuzzing infrastructure.
