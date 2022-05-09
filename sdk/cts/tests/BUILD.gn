@@ -13,7 +13,7 @@ group("tests_no_e2e") {
     "pkg:tests",
 
     # Tests not under //sdk/cts/...
-    "//src/sys/component_manager/tests/reboot_on_terminate:tests",
+    "//src/sys/component_manager/tests/collections:collections_integration_test",
   ]
 
   # TODO(jcecil): add back tools tests once we're able to execute them OOT.
