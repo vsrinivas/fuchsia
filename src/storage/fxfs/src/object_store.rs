@@ -346,6 +346,25 @@ struct LastObjectId {
     need_cipher: bool,
 }
 
+impl LastObjectId {
+    // Returns true if a cipher is needed to generate new object IDs.
+    fn should_create_cipher(&self) -> bool {
+        self.need_cipher || self.id as u32 == u32::MAX
+    }
+
+    fn get_next_object_id(&mut self) -> u64 {
+        self.id += 1;
+        if let Some(cipher) = &self.cipher {
+            let hi = self.id & OBJECT_ID_HI_MASK;
+            assert_ne!(hi, INVALID_OBJECT_ID);
+            assert_ne!(self.id as u32, 0); // This would indicate the ID wrapped.
+            hi | cipher.encrypt(self.id as u32) as u64
+        } else {
+            self.id
+        }
+    }
+}
+
 /// An object store supports a file like interface for objects.  Objects are keyed by a 64 bit
 /// identifier.  And object store has to be backed by a parent object store (which stores metadata
 /// for the object store).  The top-level object store (a.k.a. the root parent object store) is
@@ -1172,38 +1191,24 @@ impl ObjectStore {
         matches!(*self.lock_state.lock().unwrap(), LockState::Locked)
     }
 
-    // Returns INVALID_OBJECT_ID if the object ID cipher needs to be created.
+    // Returns INVALID_OBJECT_ID if the object ID cipher needs to be created or rolled.
     fn maybe_get_next_object_id(&self) -> u64 {
         let mut last_object_id = self.last_object_id.lock().unwrap();
-        if last_object_id.need_cipher {
+        if last_object_id.should_create_cipher() {
             INVALID_OBJECT_ID
         } else {
-            // TODO(fxbug.dev/99485): We need to generate a new cipher when the low 32 bits of the
-            // ID wraps.
-            last_object_id.id += 1;
-            if let Some(cipher) = &last_object_id.cipher {
-                (last_object_id.id & OBJECT_ID_HI_MASK)
-                    | cipher.encrypt(last_object_id.id as u32) as u64
-            } else {
-                last_object_id.id
-            }
+            last_object_id.get_next_object_id()
         }
     }
 
-    // Returns a new object ID that can be used.  This will create an object ID cipher if necessary
-    // (for migration).
+    // Returns a new object ID that can be used.  This will create an object ID cipher if necessary.
     pub async fn get_next_object_id(&self) -> Result<u64, Error> {
-        let mut object_id = self.maybe_get_next_object_id();
-        if object_id == INVALID_OBJECT_ID {
-            self.set_object_id_cipher().await?;
-            object_id = self.maybe_get_next_object_id();
-            assert_ne!(object_id, INVALID_OBJECT_ID);
+        let object_id = self.maybe_get_next_object_id();
+        if object_id != INVALID_OBJECT_ID {
+            return Ok(object_id);
         }
-        Ok(object_id)
-    }
 
-    // Sets the object ID cipher (if required due to migration).
-    async fn set_object_id_cipher(&self) -> Result<(), Error> {
+        // Create a transaction (which has a lock) and then check again.
         let mut transaction = self
             .filesystem()
             .new_transaction(
@@ -1221,9 +1226,12 @@ impl ObjectStore {
             )
             .await?;
 
-        if !self.last_object_id.lock().unwrap().need_cipher {
-            // We lost a race.
-            return Ok(());
+        {
+            let mut last_object_id = self.last_object_id.lock().unwrap();
+            if !last_object_id.should_create_cipher() {
+                // We lost a race.
+                return Ok(last_object_id.get_next_object_id());
+            }
         }
 
         // Create a key.
@@ -1254,10 +1262,10 @@ impl ObjectStore {
         let mut last_object_id = self.last_object_id.lock().unwrap();
         last_object_id.cipher = Some(Ff1::new(object_id_unwrapped[0].key()));
         last_object_id.need_cipher = false;
-        // Bump the ID so that we don't collide with any existing object IDs.
         last_object_id.id = (last_object_id.id + (1 << 32)) & OBJECT_ID_HI_MASK;
 
-        Ok(())
+        Ok((last_object_id.id & OBJECT_ID_HI_MASK)
+            | last_object_id.cipher.as_ref().unwrap().encrypt(last_object_id.id as u32) as u64)
     }
 
     fn allocator(&self) -> Arc<dyn Allocator> {
@@ -1294,7 +1302,11 @@ impl ObjectStore {
         let mut last_object_id = self.last_object_id.lock().unwrap();
         // For encrypted stores, object_id will be encrypted here, so we must decrypt first.
         if let Some(cipher) = &last_object_id.cipher {
-            object_id = (object_id & OBJECT_ID_HI_MASK) | cipher.decrypt(object_id as u32) as u64;
+            // If the object ID cipher has been rolled, then it's possible we might see object IDs
+            // that were generated using a different cipher so the decrypt here will return the
+            // wrong value, but that won't matter because the hi part of the object ID should still
+            // discriminate.
+            object_id = object_id & OBJECT_ID_HI_MASK | cipher.decrypt(object_id as u32) as u64;
         }
         if object_id > last_object_id.id {
             last_object_id.id = object_id;
@@ -1436,6 +1448,7 @@ impl AssociatedObject for ObjectStore {}
 #[cfg(test)]
 mod tests {
     use {
+        super::OBJECT_ID_HI_MASK,
         crate::{
             crypt::{insecure::InsecureCrypt, Crypt},
             errors::FxfsError,
@@ -1894,8 +1907,6 @@ mod tests {
     #[cfg(target_os = "fuchsia")]
     #[fasync::run(10, test)]
     async fn test_object_id_cipher_upgrade() {
-        use super::OBJECT_ID_HI_MASK;
-
         let device = DeviceHolder::new(
             FakeDevice::from_image(
                 zstd::Decoder::new(
@@ -1957,5 +1968,59 @@ mod tests {
 
         // This time, there shouldn't have been a migration.
         assert_eq!(object.object_id() & OBJECT_ID_HI_MASK, object_id & OBJECT_ID_HI_MASK);
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_object_id_cipher_roll() {
+        let fs = test_filesystem().await;
+        let crypt = Arc::new(InsecureCrypt::new());
+
+        {
+            let root_volume = root_volume(&fs).await.expect("root_volume failed");
+            let store = root_volume
+                .new_volume("test", Some(crypt.clone()))
+                .await
+                .expect("new_volume failed");
+
+            let store_info = store.store_info();
+
+            // Hack the last object ID to force a roll of the object ID cipher.
+            {
+                let mut last_object_id = store.last_object_id.lock().unwrap();
+                assert_eq!(last_object_id.id & OBJECT_ID_HI_MASK, 1u64 << 32);
+                last_object_id.id |= 0xffffffff;
+            }
+
+            let root_directory = Directory::open(&store, store.root_directory_object_id())
+                .await
+                .expect("open failed");
+
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let object = root_directory
+                .create_child_file(&mut transaction, "test")
+                .await
+                .expect("create_child_file failed");
+            transaction.commit().await.expect("commit failed");
+
+            assert_eq!(object.object_id() & OBJECT_ID_HI_MASK, 2u64 << 32);
+
+            // Check that the key has been changed.
+            assert_ne!(store.store_info().object_id_key, store_info.object_id_key);
+
+            assert_eq!(store.last_object_id.lock().unwrap().id, 2u64 << 32);
+        };
+
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+        let fs = FxFilesystem::open(device).await.expect("open failed");
+        let root_volume = root_volume(&fs).await.expect("root_volume failed");
+        let store = root_volume.volume("test", Some(crypt.clone())).await.expect("volume failed");
+
+        assert_eq!(store.last_object_id.lock().unwrap().id, 2u64 << 32);
     }
 }
