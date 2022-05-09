@@ -31,6 +31,11 @@ pub struct m32x4(__m128i);
 pub struct m32x8(__m256i);
 
 impl m32x8 {
+    pub fn splat(val: u32) -> Self {
+        // Casting between two integers of the same size is a no-op.
+        // It preserves the binary representation.
+        Self(unsafe { _mm256_set1_epi32(val as i32) })
+    }
     pub fn all(self) -> bool {
         unsafe { _mm256_movemask_epi8(_mm256_cmpeq_epi32(self.0, _mm256_setzero_si256())) == 0 }
     }
@@ -279,6 +284,22 @@ pub struct u32x8(__m256i);
 impl u32x8 {
     pub fn splat(val: u32) -> Self {
         Self(unsafe { _mm256_set1_epi32(val as i32) })
+    }
+
+    pub fn mul_add(self, a: Self, b: Self) -> Self {
+        Self(unsafe { _mm256_add_epi32(_mm256_mullo_epi32(self.0, a.0), b.0) })
+    }
+
+    pub fn to_array(self) -> [u32; 8] {
+        unsafe { mem::transmute(self.0) }
+    }
+}
+
+impl From<f32x8> for u32x8 {
+    fn from(val: f32x8) -> Self {
+        // Sets negative value to 0 to prevent _mm256_cvttps_epi32 from 
+        // returning negative values.
+        Self(unsafe { _mm256_cvttps_epi32(val.max(f32x8::splat(0.0)).0) })
     }
 }
 

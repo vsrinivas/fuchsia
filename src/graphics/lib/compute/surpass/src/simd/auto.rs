@@ -334,6 +334,30 @@ impl u32x8 {
     pub fn splat(val: u32) -> Self {
         Self([val, val, val, val, val, val, val, val])
     }
+
+    pub fn to_array(self) -> [u32; 8] {
+        self.0
+    }
+
+    pub fn mul_add(mut self, a: Self, b: Self) -> Self {
+        self.0.iter_mut().zip(a.0.iter().zip(b.0.iter())).for_each(|(t, (&a, &b))| *t = *t * a + b);
+        self
+    }
+}
+
+impl From<f32x8> for u32x8 {
+    fn from(val: f32x8) -> Self {
+        Self([
+            val.0[0] as u32,
+            val.0[1] as u32,
+            val.0[2] as u32,
+            val.0[3] as u32,
+            val.0[4] as u32,
+            val.0[5] as u32,
+            val.0[6] as u32,
+            val.0[7] as u32,
+        ])
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]

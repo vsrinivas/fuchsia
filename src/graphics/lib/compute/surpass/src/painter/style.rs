@@ -4,7 +4,10 @@
 
 use std::{fmt, hash, sync::Arc};
 
-use crate::{simd::f32x8, AffineTransform, CanonBits, Point};
+use crate::{
+    simd::{f32x8, u32x8},
+    AffineTransform, CanonBits, Point,
+};
 
 pub(crate) trait Ratio {
     fn zero() -> Self;
@@ -345,15 +348,42 @@ impl fmt::Display for ImageError {
     }
 }
 
+/// Floating point value with  bits of sign, 5 bits of exponent, and
+/// 11 bits of mantissa.
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+struct cf16(u16);
+
+impl cf16 {
+    #[inline]
+    fn to_f32(self) -> f32 {
+        f32::from_bits(((((self.0 as i32) << 16) >> 2) as u32) >> 2)
+    }
+}
+
+impl From<f32> for cf16 {
+    fn from(val: f32) -> Self {
+        Self((f32::to_bits(val) >> 12) as u16)
+    }
+}
+
+/// Transforms sRGB component into linear space.
+fn to_linear(l: u8) -> f32 {
+    let l = l as f32 * 255.0f32.recip();
+    if l <= 0.04045 {
+        l * 12.92f32.recip()
+    } else {
+        ((l + 0.055) * 1.055f32.recip()).powf(2.4)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Image {
-    /// Image pixels stored as f32 components xyza in linear space.
-    /// The array is expected to contain width * height elements.
-    data: Box<[[f32; 4]]>,
+    data: Box<[[cf16; 4]]>,
+    max_x: f32,
+    max_y: f32,
     /// Width of the image.
-    width: f32,
-    /// Height of the image.
-    height: f32,
+    width: u32,
 }
 
 impl Eq for Image {}
@@ -361,27 +391,58 @@ impl Eq for Image {}
 impl PartialEq for Image {
     fn eq(&self, other: &Self) -> bool {
         self.data.as_ptr() == other.data.as_ptr()
-            && self.width == other.width
-            && self.height == other.height
+            && self.max_x == other.max_x
+            && self.max_y == other.max_y
     }
 }
 
 impl hash::Hash for Image {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
         self.data.as_ptr().hash(state);
-        self.width.to_canon_bits().hash(state);
-        self.height.to_canon_bits().hash(state);
+        self.max_x.to_canon_bits().hash(state);
+        self.max_y.to_canon_bits().hash(state);
     }
 }
 
 impl Image {
-    pub fn new(data: Box<[[f32; 4]]>, width: usize, height: usize) -> Result<Image, ImageError> {
+    /// Creates an image from sRGB color channels and linear alpha.
+    /// The boxed array size must match the image dimensions.
+    pub fn from_srgba(
+        data: Box<[[u8; 4]]>,
+        width: usize,
+        height: usize,
+    ) -> Result<Self, ImageError> {
+        let to_alpha = |a| (a as f32) * (u8::MAX as f32).recip();
+        let data = data
+            .iter()
+            .map(|c| {
+                [to_linear(c[0]), to_linear(c[1]), to_linear(c[2]), to_alpha(c[3])].map(cf16::from)
+            })
+            .collect();
+        Self::new(data, width, height)
+    }
+
+    pub fn from_linear_rgba(
+        data: Box<[[f32; 4]]>,
+        width: usize,
+        height: usize,
+    ) -> Result<Self, ImageError> {
+        let data = data.iter().map(|c| c.map(cf16::from)).collect();
+        Self::new(data, width, height)
+    }
+
+    fn new(data: Box<[[cf16; 4]]>, width: usize, height: usize) -> Result<Self, ImageError> {
         match width * height {
-            len if len > (1 << f32::MANTISSA_DIGITS) => Err(ImageError::TooLarge),
+            len if len > u32::MAX as usize => Err(ImageError::TooLarge),
             len if len != data.len() => {
                 Err(ImageError::SizeMismatch { len: data.len(), width, height })
             }
-            _ => Ok(Image { data, width: width as f32, height: height as f32 }),
+            _ => Ok(Image {
+                data,
+                max_x: width as f32 - 1.0,
+                max_y: height as f32 - 1.0,
+                width: width as u32,
+            }),
         }
     }
 }
@@ -396,34 +457,38 @@ pub struct Texture {
 }
 
 impl Texture {
-    #[inline(never)]
-    pub fn color_at(&self, x: f32, y: f32) -> [f32x8; 4] {
+    #[inline]
+    pub(crate) fn color_at(&self, x: f32, y: f32) -> [f32x8; 4] {
         let x = f32x8::splat(x);
         let y = f32x8::splat(y) + f32x8::indexed();
         // Apply affine transformation.
         let t = self.transform;
         let tx = x.mul_add(f32x8::splat(t.ux), f32x8::splat(t.vx).mul_add(y, f32x8::splat(t.tx)));
         let ty = x.mul_add(f32x8::splat(t.uy), f32x8::splat(t.vy).mul_add(y, f32x8::splat(t.ty)));
-        // Apply Clamp texture mode.
-        let tx = tx.clamp(f32x8::splat(0.0), f32x8::splat(self.image.width - 1.0)).floor();
-        let ty = ty.clamp(f32x8::splat(0.0), f32x8::splat(self.image.height - 1.0)).floor();
+
+        // Assume that conversion clamp to 0.
+        let tx = u32x8::from(tx.min(f32x8::splat(self.image.max_x)));
+        let ty = u32x8::from(ty.min(f32x8::splat(self.image.max_y)));
         // Compute texture offsets.
-        // Largest consecutive integer is 2^53
-        let offsets = ty.mul_add(f32x8::splat(self.image.width as f32), tx);
+        // Largest consecutive integer is 2^24
+        let offsets = ty.mul_add(u32x8::splat(self.image.width), tx);
+
         let data = &*self.image.data;
-        // TODO(fxb/94997): Evaluate SIMD conversion to u32x8.
-        let pixels = offsets.to_array().map(|o| data[o as usize]);
-        let get_channel = |c| {
-            f32x8::from_array([
-                pixels[0][c],
-                pixels[1][c],
-                pixels[2][c],
-                pixels[3][c],
-                pixels[4][c],
-                pixels[5][c],
-                pixels[6][c],
-                pixels[7][c],
-            ])
+        let pixels = offsets.to_array().map(|o| unsafe { data.get_unchecked(o as usize) });
+
+        let get_channel = |c: usize| {
+            f32x8::from_array(
+                [
+                    pixels[0][c].to_f32(),
+                    pixels[1][c].to_f32(),
+                    pixels[2][c].to_f32(),
+                    pixels[3][c].to_f32(),
+                    pixels[4][c].to_f32(),
+                    pixels[5][c].to_f32(),
+                    pixels[6][c].to_f32(),
+                    pixels[7][c].to_f32(),
+                ]              
+            )
         };
         [get_channel(0), get_channel(1), get_channel(2), get_channel(3)]
     }
@@ -852,6 +917,8 @@ pub struct Style {
 
 #[cfg(test)]
 mod tests {
+    use std::{collections::HashSet, convert::TryInto};
+
     use super::*;
 
     const EPSILON: f32 = 0.001;
@@ -1197,18 +1264,17 @@ mod tests {
         let max = color.max();
         assert_eq!(max, 3.0);
     }
+    const C00: Color = Color { r: 0.0000, g: 0.03125, b: 0.0625, a: 0.09375 };
+    const C01: Color = Color { r: 0.1250, g: 0.15625, b: 0.1875, a: 0.21875 };
+    const C10: Color = Color { r: 0.2500, g: 0.28125, b: 0.3125, a: 0.34375 };
+    const C11: Color = Color { r: 0.3750, g: 0.40625, b: 0.4375, a: 0.46875 };
+    const C20: Color = Color { r: 0.5000, g: 0.53125, b: 0.5625, a: 0.59375 };
+    const C21: Color = Color { r: 0.6250, g: 0.65625, b: 0.6875, a: 0.71875 };
 
     fn apply_texture_color_at(transform: AffineTransform) -> Vec<[f32; 8]> {
         let image = Arc::new(
-            Image::new(
-                Box::new([
-                    [0.1, 0.2, 0.3, 0.1],
-                    [0.4, 0.5, 0.6, 0.2],
-                    [0.7, 0.8, 0.9, 0.3],
-                    [0.8, 0.7, 0.6, 0.4],
-                    [0.5, 0.4, 0.5, 0.5],
-                    [0.2, 0.1, 0.0, 0.6],
-                ]),
+            Image::from_linear_rgba(
+                [C00, C01, C10, C11, C20, C21].iter().map(|c| c.to_array()).collect(),
                 2,
                 3,
             )
@@ -1218,16 +1284,19 @@ mod tests {
         texture.color_at(-2.0, -2.0).iter().map(|v| v.to_array().clone()).collect()
     }
 
+    fn transpose(colors: [Color; 8]) -> Vec<[f32; 8]> {
+        (0..4)
+            .map(|i| {
+                colors.iter().map(|c| c.to_array()[i]).collect::<Vec<f32>>().try_into().unwrap()
+            })
+            .collect()
+    }
+
     #[test]
     fn texture_color_at_with_identity() {
         assert_eq!(
             apply_texture_color_at(AffineTransform::default()),
-            [
-                [0.1, 0.1, 0.1, 0.7, 0.5, 0.5, 0.5, 0.5],
-                [0.2, 0.2, 0.2, 0.8, 0.4, 0.4, 0.4, 0.4],
-                [0.3, 0.3, 0.3, 0.9, 0.5, 0.5, 0.5, 0.5],
-                [0.1, 0.1, 0.1, 0.3, 0.5, 0.5, 0.5, 0.5],
-            ],
+            transpose([C00, C00, C00, C10, C20, C20, C20, C20])
         );
     }
 
@@ -1242,12 +1311,7 @@ mod tests {
                 tx: 0.0,
                 ty: 0.0
             }),
-            [
-                [0.1, 0.1, 0.1, 0.1, 0.7, 0.7, 0.5, 0.5],
-                [0.2, 0.2, 0.2, 0.2, 0.8, 0.8, 0.4, 0.4],
-                [0.3, 0.3, 0.3, 0.3, 0.9, 0.9, 0.5, 0.5],
-                [0.1, 0.1, 0.1, 0.1, 0.3, 0.3, 0.5, 0.5],
-            ],
+            transpose([C00, C00, C00, C00, C10, C10, C20, C20])
         );
     }
 
@@ -1262,12 +1326,7 @@ mod tests {
                 tx: 1.0,
                 ty: 1.0
             }),
-            [
-                [0.1, 0.1, 0.7, 0.5, 0.5, 0.5, 0.5, 0.5],
-                [0.2, 0.2, 0.8, 0.4, 0.4, 0.4, 0.4, 0.4],
-                [0.3, 0.3, 0.9, 0.5, 0.5, 0.5, 0.5, 0.5],
-                [0.1, 0.1, 0.3, 0.5, 0.5, 0.5, 0.5, 0.5],
-            ],
+            transpose([C00, C00, C10, C20, C20, C20, C20, C20])
         );
     }
 
@@ -1282,12 +1341,42 @@ mod tests {
                 tx: 0.0,
                 ty: 0.0
             }),
-            [
-                [0.1, 0.1, 0.1, 0.4, 0.4, 0.4, 0.4, 0.4],
-                [0.2, 0.2, 0.2, 0.5, 0.5, 0.5, 0.5, 0.5],
-                [0.3, 0.3, 0.3, 0.6, 0.6, 0.6, 0.6, 0.6],
-                [0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.2, 0.2],
-            ],
+            transpose([C00, C00, C00, C01, C01, C01, C01, C01])
         );
+    }
+
+    #[test]
+    fn cf16_error() {
+        // Error for the 256 values of u8 alpha is low.
+        let alpha_mse = (0u8..=255u8)
+            .map(|u| u as f32 / 255.0)
+            .map(|v| (v - cf16::from(v).to_f32()))
+            .map(|d| d * d)
+            .sum::<f32>()
+            / 256.0;
+        assert!(alpha_mse < 2e-8, "alpha_mse: {}", alpha_mse);
+
+        // Values for 256 values of u8 alpha are distinct.
+        let alpha_distinct =
+            (0u8..=255u8).map(|a| cf16::from(a as f32 / 255.0)).collect::<HashSet<cf16>>().len();
+        assert_eq!(alpha_distinct, 256);
+
+        // Error for the 256 value of u8 sRGB is low.
+        let component_mse = (0u8..=255u8)
+            .map(to_linear)
+            .map(|v| (v - cf16::from(v).to_f32()))
+            .map(|d| d * d)
+            .sum::<f32>()
+            / 256.0;
+        assert!(component_mse < 6e-9, "component_mse: {}", component_mse);
+
+        // Values for 256 values of u8 sRGB are distinct.
+        let component_distinct =
+            (0u8..=255u8).map(|c| cf16::from(to_linear(c))).collect::<HashSet<cf16>>().len();
+        assert_eq!(component_distinct, 256);
+
+        // Min and max values are intact.
+        assert_eq!(cf16::from(0.0).to_f32(), 0.0);
+        assert_eq!(cf16::from(1.0).to_f32(), 1.0);
     }
 }

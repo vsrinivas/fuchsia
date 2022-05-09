@@ -76,6 +76,8 @@ impl Simd for f32x8 {
 
 #[cfg(test)]
 mod tests {
+    use std::f32::INFINITY;
+
     use super::*;
 
     #[test]
@@ -107,5 +109,72 @@ mod tests {
         let value = [-0.0, -0.1, -1.5, -2.5, -3.5, -4.5, -5.6, -6.7];
         let expected = [-0.0, -1.0, -2.0, -3.0, -4.0, -5.0, -6.0, -7.0];
         assert_eq!(f32x8::from_array(value).floor().to_array(), expected);
+    }
+
+    #[test]
+    fn u32x8_splat() {
+        assert_eq!([0; 8], u32x8::splat(0).to_array());
+        assert_eq!([u32::MAX; 8], u32x8::splat(u32::MAX).to_array());
+        assert_eq!([u32::MIN; 8], u32x8::splat(u32::MIN).to_array());
+    }
+
+    #[test]
+    fn u32x8_mul_add() {
+        let a = u32x8::from(f32x8::from_array([10.0, 20.0, 30.0, 50.0, 70.0, 110.0, 130.0, 170.0]));
+        let b = u32x8::from(f32x8::from_array([19.0, 23.0, 29.0, 31.0, 37.0, 41.0, 43.0, 47.0]));
+        let c = u32x8::from(f32x8::from_array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]));
+        let expected = [191, 462, 873, 1554, 2595, 4516, 5597, 7998];
+        assert_eq!(expected, u32x8::mul_add(a, b, c).to_array());
+
+        let a = u32x8::from(f32x8::splat(0x7fffff as f32));
+        let b = u32x8::from(f32x8::splat(0x200 as f32));
+        let c = u32x8::from(f32x8::splat(0x1ff as f32));
+        let expected = [u32::MAX; 8];
+        assert_eq!(expected, u32x8::mul_add(a, b, c).to_array());
+    }
+
+    #[test]
+    fn u32x8_from_f32x8() {
+        let values = u32x8::from(f32x8::from_array([
+            -INFINITY,
+            -f32::MAX,
+            -2.5,
+            -1.0,
+            -0.5,
+            -f32::MIN_POSITIVE,
+            -0.0,
+            0.0,
+        ]));
+        assert_eq!(values.to_array(), [0u32; 8]);
+
+        let f32_before = |f| f32::from_bits(f32::to_bits(f) - 1);
+        let values = u32x8::from(f32x8::from_array([
+            0.0,
+            f32::MIN_POSITIVE,
+            0.4,
+            0.5,
+            0.6,
+            0.7,
+            0.8,
+            f32_before(1.),
+        ]));
+        assert_eq!(values.to_array(), [0u32; 8]);
+
+        let values = u32x8::from(f32x8::from_array([
+            1.0,
+            1.4,
+            1.5,
+            f32_before(2.0),
+            2.0,
+            2.4,
+            2.5,
+            f32_before(3.0),
+        ]));
+        assert_eq!(values.to_array(), [1, 1, 1, 1, 2, 2, 2, 2]);
+
+        const MAX_INT_F32: u32 = 1u32 << 24;
+        for value in (MAX_INT_F32 - 255)..MAX_INT_F32 {
+            assert_eq!([value; 8], u32x8::from(f32x8::splat(value as f32)).to_array());
+        }
     }
 }

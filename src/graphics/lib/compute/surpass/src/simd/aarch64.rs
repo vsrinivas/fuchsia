@@ -146,6 +146,22 @@ impl u32x8 {
     pub fn splat(val: u32) -> Self {
         Self(unsafe { [vdupq_n_u32(val), vdupq_n_u32(val)] })
     }
+
+    pub fn to_array(self) -> [u32; 8] {
+        unsafe { mem::transmute(self.0) }
+    }
+
+    pub fn mul_add(self, a: Self, b: Self) -> Self {
+        Self(unsafe {
+            [vmlaq_u32(b.0[0], self.0[0], a.0[0]), vmlaq_u32(b.0[1], self.0[1], a.0[1])]
+        })
+    }
+}
+
+impl From<f32x8> for u32x8 {
+    fn from(val: f32x8) -> Self {
+        Self(unsafe { [vcvtq_u32_f32(val.0[0]), vcvtq_u32_f32(val.0[1])] })
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
