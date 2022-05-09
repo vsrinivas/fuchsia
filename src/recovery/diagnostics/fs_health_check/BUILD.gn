@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
   output_name = "fs_health_check"
@@ -22,21 +23,11 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("fs-health-check-cmp") {
+fuchsia_package_with_single_component("fs-health-check") {
+  manifest = "meta/fs_health_check.cml"
   deps = [ ":bin" ]
-  manifest = "meta/fs_health_check.cmx"
-  component_name = "fs-health-check"
 }
 
-fuchsia_package("fs-health-check") {
-  deps = [
-    ":config",
-    ":fs-health-check-cmp",
-  ]
-}
-
-config_data("config") {
-  for_pkg = "sysmgr"
-  outputs = [ "fs-health-check.config" ]
-  sources = [ "sysmgr.config" ]
+core_shard("fs-health-check-core-shard") {
+  shard_file = "meta/fs_health_check.core_shard.cml"
 }
