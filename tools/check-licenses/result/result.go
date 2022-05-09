@@ -20,6 +20,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/result/world"
 )
 
 const (
@@ -75,6 +76,12 @@ func SaveResults() (string, error) {
 	b.WriteString(s)
 
 	s, err = savePackageInfo("result", Config, Metrics)
+	if err != nil {
+		return "", err
+	}
+	b.WriteString(s)
+
+	s, err = savePackageInfo("world", world.Config, world.Metrics)
 	if err != nil {
 		return "", err
 	}

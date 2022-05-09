@@ -119,10 +119,29 @@ func (w *World) getFileMap() (map[string]*project.Project, error) {
 			}
 			filePath := "//" + path
 			folderPath := "//" + filepath.Dir(path)
-			fileMap[filePath] = p
-			fileMap[folderPath] = p
+
+			// "gn gen" may reveal that the current workspace has a a dependency on a LICENSE file.
+			// That LICENSE file may be used in two or more different projects across fuchsia.git.
+			// There's no way for us to tell which project actually contributes to the build.
+			//
+			// We want to deterministically generate the final NOTICE file, so in this situation
+			// we simply choose the project that comes first alphabetically.
+			//
+			// In practice this simple strategy should be OK. "gn desc" / "gn gen" will undoubtedly
+			// also have dependencies on other files in the project, which will ensure that the correct
+			// project is included (even if we also occasionally include an unrelated one).
+			if otherP, ok := fileMap[filePath]; ok {
+				if p.Root < otherP.Root {
+					fileMap[filePath] = p
+					fileMap[folderPath] = p
+				}
+			} else {
+				fileMap[filePath] = p
+				fileMap[folderPath] = p
+			}
 		}
 	}
+
 	return fileMap, nil
 }
 

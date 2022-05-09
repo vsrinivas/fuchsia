@@ -147,7 +147,7 @@ func AllFilesAndFoldersMustBeIncludedInAProject() error {
 	b.WriteString("and a README.fuchsia file must exist and specify where the license file lives.\n")
 	b.WriteString("The following directories are not included in a project:\n\n")
 	recurse = func(ft *filetree.FileTree) {
-		if len(ft.Projects) == 0 {
+		if ft.Project == nil {
 			b.WriteString(fmt.Sprintf("-> %v\n", ft.Path))
 			count = count + 1
 			return

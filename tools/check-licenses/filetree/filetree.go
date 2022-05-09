@@ -16,12 +16,12 @@ import (
 
 // FileTree is an in memory representation of the state of the repository.
 type FileTree struct {
-	Name      string             `json:"name,omitempty"`
-	Path      string             `json:"path,omitempty"`
-	FilePaths []string           `json:"files,omitempty"`
-	Children  []*FileTree        `json:"children,omitempty"`
-	Parent    *FileTree          `json:"-"`
-	Projects  []*project.Project `json:"project,omitempty"`
+	Name      string           `json:"name,omitempty"`
+	Path      string           `json:"path,omitempty"`
+	FilePaths []string         `json:"files,omitempty"`
+	Children  []*FileTree      `json:"children,omitempty"`
+	Parent    *FileTree        `json:"-"`
+	Project   *project.Project `json:"project,omitempty"`
 
 	sync.RWMutex
 }
@@ -48,7 +48,7 @@ func NewFileTree(root string, parent *FileTree) (*FileTree, error) {
 	// then the license info of the parent directory also applies to this directory.
 	// Propagate that information down here.
 	if !project.IsBarrier(root) && parent != nil {
-		ft.Projects = append(ft.Projects, parent.Projects...)
+		ft.Project = parent.Project
 	}
 
 	directoryContents, err := os.ReadDir(root)
@@ -67,7 +67,7 @@ func NewFileTree(root string, parent *FileTree) (*FileTree, error) {
 			return nil, err
 		}
 	} else {
-		ft.Projects = append(ft.Projects, p)
+		ft.Project = p
 	}
 
 	// Then traverse the rest of the contents of this directory.
@@ -105,10 +105,9 @@ func NewFileTree(root string, parent *FileTree) (*FileTree, error) {
 	}
 
 	sort.Sort(Order(ft.Children))
-	sort.Sort(project.Order(ft.Projects))
 
 	// Verify that all files in the current directory belong to a project.
-	if len(ft.Projects) == 0 {
+	if ft.Project == nil {
 		for _, f := range ft.FilePaths {
 			plusVal(FileMissingProject, f)
 		}
@@ -119,8 +118,8 @@ func NewFileTree(root string, parent *FileTree) (*FileTree, error) {
 			}
 		}
 	}
-	for _, p := range ft.Projects {
-		p.AddFiles(ft.FilePaths)
+	if ft.Project != nil {
+		ft.Project.AddFiles(ft.FilePaths)
 	}
 
 	AllFileTrees[ft.Path] = &ft
