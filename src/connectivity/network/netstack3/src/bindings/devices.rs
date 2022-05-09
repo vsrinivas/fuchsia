@@ -310,6 +310,7 @@ pub struct CommonInfo {
     pub mtu: u32,
     pub admin_enabled: bool,
     pub events: super::InterfaceEventProducer,
+    pub name: String,
 }
 
 /// Loopback device information.

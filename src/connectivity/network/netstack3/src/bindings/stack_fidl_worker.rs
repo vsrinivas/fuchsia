@@ -192,6 +192,7 @@ where
             } else {
                 finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Ethernet)
             };
+            let name = format!("eth{}", id);
 
             DeviceSpecificInfo::Ethernet(EthernetInfo {
                 common_info: CommonInfo {
@@ -199,8 +200,9 @@ where
                     admin_enabled: true,
                     events: worker.ctx.create_interface_event_producer(
                         id,
-                        super::InterfaceProperties { name: format!("eth{}", id), device_class },
+                        super::InterfaceProperties { name: name.clone(), device_class },
                     ),
+                    name,
                 },
                 client,
                 mac: mac_addr,
@@ -339,14 +341,14 @@ where
         self.ctx.update_device_state(id, |dev_info| {
             let admin_enabled: &mut bool = match dev_info.info_mut() {
                 DeviceSpecificInfo::Ethernet(EthernetInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
                     client: _,
                     mac: _,
                     features: _,
                     phy_up: _,
                 }) => admin_enabled,
                 DeviceSpecificInfo::Loopback(LoopbackInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
                 }) => admin_enabled,
             };
             *admin_enabled = true;
@@ -358,14 +360,14 @@ where
         self.ctx.update_device_state(id, |dev_info| {
             let admin_enabled: &mut bool = match dev_info.info_mut() {
                 DeviceSpecificInfo::Ethernet(EthernetInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
                     client: _,
                     mac: _,
                     features: _,
                     phy_up: _,
                 }) => admin_enabled,
                 DeviceSpecificInfo::Loopback(LoopbackInfo {
-                    common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
+                    common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
                 }) => admin_enabled,
             };
             *admin_enabled = false;

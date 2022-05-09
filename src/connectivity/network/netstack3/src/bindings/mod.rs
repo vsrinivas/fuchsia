@@ -310,7 +310,7 @@ where
 
         match dev.info_mut() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
+                common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
                 client,
                 mac: _,
                 features: _,
@@ -530,14 +530,14 @@ where
 
         let enabled = match device.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
+                common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
                 client: _,
                 mac: _,
                 features: _,
                 phy_up,
             }) => *admin_enabled && *phy_up,
             DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _, events: _ },
+                common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
             }) => *admin_enabled,
         };
 
@@ -551,14 +551,14 @@ where
         // allow traffic on the interface.
         let generate_core_id = |info: &DeviceInfo| match info.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu, events: _ },
+                common_info: CommonInfo { admin_enabled: _, mtu, events: _, name: _ },
                 client: _,
                 mac,
                 features: _,
                 phy_up: _,
             }) => state.add_ethernet_device(*mac, *mtu),
             DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu, events: _ },
+                common_info: CommonInfo { admin_enabled: _, mtu, events: _, name: _ },
             }) => {
                 // Should not panic as we only reach this point if a device
                 // was previously disabled and (as of writing) disabled
@@ -602,14 +602,14 @@ where
             Ok((core_id, device_info)) => {
                 let (online, events) = match device_info.info() {
                     DeviceSpecificInfo::Ethernet(EthernetInfo {
-                        common_info: CommonInfo { admin_enabled, mtu: _, events },
+                        common_info: CommonInfo { admin_enabled, mtu: _, events, name: _ },
                         client: _,
                         mac: _,
                         features: _,
                         phy_up,
                     }) => (*admin_enabled && *phy_up, events),
                     DeviceSpecificInfo::Loopback(LoopbackInfo {
-                        common_info: CommonInfo { admin_enabled, mtu: _, events },
+                        common_info: CommonInfo { admin_enabled, mtu: _, events, name: _ },
                     }) => (*admin_enabled, events),
                 };
                 // Sanity check that there is a reason that the device is
@@ -743,10 +743,11 @@ impl NetstackSeed {
                 .expect("error adding loopback device");
             let _binding_id: u64 = devices
                 .add_active_device(loopback, |id| {
+                    const LOOPBACK_NAME: &'static str = "lo";
                     let events = netstack.create_interface_event_producer(
                         id,
                         InterfaceProperties {
-                            name: format!("lo"),
+                            name: LOOPBACK_NAME.to_string(),
                             device_class: fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
                                 fidl_fuchsia_net_interfaces::Empty {},
                             ),
@@ -760,6 +761,7 @@ impl NetstackSeed {
                             mtu: DEFAULT_LOOPBACK_MTU,
                             admin_enabled: true,
                             events,
+                            name: LOOPBACK_NAME.to_string(),
                         },
                     })
                 })

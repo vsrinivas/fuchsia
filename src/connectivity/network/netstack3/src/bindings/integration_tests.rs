@@ -295,14 +295,14 @@ impl TestStack {
     pub(crate) async fn wait_for_interface_online(&mut self, if_id: u64) {
         let check_online = |info: &DeviceInfo| match info.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _ },
+                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
                 client: _,
                 mac: _,
                 features: _,
                 phy_up,
             }) => *phy_up,
             DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _ },
+                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
             }) => true,
         };
         self.wait_for_interface_status(if_id, check_online).await;
@@ -312,14 +312,14 @@ impl TestStack {
     pub(crate) async fn wait_for_interface_offline(&mut self, if_id: u64) {
         let check_offline = |info: &DeviceInfo| match info.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _ },
+                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
                 client: _,
                 mac: _,
                 features: _,
                 phy_up,
             }) => !phy_up,
             DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _ },
+                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
             }) => false,
         };
         self.wait_for_interface_status(if_id, check_offline).await;
@@ -409,7 +409,20 @@ impl TestStack {
                 .collect()
         });
 
-        let (admin_enabled, phy_up) = assert_matches::assert_matches!(device.info(), DeviceSpecificInfo::Ethernet(EthernetInfo {  common_info: CommonInfo { admin_enabled, mtu: _, events: _ }, client: _, mac: _, features: _, phy_up }) => (*admin_enabled, *phy_up));
+        let (admin_enabled, phy_up) = assert_matches::assert_matches!(
+            device.info(),
+            DeviceSpecificInfo::Ethernet(EthernetInfo {
+                common_info: CommonInfo {
+                    admin_enabled,
+                    mtu: _,
+                    events: _,
+                    name: _,
+                },
+                client: _,
+                mac: _,
+                features: _,
+                phy_up
+            }) => (*admin_enabled, *phy_up));
         InterfaceInfo { admin_enabled, phy_up, addresses }
     }
 }
