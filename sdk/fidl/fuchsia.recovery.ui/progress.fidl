@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.recovery.ui;
+
+type Status = strict enum {
+    ACTIVE = 1;
+    PAUSED = 2;
+    ERROR = 3;
+    CANCELLED = 4;
+    COMPLETE = 5;
+};
+
+/// Protocol to receive progress updates to display a carnelian based progress bar UI.
+@discoverable
+protocol ProgressRenderer {
+    /// Called to send progress updates to the renderer.
+    ///
+    /// The return value is used for flow control, and implementers should acknowledge receipt of
+    /// each message in order to continue receiving future messages.
+    Render(struct {
+        status Status;
+        percent_complete float32;
+    }) -> ();
+};
