@@ -100,17 +100,27 @@ template("rustc_artifact") {
     _rustflags += invoker.rustflags
   }
 
+  _configs = invoker.configs
+
+  # in-tree default is 2018 edition
+  if (defined(invoker.edition)) {
+    assert(invoker.edition == "2015" || invoker.edition == "2018",
+           "Only editions 2015 and 2018 are supported")
+
+    # in-tree default is 2018 edition
+    if (invoker.edition == "2015") {
+      _configs -= [ "//build/config/rust:edition_2018" ]
+      _configs += [ "//build/config/rust:edition_2015" ]
+    }
+  }
+
   _target_name = "$target_name.actual"
   _clippy_name = "$target_name.clippy"
 
   _disable_clippy = defined(invoker.disable_clippy) && invoker.disable_clippy
   if (!_disable_clippy) {
     clippy(_clippy_name) {
-      forward_variables_from(invoker,
-                             [
-                               "edition",
-                               "configs",
-                             ])
+      configs = _configs
       forward_variables_from(invoker.pass_through, [ "testonly" ])
       rustflags = _rustflags
       sources = invoker.sources
@@ -191,7 +201,7 @@ template("rustc_artifact") {
     rustflags += _rustflags
 
     configs = []
-    configs = invoker.configs
+    configs = _configs
     deps = invoker.deps
     inputs = _local_inputs
 
@@ -215,18 +225,6 @@ template("rustc_artifact") {
     # Clippy target is a gen dep if it's not included in the group
     if (!_disable_clippy && !include_clippy) {
       gen_deps = [ ":$_clippy_name" ]
-    }
-
-    # in-tree default is 2018 edition
-    if (defined(invoker.edition)) {
-      assert(invoker.edition == "2015" || invoker.edition == "2018",
-             "Only editions 2015 and 2018 are supported")
-
-      # in-tree default is 2018 edition
-      if (invoker.edition == "2015") {
-        configs -= [ "//build/config/rust:edition_2018" ]
-        configs += [ "//build/config/rust:edition_2015" ]
-      }
     }
 
     # _pass_through and not_needed are to workaround https://crbug.com/gn/10
