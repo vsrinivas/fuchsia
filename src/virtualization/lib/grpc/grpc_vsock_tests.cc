@@ -16,38 +16,25 @@ constexpr uint32_t kTestServicePort = 1234;
 constexpr const char* kTestMessage = "This is only a test";
 
 class GrpcVsockTest : public gtest::TestLoopFixture {
- public:
-  void SetUp() override {
-    TestLoopFixture::SetUp();
-    // Setup a fake guest realm that we can use to connect to a
-    // HostVsockEndpoint.
-    provider_.service_directory_provider()->AddService(fake_guest_manager_.GetHandler());
-    fuchsia::virtualization::ManagerPtr manager;
-    provider_.context()->svc()->Connect(manager.NewRequest());
-    manager->Create("test realm", realm_.NewRequest());
-    RunLoopUntilIdle();
-  }
-
  protected:
   // Connects to the |HostVsockEnpoint| for the realm.
   fuchsia::virtualization::HostVsockEndpointPtr GetHostVsockEndpoint() {
     fuchsia::virtualization::HostVsockEndpointPtr result;
-    realm_->GetHostVsockEndpoint(result.NewRequest());
+    host_vsock_.AddBinding(result.NewRequest());
     RunLoopUntilIdle();
     return result;
   }
 
   // Access the |FakeGuestVsock|. This can be used to simulate guest
   // interactions over virtio-vsock.
-  guest::testing::FakeGuestVsock* guest_vsock() { return fake_guest_manager_.GuestVsock(); }
+  guest::testing::FakeGuestVsock* guest_vsock() { return &guest_vsock_; }
 
   async::Executor* executor() { return &executor_; }
 
  private:
   async::Executor executor_{dispatcher()};
-  fuchsia::virtualization::RealmPtr realm_;
-  guest::testing::FakeManager fake_guest_manager_;
-  sys::testing::ComponentContextProvider provider_;
+  guest::testing::FakeGuestVsock guest_vsock_{&host_vsock_};
+  guest::testing::FakeHostVsock host_vsock_{&guest_vsock_};
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint_;
 };
 
