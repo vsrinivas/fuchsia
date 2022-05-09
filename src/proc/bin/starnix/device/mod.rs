@@ -12,8 +12,6 @@ pub use features::*;
 pub use registry::*;
 
 pub mod magma;
-pub mod magma_device;
-pub mod magma_file;
 pub mod mem;
 pub mod terminal;
 pub mod wayland;

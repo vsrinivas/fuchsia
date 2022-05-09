@@ -5,11 +5,12 @@
 #![allow(non_upper_case_globals)]
 
 use fuchsia_zircon as zx;
-use fuchsia_zircon::{AsHandleRef, HandleBased};
+use fuchsia_zircon::HandleBased;
 use magma::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use super::ffi::*;
 use super::magma::*;
 use crate::device::wayland::image_file::*;
 use crate::fs::*;
@@ -34,15 +35,15 @@ type BufferMap = HashMap<magma_buffer_t, BufferInfo>;
 /// A `ConnectionMap` stores the `BufferMap`s associated with each magma connection.
 type ConnectionMap = HashMap<MagmaConnection, BufferMap>;
 pub struct MagmaFile {
-    channel: Arc<Mutex<Option<zx::Channel>>>,
-
+    // TODO(fxbug.dev/12731): The lifecycle of the device channels should be handled by magma.
+    devices: Arc<Mutex<Vec<zx::Channel>>>,
     connections: Arc<Mutex<ConnectionMap>>,
 }
 
 impl MagmaFile {
     pub fn new() -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(Self {
-            channel: Arc::new(Mutex::new(None)),
+            devices: Arc::new(Mutex::new(vec![])),
             connections: Arc::new(Mutex::new(HashMap::new())),
         }))
     }
@@ -118,25 +119,9 @@ impl FileOps for MagmaFile {
 
         match command_type {
             virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_DEVICE_IMPORT => {
-                let (_control, mut response): (
-                    virtio_magma_device_import_ctrl_t,
-                    virtio_magma_device_import_resp_t,
-                ) = read_control_and_response(current_task, &command)?;
+                let (control, mut response) = read_control_and_response(current_task, &command)?;
+                (*self.devices.lock()).push(device_import(control, &mut response)?);
 
-                let (client_channel, server_channel) =
-                    zx::Channel::create().map_err(|_| errno!(EINVAL))?;
-                fdio::service_connect(&"/dev/class/gpu/000", server_channel)
-                    .map_err(|_| errno!(EINVAL))?;
-
-                let device_channel = client_channel.raw_handle();
-                *self.channel.lock() = Some(client_channel);
-
-                let mut device_out: u64 = 0;
-                response.result_return = unsafe {
-                    magma_device_import(device_channel, &mut device_out as *mut u64) as u64
-                };
-
-                response.device_out = device_out;
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_DEVICE_IMPORT as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::device::{
-    binder::create_binders, logd::create_socket_and_start_server, magma_device::MagmaDev,
+    binder::create_binders, logd::create_socket_and_start_server, magma::MagmaDev,
     wayland::serve_wayland,
 };
 use crate::fs::{devtmpfs::dev_tmp_fs, SpecialNode};

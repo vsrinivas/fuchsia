@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::magma_file::MagmaFile;
+use super::file::MagmaFile;
 use crate::device::DeviceOps;
 use crate::fs::{FileOps, FsNode};
 use crate::task::CurrentTask;
