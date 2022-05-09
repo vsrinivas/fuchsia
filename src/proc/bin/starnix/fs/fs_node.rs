@@ -10,7 +10,7 @@ use crate::device::DeviceMode;
 use crate::fs::pipe::Pipe;
 use crate::fs::socket::*;
 use crate::fs::*;
-use crate::lock::{Mutex, RwLock};
+use crate::lock::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::task::*;
 use crate::types::as_any::AsAny;
 use crate::types::*;
@@ -46,9 +46,7 @@ pub struct FsNode {
     /// Mutable informationa about this node.
     ///
     /// This data is used to populate the stat_t structure.
-    // TODO(qsr): This is explicitly using parking_lot locks because tracing-mutex do not support
-    // downgrading yet.
-    info: parking_lot::RwLock<FsNodeInfo>,
+    info: RwLock<FsNodeInfo>,
 
     /// A RwLock to synchronize append operations for this node.
     ///
@@ -199,10 +197,7 @@ pub trait FsNodeOps: Send + Sync + AsAny {
     /// override this function.
     ///
     /// Return a reader lock on the updated information.
-    fn update_info<'a>(
-        &self,
-        node: &'a FsNode,
-    ) -> Result<parking_lot::RwLockReadGuard<'a, FsNodeInfo>, Errno> {
+    fn update_info<'a>(&self, node: &'a FsNode) -> Result<RwLockReadGuard<'a, FsNodeInfo>, Errno> {
         Ok(node.info())
     }
 
@@ -322,7 +317,7 @@ impl FsNode {
             inode_num,
             fifo: if mode.is_fifo() { Some(Pipe::new()) } else { None },
             socket: OnceCell::new(),
-            info: parking_lot::RwLock::new(info),
+            info: RwLock::new(info),
             append_lock: RwLock::new(()),
         }
     }
@@ -514,10 +509,10 @@ impl FsNode {
         self.ops().list_xattrs()
     }
 
-    pub fn info(&self) -> parking_lot::RwLockReadGuard<'_, FsNodeInfo> {
+    pub fn info(&self) -> RwLockReadGuard<'_, FsNodeInfo> {
         self.info.read()
     }
-    pub fn info_write(&self) -> parking_lot::RwLockWriteGuard<'_, FsNodeInfo> {
+    pub fn info_write(&self) -> RwLockWriteGuard<'_, FsNodeInfo> {
         self.info.write()
     }
 }
