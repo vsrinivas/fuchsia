@@ -4,13 +4,11 @@
 
 #include "src/cobalt/bin/app/metric_event_logger_factory_impl.h"
 
+#include "fuchsia/metrics/cpp/fidl.h"
 #include "src/cobalt/bin/app/utils.h"
 #include "src/lib/fsl/vmo/strings.h"
 
 namespace cobalt {
-
-using config::ProjectConfigs;
-using FuchsiaStatus = fuchsia::metrics::Status;
 
 constexpr uint32_t kFuchsiaCustomerId = 1;
 
@@ -22,33 +20,40 @@ void MetricEventLoggerFactoryImpl::CreateMetricEventLogger(
     fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request,
     CreateMetricEventLoggerCallback callback) {
   std::vector<uint32_t> experiment_ids = std::vector<uint32_t>();
-  MetricEventLoggerFactoryImpl::CreateMetricEventLoggerWithExperiments(
-      std::move(project_spec), std::move(experiment_ids), std::move(request), std::move(callback));
+  callback(DoCreateMetricEventLogger(std::move(project_spec), std::move(experiment_ids),
+                                     std::move(request)));
 }
 
 void MetricEventLoggerFactoryImpl::CreateMetricEventLoggerWithExperiments(
     fuchsia::metrics::ProjectSpec project_spec, std::vector<uint32_t> experiment_ids,
     fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request,
-    CreateMetricEventLoggerCallback callback) {
+    CreateMetricEventLoggerWithExperimentsCallback callback) {
+  callback(DoCreateMetricEventLogger(std::move(project_spec), std::move(experiment_ids),
+                                     std::move(request)));
+}
+
+fpromise::result<void, fuchsia::metrics::Error>
+MetricEventLoggerFactoryImpl::DoCreateMetricEventLogger(
+    fuchsia::metrics::ProjectSpec project_spec, std::vector<uint32_t> experiment_ids,
+    fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request) {
   if (shut_down_) {
     FX_LOGS(ERROR) << "The LoggerFactory received a ShutDown signal and can not "
                       "create a new Logger.";
-    callback(FuchsiaStatus::SHUT_DOWN);
-    return;
+    return fpromise::error(fuchsia::metrics::Error::SHUT_DOWN);
   }
   uint32_t customer_id =
       project_spec.has_customer_id() ? project_spec.customer_id() : kFuchsiaCustomerId;
-  auto logger = cobalt_service_->NewLogger(customer_id, project_spec.project_id(), experiment_ids);
+  auto logger =
+      cobalt_service_->NewLogger(customer_id, project_spec.project_id(), std::move(experiment_ids));
   if (!logger) {
     FX_LOGS(ERROR) << "The CobaltRegistry bundled with this release does not "
                       "include a project with customer ID "
                    << customer_id << " and project ID " << project_spec.project_id();
-    callback(FuchsiaStatus::INVALID_ARGUMENTS);
-    return;
+    return fpromise::error(fuchsia::metrics::Error::INVALID_ARGUMENTS);
   }
   logger_bindings_.AddBinding(std::make_unique<MetricEventLoggerImpl>(std::move(logger)),
                               std::move(request));
-  callback(FuchsiaStatus::OK);
+  return fpromise::ok();
 }
 
 void MetricEventLoggerFactoryImpl::ShutDown() {

@@ -251,20 +251,25 @@ async fn run_metrics_service(
 ) -> Result<(), fidl::Error> {
     use fidl_fuchsia_metrics::MetricEventLoggerFactoryRequest::*;
     stream
-        .try_for_each_concurrent(None, |event| async {
-            match event {
-                CreateMetricEventLogger { project_spec, logger, responder } => {
-                    let handler = make_handler(project_spec, &loggers, logger);
-                    let () = responder.send(fidl_fuchsia_metrics::Status::Ok)?;
-                    handler.await
-                }
-                CreateMetricEventLoggerWithExperiments {
-                    project_spec, logger, responder, ..
-                } => {
-                    // TODO(fxb/90740): Support experiment_ids.
-                    let handler = make_handler(project_spec, &loggers, logger);
-                    let () = responder.send(fidl_fuchsia_metrics::Status::Ok)?;
-                    handler.await
+        .try_for_each_concurrent(None, |event| {
+            async {
+                match event {
+                    CreateMetricEventLogger { project_spec, logger, responder } => {
+                        let handler = make_handler(project_spec, &loggers, logger);
+                        let () = responder.send(&mut Ok(()))?;
+                        handler.await
+                    }
+                    CreateMetricEventLoggerWithExperiments {
+                        project_spec,
+                        logger,
+                        responder,
+                        ..
+                    } => {
+                        // TODO(fxb/90740): Support experiment_ids.
+                        let handler = make_handler(project_spec, &loggers, logger);
+                        let () = responder.send(&mut Ok(()))?;
+                        handler.await
+                    }
                 }
             }
         })
@@ -290,73 +295,77 @@ async fn handle_metric_event_logger(
     log: EventsLogHandle,
 ) -> Result<(), fidl::Error> {
     use fidl_fuchsia_metrics::MetricEventLoggerRequest::*;
-    let fut = stream.try_for_each_concurrent(None, |event| async {
-        let mut log = log.lock().await;
-        let log_state = match event {
-            LogOccurrence { responder, metric_id, count, event_codes } => {
-                let state = &mut log.log_occurrence;
-                state.log.push(
-                    MetricEvent::builder(metric_id)
-                        .with_event_codes(event_codes)
-                        .as_occurrence(count),
-                );
-                responder.send(fidl_fuchsia_metrics::Status::Ok)?;
-                state
-            }
-            LogInteger { responder, metric_id, value, event_codes } => {
-                let state = &mut log.log_integer;
-                state.log.push(
-                    MetricEvent::builder(metric_id).with_event_codes(event_codes).as_integer(value),
-                );
-                responder.send(fidl_fuchsia_metrics::Status::Ok)?;
-                state
-            }
-            LogIntegerHistogram { responder, metric_id, histogram, event_codes } => {
-                let state = &mut log.log_integer_histogram;
-                state.log.push(
-                    MetricEvent::builder(metric_id)
-                        .with_event_codes(event_codes)
-                        .as_integer_histogram(histogram),
-                );
-                responder.send(fidl_fuchsia_metrics::Status::Ok)?;
-                state
-            }
-            LogString { responder, metric_id, string_value, event_codes } => {
-                let state = &mut log.log_string;
-                state.log.push(
-                    MetricEvent::builder(metric_id)
-                        .with_event_codes(event_codes)
-                        .as_string(string_value),
-                );
-                responder.send(fidl_fuchsia_metrics::Status::Ok)?;
-                state
-            }
-            LogMetricEvents { responder, mut events } => {
-                let state = &mut log.log_metric_events;
-                state.log.append(&mut events);
-                responder.send(fidl_fuchsia_metrics::Status::Ok)?;
-                state
-            }
-            // We can't easily support CustomEvents because custom events can't
-            // be packaged into MetricEvent objects.
-            LogCustomEvent { responder, .. } => {
-                let _ = responder.send(fidl_fuchsia_metrics::Status::InternalError);
-                unimplemented!("Custom Events are not supported by mock_cobalt");
-            }
-        };
+    let fut = stream.try_for_each_concurrent(None, |event| {
+        async {
+            let mut log = log.lock().await;
+            let log_state = match event {
+                LogOccurrence { responder, metric_id, count, event_codes } => {
+                    let state = &mut log.log_occurrence;
+                    state.log.push(
+                        MetricEvent::builder(metric_id)
+                            .with_event_codes(event_codes)
+                            .as_occurrence(count),
+                    );
+                    responder.send(&mut Ok(()))?;
+                    state
+                }
+                LogInteger { responder, metric_id, value, event_codes } => {
+                    let state = &mut log.log_integer;
+                    state.log.push(
+                        MetricEvent::builder(metric_id)
+                            .with_event_codes(event_codes)
+                            .as_integer(value),
+                    );
+                    responder.send(&mut Ok(()))?;
+                    state
+                }
+                LogIntegerHistogram { responder, metric_id, histogram, event_codes } => {
+                    let state = &mut log.log_integer_histogram;
+                    state.log.push(
+                        MetricEvent::builder(metric_id)
+                            .with_event_codes(event_codes)
+                            .as_integer_histogram(histogram),
+                    );
+                    responder.send(&mut Ok(()))?;
+                    state
+                }
+                LogString { responder, metric_id, string_value, event_codes } => {
+                    let state = &mut log.log_string;
+                    state.log.push(
+                        MetricEvent::builder(metric_id)
+                            .with_event_codes(event_codes)
+                            .as_string(string_value),
+                    );
+                    responder.send(&mut Ok(()))?;
+                    state
+                }
+                LogMetricEvents { responder, mut events } => {
+                    let state = &mut log.log_metric_events;
+                    state.log.append(&mut events);
+                    responder.send(&mut Ok(()))?;
+                    state
+                }
+                // We can't easily support CustomEvents because custom events can't
+                // be packaged into MetricEvent objects.
+                LogCustomEvent { responder, .. } => {
+                    let _ = responder.send(&mut Err(fidl_fuchsia_metrics::Error::InternalError));
+                    unimplemented!("Custom Events are not supported by mock_cobalt");
+                }
+            };
 
-        while let Some(hanging_get_state) = log_state.hanging.pop() {
-            let mut last_observed = hanging_get_state.last_observed.lock().await;
-            let mut events: Vec<MetricEvent> = (&mut log_state.log)
-                .iter()
-                .skip(*last_observed)
-                .take(MAX_QUERY_LENGTH)
-                .map(Clone::clone)
-                .collect();
-            *last_observed = log_state.log.len();
-            hanging_get_state.responder.send(&mut events.iter_mut(), false)?;
+            while let Some(hanging_get_state) = log_state.hanging.pop() {
+                let mut last_observed = hanging_get_state.last_observed.lock().await;
+                let mut events: Vec<MetricEvent> = (&mut log_state.log)
+                    .iter()
+                    .skip(*last_observed)
+                    .take(MAX_QUERY_LENGTH)
+                    .map(Clone::clone)
+                    .collect();
+                *last_observed = log_state.log.len();
+                hanging_get_state.responder.send(&mut events.iter_mut(), false)?;
+            }
+            Ok(())
         }
-        Ok(())
     });
 
     match fut.await {
@@ -380,62 +389,21 @@ async fn run_cobalt_query_service(
                 u32,
                 HashMap<fidl_fuchsia_cobalt_test::LogMethod, Arc<Mutex<usize>>>,
             >,
-             event| async {
-                match event {
-                    cobalt_test::LoggerQuerierRequest::WatchLogs2 {
-                        project_id,
-                        method,
-                        responder,
-                    } => {
-                        let state = loggers
-                            .lock()
-                            .await
-                            .entry(project_id)
-                            .or_insert_with(Default::default)
-                            .clone();
+             event| {
+                async {
+                    match event {
+                        cobalt_test::LoggerQuerierRequest::WatchLogs2 {
+                            project_id,
+                            method,
+                            responder,
+                        } => {
+                            let state = loggers
+                                .lock()
+                                .await
+                                .entry(project_id)
+                                .or_insert_with(Default::default)
+                                .clone();
 
-                        let mut state = state.lock().await;
-                        let log_state = match method {
-                            LogEvent => &mut state.log_event,
-                            LogEventCount => &mut state.log_event_count,
-                            LogElapsedTime => &mut state.log_elapsed_time,
-                            LogFrameRate => &mut state.log_frame_rate,
-                            LogMemoryUsage => &mut state.log_memory_usage,
-                            LogIntHistogram => &mut state.log_int_histogram,
-                            LogCobaltEvent => &mut state.log_cobalt_event,
-                            LogCobaltEvents => &mut state.log_cobalt_events,
-                        };
-                        let last_observed = client_state
-                            .entry(project_id)
-                            .or_insert_with(Default::default)
-                            .entry(method)
-                            .or_insert_with(Default::default);
-                        let mut last_observed_len = last_observed.lock().await;
-                        let current_len = log_state.log.len();
-                        if current_len != *last_observed_len {
-                            let events = &mut log_state.log;
-                            let more = events.len() > cobalt_test::MAX_QUERY_LENGTH as usize;
-                            let mut events: Vec<_> = events
-                                .iter()
-                                .skip(*last_observed_len)
-                                .take(MAX_QUERY_LENGTH)
-                                .cloned()
-                                .collect();
-                            *last_observed_len = current_len;
-                            let () = responder.send(&mut events.iter_mut(), more)?;
-                        } else {
-                            let () = log_state.hanging.push(HangingGetState {
-                                responder: Box::new(responder),
-                                last_observed: last_observed.clone(),
-                            });
-                        }
-                    }
-                    cobalt_test::LoggerQuerierRequest::WatchLogs {
-                        project_id,
-                        method,
-                        responder,
-                    } => {
-                        if let Some(state) = loggers.lock().await.get(&project_id) {
                             let mut state = state.lock().await;
                             let log_state = match method {
                                 LogEvent => &mut state.log_event,
@@ -457,46 +425,90 @@ async fn run_cobalt_query_service(
                             if current_len != *last_observed_len {
                                 let events = &mut log_state.log;
                                 let more = events.len() > cobalt_test::MAX_QUERY_LENGTH as usize;
-                                let events = events
+                                let mut events: Vec<_> = events
                                     .iter()
                                     .skip(*last_observed_len)
                                     .take(MAX_QUERY_LENGTH)
                                     .cloned()
                                     .collect();
                                 *last_observed_len = current_len;
-                                let () = responder.send(&mut Ok((events, more)))?;
+                                let () = responder.send(&mut events.iter_mut(), more)?;
                             } else {
                                 let () = log_state.hanging.push(HangingGetState {
                                     responder: Box::new(responder),
                                     last_observed: last_observed.clone(),
                                 });
                             }
-                        } else {
-                            let () = responder
-                                .send(&mut Err(cobalt_test::QueryError::LoggerNotFound))?;
                         }
-                    }
-                    cobalt_test::LoggerQuerierRequest::ResetLogger {
-                        project_id,
-                        method,
-                        control_handle: _,
-                    } => {
-                        if let Some(log) = loggers.lock().await.get(&project_id) {
-                            let mut state = log.lock().await;
-                            match method {
-                                LogEvent => state.log_event.log.clear(),
-                                LogEventCount => state.log_event_count.log.clear(),
-                                LogElapsedTime => state.log_elapsed_time.log.clear(),
-                                LogFrameRate => state.log_frame_rate.log.clear(),
-                                LogMemoryUsage => state.log_memory_usage.log.clear(),
-                                LogIntHistogram => state.log_int_histogram.log.clear(),
-                                LogCobaltEvent => state.log_cobalt_event.log.clear(),
-                                LogCobaltEvents => state.log_cobalt_events.log.clear(),
+                        cobalt_test::LoggerQuerierRequest::WatchLogs {
+                            project_id,
+                            method,
+                            responder,
+                        } => {
+                            if let Some(state) = loggers.lock().await.get(&project_id) {
+                                let mut state = state.lock().await;
+                                let log_state = match method {
+                                    LogEvent => &mut state.log_event,
+                                    LogEventCount => &mut state.log_event_count,
+                                    LogElapsedTime => &mut state.log_elapsed_time,
+                                    LogFrameRate => &mut state.log_frame_rate,
+                                    LogMemoryUsage => &mut state.log_memory_usage,
+                                    LogIntHistogram => &mut state.log_int_histogram,
+                                    LogCobaltEvent => &mut state.log_cobalt_event,
+                                    LogCobaltEvents => &mut state.log_cobalt_events,
+                                };
+                                let last_observed = client_state
+                                    .entry(project_id)
+                                    .or_insert_with(Default::default)
+                                    .entry(method)
+                                    .or_insert_with(Default::default);
+                                let mut last_observed_len = last_observed.lock().await;
+                                let current_len = log_state.log.len();
+                                if current_len != *last_observed_len {
+                                    let events = &mut log_state.log;
+                                    let more =
+                                        events.len() > cobalt_test::MAX_QUERY_LENGTH as usize;
+                                    let events = events
+                                        .iter()
+                                        .skip(*last_observed_len)
+                                        .take(MAX_QUERY_LENGTH)
+                                        .cloned()
+                                        .collect();
+                                    *last_observed_len = current_len;
+                                    let () = responder.send(&mut Ok((events, more)))?;
+                                } else {
+                                    let () = log_state.hanging.push(HangingGetState {
+                                        responder: Box::new(responder),
+                                        last_observed: last_observed.clone(),
+                                    });
+                                }
+                            } else {
+                                let () = responder
+                                    .send(&mut Err(cobalt_test::QueryError::LoggerNotFound))?;
+                            }
+                        }
+                        cobalt_test::LoggerQuerierRequest::ResetLogger {
+                            project_id,
+                            method,
+                            control_handle: _,
+                        } => {
+                            if let Some(log) = loggers.lock().await.get(&project_id) {
+                                let mut state = log.lock().await;
+                                match method {
+                                    LogEvent => state.log_event.log.clear(),
+                                    LogEventCount => state.log_event_count.log.clear(),
+                                    LogElapsedTime => state.log_elapsed_time.log.clear(),
+                                    LogFrameRate => state.log_frame_rate.log.clear(),
+                                    LogMemoryUsage => state.log_memory_usage.log.clear(),
+                                    LogIntHistogram => state.log_int_histogram.log.clear(),
+                                    LogCobaltEvent => state.log_cobalt_event.log.clear(),
+                                    LogCobaltEvents => state.log_cobalt_events.log.clear(),
+                                }
                             }
                         }
                     }
+                    Ok(client_state)
                 }
-                Ok(client_state)
             },
         )
         .await?;
@@ -1138,6 +1150,7 @@ mod cobalt_tests {
 #[cfg(test)]
 mod metrics_tests {
     use super::*;
+    use anyhow::format_err;
     use async_utils::PollExt;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_metrics::*;
@@ -1166,7 +1179,8 @@ mod metrics_tests {
                 server,
             )
             .await
-            .expect("create_logger_from_project_id fidl call to succeed");
+            .expect("create_logger_from_project_id fidl call to succeed")
+            .expect("create_metric_event_logger should not return an error");
 
         assert!(loggers.lock().await.get(&1234).is_some());
     }
@@ -1198,10 +1212,15 @@ mod metrics_tests {
                 server,
             )
             .await
-            .expect("create_logger_from_project_id fidl call to succeed");
+            .expect("create_logger_from_project_id fidl call to succeed")
+            .expect("create_metric_event_logger should not return an error");
 
         // Log a single event.
-        logger_proxy.log_integer(12345, 123, &[]).await.expect("log_event fidl call to succeed");
+        logger_proxy
+            .log_integer(12345, 123, &[])
+            .await
+            .expect("log_event fidl call to succeed")
+            .expect("log_event should not return an error");
         assert_eq!(
             (vec![MetricEvent::builder(12345).as_integer(123)], false),
             querier_proxy
@@ -1238,7 +1257,8 @@ mod metrics_tests {
                 server,
             )
             .await
-            .expect("create_logger_from_project_id fidl call to succeed");
+            .expect("create_logger_from_project_id fidl call to succeed")
+            .expect("create_metric_event_logger should not return an error");
 
         // Log 1 more than the maximum number of events that can be stored and assert that
         // `more` flag is true on logger query request.
@@ -1246,7 +1266,8 @@ mod metrics_tests {
             logger_proxy
                 .log_integer(i, (i + 1) as i64, &[1])
                 .await
-                .expect("repeated log_event fidl call to succeed");
+                .expect("repeated log_event fidl call to succeed")
+                .expect("repeated log_event should not return an error");
         }
         let (events, more) = querier_proxy
             .watch_logs(12, LogMethod::LogInteger)
@@ -1292,7 +1313,8 @@ mod metrics_tests {
         futures::pin_mut!(create_logger_fut);
         exec.run_until_stalled(&mut create_logger_fut)
             .expect("logger creation future to complete")
-            .expect("create_logger_from_project_id fidl call to succeed");
+            .expect("create_logger_from_project_id fidl call to succeed")
+            .expect("create_metric_event_logger should not return an error");
 
         // watch_logs query still does not complete without a LogEvent for the requested project
         // id.
@@ -1303,7 +1325,8 @@ mod metrics_tests {
         futures::pin_mut!(log_event_fut);
         exec.run_until_stalled(&mut log_event_fut)
             .expect("log event future to complete")
-            .expect("log_event fidl call to succeed");
+            .expect("log_event fidl call to succeed")
+            .expect("log_event should not return an error");
 
         // finally, now that a logger and log event have been created, watch_logs2 query will
         // succeed.
@@ -1344,7 +1367,8 @@ mod metrics_tests {
                     server,
                 )
                 .await
-                .expect("create_logger_from_project_id fidl call to succeed");
+                .expect("create_logger_from_project_id fidl call to succeed")
+                .expect("create_metric_event_logger to not return an error");
 
             assert_eq!(
                 (vec![MetricEvent::builder(1).with_event_code(2).as_integer(3)], false),
@@ -1359,7 +1383,7 @@ mod metrics_tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn mock_metric_event_logger_logger_type_tracking() -> Result<(), fidl::Error> {
+    async fn mock_metric_event_logger_logger_type_tracking() -> Result<(), anyhow::Error> {
         let loggers = LoggersHandle::default();
 
         let (factory_proxy, factory_stream) =
@@ -1378,7 +1402,8 @@ mod metrics_tests {
                 server,
             )
             .await
-            .expect("create_logger_from_project_id fidl call to succeed");
+            .expect("create_logger_from_project_id fidl call to succeed")
+            .expect("create_metric_event_logger to not return an error");
 
         let metric_id = 1;
         let event_code = 2;
@@ -1386,12 +1411,22 @@ mod metrics_tests {
         let value = 4;
         let string = "value";
 
-        logger_proxy.log_occurrence(metric_id, count, &[event_code]).await?;
-        logger_proxy.log_integer(metric_id, value, &[event_code]).await?;
+        logger_proxy
+            .log_occurrence(metric_id, count, &[event_code])
+            .await?
+            .map_err(|e| format_err!("cobalt error {:?}", e))?;
+        logger_proxy
+            .log_integer(metric_id, value, &[event_code])
+            .await?
+            .map_err(|e| format_err!("cobalt error {:?}", e))?;
         logger_proxy
             .log_integer_histogram(metric_id, &mut vec![].into_iter(), &[event_code])
-            .await?;
-        logger_proxy.log_string(metric_id, string, &[event_code]).await?;
+            .await?
+            .map_err(|e| format_err!("cobalt error {:?}", e))?;
+        logger_proxy
+            .log_string(metric_id, string, &[event_code])
+            .await?
+            .map_err(|e| format_err!("cobalt error {:?}", e))?;
         logger_proxy
             .log_metric_events(
                 &mut vec![&mut MetricEvent::builder(metric_id)
@@ -1399,7 +1434,8 @@ mod metrics_tests {
                     .as_occurrence(count)]
                 .into_iter(),
             )
-            .await?;
+            .await?
+            .map_err(|e| format_err!("cobalt error {:?}", e))?;
         let log = loggers.lock().await;
         let log = log.get(&project_id).expect("project should have been created");
         let state = log.lock().await;
@@ -1438,10 +1474,15 @@ mod metrics_tests {
                 server,
             )
             .await
-            .expect("create_logger_from_project_id fidl call to succeed");
+            .expect("create_logger_from_project_id fidl call to succeed")
+            .expect("create_metric_event_logger failed internally");
 
         // Log a single event.
-        logger_proxy.log_integer(1, 2, &[3]).await.expect("log_event fidl call to succeed");
+        logger_proxy
+            .log_integer(1, 2, &[3])
+            .await
+            .expect("log_event fidl call to succeed")
+            .expect("log_integer to not return an error");
         assert_eq!(
             (vec![MetricEvent::builder(1).with_event_code(3).as_integer(2)], false),
             querier_proxy
@@ -1508,10 +1549,7 @@ mod metrics_tests {
                     "unexpected services future return (cannot be formatted with default formatter)"
                 ),
                 futures::future::Either::Right((create_logger_status, services_continuation)) => {
-                    assert_eq!(
-                        create_logger_status.expect("fidl call failed"),
-                        fidl_fuchsia_metrics::Status::Ok
-                    );
+                    assert_eq!(create_logger_status.expect("fidl call failed"), Ok(()));
                     services_continuation
                 }
             },
@@ -1541,10 +1579,7 @@ mod metrics_tests {
                     unreachable!("we asserted that resolved_hanging_get was ready")
                 }
                 core::task::Poll::Ready((watch_logs_result, log_event_result)) => {
-                    assert_eq!(
-                        log_event_result.expect("expected log event to succeed"),
-                        fidl_fuchsia_metrics::Status::Ok
-                    );
+                    assert_eq!(log_event_result.expect("expected log event to succeed"), Ok(()));
 
                     match watch_logs_result {
                         futures::future::Either::Left(_services_future_returned) => unreachable!(

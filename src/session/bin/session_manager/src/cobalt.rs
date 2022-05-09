@@ -8,7 +8,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
-    session_framework_metrics_registry::cobalt_registry::{self as metrics},
+    session_framework_metrics_registry::cobalt_registry as metrics,
     tracing::error,
 };
 
@@ -68,7 +68,8 @@ pub async fn log_session_launch_time(
             &[metrics::SessionLaunchTimeMigratedMetricDimensionStatus::Success as u32],
         )
         .await
-        .context("Could not log session launch time.")?;
+        .context("Could not log session launch time.")?
+        .map_err(|e| format_err!("Logging session launch time returned an error: {:?}", e))?;
 
     Ok(())
 }

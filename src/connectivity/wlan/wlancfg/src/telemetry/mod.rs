@@ -616,8 +616,8 @@ macro_rules! log_cobalt_1dot1 {
     ($cobalt_proxy:expr, $method_name:ident, $metric_id:expr, $value:expr, $event_codes:expr $(,)?) => {{
         let status = $cobalt_proxy.$method_name($metric_id, $value, $event_codes).await;
         match status {
-            Ok(fidl_fuchsia_metrics::Status::Ok) => (),
-            Ok(s) => warn!("Failed logging metric: {}, status: {:?}", $metric_id, s),
+            Ok(Ok(())) => (),
+            Ok(Err(e)) => warn!("Failed logging metric: {}, error: {:?}", $metric_id, e),
             Err(e) => warn!("Failed logging metric: {}, error: {}", $metric_id, e),
         }
     }};
@@ -627,8 +627,10 @@ macro_rules! log_cobalt_1dot1_batch {
     ($cobalt_proxy:expr, $events:expr, $context:expr $(,)?) => {{
         let status = $cobalt_proxy.log_metric_events($events).await;
         match status {
-            Ok(fidl_fuchsia_metrics::Status::Ok) => (),
-            Ok(s) => warn!("Failed logging batch metrics, context: {}, status: {:?}", $context, s),
+            Ok(Ok(())) => (),
+            Ok(Err(e)) => {
+                warn!("Failed logging batch metrics, context: {}, error: {:?}", $context, e)
+            }
             Err(e) => warn!("Failed logging batch metrics, context: {}, error: {}", $context, e),
         }
     }};
@@ -930,7 +932,7 @@ impl Telemetry {
                         if total_downtime < state.accounted_no_saved_neighbor_duration {
                             warn!(
                                 "Total downtime is less than no-saved-neighbor duration. \
-                                Total downtime: {:?}, No saved neighbor duration: {:?}",
+                                 Total downtime: {:?}, No saved neighbor duration: {:?}",
                                 total_downtime, state.accounted_no_saved_neighbor_duration
                             )
                         }
@@ -1208,8 +1210,8 @@ pub async fn create_metrics_logger(
         .context("failed to create metrics event logger")?;
 
     match status {
-        fidl_fuchsia_metrics::Status::Ok => Ok(cobalt_1dot1_proxy),
-        other => Err(format_err!("failed to create metrics event logger: {:?}", other)),
+        Ok(_) => Ok(cobalt_1dot1_proxy),
+        Err(err) => Err(format_err!("failed to create metrics event logger: {:?}", err)),
     }
 }
 
@@ -5603,8 +5605,8 @@ mod tests {
                 assert_eq!(experiment_ids, expected_experiments);
                 match failure_mode {
                     CreateMetricsLoggerFailureMode::FactoryRequest => panic!("The factory request failure should have been handled already."),
-                    CreateMetricsLoggerFailureMode::None => responder.send(fidl_fuchsia_metrics::Status::Ok).expect("failed to send response"),
-                    CreateMetricsLoggerFailureMode::ApiFailure => responder.send(fidl_fuchsia_metrics::Status::InvalidArguments).expect("failed to send response"),
+                    CreateMetricsLoggerFailureMode::None => responder.send(&mut Ok(())).expect("failed to send response"),
+                    CreateMetricsLoggerFailureMode::ApiFailure => responder.send(&mut Err(fidl_fuchsia_metrics::Error::InvalidArguments)).expect("failed to send response"),
                 }
             }
         );
@@ -5751,8 +5753,7 @@ mod tests {
             while let Poll::Ready(Some(Ok(req))) =
                 executor.run_until_stalled(&mut cobalt_1dot1_stream.next())
             {
-                cobalt_events
-                    .append(&mut req.respond_to_metric_req(fidl_fuchsia_metrics::Status::Ok));
+                cobalt_events.append(&mut req.respond_to_metric_req(&mut Ok(())));
                 made_progress = true;
             }
         }
@@ -5863,18 +5864,18 @@ mod tests {
         // Respond to MetricEventLoggerRequest and extract its MetricEvent
         fn respond_to_metric_req(
             self,
-            status: fidl_fuchsia_metrics::Status,
+            result: &mut Result<(), fidl_fuchsia_metrics::Error>,
         ) -> Vec<fidl_fuchsia_metrics::MetricEvent>;
     }
 
     impl CobaltExt for MetricEventLoggerRequest {
         fn respond_to_metric_req(
             self,
-            status: fidl_fuchsia_metrics::Status,
+            result: &mut Result<(), fidl_fuchsia_metrics::Error>,
         ) -> Vec<fidl_fuchsia_metrics::MetricEvent> {
             match self {
                 Self::LogOccurrence { metric_id, count, event_codes, responder } => {
-                    assert!(responder.send(status).is_ok());
+                    assert!(responder.send(result).is_ok());
                     vec![MetricEvent {
                         metric_id,
                         event_codes,
@@ -5882,7 +5883,7 @@ mod tests {
                     }]
                 }
                 Self::LogInteger { metric_id, value, event_codes, responder } => {
-                    assert!(responder.send(status).is_ok());
+                    assert!(responder.send(result).is_ok());
                     vec![MetricEvent {
                         metric_id,
                         event_codes,
@@ -5890,7 +5891,7 @@ mod tests {
                     }]
                 }
                 Self::LogIntegerHistogram { metric_id, histogram, event_codes, responder } => {
-                    assert!(responder.send(status).is_ok());
+                    assert!(responder.send(result).is_ok());
                     vec![MetricEvent {
                         metric_id,
                         event_codes,
@@ -5898,7 +5899,7 @@ mod tests {
                     }]
                 }
                 Self::LogString { metric_id, string_value, event_codes, responder } => {
-                    assert!(responder.send(status).is_ok());
+                    assert!(responder.send(result).is_ok());
                     vec![MetricEvent {
                         metric_id,
                         event_codes,
@@ -5906,7 +5907,7 @@ mod tests {
                     }]
                 }
                 Self::LogMetricEvents { events, responder } => {
-                    assert!(responder.send(status).is_ok());
+                    assert!(responder.send(result).is_ok());
                     events
                 }
                 Self::LogCustomEvent { .. } => {

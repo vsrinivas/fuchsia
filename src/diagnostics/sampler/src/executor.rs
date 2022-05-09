@@ -498,7 +498,8 @@ impl ProjectSampler {
             project_spec.project_id = Some(project_id);
             metric_logger_factory
                 .create_metric_event_logger(project_spec, metrics_server_end)
-                .await?;
+                .await?
+                .map_err(|e| format_err!("error response {:?}", e))?;
             Some(metrics_logger_proxy)
         } else {
             None
@@ -735,9 +736,7 @@ impl ProjectSampler {
                             || self.update_metric_selectors(index_info)
                                 == SnapshotOutcome::SelectorsChanged;
                     }
-                    too_many => {
-                        warn!(%too_many, %selector_string, "Too many matches for selector")
-                    }
+                    too_many => warn!(%too_many, %selector_string, "Too many matches for selector"),
                 }
             }
         }
@@ -825,7 +824,7 @@ impl ProjectSampler {
                         .unwrap()
                         .log_metric_events(&mut metric_events.iter_mut());
 
-                    log_future.await?;
+                    log_future.await?.map_err(|e| format_err!("error from cobalt: {:?}", e))?;
                 }
             }
             self.project_sampler_stats.cobalt_logs_sent.add(1);

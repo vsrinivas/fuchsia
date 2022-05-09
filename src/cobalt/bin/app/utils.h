@@ -7,6 +7,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/metrics/cpp/fidl.h>
+#include <lib/fpromise/result.h>
 #include <stdlib.h>
 
 #include <string>
@@ -17,7 +18,7 @@ namespace cobalt {
 
 fuchsia::cobalt::Status ToCobaltStatus(const Status &s);
 
-fuchsia::metrics::Status ToMetricsStatus(const Status &s);
+fpromise::result<void, fuchsia::metrics::Error> ToMetricsResult(const Status &s);
 
 // Reads the PEM file at the specified path and returns the contents as
 // a string. CHECK fails if the file cannot be read.

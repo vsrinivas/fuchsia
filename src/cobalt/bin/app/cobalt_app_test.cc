@@ -4,15 +4,16 @@
 
 #include "src/cobalt/bin/app/cobalt_app.h"
 
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <gmock/gmock.h>
+#include <sdk/lib/sys/cpp/testing/service_directory_provider.h>
 
 #include "fuchsia/process/lifecycle/cpp/fidl.h"
-#include "sdk/lib/sys/cpp/testing/service_directory_provider.h"
 #include "src/cobalt/bin/app/activity_listener_impl.h"
 #include "src/cobalt/bin/app/diagnostics_impl.h"
 #include "src/cobalt/bin/app/testapp_metrics_registry.cb.h"
@@ -201,22 +202,22 @@ class CobaltAppTest : public gtest::TestLoopFixture {
   // instead.
   fuchsia::metrics::MetricEventLoggerPtr GetMetricEventLogger(
       int project_id = testapp_registry::kProjectId, std::vector<uint32_t> experiment_ids = {}) {
-    fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
+    fpromise::result<void, fuchsia::metrics::Error> result;
     fuchsia::metrics::ProjectSpec project;
     project.set_customer_id(1);
     project.set_project_id(project_id);
     fuchsia::metrics::MetricEventLoggerPtr logger;
-    if (experiment_ids.size() == 0) {
+    if (experiment_ids.empty()) {
       metric_event_logger_factory_->CreateMetricEventLogger(
           std::move(project), logger.NewRequest(),
-          [&](fuchsia::metrics::Status status_) { status = status_; });
+          [&](auto result_) { result = std::move(result_); });
     } else {
       metric_event_logger_factory_->CreateMetricEventLoggerWithExperiments(
           std::move(project), std::move(experiment_ids), logger.NewRequest(),
-          [&](fuchsia::metrics::Status status_) { status = status_; });
+          [&](auto result_) { result = std::move(result_); });
     }
     RunLoopUntilIdle();
-    EXPECT_EQ(status, fuchsia::metrics::Status::OK);
+    EXPECT_TRUE(result.is_ok());
     EXPECT_NE(logger.get(), nullptr);
     return logger;
   }
@@ -345,16 +346,16 @@ TEST_F(CobaltAppTest, CreateMetricEventLoggerNoValidLogger) {
   // Make sure that the CobaltService returns nullptr for the next call to NewLogger().
   fake_service_->FailNextNewLogger();
 
-  fuchsia::metrics::Status status = fuchsia::metrics::Status::OK;
+  fpromise::result<void, fuchsia::metrics::Error> result;
   fuchsia::metrics::ProjectSpec project;
   project.set_customer_id(1);
   project.set_project_id(987654321);
   fuchsia::metrics::MetricEventLoggerPtr logger;
   metric_event_logger_factory_->CreateMetricEventLogger(
-      std::move(project), logger.NewRequest(),
-      [&](fuchsia::metrics::Status status_) { status = status_; });
+      std::move(project), logger.NewRequest(), [&](auto result_) { result = std::move(result_); });
   RunLoopUntilIdle();
-  EXPECT_EQ(status, fuchsia::metrics::Status::INVALID_ARGUMENTS);
+  EXPECT_TRUE(result.is_error());
+  EXPECT_EQ(result.error(), fuchsia::metrics::Error::INVALID_ARGUMENTS);
 }
 
 TEST_F(CobaltAppTest, LogOccurrence) {
@@ -363,12 +364,11 @@ TEST_F(CobaltAppTest, LogOccurrence) {
   ASSERT_NE(fake_logger, nullptr);
   EXPECT_EQ(fake_logger->call_count(), 0);
 
-  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fpromise::result<void, fuchsia::metrics::Error> result;
   logger->LogOccurrence(testapp_registry::kErrorOccurredNewMetricId, /*count=*/1,
-                        /*event_codes=*/{2},
-                        [&](fuchsia::metrics::Status status_) { status = status_; });
+                        /*event_codes=*/{2}, [&](auto result_) { result = std::move(result_); });
   RunLoopUntilIdle();
-  ASSERT_EQ(status, fuchsia::metrics::Status::OK);
+  ASSERT_TRUE(result.is_ok());
   EXPECT_EQ(fake_logger->call_count(), 1);
   auto event = fake_logger->last_event_logged();
   EXPECT_EQ(event.metric_id(), testapp_registry::kErrorOccurredNewMetricId);
@@ -382,12 +382,11 @@ TEST_F(CobaltAppTest, LogInteger) {
   ASSERT_NE(fake_logger, nullptr);
   EXPECT_EQ(fake_logger->call_count(), 0);
 
-  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fpromise::result<void, fuchsia::metrics::Error> result;
   logger->LogInteger(testapp_registry::kUpdateDurationNewMetricId, /*value=*/-42,
-                     /*event_codes=*/{3},
-                     [&](fuchsia::metrics::Status status_) { status = status_; });
+                     /*event_codes=*/{3}, [&](auto result_) { result = std::move(result_); });
   RunLoopUntilIdle();
-  ASSERT_EQ(status, fuchsia::metrics::Status::OK);
+  ASSERT_TRUE(result.is_ok());
   EXPECT_EQ(fake_logger->call_count(), 1);
   auto event = fake_logger->last_event_logged();
   EXPECT_EQ(event.metric_id(), testapp_registry::kUpdateDurationNewMetricId);
@@ -401,7 +400,7 @@ TEST_F(CobaltAppTest, LogIntegerHistogram) {
   ASSERT_NE(fake_logger, nullptr);
   EXPECT_EQ(fake_logger->call_count(), 0);
 
-  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fpromise::result<void, fuchsia::metrics::Error> result;
   std::vector<fuchsia::metrics::HistogramBucket> histogram;
   fuchsia::metrics::HistogramBucket entry;
   entry.index = 1;
@@ -409,9 +408,9 @@ TEST_F(CobaltAppTest, LogIntegerHistogram) {
   histogram.push_back(entry);
   logger->LogIntegerHistogram(testapp_registry::kBandwidthUsageNewMetricId, std::move(histogram),
                               /*event_codes=*/{4, 5},
-                              [&](fuchsia::metrics::Status status_) { status = status_; });
+                              [&](auto result_) { result = std::move(result_); });
   RunLoopUntilIdle();
-  ASSERT_EQ(status, fuchsia::metrics::Status::OK);
+  ASSERT_TRUE(result.is_ok());
   EXPECT_EQ(fake_logger->call_count(), 1);
   auto event = fake_logger->last_event_logged();
   EXPECT_EQ(event.metric_id(), testapp_registry::kBandwidthUsageNewMetricId);
@@ -427,12 +426,12 @@ TEST_F(CobaltAppTest, LogString) {
   ASSERT_NE(fake_logger, nullptr);
   EXPECT_EQ(fake_logger->call_count(), 0);
 
-  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fpromise::result<void, fuchsia::metrics::Error> result;
   logger->LogString(testapp_registry::kErrorOccurredComponentsMetricId,
                     /*string_value=*/"component", /*event_codes=*/{3},
-                    [&](fuchsia::metrics::Status status_) { status = status_; });
+                    [&](auto result_) { result = std::move(result_); });
   RunLoopUntilIdle();
-  ASSERT_EQ(status, fuchsia::metrics::Status::OK);
+  ASSERT_TRUE(result.is_ok());
   EXPECT_EQ(fake_logger->call_count(), 1);
   auto event = fake_logger->last_event_logged();
   EXPECT_EQ(event.metric_id(), testapp_registry::kErrorOccurredComponentsMetricId);
@@ -447,7 +446,7 @@ TEST_F(CobaltAppTest, LogMetricEvents) {
   ASSERT_NE(fake_logger, nullptr);
   EXPECT_EQ(fake_logger->call_count(), 0);
 
-  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fpromise::result<void, fuchsia::metrics::Error> result;
   std::vector<fuchsia::metrics::MetricEvent> events;
   events.push_back(MetricEventBuilder(testapp_registry::kErrorOccurredNewMetricId)
                        .with_event_code(2)
@@ -464,10 +463,9 @@ TEST_F(CobaltAppTest, LogMetricEvents) {
   events.push_back(MetricEventBuilder(testapp_registry::kErrorOccurredNewMetricId)
                        .with_event_code(2)
                        .as_occurrence(5));
-  logger->LogMetricEvents(std::move(events),
-                          [&](fuchsia::metrics::Status status_) { status = status_; });
+  logger->LogMetricEvents(std::move(events), [&](auto result_) { result = std::move(result_); });
   RunLoopUntilIdle();
-  ASSERT_EQ(status, fuchsia::metrics::Status::OK);
+  ASSERT_TRUE(result.is_ok());
   EXPECT_EQ(fake_logger->call_count(), 5);
   auto event = fake_logger->last_event_logged();
   EXPECT_EQ(event.metric_id(), testapp_registry::kErrorOccurredNewMetricId);
@@ -482,7 +480,7 @@ TEST_F(CobaltAppTest, LogCustomEvent) {
   ASSERT_NE(fake_logger, nullptr);
   EXPECT_EQ(fake_logger->call_count(), 0);
 
-  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fpromise::result<void, fuchsia::metrics::Error> result;
   std::vector<fuchsia::metrics::CustomEventValue> parts(3);
   parts.at(0).dimension_name = "query";
   parts.at(0).value.set_string_value("SELECT 1;");
@@ -491,9 +489,9 @@ TEST_F(CobaltAppTest, LogCustomEvent) {
   parts.at(2).dimension_name = "response_code";
   parts.at(2).value.set_index_value(2);
   logger->LogCustomEvent(testapp_registry::kQueryResponseMetricId, std::move(parts),
-                         [&](fuchsia::metrics::Status status_) { status = status_; });
+                         [&](auto result_) { result = std::move(result_); });
   RunLoopUntilIdle();
-  ASSERT_EQ(status, fuchsia::metrics::Status::OK);
+  ASSERT_TRUE(result.is_ok());
   EXPECT_EQ(fake_logger->call_count(), 1);
   auto event = fake_logger->last_event_logged();
   EXPECT_EQ(event.metric_id(), testapp_registry::kQueryResponseMetricId);
@@ -526,16 +524,19 @@ TEST_F(CobaltAppTest, NoNewLoggersAfterShutDown) {
   fuchsia::metrics::MetricEventLoggerPtr metric_logger = nullptr;
   fuchsia::cobalt::LoggerPtr logger = nullptr;
   fuchsia::cobalt::Status cobalt_status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  fuchsia::metrics::Status metrics_status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fuchsia::metrics::MetricEventLoggerFactory_CreateMetricEventLogger_Result metrics_result;
   fuchsia::metrics::ProjectSpec project;
   project.set_customer_id(1);
   project.set_project_id(testapp_registry::kProjectId);
 
   metric_event_logger_factory_->CreateMetricEventLogger(
       std::move(project), metric_logger.NewRequest(),
-      [&](fuchsia::metrics::Status status_) { metrics_status = status_; });
+      [&](fuchsia::metrics::MetricEventLoggerFactory_CreateMetricEventLogger_Result result) {
+        metrics_result = std::move(result);
+      });
   RunLoopUntilIdle();
-  EXPECT_EQ(metrics_status, fuchsia::metrics::Status::SHUT_DOWN);
+  EXPECT_TRUE(metrics_result.is_err());
+  EXPECT_EQ(metrics_result.err(), fuchsia::metrics::Error::SHUT_DOWN);
   EXPECT_FALSE(metric_logger.is_bound());
 
   factory_->CreateLoggerFromProjectId(

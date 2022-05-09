@@ -17,19 +17,23 @@ namespace cobalt {
 
 class MetricEventLoggerFactoryImpl : public fuchsia::metrics::MetricEventLoggerFactory {
  public:
-  MetricEventLoggerFactoryImpl(CobaltServiceInterface* cobalt_service);
+  explicit MetricEventLoggerFactoryImpl(CobaltServiceInterface* cobalt_service);
 
   void ShutDown();
 
  private:
   void CreateMetricEventLogger(fuchsia::metrics::ProjectSpec project_spec,
                                fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request,
-                               CreateMetricEventLoggerCallback callback);
+                               CreateMetricEventLoggerCallback callback) override;
 
   void CreateMetricEventLoggerWithExperiments(
       fuchsia::metrics::ProjectSpec project_spec, std::vector<uint32_t> experiment_ids,
       fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request,
-      CreateMetricEventLoggerCallback callback);
+      CreateMetricEventLoggerWithExperimentsCallback callback) override;
+
+  fpromise::result<void, fuchsia::metrics::Error> DoCreateMetricEventLogger(
+      fuchsia::metrics::ProjectSpec project_spec, std::vector<uint32_t> experiment_ids,
+      fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request);
 
   fidl::BindingSet<fuchsia::metrics::MetricEventLogger,
                    std::unique_ptr<fuchsia::metrics::MetricEventLogger>>

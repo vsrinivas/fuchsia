@@ -54,20 +54,20 @@ class CobaltLogger : public CobaltLoggerBase {
                            ::std::vector<uint32_t> event_codes,
                            LogIntegerHistogramCallback callback) override {
     // Not Implemented
-    callback(fuchsia::metrics::Status::INVALID_ARGUMENTS);
+    callback(fpromise::error(fuchsia::metrics::Error::INVALID_ARGUMENTS));
   }
 
   void LogString(uint32_t metric_id, ::std::string string_value, ::std::vector<uint32_t> events,
-                 LogMetricEventsCallback callback) override {
+                 LogStringCallback callback) override {
     // Not Implemented
-    callback(fuchsia::metrics::Status::INVALID_ARGUMENTS);
+    callback(fpromise::error(fuchsia::metrics::Error::INVALID_ARGUMENTS));
   }
 
   void LogCustomEvent(uint32_t metric_id,
                       ::std::vector<::fuchsia::metrics::CustomEventValue> event_values,
                       LogCustomEventCallback callback) override {
     // Not Implemented
-    callback(fuchsia::metrics::Status::INVALID_ARGUMENTS);
+    callback(fpromise::error(fuchsia::metrics::Error::INVALID_ARGUMENTS));
   }
 };
 

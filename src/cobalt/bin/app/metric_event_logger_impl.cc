@@ -10,8 +10,6 @@
 
 namespace cobalt {
 
-using FuchsiaStatus = fuchsia::metrics::Status;
-
 MetricEventLoggerImpl::MetricEventLoggerImpl(std::unique_ptr<logger::LoggerInterface> logger)
     : logger_(std::move(logger)) {}
 
@@ -19,14 +17,14 @@ void MetricEventLoggerImpl::LogOccurrence(
     uint32_t metric_id, uint64_t count, ::std::vector<uint32_t> event_codes,
     fuchsia::metrics::MetricEventLogger::LogOccurrenceCallback callback) {
   TRACE_DURATION("cobalt_fidl", "MetricEventLoggerImpl::LogOccurrence");
-  callback(ToMetricsStatus(logger_->LogOccurrence(metric_id, count, event_codes)));
+  callback(ToMetricsResult(logger_->LogOccurrence(metric_id, count, event_codes)));
 }
 
 void MetricEventLoggerImpl::LogInteger(
     uint32_t metric_id, int64_t value, ::std::vector<uint32_t> event_codes,
     fuchsia::metrics::MetricEventLogger::LogIntegerCallback callback) {
   TRACE_DURATION("cobalt_fidl", "MetricEventLoggerImpl::LogInteger");
-  callback(ToMetricsStatus(logger_->LogInteger(metric_id, value, event_codes)));
+  callback(ToMetricsResult(logger_->LogInteger(metric_id, value, event_codes)));
 }
 
 void MetricEventLoggerImpl::LogIntegerHistogram(
@@ -40,7 +38,7 @@ void MetricEventLoggerImpl::LogIntegerHistogram(
     bucket->set_index((*it).index);
     bucket->set_count((*it).count);
   }
-  callback(ToMetricsStatus(
+  callback(ToMetricsResult(
       logger_->LogIntegerHistogram(metric_id, std::move(histogram_ptr), event_codes)));
 }
 
@@ -48,7 +46,7 @@ void MetricEventLoggerImpl::LogString(
     uint32_t metric_id, std::string string_value, ::std::vector<uint32_t> event_codes,
     fuchsia::metrics::MetricEventLogger::LogStringCallback callback) {
   TRACE_DURATION("cobalt_fidl", "MetricEventLoggerImpl::LogString");
-  callback(ToMetricsStatus(logger_->LogString(metric_id, string_value, event_codes)));
+  callback(ToMetricsResult(logger_->LogString(metric_id, string_value, event_codes)));
 }
 
 void MetricEventLoggerImpl::LogMetricEvents(
@@ -68,8 +66,7 @@ void MetricEventLoggerImpl::LogMetricEvents(
   auto end = std::make_move_iterator(events.end());
 
   for (auto it = std::make_move_iterator(events.begin()); it != end; it++) {
-    FuchsiaStatus status = LogMetricEvent(std::move(*it));
-    if (status != FuchsiaStatus::OK) {
+    if (LogMetricEvent(std::move(*it)).is_error()) {
       failures += 1;
     }
   }
@@ -77,9 +74,9 @@ void MetricEventLoggerImpl::LogMetricEvents(
   logger_->ResumeInternalLogging();
 
   if (failures == 0) {
-    callback(FuchsiaStatus::OK);
+    callback(fpromise::ok());
   } else {
-    callback(FuchsiaStatus::INTERNAL_ERROR);
+    callback(fpromise::error(fuchsia::metrics::Error::INTERNAL_ERROR));
   }
 }
 
@@ -104,20 +101,21 @@ void MetricEventLoggerImpl::LogCustomEvent(
     auto pair = google::protobuf::MapPair(it->dimension_name, value);
     inner_event_values->insert(pair);
   }
-  callback(ToMetricsStatus(logger_->LogCustomEvent(metric_id, std::move(inner_event_values))));
+  callback(ToMetricsResult(logger_->LogCustomEvent(metric_id, std::move(inner_event_values))));
 }
 
 using fuchsia::metrics::MetricEventPayload;
-FuchsiaStatus MetricEventLoggerImpl::LogMetricEvent(fuchsia::metrics::MetricEvent event) {
+fpromise::result<void, fuchsia::metrics::Error> MetricEventLoggerImpl::LogMetricEvent(
+    fuchsia::metrics::MetricEvent event) {
   TRACE_DURATION("cobalt_fidl", "MetricEventLoggerImpl::LogMetricEvent");
 
   switch (event.payload.Which()) {
     case MetricEventPayload::Tag::kCount:
-      return ToMetricsStatus(
+      return ToMetricsResult(
           logger_->LogOccurrence(event.metric_id, event.payload.count(), event.event_codes));
 
     case MetricEventPayload::Tag::kIntegerValue:
-      return ToMetricsStatus(
+      return ToMetricsResult(
           logger_->LogInteger(event.metric_id, event.payload.integer_value(), event.event_codes));
 
     case MetricEventPayload::Tag::kHistogram: {
@@ -128,16 +126,16 @@ FuchsiaStatus MetricEventLoggerImpl::LogMetricEvent(fuchsia::metrics::MetricEven
         bucket->set_index((*it).index);
         bucket->set_count((*it).count);
       }
-      return ToMetricsStatus(logger_->LogIntegerHistogram(event.metric_id, std::move(histogram_ptr),
+      return ToMetricsResult(logger_->LogIntegerHistogram(event.metric_id, std::move(histogram_ptr),
                                                           event.event_codes));
     }
 
     case MetricEventPayload::Tag::kStringValue:
-      return ToMetricsStatus(
+      return ToMetricsResult(
           logger_->LogString(event.metric_id, event.payload.string_value(), event.event_codes));
 
     default:
-      return FuchsiaStatus::INVALID_ARGUMENTS;
+      return fpromise::error(fuchsia::metrics::Error::INVALID_ARGUMENTS);
   }
 }
 

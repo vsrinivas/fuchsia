@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "fuchsia/metrics/cpp/fidl.h"
 #include "src/lib/cobalt/cpp/metric_event_builder.h"
 #include "third_party/cobalt/src/logger/fake_logger.h"
 
@@ -33,7 +34,9 @@ TEST_F(MetricEventLoggerImplTest, PauseDuringBatch) {
   events.push_back(MetricEventBuilder(1).as_occurrence(3));
   events.push_back(MetricEventBuilder(1).as_occurrence(4));
   events.push_back(MetricEventBuilder(1).as_occurrence(5));
-  logger_->LogMetricEvents(std::move(events), [](fuchsia::metrics::Status status) {});
+  logger_->LogMetricEvents(
+      std::move(events),
+      [](fuchsia::metrics::MetricEventLogger_LogMetricEvents_Result response) {});
   std::map<logger::PerProjectLoggerCallsMadeMigratedMetricDimensionLoggerMethod, uint32_t>
       internal_logger_calls = fake_logger_->internal_logger_calls();
   // Only the LogMetricEvents call should be recorded.

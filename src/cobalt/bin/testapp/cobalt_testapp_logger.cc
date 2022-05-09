@@ -5,6 +5,7 @@
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <map>
@@ -133,7 +134,7 @@ bool CobaltTestAppLogger::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) {
 
 bool CobaltTestAppLogger::LogOccurrence(uint32_t metric_id, std::vector<uint32_t> indices,
                                         uint64_t count, ExperimentArm arm) {
-  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fuchsia::metrics::MetricEventLogger_LogOccurrence_Result result;
   fuchsia::metrics::MetricEventLoggerSyncPtr* metric_event_logger;
   switch (arm) {
     case kExperiment:
@@ -145,30 +146,30 @@ bool CobaltTestAppLogger::LogOccurrence(uint32_t metric_id, std::vector<uint32_t
     default:
       metric_event_logger = &metric_event_logger_;
   };
-  (*metric_event_logger)->LogOccurrence(metric_id, count, indices, &status);
-  FX_VLOGS(1) << "LogOccurrence(" << count << ") => " << StatusToString(status);
-  if (status != fuchsia::metrics::Status::OK) {
-    FX_LOGS(ERROR) << "LogOccurrence() => " << StatusToString(status);
+  (*metric_event_logger)->LogOccurrence(metric_id, count, indices, &result);
+  if (result.is_err()) {
+    FX_LOGS(ERROR) << "LogOccurrence() => " << ResultToString(std::move(result));
     return false;
   }
+  FX_VLOGS(1) << "LogOccurrence(" << count << ") => OK";
   return true;
 }
 
 bool CobaltTestAppLogger::LogInteger(uint32_t metric_id, std::vector<uint32_t> indices,
                                      int64_t value) {
-  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
-  metric_event_logger_->LogInteger(metric_id, value, indices, &status);
-  FX_VLOGS(1) << "LogInteger(" << value << ") => " << StatusToString(status);
-  if (status != fuchsia::metrics::Status::OK) {
-    FX_LOGS(ERROR) << "LogInteger() => " << StatusToString(status);
+  fuchsia::metrics::MetricEventLogger_LogInteger_Result result;
+  metric_event_logger_->LogInteger(metric_id, value, indices, &result);
+  if (result.is_err()) {
+    FX_LOGS(ERROR) << "LogInteger() => " << ResultToString(std::move(result));
     return false;
   }
+  FX_VLOGS(1) << "LogInteger(" << value << ") => OK";
   return true;
 }
 
 bool CobaltTestAppLogger::LogIntegerHistogram(uint32_t metric_id, std::vector<uint32_t> indices,
                                               const std::map<uint32_t, uint64_t>& histogram_map) {
-  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fuchsia::metrics::MetricEventLogger_LogIntegerHistogram_Result result;
   std::vector<fuchsia::metrics::HistogramBucket> histogram;
   for (auto it = histogram_map.begin(); histogram_map.end() != it; it++) {
     fuchsia::metrics::HistogramBucket entry;
@@ -177,24 +178,25 @@ bool CobaltTestAppLogger::LogIntegerHistogram(uint32_t metric_id, std::vector<ui
     histogram.push_back(std::move(entry));
   }
 
-  metric_event_logger_->LogIntegerHistogram(metric_id, std::move(histogram), indices, &status);
-  FX_VLOGS(1) << "LogIntegerHistogram() => " << StatusToString(status);
-  if (status != fuchsia::metrics::Status::OK) {
-    FX_LOGS(ERROR) << "LogIntegerHistogram() => " << StatusToString(status);
+  metric_event_logger_->LogIntegerHistogram(metric_id, std::move(histogram), indices, &result);
+  if (result.is_err()) {
+    FX_LOGS(ERROR) << "LogString() => " << ResultToString(std::move(result));
     return false;
   }
+  FX_VLOGS(1) << "LogIntegerHistogram() => OK";
   return true;
 }
 
 bool CobaltTestAppLogger::LogString(uint32_t metric_id, std::vector<uint32_t> indices,
                                     const std::string& string_value) {
-  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
-  metric_event_logger_->LogString(metric_id, string_value, indices, &status);
-  FX_VLOGS(1) << "LogString(" << string_value << ") => " << StatusToString(status);
-  if (status != fuchsia::metrics::Status::OK) {
-    FX_LOGS(ERROR) << "LogString() => " << StatusToString(status);
+  fuchsia::metrics::MetricEventLogger_LogString_Result result;
+  metric_event_logger_->LogString(metric_id, string_value, indices, &result);
+  if (result.is_err()) {
+    FX_LOGS(ERROR) << "LogString() => " << ResultToString(std::move(result));
     return false;
   }
+  FX_VLOGS(1) << "LogString(" << string_value << ") => OK";
+
   return true;
 }
 

@@ -148,31 +148,35 @@ component_testing::ScopedChild CobaltTestApp::Connect(const std::string &variant
   fuchsia::metrics::MetricEventLoggerFactorySyncPtr metric_event_logger_factory =
       child.ConnectSync<fuchsia::metrics::MetricEventLoggerFactory>();
 
-  fuchsia::metrics::Status metrics_status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fuchsia::metrics::MetricEventLoggerFactory_CreateMetricEventLogger_Result result;
   fuchsia::metrics::ProjectSpec project;
   project.set_customer_id(1);
   project.set_project_id(project_id);
   zx_status_t fx_status = metric_event_logger_factory->CreateMetricEventLogger(
-      std::move(project), logger_.metric_event_logger_.NewRequest(), &metrics_status);
+      std::move(project), logger_.metric_event_logger_.NewRequest(), &result);
   FX_CHECK(fx_status == ZX_OK) << "FIDL: CreateMetricEventLogger() => " << fx_status;
-  FX_CHECK(metrics_status == fuchsia::metrics::Status::OK)
-      << "CreateMetricEventLogger() => " << StatusToString(metrics_status);
+  FX_CHECK(!result.is_err()) << "CreateMetricEventLogger() => " << ErrorToString(result.err());
 
-  metrics_status = fuchsia::metrics::Status::INTERNAL_ERROR;
-  fx_status = metric_event_logger_factory->CreateMetricEventLoggerWithExperiments(
-      std::move(project), {kControlId}, logger_.control_metric_event_logger_.NewRequest(),
-      &metrics_status);
-  FX_CHECK(fx_status == ZX_OK) << "FIDL: CreateMetricEventLogger() => " << fx_status;
-  FX_CHECK(metrics_status == fuchsia::metrics::Status::OK)
-      << "CreateMetricEventLoggerWithExperiments() => " << StatusToString(metrics_status);
-
-  metrics_status = fuchsia::metrics::Status::INTERNAL_ERROR;
-  fx_status = metric_event_logger_factory->CreateMetricEventLoggerWithExperiments(
-      std::move(project), {kExperimentId}, logger_.experimental_metric_event_logger_.NewRequest(),
-      &metrics_status);
-  FX_CHECK(fx_status == ZX_OK) << "FIDL: CreateMetricEventLogger() => " << fx_status;
-  FX_CHECK(metrics_status == fuchsia::metrics::Status::OK)
-      << "CreateMetricEventLoggerWithExperiments() => " << StatusToString(metrics_status);
+  {
+    fuchsia::metrics::MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result
+        result_with_experiments;
+    fx_status = metric_event_logger_factory->CreateMetricEventLoggerWithExperiments(
+        std::move(project), {kControlId}, logger_.control_metric_event_logger_.NewRequest(),
+        &result_with_experiments);
+    FX_CHECK(fx_status == ZX_OK) << "FIDL: CreateMetricEventLogger() => " << fx_status;
+    FX_CHECK(!result_with_experiments.is_err()) << "CreateMetricEventLoggerWithExperiments() => "
+                                                << ErrorToString(result_with_experiments.err());
+  }
+  {
+    fuchsia::metrics::MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result
+        result_with_experiments;
+    fx_status = metric_event_logger_factory->CreateMetricEventLoggerWithExperiments(
+        std::move(project), {kExperimentId}, logger_.experimental_metric_event_logger_.NewRequest(),
+        &result_with_experiments);
+    FX_CHECK(fx_status == ZX_OK) << "FIDL: CreateMetricEventLogger() => " << fx_status;
+    FX_CHECK(!result_with_experiments.is_err()) << "CreateMetricEventLoggerWithExperiments() => "
+                                                << ErrorToString(result_with_experiments.err());
+  }
 
   child.Connect(system_data_updater_.NewRequest());
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;

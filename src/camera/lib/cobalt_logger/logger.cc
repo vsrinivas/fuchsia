@@ -28,19 +28,17 @@ uint64_t CurrentTimeUSecs(const std::unique_ptr<timekeeper::Clock>& clock) {
   return zx::nsec(clock->Now().get()).to_usecs();
 }
 
-inline std::string StatusToString(fuchsia::metrics::Status status) {
-  switch (status) {
-    case fuchsia::metrics::Status::OK:
-      return "OK";
-    case fuchsia::metrics::Status::INVALID_ARGUMENTS:
+inline std::string ErrorToString(fuchsia::metrics::Error error) {
+  switch (error) {
+    case fuchsia::metrics::Error::INVALID_ARGUMENTS:
       return "INVALID_ARGUMENTS";
-    case fuchsia::metrics::Status::EVENT_TOO_BIG:
+    case fuchsia::metrics::Error::EVENT_TOO_BIG:
       return "EVENT_TOO_BIG";
-    case fuchsia::metrics::Status::BUFFER_FULL:
+    case fuchsia::metrics::Error::BUFFER_FULL:
       return "BUFFER_FULL";
-    case fuchsia::metrics::Status::SHUT_DOWN:
+    case fuchsia::metrics::Error::SHUT_DOWN:
       return "SHUT_DOWN";
-    case fuchsia::metrics::Status::INTERNAL_ERROR:
+    case fuchsia::metrics::Error::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
   }
 }
@@ -94,18 +92,19 @@ void Logger::ConnectToLogger(
   project.set_project_id(kProjectId);
 
   logger_factory_->CreateMetricEventLogger(
-      std::move(project), std::move(logger_request), [this](fuchsia::metrics::Status status) {
+      std::move(project), std::move(logger_request),
+      [this](fuchsia::metrics::MetricEventLoggerFactory_CreateMetricEventLogger_Result result) {
         // We don't need a long standing connection to the LoggerFactory so we unbind after
         // setting up the Logger.
         logger_factory_.Unbind();
 
-        if (status == fuchsia::metrics::Status::OK) {
+        if (result.is_response()) {
           logger_reconnection_backoff_.Reset();
-        } else if (status == fuchsia::metrics::Status::SHUT_DOWN) {
+        } else if (result.err() == fuchsia::metrics::Error::SHUT_DOWN) {
           FX_LOGS(INFO) << "Stopping sending Cobalt events";
           logger_.Unbind();
         } else {
-          FX_LOGS(WARNING) << "Failed to set up Cobalt: " << StatusToString(status);
+          FX_LOGS(WARNING) << "Failed to set up Cobalt: " << ErrorToString(result.err());
           logger_.Unbind();
           RetryConnectingToLogger();
         }
@@ -162,10 +161,11 @@ void Logger::SendEvent(uint64_t event_id) {
   }
   Event& event = pending_events_.at(event_id);
 
-  auto callback = [this, event_id, &event](fuchsia::metrics::Status status) {
-    if (status != fuchsia::metrics::Status::OK) {
+  auto callback = [this, event_id,
+                   &event](fuchsia::metrics::MetricEventLogger_LogOccurrence_Result result) {
+    if (result.is_err()) {
       FX_LOGS(ERROR) << StringPrintf("Cobalt logging error: status %s, event %s",
-                                     StatusToString(status).c_str(), event.ToString().c_str());
+                                     ErrorToString(result.err()).c_str(), event.ToString().c_str());
     }
 
     // We don't retry events that have been acknowledged by the server, regardless of the return

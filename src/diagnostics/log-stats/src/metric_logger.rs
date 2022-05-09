@@ -4,11 +4,10 @@
 
 use {
     crate::stats::LogIdentifier,
+    anyhow::format_err,
     diagnostics_data::{LogsData, Severity},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_metrics::{
-        MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec, Status,
-    },
+    fidl_fuchsia_metrics::{MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::fx_log_warn,
@@ -74,7 +73,10 @@ async fn connect_to_cobalt(specs: &MetricSpecs) -> Result<MetricEventLoggerProxy
 
     let metric_logger_factory = connect_to_protocol::<MetricEventLoggerFactoryMarker>()?;
     let (proxy, request) = create_proxy().unwrap();
-    metric_logger_factory.create_metric_event_logger(project_spec, request).await?;
+    metric_logger_factory
+        .create_metric_event_logger(project_spec, request)
+        .await?
+        .map_err(|e| format_err!("error response {:?}", e))?;
     Ok(proxy)
 }
 
@@ -190,14 +192,14 @@ impl MetricLogger {
         }
         let status = status_result?;
         match status {
-            Status::Ok => Ok(()),
-            _ => {
+            Ok(()) => Ok(()),
+            Err(e) => {
                 fx_log_warn!(
                     "Not logging metrics for {} seconds because Cobalt failed",
                     COBALT_BACKOFF_SECONDS
                 );
                 self.last_cobalt_failure_time = now;
-                Err(anyhow::format_err!("Cobalt returned error: {}", status as u8))
+                Err(anyhow::format_err!("Cobalt returned error: {}", e as u8))
             }
         }
     }

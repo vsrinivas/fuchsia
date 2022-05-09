@@ -4,6 +4,7 @@
 
 #include "src/cobalt/bin/app/utils.h"
 
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "third_party/cobalt/src/lib/util/file_util.h"
@@ -39,14 +40,14 @@ fuchsia::cobalt::Status ToCobaltStatus(const Status &s) {
   }
 }
 
-fuchsia::metrics::Status ToMetricsStatus(const Status &s) {
+fpromise::result<void, fuchsia::metrics::Error> ToMetricsResult(const Status &s) {
   switch (s.error_code()) {
     case StatusCode::OK:
-      return fuchsia::metrics::Status::OK;
+      return fpromise::ok();
     case StatusCode::INVALID_ARGUMENT:
-      return fuchsia::metrics::Status::INVALID_ARGUMENTS;
+      return fpromise::error(fuchsia::metrics::Error::INVALID_ARGUMENTS);
     case StatusCode::RESOURCE_EXHAUSTED:
-      return fuchsia::metrics::Status::BUFFER_FULL;
+      return fpromise::error(fuchsia::metrics::Error::BUFFER_FULL);
     case StatusCode::CANCELLED:
     case StatusCode::UNKNOWN:
     case StatusCode::DEADLINE_EXCEEDED:
@@ -62,7 +63,7 @@ fuchsia::metrics::Status ToMetricsStatus(const Status &s) {
     case StatusCode::DATA_LOSS:
     case StatusCode::UNAUTHENTICATED:
     default:
-      return fuchsia::metrics::Status::INTERNAL_ERROR;
+      return fpromise::error(fuchsia::metrics::Error::INTERNAL_ERROR);
   }
 }
 

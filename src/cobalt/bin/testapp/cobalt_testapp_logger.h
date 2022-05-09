@@ -14,21 +14,27 @@
 
 namespace cobalt::testapp {
 
-inline std::string StatusToString(fuchsia::metrics::Status status) {
-  switch (status) {
-    case fuchsia::metrics::Status::OK:
-      return "OK";
-    case fuchsia::metrics::Status::INVALID_ARGUMENTS:
+inline std::string ErrorToString(fuchsia::metrics::Error error) {
+  switch (error) {
+    case fuchsia::metrics::Error::INVALID_ARGUMENTS:
       return "INVALID_ARGUMENTS";
-    case fuchsia::metrics::Status::EVENT_TOO_BIG:
+    case fuchsia::metrics::Error::EVENT_TOO_BIG:
       return "EVENT_TOO_BIG";
-    case fuchsia::metrics::Status::BUFFER_FULL:
+    case fuchsia::metrics::Error::BUFFER_FULL:
       return "BUFFER_FULL";
-    case fuchsia::metrics::Status::SHUT_DOWN:
+    case fuchsia::metrics::Error::SHUT_DOWN:
       return "SHUT_DOWN";
-    case fuchsia::metrics::Status::INTERNAL_ERROR:
+    case fuchsia::metrics::Error::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
   }
+}
+
+inline std::string ResultToString(fpromise::result<void, fuchsia::metrics::Error>&& result) {
+  if (result.is_ok()) {
+    return "OK";
+  }
+
+  return ErrorToString(result.error());
 }
 
 enum ExperimentArm { kExperiment = 0, kControl = 1, kNone = 2 };

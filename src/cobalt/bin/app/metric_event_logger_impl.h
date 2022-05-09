@@ -44,7 +44,8 @@ class MetricEventLoggerImpl : public fuchsia::metrics::MetricEventLogger {
       fuchsia::metrics::MetricEventLogger::LogCustomEventCallback callback) override;
 
  private:
-  fuchsia::metrics::Status LogMetricEvent(fuchsia::metrics::MetricEvent event);
+  fpromise::result<void, fuchsia::metrics::Error> LogMetricEvent(
+      fuchsia::metrics::MetricEvent event);
 
   std::unique_ptr<logger::LoggerInterface> logger_;
 };
