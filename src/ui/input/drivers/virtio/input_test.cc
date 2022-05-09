@@ -124,6 +124,31 @@ TEST_F(VirtioInputTest, MultiTouchFingerEvents) {
   ASSERT_EQ(0, paradise_touch->fingers[2].flags);
   ASSERT_EQ(0, paradise_touch->fingers[3].flags);
   ASSERT_EQ(0, paradise_touch->fingers[4].flags);
+
+  // Out of bounds slot. GetReport values shouldn't change.
+  int NEW_X_VAL = 100;
+  int NEW_Y_VAL = 50;
+  SendTouchEvent(touch, VIRTIO_INPUT_EV_ABS, VIRTIO_INPUT_EV_MT_SLOT, 5);
+  SendTouchEvent(touch, VIRTIO_INPUT_EV_ABS, VIRTIO_INPUT_EV_MT_TRACKING_ID, 1);
+  SendTouchEvent(touch, VIRTIO_INPUT_EV_ABS, VIRTIO_INPUT_EV_MT_POSITION_X,
+                 static_cast<uint16_t>(NEW_X_VAL));
+  SendTouchEvent(touch, VIRTIO_INPUT_EV_ABS, VIRTIO_INPUT_EV_MT_POSITION_Y,
+                 static_cast<uint16_t>(NEW_Y_VAL));
+
+  report = touch.GetReport(&paradise_size);
+  paradise_touch = reinterpret_cast<const paradise_touch_t*>(report);
+
+  ASSERT_EQ(sizeof(paradise_touch_t), paradise_size);
+  ASSERT_EQ(1, paradise_touch->contact_count);
+  ASSERT_EQ(PARADISE_FINGER_FLAGS_TSWITCH_MASK,
+            paradise_touch->fingers[0].flags & PARADISE_FINGER_FLAGS_TSWITCH_MASK);
+  ASSERT_EQ(X_VAL * PARADISE_X_MAX / VAL_MAX, paradise_touch->fingers[0].x);
+  ASSERT_EQ(Y_VAL * PARADISE_Y_MAX / VAL_MAX, paradise_touch->fingers[0].y);
+
+  ASSERT_EQ(0, paradise_touch->fingers[1].flags);
+  ASSERT_EQ(0, paradise_touch->fingers[2].flags);
+  ASSERT_EQ(0, paradise_touch->fingers[3].flags);
+  ASSERT_EQ(0, paradise_touch->fingers[4].flags);
 }
 
 TEST_F(VirtioInputTest, MouseTest) {

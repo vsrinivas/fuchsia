@@ -39,7 +39,7 @@ zx_status_t HidTouch::GetDescriptor(uint8_t desc_type, void* out_data_buffer, si
 void HidTouch::ReceiveEvent(virtio_input_event_t* event) {
   if (event->type == VIRTIO_INPUT_EV_ABS) {
     if (event->code == VIRTIO_INPUT_EV_MT_SLOT) {
-      if (event->value > MAX_TOUCH_POINTS) {
+      if (event->value >= MAX_TOUCH_POINTS) {
         LTRACEF("ERROR: Slot is too large for touchscreen\n");
         mt_slot_ = -1;
         return;
@@ -47,7 +47,7 @@ void HidTouch::ReceiveEvent(virtio_input_event_t* event) {
       mt_slot_ = event->value;
     }
 
-    if (mt_slot_ < 0 || mt_slot_ > MAX_TOUCH_POINTS) {
+    if (mt_slot_ < 0 || mt_slot_ >= MAX_TOUCH_POINTS) {
       return;
     }
 
