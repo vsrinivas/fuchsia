@@ -146,12 +146,12 @@ executable("server_operation_test") {
 
 fuchsia_test_component("client_operation_test_cmp") {
   deps = [ ":client_operation_test" ]
-  manifest = "meta/client_operation_test.cmx"
+  manifest = "meta/client_operation_test.cml"
 }
 
 fuchsia_test_component("server_operation_test_cmp") {
   deps = [ ":server_operation_test" ]
-  manifest = "meta/server_operation_test.cmx"
+  manifest = "meta/server_operation_test.cml"
 }
 
 fuchsia_test_package("guest_interaction_operation_tests") {
