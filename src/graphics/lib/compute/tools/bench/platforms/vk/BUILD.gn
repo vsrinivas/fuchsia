@@ -42,6 +42,7 @@ source_set("bench_vk_sources") {
 # Vulkan Bench
 #
 graphics_compute_vulkan_executable("bench-vk") {
+  testonly = true
   sources = [ "main.c" ]
   deps = [ ":bench_vk_sources" ]
 }

@@ -7,17 +7,22 @@ import("//src/graphics/lib/compute/gn/build_rules.gni")
 #
 # Vulkan Bench unit tests
 #
-graphics_compute_unittests_package("bench-vk-unittests") {
-  needs_vulkan = true
+graphics_compute_unittests("bench-vk-unittests") {
   testonly = true
   sources = [ "bench_vk_unittests.cc" ]
   deps = [ "${graphics_compute_dir}/tools/bench/platforms/vk:bench_vk_sources" ]
+}
+
+graphics_compute_unittests_package("bench-vk-tests") {
+  needs_vulkan = true
+  testonly = true
+  deps = [ ":bench-vk-unittests" ]
 
   #
   # Ensure that a host executable is built on Linux hosts
   #
   if (is_fuchsia && host_os == "linux") {
-    data_deps = [ ":bench-vk-unittests($host_toolchain)" ]
+    data_deps = [ ":bench-vk-tests($host_toolchain)" ]
   }
 }
 
@@ -28,5 +33,5 @@ graphics_compute_unittests_package("bench-vk-unittests") {
 #
 group("tests") {
   testonly = true
-  public_deps = [ ":bench-vk-unittests" ]
+  public_deps = [ ":bench-vk-tests" ]
 }
