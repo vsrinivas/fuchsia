@@ -12,13 +12,24 @@ source_set("fxt") {
   sources = [
     "include/lib/fxt/fields.h",
     "include/lib/fxt/record_types.h",
+    "include/lib/fxt/serializer.h",
+    "include/lib/fxt/writer_internal.h",
+  ]
+  deps = [ "//zircon/system/ulib/zxc" ]
+  public_deps = [
+    # <fxt/writer.h> has #include <lib/zx/status.h>
+    # <fxt/serializer.h> has #include <lib/zx/status.h>
+    "//zircon/system/ulib/zxc",
   ]
   public_configs = [ ":config" ]
 }
 
 test("fxt_unittests") {
   testonly = true
-  sources = [ "fields_tests.cc" ]
+  sources = [
+    "fields_tests.cc",
+    "serializer_test.cc",
+  ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/fxt",
