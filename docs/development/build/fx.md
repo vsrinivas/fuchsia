@@ -255,7 +255,7 @@ Note that this only works for targets declared in the default GN toolchain. For
 targets in other toolchains, the path of an output file may be used instead. For
 example, an executable target with the label
 `//foo/bar:blah(//build/toolchain:host_x64)` can be built with
-`fx build <output_dir>/host_x64/blah`.
+`fx build host_x64/blah`.
 
 See the [build system overview][build-overview] for a more detailed discussion
 of build targets.
