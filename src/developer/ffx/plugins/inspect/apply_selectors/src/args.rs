@@ -23,6 +23,10 @@ pub struct ApplySelectorsCommand {
     pub snapshot_file: Option<PathBuf>,
 
     #[argh(option)]
+    /// moniker of the component to apply the command.
+    pub moniker: Option<String>,
+
+    #[argh(option)]
     /// the path from where to get the ArchiveAccessor connection. If the given path is a
     /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
     /// If the given path is a service file, the command will attempt to connect to it as an

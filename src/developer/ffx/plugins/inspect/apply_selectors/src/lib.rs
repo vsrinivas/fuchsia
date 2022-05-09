@@ -56,17 +56,23 @@ pub async fn apply_selectors(
         provider.snapshot::<Inspect>(&cmd.accessor_path, &[]).await?
     };
 
-    interactive_apply(&cmd.selector_file, &inspect_data)?;
+    interactive_apply(&cmd.selector_file, &inspect_data, &cmd.moniker)?;
 
     Ok(())
 }
 
-fn interactive_apply(selector_file: &Path, data: &[InspectData]) -> Result<()> {
+fn interactive_apply(
+    selector_file: &Path,
+    data: &[InspectData],
+    requested_moniker: &Option<String>,
+) -> Result<()> {
     let stdin = stdin();
     let stdout = stdout().into_raw_mode().context("Unable to convert terminal to raw mode.")?;
 
-    let mut screen =
-        Screen::new(Termion::new(stdout), filter_data_to_lines(selector_file, data, &None)?);
+    let mut screen = Screen::new(
+        Termion::new(stdout),
+        filter_data_to_lines(selector_file, data, requested_moniker)?,
+    );
 
     screen.terminal.switch_interactive();
     screen.refresh_screen_and_flush();
@@ -84,7 +90,7 @@ fn interactive_apply(selector_file: &Path, data: &[InspectData]) -> Result<()> {
                 screen.set_lines(vec![Line::new("Refressing filtered hierarchiers...")]);
                 screen.clear_screen();
                 screen.refresh_screen_and_flush();
-                screen.set_lines(filter_data_to_lines(selector_file, data, &None)?);
+                screen.set_lines(filter_data_to_lines(selector_file, data, requested_moniker)?);
                 true
             }
             Event::Key(Key::PageUp) => screen.scroll(-screen.max_lines(), 0),

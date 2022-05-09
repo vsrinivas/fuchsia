@@ -89,22 +89,16 @@ pub fn filter_json_schema_by_selectors(
 pub fn filter_data_to_lines(
     selector_file: &Path,
     data: &[InspectData],
-    manifest: &Option<String>,
+    moniker: &Option<String>,
 ) -> Result<Vec<Line>> {
     let selectors: Vec<Selector> =
         selectors::parse_selector_file::<VerboseError>(&PathBuf::from(selector_file))?
             .into_iter()
             .collect();
 
-    // Filter the data to contain only manifest files we are interested in.
-    let mut diffable_source = if let Some(manifest) = manifest {
-        data.iter()
-            .filter(|data_item| match &data_item.metadata.component_url {
-                Some(ref url) => url.contains(manifest),
-                None => true,
-            })
-            .cloned()
-            .collect()
+    // Filter the data to contain only moniker files we are interested in.
+    let mut diffable_source = if let Some(moniker) = moniker {
+        data.iter().filter(|schema| schema.moniker == *moniker).cloned().collect()
     } else {
         data.to_vec()
     };
@@ -183,7 +177,7 @@ mod tests {
         selector_string: &str,
         source_hierarchy: serde_json::Value,
         golden_json: serde_json::Value,
-        requested_component: Option<String>,
+        requested_moniker: Option<String>,
     ) {
         let mut selector_path =
             tempfile::NamedTempFile::new().expect("Creating tmp selector file should succeed.");
@@ -195,7 +189,7 @@ mod tests {
         let schemas: Vec<InspectData> =
             serde_json::from_value(source_hierarchy).expect("load schemas");
         let filtered_data_string =
-            filter_data_to_lines(&selector_path.path(), &schemas, &requested_component)
+            filter_data_to_lines(&selector_path.path(), &schemas, &requested_moniker)
                 .expect("filtering hierarchy should have succeeded.")
                 .into_iter()
                 .filter(|line| !line.removed)
@@ -287,7 +281,7 @@ realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
             full_tree_selector,
             get_v1_json_dump(),
             get_v1_json_dump(),
-            Some("account_manager.cmx".to_string()),
+            Some("realm1/realm2/session5/account_manager.cmx".to_string()),
         );
 
         let single_value_selector =
@@ -304,7 +298,7 @@ realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
             single_value_selector,
             get_v1_json_dump(),
             get_v1_single_value_json(),
-            Some("account_manager.cmx".to_string()),
+            Some("realm1/realm2/session5/account_manager.cmx".to_string()),
         );
 
         setup_and_run_selector_filtering(
