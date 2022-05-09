@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
   output_name = "factory_reset_trigger"
@@ -22,21 +23,11 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("factory-reset-trigger-cmp") {
+fuchsia_package_with_single_component("factory-reset-trigger") {
+  manifest = "meta/factory-reset-trigger.cml"
   deps = [ ":bin" ]
-  manifest = "meta/factory-reset-trigger.cmx"
-  component_name = "factory-reset-trigger"
 }
 
-fuchsia_package("factory-reset-trigger") {
-  deps = [
-    ":config",
-    ":factory-reset-trigger-cmp",
-  ]
-}
-
-config_data("config") {
-  for_pkg = "sysmgr"
-  outputs = [ "factory-reset-trigger.config" ]
-  sources = [ "sysmgr.config" ]
+core_shard("factory-reset-trigger-core-shard") {
+  shard_file = "meta/factory-reset-trigger.core_shard.cml"
 }

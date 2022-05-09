@@ -1,0 +1,40 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "factory-reset-trigger",
+            url: "fuchsia-pkg://fuchsia.com/factory-reset-trigger#meta/factory-reset-trigger.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#factory-reset-trigger",
+        },
+        {
+            protocol: "fuchsia.recovery.FactoryReset",
+            from: "#factory_reset",
+            to: "#factory-reset-trigger",
+        },
+        {
+            protocol: "fuchsia.update.channel.Provider",
+            from: "#omaha-client-service",
+            to: "#factory-reset-trigger",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#factory-reset-trigger",
+            subdir: "factory-reset-trigger",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: "#factory-reset-trigger",
+        },
+    ],
+}

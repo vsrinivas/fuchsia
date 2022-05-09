@@ -164,13 +164,7 @@
         },
         {
             instance_id: "f4597d9b92f6c3e4847a5bdb53ea095aee59ad07f69745ebcdb43c9f96125d73",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/factory-reset-trigger#meta/factory-reset-trigger.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/factory-reset-trigger",
         },
         {
             instance_id: "5bd5150caf1ff36c0c48bd26ef276c7ebe01b17b7919dba84abed3ab7d7bd48b",
