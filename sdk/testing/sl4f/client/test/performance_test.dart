@@ -37,15 +37,6 @@ class FakePerformanceTools extends Performance {
   }
 }
 
-// Helper class for checking that an exception that is thrown has the
-// expected error text.
-class ExceptionHasText extends CustomMatcher {
-  ExceptionHasText(matcher)
-      : super('Exception with text that is', 'text', matcher);
-  @override
-  Object featureValueOf(dynamic exception) => exception.toString();
-}
-
 const String sl4fTraceRequestMethod = 'traceutil_facade.GetTraceFile';
 
 void main(List<String> args) {
@@ -315,8 +306,8 @@ void main(List<String> args) {
     expect(
         performance
             .convertResults('/bin/catapult_converter', fuchsiaPerfFile, {}),
-        throwsA(allOf(TypeMatcher<ArgumentError>(),
-            ExceptionHasText(matches(expectedErrorRegExp)))));
+        throwsA(TypeMatcher<ArgumentError>().having((e) => e.toString(),
+            'exception text', matches(expectedErrorRegExp))));
   });
 
   test('convert trace', () async {
