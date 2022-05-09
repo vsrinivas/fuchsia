@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/sdk/sdk_host_tool.gni")
 
 rustc_binary("cmc") {
@@ -77,7 +78,7 @@ source_set("cmc_test_schemas") {
   ]
 }
 
-rustc_binary("cmc_integration_test_bin") {
+rustc_test("cmc_integration_test_bin") {
   name = "cmc_integration_test"
   edition = "2018"
   source_root = "tests/integration_test.rs"
@@ -112,16 +113,11 @@ fuchsia_component("example_component") {
   check_references = false
 }
 
-fuchsia_component("cmc_integration_test_component") {
-  testonly = true
-  component_name = "cmc_integration_test"
-  manifest = "meta/cmc_integration_test.cmx"
-  deps = [ ":cmc_integration_test_bin" ]
-}
-
-fuchsia_test_package("cmc_integration_test") {
-  test_components = [ ":cmc_integration_test_component" ]
-  deps = [ ":example_component" ]
+fuchsia_unittest_package("cmc_integration_test") {
+  deps = [
+    ":cmc_integration_test_bin",
+    ":example_component",
+  ]
 }
 
 install_host_tools("install") {
