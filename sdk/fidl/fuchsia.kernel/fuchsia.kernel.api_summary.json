@@ -14,7 +14,7 @@
         "name": "fuchsia.kernel/Counter"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE cpu_resource)",
+        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
         "name": "fuchsia.kernel/CpuResource.Get"
     },
@@ -57,7 +57,7 @@
         "name": "fuchsia.kernel/DebugBroker"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE debug_resource)",
+        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
         "name": "fuchsia.kernel/DebugResource.Get"
     },
@@ -66,7 +66,7 @@
         "name": "fuchsia.kernel/DebugResource"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE hypervisor_resource)",
+        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
         "name": "fuchsia.kernel/HypervisorResource.Get"
     },
@@ -75,7 +75,7 @@
         "name": "fuchsia.kernel/HypervisorResource"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE info_resource)",
+        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
         "name": "fuchsia.kernel/InfoResource.Get"
     },
@@ -84,7 +84,7 @@
         "name": "fuchsia.kernel/InfoResource"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE ioport_resource)",
+        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
         "name": "fuchsia.kernel/IoportResource.Get"
     },
@@ -93,7 +93,7 @@
         "name": "fuchsia.kernel/IoportResource"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE irq_resource)",
+        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
         "name": "fuchsia.kernel/IrqResource.Get"
     },
@@ -225,7 +225,7 @@
         "name": "fuchsia.kernel/MemoryStatsExtended"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE mmio_resource)",
+        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
         "name": "fuchsia.kernel/MmioResource.Get"
     },
@@ -313,7 +313,7 @@
         "name": "fuchsia.kernel/PerCpuStats"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE power_resource)",
+        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
         "name": "fuchsia.kernel/PowerResource.Get"
     },
@@ -340,7 +340,7 @@
         "name": "fuchsia.kernel/RootJobForInspect"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE smc_resource)",
+        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
         "name": "fuchsia.kernel/SmcResource.Get"
     },
@@ -373,7 +373,7 @@
         "name": "fuchsia.kernel/Stats"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE vmex_resource)",
+        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
         "name": "fuchsia.kernel/VmexResource.Get"
     },
