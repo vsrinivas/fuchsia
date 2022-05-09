@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(test)]
+use crate::backend_test::BackendController;
 use {
     crate::backend::{BlockBackend, DeviceAttrs, Request, Sector},
-    crate::backend_test::BackendController,
     crate::wire,
     anyhow::{anyhow, Error},
     async_trait::async_trait,
@@ -12,8 +13,6 @@ use {
     std::convert::TryInto,
     std::rc::Rc,
 };
-
-const DEFAULT_CAPACITY: usize = 64 * 1024;
 
 trait AsByteRange {
     fn as_byte_range(&self) -> std::ops::Range<usize>;
@@ -31,6 +30,7 @@ impl AsByteRange for Sector {
 /// without retaining a reference to the backend.
 pub struct Controller(Rc<RefCell<Vec<u8>>>);
 
+#[cfg(test)]
 impl BackendController for Controller {
     fn write_sector(&mut self, sector: Sector, data: &[u8]) -> Result<(), Error> {
         self.0.borrow_mut()[sector.as_byte_range()].copy_from_slice(data);
@@ -51,7 +51,10 @@ pub struct MemoryBackend(Rc<RefCell<Vec<u8>>>);
 
 impl MemoryBackend {
     /// Creates a `MemoryBackend` with a 64KiB capacity.
+    #[cfg(test)]
     pub fn new() -> (Self, Controller) {
+        const DEFAULT_CAPACITY: usize = 64 * 1024;
+
         Self::with_size(DEFAULT_CAPACITY)
     }
 

@@ -122,7 +122,7 @@ impl BlockBackend for FileBackend {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use {
         super::*,
         crate::backend_test::{BackendController, BackendTest},
@@ -131,7 +131,7 @@ mod tests {
         tempfile::tempfile,
     };
 
-    struct FileBackendController(std::fs::File);
+    pub struct FileBackendController(std::fs::File);
 
     impl BackendController for FileBackendController {
         fn write_sector(&mut self, sector: Sector, data: &[u8]) -> Result<(), Error> {
@@ -150,7 +150,7 @@ mod tests {
         }
     }
 
-    struct FileBackendTest;
+    pub struct FileBackendTest;
 
     #[async_trait(?Send)]
     impl BackendTest for FileBackendTest {

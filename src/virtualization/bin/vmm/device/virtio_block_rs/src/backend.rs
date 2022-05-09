@@ -35,6 +35,10 @@ impl Sector {
     pub fn to_bytes(&self) -> Option<u64> {
         self.0.checked_mul(wire::VIRTIO_BLOCK_SECTOR_SIZE)
     }
+
+    pub fn raw(&self) -> u64 {
+        self.0
+    }
 }
 
 impl std::ops::Add for Sector {
@@ -42,6 +46,12 @@ impl std::ops::Add for Sector {
 
     fn add(self, other: Self) -> Self {
         Sector(self.0 + other.0)
+    }
+}
+
+impl std::ops::AddAssign for Sector {
+    fn add_assign(&mut self, other: Self) {
+        self.0 += other.0
     }
 }
 
@@ -127,7 +137,6 @@ impl<'a, 'b> Request<'a, 'b> {
         Self { ranges: Cow::Borrowed(ranges), sector }
     }
 
-    #[cfg(test)]
     pub fn split_at<'c>(&self, offset: Sector) -> Option<(Request<'a, 'c>, Request<'a, 'c>)> {
         let offset_bytes = offset.to_bytes().unwrap();
         let mut range_bytes = 0;

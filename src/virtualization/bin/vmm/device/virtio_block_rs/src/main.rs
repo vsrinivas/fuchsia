@@ -6,8 +6,8 @@ mod backend;
 #[cfg(test)]
 mod backend_test;
 mod block_device;
+mod copy_on_write_backend;
 mod file_backend;
-#[cfg(test)]
 mod memory_backend;
 mod qcow_backend;
 mod remote_backend;
@@ -16,7 +16,9 @@ mod wire;
 use {
     crate::backend::*,
     crate::block_device::*,
+    crate::copy_on_write_backend::CopyOnWriteBackend,
     crate::file_backend::FileBackend,
+    crate::memory_backend::MemoryBackend,
     crate::qcow_backend::QcowBackend,
     crate::remote_backend::RemoteBackend,
     anyhow::{anyhow, Context},
@@ -35,22 +37,23 @@ async fn create_backend(
     mode: BlockMode,
     channel: zx::Channel,
 ) -> Result<Box<dyn BlockBackend>, anyhow::Error> {
-    match format {
-        BlockFormat::File => {
-            let file_backend = FileBackend::new(channel)?;
-            Ok(Box::new(file_backend))
-        }
+    let backend: Box<dyn BlockBackend> = match format {
+        BlockFormat::File => Box::new(FileBackend::new(channel)?),
+        BlockFormat::Block => Box::new(RemoteBackend::new(channel).await?),
         BlockFormat::Qcow => {
             if let BlockMode::ReadWrite = mode {
-                Err(anyhow!("Writes to QCOW files is not supported"))
+                return Err(anyhow!("Writes to QCOW files is not supported"));
             } else {
-                Ok(Box::new(QcowBackend::new(channel)?))
+                Box::new(QcowBackend::new(channel)?)
             }
         }
-        BlockFormat::Block => {
-            let remote_backend = RemoteBackend::new(channel).await?;
-            Ok(Box::new(remote_backend))
-        }
+    };
+    if mode == BlockMode::VolatileWrite {
+        let size = backend.get_attrs().await?.capacity.to_bytes().unwrap();
+        let (memory_backend, _) = MemoryBackend::with_size(size as usize);
+        Ok(Box::new(CopyOnWriteBackend::new(backend, Box::new(memory_backend)).await?))
+    } else {
+        Ok(backend)
     }
 }
 
