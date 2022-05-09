@@ -21,6 +21,7 @@
             "fuchsia.hardware.pty.Device",
             "fuchsia.bluetooth.sys.Access",
             "fuchsia.bluetooth.sys.HostWatcher",
+            "fuchsia.device.NameProvider",
             "fuchsia.logger.Log",
             "fuchsia.media.Audio",
             "fuchsia.net.name.Lookup",
