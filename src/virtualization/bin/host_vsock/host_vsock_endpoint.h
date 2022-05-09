@@ -48,7 +48,7 @@ class HostVsockEndpoint : public fuchsia::virtualization::HostVsockConnector,
   void Listen(uint32_t port,
               fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
               ListenCallback callback) override;
-  void Connect(uint32_t cid, uint32_t port, zx::handle handle,
+  void Connect(uint32_t cid, uint32_t port, zx::socket socket,
                fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback) override;
 
   void OnShutdown(uint32_t port);

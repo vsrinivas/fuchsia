@@ -22,7 +22,11 @@
 #include "src/virtualization/lib/guest_interaction/common.h"
 #include "src/virtualization/lib/guest_interaction/test/integration_test_lib.h"
 
-static constexpr size_t kBufferSize = 100;
+namespace {
+
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
+
+constexpr size_t kBufferSize = 100;
 
 std::string drain_socket(zx::socket socket) {
   std::string out_string;
@@ -59,7 +63,9 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 
   std::optional<zx_status_t> status;
   ep->Connect(cid(), GUEST_INTERACTION_PORT, std::move(remote_socket),
-              [&status](zx_status_t connect_status) { status = connect_status; });
+              [&status](HostVsockEndpoint_Connect_Result result) {
+                status = result.is_response() ? ZX_OK : result.err();
+              });
   RunLoopUntil([&status]() { return status.has_value(); });
   ASSERT_OK(status.value());
 
@@ -218,7 +224,9 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
 
   std::optional<zx_status_t> status;
   ep->Connect(cid(), GUEST_INTERACTION_PORT, std::move(remote_socket),
-              [&status](zx_status_t connect_status) { status = connect_status; });
+              [&status](HostVsockEndpoint_Connect_Result result) {
+                status = result.is_response() ? ZX_OK : result.err();
+              });
   RunLoopUntil([&status] { return status.has_value(); });
   ASSERT_TRUE(status.has_value());
   ASSERT_OK(status.value());
@@ -294,3 +302,5 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
 
   ASSERT_EQ(verification_string, file_contents);
 }
+
+}  // namespace

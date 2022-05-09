@@ -9,24 +9,28 @@
 namespace guest {
 namespace testing {
 
+using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
+
 void FakeHostVsock::Listen(
     uint32_t port, fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
     ListenCallback callback) {
   if (listeners_.find(port) != listeners_.end()) {
-    callback(ZX_ERR_ALREADY_BOUND);
+    callback(HostVsockEndpoint_Listen_Result::WithErr(ZX_ERR_ALREADY_BOUND));
     return;
   }
   listeners_.emplace(std::make_pair(port, acceptor.Bind()));
-  callback(ZX_OK);
+  callback(HostVsockEndpoint_Listen_Result::WithResponse({}));
 }
 
-void FakeHostVsock::Connect(uint32_t cid, uint32_t port, zx::handle handle,
+void FakeHostVsock::Connect(uint32_t cid, uint32_t port, zx::socket socket,
                             ConnectCallback callback) {
   if (cid != kGuestCid) {
-    callback(ZX_ERR_INVALID_ARGS);
+    callback(HostVsockEndpoint_Connect_Result::WithErr(ZX_ERR_INVALID_ARGS));
     return;
   }
-  guest_vsock_->AcceptConnectionFromHost(port, std::move(handle), std::move(callback));
+  guest_vsock_->AcceptConnectionFromHost(port, std::move(socket), std::move(callback));
 }
 
 zx_status_t FakeHostVsock::AcceptConnectionFromGuest(uint32_t port,
@@ -36,11 +40,11 @@ zx_status_t FakeHostVsock::AcceptConnectionFromGuest(uint32_t port,
     return ZX_ERR_CONNECTION_REFUSED;
   }
   it->second->Accept(kGuestCid, last_guest_port_--, port,
-                     [callback = std::move(callback)](auto status, auto handle) {
-                       if (status == ZX_OK) {
-                         callback(std::move(handle));
+                     [callback = std::move(callback)](HostVsockAcceptor_Accept_Result result) {
+                       if (result.is_response()) {
+                         callback(std::move(result.response().socket));
                        } else {
-                         callback(zx::handle());
+                         callback(zx::socket());
                        }
                      });
   return ZX_OK;

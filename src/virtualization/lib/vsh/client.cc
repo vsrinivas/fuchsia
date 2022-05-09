@@ -12,6 +12,8 @@
 
 namespace vsh {
 
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
+
 // static
 fpromise::result<BlockingClient, zx_status_t> BlockingClient::Connect(
     const fuchsia::virtualization::HostVsockEndpointSyncPtr& socket_endpoint, uint32_t cid,
@@ -23,11 +25,14 @@ fpromise::result<BlockingClient, zx_status_t> BlockingClient::Connect(
     FX_LOGS(ERROR) << "Failed to create socket: " << zx_status_get_string(status);
     return fpromise::error(status);
   }
-  zx_status_t fidl_status = socket_endpoint->Connect(cid, port, std::move(remote_socket), &status);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to connect to vshd: " << zx_status_get_string(status);
-    return fpromise::error(status);
+
+  HostVsockEndpoint_Connect_Result result;
+  zx_status_t fidl_status = socket_endpoint->Connect(cid, port, std::move(remote_socket), &result);
+  if (result.is_err()) {
+    FX_LOGS(ERROR) << "Failed to connect to vshd: " << zx_status_get_string(result.err());
+    return fpromise::error(result.err());
   }
+
   if (fidl_status != ZX_OK) {
     FX_LOGS(ERROR) << "FIDL error connecting to vshd: " << zx_status_get_string(fidl_status);
     return fpromise::error(fidl_status);

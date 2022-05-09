@@ -28,6 +28,8 @@
 
 namespace fpty = fuchsia_hardware_pty;
 
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
+
 std::optional<fpty::wire::WindowSize> get_window_size(zx::unowned_channel pty) {
   auto result = fidl::WireCall<fpty::Device>(pty)->GetWindowSize();
 
@@ -633,10 +635,12 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t>
     std::cerr << "Failed to create socket: " << zx_status_get_string(status) << '\n';
     return status;
   }
-  vsock_endpoint->Connect(cid, port, std::move(remote_socket), &status);
-  if (status != ZX_OK) {
-    std::cerr << "Failed to connect: " << zx_status_get_string(status) << '\n';
-    return status;
+
+  HostVsockEndpoint_Connect_Result result;
+  vsock_endpoint->Connect(cid, port, std::move(remote_socket), &result);
+  if (result.is_err()) {
+    std::cerr << "Failed to connect: " << zx_status_get_string(result.err()) << '\n';
+    return result.err();
   }
 
   // Helper injection is likely undesirable if we aren't connecting to the default VM login shell.

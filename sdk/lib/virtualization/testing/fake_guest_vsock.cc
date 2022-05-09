@@ -8,6 +8,8 @@
 namespace guest {
 namespace testing {
 
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
+
 zx_status_t FakeGuestVsock::ConnectToHost(uint32_t port, ConnectCallback callback) {
   return host_vsock_->AcceptConnectionFromGuest(port, std::move(callback));
 }
@@ -25,9 +27,12 @@ void FakeGuestVsock::AcceptConnectionFromHost(
     fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback) {
   auto it = listeners_.find(port);
   if (it == listeners_.end()) {
-    callback(ZX_ERR_CONNECTION_REFUSED);
+    callback(fuchsia::virtualization::HostVsockEndpoint_Connect_Result::WithErr(
+        ZX_ERR_CONNECTION_REFUSED));
   } else {
-    callback(it->second(std::move(handle)));
+    zx_status_t status = it->second(std::move(handle));
+    callback(status == ZX_OK ? HostVsockEndpoint_Connect_Result::WithResponse({})
+                             : HostVsockEndpoint_Connect_Result::WithErr(std::move(status)));
   }
 }
 

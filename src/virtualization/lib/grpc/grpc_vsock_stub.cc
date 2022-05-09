@@ -24,10 +24,11 @@ fpromise::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
   fpromise::bridge<zx::socket, zx_status_t> bridge;
   socket_endpoint->Connect(
       cid, port, std::move(h1),
-      [completer = std::move(bridge.completer), h2 = std::move(h2)](zx_status_t status) mutable {
-        if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to connect: " << status;
-          completer.complete_error(status);
+      [completer = std::move(bridge.completer), h2 = std::move(h2)](
+          fuchsia::virtualization::HostVsockEndpoint_Connect_Result result) mutable {
+        if (result.is_err()) {
+          FX_LOGS(ERROR) << "Failed to connect: " << result.err();
+          completer.complete_error(result.err());
         } else {
           completer.complete_ok(std::move(h2));
         }

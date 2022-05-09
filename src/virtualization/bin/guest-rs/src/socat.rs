@@ -9,8 +9,7 @@ use {
     fidl_fuchsia_virtualization::{
         HostVsockAcceptorMarker, HostVsockEndpointMarker, HostVsockEndpointProxy,
     },
-    fuchsia_zircon::{self as zx, HandleBased},
-    fuchsia_zircon_status as zx_status,
+    fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
     futures::TryStreamExt,
 };
 
@@ -32,8 +31,10 @@ pub async fn handle_socat_listen(
         fidl::endpoints::create_request_stream::<HostVsockAcceptorMarker>()
             .context("failed to make vsock acceptor")?;
 
-    let _ = zx::Status::ok(vsock_endpoint.listen(host_port, vsock_accept_client).await?)
-        .map_err(Error::new)?;
+    vsock_endpoint
+        .listen(host_port, vsock_accept_client)
+        .await?
+        .map_err(|val| zx::Status::from_raw(val))?;
 
     // Try_next returns a Result<Option<T>, Err>, hence we need to unwrap our value
     let connection =
@@ -42,12 +43,12 @@ pub async fn handle_socat_listen(
         connection.into_accept().ok_or(zx_status::Status::CONNECTION_REFUSED)?;
 
     if port != host_port {
-        responder.send(zx_status::Status::CONNECTION_REFUSED.into_raw(), None)?;
+        responder.send(&mut Err(zx_status::Status::CONNECTION_REFUSED.into_raw()))?;
         return Err(anyhow!(zx_status::Status::CONNECTION_REFUSED));
     }
 
     let (socket, remote_socket) = zx::Socket::create(zx::SocketOpts::STREAM)?;
-    responder.send(zx_status::Status::OK.into_raw(), Some(remote_socket.into_handle()))?;
+    responder.send(&mut Ok(remote_socket))?;
     let io = services::GuestConsole::new(socket)?;
 
     io.run_with_stdio().await.map_err(From::from)
@@ -59,9 +60,11 @@ pub async fn handle_socat(
     port: u32,
 ) -> Result<(), Error> {
     let (socket, remote_socket) = zx::Socket::create(zx::SocketOpts::STREAM)?;
-    let _ =
-        zx::Status::ok(vsock_endpoint.connect(cid, port, Some(remote_socket.into_handle())).await?)
-            .map_err(Error::new)?;
+
+    vsock_endpoint
+        .connect(cid, port, remote_socket)
+        .await?
+        .map_err(|val| zx::Status::from_raw(val))?;
 
     let io = services::GuestConsole::new(socket)?;
     io.run_with_stdio().await.map_err(From::from)
@@ -88,7 +91,7 @@ mod test {
                 .expect("Unexpected call to Guest Proxy");
             assert_eq!(port, 0);
             responder
-                .send(zx_status::Status::CONNECTION_REFUSED.into_raw())
+                .send(&mut Err(zx_status::Status::CONNECTION_REFUSED.into_raw()))
                 .expect("Failed to send status code to client");
         };
 
@@ -112,10 +115,8 @@ mod test {
                 .into_listen()
                 .expect("Unexpected call to Guest Proxy");
             assert_eq!(port, 0);
-            responder
-                .send(zx_status::Status::OK.into_raw())
-                .expect("Failed to send status code to client");
-            acceptor
+            responder.send(&mut Ok(())).expect("Failed to send status code to client");
+            let _ = acceptor
                 .into_proxy()
                 .expect("Failed to convert client end into proxy")
                 .accept(0, 0, 1)
@@ -145,7 +146,7 @@ mod test {
             assert_eq!(cid, 0);
             assert_eq!(port, 0);
             responder
-                .send(zx_status::Status::CONNECTION_REFUSED.into_raw())
+                .send(&mut Err(zx_status::Status::CONNECTION_REFUSED.into_raw()))
                 .expect("Failed to send status code to client");
         };
 

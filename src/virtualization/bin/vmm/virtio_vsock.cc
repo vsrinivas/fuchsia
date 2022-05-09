@@ -12,9 +12,9 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
-#include "src/lib/fsl/handles/object_info.h"
-
 namespace {
+
+using ::fuchsia::virtualization::HostVsockConnector_Connect_Result;
 
 // Maximum number of unprocessed control packets the guest is allowed to cause
 // us to generate before we stop emitting packets.
@@ -559,7 +559,7 @@ void VirtioVsock::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx:
   AddConnectionLocked(key, std::move(conn));
 }
 
-void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status, zx::handle handle,
+void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status, zx::socket socket,
                                   uint32_t buf_alloc, uint32_t fwd_cnt) {
   // If the connection request resulted in an error, send a reset.
   if (status != ZX_OK) {
@@ -568,18 +568,9 @@ void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status, zx::han
     return;
   }
 
-  // If the host gave us an unsupported handle to communicate to them with, abort
-  // the connection.
-  zx_obj_type_t type = fsl::GetType(handle.get());
-  if (type != zx::socket::TYPE) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    SendResetPacket(send_queue_, key);
-    return;
-  }
-
   // Create a new connection object to track this virtio socket.
   std::unique_ptr<VirtioVsock::Connection> new_conn =
-      Connection::Create(key, zx::socket(handle.release()), dispatcher_, nullptr, [this, key] {
+      Connection::Create(key, std::move(socket), dispatcher_, nullptr, [this, key] {
         std::lock_guard<std::mutex> lock(mutex_);
         WaitOnQueueLocked(key);
       });
@@ -897,9 +888,14 @@ void VirtioVsock::ProcessIncomingPacket(const VsockChain& chain) {
   if (header->op == VIRTIO_VSOCK_OP_REQUEST && connector_) {
     connector_->Connect(static_cast<uint32_t>(header->src_cid), header->src_port,
                         static_cast<uint32_t>(header->dst_cid), header->dst_port,
-                        [this, key, buf_alloc = header->buf_alloc, fwd_cnt = header->fwd_cnt](
-                            zx_status_t status, zx::handle handle) {
-                          ConnectCallback(key, status, std::move(handle), buf_alloc, fwd_cnt);
+                        [this, key, buf_alloc = header->buf_alloc,
+                         fwd_cnt = header->fwd_cnt](HostVsockConnector_Connect_Result result) {
+                          if (result.is_response()) {
+                            ConnectCallback(key, ZX_OK, std::move(result.response().socket),
+                                            buf_alloc, fwd_cnt);
+                          } else {
+                            ConnectCallback(key, result.err(), zx::socket(), buf_alloc, fwd_cnt);
+                          }
                         });
     return;
   }

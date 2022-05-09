@@ -13,8 +13,16 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/virtualization/bin/host_vsock/guest_vsock_endpoint.h"
 
-static constexpr uint32_t kGuestCid = 3;
-static constexpr uint32_t kOtherGuestCid = 4;
+namespace {
+
+using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Response;
+using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Result;
+using ::fuchsia::virtualization::HostVsockConnector_Connect_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
+
+constexpr uint32_t kGuestCid = 3;
+constexpr uint32_t kOtherGuestCid = 4;
 
 template <typename T>
 class TestVsockAcceptorBase : public T {
@@ -60,12 +68,17 @@ class TestHostVsockAcceptor
 
 struct TestConnectorConnection {
   zx_status_t status = ZX_ERR_BAD_STATE;
-  zx::handle handle;
+  zx::socket socket;
 
   fuchsia::virtualization::HostVsockConnector::ConnectCallback callback() {
-    return [this](zx_status_t status, zx::handle handle) {
-      this->status = status;
-      this->handle = std::move(handle);
+    return [this](HostVsockConnector_Connect_Result result) {
+      if (result.is_response()) {
+        this->status = ZX_OK;
+        this->socket = std::move(result.response().socket);
+      } else {
+        this->status = result.err();
+        this->socket = zx::socket();
+      }
     };
   }
 };
@@ -73,12 +86,21 @@ struct TestConnectorConnection {
 struct TestEndpointConnection {
   zx_status_t status = ZX_ERR_BAD_STATE;
 
-  fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback() {
-    return [this](zx_status_t status) { this->status = status; };
+  fuchsia::virtualization::HostVsockEndpoint::ConnectCallback connect_callback() {
+    return [this](HostVsockEndpoint_Connect_Result result) {
+      this->status = result.is_response() ? ZX_OK : result.err();
+    };
+  }
+
+  fuchsia::virtualization::HostVsockEndpoint::ListenCallback listen_callback() {
+    return [this](HostVsockEndpoint_Listen_Result result) {
+      this->status = result.is_response() ? ZX_OK : result.err();
+    };
   }
 };
 
-static void NoOpCallback(zx_status_t status) {}
+void NoOpCallback(HostVsockEndpoint_Connect_Result result) {}
+void NoOpCallback(HostVsockEndpoint_Listen_Result result) {}
 
 class HostVsockEndpointTest : public ::gtest::TestLoopFixture {
  protected:
@@ -106,7 +128,7 @@ TEST_F(HostVsockEndpointTest, ConnectGuestToGuest) {
   requests[0].callback(fuchsia::virtualization::GuestVsockAcceptor_Accept_Result::WithResponse({}));
 
   EXPECT_EQ(ZX_OK, connection.status);
-  EXPECT_TRUE(connection.handle.is_valid());
+  EXPECT_TRUE(connection.socket.is_valid());
 }
 
 TEST_F(HostVsockEndpointTest, ConnectGuestToHost) {
@@ -128,12 +150,13 @@ TEST_F(HostVsockEndpointTest, ConnectGuestToHost) {
   zx::socket h1, h2;
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
 
-  requests[0].callback(ZX_OK, std::move(h1));
+  requests[0].callback(HostVsockAcceptor_Accept_Result::WithResponse(
+      HostVsockAcceptor_Accept_Response(std::move(h1))));
 
   RunLoopUntilIdle();
 
   EXPECT_EQ(ZX_OK, connection.status);
-  EXPECT_TRUE(connection.handle.is_valid());
+  EXPECT_TRUE(connection.socket.is_valid());
 }
 
 TEST_F(HostVsockEndpointTest, ConnectHostToGuest) {
@@ -141,7 +164,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuest) {
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
 
   TestEndpointConnection connection;
-  host_endpoint_.Connect(kGuestCid, 22, std::move(h1), connection.callback());
+  host_endpoint_.Connect(kGuestCid, 22, std::move(h1), connection.connect_callback());
 
   auto requests = guest_acceptor_.TakeRequests();
   ASSERT_EQ(1u, requests.size());
@@ -161,7 +184,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToHost) {
 
   TestEndpointConnection connection;
   host_endpoint_.Connect(fuchsia::virtualization::HOST_CID, 22, std::move(h1),
-                         connection.callback());
+                         connection.connect_callback());
 
   ASSERT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
 }
@@ -174,7 +197,7 @@ TEST_F(HostVsockEndpointTest, ConnectGuestToGuestNoAcceptor) {
   ASSERT_EQ(0u, requests.size());
 
   EXPECT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
-  EXPECT_FALSE(connection.handle.is_valid());
+  EXPECT_FALSE(connection.socket.is_valid());
 }
 
 TEST_F(HostVsockEndpointTest, ConnectGuestToHostNoAcceptor) {
@@ -183,7 +206,7 @@ TEST_F(HostVsockEndpointTest, ConnectGuestToHostNoAcceptor) {
                          connection.callback());
 
   EXPECT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
-  EXPECT_FALSE(connection.handle.is_valid());
+  EXPECT_FALSE(connection.socket.is_valid());
 }
 
 TEST_F(HostVsockEndpointTest, ConnectHostToGuestNoAcceptor) {
@@ -191,7 +214,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestNoAcceptor) {
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
 
   TestEndpointConnection connection;
-  host_endpoint_.Connect(kGuestCid + 1000, 22, std::move(h1), connection.callback());
+  host_endpoint_.Connect(kGuestCid + 1000, 22, std::move(h1), connection.connect_callback());
 
   EXPECT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
 }
@@ -201,13 +224,13 @@ TEST_F(HostVsockEndpointTest, ListenMultipleTimesSamePort) {
 
   // Listen on port 22.
   TestHostVsockAcceptor host_acceptor1;
-  host_endpoint_.Listen(22, host_acceptor1.NewBinding(), connection.callback());
+  host_endpoint_.Listen(22, host_acceptor1.NewBinding(), connection.listen_callback());
 
   EXPECT_EQ(ZX_OK, connection.status);
 
   // Listen again on port 22 and verify that it fails.
   TestHostVsockAcceptor host_acceptor2;
-  host_endpoint_.Listen(22, host_acceptor2.NewBinding(), connection.callback());
+  host_endpoint_.Listen(22, host_acceptor2.NewBinding(), connection.listen_callback());
 
   EXPECT_EQ(ZX_ERR_ALREADY_BOUND, connection.status);
 }
@@ -285,3 +308,5 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
   ASSERT_EQ(1u, requests.size());
   EXPECT_EQ(requests[0].src_port, kFirstEphemeralPort);
 }
+
+}  // namespace

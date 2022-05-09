@@ -32,7 +32,7 @@ class FakeHostVsock : public fuchsia::virtualization::HostVsockEndpoint {
   void Listen(uint32_t port,
               fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
               ListenCallback callback) override;
-  void Connect(uint32_t cid, uint32_t port, zx::handle handle, ConnectCallback callback) override;
+  void Connect(uint32_t cid, uint32_t port, zx::socket socket, ConnectCallback callback) override;
 
   FakeGuestVsock* guest_vsock_;
   fidl::BindingSet<fuchsia::virtualization::HostVsockEndpoint> bindings_;

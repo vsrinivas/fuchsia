@@ -162,7 +162,7 @@ class VirtioVsock
   // |fuchsia::virtualization::GuestVsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::socket socket,
               fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback callback) override;
-  void ConnectCallback(ConnectionKey key, zx_status_t status, zx::handle handle, uint32_t buf_alloc,
+  void ConnectCallback(ConnectionKey key, zx_status_t status, zx::socket socket, uint32_t buf_alloc,
                        uint32_t fwd_cnt);
 
   zx_status_t AddConnectionLocked(ConnectionKey key, std::unique_ptr<Connection> conn)

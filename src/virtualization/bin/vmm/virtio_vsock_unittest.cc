@@ -16,6 +16,9 @@
 
 namespace {
 
+using ::fuchsia::virtualization::HostVsockConnector_Connect_Response;
+using ::fuchsia::virtualization::HostVsockConnector_Connect_Result;
+
 static constexpr size_t kDataSize = 4;
 
 struct RxBuffer {
@@ -100,13 +103,13 @@ class TestConnection {
   zx::socket remote_socket_;
 };
 
-using CreateCallback = fit::function<void(zx::handle*, zx::handle*)>;
+using CreateCallback = fit::function<void(zx::socket*, zx::socket*)>;
 
-static void CreateSocket(zx::handle* handle, zx::handle* remote_handle) {
+static void CreateSocket(zx::socket* socket_handle, zx::socket* remote_socket_handle) {
   zx::socket socket, remote_socket;
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket));
-  *handle = std::move(socket);
-  *remote_handle = std::move(remote_socket);
+  *socket_handle = std::move(socket);
+  *remote_socket_handle = std::move(remote_socket);
 }
 
 class VirtioVsockTest : public ::gtest::TestLoopFixture,
@@ -326,12 +329,16 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
   void GuestConnectInvokeCallbacks(zx_status_t status, CreateCallback create_callback) {
     for (auto it = connection_requests_.begin(); it != connection_requests_.end();
          it = connection_requests_.erase(it)) {
-      zx::handle handle, remote_handle;
+      zx::socket socket, remote_socket;
       if (status == ZX_OK) {
-        create_callback(&handle, &remote_handle);
-        remote_handles_.emplace_back(std::move(remote_handle));
+        create_callback(&socket, &remote_socket);
+        remote_handles_.emplace_back(std::move(remote_socket));
       }
-      it->callback(status, std::move(handle));
+
+      it->callback(status == ZX_OK ? HostVsockConnector_Connect_Result::WithResponse(
+                                         HostVsockConnector_Connect_Response(std::move(socket)))
+                                   : HostVsockConnector_Connect_Result::WithErr(std::move(status)));
+
       connections_established_.emplace_back(
           ConnectionRequest{it->src_cid, it->src_port, it->cid, it->port, nullptr});
       RunLoopUntilIdle();

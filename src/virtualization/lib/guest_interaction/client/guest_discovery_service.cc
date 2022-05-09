@@ -4,6 +4,8 @@
 
 #include "src/virtualization/lib/guest_interaction/client/guest_discovery_service.h"
 
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
+
 GuestDiscoveryServiceImpl::GuestDiscoveryServiceImpl(async_dispatcher_t* dispatcher)
     : context_(sys::ServiceDirectory::CreateFromNamespace(), dispatcher), executor_(dispatcher) {
   context_.svc()->Connect(manager_.NewRequest(dispatcher));
@@ -135,21 +137,22 @@ void GuestDiscoveryServiceImpl::GetGuest(
 
             ep->Connect(guest_info.guest_cid, GUEST_INTERACTION_PORT, std::move(remote_socket),
                         [completer, completers_cb = std::move(completers_cb),
-                         &variant](zx_status_t status) mutable {
-                          std::visit(overloaded{
-                                         [completer](FuchsiaGuestInteractionService& guest) {
-                                           // We completed the connection to the guest and
-                                           // discovered an already-existing connection. This should
-                                           // never happen.
-                                           FX_LOGS(ERROR)
-                                               << "existing connection in connection callback";
-                                           completer->complete_ok(&guest);
-                                         },
-                                         [&](GuestCompleters& completers) {
-                                           completers_cb(std::move(completers), status);
-                                         },
-                                     },
-                                     variant);
+                         &variant](HostVsockEndpoint_Connect_Result result) mutable {
+                          std::visit(
+                              overloaded{
+                                  [completer](FuchsiaGuestInteractionService& guest) {
+                                    // We completed the connection to the guest and
+                                    // discovered an already-existing connection. This should
+                                    // never happen.
+                                    FX_LOGS(ERROR) << "existing connection in connection callback";
+                                    completer->complete_ok(&guest);
+                                  },
+                                  [&](GuestCompleters& completers) {
+                                    completers_cb(std::move(completers),
+                                                  result.is_response() ? ZX_OK : result.err());
+                                  },
+                              },
+                              variant);
                         });
 
             return bridge.consumer.promise().inspect(

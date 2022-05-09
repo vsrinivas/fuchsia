@@ -20,6 +20,11 @@
 
 namespace {
 
+using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Response;
+using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
+
 class HostVsockAcceptor : public fuchsia::virtualization::HostVsockAcceptor {
  public:
   HostVsockAcceptor(uint32_t port, async::Loop* loop) : port_(port), console_(loop) {}
@@ -29,17 +34,19 @@ class HostVsockAcceptor : public fuchsia::virtualization::HostVsockAcceptor {
               AcceptCallback callback) override {
     if (port != port_) {
       std::cerr << "Unexpected port " << port << "\n";
-      callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
+      callback(HostVsockAcceptor_Accept_Result::WithErr(ZX_ERR_CONNECTION_REFUSED));
       return;
     }
     zx::socket socket, remote_socket;
     zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
     if (status != ZX_OK) {
       std::cerr << "Failed to create socket " << status << "\n";
-      callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
+      callback(HostVsockAcceptor_Accept_Result::WithErr(ZX_ERR_CONNECTION_REFUSED));
       return;
     }
-    callback(ZX_OK, std::move(remote_socket));
+
+    callback(HostVsockAcceptor_Accept_Result::WithResponse(
+        HostVsockAcceptor_Accept_Response(std::move(remote_socket))));
     console_.Start(zx::socket(std::move(socket)));
   }
 
@@ -79,11 +86,11 @@ zx_status_t handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loo
 
   HostVsockAcceptor acceptor(port, loop);
   fidl::Binding<fuchsia::virtualization::HostVsockAcceptor> binding(&acceptor);
-  zx_status_t status;
-  vsock_endpoint->Listen(port, binding.NewBinding(), &status);
-  if (status != ZX_OK) {
+  HostVsockEndpoint_Listen_Result result;
+  vsock_endpoint->Listen(port, binding.NewBinding(), &result);
+  if (result.is_err()) {
     std::cerr << "Failed to listen on port " << port << "\n";
-    return status;
+    return result.err();
   }
 
   return loop->Run();
@@ -103,10 +110,12 @@ zx_status_t handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port, a
     std::cerr << "Failed to create socket " << status << "\n";
     return status;
   }
-  vsock_endpoint->Connect(cid, port, std::move(remote_socket), &status);
-  if (status != ZX_OK) {
-    std::cerr << "Failed to connect " << status << "\n";
-    return status;
+
+  HostVsockEndpoint_Connect_Result result;
+  vsock_endpoint->Connect(cid, port, std::move(remote_socket), &result);
+  if (result.is_err()) {
+    std::cerr << "Failed to connect " << result.err() << "\n";
+    return result.err();
   }
 
   GuestConsole console(loop);

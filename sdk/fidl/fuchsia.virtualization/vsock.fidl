@@ -27,25 +27,22 @@ protocol GuestVsockAcceptor {
 };
 
 /// Exposed by a host capable of listening via vsocks. A variant of a
-/// `GuestVsockAcceptor` that is responsible for creating the `handle` with which
-/// to communicate. The `handle` will be either a socket or a channel, depending
-/// on the current configuration.
+/// `GuestVsockAcceptor` that is responsible for creating the `socket` with which
+/// to communicate.
 protocol HostVsockAcceptor {
     Accept(struct {
         src_cid uint32;
         src_port uint32;
         port uint32;
     }) -> (resource struct {
-        status zx.status;
-        handle zx.handle:optional;
-    });
+        socket zx.handle:SOCKET;
+    }) error zx.status;
 };
 
 /// Exposed by a host capable of connecting via vsocks. This allows a guest to
 /// identify itself via {src_cid, src_port}, and request to connect to
-/// {cid, port}. The host should return `ZX_OK`, and create a handle with which
-/// to communicate. The `handle` will be either a socket or a channel, depending
-/// on the current configuration.
+/// {cid, port}. The host should return `ZX_OK`, and create a socket with which
+/// to communicate.
 protocol HostVsockConnector {
     Connect(struct {
         src_cid uint32;
@@ -53,9 +50,8 @@ protocol HostVsockConnector {
         cid uint32;
         port uint32;
     }) -> (resource struct {
-        status zx.status;
-        handle zx.handle:optional;
-    });
+        socket zx.handle:SOCKET;
+    }) error zx.status;
 };
 
 /// Exposed by guests capable of handling vsock traffic. During
@@ -86,17 +82,13 @@ protocol HostVsockEndpoint {
     Listen(resource struct {
         port uint32;
         acceptor client_end:HostVsockAcceptor;
-    }) -> (struct {
-        status zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 
     /// Similar to `HostVsockConnector.Connect` except the `src_cid` is
     /// `HOST_CID` and `src_port` is generated automatically.
     Connect(resource struct {
         cid uint32;
         port uint32;
-        handle zx.handle:optional;
-    }) -> (struct {
-        status zx.status;
-    });
+        socket zx.handle:SOCKET;
+    }) -> (struct {}) error zx.status;
 };

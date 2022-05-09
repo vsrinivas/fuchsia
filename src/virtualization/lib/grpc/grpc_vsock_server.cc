@@ -11,6 +11,10 @@
 
 #include "src/virtualization/lib/grpc/fdio_util.h"
 
+using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Response;
+using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
+
 void GrpcVsockServerBuilder::RegisterService(grpc::Service* service) {
   builder_->RegisterService(service);
 }
@@ -24,10 +28,10 @@ void GrpcVsockServerBuilder::AddListenPort(uint32_t vsock_port) {
                // closure so ensure the FIDL reply will be delivered. If we
                // don't do this, the underlying channel may be closed if the
                // builder is free'd after a call to Build().
-               [socket_endpoint = socket_endpoint_,
-                completer = std::move(bridge.completer)](zx_status_t status) mutable {
-                 if (status != ZX_OK) {
-                   completer.complete_error(status);
+               [socket_endpoint = socket_endpoint_, completer = std::move(bridge.completer)](
+                   HostVsockEndpoint_Listen_Result result) mutable {
+                 if (result.is_err()) {
+                   completer.complete_error(result.err());
                  } else {
                    completer.complete_ok();
                  }
@@ -90,5 +94,8 @@ void GrpcVsockServer::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
     grpc::AddInsecureChannelFromFd(server_.get(), fd.release());
     return ZX_OK;
   }();
-  callback(status, std::move(h2));
+
+  callback(status == ZX_OK ? HostVsockAcceptor_Accept_Result::WithResponse(
+                                 HostVsockAcceptor_Accept_Response(std::move(h2)))
+                           : HostVsockAcceptor_Accept_Result::WithErr(std::move(status)));
 }
