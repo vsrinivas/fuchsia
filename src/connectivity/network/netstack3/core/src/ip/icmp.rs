@@ -38,7 +38,10 @@ use crate::{
     device::ndp::NdpPacketHandler,
     device::FrameDestination,
     ip::{
-        device::route_discovery::{Ipv6DiscoveredRoute, RouteDiscoveryHandler},
+        device::{
+            route_discovery::{Ipv6DiscoveredRoute, RouteDiscoveryHandler},
+            slaac::SlaacHandler,
+        },
         forwarding::ForwardingTable,
         gmp::mld::MldPacketHandler,
         path_mtu::PmtuHandler,
@@ -1180,7 +1183,8 @@ fn receive_ndp_packet<
     B: ByteSlice,
     C: InnerIcmpv6Context
         + NdpPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
-        + RouteDiscoveryHandler,
+        + RouteDiscoveryHandler
+        + SlaacHandler,
 >(
     sync_ctx: &mut C,
     device_id: C::DeviceId,
@@ -1238,16 +1242,22 @@ fn receive_ndp_packet<
                     | NdpOption::RouteInformation(_)
                     | NdpOption::Mtu(_) => {}
                     NdpOption::PrefixInformation(prefix_info) => {
-                        if !prefix_info.on_link_flag() {
-                            continue;
-                        }
-
                         // As per RFC 4861 section 6.3.4,
                         //
                         //   For each Prefix Information option with the on-link
                         //   flag set, a host does the following:
                         //
                         //      - If the prefix is the link-local prefix,
+                        //        silently ignore the Prefix Information option.
+                        //
+                        // Also as per RFC 4862 section 5.5.3,
+                        //
+                        //   For each Prefix-Information option in the Router
+                        //   Advertisement:
+                        //
+                        //    ..
+                        //
+                        //    b)  If the prefix is the link-local prefix,
                         //        silently ignore the Prefix Information option.
                         if prefix_info.prefix().is_link_local() {
                             continue;
@@ -1265,12 +1275,26 @@ fn receive_ndp_packet<
                             None => continue,
                         }
 
-                        RouteDiscoveryHandler::update_route(
-                            sync_ctx,
-                            device_id,
-                            Ipv6DiscoveredRoute { subnet, gateway: None },
-                            prefix_info.valid_lifetime(),
-                        )
+                        let valid_lifetime = prefix_info.valid_lifetime();
+
+                        if prefix_info.on_link_flag() {
+                            RouteDiscoveryHandler::update_route(
+                                sync_ctx,
+                                device_id,
+                                Ipv6DiscoveredRoute { subnet, gateway: None },
+                                valid_lifetime,
+                            )
+                        }
+
+                        if prefix_info.autonomous_address_configuration_flag() {
+                            SlaacHandler::apply_slaac_update(
+                                sync_ctx,
+                                device_id,
+                                subnet,
+                                prefix_info.preferred_lifetime(),
+                                valid_lifetime,
+                            );
+                        }
                     }
                 }
             }
@@ -1287,7 +1311,8 @@ impl<
             + PmtuHandler<Ipv6>
             + MldPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
             + NdpPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
-            + RouteDiscoveryHandler,
+            + RouteDiscoveryHandler
+            + SlaacHandler,
     > BufferIpTransportContext<Ipv6, B, C> for IcmpIpTransportContext
 {
     fn receive_ip_packet(
@@ -2557,7 +2582,7 @@ mod tests {
     use alloc::{format, vec};
     use core::{convert::TryInto, fmt::Debug, num::NonZeroU16, time::Duration};
 
-    use net_types::ip::{Ip, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use net_types::ip::{AddrSubnet, Ip, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
     use packet::{Buf, Serializer};
     use packet_formats::{
         icmp::{
@@ -2576,8 +2601,9 @@ mod tests {
         device::{DeviceId, FrameDestination},
         ip::{
             device::{
-                route_discovery::Ipv6DiscoveredRoute, set_routing_enabled,
-                state::IpDeviceStateIpExt,
+                route_discovery::Ipv6DiscoveredRoute,
+                set_routing_enabled,
+                state::{IpDeviceStateIpExt, SlaacConfig},
             },
             gmp::mld::MldPacketHandler,
             path_mtu::testutil::DummyPmtuState,
@@ -3654,6 +3680,27 @@ mod tests {
         }
 
         fn invalidate_routes(&mut self, _device_id: Self::DeviceId) {
+            unimplemented!()
+        }
+    }
+
+    impl SlaacHandler for Dummyv6Ctx {
+        fn apply_slaac_update(
+            &mut self,
+            _device_id: Self::DeviceId,
+            _subnet: Subnet<Ipv6Addr>,
+            _preferred_lifetime: Option<NonZeroNdpLifetime>,
+            _valid_lifetime: Option<NonZeroNdpLifetime>,
+        ) {
+            unimplemented!()
+        }
+
+        fn on_dad_failed(
+            &mut self,
+            _device_id: Self::DeviceId,
+            _addr: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
+            _state: SlaacConfig<Self::Instant>,
+        ) {
             unimplemented!()
         }
     }

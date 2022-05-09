@@ -17,7 +17,7 @@ use crate::{
     ip::{
         device::{
             dad::DUP_ADDR_DETECT_TRANSMITS, route_discovery::Ipv6RouteDiscoveryState,
-            router_solicitation::MAX_RTR_SOLICITATIONS,
+            router_solicitation::MAX_RTR_SOLICITATIONS, slaac::SlaacConfiguration,
         },
         gmp::{igmp::IgmpGroupState, mld::MldGroupState, MulticastGroupSet},
     },
@@ -211,7 +211,7 @@ impl<I: Instant> AsRef<IpDeviceConfiguration> for Ipv4DeviceState<I> {
 }
 
 /// Configurations common to all IP devices.
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct IpDeviceConfiguration {
     /// Is IP enabled for this device.
     pub ip_enabled: bool,
@@ -246,7 +246,7 @@ impl Default for Ipv4DeviceConfiguration {
 }
 
 /// Configuration common to all IPv6 devices.
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Ipv6DeviceConfiguration {
     /// The value for NDP's DupAddrDetectTransmits parameter as defined by
     /// [RFC 4862 section 5.1].
@@ -266,6 +266,9 @@ pub struct Ipv6DeviceConfiguration {
     /// [RFC 4861 section 6.3.7]: https://datatracker.ietf.org/doc/html/rfc4861#section-6.3.7
     pub max_router_solicitations: Option<NonZeroU8>,
 
+    /// The configuration for SLAAC.
+    pub slaac_config: SlaacConfiguration,
+
     /// The configuration common to all IP devices.
     pub ip_config: IpDeviceConfiguration,
 }
@@ -275,6 +278,7 @@ impl Default for Ipv6DeviceConfiguration {
         Ipv6DeviceConfiguration {
             dad_transmits: NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS),
             max_router_solicitations: NonZeroU8::new(MAX_RTR_SOLICITATIONS),
+            slaac_config: Default::default(),
             ip_config: Default::default(),
         }
     }

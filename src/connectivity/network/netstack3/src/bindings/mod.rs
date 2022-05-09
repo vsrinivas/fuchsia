@@ -58,7 +58,8 @@ use netstack3_core::{
     set_ipv4_configuration, set_ipv6_configuration, AddableEntryEither, BlanketCoreContext,
     BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
     IpDeviceConfiguration, IpExt, IpSockCreationError, Ipv4DeviceConfiguration,
-    Ipv6DeviceConfiguration, TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
+    Ipv6DeviceConfiguration, SlaacConfiguration, TimerId, UdpBoundId, UdpConnId, UdpContext,
+    UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -777,6 +778,7 @@ impl NetstackSeed {
                 Ipv6DeviceConfiguration {
                     dad_transmits: None,
                     max_router_solicitations: None,
+                    slaac_config: SlaacConfiguration { temporary_address_configuration: None },
                     ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
                 },
             );

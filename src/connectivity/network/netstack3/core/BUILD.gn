@@ -31,6 +31,7 @@ lib_sources = [
   "src/ip/device/mod.rs",
   "src/ip/device/route_discovery.rs",
   "src/ip/device/router_solicitation.rs",
+  "src/ip/device/slaac.rs",
   "src/ip/device/state.rs",
   "src/ip/forwarding.rs",
   "src/ip/gmp/igmp.rs",

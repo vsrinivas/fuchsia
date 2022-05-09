@@ -8,6 +8,7 @@ pub(crate) mod dad;
 mod integration;
 pub(crate) mod route_discovery;
 pub(crate) mod router_solicitation;
+pub(crate) mod slaac;
 pub(crate) mod state;
 
 use alloc::{boxed::Box, vec::Vec};
@@ -29,6 +30,7 @@ use crate::{
             dad::{DadHandler, DadTimerId},
             route_discovery::{Ipv6DiscoveredRouteTimerId, RouteDiscoveryHandler},
             router_solicitation::{RsHandler, RsTimerId},
+            slaac::{SlaacHandler, SlaacTimerId},
             state::{
                 AddrConfig, AddressState, IpDeviceConfiguration, IpDeviceState, IpDeviceStateIpExt,
                 Ipv4DeviceConfiguration, Ipv4DeviceState, Ipv6AddressEntry,
@@ -81,6 +83,7 @@ pub(crate) enum Ipv6DeviceTimerId<DeviceId> {
     Dad(DadTimerId<DeviceId>),
     Rs(RsTimerId<DeviceId>),
     RouteDiscovery(Ipv6DiscoveredRouteTimerId<DeviceId>),
+    Slaac(SlaacTimerId<DeviceId>),
 }
 
 impl<DeviceId> From<MldDelayedReportTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
@@ -104,6 +107,12 @@ impl<DeviceId> From<RsTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
 impl<DeviceId> From<Ipv6DiscoveredRouteTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
     fn from(id: Ipv6DiscoveredRouteTimerId<DeviceId>) -> Ipv6DeviceTimerId<DeviceId> {
         Ipv6DeviceTimerId::RouteDiscovery(id)
+    }
+}
+
+impl<DeviceId> From<SlaacTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
+    fn from(id: SlaacTimerId<DeviceId>) -> Ipv6DeviceTimerId<DeviceId> {
+        Ipv6DeviceTimerId::Slaac(id)
     }
 }
 
@@ -137,6 +146,13 @@ impl_timer_context!(
     Ipv6DeviceTimerId::RouteDiscovery(id),
     id
 );
+impl_timer_context!(
+    IpDeviceIdContext<Ipv6>,
+    Ipv6DeviceTimerId<C::DeviceId>,
+    SlaacTimerId<C::DeviceId>,
+    Ipv6DeviceTimerId::Slaac(id),
+    id
+);
 
 /// Handle an IPv6 device timer firing.
 pub(crate) fn handle_ipv6_timer<
@@ -144,7 +160,8 @@ pub(crate) fn handle_ipv6_timer<
         + DadHandler
         + RsHandler
         + TimerHandler<Ipv6DiscoveredRouteTimerId<C::DeviceId>>
-        + TimerHandler<MldDelayedReportTimerId<C::DeviceId>>,
+        + TimerHandler<MldDelayedReportTimerId<C::DeviceId>>
+        + TimerHandler<SlaacTimerId<C::DeviceId>>,
 >(
     sync_ctx: &mut C,
     id: Ipv6DeviceTimerId<C::DeviceId>,
@@ -154,6 +171,7 @@ pub(crate) fn handle_ipv6_timer<
         Ipv6DeviceTimerId::Dad(id) => DadHandler::handle_timer(sync_ctx, id),
         Ipv6DeviceTimerId::Rs(id) => RsHandler::handle_timer(sync_ctx, id),
         Ipv6DeviceTimerId::RouteDiscovery(id) => TimerHandler::handle_timer(sync_ctx, id),
+        Ipv6DeviceTimerId::Slaac(id) => TimerHandler::handle_timer(sync_ctx, id),
     }
 }
 
@@ -284,6 +302,7 @@ fn enable_ipv6_device<C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadH
             Ipv6DeviceConfiguration {
                 dad_transmits,
                 max_router_solicitations: _,
+                slaac_config: _,
                 ip_config: IpDeviceConfiguration { ip_enabled: _, gmp_enabled: _ },
             },
         router_soliciations_remaining: _,
@@ -356,7 +375,12 @@ fn enable_ipv6_device<C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadH
 }
 
 fn disable_ipv6_device<
-    C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadHandler + RouteDiscoveryHandler,
+    C: Ipv6DeviceContext
+        + GmpHandler<Ipv6>
+        + RsHandler
+        + DadHandler
+        + RouteDiscoveryHandler
+        + SlaacHandler,
 >(
     sync_ctx: &mut C,
     device_id: C::DeviceId,
@@ -378,8 +402,13 @@ fn disable_ipv6_device<
         .into_iter()
         .for_each(|(addr, config)| {
             if config == AddrConfig::SLAAC_LINK_LOCAL {
-                del_ipv6_addr(sync_ctx, device_id, &addr.into_specified())
-                    .expect("delete listed address")
+                del_ipv6_addr_with_reason(
+                    sync_ctx,
+                    device_id,
+                    &addr.into_specified(),
+                    DelIpv6AddrReason::ManualAction,
+                )
+                .expect("delete listed address")
             } else {
                 DadHandler::stop_duplicate_address_detection(sync_ctx, device_id, addr)
             }
@@ -671,6 +700,7 @@ pub(crate) fn add_ipv6_addr_subnet<C: Ipv6DeviceContext + GmpHandler<Ipv6> + Dad
             Ipv6DeviceConfiguration {
                 dad_transmits,
                 max_router_solicitations: _,
+                slaac_config: _,
                 ip_config: IpDeviceConfiguration { ip_enabled, gmp_enabled: _ },
             },
         router_soliciations_remaining: _,
@@ -720,30 +750,61 @@ pub(crate) fn del_ipv4_addr<C: IpDeviceContext<Ipv4> + BufferIpDeviceContext<Ipv
         .map(|addr| sync_ctx.on_event(IpDeviceEvent::AddressUnassigned { device: device_id, addr }))
 }
 
-/// Removes an IPv6 address and associated subnet from this device.
-pub(crate) fn del_ipv6_addr<C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler>(
+fn del_ipv6_addr_core<C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler>(
     sync_ctx: &mut C,
     device_id: C::DeviceId,
     addr: &SpecifiedAddr<Ipv6Addr>,
-) -> Result<(), NotFoundError> {
-    sync_ctx.get_ip_device_state_mut(device_id).ip_state.remove_addr(&addr).map(
-        |entry: Ipv6AddressEntry<_>| {
-            // TODO(https://fxbug.dev/69196): Give `addr` the type
-            // `UnicastAddr<Ipv6Addr>` for IPv6 instead of doing this
-            // dynamic check here and statically guarantee only unicast
-            // addresses are added for IPv6.
-            if let Some(addr) = UnicastAddr::new(addr.get()) {
-                DadHandler::stop_duplicate_address_detection(sync_ctx, device_id, addr);
-                leave_ip_multicast(sync_ctx, device_id, addr.to_solicited_node_address());
+) -> Result<Ipv6AddressEntry<C::Instant>, NotFoundError> {
+    let entry = sync_ctx.get_ip_device_state_mut(device_id).ip_state.remove_addr(&addr)?;
+    // TODO(https://fxbug.dev/69196): Give `addr` the type
+    // `UnicastAddr<Ipv6Addr>` for IPv6 instead of doing this
+    // dynamic check here and statically guarantee only unicast
+    // addresses are added for IPv6.
+    let addr = UnicastAddr::new(addr.get()).expect("unicast address");
+    DadHandler::stop_duplicate_address_detection(sync_ctx, device_id, addr);
+    leave_ip_multicast(sync_ctx, device_id, addr.to_solicited_node_address());
 
-                match entry.state {
-                    AddressState::Assigned => sync_ctx
-                        .on_event(IpDeviceEvent::AddressUnassigned { device: device_id, addr }),
-                    AddressState::Tentative { .. } => {}
+    match entry.state {
+        AddressState::Assigned => {
+            sync_ctx.on_event(IpDeviceEvent::AddressUnassigned { device: device_id, addr })
+        }
+        AddressState::Tentative { .. } => {}
+    }
+
+    Ok(entry)
+}
+
+pub(crate) enum DelIpv6AddrReason {
+    ManualAction,
+    DadFailed,
+}
+
+/// Removes an IPv6 address and associated subnet from this device.
+pub(crate) fn del_ipv6_addr_with_reason<
+    C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler + SlaacHandler,
+>(
+    sync_ctx: &mut C,
+    device_id: C::DeviceId,
+    addr: &SpecifiedAddr<Ipv6Addr>,
+    reason: DelIpv6AddrReason,
+) -> Result<(), NotFoundError> {
+    let entry = del_ipv6_addr_core(sync_ctx, device_id, addr)?;
+
+    match entry.config {
+        AddrConfig::Slaac(s) => {
+            match reason {
+                DelIpv6AddrReason::ManualAction => {
+                    // TODO(https://fxbug.dev/99667): Handle this case.
+                }
+                DelIpv6AddrReason::DadFailed => {
+                    SlaacHandler::on_dad_failed(sync_ctx, device_id, *entry.addr_sub(), s)
                 }
             }
-        },
-    )
+        }
+        AddrConfig::Manual => {}
+    }
+
+    Ok(())
 }
 
 /// Sends an IP packet through the device.
@@ -818,7 +879,12 @@ pub(super) fn is_ip_device_enabled<
 
 /// Updates the IPv6 Configuration for the device.
 pub(crate) fn set_ipv6_configuration<
-    C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadHandler + RouteDiscoveryHandler,
+    C: Ipv6DeviceContext
+        + GmpHandler<Ipv6>
+        + RsHandler
+        + DadHandler
+        + RouteDiscoveryHandler
+        + SlaacHandler,
 >(
     sync_ctx: &mut C,
     device_id: C::DeviceId,
@@ -827,12 +893,14 @@ pub(crate) fn set_ipv6_configuration<
     let Ipv6DeviceConfiguration {
         dad_transmits: _,
         max_router_solicitations: _,
+        slaac_config: _,
         ip_config:
             IpDeviceConfiguration { ip_enabled: next_ip_enabled, gmp_enabled: next_gmp_enabled },
     } = config;
     let Ipv6DeviceConfiguration {
         dad_transmits: _,
         max_router_solicitations: _,
+        slaac_config: _,
         ip_config:
             IpDeviceConfiguration { ip_enabled: prev_ip_enabled, gmp_enabled: prev_gmp_enabled },
     } = sync_ctx.get_ip_device_state_mut(device_id).config;

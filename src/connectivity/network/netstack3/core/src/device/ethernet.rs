@@ -37,8 +37,8 @@ use crate::{
         IpLinkDeviceContext, RecvIpFrameMeta,
     },
     error::{ExistsError, NotFoundError},
-    ip::device::state::{AddrConfig, IpDeviceState, SlaacConfig},
-    BlanketCoreContext, Ctx, EventDispatcher, Ipv6DeviceConfiguration,
+    ip::device::state::{AddrConfig, IpDeviceState},
+    BlanketCoreContext, Ctx, EventDispatcher,
 };
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
@@ -73,10 +73,10 @@ pub(crate) trait EthernetIpLinkDeviceContext:
         config: AddrConfig<Self::Instant>,
     ) -> Result<(), ExistsError>;
 
-    /// Removes an IPv6 address from the device.
+    /// Removes an IPv6 address from the device as a result of DAD failing.
     // TODO(https://fxbug.dev/72378): Remove this method once NDP operates at
     // L3.
-    fn del_ipv6_addr(
+    fn del_ipv6_addr_on_dad_failure(
         &mut self,
         device_id: Self::DeviceId,
         addr: &SpecifiedAddr<Ipv6Addr>,
@@ -111,12 +111,17 @@ impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext for 
         crate::ip::device::add_ipv6_addr_subnet(self, device_id.into(), addr_sub, config)
     }
 
-    fn del_ipv6_addr(
+    fn del_ipv6_addr_on_dad_failure(
         &mut self,
         device_id: EthernetDeviceId,
         addr: &SpecifiedAddr<Ipv6Addr>,
     ) -> Result<(), NotFoundError> {
-        crate::ip::device::del_ipv6_addr(self, device_id.into(), addr)
+        crate::ip::device::del_ipv6_addr_with_reason(
+            self,
+            device_id.into(),
+            addr,
+            crate::ip::device::DelIpv6AddrReason::DadFailed,
+        )
     }
 
     fn join_ipv6_multicast(
@@ -164,7 +169,6 @@ impl<
 pub(crate) struct EthernetDeviceStateBuilder {
     mac: UnicastAddr<Mac>,
     mtu: u32,
-    ndp_config: ndp::NdpConfiguration,
 }
 
 impl EthernetDeviceStateBuilder {
@@ -183,12 +187,7 @@ impl EthernetDeviceStateBuilder {
         //  A few questions:
         //  - How do we wire error information back up the call stack? Should
         //    this just return a Result or something?
-        Self { mac, mtu, ndp_config: ndp::NdpConfiguration::default() }
-    }
-
-    /// Update the NDP configuration that will be set on the ethernet device.
-    pub(crate) fn set_ndp_config(&mut self, v: ndp::NdpConfiguration) {
-        self.ndp_config = v;
+        Self { mac, mtu }
     }
 
     /// Build the `EthernetDeviceState` from this builder.
@@ -199,7 +198,7 @@ impl EthernetDeviceStateBuilder {
             hw_mtu: self.mtu,
             link_multicast_groups: RefCountedHashSet::default(),
             ipv4_arp: ArpState::default(),
-            ndp: NdpState::new(self.ndp_config),
+            ndp: NdpState::new(),
             pending_frames: HashMap::new(),
             promiscuous_mode: false,
         }
@@ -730,10 +729,6 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
         get_mac(self, device_id).clone()
     }
 
-    fn get_interface_identifier(&self, device_id: C::DeviceId) -> [u8; 8] {
-        self.get_state_with(device_id).link.mac.to_eui64()
-    }
-
     fn get_ip_device_state(
         &self,
         device_id: Self::DeviceId,
@@ -746,10 +741,6 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
         device_id: Self::DeviceId,
     ) -> &mut IpDeviceState<Self::Instant, Ipv6> {
         &mut self.get_state_mut_with(device_id).ip.ipv6.ip_state
-    }
-
-    fn get_ip_device_configuration(&self, device_id: Self::DeviceId) -> &Ipv6DeviceConfiguration {
-        &self.get_state_with(device_id).ip.ipv6.config
     }
 
     fn send_ipv6_frame<S: Serializer<Buffer = EmptyBuf>>(
@@ -781,7 +772,7 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
     fn duplicate_address_detected(&mut self, device_id: C::DeviceId, addr: UnicastAddr<Ipv6Addr>) {
         let () = self
-            .del_ipv6_addr(device_id, &addr.into_specified())
+            .del_ipv6_addr_on_dad_failure(device_id, &addr.into_specified())
             .expect("expected to delete an address we are performing DAD on");
     }
 
@@ -803,33 +794,6 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
         trace!("ethernet::ndp_device::set_mtu: setting link MTU to {:?}", mtu);
         dev_state.mtu = mtu;
-    }
-
-    fn add_slaac_addr_sub(
-        &mut self,
-        device_id: Self::DeviceId,
-        addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
-        slaac_config: SlaacConfig<Self::Instant>,
-    ) -> Result<(), ExistsError> {
-        trace!(
-            "ethernet::add_slaac_addr_sub: adding address {:?} on device {:?}",
-            addr_sub,
-            device_id
-        );
-
-        self.add_ipv6_addr_subnet(device_id, addr_sub.to_witness(), AddrConfig::Slaac(slaac_config))
-    }
-
-    fn invalidate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>) {
-        trace!(
-            "ethernet::invalidate_slaac_addr: invalidating address {:?} on device {:?}",
-            addr,
-            device_id
-        );
-
-        // `unwrap` will panic if `addr` is not an address configured via SLAAC
-        // on `device_id`.
-        self.del_ipv6_addr(device_id, &addr.into_specified()).unwrap();
     }
 }
 
@@ -1005,7 +969,7 @@ mod tests {
             unimplemented!()
         }
 
-        fn del_ipv6_addr(
+        fn del_ipv6_addr_on_dad_failure(
             &mut self,
             _device_id: DummyDeviceId,
             _addr: &SpecifiedAddr<Ipv6Addr>,

@@ -56,15 +56,15 @@ use log::trace;
 pub use crate::{
     data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionKey},
     device::{
-        get_ipv4_configuration, get_ipv6_configuration, ndp::NdpConfiguration, receive_frame,
-        remove_device, set_ipv4_configuration, set_ipv6_configuration, DeviceId,
-        DeviceLayerEventDispatcher,
+        get_ipv4_configuration, get_ipv6_configuration, receive_frame, remove_device,
+        set_ipv4_configuration, set_ipv6_configuration, DeviceId, DeviceLayerEventDispatcher,
     },
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError},
     ip::{
         device::{
             dad::DadEvent,
             route_discovery::Ipv6RouteDiscoveryEvent,
+            slaac::SlaacConfiguration,
             state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
             IpDeviceEvent,
         },

@@ -21,26 +21,29 @@ use packet_formats::{
 
 use crate::{
     context::{FrameContext, InstantContext},
+    error::ExistsError,
     ip::{
         self,
         device::{
-            self,
-            dad::{Ipv6DeviceDadContext, Ipv6LayerDadContext},
-            get_ipv4_addr_subnet, get_ipv4_device_state, get_ipv6_device_state, get_ipv6_hop_limit,
-            is_ipv4_routing_enabled, is_ipv6_routing_enabled, iter_ipv4_devices, iter_ipv6_devices,
+            self, add_ipv6_addr_subnet,
+            dad::{DadHandler, Ipv6DeviceDadContext, Ipv6LayerDadContext},
+            del_ipv6_addr_core, get_ipv4_addr_subnet, get_ipv4_device_state, get_ipv6_device_state,
+            get_ipv6_hop_limit, is_ipv4_routing_enabled, is_ipv6_routing_enabled,
+            iter_ipv4_devices, iter_ipv6_devices,
             route_discovery::{Ipv6RouteDiscoveryState, Ipv6RouteDiscoveryStateContext},
             router_solicitation::{Ipv6DeviceRsContext, Ipv6LayerRsContext},
             send_ip_frame,
+            slaac::{SlaacConfiguration, SlaacStateContext},
             state::{
-                AddressState, IpDeviceConfiguration, IpDeviceState, Ipv4DeviceConfiguration,
-                Ipv6AddressEntry, Ipv6DeviceConfiguration,
+                AddrConfig, AddressState, IpDeviceConfiguration, IpDeviceState,
+                Ipv4DeviceConfiguration, Ipv6AddressEntry, Ipv6DeviceConfiguration, SlaacConfig,
             },
             IpDeviceIpExt,
         },
         gmp::{
             igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata},
             mld::{MldContext, MldFrameMetadata, MldGroupState},
-            MulticastGroupSet,
+            GmpHandler, MulticastGroupSet,
         },
         send_ipv6_packet_from_device, AddressStatus, IpLayerIpExt, Ipv6PresentAddressStatus,
         SendIpPacketMeta, DEFAULT_TTL,
@@ -59,6 +62,70 @@ use crate::{
 /// [RFC 4861 section 4.4]: https://tools.ietf.org/html/rfc4861#section-4.4
 /// [RFC 4861 section 4.5]: https://tools.ietf.org/html/rfc4861#section-4.5
 pub(super) const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
+
+impl<C: device::Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler> SlaacStateContext for C {
+    fn get_config(&self, device_id: Self::DeviceId) -> SlaacConfiguration {
+        let Ipv6DeviceConfiguration {
+            dad_transmits: _,
+            max_router_solicitations: _,
+            slaac_config,
+            ip_config: _,
+        } = C::get_ip_device_state(self, device_id).config;
+        slaac_config
+    }
+
+    fn dad_transmits(&self, device_id: Self::DeviceId) -> Option<NonZeroU8> {
+        let Ipv6DeviceConfiguration {
+            dad_transmits,
+            max_router_solicitations: _,
+            slaac_config: _,
+            ip_config: _,
+        } = C::get_ip_device_state(self, device_id).config;
+
+        dad_transmits
+    }
+
+    fn retrans_timer(&self, device_id: C::DeviceId) -> Duration {
+        device::Ipv6DeviceContext::retrans_timer(self, device_id)
+    }
+
+    fn get_interface_identifier(&self, device_id: Self::DeviceId) -> [u8; 8] {
+        C::get_eui64_iid(self, device_id).unwrap_or_else(Default::default)
+    }
+
+    fn get_ip_device_state(
+        &self,
+        device_id: Self::DeviceId,
+    ) -> &IpDeviceState<Self::Instant, Ipv6> {
+        &C::get_ip_device_state(self, device_id).ip_state
+    }
+
+    fn get_ip_device_state_mut(
+        &mut self,
+        device_id: Self::DeviceId,
+    ) -> &mut IpDeviceState<Self::Instant, Ipv6> {
+        &mut C::get_ip_device_state_mut(self, device_id).ip_state
+    }
+
+    fn add_slaac_addr_sub(
+        &mut self,
+        device_id: Self::DeviceId,
+        addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
+        slaac_config: SlaacConfig<Self::Instant>,
+    ) -> Result<(), ExistsError> {
+        add_ipv6_addr_subnet(
+            self,
+            device_id,
+            addr_sub.to_witness(),
+            AddrConfig::Slaac(slaac_config),
+        )
+    }
+
+    fn remove_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>) {
+        let _: Ipv6AddressEntry<_> =
+            del_ipv6_addr_core(self, device_id, &addr.into_specified()).unwrap();
+    }
+}
 
 impl<C: device::IpDeviceContext<Ipv6>> Ipv6RouteDiscoveryStateContext for C {
     fn get_discovered_routes_mut(
@@ -131,6 +198,7 @@ impl<C: device::BufferIpDeviceContext<Ipv6, EmptyBuf>> MldContext for C {
         let Ipv6DeviceConfiguration {
             dad_transmits: _,
             max_router_solicitations: _,
+            slaac_config: _,
             ip_config: IpDeviceConfiguration { ip_enabled, gmp_enabled },
         } = C::get_ip_device_state(self, device).config;
 

@@ -204,8 +204,7 @@ fn get_ip_device_state_mut_and_rng<D: EventDispatcher, C: BlanketCoreContext>(
 fn iter_devices<D: EventDispatcher, C: BlanketCoreContext>(
     ctx: &Ctx<D, C>,
 ) -> impl Iterator<Item = DeviceId> + '_ {
-    let DeviceLayerState { ethernet, loopback, default_ndp_config: _, default_ipv6_config: _ } =
-        &ctx.state.device;
+    let DeviceLayerState { ethernet, loopback, default_ipv6_config: _ } = &ctx.state.device;
 
     ethernet
         .iter()
@@ -589,35 +588,19 @@ impl FrameDestination {
 /// Builder for a [`DeviceLayerState`].
 #[derive(Clone, Default)]
 pub struct DeviceStateBuilder {
-    /// Default values for NDP's configuration for new interfaces.
-    ///
-    /// See [`ndp::NdpConfiguration`].
-    default_ndp_config: ndp::NdpConfiguration,
     default_ipv6_config: Ipv6DeviceConfiguration,
 }
 
 impl DeviceStateBuilder {
-    /// Set the default values for NDP's configuration for new interfaces.
-    ///
-    /// See [`ndp::NdpConfiguration`] for more details.
-    pub fn set_default_ndp_config(&mut self, v: ndp::NdpConfiguration) {
-        self.default_ndp_config = v;
-    }
-
-    /// Set the default IPv6 device configuration or new interfaces.
+    /// Set the default IPv6 device configuration for new interfaces.
     pub fn set_default_ipv6_config(&mut self, v: Ipv6DeviceConfiguration) {
         self.default_ipv6_config = v;
     }
 
     /// Build the [`DeviceLayerState`].
     pub(crate) fn build<I: Instant>(self) -> DeviceLayerState<I> {
-        let Self { default_ndp_config, default_ipv6_config } = self;
-        DeviceLayerState {
-            ethernet: IdMap::new(),
-            loopback: None,
-            default_ndp_config,
-            default_ipv6_config,
-        }
+        let Self { default_ipv6_config } = self;
+        DeviceLayerState { ethernet: IdMap::new(), loopback: None, default_ipv6_config }
     }
 }
 
@@ -625,7 +608,6 @@ impl DeviceStateBuilder {
 pub(crate) struct DeviceLayerState<I: Instant> {
     ethernet: IdMap<IpLinkDeviceState<I, EthernetDeviceState>>,
     loopback: Option<IpLinkDeviceState<I, LoopbackDeviceState>>,
-    default_ndp_config: ndp::NdpConfiguration,
     default_ipv6_config: Ipv6DeviceConfiguration,
 }
 
@@ -636,11 +618,10 @@ impl<I: Instant> DeviceLayerState<I> {
     /// MTU. The MTU will be taken as a limit on the size of Ethernet payloads -
     /// the Ethernet header is not counted towards the MTU.
     pub(crate) fn add_ethernet_device(&mut self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
-        let Self { ethernet, loopback: _, default_ndp_config, default_ipv6_config } = self;
+        let Self { ethernet, loopback: _, default_ipv6_config } = self;
 
-        let mut builder = EthernetDeviceStateBuilder::new(mac, mtu);
-        builder.set_ndp_config(default_ndp_config.clone());
-        let mut ethernet_state = IpLinkDeviceState::new(builder.build());
+        let mut ethernet_state =
+            IpLinkDeviceState::new(EthernetDeviceStateBuilder::new(mac, mtu).build());
         ethernet_state.ip.ipv6.config = default_ipv6_config.clone();
         let id = ethernet.push(ethernet_state);
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
@@ -649,7 +630,7 @@ impl<I: Instant> DeviceLayerState<I> {
 
     /// Adds a new loopback device to the device layer.
     pub(crate) fn add_loopback_device(&mut self, mtu: u32) -> Result<DeviceId, ExistsError> {
-        let Self { ethernet: _, loopback, default_ndp_config: _, default_ipv6_config } = self;
+        let Self { ethernet: _, loopback, default_ipv6_config } = self;
 
         if let Some(IpLinkDeviceState { .. }) = loopback {
             return Err(ExistsError);
@@ -767,6 +748,8 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext, A: I
 }
 
 /// Removes an IP address and associated subnet from this device.
+///
+/// Should only be called on user action.
 pub(crate) fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
     ctx: &mut Ctx<D, C>,
     device: DeviceId,
@@ -777,8 +760,13 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext, A: IpAddres
     match Into::into(*addr) {
         IpAddr::V4(addr) => crate::ip::device::del_ipv4_addr(ctx, device, &addr)
             .map(|()| crate::ip::on_routing_state_updated::<Ipv4, _>(ctx)),
-        IpAddr::V6(addr) => crate::ip::device::del_ipv6_addr(ctx, device, &addr)
-            .map(|()| crate::ip::on_routing_state_updated::<Ipv6, _>(ctx)),
+        IpAddr::V6(addr) => crate::ip::device::del_ipv6_addr_with_reason(
+            ctx,
+            device,
+            &addr,
+            crate::ip::device::DelIpv6AddrReason::ManualAction,
+        )
+        .map(|()| crate::ip::on_routing_state_updated::<Ipv6, _>(ctx)),
     }
 }
 
@@ -831,37 +819,6 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher, C: BlanketCoreContext>(
             Ok(self::ethernet::insert_ndp_table_entry(ctx, id, addr, mac))
         }
         DeviceIdInner::Loopback => Err(NotSupportedError),
-    }
-}
-
-/// Updates the NDP Configuration for a `device`.
-///
-/// Note, some values may not take effect immediately, and may only take effect
-/// the next time they are used. These scenarios documented below:
-///
-///  - Updates to [`NdpConfiguration::dup_addr_detect_transmits`] will only take
-///    effect the next time Duplicate Address Detection (DAD) is done. Any DAD
-///    processes that have already started will continue using the old value.
-///
-///  - Updates to [`NdpConfiguration::max_router_solicitations`] will only take
-///    effect the next time routers are explicitly solicited. Current router
-///    solicitation will continue using the old value.
-// TODO(rheacock): remove `allow(dead_code)` when this is used.
-#[allow(dead_code)]
-pub fn set_ndp_configuration<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
-    device: DeviceId,
-    config: ndp::NdpConfiguration,
-) -> Result<(), NotSupportedError> {
-    match device.inner() {
-        DeviceIdInner::Ethernet(id) => {
-            Ok(<Ctx<_, _> as NdpHandler<EthernetLinkDevice>>::set_configuration(ctx, id, config))
-        }
-        DeviceIdInner::Loopback => {
-            // TODO(https://fxbug.dev/72378): Support NDP configurations on
-            // loopback?
-            Err(NotSupportedError)
-        }
     }
 }
 

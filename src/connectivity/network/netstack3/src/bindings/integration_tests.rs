@@ -373,6 +373,7 @@ impl TestStack {
         builder.device_builder().set_default_ipv6_config(Ipv6DeviceConfiguration {
             dad_transmits: None,
             max_router_solicitations: None,
+            slaac_config: Default::default(),
             ip_config: Default::default(),
         });
         let ctx = TestContext::new(builder);
