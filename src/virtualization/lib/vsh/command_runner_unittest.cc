@@ -61,15 +61,7 @@ class VshCommandRunnerTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     TestLoopFixture::SetUp();
-    // Setup a fake guest realm that we can use to connect to a
-    // HostVsockEndpoint.
-    provider_.service_directory_provider()->AddService(fake_guest_manager_.GetHandler());
-    fuchsia::virtualization::ManagerPtr manager;
-    provider_.context()->svc()->Connect(manager.NewRequest());
-    manager->Create("test realm", realm_.NewRequest());
-    RunLoopUntilIdle();
-
-    ASSERT_EQ(ZX_OK, vshd_.Listen(fake_guest_manager_.GuestVsock()));
+    ASSERT_EQ(ZX_OK, vshd_.Listen(&guest_vsock_));
   }
 
   void TearDown() override { CloseConnectionsAndWaitForThreadJoin(); }
@@ -99,7 +91,7 @@ class VshCommandRunnerTest : public gtest::TestLoopFixture {
   // Connects to the |HostVsockEnpoint| for the realm.
   fidl::InterfaceHandle<fuchsia::virtualization::HostVsockEndpoint> GetHostVsockEndpoint() {
     fuchsia::virtualization::HostVsockEndpointPtr result;
-    realm_->GetHostVsockEndpoint(result.NewRequest());
+    host_vsock_.AddBinding(result.NewRequest());
     RunLoopUntilIdle();
     return result;
   }
@@ -145,8 +137,9 @@ class VshCommandRunnerTest : public gtest::TestLoopFixture {
   bool thread_running_ = false;
   thrd_t thread_;
   FakeVshd vshd_;
-  fuchsia::virtualization::RealmPtr realm_;
-  guest::testing::FakeManager fake_guest_manager_;
+  guest::testing::FakeHostVsock host_vsock_{&guest_vsock_};
+  guest::testing::FakeGuestVsock guest_vsock_{&host_vsock_};
+
   sys::testing::ComponentContextProvider provider_;
   std::unique_ptr<BlockingCommandRunner> command_runner_;
 };
