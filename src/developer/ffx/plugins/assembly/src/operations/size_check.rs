@@ -6,6 +6,7 @@ use crate::blob_json_generator::BlobJsonGenerator;
 use crate::util::read_config;
 use crate::util::write_json_file;
 use anyhow::anyhow;
+use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use assembly_tool::SdkToolProvider;
@@ -93,13 +94,15 @@ struct BlobInstance {
 }
 
 struct BudgetBlobs {
+    // TODO(samans): BudgetResult is supposed to represent the result of size checker and should
+    // not be used here.
     /// Budget to which one the blobs applies.
     budget: BudgetResult,
     /// List blobs that are charged to a given budget.
     blobs: Vec<BlobInstance>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Eq, PartialEq)]
 struct BudgetResult {
     /// Human readable name of this budget.
     pub name: String,
@@ -109,6 +112,8 @@ struct BudgetResult {
     pub creep_budget_bytes: u64,
     /// Number of bytes used by the packages this budget applies to.
     pub used_bytes: u64,
+    /// Breakdown of storage consumption by package.
+    pub package_breakdown: HashMap<PathBuf, u64>,
 }
 
 /// Verifies that no budget is exceeded.
@@ -135,7 +140,7 @@ fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) 
 
     // Find blobs to be charged on the resource budget, and compute each budget usage.
     let mut results =
-        compute_budget_results(&resource_budget_blobs, &blob_count_by_hash, &HashSet::new());
+        compute_budget_results(&resource_budget_blobs, &blob_count_by_hash, &HashSet::new())?;
 
     // Compute the total size of the packages for each budget, excluding blobs charged on
     // resources budget.
@@ -146,7 +151,7 @@ fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) 
             &package_budget_blobs,
             &blob_count_by_hash,
             &resource_hashes,
-        ));
+        )?);
     }
 
     // Write the output result if requested by the command line.
@@ -177,14 +182,33 @@ fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) 
 
     if over_budget > 0 {
         println!("FAILED: {} package set(s) over budget", over_budget);
-        for entry in results.iter() {
-            if entry.used_bytes > entry.budget_bytes {
+    }
+    if args.verbose || over_budget > 0 {
+        println!("{:<40} {:>10} {:>10} {:>10}", "Package Sets", "Size", "Budget", "Remaining");
+        for result in &results {
+            // Only print the component usage if it went over budget or verbose output is
+            // requested.
+            if !args.verbose && result.used_bytes <= result.budget_bytes {
+                continue;
+            }
+            println!(
+                "{:<40} {:>10} {:>10} {:>10}",
+                result.name,
+                result.used_bytes,
+                result.budget_bytes,
+                result.budget_bytes as i64 - result.used_bytes as i64
+            );
+            // Only print the package breakdown if verbose output is requested.
+            if !args.verbose {
+                continue;
+            }
+            for (key, value) in result.package_breakdown.iter() {
                 println!(
-                    " - \"{}\" is over budget (budget={}, usage={}, exceeding_by={})",
-                    entry.name,
-                    entry.budget_bytes,
-                    entry.used_bytes,
-                    entry.used_bytes - entry.budget_bytes
+                    "    {:<36} {:>10}",
+                    key.file_name()
+                        .and_then(|name| name.to_str())
+                        .ok_or(format_err!("Can't extract file name from path {:?}", key))?,
+                    value
                 );
             }
         }
@@ -207,6 +231,7 @@ fn load_manifests_blobs_match_budgets(budgets: &Vec<PackageSetBudget>) -> Result
                 budget_bytes: budget.budget_bytes,
                 creep_budget_bytes: budget.creep_budget_bytes,
                 used_bytes: 0,
+                package_breakdown: HashMap::new(),
             },
             blobs: Vec::new(),
         };
@@ -350,6 +375,7 @@ fn compute_resources_budget_blobs(
                 budget_bytes: budget.budget_bytes,
                 creep_budget_bytes: budget.creep_budget_bytes,
                 used_bytes: 0,
+                package_breakdown: HashMap::new(),
             },
             blobs: package_budget_blobs
                 .iter()
@@ -367,26 +393,43 @@ fn compute_budget_results(
     budget_usages: &Vec<BudgetBlobs>,
     blob_count_by_hash: &HashMap<Hash, BlobSizeAndCount>,
     ignore_hashes: &HashSet<&Hash>,
-) -> Vec<BudgetResult> {
+) -> Result<Vec<BudgetResult>> {
     let mut result = vec![];
     for budget_usage in budget_usages.iter() {
         let mut used_bytes = budget_usage.budget.used_bytes;
-        used_bytes += budget_usage
+        let filtered_blobs = budget_usage
             .blobs
             .iter()
             .filter(|blob| !ignore_hashes.contains(&blob.hash))
+            .collect::<Vec<&BlobInstance>>();
+
+        used_bytes += filtered_blobs
+            .iter()
             .map(|blob| match blob_count_by_hash.get(&blob.hash) {
                 Some(blob_entry_count) => blob_entry_count.size / blob_entry_count.share_count,
                 None => 0,
             })
             .sum::<u64>();
+
+        let mut package_breakdown = HashMap::new();
+        for blob in filtered_blobs {
+            let count = &blob_count_by_hash.get(&blob.hash).ok_or(format_err!(
+                "Can't find blob {} from package {:?} in map",
+                blob.hash,
+                blob.package
+            ))?;
+            let package_size = package_breakdown.entry(blob.package.clone()).or_insert(0);
+            *package_size += count.size / count.share_count;
+        }
+
         result.push(BudgetResult {
             name: budget_usage.budget.name.clone(),
             used_bytes: used_bytes,
+            package_breakdown,
             ..budget_usage.budget
         });
     }
-    result
+    Ok(result)
 }
 
 /// Builds a report with the gerrit size checker format from the computed component size and budget.
@@ -411,17 +454,23 @@ fn to_json_output(
 
 #[cfg(test)]
 mod tests {
-
-    use crate::operations::size_check::verify_budgets_with_tools;
+    use crate::operations::size_check::{
+        compute_budget_results, verify_budgets_with_tools, BlobInstance, BlobSizeAndCount,
+        BudgetBlobs, BudgetResult,
+    };
     use crate::util::read_config;
     use crate::util::write_json_file;
+    use anyhow::Result;
     use assembly_images_config::BlobFSLayout;
     use assembly_tool::testing::FakeToolProvider;
     use errors::ResultExt;
     use ffx_assembly_args::SizeCheckArgs;
+    use fuchsia_hash::Hash;
     use serde_json::json;
+    use std::collections::{HashMap, HashSet};
     use std::fs;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
+    use std::str::FromStr;
     use tempfile::TempDir;
 
     struct TestFs {
@@ -476,6 +525,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: None,
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         );
@@ -492,6 +542,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: None,
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         );
@@ -538,6 +589,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: None,
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         );
@@ -584,6 +636,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: None,
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         );
@@ -630,6 +683,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: None,
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         )
@@ -666,6 +720,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: None,
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         );
@@ -702,6 +757,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: None,
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         )
@@ -783,6 +839,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         );
@@ -856,6 +913,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         )
@@ -959,6 +1017,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         )
@@ -1019,6 +1078,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         );
@@ -1097,6 +1157,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
+                verbose: false,
             },
             Box::new(FakeToolProvider::default()),
         )
@@ -1182,6 +1243,7 @@ mod tests {
                 budgets: test_fs.path("size_budgets.json"),
                 blob_sizes: [test_fs.path("blobs1.json")].to_vec(),
                 gerrit_output: Some(test_fs.path("output.json")),
+                verbose: false,
             },
             tool_provider,
         )
@@ -1196,5 +1258,101 @@ mod tests {
                 "Software Deliver.owner": "http://go/fuchsia-size-stats/single_component/?f=component%3Ain%3ASoftware+Deliver"
             }),
         );
+    }
+
+    #[test]
+    fn test_package_breakdown() -> Result<()> {
+        let blob1_hash: Hash =
+            Hash::from_str("0e56473237b6b2ce39358c11a0fbd2f89902f246d966898d7d787c9025124d51")
+                .unwrap();
+        let blob2_hash: Hash =
+            Hash::from_str("b62ee413090825c2ae70fe143b34cbd851f055932cfd5e7ca4ef0efbb802da2a")
+                .unwrap();
+        let blob3_hash: Hash =
+            Hash::from_str("b61ee413090825c2ae70fe143b34cbd851f055932cfd5e7ca4ef0efbb802da2a")
+                .unwrap();
+        let blob1_path: &str = "/a/x/blob1";
+        let blob2_path: &str = "/a/x/blob2";
+        let blob3_path: &str = "/a/x/blob3";
+        let package1_path: PathBuf = PathBuf::from("x/a/s/package1");
+        let package2_path: PathBuf = PathBuf::from("x/a/s/package2");
+        let package3_path: PathBuf = PathBuf::from("x/a/s/package3");
+
+        let resource_budget_blobs: Vec<BudgetBlobs> = vec![
+            BudgetBlobs {
+                budget: BudgetResult {
+                    name: "Component1".to_string(),
+                    budget_bytes: 123,
+                    creep_budget_bytes: 3245,
+                    used_bytes: 0,
+                    package_breakdown: HashMap::new(),
+                },
+                blobs: vec![
+                    BlobInstance {
+                        hash: blob1_hash.clone(),
+                        package: package1_path.clone(),
+                        path: blob1_path.to_string(),
+                    },
+                    BlobInstance {
+                        hash: blob3_hash.clone(),
+                        package: package1_path.clone(),
+                        path: blob3_path.to_string(),
+                    },
+                    BlobInstance {
+                        hash: blob2_hash.clone(),
+                        package: package2_path.clone(),
+                        path: blob2_path.to_string(),
+                    },
+                    BlobInstance {
+                        hash: blob1_hash.clone(),
+                        package: package2_path.clone(),
+                        path: blob1_path.to_string(),
+                    },
+                ],
+            },
+            BudgetBlobs {
+                budget: BudgetResult {
+                    name: "Component2".to_string(),
+                    budget_bytes: 456,
+                    creep_budget_bytes: 111,
+                    used_bytes: 6,
+                    package_breakdown: HashMap::new(),
+                },
+                blobs: vec![BlobInstance {
+                    hash: blob2_hash.clone(),
+                    package: package3_path.clone(),
+                    path: blob2_path.to_string(),
+                }],
+            },
+        ];
+        let blob_count_by_hash: HashMap<Hash, BlobSizeAndCount> = HashMap::from([
+            (blob1_hash.clone(), BlobSizeAndCount { size: 90, share_count: 2 }),
+            (blob2_hash.clone(), BlobSizeAndCount { size: 50, share_count: 2 }),
+            (blob3_hash.clone(), BlobSizeAndCount { size: 1000, share_count: 1 }),
+        ]);
+        let ignored_hashes: HashSet<&Hash> = HashSet::from([&blob3_hash]);
+        let results =
+            compute_budget_results(&resource_budget_blobs, &blob_count_by_hash, &ignored_hashes)?;
+        let expected_result = vec![
+            BudgetResult {
+                name: "Component1".to_string(),
+                budget_bytes: 123,
+                creep_budget_bytes: 3245,
+                used_bytes: 115,
+                package_breakdown: HashMap::from([
+                    (package2_path.clone(), 70 /* 90/2 + 50/2 */),
+                    (package1_path.clone(), 45 /* 90/2 */),
+                ]),
+            },
+            BudgetResult {
+                name: "Component2".to_string(),
+                budget_bytes: 456,
+                creep_budget_bytes: 111,
+                used_bytes: 31, /* 25 + 6 */
+                package_breakdown: HashMap::from([(package3_path.clone(), 25 /* 50/2 */)]),
+            },
+        ];
+        assert_eq!(results, expected_result);
+        Ok(())
     }
 }

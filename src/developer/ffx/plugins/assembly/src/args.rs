@@ -180,6 +180,10 @@ pub struct SizeCheckArgs {
     /// path where to write the verification report, in JSON format.
     #[argh(option)]
     pub gerrit_output: Option<PathBuf>,
+    /// show the storage consumption of each component broken down by package
+    /// regardless of whether the component exceeded its budget.
+    #[argh(switch, short = 'v')]
+    pub verbose: bool,
 }
 
 fn default_blobfs_layout() -> BlobFSLayout {
