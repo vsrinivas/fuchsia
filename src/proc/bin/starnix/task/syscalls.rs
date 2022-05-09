@@ -344,12 +344,12 @@ pub fn sys_prctl(
             let name = current_task.mm.read_c_string(name, &mut buf)?;
             let name = CString::new(name).map_err(|_| errno!(EINVAL))?;
             current_task.mm.set_mapping_name(addr, length, name)?;
-            Ok(0.into())
+            Ok(().into())
         }
         PR_SET_DUMPABLE => {
             let mut dumpable = current_task.mm.dumpable.lock();
             *dumpable = if arg2 == 1 { DumpPolicy::USER } else { DumpPolicy::DISABLE };
-            Ok(0.into())
+            Ok(().into())
         }
         PR_GET_DUMPABLE => {
             let dumpable = current_task.mm.dumpable.lock();
@@ -360,16 +360,20 @@ pub fn sys_prctl(
         }
         PR_SET_PDEATHSIG => {
             not_implemented!("PR_SET_PDEATHSIG");
-            Ok(0.into())
+            Ok(().into())
         }
         PR_GET_NAME => {
             let addr = UserAddress::from(arg2);
             current_task.mm.write_memory(addr, current_task.read().command.to_bytes_with_nul())?;
-            Ok(0.into())
+            Ok(().into())
         }
         PR_SET_PTRACER => {
             not_implemented!("prctl(PR_SET_PTRACER, {})", arg2);
-            Ok(0.into())
+            Ok(().into())
+        }
+        PR_SET_KEEPCAPS => {
+            not_implemented!("prctl(PR_SET_KEEPCAPS, {})", arg2);
+            Ok(().into())
         }
         _ => {
             not_implemented!("prctl: Unknown option: 0x{:x}", option);
