@@ -255,8 +255,9 @@ PagerErrorStatus PageLoader::Worker::TransferUncompressedPages(
     auto populate_status = uncompressed_transfer_buffer_->Populate(offset, length, info);
     if (!populate_status.is_ok()) {
       FX_LOGS(ERROR) << "TransferUncompressed: Failed to populate transfer vmo for blob "
-                     << info.verifier->digest() << ": " << populate_status.status_string();
-      return ToPagerErrorStatus(populate_status.status_value());
+                     << info.verifier->digest() << ": " << populate_status.status_string()
+                     << ". Returning as plain IO error.";
+      return PagerErrorStatus::kErrIO;
     }
 
     const uint64_t rounded_length = fbl::round_up<uint64_t, uint64_t>(length, PAGE_SIZE);
@@ -388,8 +389,9 @@ PagerErrorStatus PageLoader::Worker::TransferChunkedPages(PageLoader::PageSuppli
     auto populate_status = compressed_transfer_buffer_->Populate(read_offset, read_len, info);
     if (!populate_status.is_ok()) {
       FX_LOGS(ERROR) << "TransferChunked: Failed to populate transfer vmo for blob "
-                     << info.verifier->digest() << ": " << populate_status.status_string();
-      return ToPagerErrorStatus(populate_status.status_value());
+                     << info.verifier->digest() << ": " << populate_status.status_string()
+                     << ". Returning as plain IO error.";
+      return PagerErrorStatus::kErrIO;
     }
 
     auto decommit_decompressed = fit::defer([this, length = mapping.decompressed_length]() {

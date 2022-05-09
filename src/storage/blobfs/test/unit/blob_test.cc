@@ -28,6 +28,7 @@
 #include "src/storage/blobfs/test/blobfs_test_setup.h"
 #include "src/storage/blobfs/test/test_scoped_vnode_open.h"
 #include "src/storage/blobfs/test/unit/utils.h"
+#include "zircon/compiler.h"
 
 namespace blobfs {
 
@@ -52,6 +53,13 @@ class BlobTest : public BlobfsTestSetup,
   void SetUp() override {
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kTestDeviceNumBlocks, kTestDeviceBlockSize);
+    device->set_hook([this](const block_fifo_request_t& request, const zx::vmo* vmo) {
+      std::lock_guard l(this->hook_lock_);
+      if (hook_) {
+        return hook_(request, vmo);
+      }
+      return ZX_OK;
+    });
 
     FilesystemOptions filesystem_options{
         .blob_layout_format = std::get<0>(GetParam()),
@@ -75,6 +83,15 @@ class BlobTest : public BlobfsTestSetup,
     std::lock_guard lock(blob.mutex_);
     return blob.paged_vmo();
   }
+
+  void set_hook(block_client::FakeBlockDevice::Hook hook) {
+    std::lock_guard l(this->hook_lock_);
+    hook_ = std::move(hook);
+  }
+
+ private:
+  std::mutex hook_lock_;
+  block_client::FakeBlockDevice::Hook hook_ __TA_GUARDED(hook_lock_);
 };
 
 namespace {
@@ -351,6 +368,59 @@ TEST_P(BlobTest, VmoChildDeletedTriggersPurging) {
     zx::nanosleep(zx::deadline_after(zx::sec(1)));
   }
   EXPECT_TRUE(deleted);
+}
+
+// Some paging failures result in permenent failure. Failed block ops should not.
+TEST_P(BlobTest, ReadErrorsTemporary) {
+  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", 1 << 16);
+  auto root = OpenRoot();
+
+  // Write the blob
+  {
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+    size_t out_actual = 0;
+    ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
+    ASSERT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
+    ASSERT_EQ(file->Close(), ZX_OK);
+    ASSERT_EQ(out_actual, info->size_data);
+  }
+
+  // Get a copy of the VMO.
+  zx::vmo vmo = [&]() {
+    fbl::RefPtr<fs::Vnode> file;
+    // Lookup doesn't call Open, so no need to Close later.
+    EXPECT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+    zx::vmo vmo = {};
+    size_t data_size;
+
+    // Open the blob, get the vmo, and close the blob.
+    TestScopedVnodeOpen open(file);
+    EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo, &data_size), ZX_OK);
+    EXPECT_EQ(data_size, info->size_data);
+    return vmo;
+  }();
+
+  // Add a hook to toggle read failure.
+  std::atomic<zx_status_t> fail_ops = ZX_OK;
+  set_hook([&fail_ops](const block_fifo_request_t& _req, const zx::vmo* _vmo) {
+    return fail_ops.load();
+  });
+
+  // Attempt a read with various failure modes.
+  char buf;
+  for (zx_status_t err :
+       {ZX_ERR_IO, ZX_ERR_IO_DATA_INTEGRITY, ZX_ERR_IO_REFUSED, ZX_ERR_BAD_STATE}) {
+    fail_ops.store(err);
+    ASSERT_NE(vmo.read(&buf, 0, 1), ZX_OK);
+  }
+
+  // Now succeed.
+  fail_ops.store(ZX_OK);
+  ASSERT_EQ(vmo.read(&buf, 0, 1), ZX_OK);
+
+  // Clear the hook to stop using the atomic.
+  set_hook([](const block_fifo_request_t& _req, const zx::vmo* _vmo) { return ZX_OK; });
 }
 
 TEST_P(BlobTest, BlobPrepareWriteFailure) {
