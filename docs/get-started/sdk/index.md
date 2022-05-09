@@ -180,18 +180,18 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx version -v
    ffx:
-     abi-revision: 0xECCEA2F70ACD6FC0
-     api-level: 7
-     build-version: 2022-04-15T14:02:14+00:00
-     integration-commit-hash: 45d8063a1ce6021647378074ae7cceb6a870c11f
-     integration-commit-time: Fri, 15 Apr 2022 14:02:14 +0000
+     abi-revision: 0xA56735A6690E09D8
+     api-level: 8
+     build-version: 2022-04-25T14:46:40+00:00
+     integration-commit-hash: 41e415830c1649b9c09ef570bb3620cf923cdfac
+     integration-commit-time: Mon, 25 Apr 2022 14:46:40 +0000
 
    daemon:
-     abi-revision: 0xECCEA2F70ACD6FC0
-     api-level: 7
-     build-version: 2022-04-15T14:02:14+00:00
-     integration-commit-hash: 45d8063a1ce6021647378074ae7cceb6a870c11f
-     integration-commit-time: Fri, 15 Apr 2022 14:02:14 +0000
+     abi-revision: 0xA56735A6690E09D8
+     api-level: 8
+     build-version: 2022-04-25T14:46:40+00:00
+     integration-commit-hash: 41e415830c1649b9c09ef570bb3620cf923cdfac
+     integration-commit-time: Mon, 25 Apr 2022 14:46:40 +0000
    ```
 
    At this point, you only need to confirm that you can run this `ffx` command
@@ -232,10 +232,10 @@ Do the following:
    tools/ffx emu stop --all
    ```
 
-1. Start a new Fuchsia emulator instance (and name it `walkthrough-emu`):
+1. Start a new Fuchsia emulator instance:
 
    ```posix-terminal
-   tools/ffx emu start --headless --name walkthrough-emu workstation.qemu-x64
+   tools/ffx emu start workstation.qemu-x64 --headless
    ```
 
    This command starts a headless emulator instance running a Fuchsia prebuilt
@@ -245,13 +245,13 @@ Do the following:
    following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx emu start --headless --name walkthrough-emu workstation.qemu-x64
-   Logging to "/home/alice/.local/share/Fuchsia/ffx/emu/instances/walkthrough-emu/emulator.log"
+   $ tools/ffx emu start workstation.qemu-x64 --headless
+   Logging to "/home/alice/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
    Waiting for Fuchsia to start (up to 60 seconds)...........
    Emulator is ready.
    ```
 
-1. Verify that an emulator instance named `walkthrough-emu` is running:
+1. Verify that the new emulator instance is running:
 
    ```posix-terminal
    tools/ffx emu list
@@ -261,7 +261,7 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx emu list
-   [Active]    walkthrough-emu
+   [Active]    fuchsia-emulator
    ```
 
 1. Verify that the emulator instance is detected as a device:
@@ -276,13 +276,13 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx target list
    NAME               SERIAL       TYPE                    STATE      ADDRS/IP                           RCS
-   walkthrough-emu    <unknown>    Unknown                 Product    [fe80::d4e3:9a5b:c2e:2534%qemu]    Y
+   fuchsia-emulator   <unknown>    Unknown                 Product    [fe80::d4e3:9a5b:c2e:2534%qemu]    Y
    ```
 
 1. Set this emulator instance to be the default device:
 
    ```posix-terminal
-   tools/ffx target default set walkthrough-emu
+   tools/ffx target default set fuchsia-emulator
    ```
 
    This command exits silently without output.
@@ -299,7 +299,7 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx target default get
-   walkthrough-emu
+   fuchsia-emulator
    ```
 
 1. To verify that you can establish an SSH connection to the emulator instance,
@@ -318,7 +318,7 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx target show
    Target:
-       Name: "walkthrough-emu"
+       Name: "fuchsia-emulator"
        SSH Address: "[fe80::9597:e5fb:4746:a7b1%3]:22"
    Board:
        Name: "default-board"
@@ -387,7 +387,12 @@ Do the following:
    tools/ffx repository add-from-pm -r fuchsiasamples.com $HOME/.package_repos/sdk-samples
    ```
 
-   This command exits silently without output.
+   This command prints output similar to the following:
+
+   ```none {:.devsite-disable-click-to-copy}
+   $ tools/ffx repository add-from-pm -r fuchsiasamples.com $HOME/.package_repos/sdk-samples
+   added repository fuchsiasamples.com
+   ```
 
 1. Verify that the new package repository (`fuchsiasamples.com`) is created:
 
@@ -423,7 +428,7 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx repository server start
-   server is listening on [::]:8083
+   ffx repository server is listening on [::]:8083
    ```
 
 1. Register the `fuchsiasamples.com` repository to the target device
@@ -457,9 +462,9 @@ Do the following:
    +----------------------+----------------------+
    | REPO                 | TARGET               |
    +======================+======================+
-   | fuchsiasamples.com   | walkthrough-emu      |
+   | fuchsiasamples.com   | fuchsia-emulator     |
    +----------------------+----------------------+
-   | workstation.qemu-x64 | walkthrough-emu      |
+   | workstation.qemu-x64 | fuchsia-emulator     |
    |                      |   alias: fuchsia.com |
    +----------------------+----------------------+
    ```
@@ -504,6 +509,7 @@ Do the following:
    Moniker: /core/ffx-laboratory:hello_world
    Creating component instance...
    Starting component instance...
+   Success! The component instance has been started.
    ```
 
 1. Check the status of the `hello_world` component:
