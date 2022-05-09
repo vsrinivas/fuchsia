@@ -4,15 +4,17 @@
 
 #include "codec_adapter_vaapi_decoder.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/fit/defer.h>
 #include <zircon/status.h>
 
 #include <condition_variable>
 #include <mutex>
+#include <optional>
 
 #include <va/va_drmcommon.h>
 
 #include "h264_accelerator.h"
-#include "lib/async/cpp/task.h"
 #include "media/gpu/h264_decoder.h"
 #include "media/gpu/vp9_decoder.h"
 #include "vp9_accelerator.h"
@@ -48,6 +50,74 @@ void CodecAdapterVaApiDecoder::CoreCodecInit(
   if (codec_diagnostics_) {
     std::string codec_name = is_h264_ ? "H264" : "VP9";
     codec_instance_diagnostics_ = codec_diagnostics_->CreateComponentCodec(codec_name);
+  }
+
+  VAConfigAttrib attribs[1];
+  attribs[0].type = VAConfigAttribRTFormat;
+  attribs[0].value = VA_RT_FORMAT_YUV420;
+  VAConfigID config_id;
+  VAEntrypoint va_entrypoint = VAEntrypointVLD;
+  VAStatus va_status;
+  VAProfile va_profile;
+
+  if (mime_type == "video/h264-multi" || mime_type == "video/h264") {
+    va_profile = VAProfileH264High;
+  } else if (mime_type == "video/vp9") {
+    va_profile = VAProfileVP9Profile0;
+  } else {
+    SetCodecFailure("CodecCodecInit(): Unknown mime_type %s\n", mime_type.c_str());
+    return;
+  }
+
+  va_status = vaCreateConfig(VADisplayWrapper::GetSingleton()->display(), va_profile, va_entrypoint,
+                             attribs, std::size(attribs), &config_id);
+  if (va_status != VA_STATUS_SUCCESS) {
+    SetCodecFailure("CodecCodecInit(): Failed to create config: %s", vaErrorStr(va_status));
+    return;
+  }
+  config_.emplace(config_id);
+
+  int max_config_attributes = vaMaxNumConfigAttributes(VADisplayWrapper::GetSingleton()->display());
+  std::vector<VAConfigAttrib> config_attributes(max_config_attributes);
+
+  int num_config_attributes;
+  va_status = vaQueryConfigAttributes(VADisplayWrapper::GetSingleton()->display(), config_->id(),
+                                      &va_profile, &va_entrypoint, config_attributes.data(),
+                                      &num_config_attributes);
+
+  if (va_status != VA_STATUS_SUCCESS) {
+    SetCodecFailure("CodecCodecInit(): Failed to query attributes: %s", vaErrorStr(va_status));
+    return;
+  }
+
+  std::optional<uint32_t> max_height = std::nullopt;
+  std::optional<uint32_t> max_width = std::nullopt;
+
+  for (int i = 0; i < num_config_attributes; i += 1) {
+    const VAConfigAttrib& attrib = config_attributes[i];
+    switch (attrib.type) {
+      case VAConfigAttribMaxPictureHeight:
+        max_height = attrib.value;
+        break;
+      case VAConfigAttribMaxPictureWidth:
+        max_width = attrib.value;
+        break;
+      default:
+        break;
+    }
+  }
+
+  if (!max_height) {
+    FX_LOGS(WARNING)
+        << "Could not query hardware for max picture height supported. Setting default";
+  } else {
+    max_picture_height_ = max_height.value();
+  }
+
+  if (!max_width) {
+    FX_LOGS(WARNING) << "Could not query hardware for max picture width supported. Setting default";
+  } else {
+    max_picture_width_ = max_width.value();
   }
 
   zx_status_t result =
@@ -173,39 +243,14 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
     CodecInputItem input_item = std::move(maybe_input_item.value());
     if (input_item.is_format_details()) {
       const std::string& mime_type = input_item.format_details().mime_type();
-      if (!config_) {
-        VAConfigAttrib attribs[1];
-        attribs[0].type = VAConfigAttribRTFormat;
-        attribs[0].value = VA_RT_FORMAT_YUV420;
-        VAConfigID config_id;
-        VAStatus va_status;
 
-        if ((!is_h264_ && (mime_type == "video/h264-multi" || mime_type == "video/h264")) ||
-            (is_h264_ && mime_type == "video/vp9")) {
-          SetCodecFailure(
-              "CodecCodecInit(): Can not switch codec type after setting it in CoreCodecInit(). "
-              "Attempting to switch it to %s\n",
-              mime_type.c_str());
-          return;
-        }
-
-        if (mime_type == "video/h264-multi" || mime_type == "video/h264") {
-          va_status = vaCreateConfig(VADisplayWrapper::GetSingleton()->display(), VAProfileH264High,
-                                     VAEntrypointVLD, attribs, std::size(attribs), &config_id);
-        } else if (mime_type == "video/vp9") {
-          va_status =
-              vaCreateConfig(VADisplayWrapper::GetSingleton()->display(), VAProfileVP9Profile0,
-                             VAEntrypointVLD, attribs, std::size(attribs), &config_id);
-        } else {
-          SetCodecFailure("CodecCodecInit(): Unknown mime_type %s\n", mime_type.c_str());
-          return;
-        }
-
-        if (va_status != VA_STATUS_SUCCESS) {
-          SetCodecFailure("Failed to create config.");
-          return;
-        }
-        config_.emplace(config_id);
+      if ((!is_h264_ && (mime_type == "video/h264-multi" || mime_type == "video/h264")) ||
+          (is_h264_ && mime_type == "video/vp9")) {
+        SetCodecFailure(
+            "CodecCodecInit(): Can not switch codec type after setting it in CoreCodecInit(). "
+            "Attempting to switch it to %s\n",
+            mime_type.c_str());
+        return;
       }
 
       if (mime_type == "video/h264-multi" || mime_type == "video/h264") {

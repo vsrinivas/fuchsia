@@ -390,12 +390,12 @@ TEST_F(Vp9VaapiTestFixture, CreateConfigFailure) {
   // Cause vaCreateConfig to return a failure
   vaCreateConfigStubSetReturn(VA_STATUS_ERROR_OPERATION_FAILED);
 
-  CodecAndStreamInit();
+  fuchsia::media::FormatDetails format_details;
+  format_details.set_format_details_version_ordinal(1);
+  format_details.set_mime_type("video/vp9");
+  decoder_->CoreCodecInit(format_details);
 
-  events_.SetBufferInitializationCompleted();
   events_.WaitForCodecFailure(kExpectedNumOfCodecFailures);
-
-  CodecStreamStop();
 
   EXPECT_EQ(kExpectedNumOfCodecFailures, events_.fail_codec_count());
   EXPECT_EQ(0u, events_.fail_stream_count());

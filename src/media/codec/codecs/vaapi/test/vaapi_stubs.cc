@@ -43,10 +43,16 @@ VAStatus vaCreateConfig(VADisplay dpy, VAProfile profile, VAEntrypoint entrypoin
   *config_id = 1;
   return vaCreateConfigReturn;
 }
+int vaMaxNumConfigAttributes(VADisplay dpy) { return 6; }
 VAStatus vaQueryConfigAttributes(VADisplay dpy, VAConfigID config_id, VAProfile *profile,
                                  VAEntrypoint *entrypoint, VAConfigAttrib *attrib_list,
                                  int *num_attribs) {
-  return VA_STATUS_ERROR_FLAG_NOT_SUPPORTED;
+  attrib_list[0].type = VAConfigAttribMaxPictureHeight;
+  attrib_list[0].value = 3840;
+  attrib_list[1].type = VAConfigAttribMaxPictureWidth;
+  attrib_list[1].value = 2160;
+  *num_attribs = 2;
+  return VA_STATUS_SUCCESS;
 }
 VAStatus vaCreateSurfaces(VADisplay dpy, unsigned int format, unsigned int width,
                           unsigned int height, VASurfaceID *surfaces, unsigned int num_surfaces,

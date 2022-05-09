@@ -307,15 +307,15 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       // the current stream being somewhere in these bounds, these have nothing to
       // do with the current stream in particular.
       image_constraints.min_coded_width = 16;
-      image_constraints.max_coded_width = 3840;
+      image_constraints.max_coded_width = max_picture_width_;
       image_constraints.min_coded_height = 16;
+      image_constraints.max_coded_height = max_picture_height_;
       // This intentionally isn't the height of a 4k frame.  See
       // max_coded_width_times_coded_height.  We intentionally constrain the max
       // dimension in width or height to the width of a 4k frame.  While the HW
       // might be able to go bigger than that as long as the other dimension is
       // smaller to compensate, we don't really need to enable any larger than
       // 4k's width in either dimension, so we don't.
-      image_constraints.max_coded_height = 3840;
       image_constraints.min_bytes_per_row = 16;
       // no hard-coded max stride, at least for now
       image_constraints.max_bytes_per_row = 0xFFFFFFFF;
@@ -505,6 +505,11 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   DiagnosticStateWrapper<DecoderState> state_{
       []() {}, DecoderState::kIdle,
       &DecoderStateName};  // Used for trace events to show when we are waiting on the iGPU for data
+
+  // These are set in CoreCodecInit() by querying the underlying hardware. If the hardware query
+  // returns no results the current value is not overwritten.
+  uint32_t max_picture_height_{3840};
+  uint32_t max_picture_width_{3840};
 
   std::deque<std::pair<int32_t, uint64_t>> stream_to_pts_map_;
   int32_t next_stream_id_{};
