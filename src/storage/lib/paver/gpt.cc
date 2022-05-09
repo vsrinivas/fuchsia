@@ -158,8 +158,10 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
     std::string path_str(response2.result.response().path.data(),
                          static_cast<size_t>(response2.result.response().path.size()));
 
-    // The GPT which will be a non-removable block device that isn't a partition itself.
-    if (path_str.find("part-") == std::string::npos) {
+    // The GPT which will be a non-removable block device that isn't a partition or fvm created
+    // partition itself.
+    if (path_str.find("part-") == std::string::npos &&
+        path_str.find("/fvm/") == std::string::npos) {
       found_devices.push_back(std::make_pair(path_str, caller.release()));
     }
   }

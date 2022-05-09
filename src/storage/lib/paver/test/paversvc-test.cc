@@ -40,6 +40,7 @@
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/lib/paver/device-partitioner.h"
+#include "src/storage/lib/paver/fvm.h"
 #include "src/storage/lib/paver/luis.h"
 #include "src/storage/lib/paver/paver.h"
 #include "src/storage/lib/paver/test/test-utils.h"
@@ -2096,6 +2097,28 @@ TEST_F(PaverServiceLuisTest, WriteDataFileIgnoreDataPartitionFromOtherBlockDevic
   // be ZX_ERR_TIMED_OUT, as OpenPartitionWithDevfs() should eventually timed out waiting for the
   // data partition.
   ASSERT_EQ(result.value().status, ZX_ERR_TIMED_OUT);
+}
+
+TEST_F(PaverServiceLuisTest, FindGPTDevicesIgnoreFvmPartitions) {
+  // Initialize the primary block solely as FVM and allocate sub-partitions.
+  fvm::SparseImage header = {};
+  header.slice_size = 1 << 20;
+  zx::channel gpt_chan;
+  ASSERT_OK(fdio_fd_clone(gpt_dev_->fd(), gpt_chan.reset_and_get_address()));
+  int block_fd;
+  ASSERT_TRUE(zx::make_status(fdio_fd_create(gpt_chan.release(), &block_fd)).is_ok());
+  fbl::unique_fd block_unique_fd(block_fd);
+  fbl::unique_fd fvm_fd(FvmPartitionFormat(devmgr_.devfs_root(), std::move(block_unique_fd), header,
+                                           paver::BindOption::Reformat));
+  ASSERT_TRUE(fvm_fd);
+  auto status = paver::AllocateEmptyPartitions(devmgr_.devfs_root(), fvm_fd);
+  ASSERT_TRUE(status.is_ok());
+
+  // Check that FVM created sub-partitions are not considered as candidates.
+  paver::GptDevicePartitioner::GptDevices gpt_devices;
+  paver::GptDevicePartitioner::FindGptDevices(devmgr_.devfs_root(), &gpt_devices);
+  ASSERT_EQ(gpt_devices.size(), 1);
+  ASSERT_EQ(gpt_devices[0].first, std::string("/dev/sys/platform/00:00:2d/ramctl/ramdisk-0/block"));
 }
 
 }  // namespace

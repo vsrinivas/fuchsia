@@ -90,12 +90,12 @@ class GptDevicePartitioner {
 
   fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root() { return svc_root_; }
 
- private:
   using GptDevices = std::vector<std::pair<std::string, fbl::unique_fd>>;
 
   // Find all block devices which could contain a GPT.
   static bool FindGptDevices(const fbl::unique_fd& devfs_root, GptDevices* out);
 
+ private:
   // Initializes GPT for a device which was explicitly provided. If |gpt_device| doesn't have a
   // valid GPT, it will initialize it with a valid one.
   static zx::status<std::unique_ptr<GptDevicePartitioner>> InitializeProvidedGptDevice(
