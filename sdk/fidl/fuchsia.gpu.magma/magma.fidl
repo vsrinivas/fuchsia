@@ -226,7 +226,8 @@ type BufferRange = struct {
     size uint64;
 };
 
-/// If a system driver error occurs, the connection will be closed and a zx.status sent via epitaph.
+/// If a system driver error occurs, or if the client sends a message that the client should have
+/// known is invalid, the connection will be closed and a zx.status sent via epitaph.
 protocol Primary {
     /// Imports an object for use in the system driver.
     ImportObject(resource struct {
