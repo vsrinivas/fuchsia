@@ -11,8 +11,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
 
+#include <list>
 #include <memory>
-#include <vector>
 
 #include "src/storage/blobfs/compression/decompressor_sandbox/decompressor_impl.h"
 #include "src/storage/blobfs/compression/external_decompressor.h"
@@ -24,6 +24,8 @@ class LocalDecompressorCreator {
   // Disallow copy.
   LocalDecompressorCreator(const LocalDecompressorCreator&) = delete;
 
+  ~LocalDecompressorCreator();
+
   static zx::status<std::unique_ptr<LocalDecompressorCreator>> Create();
 
   DecompressorCreatorConnector* GetDecompressorConnector() { return connector_.get(); }
@@ -31,15 +33,19 @@ class LocalDecompressorCreator {
  private:
   LocalDecompressorCreator() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
+  // Called on the server thread. Removes dead channels then binds the new one.
+  zx_status_t RegisterChannelOnServerThread(zx::channel);
+
+  // Removes dead channels then binds the given channel to the local server.
   zx_status_t RegisterChannel(zx::channel);
 
   blobfs::DecompressorImpl decompressor_;
   async::Loop loop_;
-  std::mutex bindings_lock_;
-  // This is wrapped in unique_ptr because it is not movable, as is required for vector erase.
-  std::vector<std::unique_ptr<fidl::Binding<fuchsia::blobfs::internal::DecompressorCreator>>>
-      bindings_;
   std::unique_ptr<DecompressorCreatorConnector> connector_;
+  // Track existing bindings. Only accessed from the server thread.
+  std::list<fidl::Binding<fuchsia::blobfs::internal::DecompressorCreator>> bindings_;
+  // Used to prevent new connections during teardown. Only accessed from the server thread.
+  bool shutting_down_ = false;
 };
 
 }  // namespace blobfs
