@@ -141,17 +141,6 @@ TEST(Vulkan, ReadbackLoopWithTimelineWait) {
     GTEST_SKIP();
   }
 
-  {
-    // Check device timeline semaphore support.
-    vk::PhysicalDeviceTimelineSemaphoreProperties timeline_properties{};
-    auto properties = vk::PhysicalDeviceProperties2{};
-    properties.pNext = &timeline_properties;
-    test.physical_device().getProperties2(&properties);
-    // TODO(fxbug.dev/69054) - remove
-    if (timeline_properties.maxTimelineSemaphoreValueDifference == 0)
-      GTEST_SKIP();
-  }
-
   const vk::Device device = test.vulkan_device();
 
   vk::Semaphore semaphore{};
