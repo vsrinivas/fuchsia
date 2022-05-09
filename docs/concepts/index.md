@@ -9,7 +9,7 @@ values of the system have remained relatively constant throughout the project.
 The core principles guiding Fuchsia’s design and development are simple, secure,
 updatable, and performant.
 
-### Simple
+### [Simple][simple]
 
 Fuchsia makes it easy to create, maintain, and integrate software and hardware
 across a wide range of devices.
@@ -21,7 +21,7 @@ management, and software abstraction—in a coherent way, creating a robust, sta
 products.
 
 
-### Secure
+### [Secure][secure]
 
 Fuchsia has a kernel and software model designed for modern computing.
 
@@ -33,7 +33,7 @@ guarantees.
 resource costs for security.
 
 
-### Updatable
+### [Updatable][updatable]
 
 As a modular operating system, Fuchsia allows the kernel, drivers, and software
 components to be independently updatable.
@@ -46,7 +46,7 @@ like the web.
 * Google is committed to updating and maintaining Fuchsia over time.
 
 
-### Performant
+### [Performant][performant]
 
 Fuchsia is designed for real world product requirements and optimized for
 performance.
@@ -56,3 +56,9 @@ platforms, architectures, and devices.
 * Fuchsia efficiently manages system resources—processors, memory, storage, networking, and power—
 to optimize performance.
 * Fuchsia meets performance goals in commercial devices currently in production.
+
+
+[performant]: /docs/concepts/principles/performant.md
+[simple]: /docs/concepts/principles/simple.md
+[secure]: /docs/concepts/principles/secure.md
+[updatable]: /docs/concepts/principles/updatable.md
