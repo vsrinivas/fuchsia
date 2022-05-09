@@ -267,8 +267,27 @@ pub trait Crypt: Send + Sync {
         purpose: KeyPurpose,
     ) -> Result<(WrappedKeys, UnwrappedKeys), Error>;
 
+    // Unwraps a single key.
+    async fn unwrap_key(
+        &self,
+        wrapping_key_id: u64,
+        key: &WrappedKeyBytes,
+        owner: u64,
+    ) -> Result<KeyBytes, Error>;
+
     /// Unwraps the keys and stores the result in UnwrappedKeys.
-    async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error>;
+    async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
+        let mut futures = vec![];
+        for key in keys.iter() {
+            futures.push(async move {
+                Ok(UnwrappedKey::new(
+                    key.key_id,
+                    self.unwrap_key(key.wrapping_key_id, &key.key, owner).await?,
+                ))
+            });
+        }
+        futures::future::try_join_all(futures).await
+    }
 }
 
 #[cfg(any(test, feature = "insecure_crypt"))]
@@ -314,7 +333,8 @@ pub mod insecure {
                 KeyPurpose::Data => (&DATA_WRAP_XOR, 0),
                 KeyPurpose::Metadata => (&METADATA_WRAP_XOR, 1),
             };
-            // This intentionally leaves the extra bytes in the wrapped key as zero.  They are unused.
+            // This intentionally leaves the extra bytes in the wrapped key as zero.  They are
+            // unused.
             for i in 0..key.len() {
                 let j = i % wrap_xor.len();
                 wrapped[i] = key[i] ^ wrap_xor[j] ^ owner_bytes[j];
@@ -325,29 +345,24 @@ pub mod insecure {
             ))
         }
 
-        /// Unwraps the keys and stores the result in UnwrappedKeys.
-        async fn unwrap_keys(
+        async fn unwrap_key(
             &self,
-            keys: &WrappedKeys,
+            wrapping_key_id: u64,
+            key: &WrappedKeyBytes,
             owner: u64,
-        ) -> Result<UnwrappedKeys, Error> {
-            Ok(keys
-                .iter()
-                .map(|key| {
-                    let mut unwrapped: KeyBytes = [0; KEY_SIZE];
-                    let owner_bytes = owner.to_le_bytes();
-                    let wrap_xor = match key.wrapping_key_id {
-                        0 => &DATA_WRAP_XOR,
-                        1 => &METADATA_WRAP_XOR,
-                        _ => panic!("Unexpected wrapping key ID for {:?}", key),
-                    };
-                    for i in 0..unwrapped.len() {
-                        let j = i % wrap_xor.len();
-                        unwrapped[i] = key.key[i] ^ wrap_xor[j] ^ owner_bytes[j];
-                    }
-                    UnwrappedKey::new(key.key_id, unwrapped)
-                })
-                .collect())
+        ) -> Result<KeyBytes, Error> {
+            let mut unwrapped: KeyBytes = [0; KEY_SIZE];
+            let owner_bytes = owner.to_le_bytes();
+            let wrap_xor = match wrapping_key_id {
+                0 => &DATA_WRAP_XOR,
+                1 => &METADATA_WRAP_XOR,
+                _ => panic!("Unexpected wrapping key ID for {:?}", key),
+            };
+            for i in 0..unwrapped.len() {
+                let j = i % wrap_xor.len();
+                unwrapped[i] = key[i] ^ wrap_xor[j] ^ owner_bytes[j];
+            }
+            Ok(unwrapped)
         }
     }
 }

@@ -17,7 +17,7 @@ use {
                 AssocObj, AssociatedObject, MetadataReservation, Mutation, Transaction, TxnMutation,
             },
             volume::{list_volumes, VOLUMES_DIRECTORY},
-            LockState, ObjectDescriptor, ObjectStore,
+            LastObjectId, LockState, ObjectDescriptor, ObjectStore,
         },
     },
     anyhow::{anyhow, bail, Context, Error},
@@ -207,6 +207,7 @@ impl ObjectManager {
                     None,
                     None,
                     LockState::Unknown,
+                    LastObjectId::default(),
                 );
                 if let Some(on_new_store) = &self.on_new_store {
                     on_new_store(&store);

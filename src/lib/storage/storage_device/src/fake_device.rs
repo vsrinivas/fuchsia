@@ -54,6 +54,26 @@ impl FakeDevice {
     ) {
         self.operation_closure = Box::new(cb);
     }
+
+    /// Creates a fake block device from an image (which can be anything that implements
+    /// std::io::Read).  The size of the device is determined by how much data is read.
+    pub fn from_image(
+        mut reader: impl std::io::Read,
+        block_size: u32,
+    ) -> Result<Self, std::io::Error> {
+        let allocator = BufferAllocator::new(
+            block_size as usize,
+            Box::new(MemBufferSource::new(TRANSFER_HEAP_SIZE)),
+        );
+        let mut data = Vec::new();
+        reader.read_to_end(&mut data)?;
+        Ok(Self {
+            allocator,
+            data: Mutex::new(data),
+            closed: AtomicBool::new(false),
+            operation_closure: Box::new(|_| Ok(())),
+        })
+    }
 }
 
 #[async_trait]

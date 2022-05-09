@@ -51,6 +51,7 @@ fxfs_sources = [
   "src/data_buffer.rs",
   "src/debug_assert_not_too_long.rs",
   "src/errors.rs",
+  "src/ff1.rs",
   "src/filesystem.rs",
   "src/fsck.rs",
   "src/fsck/errors.rs",
@@ -132,6 +133,8 @@ if (is_fuchsia) {
     "//garnet/lib/rust/io_util",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/sys/pkg/lib/fuchsia-merkle",
+    "//third_party/rust_crates:zstd",
+    "//third_party/zstd",
   ]
   fxfs_sources += [
     "src/platform/fuchsia.rs",
@@ -195,8 +198,19 @@ group("fxfs-test-manifest") {
   }
 }
 
+resource("test_data") {
+  sources = [
+    # object_store::tests::test_object_id_cipher_upgrade uses this
+    "testdata/fxfs_golden.16.0.img.zstd",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
 fuchsia_unittest_component("fxfs-test") {
-  deps = [ ":lib_test" ]
+  deps = [
+    ":lib_test",
+    ":test_data",
+  ]
 }
 
 fuchsia_test_package("fxfs-tests") {

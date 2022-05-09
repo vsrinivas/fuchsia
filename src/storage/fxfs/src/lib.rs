@@ -13,6 +13,7 @@
 pub mod crypt;
 mod data_buffer;
 pub mod errors;
+pub mod ff1;
 pub mod filesystem;
 pub mod fsck;
 mod lsm_tree;

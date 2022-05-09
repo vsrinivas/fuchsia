@@ -102,6 +102,10 @@ impl ObjectStore {
                     store_info.mutations_cipher_offset = cipher.offset();
                 }
 
+                // This will capture object IDs that might be in transactions not yet committed.  In
+                // theory, we could do better than this but it's not worth the effort.
+                store_info.last_object_id = self.store.last_object_id.lock().unwrap().id;
+
                 self.store_info.set(store_info).unwrap();
             }
         }

@@ -1194,12 +1194,13 @@ async fn test_spurious_extents() {
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(
-        test.errors()[..],
-        [
-            FsckIssue::Warning(FsckWarning::ExtentForDirectory(..)),
-            FsckIssue::Warning(FsckWarning::ExtentForNonexistentObject(..)),
-            ..
-        ]
-    );
+    let mut found = 0;
+    for e in test.errors() {
+        match e {
+            FsckIssue::Warning(FsckWarning::ExtentForDirectory(..)) => found |= 1,
+            FsckIssue::Warning(FsckWarning::ExtentForNonexistentObject(..)) => found |= 2,
+            _ => {}
+        }
+    }
+    assert_eq!(found, 3, "Missing expected errors: {:?}", test.errors());
 }

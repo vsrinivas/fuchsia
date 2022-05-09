@@ -71,7 +71,7 @@ impl<S: HandleOwner> Directory<S> {
         owner: &Arc<S>,
     ) -> Result<Directory<S>, Error> {
         let store = owner.as_ref().as_ref();
-        let object_id = store.get_next_object_id();
+        let object_id = store.get_next_object_id().await?;
         let now = Timestamp::now();
         transaction.add(
             store.store_object_id,

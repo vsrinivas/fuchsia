@@ -12,7 +12,7 @@ use {
         serialized_types::LATEST_VERSION,
     },
     std::{
-        io::{Read, Write},
+        io::Write,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -43,20 +43,8 @@ fn latest_image_filename() -> String {
 }
 
 /// Decompresses a zstd compressed local image into a RAM backed FakeDevice.
-async fn load_device(path: &Path) -> Result<FakeDevice, Error> {
-    let mut image = zstd::Decoder::new(std::fs::File::open(path)?)?;
-    let device = FakeDevice::new(IMAGE_BLOCKS, IMAGE_BLOCK_SIZE);
-    let mut offset: u64 = 0;
-    loop {
-        let mut buf = device.allocate_buffer(device.block_size() as usize);
-        let bytes = image.read(&mut buf.as_mut().as_mut_slice())?;
-        if bytes != device.block_size() as usize {
-            break;
-        }
-        device.write(offset, buf.as_ref()).await?;
-        offset += bytes as u64;
-    }
-    Ok(device)
+fn load_device(path: &Path) -> Result<FakeDevice, Error> {
+    Ok(FakeDevice::from_image(zstd::Decoder::new(std::fs::File::open(path)?)?, IMAGE_BLOCK_SIZE)?)
 }
 
 /// Compresses a RAM backed FakeDevice into a zstd compressed local image.
@@ -87,7 +75,7 @@ pub async fn create_image() -> Result<(), Error> {
         device.reopen();
         save_device(device, path.as_path()).await?;
     }
-    let device_holder = DeviceHolder::new(load_device(&path).await?);
+    let device_holder = DeviceHolder::new(load_device(&path)?);
     let device = device_holder.clone();
     let fs = FxFilesystem::open(device_holder).await?;
     let vol = ops::open_volume(&fs, crypt.clone()).await?;
@@ -125,12 +113,12 @@ pub async fn create_image() -> Result<(), Error> {
 async fn check_image(path: &Path) -> Result<(), Error> {
     let crypt: Arc<dyn Crypt> = Arc::new(InsecureCrypt::new());
     {
-        let device = DeviceHolder::new(load_device(path).await?);
+        let device = DeviceHolder::new(load_device(path)?);
         let fs = FxFilesystem::open(device).await?;
         ops::fsck(&fs, crypt.clone(), true).await.context("fsck failed")?;
     }
     {
-        let device = DeviceHolder::new(load_device(path).await?);
+        let device = DeviceHolder::new(load_device(path)?);
         let fs = FxFilesystem::open(device).await?;
         let vol = ops::open_volume(&fs, crypt.clone()).await?;
         if ops::get(&vol, &Path::new("some/file.txt")).await? != EXPECTED_FILE_CONTENT.to_vec() {

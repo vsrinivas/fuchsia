@@ -31,9 +31,9 @@ change is considered to be a non-breaking change or a breaking change.
 Non-breaking changes are changes where it is possible to migrate the filesystem
 from a previous storage format version to the latest storage format version.
 
-1. Copy the previous version of the struct into `types.rs` and give it a new
-   name (e.g. rename it from `Foo` to `FooV1`). Where appropriate, drop comments
-   and restrict visibility of fields to private.
+1. Make a copy the previous version of the struct and give it a new name
+   (e.g. rename it from `Foo` to `FooV1`). Where appropriate, drop comments and
+   restrict visibility of fields to private.
 2. Implement `From<OldVersion> for NewVersion` for their new version, e.g.
    implement `From<FooV1> for Foo`
 3. Bump the major component of `LATEST_VERSION` and set the minor component to zero.

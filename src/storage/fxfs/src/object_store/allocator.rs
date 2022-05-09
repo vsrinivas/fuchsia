@@ -1432,7 +1432,7 @@ mod tests {
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1));
         fs.object_manager().set_allocator(allocator.clone());
         let store = ObjectStore::new_empty(None, 2, fs.clone());
-        store.set_graveyard_directory_object_id(store.get_next_object_id());
+        store.set_graveyard_directory_object_id(store.maybe_get_next_object_id());
         fs.object_manager().set_root_store(store.clone());
         fs.object_manager().init_metadata_reservation();
         let mut transaction = fs

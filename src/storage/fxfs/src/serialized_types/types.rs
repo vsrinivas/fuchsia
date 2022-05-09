@@ -6,7 +6,8 @@ use crate::{
     lsm_tree::LayerInfo,
     object_store::{
         transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
-        JournalRecord, ObjectKey, ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
+        JournalRecord, ObjectKey, ObjectValue, StoreInfo, StoreInfoV1, SuperBlock,
+        SuperBlockRecord,
     },
     serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
 };
@@ -15,10 +16,7 @@ use crate::{
 ///
 /// If all layer files are compacted the the journal flushed, and super-block
 /// both rewritten, all versions should match this value.
-///
-/// Last breaking change:
-///  v16:  Track allocated space on a per object-store basis.
-pub const LATEST_VERSION: Version = Version { major: 16, minor: 0 };
+pub const LATEST_VERSION: Version = Version { major: 17, minor: 0 };
 
 versioned_type! {
     16.. => AllocatorInfo,
@@ -48,7 +46,8 @@ versioned_type! {
     5.. => ObjectValue,
 }
 versioned_type! {
-    8.. => StoreInfo,
+    17.. => StoreInfo,
+    8.. => StoreInfoV1,
 }
 versioned_type! {
     16.. => SuperBlock,

@@ -9,6 +9,7 @@ use {
             merge::{Merger, MergerIterator},
             types::{ItemRef, LayerIterator},
         },
+        object_handle::INVALID_OBJECT_ID,
         object_store::{
             object_manager::ObjectManager,
             object_record::{
@@ -60,7 +61,10 @@ impl Graveyard {
 
     /// Creates a graveyard object in `store`.  Returns the object ID for the graveyard object.
     pub fn create(transaction: &mut Transaction<'_>, store: &ObjectStore) -> u64 {
-        let object_id = store.get_next_object_id();
+        let object_id = store.maybe_get_next_object_id();
+        // This is OK because we only ever create a graveyard as we are creating a new store so
+        // maybe_get_next_object_id will never fail here due to a lack of an object ID cipher.
+        assert_ne!(object_id, INVALID_OBJECT_ID);
         let now = Timestamp::now();
         transaction.add(
             store.store_object_id,

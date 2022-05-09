@@ -44,8 +44,8 @@ use {
                 AllocatorMutation, Mutation, ObjectStoreMutation, Options, Transaction,
                 TxnMutation, TRANSACTION_MAX_JOURNAL_USAGE,
             },
-            HandleOptions, Item, ItemRef, LockState, NewChildStoreOptions, ObjectStore,
-            StoreObjectHandle, INVALID_OBJECT_ID,
+            HandleOptions, Item, ItemRef, LastObjectId, LockState, NewChildStoreOptions,
+            ObjectStore, StoreObjectHandle, INVALID_OBJECT_ID,
         },
         range::RangeExt,
         round::{round_down, round_up},
@@ -458,6 +458,7 @@ impl Journal {
             None,
             None,
             LockState::Unencrypted,
+            LastObjectId::default(),
         );
         self.objects.set_root_store(root_store);
 

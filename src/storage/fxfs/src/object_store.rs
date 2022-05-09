@@ -27,9 +27,10 @@ pub use store_object_handle::StoreObjectHandle;
 
 use {
     crate::{
-        crypt::{Crypt, KeyPurpose, StreamCipher, WrappedKeys},
+        crypt::{Crypt, KeyPurpose, StreamCipher, WrappedKeyBytes, WrappedKeys},
         data_buffer::{DataBuffer, MemDataBuffer},
         errors::FxfsError,
+        ff1::Ff1,
         filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
         lsm_tree::{
             types::{Item, ItemRef, LayerIterator},
@@ -41,10 +42,11 @@ use {
             graveyard::Graveyard,
             journal::JournalCheckpoint,
             transaction::{
-                AssocObj, AssociatedObject, ObjectStoreMutation, Operation, Options, Transaction,
+                AssocObj, AssociatedObject, LockKey, ObjectStoreMutation, Operation, Options,
+                Transaction,
             },
         },
-        serialized_types::{Versioned, VersionedLatest},
+        serialized_types::{Version, Versioned, VersionedLatest},
     },
     allocator::Allocator,
     anyhow::{anyhow, bail, Context, Error},
@@ -73,6 +75,10 @@ pub use object_record::{
 };
 pub use transaction::Mutation;
 
+// For encrypted stores, the lower 32 bits of the object ID are encrypted to make side-channel
+// attacks more difficult. This mask can be used to extract the hi part of the object ID.
+const OBJECT_ID_HI_MASK: u64 = 0xffffffff00000000;
+
 /// StoreObjectHandle stores an owner that must implement this trait, which allows the handle to get
 /// back to an ObjectStore and provides a callback for creating a data buffer for the handle.
 pub trait HandleOwner: AsRef<ObjectStore> + Send + Sync + 'static {
@@ -89,7 +95,10 @@ pub struct StoreInfo {
     guid: [u8; 16],
 
     /// The last used object ID.  Note that this field is not accurate in memory; ObjectStore's
-    /// last_object_id field is the one to use in that case.
+    /// last_object_id field is the one to use in that case.  Technically, this might not be the
+    /// last object ID used for the latest transaction that created an object because we use this at
+    /// the point of creating the object but before we commit the transaction.  Transactions can
+    /// then get committed in an arbitrary order (or not at all).
     last_object_id: u64,
 
     /// Object ids for layers.  TODO(fxbug.dev/95971): need a layer of indirection here so we can
@@ -115,6 +124,12 @@ pub struct StoreInfo {
     /// If we have to flush the store whilst we do not have the key, we need to write the encrypted
     /// mutations to an object. This is the object ID of that file if it exists.
     encrypted_mutations_object_id: u64,
+
+    /// Object IDs are encrypted to reduce the amount of information that sequential object IDs
+    /// reveal (such as the number of files in the system and the ordering of their creation in
+    /// time).  Only the bottom 32 bits of the object ID are encrypted whilst the top 32 bits will
+    /// increment after 2^32 object IDs have been used and this allows us to roll the key.
+    object_id_key: Option<(u64, WrappedKeyBytes)>,
 }
 
 impl StoreInfo {
@@ -122,6 +137,36 @@ impl StoreInfo {
     fn new_with_guid() -> Self {
         let guid = Uuid::new_v4();
         Self { guid: *guid.as_bytes(), ..Default::default() }
+    }
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Versioned)]
+pub struct StoreInfoV1 {
+    guid: [u8; 16],
+    last_object_id: u64,
+    layers: Vec<u64>,
+    root_directory_object_id: u64,
+    graveyard_directory_object_id: u64,
+    object_count: u64,
+    mutations_key: Option<WrappedKeys>,
+    mutations_cipher_offset: u64,
+    encrypted_mutations_object_id: u64,
+}
+
+impl From<StoreInfoV1> for StoreInfo {
+    fn from(old: StoreInfoV1) -> StoreInfo {
+        StoreInfo {
+            guid: old.guid,
+            last_object_id: old.last_object_id,
+            layers: old.layers,
+            root_directory_object_id: old.root_directory_object_id,
+            graveyard_directory_object_id: old.graveyard_directory_object_id,
+            object_count: old.object_count,
+            mutations_key: old.mutations_key,
+            mutations_cipher_offset: old.mutations_cipher_offset,
+            encrypted_mutations_object_id: old.encrypted_mutations_object_id,
+            object_id_key: None,
+        }
     }
 }
 
@@ -195,11 +240,7 @@ impl EncryptedMutations {
 // needed, which currently doesn't bother replaying this information.
 #[derive(Debug, Default)]
 struct ReplayInfo {
-    last_object_id: u64,
     object_count_delta: i64,
-
-    // Encrypted mutations consist of an array of log offsets (1 per mutation), followed by the
-    // mutations.
     encrypted_mutations: EncryptedMutations,
 }
 
@@ -225,15 +266,6 @@ enum StoreOrReplayInfo {
 }
 
 impl StoreOrReplayInfo {
-    fn last_object_id(&mut self) -> &mut u64 {
-        match self {
-            StoreOrReplayInfo::Info(StoreInfo { last_object_id, .. }) => last_object_id,
-            StoreOrReplayInfo::Replay(replay_info) => {
-                &mut replay_info.front_mut().unwrap().last_object_id
-            }
-        }
-    }
-
     fn info(&self) -> Option<&StoreInfo> {
         match self {
             StoreOrReplayInfo::Info(info) => Some(info),
@@ -301,6 +333,19 @@ pub enum LockState {
     Unknown,
 }
 
+#[derive(Default)]
+struct LastObjectId {
+    // The *unencrypted* value of the last object ID.
+    id: u64,
+
+    // Encrypted stores will use a cipher to obfuscate the object ID.
+    cipher: Option<Ff1>,
+
+    // If true, it means we upgraded from an older version of Fxfs and a cipher needs to be created
+    // for the next new object.
+    need_cipher: bool,
+}
+
 /// An object store supports a file like interface for objects.  Objects are keyed by a 64 bit
 /// identifier.  And object store has to be backed by a parent object store (which stores metadata
 /// for the object store).  The top-level object store (a.k.a. the root parent object store) is
@@ -314,26 +359,30 @@ pub struct ObjectStore {
     store_info: Mutex<StoreOrReplayInfo>,
     tree: LSMTree<ObjectKey, ObjectValue>,
 
-    /// When replaying the journal, the store cannot read StoreInfo until the whole journal
-    /// has been replayed, so during that time, store_info_handle will be None and records
-    /// just get sent to the tree. Once the journal has been replayed, we can open the store
-    /// and load all the other layer information.
+    // When replaying the journal, the store cannot read StoreInfo until the whole journal
+    // has been replayed, so during that time, store_info_handle will be None and records
+    // just get sent to the tree. Once the journal has been replayed, we can open the store
+    // and load all the other layer information.
     store_info_handle: OnceCell<StoreObjectHandle<ObjectStore>>,
 
-    /// The cipher to use for encrypted mutations, if this store is encrypted.
+    // The cipher to use for encrypted mutations, if this store is encrypted.
     mutations_cipher: Mutex<Option<StreamCipher>>,
 
-    /// Encrypted mutations that exist after replaying an encrypted store but before it is unlocked.
+    // Encrypted mutations that exist after replaying an encrypted store but before it is unlocked.
     encrypted_mutations: Mutex<Option<Arc<EncryptedMutations>>>,
 
-    /// Current lock state of the store.
+    // Current lock state of the store.
     lock_state: Mutex<LockState>,
 
-    /// Enable/disable tracing.
+    // Enable/disable tracing.
     trace: AtomicBool,
 
-    /// Metrics associated with the store. Only set once the journal has been replayed.
+    // Metrics associated with the store. Only set once the journal has been replayed.
     metrics: OnceCell<ObjectStoreMetrics>,
+
+    // Contains the last object ID and, optionally, a cipher to be used when generating new object
+    // IDs.
+    last_object_id: Mutex<LastObjectId>,
 }
 
 struct ObjectStoreMetrics {
@@ -361,6 +410,7 @@ impl ObjectStore {
         store_info: Option<StoreInfo>,
         mutations_cipher: Option<StreamCipher>,
         lock_state: LockState,
+        last_object_id: LastObjectId,
     ) -> Arc<ObjectStore> {
         let device = filesystem.device();
         let block_size = filesystem.block_size();
@@ -381,6 +431,7 @@ impl ObjectStore {
             lock_state: Mutex::new(lock_state),
             trace: AtomicBool::new(false),
             metrics: OnceCell::new(),
+            last_object_id: Mutex::new(last_object_id),
         })
     }
 
@@ -396,6 +447,7 @@ impl ObjectStore {
             Some(StoreInfo::default()),
             None,
             LockState::Unencrypted,
+            LastObjectId::default(),
         )
     }
 
@@ -429,13 +481,27 @@ impl ObjectStore {
         let store = if let Some(crypt) = options.crypt {
             let (wrapped_keys, unwrapped_keys) =
                 crypt.create_key(handle.object_id(), KeyPurpose::Metadata).await?;
+            let (mut object_id_wrapped, object_id_unwrapped) =
+                crypt.create_key(handle.object_id(), KeyPurpose::Metadata).await?;
+            let object_id_wrapped = object_id_wrapped.0.pop().unwrap();
             Self::new(
                 Some(self.clone()),
                 handle.object_id(),
                 filesystem.clone(),
-                Some(StoreInfo { mutations_key: Some(wrapped_keys), ..StoreInfo::new_with_guid() }),
+                Some(StoreInfo {
+                    mutations_key: Some(wrapped_keys),
+                    object_id_key: Some((object_id_wrapped.wrapping_key_id, object_id_wrapped.key)),
+                    ..StoreInfo::new_with_guid()
+                }),
                 Some(StreamCipher::new(&unwrapped_keys[0], 0)),
                 LockState::Unlocked(crypt),
+                LastObjectId {
+                    // We need to avoid accidentally getting INVALID_OBJECT_ID, so we set
+                    // the top 32 bits to a non-zero value.
+                    id: 1 << 32,
+                    cipher: Some(Ff1::new(object_id_unwrapped[0].key())),
+                    need_cipher: false,
+                },
             )
         } else {
             Self::new(
@@ -445,6 +511,7 @@ impl ObjectStore {
                 Some(StoreInfo::new_with_guid()),
                 None,
                 LockState::Unencrypted,
+                LastObjectId::default(),
             )
         };
         assert!(store.store_info_handle.set(handle).is_ok());
@@ -627,15 +694,21 @@ impl ObjectStore {
         }
     }
 
-    // See the comment on create_object for the semantics of the `crypt` argument.
+    // See the comment on create_object for the semantics of the `crypt` argument.  If object_id ==
+    // INVALID_OBJECT_ID (which should usually be the case), an object ID will be chosen.
     async fn create_object_with_id<S: HandleOwner>(
         owner: &Arc<S>,
         transaction: &mut Transaction<'_>,
-        object_id: u64,
+        mut object_id: u64,
         options: HandleOptions,
         mut crypt: Option<&dyn Crypt>,
     ) -> Result<StoreObjectHandle<S>, Error> {
         let store = owner.as_ref().as_ref();
+        if object_id == INVALID_OBJECT_ID {
+            object_id = store.get_next_object_id().await?;
+        } else {
+            store.update_last_object_id(object_id);
+        }
         let store_crypt;
         if crypt.is_none() {
             store_crypt = store.crypt();
@@ -647,10 +720,6 @@ impl ObjectStore {
         } else {
             (EncryptionKeys::None, None)
         };
-        // If the object ID was specified i.e. this hasn't come via create_object, then we
-        // should update last_object_id in case the caller wants to create more objects in
-        // the same transaction.
-        store.update_last_object_id(object_id);
         let now = Timestamp::now();
         transaction.add(
             store.store_object_id(),
@@ -687,8 +756,14 @@ impl ObjectStore {
         options: HandleOptions,
         crypt: Option<&dyn Crypt>,
     ) -> Result<StoreObjectHandle<S>, Error> {
-        let object_id = owner.as_ref().as_ref().get_next_object_id();
-        ObjectStore::create_object_with_id(owner, &mut transaction, object_id, options, crypt).await
+        ObjectStore::create_object_with_id(
+            owner,
+            &mut transaction,
+            INVALID_OBJECT_ID,
+            options,
+            crypt,
+        )
+        .await
     }
 
     /// Adjusts the reference count for a given object.  If the reference count reaches zero, the
@@ -876,8 +951,16 @@ impl ObjectStore {
             let mut info = if handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
                 let mut cursor = std::io::Cursor::new(&serialized_info[..]);
-                let (store_info, _version) = StoreInfo::deserialize_with_version(&mut cursor)
+                let (store_info, version) = StoreInfo::deserialize_with_version(&mut cursor)
                     .context("Failed to deserialize StoreInfo")?;
+                static STORE_INFO_V2_VERSION: Version = Version { major: 17, minor: 0 };
+                if version < STORE_INFO_V2_VERSION && store_info.mutations_key.is_some() {
+                    assert!(store_info.object_id_key.is_none());
+                    self.last_object_id.lock().unwrap().need_cipher = true;
+                }
+                if store_info.object_id_key.is_none() {
+                    self.update_last_object_id(store_info.last_object_id);
+                }
                 store_info
             } else {
                 // The store_info will be absent for a newly created and empty object store.
@@ -890,9 +973,6 @@ impl ObjectStore {
             // The frontmost element of the replay information is the most recent so we must apply
             // that last.
             for replay_info in store_info.replay_info_mut().unwrap().iter_mut().rev() {
-                if replay_info.last_object_id > info.last_object_id {
-                    info.last_object_id = replay_info.last_object_id;
-                }
                 if replay_info.object_count_delta < 0 {
                     info.object_count =
                         info.object_count.saturating_sub(-replay_info.object_count_delta as u64);
@@ -1012,6 +1092,20 @@ impl ObjectStore {
         let mut mutations_cipher =
             StreamCipher::new(&unwrapped_keys[0], store_info.mutations_cipher_offset);
 
+        let need_cipher = self.last_object_id.lock().unwrap().need_cipher;
+        if !need_cipher {
+            let (wrapping_key_id, key_bytes) =
+                store_info.object_id_key.as_ref().ok_or(FxfsError::Inconsistent)?;
+            let object_id_cipher = Ff1::new(
+                &crypt.unwrap_key(*wrapping_key_id, key_bytes, self.store_object_id).await?,
+            );
+            {
+                let mut last_object_id = self.last_object_id.lock().unwrap();
+                last_object_id.cipher = Some(object_id_cipher);
+            }
+            self.update_last_object_id(store_info.last_object_id);
+        }
+
         // Apply the encrypted mutations.
         let mut mutations = {
             if store_info.encrypted_mutations_object_id == INVALID_OBJECT_ID {
@@ -1078,11 +1172,92 @@ impl ObjectStore {
         matches!(*self.lock_state.lock().unwrap(), LockState::Locked)
     }
 
-    fn get_next_object_id(&self) -> u64 {
-        let mut store_info = self.store_info.lock().unwrap();
-        let last_object_id = store_info.last_object_id();
-        *last_object_id += 1;
-        *last_object_id
+    // Returns INVALID_OBJECT_ID if the object ID cipher needs to be created.
+    fn maybe_get_next_object_id(&self) -> u64 {
+        let mut last_object_id = self.last_object_id.lock().unwrap();
+        if last_object_id.need_cipher {
+            INVALID_OBJECT_ID
+        } else {
+            // TODO(fxbug.dev/99485): We need to generate a new cipher when the low 32 bits of the
+            // ID wraps.
+            last_object_id.id += 1;
+            if let Some(cipher) = &last_object_id.cipher {
+                (last_object_id.id & OBJECT_ID_HI_MASK)
+                    | cipher.encrypt(last_object_id.id as u32) as u64
+            } else {
+                last_object_id.id
+            }
+        }
+    }
+
+    // Returns a new object ID that can be used.  This will create an object ID cipher if necessary
+    // (for migration).
+    pub async fn get_next_object_id(&self) -> Result<u64, Error> {
+        let mut object_id = self.maybe_get_next_object_id();
+        if object_id == INVALID_OBJECT_ID {
+            self.set_object_id_cipher().await?;
+            object_id = self.maybe_get_next_object_id();
+            assert_ne!(object_id, INVALID_OBJECT_ID);
+        }
+        Ok(object_id)
+    }
+
+    // Sets the object ID cipher (if required due to migration).
+    async fn set_object_id_cipher(&self) -> Result<(), Error> {
+        let mut transaction = self
+            .filesystem()
+            .new_transaction(
+                &[LockKey::object(
+                    self.parent_store.as_ref().unwrap().store_object_id,
+                    self.store_object_id,
+                )],
+                Options {
+                    // We must skip journal checks because this transaction might be needed to
+                    // compact.
+                    skip_journal_checks: true,
+                    borrow_metadata_space: true,
+                    ..Default::default()
+                },
+            )
+            .await?;
+
+        if !self.last_object_id.lock().unwrap().need_cipher {
+            // We lost a race.
+            return Ok(());
+        }
+
+        // Create a key.
+        let (mut object_id_wrapped, object_id_unwrapped) =
+            self.crypt().unwrap().create_key(self.store_object_id, KeyPurpose::Metadata).await?;
+        let object_id_wrapped = object_id_wrapped.0.pop().unwrap();
+
+        // Update StoreInfo.
+        let buf = {
+            let mut store_info = self.store_info.lock().unwrap();
+            let mut store_info = store_info.info_mut().unwrap();
+            store_info.object_id_key =
+                Some((object_id_wrapped.wrapping_key_id, object_id_wrapped.key));
+            let mut serialized_info = Vec::new();
+            store_info.serialize_with_version(&mut serialized_info)?;
+            let mut buf = self.device.allocate_buffer(serialized_info.len());
+            buf.as_mut_slice().copy_from_slice(&serialized_info[..]);
+            buf
+        };
+
+        self.store_info_handle
+            .get()
+            .unwrap()
+            .txn_write(&mut transaction, 0u64, buf.as_ref())
+            .await?;
+        transaction.commit().await?;
+
+        let mut last_object_id = self.last_object_id.lock().unwrap();
+        last_object_id.cipher = Some(Ff1::new(object_id_unwrapped[0].key()));
+        last_object_id.need_cipher = false;
+        // Bump the ID so that we don't collide with any existing object IDs.
+        last_object_id.id = (last_object_id.id + (1 << 32)) & OBJECT_ID_HI_MASK;
+
+        Ok(())
     }
 
     fn allocator(&self) -> Arc<dyn Allocator> {
@@ -1115,11 +1290,14 @@ impl ObjectStore {
         }
     }
 
-    fn update_last_object_id(&self, object_id: u64) {
-        let mut store_info = self.store_info.lock().unwrap();
-        let last_object_id = store_info.last_object_id();
-        if object_id > *last_object_id {
-            *last_object_id = object_id;
+    fn update_last_object_id(&self, mut object_id: u64) {
+        let mut last_object_id = self.last_object_id.lock().unwrap();
+        // For encrypted stores, object_id will be encrypted here, so we must decrypt first.
+        if let Some(cipher) = &last_object_id.cipher {
+            object_id = (object_id & OBJECT_ID_HI_MASK) | cipher.decrypt(object_id as u32) as u64;
+        }
+        if object_id > last_object_id.id {
+            last_object_id.id = object_id;
         }
     }
 
@@ -1162,13 +1340,15 @@ impl Mutations for ObjectStore {
         match mutation {
             Mutation::ObjectStore(ObjectStoreMutation { mut item, op }) => {
                 item.sequence = context.checkpoint.file_offset;
-                self.update_last_object_id(item.key.object_id);
                 match op {
                     Operation::Insert => {
                         // If we are inserting an object record for the first time, it signifies the
                         // birth of the object so we need to adjust the object count.
                         if matches!(item.value, ObjectValue::Object { .. }) {
                             self.store_info.lock().unwrap().adjust_object_count(1);
+                            if context.mode.is_replay() {
+                                self.update_last_object_id(item.key.object_id);
+                            }
                         }
                         self.tree.insert(item).await;
                     }
@@ -1252,6 +1432,7 @@ fn layer_size_from_encrypted_mutations_size(size: u64) -> u64 {
 }
 
 impl AssociatedObject for ObjectStore {}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -1708,5 +1889,73 @@ mod tests {
         for i in 0..5 {
             fs = one_iteration(fs, crypt.clone(), i).await;
         }
+    }
+
+    #[cfg(target_os = "fuchsia")]
+    #[fasync::run(10, test)]
+    async fn test_object_id_cipher_upgrade() {
+        use super::OBJECT_ID_HI_MASK;
+
+        let device = DeviceHolder::new(
+            FakeDevice::from_image(
+                zstd::Decoder::new(
+                    std::fs::File::open("/pkg/data/fxfs_golden.16.0.img.zstd")
+                        .expect("open failed"),
+                )
+                .expect("new failed"),
+                1024,
+            )
+            .expect("from_image failed"),
+        );
+
+        let fs = FxFilesystem::open(device).await.expect("FS open failed");
+        let crypt = Arc::new(InsecureCrypt::new());
+        let object_id = {
+            let root_volume = root_volume(&fs).await.expect("root_volume failed");
+            let store =
+                root_volume.volume("default", Some(crypt.clone())).await.expect("volume failed");
+            let root_directory = Directory::open(&store, store.root_directory_object_id())
+                .await
+                .expect("open failed");
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let object = root_directory
+                .create_child_file(&mut transaction, "test")
+                .await
+                .expect("create_child_file failed");
+            transaction.commit().await.expect("commit failed");
+
+            // Make sure the hi part of the object ID is non-zero which indicates a successful
+            // migration.
+            assert_ne!(object.object_id() & OBJECT_ID_HI_MASK, 0);
+            object.object_id()
+        };
+
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+        let fs = FxFilesystem::open(device).await.expect("open failed");
+
+        let root_volume = root_volume(&fs).await.expect("root_volume failed");
+        let store =
+            root_volume.volume("default", Some(crypt.clone())).await.expect("volume failed");
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let object = root_directory
+            .create_child_file(&mut transaction, "test2")
+            .await
+            .expect("create_child_file failed");
+        transaction.commit().await.expect("commit failed");
+
+        // This time, there shouldn't have been a migration.
+        assert_eq!(object.object_id() & OBJECT_ID_HI_MASK, object_id & OBJECT_ID_HI_MASK);
     }
 }

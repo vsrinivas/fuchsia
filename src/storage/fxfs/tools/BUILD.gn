@@ -9,6 +9,10 @@ import("//build/rust/rustc_library.gni")
 import("//build/testing/host_test.gni")
 
 rustc_library("lib") {
+  if (is_fuchsia) {
+    # We don't want this library making it to production by accident.
+    testonly = true
+  }
   edition = "2018"
   deps = [
     "//src/lib/fuchsia-async",

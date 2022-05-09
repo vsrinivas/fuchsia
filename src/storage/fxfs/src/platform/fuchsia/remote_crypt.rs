@@ -4,8 +4,8 @@
 
 use {
     crate::crypt::{
-        Crypt, KeyPurpose, UnwrappedKey, UnwrappedKeys, WrappedKey, WrappedKeyBytes, WrappedKeys,
-        KEY_SIZE,
+        Crypt, KeyBytes, KeyPurpose, UnwrappedKey, UnwrappedKeys, WrappedKey, WrappedKeyBytes,
+        WrappedKeys, KEY_SIZE,
     },
     anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
@@ -29,20 +29,6 @@ impl From<KeyPurpose> for FidlKeyPurpose {
             KeyPurpose::Data => Self::Data,
             KeyPurpose::Metadata => Self::Metadata,
         }
-    }
-}
-
-impl RemoteCrypt {
-    async fn unwrap_key(&self, key: &WrappedKey, owner: u64) -> Result<UnwrappedKey, Error> {
-        let unwrapped = self
-            .client
-            .unwrap_key(key.wrapping_key_id, owner, &key.key[..])
-            .await?
-            .map_err(|e| anyhow!(e))?;
-        if unwrapped.len() != KEY_SIZE {
-            bail!("Unexpected key length");
-        }
-        Ok(UnwrappedKey::new(key.key_id, unwrapped.try_into().unwrap()))
     }
 }
 
@@ -72,16 +58,20 @@ impl Crypt for RemoteCrypt {
         ))
     }
 
-    async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
-        let mut futures = vec![];
-        for key in keys.iter() {
-            futures.push(self.unwrap_key(&key, owner));
+    async fn unwrap_key(
+        &self,
+        wrapping_key_id: u64,
+        key: &WrappedKeyBytes,
+        owner: u64,
+    ) -> Result<KeyBytes, Error> {
+        let unwrapped = self
+            .client
+            .unwrap_key(wrapping_key_id, owner, &key[..])
+            .await?
+            .map_err(|e| anyhow!(e))?;
+        if unwrapped.len() != KEY_SIZE {
+            bail!("Unexpected key length");
         }
-        let results = futures::future::join_all(futures).await;
-        let mut keys = vec![];
-        for result in results {
-            keys.push(result?);
-        }
-        Ok(keys)
+        Ok(unwrapped.try_into().unwrap())
     }
 }
