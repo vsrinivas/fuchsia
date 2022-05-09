@@ -9,7 +9,6 @@
 #include <Weave/DeviceLayer/internal/BLEManager.h>
 #include <Weave/DeviceLayer/internal/DeviceNetworkInfo.h>
 #include <Weave/DeviceLayer/internal/ServiceTunnelAgent.h>
-#include <Weave/DeviceLayer/ThreadStackManager.h>
 #include <Weave/Profiles/WeaveProfiles.h>
 #include <Warm/Warm.h>
 
@@ -25,9 +24,7 @@
 
 #include "weave_inspector.h"
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
+namespace nl::Weave::DeviceLayer {
 
 namespace {
 
@@ -49,20 +46,21 @@ WeaveTunnelAgent* SrvTunnelAgent() { return &ServiceTunnelAgent; }
 
 }  // unnamed namespace
 
-bool ConnectivityManagerDelegateImpl::IsServiceTunnelConnected(void) {
+bool ConnectivityManagerDelegateImpl::IsServiceTunnelConnected() {
   WeaveTunnelAgent::AgentState tunnel_state = SrvTunnelAgent()->GetWeaveTunnelAgentState();
   return (tunnel_state == WeaveTunnelAgent::kState_PrimaryTunModeEstablished ||
           tunnel_state == WeaveTunnelAgent::kState_PrimaryAndBkupTunModeEstablished ||
           tunnel_state == WeaveTunnelAgent::kState_BkupOnlyTunModeEstablished);
 }
 
-bool ConnectivityManagerDelegateImpl::IsServiceTunnelRestricted(void) {
+bool ConnectivityManagerDelegateImpl::IsServiceTunnelRestricted() {
   return SrvTunnelAgent()->IsTunnelRoutingRestricted();
 }
 
 void ConnectivityManagerDelegateImpl::HandleServiceTunnelNotification(
     WeaveTunnelConnectionMgr::TunnelConnNotifyReasons reason, WEAVE_ERROR err, void* app_ctx) {
-  ConnectivityManagerDelegateImpl* delegate = (ConnectivityManagerDelegateImpl*)app_ctx;
+  ConnectivityManagerDelegateImpl* delegate =
+      static_cast<ConnectivityManagerDelegateImpl*>(app_ctx);
   bool new_tunnel_state = false;
   bool prev_tunnel_state = GetFlag(delegate->flags_, kFlag_ServiceTunnelUp);
   bool is_restricted = false;
@@ -143,7 +141,7 @@ void ConnectivityManagerDelegateImpl::StartServiceTunnel() {
 }
 
 void ConnectivityManagerDelegateImpl::StopServiceTunnel(WEAVE_ERROR err) {
-  if (GetFlag(flags_, kFlag_ServiceTunnelStarted) == false) {
+  if (!GetFlag(flags_, kFlag_ServiceTunnelStarted)) {
     return;
   }
   // Update the tunnel started state.
@@ -228,7 +226,7 @@ void ConnectivityManagerDelegateImpl::DriveServiceTunnelState() {
 }
 
 void ConnectivityManagerDelegateImpl::OnPlatformEvent(const WeaveDeviceEvent* event) {
-  if (event == NULL) {
+  if (event == nullptr) {
     return;
   }
   switch (event->Type) {
@@ -381,6 +379,4 @@ ThreadMode ConnectivityManagerDelegateImpl::GetThreadMode() {
                                                     : (kThreadMode_Disabled));
 }
 
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer

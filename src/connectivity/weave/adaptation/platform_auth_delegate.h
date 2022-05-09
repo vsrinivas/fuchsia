@@ -67,17 +67,18 @@ class PlatformAuthDelegate final : public WeaveCASEAuthDelegate, public WeaveKey
                                                uint32_t requested_key_id) override;
 
  private:
-  WEAVE_ERROR GetNodeCertificates(std::vector<uint8_t>& device_cert,
-                                  std::vector<uint8_t>& device_intermediate_certs);
+  static WEAVE_ERROR GetNodeCertificates(std::vector<uint8_t>& device_cert,
+                                         std::vector<uint8_t>& device_intermediate_certs);
 
-  WEAVE_ERROR GenerateNodeSignature(const uint8_t* msg_hash, uint8_t msg_hash_len,
-                                    TLVWriter& writer, uint64_t tag);
+  static WEAVE_ERROR GenerateNodeSignature(const uint8_t* msg_hash, uint8_t msg_hash_len,
+                                           TLVWriter& writer, uint64_t tag);
 
   WEAVE_ERROR BeginCertValidation(ValidationContext& valid_ctx, WeaveCertificateSet& cert_set,
                                   bool is_initiator);
 
-  WEAVE_ERROR LoadCertsFromServiceConfig(const uint8_t* service_config, uint16_t service_config_len,
-                                         WeaveCertificateSet& cert_set);
+  static WEAVE_ERROR LoadCertsFromServiceConfig(const uint8_t* service_config,
+                                                uint16_t service_config_len,
+                                                WeaveCertificateSet& cert_set);
 
   std::vector<uint8_t> device_cert_;
   std::vector<uint8_t> device_intermediate_certs_;

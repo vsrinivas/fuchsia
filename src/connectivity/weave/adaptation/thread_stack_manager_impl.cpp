@@ -10,9 +10,7 @@
 #include <Weave/DeviceLayer/ThreadStackManager.h>
 // clang-format on
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
+namespace nl::Weave::DeviceLayer {
 
 ThreadStackManagerImpl ThreadStackManagerImpl::sInstance;
 
@@ -95,6 +93,4 @@ WEAVE_ERROR ThreadStackManagerImpl::SetThreadJoinable(bool enable) {
   return delegate_->SetThreadJoinable(enable);
 }
 
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer

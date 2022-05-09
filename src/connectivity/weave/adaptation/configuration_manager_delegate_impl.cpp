@@ -327,7 +327,7 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreSerialNumber() {
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreFirmwareRevision() {
   fuchsia::buildinfo::BuildInfo build_info;
   zx_status_t status = buildinfo_provider_->GetBuildInfo(&build_info);
-  if (status == ZX_OK && build_info.version().size() != 0) {
+  if (status == ZX_OK && !build_info.version().empty()) {
     firmware_revision_ = build_info.version();
     return WEAVE_NO_ERROR;
   }

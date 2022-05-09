@@ -75,8 +75,8 @@ class StackImpl::PairingStateWatcherImpl : public PairingStateWatcher {
   PairingStateWatcherImpl& operator=(const PairingStateWatcherImpl&) = delete;
 
   StackImpl* stack_;
-  bool dirty_;
-  bool first_call_;
+  bool dirty_ = false;
+  bool first_call_ = true;
   WatchPairingStateCallback pairing_state_callback_;
 };
 
@@ -105,8 +105,8 @@ class StackImpl::SvcDirectoryWatcherImpl : public SvcDirectoryWatcher {
   SvcDirectoryWatcherImpl& operator=(const SvcDirectoryWatcherImpl&) = delete;
 
   StackImpl* stack_;
-  bool dirty_;
-  bool first_call_;
+  bool dirty_ = false;
+  bool first_call_ = true;
   uint64_t endpoint_id_;
   WatchServiceDirectoryCallback svc_directory_callback_;
 };
@@ -277,8 +277,7 @@ zx_status_t StackImpl::LookupHostPorts(uint64_t endpoint_id, std::vector<HostPor
 
 // Watcher class definitions ---------------------------------------------------
 
-StackImpl::PairingStateWatcherImpl::PairingStateWatcherImpl(StackImpl* stack)
-    : stack_(stack), dirty_(false), first_call_(true) {}
+StackImpl::PairingStateWatcherImpl::PairingStateWatcherImpl(StackImpl* stack) : stack_(stack) {}
 
 void StackImpl::PairingStateWatcherImpl::WatchPairingState(WatchPairingStateCallback callback) {
   // Check to make sure there isn't a waiting callback already.
@@ -334,7 +333,7 @@ zx_status_t StackImpl::PairingStateWatcherImpl::DoCallback() {
 }
 
 StackImpl::SvcDirectoryWatcherImpl::SvcDirectoryWatcherImpl(StackImpl* stack, uint64_t endpoint_id)
-    : stack_(stack), dirty_(false), first_call_(true), endpoint_id_(endpoint_id) {}
+    : stack_(stack), endpoint_id_(endpoint_id) {}
 
 void StackImpl::SvcDirectoryWatcherImpl::WatchServiceDirectory(
     WatchServiceDirectoryCallback callback) {

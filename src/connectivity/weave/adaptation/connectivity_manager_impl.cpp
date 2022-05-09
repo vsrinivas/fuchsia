@@ -10,9 +10,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
+namespace nl::Weave::DeviceLayer {
 
 ConnectivityManagerImpl ConnectivityManagerImpl::sInstance;
 
@@ -29,16 +27,16 @@ ConnectivityManagerImpl::Delegate* ConnectivityManagerImpl::GetDelegate() {
   return delegate_.get();
 }
 
-WEAVE_ERROR ConnectivityManagerImpl::_Init(void) {
+WEAVE_ERROR ConnectivityManagerImpl::_Init() {
   FX_CHECK(delegate_ != nullptr) << "ConnectivityManager delegate not set before Init.";
   return delegate_->Init();
 }
 
-bool ConnectivityManagerImpl::_IsServiceTunnelConnected(void) {
+bool ConnectivityManagerImpl::_IsServiceTunnelConnected() {
   return delegate_->IsServiceTunnelConnected();
 }
 
-bool ConnectivityManagerImpl::_IsServiceTunnelRestricted(void) {
+bool ConnectivityManagerImpl::_IsServiceTunnelRestricted() {
   return delegate_->IsServiceTunnelRestricted();
 }
 
@@ -46,32 +44,31 @@ void ConnectivityManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
   return delegate_->OnPlatformEvent(event);
 }
 
-bool ConnectivityManagerImpl::_HaveServiceConnectivityViaTunnel(void) {
+bool ConnectivityManagerImpl::_HaveServiceConnectivityViaTunnel() {
   return delegate_->IsServiceTunnelConnected() && !delegate_->IsServiceTunnelRestricted();
 }
 
-ConnectivityManager::ServiceTunnelMode ConnectivityManagerImpl::_GetServiceTunnelMode(void) {
+ConnectivityManager::ServiceTunnelMode ConnectivityManagerImpl::_GetServiceTunnelMode() {
   return delegate_->GetServiceTunnelMode();
 }
 
-bool ConnectivityManagerImpl::_HaveIPv4InternetConnectivity(void) {
+bool ConnectivityManagerImpl::_HaveIPv4InternetConnectivity() {
   return delegate_->HaveIPv4InternetConnectivity();
 }
 
-bool ConnectivityManagerImpl::_HaveIPv6InternetConnectivity(void) {
+bool ConnectivityManagerImpl::_HaveIPv6InternetConnectivity() {
   return delegate_->HaveIPv6InternetConnectivity();
 }
 
-ConnectivityManager::ServiceTunnelMode ConnectivityManagerImpl::Delegate::GetServiceTunnelMode(
-    void) {
+ConnectivityManager::ServiceTunnelMode ConnectivityManagerImpl::Delegate::GetServiceTunnelMode() {
   return service_tunnel_mode_;
 }
 
-bool ConnectivityManagerImpl::Delegate::HaveIPv4InternetConnectivity(void) {
+bool ConnectivityManagerImpl::Delegate::HaveIPv4InternetConnectivity() const {
   return ::nl::GetFlag(flags_, kFlag_HaveIPv4InternetConnectivity);
 }
 
-bool ConnectivityManagerImpl::Delegate::HaveIPv6InternetConnectivity(void) {
+bool ConnectivityManagerImpl::Delegate::HaveIPv6InternetConnectivity() const {
   return ::nl::GetFlag(flags_, kFlag_HaveIPv6InternetConnectivity);
 }
 
@@ -79,10 +76,8 @@ std::optional<std::string> ConnectivityManagerImpl::GetWiFiInterfaceName() {
   return delegate_->GetWiFiInterfaceName();
 }
 
-ConnectivityManager::ThreadMode ConnectivityManagerImpl::_GetThreadMode(void) {
+ConnectivityManager::ThreadMode ConnectivityManagerImpl::_GetThreadMode() {
   return delegate_->GetThreadMode();
 }
 
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer

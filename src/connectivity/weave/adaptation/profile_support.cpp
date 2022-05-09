@@ -9,19 +9,10 @@
 
 // ==================== DataManagement Default Functions ====================
 
-namespace nl {
-namespace Weave {
-namespace Profiles {
-namespace WeaveMakeManagedNamespaceIdentifier(DataManagement,
-                                              kWeaveManagedNamespaceDesignation_Current) {
-  namespace Platform {
-  // Only used in unit tests, the critical section is empty.
-  NL_DLL_EXPORT
-  void CriticalSectionEnter() {}
-  NL_DLL_EXPORT
-  void CriticalSectionExit() {}
-  }  // namespace Platform
-}  // namespace )
-}  // namespace Profiles
-}  // namespace Weave
-}  // namespace nl
+namespace nl::Weave::Profiles::DataManagement_Current::Platform {
+// Only used in unit tests, the critical section is empty.
+NL_DLL_EXPORT
+void CriticalSectionEnter() {}
+NL_DLL_EXPORT
+void CriticalSectionExit() {}
+}  // namespace nl::Weave::Profiles::DataManagement_Current::Platform

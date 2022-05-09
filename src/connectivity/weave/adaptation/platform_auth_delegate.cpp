@@ -183,7 +183,7 @@ WEAVE_ERROR PlatformAuthDelegate::GetNodeCertSet(WeaveKeyExport* key_export,
   }
 
   // If device intermediate certs were available, load into certificate set.
-  if (device_intermediate_certs_.size() > 0) {
+  if (!device_intermediate_certs_.empty()) {
     err =
         cert_set.LoadCerts(device_intermediate_certs_.data(), device_intermediate_certs_.size(), 0);
     if (err != WEAVE_NO_ERROR) {

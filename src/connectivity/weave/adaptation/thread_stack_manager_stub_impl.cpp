@@ -13,9 +13,7 @@
 
 #include "thread_stack_manager_stub_impl.h"
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
+namespace nl::Weave::DeviceLayer {
 
 WEAVE_ERROR ThreadStackManagerStubImpl::GetPrimary802154MACAddress(uint8_t* mac_address) {
   // It is necessary to ensure that callers don't believe a real physical radio
@@ -30,6 +28,4 @@ ThreadStackManagerStubImpl::LogNetworkWpanStatsEvent(
   return nl::LogEvent(event);
 }
 
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer

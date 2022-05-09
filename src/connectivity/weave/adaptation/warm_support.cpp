@@ -20,14 +20,10 @@
 
 // ==================== WARM Platform Functions ====================
 
-namespace nl {
-namespace Weave {
-namespace Warm {
-namespace Platform {
+namespace nl::Weave::Warm::Platform {
 
 namespace {
 using DeviceLayer::ConnectivityMgrImpl;
-using DeviceLayer::ThreadStackMgrImpl;
 
 // Fixed name for tunnel interface.
 constexpr char kTunInterfaceName[] = "weav-tun0";
@@ -65,7 +61,7 @@ bool ShouldEnableV6Forwarding(InterfaceType interface_type) {
 // failures to fetch the list, no value will be returned. When the interface
 // does not exist, the interface ID '0' will be returned (it is guaranteed by
 // the networking stack that all valid interface IDs are positive).
-std::optional<uint64_t> GetInterfaceId(std::string interface_name) {
+std::optional<uint64_t> GetInterfaceId(const std::string &interface_name) {
   fuchsia::net::interfaces::StateSyncPtr state_sync_ptr;
   fuchsia::net::interfaces::WatcherOptions options;
   fuchsia::net::interfaces::WatcherSyncPtr watcher_sync_ptr;
@@ -151,7 +147,8 @@ PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
     // interface may already have been removed at this point.
     FX_LOGS(INFO) << "Interface " << interface_name.value() << " has already been removed.";
     return kPlatformResultSuccess;
-  } else if (!interface_id) {
+  }
+  if (!interface_id) {
     return kPlatformResultFailure;
   }
 
@@ -159,7 +156,8 @@ PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
   fuchsia::net::IpAddress ip_addr;
   fuchsia::net::Ipv6Address ipv6_addr;
 
-  std::memcpy(ipv6_addr.addr.data(), (uint8_t *)(address.Addr), ipv6_addr.addr.size());
+  std::memcpy(ipv6_addr.addr.data(), reinterpret_cast<const uint8_t *>(address.Addr),
+              ipv6_addr.addr.size());
   ip_addr.set_ipv6(ipv6_addr);
 
   fuchsia::net::Subnet subnet{
@@ -243,7 +241,8 @@ PlatformResult AddRemoveRouteInternal(InterfaceType interface_type, const Inet::
     // interface may already have been removed at this point.
     FX_LOGS(INFO) << "Interface " << interface_name.value() << " has already been removed.";
     return kPlatformResultSuccess;
-  } else if (!interface_id) {
+  }
+  if (!interface_id) {
     return kPlatformResultFailure;
   }
 
@@ -253,7 +252,8 @@ PlatformResult AddRemoveRouteInternal(InterfaceType interface_type, const Inet::
           {
               .addr = fuchsia::net::IpAddress::WithIpv6([&prefix]() {
                 fuchsia::net::Ipv6Address ipv6_addr;
-                std::memcpy(ipv6_addr.addr.data(), (uint8_t *)(prefix.IPAddr.Addr),
+                std::memcpy(ipv6_addr.addr.data(),
+                            reinterpret_cast<const uint8_t *>(prefix.IPAddr.Addr),
                             ipv6_addr.addr.size());
                 return ipv6_addr;
               }()),
@@ -332,7 +332,8 @@ PlatformResult AddRemoveRouteInternal(InterfaceType interface_type, const Inet::
       FX_PLOGS(ERROR, status) << "Failed to enable IPv6 forwarding on interface id "
                               << interface_id.value();
       return kPlatformResultFailure;
-    } else if (forwarding_result.is_err()) {
+    }
+    if (forwarding_result.is_err()) {
       FX_LOGS(ERROR) << "Unable to enable IPv6 forwarding on interface id " << interface_id.value()
                      << ": " << static_cast<uint32_t>(forwarding_result.err());
       return kPlatformResultFailure;
@@ -348,10 +349,10 @@ PlatformResult AddRemoveRouteInternal(InterfaceType interface_type, const Inet::
 WEAVE_ERROR Init(WarmFabricStateDelegate *inFabricStateDelegate) { return WEAVE_NO_ERROR; }
 
 NL_DLL_EXPORT
-void CriticalSectionEnter(void) {}
+void CriticalSectionEnter() {}
 
 NL_DLL_EXPORT
-void CriticalSectionExit(void) {}
+void CriticalSectionExit() {}
 
 // Add or remove a host address attached to the Thread or WLAN interfaces.
 PlatformResult AddRemoveHostAddress(InterfaceType interface_type, const Inet::IPAddress &address,
@@ -366,7 +367,7 @@ PlatformResult AddRemoveHostRoute(InterfaceType interface_type, const Inet::IPPr
 }
 
 NL_DLL_EXPORT
-void RequestInvokeActions(void) { ::nl::Weave::Warm::InvokeActions(); }
+void RequestInvokeActions() { ::nl::Weave::Warm::InvokeActions(); }
 
 #if WARM_CONFIG_SUPPORT_THREAD
 PlatformResult AddRemoveThreadAddress(InterfaceType interface_type, const Inet::IPAddress &address,
@@ -398,7 +399,4 @@ PlatformResult SetThreadRoutePriority(InterfaceType interface_type, const Inet::
 }
 #endif  // WARM_CONFIG_SUPPORT_BORDER_ROUTING
 
-}  // namespace Platform
-}  // namespace Warm
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::Warm::Platform

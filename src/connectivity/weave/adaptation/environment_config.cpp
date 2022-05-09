@@ -9,10 +9,7 @@
 #include "src/lib/files/file.h"
 #include "weave_config_manager.h"
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
-namespace Internal {
+namespace nl::Weave::DeviceLayer::Internal {
 
 // clang-format off
 const EnvironmentConfig::Key EnvironmentConfig::kConfigKey_SerialNum = "serial-num";
@@ -114,11 +111,8 @@ bool EnvironmentConfig::ConfigValueExists(Key key) {
   return WeaveConfigMgr().ConfigValueExists(key);
 }
 
-WEAVE_ERROR EnvironmentConfig::FactoryResetConfig(void) {
+WEAVE_ERROR EnvironmentConfig::FactoryResetConfig() {
   return WeaveConfigMgr().FactoryResetConfig();
 }
 
-}  // namespace Internal
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer::Internal
