@@ -1001,6 +1001,72 @@ mod tests {
     }
 
     #[test]
+    fn draw_if_width_or_height_change() {
+        let mut buffer = [BLACK_SRGB; 1].concat();
+        let mut layout = LinearLayout::new(1, 1 * 4, 1);
+
+        let mut composition = Composition::new();
+        let mut renderer = CpuRenderer::new();
+        let layer_cache = renderer.create_buffer_layer_cache().unwrap();
+
+        renderer.render(
+            &mut composition,
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.clone())
+                .build(),
+            RGBA,
+            RED,
+            None,
+        );
+
+        assert_eq!(buffer[0..4], RED_SRGB);
+
+        buffer = [BLACK_SRGB; 1].concat();
+
+        renderer.render(
+            &mut composition,
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.clone())
+                .build(),
+            RGBA,
+            RED,
+            None,
+        );
+
+        assert_eq!(buffer[0..4], BLACK_SRGB);
+
+        buffer = [BLACK_SRGB; 2].concat();
+        layout = LinearLayout::new(2, 2 * 4, 1);
+
+        renderer.render(
+            &mut composition,
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.clone())
+                .build(),
+            RGBA,
+            RED,
+            None,
+        );
+
+        assert_eq!(buffer[0..8], [RED_SRGB; 2].concat());
+
+        buffer = [BLACK_SRGB; 2].concat();
+        layout = LinearLayout::new(1, 1 * 4, 2);
+
+        renderer.render(
+            &mut composition,
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.clone())
+                .build(),
+            RGBA,
+            RED,
+            None,
+        );
+
+        assert_eq!(buffer[0..8], [RED_SRGB; 2].concat());
+    }
+
+    #[test]
     fn even_odd() {
         let mut builder = PathBuilder::new();
 

@@ -37,11 +37,10 @@ impl CpuRenderer {
 
     #[inline]
     pub fn create_buffer_layer_cache(&mut self) -> Option<BufferLayerCache> {
-        self.buffers_with_caches.borrow_mut().first_empty_slot().map(|id| BufferLayerCache {
-            id,
-            cache: Default::default(),
-            buffers_with_caches: Rc::downgrade(&self.buffers_with_caches),
-        })
+        self.buffers_with_caches
+            .borrow_mut()
+            .first_empty_slot()
+            .map(|id| BufferLayerCache::new(id, Rc::downgrade(&self.buffers_with_caches)))
     }
 
     pub fn render<L>(
@@ -63,12 +62,19 @@ impl CpuRenderer {
             });
         }
 
-        if let Some(buffer_layer_cache) = buffer.layer_cache.as_ref() {
+        if let Some(layer_cache) = buffer.layer_cache.as_ref() {
             let tiles_len = buffer.layout.width_in_tiles() * buffer.layout.height_in_tiles();
+            let cache = &layer_cache.cache;
 
-            if buffer_layer_cache.cache.borrow().1.len() != tiles_len {
-                buffer_layer_cache.cache.borrow_mut().1.resize(tiles_len, None);
-                buffer_layer_cache.clear();
+            cache.borrow_mut().layers.resize(tiles_len, None);
+
+            if cache.borrow().width != Some(buffer.layout.width())
+                || cache.borrow().height != Some(buffer.layout.height())
+            {
+                cache.borrow_mut().width = Some(buffer.layout.width());
+                cache.borrow_mut().height = Some(buffer.layout.height());
+
+                layer_cache.clear();
             }
         }
 
@@ -144,11 +150,13 @@ impl CpuRenderer {
                 rasterizer.sort();
             }
 
-            let previous_clear_color =
-                buffer.layer_cache.as_ref().and_then(|layer_cache| layer_cache.cache.borrow().0);
+            let previous_clear_color = buffer
+                .layer_cache
+                .as_ref()
+                .and_then(|layer_cache| layer_cache.cache.borrow().clear_color);
 
             let layers_per_tile = buffer.layer_cache.as_ref().map(|layer_cache| {
-                RefMut::map(layer_cache.cache.borrow_mut(), |cache| &mut cache.1)
+                RefMut::map(layer_cache.cache.borrow_mut(), |cache| &mut cache.layers)
             });
 
             {
@@ -171,7 +179,7 @@ impl CpuRenderer {
         };
 
         if let Some(buffer_layer_cache) = &buffer.layer_cache {
-            buffer_layer_cache.cache.borrow_mut().0 = Some(clear_color);
+            buffer_layer_cache.cache.borrow_mut().clear_color = Some(clear_color);
 
             for layer in composition.layers.values_mut() {
                 layer.set_is_unchanged(buffer_layer_cache.id, layer.inner.is_enabled);

@@ -14,6 +14,21 @@ use layout::{Flusher, Layout};
 
 use crate::small_bit_set::SmallBitSet;
 
+/// A short-lived description of the buffer being rendered into for the current frame.
+///
+/// # Examples
+///
+/// ```
+/// # use forma::buffer::{BufferBuilder, layout::LinearLayout};
+/// let width = 100;
+/// let height = 100;
+/// let mut buffer = vec![0; 100 * 4 * 100];
+///
+/// let _buffer = BufferBuilder::new(
+///     &mut buffer,
+///     &mut LinearLayout::new(width, width * 4, height),
+/// ).build();
+/// ```
 #[derive(Debug)]
 pub struct Buffer<'b, 'l, L: Layout> {
     pub(crate) buffer: &'b mut [u8],
@@ -22,6 +37,21 @@ pub struct Buffer<'b, 'l, L: Layout> {
     pub(crate) flusher: Option<Box<dyn Flusher>>,
 }
 
+/// A builder for the [`Buffer`].
+///
+/// # Examples
+///
+/// ```
+/// # use forma::buffer::{BufferBuilder, layout::LinearLayout};
+/// let width = 100;
+/// let height = 100;
+/// let mut buffer = vec![0; 100 * 4 * 100];
+///
+/// let _buffer = BufferBuilder::new(
+///     &mut buffer,
+///     &mut LinearLayout::new(width, width * 4, height),
+/// ).build();
+/// ```
 #[derive(Debug)]
 pub struct BufferBuilder<'b, 'l, L: Layout> {
     buffer: Buffer<'b, 'l, L>,
@@ -51,34 +81,102 @@ impl<'b, 'l, L: Layout> BufferBuilder<'b, 'l, L> {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct BufferLayerCache {
-    pub(crate) id: u8,
-    pub(crate) cache: Rc<RefCell<(Option<Color>, Vec<Option<u32>>)>>,
-    pub(crate) buffers_with_caches: Weak<RefCell<SmallBitSet>>,
+#[derive(Debug)]
+struct IdDropper {
+    id: u8,
+    buffers_with_caches: Weak<RefCell<SmallBitSet>>,
 }
 
-impl BufferLayerCache {
-    #[inline]
-    pub fn clear(&self) {
-        if Weak::upgrade(&self.buffers_with_caches).is_some() {
-            let mut cache = self.cache.borrow_mut();
-
-            cache.0 = None;
-            cache.1.fill(None);
+impl Drop for IdDropper {
+    fn drop(&mut self) {
+        if let Some(buffers_with_caches) = Weak::upgrade(&self.buffers_with_caches) {
+            buffers_with_caches.borrow_mut().remove(self.id);
         }
     }
 }
 
-impl Drop for BufferLayerCache {
-    fn drop(&mut self) {
-        if let Some(buffers_with_caches) = Weak::upgrade(&self.buffers_with_caches) {
-            // We don't want to remove the current ID if there are more than 1 copies of the
-            // current object, so we cheat and use the available `Rc` to make sure that's the case.
-            if Rc::strong_count(&self.cache) == 1 {
-                buffers_with_caches.borrow_mut().remove(self.id);
-            }
+#[derive(Debug)]
+pub struct CacheInner {
+    pub clear_color: Option<Color>,
+    // Not `Option<Vec<u32>>` because the vector is split and sent to different
+    // threads.
+    pub layers: Vec<Option<u32>>,
+    pub width: Option<usize>,
+    pub height: Option<usize>,
+    _id_dropper: IdDropper,
+}
+
+/// A per-[`Buffer`] cache that enables forma to skip rendering to buffer
+/// regions that have not changed.
+///
+/// # Examples
+///
+/// ```
+/// # use forma::{
+/// #     buffer::{BufferBuilder, layout::LinearLayout},
+/// #     Color, Composition, CpuRenderer, RGBA,
+/// # };
+/// let mut buffer = vec![0; 4];
+///
+/// let mut composition = Composition::new();
+/// let mut renderer = CpuRenderer::new();
+/// let layer_cache = renderer.create_buffer_layer_cache().unwrap();
+///
+/// renderer.render(
+///     &mut composition,
+///     &mut BufferBuilder::new(&mut buffer, &mut LinearLayout::new(1, 1 * 4, 1))
+///         .layer_cache(layer_cache.clone())
+///         .build(),
+///     RGBA,
+///     Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
+///     None,
+/// );
+///
+/// // Rendered white on first frame.
+/// assert_eq!(buffer, [255; 4]);
+///
+/// // Reset buffer manually.
+/// buffer = vec![0; 4];
+///
+/// renderer.render(
+///     &mut composition,
+///     &mut BufferBuilder::new(&mut buffer, &mut LinearLayout::new(1, 1 * 4, 1))
+///         .layer_cache(layer_cache.clone())
+///         .build(),
+///     RGBA,
+///     Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
+///     None,
+/// );
+///
+/// // Skipped rendering on second frame since nothing changed.
+/// assert_eq!(buffer, [0; 4]);
+/// ```
+#[derive(Clone, Debug)]
+pub struct BufferLayerCache {
+    pub(crate) id: u8,
+    pub(crate) cache: Rc<RefCell<CacheInner>>,
+}
+
+impl BufferLayerCache {
+    pub(crate) fn new(id: u8, buffers_with_caches: Weak<RefCell<SmallBitSet>>) -> Self {
+        Self {
+            id,
+            cache: Rc::new(RefCell::new(CacheInner {
+                clear_color: None,
+                layers: Vec::new(),
+                width: None,
+                height: None,
+                _id_dropper: IdDropper { id, buffers_with_caches },
+            })),
         }
+    }
+
+    #[inline]
+    pub fn clear(&self) {
+        let mut cache = self.cache.borrow_mut();
+
+        cache.clear_color = None;
+        cache.layers.fill(None);
     }
 }
 
@@ -92,11 +190,7 @@ mod tests {
         bit_set
             .borrow_mut()
             .first_empty_slot()
-            .map(|id| BufferLayerCache {
-                id,
-                cache: Default::default(),
-                buffers_with_caches: Rc::downgrade(bit_set),
-            })
+            .map(|id| BufferLayerCache::new(id, Rc::downgrade(bit_set)))
             .unwrap()
     }
 
