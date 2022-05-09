@@ -1454,7 +1454,9 @@ TEST_F(BlobfsMetricIntegrationTest, BlobfsInspectTree) {
       NodeMatches(AllOf(
           NameMatches(fs_inspect::kInfoNodeName),
           PropertyList(IsSupersetOf({StringIs(fs_inspect::InfoData::kPropName, "blobfs"),
-                                     UintIs(fs_inspect::InfoData::kPropMaxFilenameLength, 64)})))));
+                                     UintIs(fs_inspect::InfoData::kPropMaxFilenameLength, 64),
+                                     StringIs(fs_inspect::InfoData::kPropOldestVersion,
+                                              ::testing::MatchesRegex("^[0-9]+\\/[0-9]+$"))})))));
 
   const inspect::Hierarchy* usage_node = blobfs_root->GetByPath({fs_inspect::kUsageNodeName});
   ASSERT_NE(usage_node, nullptr);

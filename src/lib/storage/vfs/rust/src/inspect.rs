@@ -95,9 +95,9 @@ pub struct InfoData {
     pub name: String,
     pub version_major: u64,
     pub version_minor: u64,
-    pub oldest_minor_version: u64,
     pub block_size: u64,
     pub max_filename_length: u64,
+    pub oldest_version: Option<String>,
 }
 
 impl InfoData {
@@ -106,9 +106,9 @@ impl InfoData {
     const NAME_KEY: &'static str = "name";
     const VERSION_MAJOR_KEY: &'static str = "version_major";
     const VERSION_MINOR_KEY: &'static str = "version_minor";
-    const OLDEST_MINOR_VERSION_KEY: &'static str = "oldest_minor_version";
     const BLOCK_SIZE: &'static str = "block_size";
     const MAX_FILENAME_LENGTH: &'static str = "max_filename_length";
+    const OLDEST_VERSION_KEY: &'static str = "oldest_version";
 
     fn record_into(self, node: &Node) {
         node.record_uint(Self::ID_KEY, self.id);
@@ -116,9 +116,11 @@ impl InfoData {
         node.record_string(Self::NAME_KEY, self.name);
         node.record_uint(Self::VERSION_MAJOR_KEY, self.version_major);
         node.record_uint(Self::VERSION_MINOR_KEY, self.version_minor);
-        node.record_uint(Self::OLDEST_MINOR_VERSION_KEY, self.oldest_minor_version);
         node.record_uint(Self::BLOCK_SIZE, self.block_size);
         node.record_uint(Self::MAX_FILENAME_LENGTH, self.max_filename_length);
+        if self.oldest_version.is_some() {
+            node.record_string(Self::OLDEST_VERSION_KEY, self.oldest_version.as_ref().unwrap());
+        }
     }
 }
 

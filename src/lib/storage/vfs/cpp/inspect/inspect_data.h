@@ -15,6 +15,7 @@
 #include <lib/zx/status.h>
 
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include "src/lib/storage/block_client/cpp/block_device.h"
@@ -28,9 +29,13 @@ struct InfoData {
   std::string name;
   uint64_t version_major;
   uint64_t version_minor;
-  uint64_t oldest_minor_version;
   uint64_t block_size;
   uint64_t max_filename_length;
+  std::optional<std::string> oldest_version = std::nullopt;
+
+  // Create an oldest_version string from integral version identifiers. Due to data collection
+  // limitations, oldest_version must be stored as a string.
+  static std::string OldestVersion(uint32_t oldest_major, uint32_t oldest_minor);
 
   // Inspect Property Names
 
@@ -39,9 +44,9 @@ struct InfoData {
   static constexpr char kPropName[] = "name";
   static constexpr char kPropVersionMajor[] = "version_major";
   static constexpr char kPropVersionMinor[] = "version_minor";
-  static constexpr char kPropOldestMinorVersion[] = "oldest_minor_version";
   static constexpr char kPropBlockSize[] = "block_size";
   static constexpr char kPropMaxFilenameLength[] = "max_filename_length";
+  static constexpr char kPropOldestVersion[] = "oldest_version";
 };
 
 // fs.usage properties

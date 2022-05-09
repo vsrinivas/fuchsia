@@ -367,7 +367,8 @@ void Blobfs::InitializeInspectTree() {
   fs_inspect::InfoData info{
       .version_major = kBlobfsCurrentMajorVersion,
       .version_minor = kBlobfsCurrentMinorVersion,
-      .oldest_minor_version = Info().oldest_minor_version,
+      .oldest_version =
+          fs_inspect::InfoData::OldestVersion(Info().major_version, Info().oldest_minor_version),
   };
 
   zx::status<fs::FilesystemInfo> fs_info{GetFilesystemInfo()};

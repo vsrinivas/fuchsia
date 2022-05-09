@@ -269,9 +269,10 @@ impl FsInspect for FxfsServer {
             name: FXFS_INFO_NAME.into(),
             version_major: LATEST_VERSION.major.into(),
             version_minor: LATEST_VERSION.minor.into(),
-            oldest_minor_version: 0, // TODO(fxbug.dev/93770)
             block_size: self.fs.block_size(),
             max_filename_length: fio::MAX_FILENAME,
+            // TODO(fxbug.dev/93770): Determine how to report oldest on-disk version if required.
+            oldest_version: None,
         }
     }
 

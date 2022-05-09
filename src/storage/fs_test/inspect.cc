@@ -11,6 +11,7 @@
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -27,12 +28,15 @@ using namespace inspect::testing;
 using inspect::StringPropertyValue;
 using inspect::UintPropertyValue;
 
-// All properties we expect the fs.info node to contain.
-constexpr std::string_view kAllInfoProperties[] = {
-    fs_inspect::InfoData::kPropId,           fs_inspect::InfoData::kPropType,
-    fs_inspect::InfoData::kPropName,         fs_inspect::InfoData::kPropVersionMajor,
-    fs_inspect::InfoData::kPropVersionMinor, fs_inspect::InfoData::kPropOldestMinorVersion,
-    fs_inspect::InfoData::kPropBlockSize,    fs_inspect::InfoData::kPropMaxFilenameLength,
+// All properties we require the fs.info node to contain, excluding optional fields.
+constexpr std::string_view kRequiredInfoProperties[] = {
+    fs_inspect::InfoData::kPropId,
+    fs_inspect::InfoData::kPropType,
+    fs_inspect::InfoData::kPropName,
+    fs_inspect::InfoData::kPropVersionMajor,
+    fs_inspect::InfoData::kPropVersionMinor,
+    fs_inspect::InfoData::kPropBlockSize,
+    fs_inspect::InfoData::kPropMaxFilenameLength,
 };
 
 // All properties we expect the fs.usage node to contain.
@@ -72,10 +76,10 @@ void ValidateHierarchy(const inspect::Hierarchy& root) {
   // Ensure the expected properties under each node exist so that the invariants the getters above
   // rely on are valid (namely, that these specific nodes and their properties exist).
 
-  // Validate fs.info node properties.
+  // Validate that the required fs.info node properties are present.
   const inspect::Hierarchy* info = root.GetByPath({fs_inspect::kInfoNodeName});
   ASSERT_NE(info, nullptr) << "Could not find node " << fs_inspect::kInfoNodeName;
-  EXPECT_THAT(GetPropertyNames(info->node()), UnorderedElementsAreArray(kAllInfoProperties));
+  EXPECT_THAT(GetPropertyNames(info->node()), IsSupersetOf(kRequiredInfoProperties));
 
   // Validate fs.usage node properties.
   const inspect::Hierarchy* usage = root.GetByPath({fs_inspect::kUsageNodeName});
@@ -92,6 +96,14 @@ void ValidateHierarchy(const inspect::Hierarchy& root) {
 // Properties within the given node must both exist and be the correct type.
 fs_inspect::InfoData GetInfoProperties(const inspect::NodeValue& info_node) {
   using fs_inspect::InfoData;
+
+  // oldest_version is optional.
+  std::optional<std::string> oldest_version = std::nullopt;
+  if (info_node.get_property<StringPropertyValue>(InfoData::kPropOldestVersion)) {
+    oldest_version =
+        info_node.get_property<StringPropertyValue>(InfoData::kPropOldestVersion)->value();
+  }
+
   return InfoData{
       .id = info_node.get_property<UintPropertyValue>(InfoData::kPropId)->value(),
       .type = info_node.get_property<UintPropertyValue>(InfoData::kPropType)->value(),
@@ -100,11 +112,10 @@ fs_inspect::InfoData GetInfoProperties(const inspect::NodeValue& info_node) {
           info_node.get_property<UintPropertyValue>(InfoData::kPropVersionMajor)->value(),
       .version_minor =
           info_node.get_property<UintPropertyValue>(InfoData::kPropVersionMinor)->value(),
-      .oldest_minor_version =
-          info_node.get_property<UintPropertyValue>(InfoData::kPropOldestMinorVersion)->value(),
       .block_size = info_node.get_property<UintPropertyValue>(InfoData::kPropBlockSize)->value(),
       .max_filename_length =
           info_node.get_property<UintPropertyValue>(InfoData::kPropMaxFilenameLength)->value(),
+      .oldest_version = std::move(oldest_version),
   };
 }
 
@@ -251,6 +262,10 @@ TEST_P(InspectTest, ValidateInfoNode) {
   ASSERT_NE(info_data.id, ZX_HANDLE_INVALID);
   // The maximum filename length should be set (i.e. > 0).
   ASSERT_GT(info_data.max_filename_length, 0u);
+  // If the filesystem reports oldest_version, ensure it is the correct format (oldest maj/min).
+  if (info_data.oldest_version.has_value()) {
+    ASSERT_THAT(info_data.oldest_version.value(), ::testing::MatchesRegex("^[0-9]+\\/[0-9]+$"));
+  }
 }
 
 // Validate values in the fs.usage node.

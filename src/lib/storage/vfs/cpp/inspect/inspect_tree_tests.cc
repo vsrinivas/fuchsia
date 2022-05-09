@@ -10,6 +10,7 @@
 #include <lib/zx/status.h>
 
 #include <optional>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -35,16 +36,24 @@ namespace {
 
 // Match the given hierarchy against fs.info using the given InfoData values.
 ::testing::Matcher<const inspect::Hierarchy&> NodePropertiesMatch(const InfoData& info) {
+  // Required properties:
+  std::vector<::testing::Matcher<const inspect::PropertyValue&>> properties = {
+      UintIs(InfoData::kPropId, info.id),
+      UintIs(InfoData::kPropType, info.type),
+      StringIs(InfoData::kPropName, info.name),
+      UintIs(InfoData::kPropVersionMajor, info.version_major),
+      UintIs(InfoData::kPropVersionMinor, info.version_minor),
+      UintIs(InfoData::kPropBlockSize, info.block_size),
+      UintIs(InfoData::kPropMaxFilenameLength, info.max_filename_length),
+  };
+
+  // Optional properties:
+  if (info.oldest_version.has_value()) {
+    properties.push_back(StringIs(InfoData::kPropOldestVersion, info.oldest_version.value()));
+  }
+
   return NodeMatches(
-      AllOf(NameMatches(kInfoNodeName),
-            PropertyList(UnorderedElementsAre(
-                UintIs(InfoData::kPropId, info.id), UintIs(InfoData::kPropType, info.type),
-                StringIs(InfoData::kPropName, info.name),
-                UintIs(InfoData::kPropVersionMajor, info.version_major),
-                UintIs(InfoData::kPropVersionMinor, info.version_minor),
-                UintIs(InfoData::kPropOldestMinorVersion, info.oldest_minor_version),
-                UintIs(InfoData::kPropBlockSize, info.block_size),
-                UintIs(InfoData::kPropMaxFilenameLength, info.max_filename_length)))));
+      AllOf(NameMatches(kInfoNodeName), PropertyList(UnorderedElementsAreArray(properties))));
 }
 
 // Match the given hierarchy against fs.usage using the given UsageData values.
@@ -180,9 +189,9 @@ TEST(VfsInspectTree, InfoNode) {
       .name = "fakefs",
       .version_major = 3,
       .version_minor = 4,
-      .oldest_minor_version = 5,
       .block_size = 1024,
       .max_filename_length = 255,
+      .oldest_version = "5/6",
   };
   inspect_tree.SetInfoData(info_data);
   inspect_tree.UpdateSnapshot();
@@ -192,6 +201,8 @@ TEST(VfsInspectTree, InfoNode) {
   info_data = {
       .name = "some other name",
       .max_filename_length = 64,
+      // Optional properties should not be present in the resulting tree.
+      .oldest_version = std::nullopt,
   };
   inspect_tree.SetInfoData(info_data);
   inspect_tree.UpdateSnapshot();

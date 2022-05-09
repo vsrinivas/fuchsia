@@ -18,9 +18,11 @@ void Attach(inspect::Inspector& insp, const InfoData& info) {
   root.CreateString(InfoData::kPropName, info.name, &insp);
   root.CreateUint(InfoData::kPropVersionMajor, info.version_major, &insp);
   root.CreateUint(InfoData::kPropVersionMinor, info.version_minor, &insp);
-  root.CreateUint(InfoData::kPropOldestMinorVersion, info.oldest_minor_version, &insp);
   root.CreateUint(InfoData::kPropBlockSize, info.block_size, &insp);
   root.CreateUint(InfoData::kPropMaxFilenameLength, info.max_filename_length, &insp);
+  if (info.oldest_version.has_value()) {
+    root.CreateString(InfoData::kPropOldestVersion, info.oldest_version.value(), &insp);
+  }
 }
 
 void Attach(inspect::Inspector& insp, const UsageData& usage) {
@@ -43,6 +45,10 @@ void Attach(inspect::Inspector& insp, const VolumeData& volume) {
 }
 
 }  // namespace detail
+
+std::string InfoData::OldestVersion(uint32_t oldest_major, uint32_t oldest_minor) {
+  return std::to_string(oldest_major) + "/" + std::to_string(oldest_minor);
+}
 
 zx::status<VolumeData::SizeInfo> VolumeData::GetSizeInfoFromDevice(
     const block_client::BlockDevice& device) {

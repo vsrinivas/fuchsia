@@ -24,7 +24,6 @@ void InspectTree::Initialize() {
         .name = fs_info.value().name,
         .version_major = fs_->GetSuperblockInfo().GetRawSuperblock().major_ver,
         .version_minor = fs_->GetSuperblockInfo().GetRawSuperblock().minor_ver,
-        .oldest_minor_version = fs_->GetSuperblockInfo().GetRawSuperblock().minor_ver,
         .block_size = fs_info.value().block_size,
         .max_filename_length = fs_info.value().max_filename_size,
     };

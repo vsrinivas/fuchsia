@@ -38,9 +38,10 @@ void MinfsInspectTree::Initialize(const fs::FilesystemInfo& fs_info, const Super
         .name = fs_info.name,
         .version_major = kMinfsCurrentMajorVersion,
         .version_minor = kMinfsCurrentMinorVersion,
-        .oldest_minor_version = superblock.oldest_minor_version,
         .block_size = fs_info.block_size,
         .max_filename_length = fs_info.max_filename_size,
+        .oldest_version = fs_inspect::InfoData::OldestVersion(superblock.major_version,
+                                                              superblock.oldest_minor_version),
     };
   }
   UpdateSpaceUsage(superblock, reserved_blocks);
