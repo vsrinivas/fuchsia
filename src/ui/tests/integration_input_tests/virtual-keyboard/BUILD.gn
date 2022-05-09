@@ -84,7 +84,6 @@ fuchsia_test_package("virtual-keyboard-test") {
           # Ensure the device has Vulkan.
           device_type = "AEMU"
         }
-        tags = [ "flaky" ]
       },
     ]
   }
