@@ -73,8 +73,7 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
       device_ = DeviceClient(std::move(endpoints->client));
 
       {
-        auto wire_result =
-            device_->Query(static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kVendorId));
+        auto wire_result = device_->Query(fuchsia_gpu_magma::wire::QueryId::kVendorId);
         ASSERT_TRUE(wire_result.ok());
 
         ASSERT_TRUE(wire_result.Unwrap()->result.response().is_simple_result());
@@ -91,8 +90,7 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
     ASSERT_TRUE(device_.client_end());
 
     {
-      auto wire_result = device_->Query(
-          static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kMaximumInflightParams));
+      auto wire_result = device_->Query(fuchsia_gpu_magma::wire::QueryId::kMaximumInflightParams);
       ASSERT_TRUE(wire_result.ok());
 
       ASSERT_TRUE(wire_result.Unwrap()->result.response().is_simple_result());
@@ -175,29 +173,25 @@ TEST_F(TestMagmaFidl, QueryReturnsBuffer) {
 
 TEST_F(TestMagmaFidl, Query) {
   {
-    auto wire_response =
-        device_->Query(static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kVendorId));
+    auto wire_response = device_->Query(fuchsia_gpu_magma::wire::QueryId::kVendorId);
     EXPECT_TRUE(wire_response.ok());
     EXPECT_TRUE(wire_response->result.response().is_simple_result());
     EXPECT_FALSE(wire_response->result.response().is_buffer_result());
   }
   {
-    auto wire_response =
-        device_->Query(static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kDeviceId));
+    auto wire_response = device_->Query(fuchsia_gpu_magma::wire::QueryId::kDeviceId);
     EXPECT_TRUE(wire_response.ok());
     EXPECT_TRUE(wire_response->result.response().is_simple_result());
     EXPECT_FALSE(wire_response->result.response().is_buffer_result());
   }
   {
-    auto wire_response = device_->Query(
-        static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kIsTotalTimeSupported));
+    auto wire_response = device_->Query(fuchsia_gpu_magma::wire::QueryId::kIsTotalTimeSupported);
     EXPECT_TRUE(wire_response.ok());
     EXPECT_TRUE(wire_response->result.response().is_simple_result());
     EXPECT_FALSE(wire_response->result.response().is_buffer_result());
   }
   {
-    auto wire_response = device_->Query(
-        static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kMaximumInflightParams));
+    auto wire_response = device_->Query(fuchsia_gpu_magma::wire::QueryId::kMaximumInflightParams);
     EXPECT_TRUE(wire_response.ok());
     EXPECT_TRUE(wire_response->result.response().is_simple_result());
     EXPECT_FALSE(wire_response->result.response().is_buffer_result());

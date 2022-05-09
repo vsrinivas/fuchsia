@@ -46,7 +46,8 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
   }
 
   magma::Status Query(uint64_t query_id, magma_handle_t* result_buffer_out, uint64_t* result_out) {
-    auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(channel_.borrow())->Query(query_id);
+    auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(channel_.borrow())
+                      ->Query(fuchsia_gpu_magma::wire::QueryId(query_id));
 
     if (result.status() != ZX_OK)
       return DRETF(result.status(), "magma_DeviceQuery failed");

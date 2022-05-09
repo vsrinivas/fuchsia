@@ -155,7 +155,7 @@ static void test_shutdown(uint32_t iters) {
 
     {
       auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(test_base.channel()->borrow())
-                        ->Query(MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED);
+                        ->Query(fuchsia_gpu_magma::QueryId::kIsTestRestartSupported);
       ASSERT_TRUE(result->result.response().is_simple_result());
       uint64_t is_supported = result->result.response().simple_result();
       if (result.status() != ZX_OK || !is_supported) {

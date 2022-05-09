@@ -19,7 +19,7 @@ using fuchsia.memorypressure;
 
 /// Types of information about the hardware and driver that can be queried from the Magma system
 /// driver. Vendor-specific ID numbers may be used, but those IDs will be listed elsewhere.
-type QueryId = strict enum {
+type QueryId = flexible enum : uint64 {
     /// Returns the hardware vendor ID (simple result) - should be the PCI ID of the GPU vendor
     /// if possible, or the Khronos vendor ID otherwise.
     VENDOR_ID = 0;
@@ -85,7 +85,7 @@ protocol Device {
 
     /// On success, returns a result either in a buffer or a simple value.
     Query(struct {
-        query_id uint64;
+        query_id QueryId;
     }) -> (strict resource union {
         1: simple_result uint64;
         2: buffer_result zx.handle:VMO;
