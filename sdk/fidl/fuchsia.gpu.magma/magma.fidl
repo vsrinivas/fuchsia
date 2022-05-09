@@ -226,6 +226,8 @@ type BufferRange = struct {
     size uint64;
 };
 
+alias ContextId = uint32;
+
 /// If a system driver error occurs, or if the client sends a message that the client should have
 /// known is invalid, the connection will be closed and a zx.status sent via epitaph.
 protocol Primary {
@@ -244,12 +246,12 @@ protocol Primary {
     /// Creates context `context_id` for use in command execution.  A context may be associated
     /// with hardware state.
     CreateContext(struct {
-        context_id uint32;
+        context_id ContextId;
     });
 
     /// Destroys context `context_id`.
     DestroyContext(struct {
-        context_id uint32;
+        context_id ContextId;
     });
 
     /// DEPRECATED - TODO(fxb/86670) remove prior to SDK release
@@ -272,7 +274,7 @@ protocol Primary {
     /// `wait_semaphores` must all be signaled before execution begins, then are reset.
     /// `signal_semaphores` will be signaled after the command buffer is completed.
     ExecuteCommand(struct {
-        context_id uint32;
+        context_id ContextId;
         resources vector<BufferRange>:MAX;
         command_buffers vector<CommandBuffer>:MAX;
         wait_semaphores vector<zx.koid>:MAX;
@@ -284,7 +286,7 @@ protocol Primary {
     /// `semaphores` must refer to events that have been imported, and will be signaled after
     /// the commands are completed.
     ExecuteImmediateCommands(struct {
-        context_id uint32;
+        context_id ContextId;
         command_data bytes:MAX_IMMEDIATE_COMMANDS_DATA_SIZE;
         semaphores vector<zx.koid>:MAX;
     });
