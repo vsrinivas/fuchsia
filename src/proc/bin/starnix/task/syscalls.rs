@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
+use fuchsia_zircon::AsHandleRef;
 use std::ffi::CString;
 use std::sync::Arc;
 use tracing::info;
@@ -362,6 +363,20 @@ pub fn sys_prctl(
             not_implemented!("PR_SET_PDEATHSIG");
             Ok(().into())
         }
+        PR_SET_NAME => {
+            let addr = UserAddress::from(arg2);
+            let mut name = [0u8; 16];
+            current_task.mm.read_memory(addr, &mut name)?;
+            // The name is truncated to 16 bytes (including the nul)
+            name[15] = 0;
+            // this will succeed, because we set 0 at end above
+            let string_end = name.iter().position(|&c| c == 0).unwrap();
+
+            let name_str = CString::new(&mut name[0..string_end]).or_else(|_| error!(EINVAL))?;
+            current_task.thread.set_name(&name_str).map_err(|_| errno!(EINVAL))?;
+            current_task.set_command_name(name_str);
+            Ok(0.into())
+        }
         PR_GET_NAME => {
             let addr = UserAddress::from(arg2);
             current_task.mm.write_memory(addr, current_task.read().command.to_bytes_with_nul())?;
@@ -647,5 +662,31 @@ mod tests {
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         assert_eq!(sys_sched_setaffinity(&current_task, 1, u32::MAX, mapped_address), Ok(()));
         assert_eq!(sys_sched_setaffinity(&current_task, 1, 1, mapped_address), Err(EINVAL));
+    }
+
+    #[::fuchsia::test]
+    fn test_task_name() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        let name = "my-task-name\0";
+        current_task
+            .mm
+            .write_memory(mapped_address, name.as_bytes())
+            .expect("failed to write name");
+
+        let result =
+            sys_prctl(&current_task, PR_SET_NAME, mapped_address.ptr() as u64, 0, 0, 0).unwrap();
+        assert_eq!(SUCCESS, result);
+
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        let result =
+            sys_prctl(&current_task, PR_GET_NAME, mapped_address.ptr() as u64, 0, 0, 0).unwrap();
+        assert_eq!(SUCCESS, result);
+
+        let name_length = name.len();
+        let mut out_name = vec![0u8; name_length];
+
+        current_task.mm.read_memory(mapped_address, &mut out_name).unwrap();
+        assert_eq!(name.as_bytes(), &out_name);
     }
 }

@@ -824,7 +824,7 @@ impl CurrentTask {
         Ok(())
     }
 
-    pub fn set_command_name(&mut self, name: CString) {
+    pub fn set_command_name(&self, name: CString) {
         // Truncate to 16 bytes, including null byte.
         let bytes = name.to_bytes();
         self.write().command = if bytes.len() > 15 {
