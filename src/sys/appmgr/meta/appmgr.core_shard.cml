@@ -235,7 +235,7 @@
                 "fuchsia.pkg.PackageCache",
                 "fuchsia.space.Manager",
             ],
-            from: "#pkg-cache",
+            from: "parent",
         },
         {
             protocol: [

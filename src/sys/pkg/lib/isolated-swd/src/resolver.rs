@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{cache::Cache, pkgfs::Pkgfs},
+    crate::cache::Cache,
     anyhow::{Context, Error},
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_pkg::PackageCacheMarker,
@@ -13,7 +13,7 @@ use {
         server::{NestedEnvironment, ServiceFs, ServiceObj},
     },
     fuchsia_syslog::fx_log_err,
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon::{self as zx},
     futures::prelude::*,
     std::{io::Write, sync::Arc},
 };
@@ -60,14 +60,12 @@ impl Resolver {
     /// Launch the package resolver using the given components, TUF repo/channel config,
     /// and SSL certificate folder.
     pub fn launch(
-        pkgfs: &Pkgfs,
         cache: Arc<Cache>,
         repo_config: std::fs::File,
         channel: &str,
         ssl_dir: std::fs::File,
     ) -> Result<Self, Error> {
         Resolver::launch_with_components(
-            pkgfs,
             cache,
             repo_config,
             Some(channel.to_owned()),
@@ -79,7 +77,6 @@ impl Resolver {
     /// Launch the package resolver. This is the same as `launch`, but the URL for the
     /// resolver's manifest must be provided.
     fn launch_with_components(
-        pkgfs: &Pkgfs,
         cache: Arc<Cache>,
         repo_config: std::fs::File,
         channel: Option<String>,
@@ -87,7 +84,6 @@ impl Resolver {
         resolver_url: &str,
     ) -> Result<Self, Error> {
         let mut pkg_resolver = AppBuilder::new(resolver_url)
-            .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_handle()?.into_handle())
             .add_dir_to_namespace("/config/data/repositories".to_owned(), repo_config)?
             .add_dir_to_namespace(SSL_CERTS_PATH.to_owned(), ssl_dir)?;
 
@@ -202,7 +198,6 @@ pub mod for_tests {
             let ssl_certs =
                 std::fs::File::open(SSL_TEST_CERTS_PATH).context("opening ssl certificates dir")?;
             let resolver = Resolver::launch_with_components(
-                &cache.pkgfs.pkgfs,
                 Arc::clone(&cache.cache),
                 repo_dir,
                 channel,

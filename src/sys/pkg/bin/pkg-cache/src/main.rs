@@ -61,21 +61,8 @@ async fn main_inner() -> Result<(), Error> {
     let Args { ignore_system_image } = argh::from_env();
 
     let inspector = finspect::Inspector::new();
-    let index_node = inspector.root().create_child("index");
-
-    let (cobalt_sender, cobalt_fut) = CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
-        .serve(ConnectionType::project_id(metrics::PROJECT_ID));
-    let cobalt_fut = Task::spawn(cobalt_fut);
-
-    let pkgfs_versions =
-        pkgfs::versions::Client::open_from_namespace().context("error opening /pkgfs/versions")?;
-    let pkgfs_install =
-        pkgfs::install::Client::open_from_namespace().context("error opening /pkgfs/install")?;
-    let pkgfs_needs =
-        pkgfs::needs::Client::open_from_namespace().context("error opening /pkgfs/needs")?;
-    let blobfs = blobfs::Client::open_from_namespace().context("error opening blobfs")?;
-
-    let mut package_index = PackageIndex::new(index_node);
+    let mut package_index = PackageIndex::new(inspector.root().create_child("index"));
+    let blobfs = blobfs::Client::open_from_namespace_rwx().context("error opening blobfs")?;
 
     let (
         system_image,
@@ -96,8 +83,6 @@ async fn main_inner() -> Result<(), Error> {
     } else {
         let boot_args = connect_to_protocol::<fidl_fuchsia_boot::ArgumentsMarker>()
             .context("error connecting to fuchsia.boot/Arguments")?;
-        // TODO(fxbug.dev/88871) Use a blobfs client with RX rights (instead of RW) to create
-        // system_image.
         let system_image = system_image::SystemImage::new(blobfs.clone(), &boot_args)
             .await
             .context("Accessing contents of system_image package")?;
@@ -145,20 +130,24 @@ async fn main_inner() -> Result<(), Error> {
         .record_child("non_static_allow_list", |n| non_static_allow_list.record_inspect(n));
 
     let base_packages = Arc::new(base_packages);
+    let non_static_allow_list = Arc::new(non_static_allow_list);
     let package_index = Arc::new(async_lock::RwLock::new(package_index));
+    let scope = vfs::execution_scope::ExecutionScope::new();
+    let (cobalt_sender, cobalt_fut) = CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
+        .serve(ConnectionType::project_id(metrics::PROJECT_ID));
+    let cobalt_fut = Task::spawn(cobalt_fut);
 
     // Use VFS to serve the out dir because ServiceFs does not support OPEN_RIGHT_EXECUTABLE and
     // pkgfs/{packages|versions|system} require it.
     let svc_dir = vfs::pseudo_directory! {};
     let cache_inspect_node = inspector.root().create_child("fuchsia.pkg.PackageCache");
     {
-        let pkgfs_versions = pkgfs_versions.clone();
-        let pkgfs_install = pkgfs_install.clone();
-        let pkgfs_needs = pkgfs_needs.clone();
         let package_index = Arc::clone(&package_index);
         let blobfs = blobfs.clone();
         let base_packages = Arc::clone(&base_packages);
         let cache_packages = Arc::new(cache_packages);
+        let non_static_allow_list = Arc::clone(&non_static_allow_list);
+        let scope = scope.clone();
         let cobalt_sender = cobalt_sender.clone();
         let cache_inspect_id = Arc::new(AtomicU32::new(0));
         let cache_get_node = Arc::new(cache_inspect_node.create_child("get"));
@@ -168,13 +157,13 @@ async fn main_inner() -> Result<(), Error> {
                 fidl_fuchsia_pkg::PackageCacheMarker::PROTOCOL_NAME,
                 vfs::service::host(move |stream: fidl_fuchsia_pkg::PackageCacheRequestStream| {
                     cache_service::serve(
-                        pkgfs_versions.clone(),
-                        pkgfs_install.clone(),
-                        pkgfs_needs.clone(),
                         Arc::clone(&package_index),
                         blobfs.clone(),
-                        base_packages.clone(),
+                        Arc::clone(&base_packages),
                         Arc::clone(&cache_packages),
+                        executability_restrictions,
+                        Arc::clone(&non_static_allow_list),
+                        scope.clone(),
                         stream,
                         cobalt_sender.clone(),
                         Arc::clone(&cache_inspect_id),
@@ -251,10 +240,8 @@ async fn main_inner() -> Result<(), Error> {
             crate::compat::pkgfs::make_dir(
                 Arc::clone(&base_packages),
                 Arc::clone(&package_index),
-                Arc::new(non_static_allow_list),
+                Arc::clone(&non_static_allow_list),
                 executability_restrictions,
-                // TODO(fxbug.dev/88871) Use a blobfs client with RX rights (instead of RW) to serve
-                // pkgfs.
                 blobfs.clone(),
                 system_image,
             )
@@ -262,7 +249,6 @@ async fn main_inner() -> Result<(), Error> {
         inspect_runtime::DIAGNOSTICS_DIR => inspect_runtime::create_diagnostics_dir(inspector),
     };
 
-    let scope = vfs::execution_scope::ExecutionScope::new();
     let () = out_dir.open(
         scope.clone(),
         fio::OpenFlags::RIGHT_READABLE

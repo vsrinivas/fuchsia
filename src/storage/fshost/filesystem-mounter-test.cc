@@ -63,15 +63,6 @@ TEST_F(MounterTest, CreateFilesystemManager) { manager(); }
 
 TEST_F(MounterTest, CreateFilesystemMounter) { FilesystemMounter mounter(manager(), &config_); }
 
-TEST_F(MounterTest, PkgfsWillNotMountBeforeBlobAndData) {
-  FilesystemMounter mounter(manager(), &config_);
-
-  ASSERT_FALSE(mounter.BlobMounted());
-  ASSERT_FALSE(mounter.DataMounted());
-  mounter.TryMountPkgfs();
-  EXPECT_FALSE(mounter.PkgfsMounted());
-}
-
 enum class FilesystemType {
   kBlobfs,
   kMinfs,
@@ -178,20 +169,6 @@ TEST_F(MounterTest, FactoryMount) {
   ASSERT_OK(mounter.MountFactoryFs(zx::channel(), fs_management::MountOptions()));
 
   ASSERT_TRUE(mounter.FactoryMounted());
-}
-
-TEST_F(MounterTest, PkgfsMountsWithBlob) {
-  config_ = EmptyConfig();
-  TestMounter mounter(manager(), &config_);
-
-  mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
-  ASSERT_TRUE(mounter.BlobMounted());
-
-  ASSERT_FALSE(mounter.DataMounted());
-
-  mounter.TryMountPkgfs();
-  EXPECT_TRUE(mounter.PkgfsMounted());
 }
 
 }  // namespace

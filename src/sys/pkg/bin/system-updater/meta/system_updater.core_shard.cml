@@ -29,7 +29,7 @@
                 "fuchsia.pkg.RetainedPackages",
                 "fuchsia.space.Manager",
             ],
-            from: "#pkg-cache",
+            from: "parent",
             to: "#system-updater",
         },
         {

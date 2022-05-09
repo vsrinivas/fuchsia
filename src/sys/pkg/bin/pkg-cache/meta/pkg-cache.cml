@@ -58,14 +58,11 @@
     ],
     use: [
         {
-            // TODO(fxbug.dev/68239): Add the "execute" right once possible.
-            directory: "pkgfs",
-            rights: [ "rw*" ],
-            path: "/pkgfs",
-        },
-        {
-            directory: "blob",
-            rights: [ "rw*" ],
+            directory: "blob-exec",
+            rights: [
+                "execute",
+                "rw*",
+            ],
             path: "/blob",
         },
         {

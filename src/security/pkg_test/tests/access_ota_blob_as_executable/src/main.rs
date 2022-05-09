@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::{Context as _, Result},
     argh::{from_env, FromArgs},
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd},
     fidl_fuchsia_io as fio,
@@ -81,7 +81,6 @@ impl ReadableExecutableResult {
     }
 
     /// Signals whether both readable and executable results are errors.
-    #[allow(unused)]
     pub fn is_readable_executable_err(&self) -> bool {
         self.readable.is_err() && self.executable.is_err()
     }
@@ -217,15 +216,28 @@ impl AccessCheckRequest {
             let pkg_cache_proxy = connect_to_protocol::<PackageCacheMarker>().unwrap();
             let (package_directory_proxy, package_directory_server_end) =
                 create_proxy::<fio::DirectoryMarker>().unwrap();
-            pkg_cache_proxy
+            // The updated version of the package resolved during OTA is not added to the dynamic
+            // index (because the system-updater adds it to the retained index before resolving it),
+            // so attempting to PackageCache.Open it should fail with NOT_FOUND. We convert
+            // NOT_FOUND into not readable and not executable so we can verify that the OTA
+            // process does not create more executable packages. Non NOT_FOUND errors fail the test
+            // to help catch misconfigurations of the test environment.
+            match pkg_cache_proxy
                 .open(&mut package_blob_id.clone(), package_directory_server_end)
                 .await
                 .unwrap()
-                .unwrap();
-            Some((
-                self.attempt_readable(&package_directory_proxy).await,
-                self.attempt_executable(&package_directory_proxy).await,
-            ))
+            {
+                Ok(()) => Some((
+                    self.attempt_readable(&package_directory_proxy).await,
+                    self.attempt_executable(&package_directory_proxy).await,
+                )),
+                Err(e) if Status::from_raw(e) == Status::NOT_FOUND => Some((
+                    Status::ok(e).context("PackageCache.Open failed"),
+                    Result::<Box<fidl_fuchsia_mem::Buffer>, _>::Err(Status::from_raw(e))
+                        .context("PackageCache.Open failed"),
+                )),
+                Err(e) => panic!("unexpected PackageCache.Open error {:?}", e),
+            }
         } else {
             fx_log_info!(
                 "Skipping open package via fuchsia.pkg/PackageCache.Open: {}",
@@ -647,11 +659,19 @@ async fn access_ota_blob_as_executable() {
         hello_world_v1_access_check.perform_access_check().await;
 
     // Post-update new version access check: Access should fail on all
-    // hash-qualified attempts to open as executable.
-    assert!(hello_world_v1_access_check_result.pkgfs_versions.unwrap().is_executable_err());
-    assert!(hello_world_v1_access_check_result.pkg_cache_open.unwrap().is_executable_err());
+    // hash-qualified attempts to open as executable. Additionally, the system-updater adds
+    // the OTA packages to the retained index before resolving them, preventing the packages from
+    // appearing in the dynamic index, so we should not be able to obtain readable packages from
+    // the pkgfs directories or PackageCache.Open.
+    assert!(hello_world_v1_access_check_result
+        .pkgfs_versions
+        .unwrap()
+        .is_readable_executable_err());
+    assert!(hello_world_v1_access_check_result
+        .pkg_cache_open
+        .unwrap()
+        .is_readable_executable_err());
     assert!(hello_world_v1_access_check_result.pkg_cache_get.unwrap().is_executable_err());
-
     assert!(hello_world_v1_access_check_result.pkg_resolver_with_hash.unwrap().is_executable_err());
 
     let hello_world_v0_access_check_result =

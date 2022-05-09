@@ -70,6 +70,18 @@ impl Client {
         Ok(Client { proxy })
     }
 
+    /// Returns a client connected to blobfs from the current component's namespace with
+    /// OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, OPEN_RIGHT_EXECUTABLE.
+    pub fn open_from_namespace_rwx() -> Result<Self, BlobfsError> {
+        let proxy = io_util::directory::open_in_namespace(
+            "/blob",
+            fidl_fuchsia_io::OpenFlags::RIGHT_READABLE
+                | fidl_fuchsia_io::OpenFlags::RIGHT_WRITABLE
+                | fidl_fuchsia_io::OpenFlags::RIGHT_EXECUTABLE,
+        )?;
+        Ok(Client { proxy })
+    }
+
     /// Returns an client connected to blobfs from the given blobfs root dir.
     pub fn new(proxy: fio::DirectoryProxy) -> Self {
         Client { proxy }
