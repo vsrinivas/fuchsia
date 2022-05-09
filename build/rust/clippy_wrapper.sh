@@ -87,6 +87,6 @@ RUSTC_LOG=error "${command[@]}" 2>"$output"
 result="$?"
 
 if [[ "$result" != 0 && "$fail" = 1 ]]; then
-    "$jq" -sr '.[] | select(.level == "error") | .rendered' "$output"
+    "$jq" -sre '.[] | select(.level == "error") | .rendered' "$output" || cat "$output" >&2
     exit "$result"
 fi
