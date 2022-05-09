@@ -387,6 +387,7 @@ impl f32x8 {
         Self(unsafe { [vld1q_f32(val.as_ptr()), vld1q_f32(val[4..].as_ptr())] })
     }
 
+    #[cfg(test)]
     pub fn to_array(self) -> [f32; 8] {
         unsafe { mem::transmute(self.0) }
     }
@@ -426,12 +427,6 @@ impl f32x8 {
 
     pub fn clamp(self, min: Self, max: Self) -> Self {
         self.min(max).max(min)
-    }
-
-    pub fn floor(self) -> Self {
-        Self(unsafe {
-            [vcvtq_f32_s32(vcvtmq_s32_f32(self.0[0])), vcvtq_f32_s32(vcvtmq_s32_f32(self.0[1]))]
-        })
     }
 
     pub fn sqrt(self) -> Self {

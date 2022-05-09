@@ -490,6 +490,7 @@ impl f32x8 {
         ])
     }
 
+    #[cfg(test)]
     pub fn to_array(self) -> [f32; 8] {
         self.0
     }
@@ -566,11 +567,6 @@ impl f32x8 {
             .iter_mut()
             .zip(min.0.iter().zip(max.0.iter()))
             .for_each(|(t, (&min, &max))| *t = t.clamp(min, max));
-        self
-    }
-
-    pub fn floor(mut self) -> Self {
-        self.0.iter_mut().for_each(|val| *val = val.floor());
         self
     }
 

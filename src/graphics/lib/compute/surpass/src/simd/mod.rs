@@ -100,18 +100,6 @@ mod tests {
     }
 
     #[test]
-    fn f32x8_floor() {
-        // Verify rounding toward negative infinity.
-        let value = [0.0, 1.1, 2.5, 3.5, 4.5, 5.5, 6.6, 7.7];
-        let expected = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
-        assert_eq!(f32x8::from_array(value).floor().to_array(), expected);
-
-        let value = [-0.0, -0.1, -1.5, -2.5, -3.5, -4.5, -5.6, -6.7];
-        let expected = [-0.0, -1.0, -2.0, -3.0, -4.0, -5.0, -6.0, -7.0];
-        assert_eq!(f32x8::from_array(value).floor().to_array(), expected);
-    }
-
-    #[test]
     fn u32x8_splat() {
         assert_eq!([0; 8], u32x8::splat(0).to_array());
         assert_eq!([u32::MAX; 8], u32x8::splat(u32::MAX).to_array());

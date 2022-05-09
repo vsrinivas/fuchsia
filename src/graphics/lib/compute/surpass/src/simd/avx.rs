@@ -393,6 +393,7 @@ impl f32x8 {
         Self(unsafe { _mm256_loadu_ps(val.as_ptr()) })
     }
 
+    #[cfg(test)]
     pub fn to_array(self) -> [f32; 8] {
         unsafe { mem::transmute(self.0) }
     }
@@ -427,10 +428,6 @@ impl f32x8 {
 
     pub fn clamp(self, min: Self, max: Self) -> Self {
         self.min(max).max(min)
-    }
-
-    pub fn floor(self) -> Self {
-        Self(unsafe { _mm256_floor_ps(self.0) })
     }
 
     pub fn sqrt(self) -> Self {
