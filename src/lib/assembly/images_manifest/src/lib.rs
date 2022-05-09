@@ -9,4 +9,6 @@
 
 mod images_manifest;
 
-pub use images_manifest::{Image, ImagesManifest};
+pub use images_manifest::{
+    BlobfsContents, Image, ImagesManifest, PackageMetadata, PackagesMetadata,
+};

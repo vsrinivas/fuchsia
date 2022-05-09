@@ -8,9 +8,12 @@ import argparse
 import filecmp
 import json
 import os
+import pathlib
 import subprocess
 import sys
 
+from assembly import PackageManifest
+from serialization import json_load
 from typing import Dict, Set
 
 
@@ -107,10 +110,13 @@ def main():
     for package_manifest_path in package_manifest_paths:
         depfile_inputs.add(package_manifest_path)
         with open(package_manifest_path) as f:
-            package_manifest = json.load(f)
-        for blob_entry in package_manifest['blobs']:
-            src = blob_entry['source_path']
-            merkle = blob_entry['merkle']
+            package_manifest = json_load(PackageManifest, f)
+        # TODO(https://fxbug.dev/98482) extract this into a constructor for PackageManifest?
+        for blob_entry in package_manifest.blobs:
+            src = blob_entry.source_path
+            if package_manifest.blob_sources_relative == "file":
+                src = pathlib.Path(package_manifest_path).parent / src
+            merkle = blob_entry.merkle
             merkle_to_source[merkle] = src
             dst = os.path.join(blobs_dst_dir, merkle)
             add_content_entry(content, dst, src, args.src_dir, depfile_inputs)

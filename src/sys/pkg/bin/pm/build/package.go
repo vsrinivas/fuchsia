@@ -37,20 +37,50 @@ type PackageManifest struct {
 	Blobs      []PackageBlobInfo `json:"blobs"`
 }
 
-// LoadPackageManifest parses the package manifest for a particular package.
+// packageManifestMaybeRelative is the json structure representation of a package
+// manifest that may contain file-relative source paths. This is a separate type
+// from PackageManifest so we don't need to touch every use of PackageManifest to
+// avoid writing invalid blob_sources_relative values to disk.
+type packageManifestMaybeRelative struct {
+	Version    string            `json:"version"`
+	Repository string            `json:"repository,omitempty"`
+	Package    pkg.Package       `json:"package"`
+	Blobs      []PackageBlobInfo `json:"blobs"`
+	RelativeTo string            `json:"blob_sources_relative"`
+}
+
+// LoadPackageManifest parses the package manifest for a particular package,
+// resolving file-relative blob source paths before returning if needed.
 func LoadPackageManifest(packageManifestPath string) (*PackageManifest, error) {
 	fileContents, err := ioutil.ReadFile(packageManifestPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", packageManifestPath, err)
 	}
 
-	manifest := &PackageManifest{}
-	if err := json.Unmarshal(fileContents, manifest); err != nil {
+	rawManifest := &packageManifestMaybeRelative{}
+	if err := json.Unmarshal(fileContents, rawManifest); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal %s: %w", packageManifestPath, err)
 	}
 
+	manifest := &PackageManifest{}
+	manifest.Version = rawManifest.Version
+	manifest.Repository = rawManifest.Repository
+	manifest.Package = rawManifest.Package
+
 	if manifest.Version != "1" {
 		return nil, fmt.Errorf("unknown version %q, can't load manifest", manifest.Version)
+	}
+
+	// if the manifest has file-relative blob paths, make them relative to the working directory
+	if rawManifest.RelativeTo == "file" {
+		basePath := filepath.Dir(packageManifestPath)
+		for i := 0; i < len(rawManifest.Blobs); i++ {
+			blob := rawManifest.Blobs[i]
+			blob.SourcePath = filepath.Join(basePath, blob.SourcePath)
+			manifest.Blobs = append(manifest.Blobs, blob)
+		}
+	} else {
+		manifest.Blobs = rawManifest.Blobs
 	}
 
 	return manifest, nil

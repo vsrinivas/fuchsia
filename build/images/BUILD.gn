@@ -10,6 +10,7 @@ import("//build/config/clang/clang.gni")
 import("//build/dist/fini_manifest.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/args.gni")
+import("//build/images/assembly/package_list.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/flash.gni")
 import("//build/images/shell_commands.gni")
@@ -48,6 +49,15 @@ files = {
   minfs = "${outdir}/data.blk"
   blobfs = "${root_out_dir}/obj/build/images/blob.blk"
 
+  # TODO(https://fxbug.dev/98480) move these to image-relative paths along with tools' usages
+  base_package_manifests = "$root_build_dir/base_package_manifests.list"
+  cache_package_manifests = "$root_build_dir/cache_package_manifests.list"
+  manifests_from_metadata =
+      "$root_build_dir/package_manifests_from_metadata.list"
+  base_package_names = "$root_build_dir/base_packages.list"
+  cache_package_names = "$root_build_dir/cache_packages.list"
+  universe_package_names = "$root_build_dir/universe_packages.list"
+
   if (!bootfs_only) {
     fvm = "${outdir}/fvm.blk"
   }
@@ -55,6 +65,9 @@ files = {
   if (supports_fastboot_fvm) {
     fvm_fastboot = "${outdir}/fvm.fastboot.blk"
   }
+}
+if (bootfs_only && !supports_fastboot_fvm) {
+  not_needed(files, "*")
 }
 
 # Dependencies for all image targets referenced by paver_targets, i.e., the
@@ -70,11 +83,7 @@ write_file(board_name_file, "${board_name}")
 group("universe_packages") {
   testonly = fuchsia_zbi_testonly
   visibility = [ ":*" ]
-  public_deps = [
-    "//:additional_universe_packages",
-    labels.base_packages,
-    labels.cache_packages,
-  ]
+  public_deps = [ "//:additional_universe_packages" ]
 }
 
 group("packages") {
@@ -88,36 +97,27 @@ group("packages") {
 #####
 # These are lists of the packages in the above groups
 
-template("package_list") {
-  generate_package_metadata(target_name) {
-    testonly = true
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "public_deps",
-                             "visibility",
-                           ])
-
-    data_keys = [ "package_names" ]
-    outputs = [ "$root_out_dir/$target_name" ]
-  }
+package_list_from_assembly("base_packages.list") {
+  testonly = true
+  system_label = labels.images
+  package_set = "base"
+  contents = "name"
+  outputs = [ files.base_package_names ]
 }
 
-package_list("base_packages.list") {
-  visibility = [ ":*" ]
-  deps = [
-    labels.base_packages,
-    labels.meta_packages,
-  ]
+package_list_from_assembly("cache_packages.list") {
+  testonly = true
+  system_label = labels.images
+  package_set = "cache"
+  contents = "name"
+  outputs = [ files.cache_package_names ]
 }
 
-package_list("cache_packages.list") {
+generate_package_metadata("universe_packages.list") {
+  testonly = true
   visibility = [ ":*" ]
-  deps = [ labels.cache_packages ]
-}
-
-package_list("universe_packages.list") {
-  visibility = [ ":*" ]
+  data_keys = [ "package_names" ]
+  outputs = [ files.universe_package_names ]
   deps = [ ":universe_packages" ]
 }
 
@@ -1060,9 +1060,9 @@ generate_epoch("epoch.json") {
 # publish -lp`, a tool for publishing a set of packages from a build produced
 # list of package manifests.
 all_package_manifests_list = root_build_dir + "/all_package_manifests.list"
-generate_package_metadata("all_package_manifests.list") {
+generate_package_metadata("package_manifests_from_metadata.list") {
   testonly = true
-  outputs = [ all_package_manifests_list ]
+  outputs = [ files.manifests_from_metadata ]
   data_keys = [ "package_output_manifests" ]
   rebase = root_build_dir
   deps = [
@@ -1070,6 +1070,41 @@ generate_package_metadata("all_package_manifests.list") {
     labels.images,
     labels.images_prime,
   ]
+}
+
+package_list_from_assembly("base_package_manifests.list") {
+  testonly = true
+  system_label = labels.images
+  package_set = "base"
+  contents = "manifest"
+  outputs = [ files.base_package_manifests ]
+}
+
+package_list_from_assembly("cache_package_manifests.list") {
+  testonly = true
+  system_label = labels.images
+  package_set = "cache"
+  contents = "manifest"
+  outputs = [ files.cache_package_manifests ]
+}
+
+action("all_package_manifests.list") {
+  testonly = true
+  script = "//build/cat.sh"
+  outputs = [ all_package_manifests_list ]
+  deps = [
+    ":base_package_manifests.list",
+    ":cache_package_manifests.list",
+    ":package_manifests_from_metadata.list",
+  ]
+  args = rebase_path(outputs, root_build_dir)
+  sources = []
+  foreach(_dep, deps) {
+    _dep_outputs = []  # tell gn its ok to rewrite each iteration
+    _dep_outputs = get_target_outputs(_dep)
+    args += [ rebase_path(_dep_outputs[0], root_build_dir) ]
+    sources += [ _dep_outputs[0] ]
+  }
 }
 
 component_index_metadata = "$target_out_dir/component_index_metadata"
@@ -1082,7 +1117,11 @@ generate_component_index("component_index_metadata") {
 
   outputs = [ component_index_metadata ]
 
-  deps = [ ":universe_packages" ]
+  deps = [
+    ":universe_packages",
+    labels.base_packages,
+    labels.cache_packages,
+  ]
 
   metadata = {
     # Don't collect all expect_includes() in the universe
