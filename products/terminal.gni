@@ -73,10 +73,7 @@ core_realm_shards += [ "//src/media/codec:codec_factory_shard" ]
 
 # Add cfv2 sl4f to base.
 core_realm_shards += [ "//src/testing/sl4f:sl4f_terminal_core_shard" ]
-legacy_base_package_labels += [
-  "//src/testing/sl4f",
-  "//src/sys/bin/start_sl4f",
-]
+legacy_base_package_labels += [ "//src/sys/bin/start_sl4f" ]
 
 legacy_universe_package_labels += [
   # E2E Product Tests. They don't produce fuchsia packages, but host

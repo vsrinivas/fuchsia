@@ -8,10 +8,12 @@
         {
             name: "sl4f",
             url: "fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cm",
+            environment: "#full-resolver-env",
         },
         {
             name: "data_proxy",
             url: "fuchsia-pkg://fuchsia.com/sl4f#meta/data_proxy.cm",
+            environment: "#full-resolver-env",
         },
     ],
     capabilities: [

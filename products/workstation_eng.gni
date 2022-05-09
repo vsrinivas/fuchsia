@@ -113,10 +113,7 @@ legacy_cache_package_labels += [ "//sdk/bundles:core-tools" ]
 
 # Add cfv2 sl4f to base.
 core_realm_shards += [ "//src/testing/sl4f:sl4f_terminal_core_shard" ]
-legacy_base_package_labels += [
-  "//src/testing/sl4f",
-  "//src/sys/bin/start_sl4f",
-]
+legacy_base_package_labels += [ "//src/sys/bin/start_sl4f" ]
 
 # Enable the live_usb component.
 with_live_usb = true
