@@ -104,6 +104,7 @@ if (target_cpu == "x64") {
       "device/features.rs",
       "device/logd.rs",
       "device/magma.rs",
+      "device/magma_device.rs",
       "device/magma_file.rs",
       "device/mem.rs",
       "device/mod.rs",

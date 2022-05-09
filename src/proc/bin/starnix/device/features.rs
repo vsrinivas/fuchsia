@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use crate::device::{
-    binder::create_binders, logd::create_socket_and_start_server, wayland::serve_wayland,
+    binder::create_binders, logd::create_socket_and_start_server, magma_device::MagmaDev,
+    wayland::serve_wayland,
 };
+use crate::fs::{devtmpfs::dev_tmp_fs, SpecialNode};
 use crate::task::CurrentTask;
 use crate::types::*;
 
@@ -13,6 +15,14 @@ pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) ->
     for entry in entries {
         match entry.as_str() {
             "wayland" => {
+                let kernel = current_task.kernel();
+                let dev = kernel.device_registry.write().register_misc_chrdev(MagmaDev::new())?;
+                dev_tmp_fs(kernel).root().add_node_ops_dev(
+                    b"magma0",
+                    mode!(IFCHR, 0o600),
+                    dev,
+                    SpecialNode,
+                )?;
                 // TODO: The paths for the display and memory allocation file currently hard coded
                 // to wayland-0 and wayland-1. In the future this will need to match the environment
                 // variables set for the component.

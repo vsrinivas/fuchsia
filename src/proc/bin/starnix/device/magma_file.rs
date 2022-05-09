@@ -33,13 +33,6 @@ type BufferMap = HashMap<magma_buffer_t, BufferInfo>;
 
 /// A `ConnectionMap` stores the `BufferMap`s associated with each magma connection.
 type ConnectionMap = HashMap<MagmaConnection, BufferMap>;
-pub struct MagmaNode {}
-impl FsNodeOps for MagmaNode {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        MagmaFile::new()
-    }
-}
-
 pub struct MagmaFile {
     channel: Arc<Mutex<Option<zx::Channel>>>,
 
