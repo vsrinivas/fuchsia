@@ -430,7 +430,7 @@ async fn run() -> Result<()> {
     } else if app.machine.is_some() && !ffx_lib_suite::ffx_plugin_is_machine_supported(&app) {
         Err(anyhow::Error::new(ffx_error!("The machine flag is not supported for this subcommand")))
     } else {
-        ffx_lib_suite::ffx_plugin_impl(injection, app).await
+        ffx_lib_suite::ffx_plugin_impl(&injection, app).await
     };
 
     let command_done = Instant::now();

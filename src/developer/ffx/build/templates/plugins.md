@@ -1,9 +1,9 @@
-pub async fn ffx_plugin_impl<I: ffx_core::Injector>(
+pub async fn ffx_plugin_impl(
 {% if not includes_execution and not includes_subcommands %}
-  _injector: I,
+  _injector: &dyn ffx_core::Injector,
   _cmd: {{suite_args_lib}}::FfxPluginCommand,
 {% else %}
-  injector: I,
+  injector: &dyn ffx_core::Injector,
   cmd: {{suite_args_lib}}::FfxPluginCommand,
 {% endif %}
 ) -> anyhow::Result<()>
