@@ -9,8 +9,8 @@ using zx;
 /// `ZX_RSRC_SYSTEM_DEBUG_BASE`.
 @discoverable
 protocol DebugResource {
-    /// Get a debug resource handle as `debug_resource`.
+    /// Get a debug resource handle.
     Get() -> (resource struct {
-        debug_resource zx.handle:RESOURCE;
+        resource zx.handle:RESOURCE;
     });
 };

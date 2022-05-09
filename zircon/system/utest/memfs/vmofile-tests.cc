@@ -182,7 +182,7 @@ TEST(VmofileTests, test_vmofile_exec) {
   ASSERT_TRUE(result.ok(), "%s", result.FormatDescription().c_str());
   auto& response = result.value();
 
-  ASSERT_OK(read_exec_vmo.replace_as_executable(std::move(response.vmex_resource), &read_exec_vmo));
+  ASSERT_OK(read_exec_vmo.replace_as_executable(std::move(response.resource), &read_exec_vmo));
   ASSERT_OK(vfs->CreateFromVmo(root.get(), "read_exec", read_exec_vmo.get(), 0, 13));
   ASSERT_OK(vfs->ServeDirectory(std::move(root), std::move(directory_endpoints->server)));
 

@@ -8,8 +8,8 @@ using zx;
 /// Protocol for providing the hypervisor resource.
 @discoverable
 protocol HypervisorResource {
-    /// Get the hypervisor resource handle.
+    /// Get a hypervisor resource handle.
     Get() -> (resource struct {
-        hypervisor_resource zx.handle:RESOURCE;
+        resource zx.handle:RESOURCE;
     });
 };

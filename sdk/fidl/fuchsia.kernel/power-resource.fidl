@@ -10,8 +10,8 @@ using zx;
 /// `ZX_RSRC_SYSTEM_POWER_BASE`.
 @discoverable
 protocol PowerResource {
-    /// Get a power resource handle as `power_resource`.
+    /// Get a power resource handle.
     Get() -> (resource struct {
-        power_resource zx.handle:RESOURCE;
+        resource zx.handle:RESOURCE;
     });
 };

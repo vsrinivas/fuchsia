@@ -8,8 +8,8 @@ using zx;
 /// Protocol for providing an IO Port resource with access to all valid ranges.
 @discoverable
 protocol IoportResource {
-    /// Get the IO Port resource handle.
+    /// Get an IO Port resource handle.
     Get() -> (resource struct {
-        ioport_resource zx.handle:RESOURCE;
+        resource zx.handle:RESOURCE;
     });
 };

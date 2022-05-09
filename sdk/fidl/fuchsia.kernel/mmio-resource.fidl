@@ -8,8 +8,8 @@ using zx;
 /// Protocol for providing an MMIO resource with access to all valid ranges.
 @discoverable
 protocol MmioResource {
-    /// Get the MMIO resource handle.
+    /// Get an MMIO resource handle.
     Get() -> (resource struct {
-        mmio_resource zx.handle:RESOURCE;
+        resource zx.handle:RESOURCE;
     });
 };

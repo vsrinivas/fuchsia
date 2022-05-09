@@ -48,7 +48,7 @@ class ExecutableMountTest : public FdioTest {
     auto result = client->Get();
     ZX_ASSERT_MSG(result.ok(), "fuchsia.kernel.VmexResource.Get() failed: %u", result.status());
 
-    set_vmex_resource(std::move(result->vmex_resource));
+    set_vmex_resource(std::move(result->resource));
   }
 };
 

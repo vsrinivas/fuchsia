@@ -10,8 +10,8 @@ using zx;
 /// executable.
 @discoverable
 protocol VmexResource {
-    /// Get a VMEX resource handle as `resource`.
+    /// Get a VMEX resource handle.
     Get() -> (resource struct {
-        vmex_resource zx.handle:RESOURCE;
+        resource zx.handle:RESOURCE;
     });
 };

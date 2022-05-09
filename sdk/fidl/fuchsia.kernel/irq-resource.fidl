@@ -8,8 +8,8 @@ using zx;
 /// Protocol for providing an IRQ resource with access to all valid ranges.
 @discoverable
 protocol IrqResource {
-    /// Get the IRQ resource handle.
+    /// Get an IRQ resource handle.
     Get() -> (resource struct {
-        irq_resource zx.handle:RESOURCE;
+        resource zx.handle:RESOURCE;
     });
 };

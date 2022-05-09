@@ -9,8 +9,8 @@ using zx;
 /// `ZX_RSRC_SYSTEM_INFO_BASE`.
 @discoverable
 protocol InfoResource {
-    /// Get a info resource handle as `info_resource`.
+    /// Get an info resource handle.
     Get() -> (resource struct {
-        info_resource zx.handle:RESOURCE;
+        resource zx.handle:RESOURCE;
     });
 };

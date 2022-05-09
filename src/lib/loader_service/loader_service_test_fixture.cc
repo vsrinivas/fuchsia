@@ -160,7 +160,7 @@ zx::status<zx::unowned_resource> LoaderServiceTest::GetVmexResource() {
     if (!result.ok()) {
       return zx::error(result.status());
     }
-    vmex_resource = std::move(result->vmex_resource);
+    vmex_resource = std::move(result->resource);
   }
   return zx::ok(vmex_resource.borrow());
 }
