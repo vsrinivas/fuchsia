@@ -37,7 +37,6 @@ mod macros;
 
 mod algorithm;
 #[cfg(test)]
-#[cfg(ignore)]
 mod benchmarks;
 pub mod context;
 mod data_structures;

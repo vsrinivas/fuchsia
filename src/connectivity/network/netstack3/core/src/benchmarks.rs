@@ -29,7 +29,7 @@ use packet_formats::{
 use rand_xorshift::XorShiftRng;
 
 use crate::{
-    context::{testutil::DummyInstant, InstantContext, RngContext, TimerContext},
+    context::{testutil::DummyInstant, EventContext, InstantContext, RngContext, TimerContext},
     device::{receive_frame, DeviceId, DeviceLayerEventDispatcher},
     ip::{
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
@@ -52,6 +52,10 @@ use crate::{
 struct BenchmarkEventDispatcher {
     #[cfg(debug_assertions)]
     frames_sent: usize,
+}
+
+#[derive(Default)]
+struct BenchmarkCoreContext {
     rng: FakeCryptoRng<XorShiftRng>,
 }
 
@@ -98,7 +102,11 @@ impl<I: IcmpIpExt, B: BufferMut> BufferIcmpContext<I, B> for BenchmarkEventDispa
     }
 }
 
-impl InstantContext for BenchmarkEventDispatcher {
+impl<T> EventContext<T> for BenchmarkEventDispatcher {
+    fn on_event(&mut self, _event: T) {}
+}
+
+impl InstantContext for BenchmarkCoreContext {
     type Instant = DummyInstant;
 
     fn now(&self) -> DummyInstant {
@@ -106,7 +114,7 @@ impl InstantContext for BenchmarkEventDispatcher {
     }
 }
 
-impl RngContext for BenchmarkEventDispatcher {
+impl RngContext for BenchmarkCoreContext {
     type Rng = FakeCryptoRng<XorShiftRng>;
 
     fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
@@ -118,7 +126,7 @@ impl RngContext for BenchmarkEventDispatcher {
     }
 }
 
-impl TimerContext<TimerId> for BenchmarkEventDispatcher {
+impl TimerContext<TimerId> for BenchmarkCoreContext {
     fn schedule_timer(&mut self, _duration: Duration, _id: TimerId) -> Option<DummyInstant> {
         unimplemented!()
     }
@@ -162,8 +170,11 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     ipv6_config.max_router_solicitations = None;
     state_builder.device_builder().set_default_ipv6_config(ipv6_config);
 
-    let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
-        .build_with::<BenchmarkEventDispatcher>(state_builder, BenchmarkEventDispatcher::default());
+    let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4).build_with(
+        state_builder,
+        BenchmarkEventDispatcher::default(),
+        BenchmarkCoreContext::default(),
+    );
     crate::ip::device::set_routing_enabled::<_, Ipv4>(&mut ctx, DeviceId::new_ethernet(0), true)
         .expect("error setting routing enabled");
 
