@@ -27,6 +27,7 @@ executable("hypervisor_integration_tests") {
     "//third_party/googletest:gtest",
     "//zircon/kernel/phys/lib/page-table",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/page_tables",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",

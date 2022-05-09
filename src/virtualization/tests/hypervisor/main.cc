@@ -113,12 +113,12 @@ void SetupGuest(TestCase* test, const char* start, const char* end) {
   // Set up a simple page table structure for the guest.
   SetUpGuestPageTable(guest_memory);
 
-  // Copy guest code into guest memory at address `kGuestEntryPoint`.
+  // Copy guest code into guest memory at address `GUEST_ENTRY`.
   if (start != nullptr && end != nullptr) {
-    memcpy(guest_memory.data() + kGuestEntryPoint, start, end - start);
+    memcpy(guest_memory.data() + GUEST_ENTRY, start, end - start);
   }
 
-  status = zx::vcpu::create(test->guest, 0, kGuestEntryPoint, &test->vcpu);
+  status = zx::vcpu::create(test->guest, 0, GUEST_ENTRY, &test->vcpu);
   ASSERT_EQ(status, ZX_OK);
 }
 
