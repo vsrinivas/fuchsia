@@ -343,7 +343,6 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//src/graphics/lib/magma/src/magma_util/platform/zircon:sysmem_connection",
     "//src/graphics/tests/goldfish_test:goldfish_test_bin",
     "//src/lib/fidl/llcpp/tests/conformance:*",
-    "//src/lib/fidl/transformer/tests:*",
     "//src/lib/storage/vfs/cpp",
     "//src/media/audio/audio_core:audio_core_lib",
     "//src/media/audio/audio_core:unittest_bin",

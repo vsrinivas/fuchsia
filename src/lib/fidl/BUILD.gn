@@ -12,6 +12,5 @@ group("tests") {
     "dart/gidl:tests",
     "llcpp/tests",
     "rust:tests",
-    "transformer:tests",
   ]
 }

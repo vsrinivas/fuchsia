@@ -29,7 +29,6 @@ import (
 	gidlparser "go.fuchsia.dev/fuchsia/tools/fidl/gidl/parser"
 	gidlreference "go.fuchsia.dev/fuchsia/tools/fidl/gidl/reference"
 	gidlrust "go.fuchsia.dev/fuchsia/tools/fidl/gidl/rust"
-	gidltranformer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/transformer"
 	gidlwalker "go.fuchsia.dev/fuchsia/tools/fidl/gidl/walker"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
@@ -50,7 +49,6 @@ var conformanceGenerators = map[string]Generator{
 	"hlcpp":         gidlhlcpp.GenerateConformanceTests,
 	"dart":          gidldart.GenerateConformanceTests,
 	"rust":          gidlrust.GenerateConformanceTests,
-	"transformer":   gidltranformer.GenerateConformanceTests,
 	"fuzzer_corpus": gidlcorpus.GenerateConformanceTests,
 }
 

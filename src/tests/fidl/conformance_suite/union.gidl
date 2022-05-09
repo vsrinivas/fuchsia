@@ -493,7 +493,7 @@ success("UnionEnvelopeInlining_HandleValue_Inlined") {
 }
 
 success("UnionEnvelopeInlining_UnknownSmallValue_Inlined") {
-    bindings_allowlist = [go, rust, transformer],
+    bindings_allowlist = [go, rust],
     value = EnvelopeInliningTestUnionStruct{
         u: EnvelopeInliningTestUnion{
             10: {
@@ -511,7 +511,7 @@ success("UnionEnvelopeInlining_UnknownSmallValue_Inlined") {
 }
 
 success("UnionEnvelopeInlining_UnknownLargeValue_Outlined") {
-    bindings_allowlist = [go, rust, transformer],
+    bindings_allowlist = [go, rust],
     value = EnvelopeInliningTestUnionStruct{
         u: EnvelopeInliningTestUnion{
             10: {
@@ -532,7 +532,7 @@ success("UnionEnvelopeInlining_UnknownLargeValue_Outlined") {
 }
 
 success("UnionEnvelopeInlining_UnknownHandleValue_Inlined") {
-    bindings_allowlist = [go, rust, transformer],
+    bindings_allowlist = [go, rust],
     handle_defs = {
         #0 = event(),
     },

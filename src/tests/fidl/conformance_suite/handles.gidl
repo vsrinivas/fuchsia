@@ -717,7 +717,7 @@ encode_success("EncodeVectorOfArrayOfEventInStruct") {
 // Vector and arrays can't hold handle type information in some bindings.
 // Test this with tables, which may have different behavior than other types.
 encode_success("EncodeArrayOfVectorOfEventInTable") {
-    bindings_allowlist = [llcpp, hlcpp, cpp, go, rust, dart, transformer],
+    bindings_allowlist = [llcpp, hlcpp, cpp, go, rust, dart],
     handle_defs = {
         #0 = channel(rights: channel_default),
     },
@@ -805,7 +805,7 @@ encode_success("EncodeVectorOfArrayOfEventInTable") {
 // Vector and arrays can't hold handle type information in some bindings.
 // Test this with unions, which may have different behavior than other types.
 encode_success("EncodeArrayOfVectorOfEventInUnion") {
-    bindings_allowlist = [llcpp, hlcpp, cpp, go, rust, dart, transformer],
+    bindings_allowlist = [llcpp, hlcpp, cpp, go, rust, dart],
     handle_defs = {
         #0 = channel(rights: channel_default),
     },
@@ -1045,7 +1045,7 @@ decode_failure("DecodeVectorOfArrayOfEventInStructType") {
 // rights by reducing the rights.
 decode_success("DecodeArrayOfVectorOfEventInTableExtraRights") {
     // Rust does not support GIDL tests involving reducing rights.
-    bindings_allowlist = [llcpp, hlcpp, cpp, go, transformer],
+    bindings_allowlist = [llcpp, hlcpp, cpp, go],
     handle_defs = {
         #0 = event(rights: event_default),
     },

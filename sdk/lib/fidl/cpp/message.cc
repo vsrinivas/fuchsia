@@ -7,7 +7,6 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/trace.h>
-#include <lib/fidl/transformer.h>
 #include <string.h>
 
 #include "zircon/fidl.h"
