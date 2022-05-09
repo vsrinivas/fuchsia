@@ -9,7 +9,10 @@
             path: "/cache",
         },
         {
-            protocol: [ "fuchsia.stash.SecureStore" ],
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.stash.SecureStore",
+            ],
         },
     ],
 }
