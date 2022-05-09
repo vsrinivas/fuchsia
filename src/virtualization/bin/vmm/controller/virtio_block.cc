@@ -58,7 +58,7 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx
                                async_dispatcher_t* dispatcher, size_t component_name_suffix) {
   if (launcher) {
     constexpr auto kCppUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
-    constexpr auto kRustUrl= "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cmx";
+    constexpr auto kRustUrl = "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cmx";
 
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = UseRustDevice(mode_, format_) ? kRustUrl : kCppUrl;
@@ -69,7 +69,7 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx
     const auto kComponentName = fxl::StringPrintf("virtio_block_%zu", component_name_suffix);
     constexpr auto kVirtioBlockCollectionName = "virtio_block_devices";
     constexpr auto kCppUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
-    constexpr auto kRustUrl= "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cm";
+    constexpr auto kRustUrl = "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cm";
     auto component_url = UseRustDevice(mode_, format_) ? kRustUrl : kCppUrl;
 
     zx_status_t status = CreateDynamicComponent(
