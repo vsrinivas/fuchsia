@@ -24,6 +24,8 @@ VADisplay vaGetDisplayMagma(magma_device_t device) { return &global_display_ptr;
 namespace {
 
 constexpr uint32_t kBearVideoWidth = 320u;
+constexpr uint32_t kBearVideoHeight = 192u;
+constexpr uint32_t kBearUncompressedFrameBytes = kBearVideoWidth * kBearVideoHeight * 3 / 2;
 
 class FakeCodecAdapterEvents : public CodecAdapterEvents {
  public:
@@ -49,24 +51,21 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
   void onCoreCodecResetStreamAfterCurrentFrame() override {}
 
   void onCoreCodecMidStreamOutputConstraintsChange(bool output_re_config_required) override {
-    // Test a representative value.
-    auto output_constraints = codec_adapter_->CoreCodecGetBufferCollectionConstraints(
-        CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
-        fuchsia::media::StreamBufferPartialSettings());
-    EXPECT_TRUE(output_constraints.buffer_memory_constraints.cpu_domain_supported);
-    EXPECT_EQ(kBearVideoWidth,
-              output_constraints.image_format_constraints[0].required_min_coded_width);
-
-    std::unique_lock<std::mutex> lock(lock_);
-    // Wait for buffer initialization to complete to ensure all buffers are staged to be loaded.
-    cond_.wait(lock, [&]() { return buffer_initialization_completed_; });
-
-    // Fake out the client setting buffer constraints on sysmem
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    buffer_collection.settings.image_format_constraints =
-        output_constraints.image_format_constraints.at(0);
-    codec_adapter_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
-    codec_adapter_->CoreCodecMidStreamOutputBufferReConfigFinish();
+    {
+      std::lock_guard lock(lock_);
+      // Test a representative value.
+      output_constraints_ = codec_adapter_->CoreCodecGetBufferCollectionConstraints(
+          CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
+          fuchsia::media::StreamBufferPartialSettings());
+      EXPECT_TRUE(output_constraints_.buffer_memory_constraints.cpu_domain_supported);
+      EXPECT_EQ(kBearVideoWidth,
+                output_constraints_.image_format_constraints[0].required_min_coded_width);
+      output_constraints_set_ = true;
+      cond_.notify_all();
+    }
+    if (reconfigure_in_constraints_change_) {
+      ReconfigureBuffers();
+    }
   }
 
   void onCoreCodecOutputFormatChange() override {}
@@ -133,6 +132,29 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
     codec_adapter_->CoreCodecRecycleOutputPacket(packet);
   }
 
+  void ReconfigureBuffers() {
+    std::unique_lock<std::mutex> lock(lock_);
+    EXPECT_TRUE(output_constraints_set_);
+    // Wait for buffer initialization to complete to ensure all buffers are staged to be loaded.
+    cond_.wait(lock, [&]() { return buffer_initialization_completed_; });
+
+    // Fake out the client setting buffer constraints on sysmem
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    buffer_collection.settings.image_format_constraints =
+        output_constraints_.image_format_constraints.at(0);
+    codec_adapter_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
+    codec_adapter_->CoreCodecMidStreamOutputBufferReConfigFinish();
+  }
+
+  void set_reconfigure_in_constraints_change(bool reconfig) {
+    reconfigure_in_constraints_change_ = reconfig;
+  }
+
+  void WaitForOutputConstraintsSet() {
+    std::unique_lock<std::mutex> lock(lock_);
+    cond_.wait(lock, [&]() { return output_constraints_set_; });
+  }
+
  private:
   CodecAdapter *codec_adapter_ = nullptr;
   uint64_t fail_codec_count_{};
@@ -144,6 +166,9 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
   std::vector<CodecPacket *> input_packets_done_;
   std::vector<CodecPacket *> output_packets_done_;
   bool buffer_initialization_completed_ = false;
+  bool reconfigure_in_constraints_change_ = true;
+  fuchsia::sysmem::BufferCollectionConstraints output_constraints_;
+  bool output_constraints_set_ = false;
 };
 
 class H264VaapiTestFixture : public ::testing::Test {
@@ -256,13 +281,46 @@ TEST_F(H264VaapiTestFixture, DecodeBasic) {
 
   // Should be enough to handle a large fraction of bear.h264 output without recycling.
   constexpr uint32_t kOutputPacketCount = 35;
-  // Nothing writes to the output packet so its size doesn't matter.
-  constexpr size_t kOutputPacketSize = 4096;
+  constexpr size_t kOutputPacketSize = kBearUncompressedFrameBytes;
 
   ParseFileIntoInputPackets("/pkg/data/bear.h264");
   ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);
 
   events_.SetBufferInitializationCompleted();
+  events_.WaitForInputPacketsDone();
+  events_.WaitForOutputPacketCount(kExpectedOutputPackets);
+  events_.ReturnLastOutputPacket();
+
+  CodecStreamStop();
+
+  // One packet was returned, so it was already removed from the list.
+  EXPECT_EQ(kExpectedOutputPackets - 1u, events_.output_packet_count());
+
+  EXPECT_EQ(0u, events_.fail_codec_count());
+  EXPECT_EQ(0u, events_.fail_stream_count());
+}
+
+// Check that delaying the output buffer configuration for a while doesn't cause a crash when
+// outputting frames.
+TEST_F(H264VaapiTestFixture, DelayedConfiguration) {
+  constexpr uint32_t kExpectedOutputPackets = 29;
+
+  events_.set_reconfigure_in_constraints_change(false);
+
+  CodecAndStreamInit();
+
+  // Should be enough to handle a large fraction of bear.h264 output without recycling.
+  constexpr uint32_t kOutputPacketCount = 35;
+  constexpr size_t kOutputPacketSize = kBearUncompressedFrameBytes;
+
+  ParseFileIntoInputPackets("/pkg/data/bear.h264");
+
+  sleep(1);
+
+  events_.WaitForOutputConstraintsSet();
+  ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);
+  events_.SetBufferInitializationCompleted();
+  events_.ReconfigureBuffers();
   events_.WaitForInputPacketsDone();
   events_.WaitForOutputPacketCount(kExpectedOutputPackets);
   events_.ReturnLastOutputPacket();

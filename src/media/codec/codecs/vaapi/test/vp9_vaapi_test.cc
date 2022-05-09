@@ -118,6 +118,7 @@ class IvfParser {
 
 constexpr uint32_t kVideoWidth = 320u;
 constexpr uint32_t kVideoHeight = 240u;
+constexpr uint32_t kVideoBytes = kVideoWidth * kVideoHeight * 3 / 2;
 
 class FakeCodecAdapterEvents : public CodecAdapterEvents {
  public:
@@ -426,10 +427,9 @@ TEST_F(Vp9VaapiTestFixture, CreateContextFailure) {
 
   // Since each decoded frame will be its own output packet, create enough so we don't have to
   // recycle them.
-  constexpr uint32_t kOutputPacketCount = 4096u;
+  constexpr uint32_t kOutputPacketCount = 255u;
 
-  // Nothing writes to the output packet so its size doesn't matter.
-  constexpr size_t kOutputPacketSize = 4096u;
+  constexpr size_t kOutputPacketSize = kVideoBytes;
 
   ParseIvfFileIntoPackets(1u);
   ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);
@@ -469,10 +469,9 @@ TEST_F(Vp9VaapiTestFixture, CreateSurfacesFailure) {
 
   // Since each decoded frame will be its own output packet, create enough so we don't have to
   // recycle them.
-  constexpr uint32_t kOutputPacketCount = 4096u;
+  constexpr uint32_t kOutputPacketCount = 255u;
 
-  // Nothing writes to the output packet so its size doesn't matter.
-  constexpr size_t kOutputPacketSize = 4096u;
+  constexpr size_t kOutputPacketSize = kVideoBytes;
 
   ParseIvfFileIntoPackets(1u);
   ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);
@@ -509,10 +508,9 @@ TEST_F(Vp9VaapiTestFixture, DecodeBasic) {
 
   // Since each decoded frame will be its own output packet, create enough so we don't have to
   // recycle them.
-  constexpr uint32_t kOutputPacketCount = 4096u;
+  constexpr uint32_t kOutputPacketCount = 255u;
 
-  // Nothing writes to the output packet so its size doesn't matter.
-  constexpr size_t kOutputPacketSize = 4096u;
+  constexpr size_t kOutputPacketSize = kVideoBytes;
 
   ParseIvfFileIntoPackets();
   ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);

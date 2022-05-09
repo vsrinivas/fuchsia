@@ -346,6 +346,15 @@ void CodecAdapterVaApiDecoder::CleanUpAfterStream() {
 
 bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface,
                                              int bitstream_id) {
+  // We always allocate an entire buffer. Output buffers may not necessarily be
+  // allocated in sysmem until AllocateBuffer returns.
+  const CodecBuffer* buffer = output_buffer_pool_.AllocateBuffer();
+  if (!buffer) {
+    // Wait will succeed unless we're dropping all remaining frames of a stream.
+    return true;
+  }
+  auto release_buffer = fit::defer([&]() { output_buffer_pool_.FreeBuffer(buffer->base()); });
+
   gfx::Size pic_size = va_surface->size();
 
   // NV12 texture
@@ -357,13 +366,7 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
     return false;
   }
   size_t pic_size_bytes = pic_size_checked.ValueOrDie();
-  const CodecBuffer* buffer = output_buffer_pool_.AllocateBuffer(pic_size_bytes);
-  if (!buffer) {
-    // Wait will succeed unless we're dropping all remaining frames of a stream.
-    return true;
-  }
-
-  auto release_buffer = fit::defer([&]() { output_buffer_pool_.FreeBuffer(buffer->base()); });
+  ZX_ASSERT(buffer->size() >= pic_size_bytes);
 
   // For the moment we use DRM_PRIME_2 to represent VMOs.
   // To specify the destination VMO, we need two VASurfaceAttrib, one for the
