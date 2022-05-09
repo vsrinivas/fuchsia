@@ -264,31 +264,6 @@ TEST_F(MmapTest, GetVmoException) {
   test_vnode.reset();
 }
 
-class MampVnodeF2fs : public VnodeF2fs {
- public:
-  zx_status_t LockedReadOnPageFault(void *data, size_t len, size_t off, size_t *out_actual) {
-    fs::SharedLock rlock(mutex_);
-    return ReadOnPageFault(data, len, off, out_actual);
-  }
-};
-
-TEST_F(MmapTest, ReadOnPageFaultException) {
-  fbl::RefPtr<fs::Vnode> test_fs_vnode;
-  std::string file_name("mmap_getvmo_page_fault_exception_test");
-  ASSERT_EQ(root_dir_->Create(file_name, S_IFDIR, &test_fs_vnode), ZX_OK);
-  fbl::RefPtr<MampVnodeF2fs> test_vnode =
-      fbl::RefPtr<MampVnodeF2fs>::Downcast(std::move(test_fs_vnode));
-
-  uint8_t read_buf[PAGE_SIZE];
-  size_t read_size = 0;
-
-  ASSERT_EQ(test_vnode->LockedReadOnPageFault(read_buf, 0, PAGE_SIZE, &read_size),
-            ZX_ERR_NOT_SUPPORTED);
-
-  test_vnode->Close();
-  test_vnode.reset();
-}
-
 TEST_F(MmapTest, VmoRead) {
   srand(testing::UnitTest::GetInstance()->random_seed());
 
@@ -389,6 +364,99 @@ TEST_F(MmapTest, VmoReadSizeException) {
 
   test_vnode->Close();
   test_vnode.reset();
+}
+
+TEST_F(MmapTest, AvoidPagedVmoRaceCondition) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_avoid_paged_vmo_race_condition_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+  File *test_file_ptr = static_cast<File *>(test_vnode.get());
+
+  uint8_t write_buf[PAGE_SIZE];
+  for (uint8_t &character : write_buf) {
+    character = static_cast<uint8_t>(rand());
+  }
+
+  FileTester::AppendToFile(test_file_ptr, write_buf, PAGE_SIZE);
+
+  // Clone a VMO from pager-backed VMO
+  zx::vmo vmo;
+  size_t read_size = 0;
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+
+  // Close the cloned VMO
+  vmo.reset();
+  loop_.RunUntilIdle();
+
+  // Make sure pager-backed VMO is not freed
+  ASSERT_EQ(test_vnode->HasPagedVmo(), true);
+
+  // Request a page fault assuming a race condition
+  test_vnode->VmoRead(0, PAGE_SIZE);
+
+  // Make sure pager-backed VMO is not freed
+  ASSERT_EQ(test_vnode->HasPagedVmo(), true);
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+TEST_F(MmapTest, ReleasePagedVmoInVnodeRecycle) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_release_paged_vmo_in_vnode_recycle_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+  File *test_file_ptr = static_cast<File *>(test_vnode.get());
+
+  uint8_t write_buf[PAGE_SIZE];
+  for (uint8_t &character : write_buf) {
+    character = static_cast<uint8_t>(rand());
+  }
+
+  FileTester::AppendToFile(test_file_ptr, write_buf, PAGE_SIZE);
+
+  // Sync to remove vnode from dirty list.
+  WritebackOperation op;
+  test_file_ptr->Writeback(op);
+  fs_->SyncFs();
+
+  zx::vmo vmo;
+  size_t read_size = 0;
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+
+  // Pager-backed VMO is not freed becasue vnode is in vnode cache
+  vmo.reset();
+  loop_.RunUntilIdle();
+
+  // Make sure pager-backed VMO is not freed
+  ASSERT_EQ(test_vnode->HasPagedVmo(), true);
+
+  // Release pager-backed VMO directly
+  test_vnode->ReleasePagedVmo();
+
+  // Make sure pager-backed VMO is freed
+  ASSERT_EQ(test_vnode->HasPagedVmo(), false);
+
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+
+  // Pager-backed VMO has been reallocated
+  ASSERT_EQ(test_vnode->HasPagedVmo(), true);
+
+  vmo.reset();
+  loop_.RunUntilIdle();
+
+  // Pager-backed VMO is released in vnode recycle
+  VnodeF2fs *vnode_ptr = test_vnode.get();
+  test_vnode->Close();
+  test_vnode.reset();
+
+  // Make sure pager-backed VMO is freed
+  ASSERT_EQ(vnode_ptr->HasPagedVmo(), false);
 }
 
 }  // namespace

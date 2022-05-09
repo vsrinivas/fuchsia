@@ -107,15 +107,14 @@ class VnodeF2fs : public fs::Vnode,
 
   zx_status_t SetMmamppedPages(size_t offset, size_t length) __TA_REQUIRES_SHARED(mutex_);
 
-  virtual zx_status_t ReadOnPageFault(void *data, size_t len, size_t off, size_t *out_actual)
-      __TA_REQUIRES_SHARED(mutex_) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  void OnNoPagedVmoClones() final __TA_REQUIRES(mutex_);
 #endif  // __Fuchsia__
 
   zx_status_t InvalidatePagedVmo(uint64_t offset, size_t len) __TA_EXCLUDES(mutex_);
   zx_status_t WritePagedVmo(const void *buffer_address, uint64_t offset, size_t len)
       __TA_EXCLUDES(mutex_);
+  void ReleasePagedVmo() __TA_EXCLUDES(mutex_);
+  void ReleasePagedVmoUnsafe() __TA_REQUIRES(mutex_);
 
 #if 0  // porting needed
   // void F2fsSetInodeFlags();
@@ -401,6 +400,14 @@ class VnodeF2fs : public fs::Vnode,
       return PageType::kData;
     }
   }
+
+#ifdef __Fuchsia__
+  // For testing
+  bool HasPagedVmo() {
+    fs::SharedLock rlock(mutex_);
+    return paged_vmo() ? true : false;
+  }
+#endif
 
  protected:
   void RecycleNode() override;

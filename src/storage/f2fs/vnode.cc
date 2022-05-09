@@ -175,6 +175,7 @@ void VnodeF2fs::VmoRead(uint64_t offset, uint64_t length) {
   if (!paged_vmo()) {
     // Races with calling FreePagedVmo() on another thread can result in stale read requests. Ignore
     // them if the VMO is gone.
+    FX_LOGS(WARNING) << "Pager-backed VMO is already freed: " << ZX_ERR_NOT_FOUND;
     return;
   }
 
@@ -232,6 +233,20 @@ zx_status_t VnodeF2fs::SetMmamppedPages(size_t offset, size_t length) {
   return ZX_OK;
 }
 
+void VnodeF2fs::OnNoPagedVmoClones() {
+  // Override PagedVnode::OnNoPagedVmoClones().
+  // We intend to keep PagedVnode::paged_vmo alive while this vnode has any reference. Here, we just
+  // set a ZX_VMO_OP_DONT_NEED hint to allow mm to reclaim the committed pages when there is no
+  // clone. This way can avoid a race condition between page fault and paged_vmo release.
+  ZX_DEBUG_ASSERT(!has_clones());
+  size_t vmo_size;
+  paged_vmo().get_size(&vmo_size);
+  zx_status_t status = paged_vmo().op_range(ZX_VMO_OP_DONT_NEED, 0, vmo_size, nullptr, 0);
+  if (status != ZX_OK) {
+    FX_LOGS(WARNING) << "Hinting DONT_NEED on f2fs failed: " << zx_status_get_string(status);
+  }
+}
+
 void VnodeF2fs::ReportPagerError(uint64_t offset, uint64_t length, zx_status_t err) {
   if (auto result = paged_vfs()->ReportPagerError(paged_vmo(), offset, length, err);
       result.is_error()) {
@@ -244,7 +259,6 @@ zx_status_t VnodeF2fs::InvalidatePagedVmo(uint64_t offset, size_t len) {
   zx_status_t ret = ZX_OK;
 #ifdef __Fuchsia__
   fs::SharedLock rlock(mutex_);
-  // paged_vmo may have been removed by OnNoPagedVmoClones.
   if (paged_vmo()) {
     ret = paged_vmo().op_range(ZX_VMO_OP_ZERO, offset, len, nullptr, 0);
   }
@@ -256,7 +270,6 @@ zx_status_t VnodeF2fs::WritePagedVmo(const void *buffer_address, uint64_t offset
   zx_status_t ret = ZX_OK;
 #ifdef __Fuchsia__
   fs::SharedLock rlock(mutex_);
-  // paged_vmo may have been removed by OnNoPagedVmoClones.
   if (paged_vmo()) {
     ret = paged_vmo().write(buffer_address, offset, len);
   }
@@ -362,6 +375,7 @@ void VnodeF2fs::RecycleNode() {
     std::lock_guard lock(mutex_);
     ZX_ASSERT_MSG(open_count() == 0, "RecycleNode[%s:%u]: open_count must be zero (%lu)",
                   GetNameView().data(), GetKey(), open_count());
+    ReleasePagedVmoUnsafe();
   }
   if (GetNlink()) {
     // f2fs removes the last reference to a dirty vnode from the dirty vnode list
@@ -753,6 +767,20 @@ void VnodeF2fs::TruncateToSize() {
     SetMTime(cur_time);
     SetCTime(cur_time);
   }
+}
+
+void VnodeF2fs::ReleasePagedVmo() {
+  std::lock_guard lock(mutex_);
+  ReleasePagedVmoUnsafe();
+}
+
+void VnodeF2fs::ReleasePagedVmoUnsafe() {
+#ifdef __Fuchsia__
+  if (paged_vmo()) {
+    fbl::RefPtr<fs::Vnode> pager_reference = FreePagedVmo();
+    ZX_DEBUG_ASSERT(!pager_reference);
+  }
+#endif
 }
 
 // Called at Recycle if nlink_ is zero
