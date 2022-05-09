@@ -12,6 +12,10 @@ familiarized with general software testing concepts.
 Fuchsia platform testing should serve the goals of the project and align with
 [Fuchsia's architectural principles][principles]:
 
+- **[Simple][principles-simple]**: Simple tests are better than complex tests.
+  Unit tests are preferred over integration, system, or manual tests. Testing
+  solutions on Fuchsia should exercise the same mechanisms that exist in
+  production.
 - **[Secure][principles-secure]**: Tests are subject to the same security,
   isolation, and hermeticity mechanisms that apply to production software. Tests
   leverage those same mechanisms for their benefit. The security properties of
@@ -23,18 +27,10 @@ Fuchsia platform testing should serve the goals of the project and align with
   interfaces between components should continue to work. Tests that are outside
   of Fuchsia tree should not assume implementation details of platform
   components.
-- **Inclusive**: Testing frameworks and testing guides
-  should either not assume that the developer is using a particular runtime,
-  programming language, or hardware, or alternatively demonstrate that
-  developers can make their own choices, such as by providing support in
-  multiple distinct languages and making it easy to bring up new language
-  support. Tests for public and open source Fuchsia code should themselves be
-  public and open source.
-- **Pragmatic**: When the principles presented above are
-  in conflict with each other or with important near-term goals, it’s ok to make
-  pragmatic choices. It is usually not important to meet an arbitrary bar, for
-  instance a fixed percentage of test coverage, or a particular mix of
-  unit, integration, and system tests.
+- **[Performant][principles-performant]**: Tests on Fuchsia should be fast,
+  reliable, and flexible. When tests run quickly, it is easier to iterate and
+  expend fewer resources. Tests should not be flaky, or picky about how they run
+  on Fuchsia. It’s easier to run tests on an emulator than on real hardware.
 
 ## How is testing different on Fuchsia?
 
@@ -83,8 +79,10 @@ the problems and solutions that are also encountered when developing Fuchsia.
 [best-practices]: /docs/contribute/testing/best-practices.md
 [continuous-integration]: https://martinfowler.com/articles/continuousIntegration.html
 [principles]: /docs/concepts/index.md
+[principles-simple]: /docs/concepts/principles/simple.md
 [principles-secure]: /docs/concepts/principles/secure.md
 [principles-updatable]: /docs/concepts/principles/updatable.md
+[principles-performant]: /docs/concepts/principles/performant.md
 [glossary.component]: /docs/glossary/README.md#component
 [glossary.zircon]: /docs/glossary/README.md#zircon
 [cf]: /docs/concepts/components/v2/README.md
