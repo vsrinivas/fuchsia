@@ -4142,7 +4142,7 @@ mod tests {
     fn test_host_generate_temporary_slaac_address(
         valid_lifetime_in_ra: u32,
         preferred_lifetime_in_ra: u32,
-    ) {
+    ) -> (crate::testutil::DummyCtx, DeviceId, UnicastAddr<Ipv6Addr>) {
         set_logger_for_test();
         let (mut ctx, device, slaac_config) = initialize_with_temporary_addresses_enabled();
 
@@ -4201,16 +4201,28 @@ mod tests {
         assert_eq!(addr_sub.subnet(), subnet);
         assert_eq!(state, AddressState::Assigned);
         assert!(valid_until <= ctx.now().checked_add(max_valid_lifetime).unwrap());
+
+        (ctx, device, expected_addr)
     }
+
+    const INFINITE_LIFETIME: u32 = u32::MAX;
 
     #[test]
     fn test_host_generate_temporary_slaac_address_finite_lifetime_in_ra() {
-        test_host_generate_temporary_slaac_address(10000, 9000)
+        let (_ctx, _device, _expected_addr): (
+            crate::testutil::DummyCtx,
+            DeviceId,
+            UnicastAddr<Ipv6Addr>,
+        ) = test_host_generate_temporary_slaac_address(10000, 9000);
     }
 
     #[test]
     fn test_host_generate_temporary_slaac_address_infinite_lifetime_in_ra() {
-        test_host_generate_temporary_slaac_address(u32::MAX, u32::MAX)
+        let (_ctx, _device, _expected_addr): (
+            crate::testutil::DummyCtx,
+            DeviceId,
+            UnicastAddr<Ipv6Addr>,
+        ) = test_host_generate_temporary_slaac_address(INFINITE_LIFETIME, INFINITE_LIFETIME);
     }
 
     #[test]
@@ -5635,5 +5647,97 @@ mod tests {
             max_valid_until,
             max_preferred_until - desync_factor,
         );
+    }
+
+    #[test]
+    fn test_remove_stable_slaac_address() {
+        let config = Ipv6::DUMMY_CONFIG;
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        crate::device::testutil::enable_device(&mut ctx, device);
+
+        let src_mac = config.remote_mac;
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
+        let prefix = Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix_length = 64;
+        let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
+        expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
+        let expected_addr = UnicastAddr::new(Ipv6Addr::from(expected_addr)).unwrap();
+
+        // Receive a new RA with new prefix (autonomous).
+        //
+        // Should get a new IP.
+
+        const VALID_LIFETIME_SECS: u32 = 10000;
+        const PREFERRED_LIFETIME_SECS: u32 = 9000;
+
+        let icmpv6_packet_buf = slaac_packet_buf(
+            src_ip,
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            prefix,
+            prefix_length,
+            false,
+            true,
+            VALID_LIFETIME_SECS,
+            PREFERRED_LIFETIME_SECS,
+        );
+        receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
+
+        // Should have gotten a new IP.
+        let now = ctx.now();
+        let valid_until = now + Duration::from_secs(VALID_LIFETIME_SECS.into());
+        let expected_address_entry = Ipv6AddressEntry {
+            addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
+            state: AddressState::Assigned,
+            config: AddrConfig::Slaac(SlaacConfig::Static {
+                valid_until: Lifetime::Finite(DummyInstant::from(valid_until)),
+            }),
+            deprecated: false,
+        };
+        let device_id = device.try_into().unwrap();
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
+        );
+        // Make sure deprecate and invalidation timers are set.
+        ctx.ctx.timer_ctx().assert_some_timers_installed([
+            (
+                SlaacTimerId::new_deprecate_slaac_address(device, expected_addr).into(),
+                now + Duration::from_secs(PREFERRED_LIFETIME_SECS.into()),
+            ),
+            (SlaacTimerId::new_invalidate_slaac_address(device, expected_addr).into(), valid_until),
+        ]);
+
+        // Deleting the address should cancel its SLAAC timers.
+        del_ip_addr(&mut ctx, device, &expected_addr.into_specified()).unwrap();
+        assert_empty(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs(),
+        );
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
+    }
+
+    #[test]
+    fn test_remove_temporary_slaac_address() {
+        // We use the infinite lifetime so that the stable address does not have
+        // any timers as it is valid and preferred forever. As a result, we will
+        // only observe timers for temporary addresses.
+        let (mut ctx, device, expected_addr) =
+            test_host_generate_temporary_slaac_address(INFINITE_LIFETIME, INFINITE_LIFETIME);
+
+        // Deleting the address should cancel its SLAAC timers.
+        del_ip_addr(&mut ctx, device, &expected_addr.into_specified()).unwrap();
+        assert_empty(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.try_into().unwrap())
+                .iter_global_ipv6_addrs()
+                .filter(|e| match e.config {
+                    AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
+                    AddrConfig::Slaac(SlaacConfig::Static { valid_until: _ }) => false,
+                    AddrConfig::Manual => false,
+                }),
+        );
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
     }
 }

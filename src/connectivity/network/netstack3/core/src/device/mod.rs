@@ -764,7 +764,7 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext, A: IpAddres
             ctx,
             device,
             &addr,
-            crate::ip::device::DelIpv6AddrReason::ManualAction,
+            crate::ip::device::state::DelIpv6AddrReason::ManualAction,
         )
         .map(|()| crate::ip::on_routing_state_updated::<Ipv6, _>(ctx)),
     }

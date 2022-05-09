@@ -32,7 +32,8 @@ use crate::{
     error::ExistsError,
     ip::{
         device::state::{
-            AddrConfig, AddrConfigType, IpDeviceState, Lifetime, SlaacConfig, TemporarySlaacConfig,
+            AddrConfig, AddrConfigType, DelIpv6AddrReason, IpDeviceState, Lifetime, SlaacConfig,
+            TemporarySlaacConfig,
         },
         IpDeviceIdContext,
     },
@@ -225,11 +226,15 @@ pub(crate) trait SlaacHandler: IpDeviceIdContext<Ipv6> + InstantContext {
         valid_lifetime: Option<NonZeroNdpLifetime>,
     );
 
-    fn on_dad_failed(
+    /// Handles SLAAC specific aspects of address removal.
+    ///
+    /// Must only be called after the address is removed from the interface.
+    fn on_address_removed(
         &mut self,
         device_id: Self::DeviceId,
         addr: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
         state: SlaacConfig<Self::Instant>,
+        reason: DelIpv6AddrReason,
     );
 }
 
@@ -642,17 +647,35 @@ impl<C: SlaacContext> SlaacHandler for C {
         }
     }
 
-    fn on_dad_failed(
+    fn on_address_removed(
         &mut self,
         device_id: Self::DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
         state: SlaacConfig<C::Instant>,
+        reason: DelIpv6AddrReason,
     ) {
+        let preferred_until = self
+            .cancel_timer(SlaacTimerId::new_deprecate_slaac_address(device_id, addr_sub.addr()));
+        let _valid_until: Option<C::Instant> = self
+            .cancel_timer(SlaacTimerId::new_invalidate_slaac_address(device_id, addr_sub.addr()));
+
         let TemporarySlaacConfig { valid_until, creation_time, desync_factor, dad_counter } =
             match state {
-                SlaacConfig::Temporary(temporary_config) => temporary_config,
+                SlaacConfig::Temporary(temporary_config) => {
+                    let _regen_at: Option<C::Instant> = self.cancel_timer(
+                        SlaacTimerId::new_regenerate_temporary_slaac_address(device_id, addr_sub),
+                    );
+                    temporary_config
+                }
                 SlaacConfig::Static { .. } => return,
             };
+
+        match reason {
+            DelIpv6AddrReason::ManualAction => return,
+            DelIpv6AddrReason::DadFailed => {
+                // Attempt to regenerate the address.
+            }
+        }
 
         let config = self.get_config(device_id);
         let temporary_address_configuration = match &config.temporary_address_configuration {
@@ -665,8 +688,6 @@ impl<C: SlaacContext> SlaacHandler for C {
         }
 
         let temp_valid_lifetime = temporary_address_configuration.temp_valid_lifetime;
-        let deprecate_timer_id =
-            SlaacTimerId::new_deprecate_slaac_address(device_id, addr_sub.addr()).into();
         // Compute the original preferred lifetime for the removed address so that
         // it can be used for the new address being generated. If, when the address
         // was created, the prefix's preferred lifetime was less than
@@ -674,8 +695,7 @@ impl<C: SlaacContext> SlaacHandler for C {
         // what will be calculated here. That's fine because it's a lower bound on
         // the prefix's value, which means the prefix's value is still being
         // respected.
-        let preferred_for = match self
-            .cancel_timer(deprecate_timer_id)
+        let preferred_for = match preferred_until
             .map(|preferred_until| preferred_until.duration_since(creation_time) + desync_factor)
         {
             Some(preferred_for) => preferred_for,

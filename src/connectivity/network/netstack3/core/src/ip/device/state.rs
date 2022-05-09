@@ -24,6 +24,11 @@ use crate::{
     Instant,
 };
 
+pub(crate) enum DelIpv6AddrReason {
+    ManualAction,
+    DadFailed,
+}
+
 /// An `Ip` extension trait adding IP device state properties.
 pub(crate) trait IpDeviceStateIpExt<Instant>: Ip {
     /// The information stored about an IP address assigned to an interface.

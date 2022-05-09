@@ -32,8 +32,8 @@ use crate::{
             router_solicitation::{RsHandler, RsTimerId},
             slaac::{SlaacHandler, SlaacTimerId},
             state::{
-                AddrConfig, AddressState, IpDeviceConfiguration, IpDeviceState, IpDeviceStateIpExt,
-                Ipv4DeviceConfiguration, Ipv4DeviceState, Ipv6AddressEntry,
+                AddrConfig, AddressState, DelIpv6AddrReason, IpDeviceConfiguration, IpDeviceState,
+                IpDeviceStateIpExt, Ipv4DeviceConfiguration, Ipv4DeviceState, Ipv6AddressEntry,
                 Ipv6DeviceConfiguration, Ipv6DeviceState,
             },
         },
@@ -774,11 +774,6 @@ fn del_ipv6_addr_core<C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler>(
     Ok(entry)
 }
 
-pub(crate) enum DelIpv6AddrReason {
-    ManualAction,
-    DadFailed,
-}
-
 /// Removes an IPv6 address and associated subnet from this device.
 pub(crate) fn del_ipv6_addr_with_reason<
     C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler + SlaacHandler,
@@ -792,14 +787,7 @@ pub(crate) fn del_ipv6_addr_with_reason<
 
     match entry.config {
         AddrConfig::Slaac(s) => {
-            match reason {
-                DelIpv6AddrReason::ManualAction => {
-                    // TODO(https://fxbug.dev/99667): Handle this case.
-                }
-                DelIpv6AddrReason::DadFailed => {
-                    SlaacHandler::on_dad_failed(sync_ctx, device_id, *entry.addr_sub(), s)
-                }
-            }
+            SlaacHandler::on_address_removed(sync_ctx, device_id, *entry.addr_sub(), s, reason)
         }
         AddrConfig::Manual => {}
     }

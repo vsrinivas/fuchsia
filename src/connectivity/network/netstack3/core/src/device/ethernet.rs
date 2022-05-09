@@ -120,7 +120,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext for 
             self,
             device_id.into(),
             addr,
-            crate::ip::device::DelIpv6AddrReason::DadFailed,
+            crate::ip::device::state::DelIpv6AddrReason::DadFailed,
         )
     }
 

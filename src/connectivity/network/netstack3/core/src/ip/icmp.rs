@@ -2603,7 +2603,7 @@ mod tests {
             device::{
                 route_discovery::Ipv6DiscoveredRoute,
                 set_routing_enabled,
-                state::{IpDeviceStateIpExt, SlaacConfig},
+                state::{DelIpv6AddrReason, IpDeviceStateIpExt, SlaacConfig},
             },
             gmp::mld::MldPacketHandler,
             path_mtu::testutil::DummyPmtuState,
@@ -3695,11 +3695,12 @@ mod tests {
             unimplemented!()
         }
 
-        fn on_dad_failed(
+        fn on_address_removed(
             &mut self,
             _device_id: Self::DeviceId,
             _addr: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
             _state: SlaacConfig<Self::Instant>,
+            _reason: DelIpv6AddrReason,
         ) {
             unimplemented!()
         }
