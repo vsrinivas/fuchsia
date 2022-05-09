@@ -20,14 +20,14 @@ executable("hypervisor_integration_tests") {
     "arch/${target_cpu}/guest_code.S",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.sysinfo",
-    "//sdk/lib/fdio",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//src/lib/fxl/test:test_settings",
     "//src/virtualization/bin/vmm:bits",
     "//third_party/googletest:gtest",
     "//zircon/kernel/phys/lib/page-table",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]

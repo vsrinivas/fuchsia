@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/kernel/cpp/fidl.h>
-#include <fuchsia/sysinfo/cpp/fidl.h>
+#include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/guest.h>
@@ -39,40 +39,29 @@
 
 namespace {
 
-zx_status_t GetVmexResource(zx::resource* resource) {
-  fuchsia::kernel::VmexResourceSyncPtr vmex_resource;
-  auto path = std::string("/svc/") + fuchsia::kernel::VmexResource::Name_;
-  zx_status_t status =
-      fdio_service_connect(path.data(), vmex_resource.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    return status;
+template <typename T>
+zx::status<zx::resource> GetResource() {
+  auto client_end = service::Connect<T>();
+  if (client_end.is_error()) {
+    return client_end.take_error();
   }
-  return vmex_resource->Get(resource);
-}
-
-zx_status_t GetHypervisorResource(zx::resource* resource) {
-  fuchsia::kernel::HypervisorResourceSyncPtr hypervisor_rsrc;
-  auto path = std::string("/svc/") + fuchsia::kernel::HypervisorResource::Name_;
-  zx_status_t status =
-      fdio_service_connect(path.data(), hypervisor_rsrc.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    return status;
+  auto result = fidl::WireCall(*client_end)->Get();
+  if (!result.ok()) {
+    return zx::error(result.status());
   }
-
-  return hypervisor_rsrc->Get(resource);
+  return zx::ok(std::move(result->resource));
 }
 
 // Return true if the platform we are running on supports running guests.
 bool PlatformSupportsGuests() {
   // Get hypervisor permissions.
-  zx::resource hypervisor_resource;
-  zx_status_t status = GetHypervisorResource(&hypervisor_resource);
-  FX_CHECK(status == ZX_OK) << "Could not get hypervisor resource.";
+  auto hypervisor = GetResource<fuchsia_kernel::HypervisorResource>();
+  FX_CHECK(hypervisor.is_ok()) << "Could not get hypervisor resource.";
 
   // Try create a guest.
   zx::guest guest;
   zx::vmar vmar;
-  status = zx::guest::create(hypervisor_resource, 0, &guest, &vmar);
+  zx_status_t status = zx::guest::create(*hypervisor, 0, &guest, &vmar);
   if (status != ZX_OK) {
     FX_CHECK(status == ZX_ERR_NOT_SUPPORTED)
         << "Unexpected error attempting to create Zircon guest object: "
@@ -107,13 +96,13 @@ void SetupGuest(TestCase* test, const char* start, const char* end) {
   cpp20::span<uint8_t> guest_memory(reinterpret_cast<uint8_t*>(test->host_addr), VMO_SIZE);
 
   // Add ZX_RIGHT_EXECUTABLE so we can map into guest address space.
-  zx::resource vmex_resource;
-  ASSERT_EQ(GetVmexResource(&vmex_resource), ZX_OK);
-  ASSERT_EQ(test->vmo.replace_as_executable(vmex_resource, &test->vmo), ZX_OK);
+  auto vmex = GetResource<fuchsia_kernel::VmexResource>();
+  ASSERT_EQ(vmex.status_value(), ZX_OK);
+  ASSERT_EQ(test->vmo.replace_as_executable(*vmex, &test->vmo), ZX_OK);
 
-  zx::resource hypervisor_resource;
-  ASSERT_EQ(GetHypervisorResource(&hypervisor_resource), ZX_OK);
-  zx_status_t status = zx::guest::create(hypervisor_resource, 0, &test->guest, &test->vmar);
+  auto hypervisor = GetResource<fuchsia_kernel::HypervisorResource>();
+  ASSERT_EQ(hypervisor.status_value(), ZX_OK);
+  zx_status_t status = zx::guest::create(*hypervisor, 0, &test->guest, &test->vmar);
   ASSERT_EQ(status, ZX_OK);
 
   zx_gpaddr_t guest_addr;

@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/sysinfo/cpp/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/vcpu.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
@@ -31,21 +29,19 @@ DECLARE_TEST_FUNCTION(vcpu_enable_disable_mmu)
 
 namespace {
 
-zx_status_t GetSysinfo(fuchsia::sysinfo::SysInfoSyncPtr* sysinfo) {
-  auto path = std::string("/svc/") + fuchsia::sysinfo::SysInfo::Name_;
-  return fdio_service_connect(path.data(), sysinfo->NewRequest().TakeChannel().release());
-}
-
-zx_status_t GetInterruptControllerInfo(fuchsia::sysinfo::InterruptControllerInfoPtr* info) {
-  fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
-  zx_status_t status = GetSysinfo(&sysinfo);
-  if (status != ZX_OK) {
-    return status;
+zx::status<fuchsia_sysinfo::InterruptControllerType> GetInterruptControllerType() {
+  auto client_end = service::Connect<fuchsia_sysinfo::SysInfo>();
+  if (client_end.is_error()) {
+    return client_end.take_error();
   }
-
-  zx_status_t fidl_status;
-  status = sysinfo->GetInterruptControllerInfo(&fidl_status, info);
-  return status != ZX_OK ? status : fidl_status;
+  auto result = fidl::WireCall(*client_end)->GetInterruptControllerInfo();
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  if (result->status != ZX_OK) {
+    return zx::error(result->status);
+  }
+  return zx::ok(result->info->type);
 }
 
 TEST(Guest, VcpuReadWriteState) {
@@ -125,16 +121,16 @@ TEST(Guest, VcpuWfi) {
 }
 
 TEST(Guest, VcpuWfiPendingInterrupt) {
-  fuchsia::sysinfo::InterruptControllerInfoPtr info;
-  ASSERT_EQ(ZX_OK, GetInterruptControllerInfo(&info));
+  auto type = GetInterruptControllerType();
+  ASSERT_EQ(ZX_OK, type.status_value());
 
   TestCase test;
-  switch (info->type) {
-    case fuchsia::sysinfo::InterruptControllerType::GIC_V2:
+  switch (*type) {
+    case fuchsia_sysinfo::InterruptControllerType::kGicV2:
       ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_wfi_pending_interrupt_gicv2_start,
                                          vcpu_wfi_pending_interrupt_gicv2_end));
       break;
-    case fuchsia::sysinfo::InterruptControllerType::GIC_V3:
+    case fuchsia_sysinfo::InterruptControllerType::kGicV3:
       ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_wfi_pending_interrupt_gicv3_start,
                                          vcpu_wfi_pending_interrupt_gicv3_end));
       break;
