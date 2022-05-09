@@ -4,7 +4,7 @@
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
-TODO(fxbug.dev/32938)
+This function is obsolete and should not be used.
 
 ## SYNOPSIS
 
@@ -21,7 +21,8 @@ zx_status_t zx_pci_config_read(zx_handle_t handle,
 
 ## DESCRIPTION
 
-TODO(fxbug.dev/32938)
+This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
 
 ## RIGHTS
 

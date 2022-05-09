@@ -16088,6 +16088,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
@@ -16130,6 +16131,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_WRITE", "."
@@ -16158,6 +16160,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_WRITE", "."
@@ -16179,6 +16182,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", "."
@@ -16221,6 +16225,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", "."
@@ -16263,6 +16268,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
@@ -16333,6 +16339,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", "."
@@ -16375,6 +16382,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_READ", "."
@@ -16410,6 +16418,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_READ", "."
@@ -16445,6 +16454,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_WRITE", "."
@@ -16480,6 +16490,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
@@ -16516,6 +16527,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
       ],
       "requirements": [
         "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
