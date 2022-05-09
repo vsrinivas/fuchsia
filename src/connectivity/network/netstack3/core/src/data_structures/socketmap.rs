@@ -88,10 +88,20 @@ struct DescendantCounts<T, const INLINE_SIZE: usize = 1> {
 }
 
 /// An entry for a key in a map that has a value.
+///
+/// This type maintains the invariant that, if an `OccupiedEntry(map, a)`
+/// exists, `SocketMap::get(map, a)` is `Some(v)`, i.e. the `HashMap` that
+/// [`SocketMap`] wraps contains a [`MapValue`] whose `value` field is
+/// `Some(v)`.
 #[cfg_attr(test, derive(Debug))]
 pub(crate) struct OccupiedEntry<'a, A: Hash + Eq, V: Tagged>(&'a mut SocketMap<A, V>, A);
 
 /// An entry for a key in a map that does not have a value.
+///
+/// This type maintains the invariant that, if a `VacantEntry(map, a)` exists,
+/// `SocketMap::get(map, a)` is `None`. This means that in the `HashMap` that
+/// `SocketMap` wraps, either there is no value for key `a` or there is a
+/// `MapValue` whose `value` field is `None`.
 #[cfg_attr(test, derive(Debug))]
 pub(crate) struct VacantEntry<'a, A: Hash + Eq, V: Tagged>(&'a mut SocketMap<A, V>, A);
 
