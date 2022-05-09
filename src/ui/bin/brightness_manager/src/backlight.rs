@@ -98,6 +98,7 @@ impl Backlight {
 
     /// Creates a `Backlight` control that manages both the backlight brightness/power and the power
     /// state of the DDIC.
+    #[allow(unused)]
     pub async fn with_display_power(
         power_off_delay_millis: u16,
         power_on_delay_millis: u16,

@@ -11,7 +11,6 @@ use futures::prelude::*;
 use std::pin::Pin;
 use std::sync::Arc;
 // Include Brightness Control FIDL bindings
-use backlight::Backlight;
 use control::{
     Control, ControlTrait, WatcherAdjustmentResponder, WatcherAutoResponder,
     WatcherCurrentResponder,
@@ -22,14 +21,13 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{self, fx_log_info, fx_log_warn};
 use futures::channel::mpsc::UnboundedReceiver;
 use futures::future::{AbortHandle, Abortable};
+use lib::backlight::Backlight;
+use lib::sensor::Sensor;
 use sender_channel::SenderChannel;
-use sensor::Sensor;
 use watch_handler::WatchHandler;
 
-mod backlight;
 mod control;
 mod sender_channel;
-mod sensor;
 
 const ADJUSTMENT_DELTA: f32 = 0.1;
 

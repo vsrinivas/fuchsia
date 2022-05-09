@@ -1,0 +1,26 @@
+{
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/brightness_manager_tests#meta/brightness_manager_test_driver.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#test_driver" ],
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#test_driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}

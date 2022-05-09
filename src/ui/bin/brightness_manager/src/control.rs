@@ -25,9 +25,9 @@ use serde_json;
 use splines::{Interpolation, Key, Spline};
 use watch_handler::{Sender, WatchHandler};
 
-use crate::backlight::BacklightControl;
 use crate::sender_channel::SenderChannel;
-use crate::sensor::SensorControl;
+use lib::backlight::BacklightControl;
+use lib::sensor::SensorControl;
 
 // Delay between sensor reads
 const SLOW_SCAN_TIMEOUT_MS: i64 = 2000;
@@ -732,7 +732,7 @@ mod tests {
     use futures::pin_mut;
 
     use crate::sender_channel::SenderChannel;
-    use crate::sensor::AmbientLightInputRpt;
+    use lib::sensor::AmbientLightInputRpt;
 
     use super::*;
 

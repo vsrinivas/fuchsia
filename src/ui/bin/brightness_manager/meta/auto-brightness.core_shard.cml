@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "auto-brightness",
+            url: "fuchsia-pkg://fuchsia.com/auto-brightness#meta/auto-brightness.cm",
+            startup: "eager",
+            environment: "#full-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#auto-brightness",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-light",
+            to: "#auto-brightness",
+            subdir: "class/light",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-backlight",
+            to: "#auto-brightness",
+            subdir: "class/backlight",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input-report",
+            to: "#auto-brightness",
+            subdir: "class/input-report",
+        },
+    ],
+}
