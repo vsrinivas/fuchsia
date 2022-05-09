@@ -4,6 +4,7 @@
 
 #include <lib/fdio/fdio.h>
 #include <lib/zxio/ops.h>
+#include <zircon/errors.h>
 
 #include <variant>
 
@@ -105,7 +106,7 @@ __EXPORT
 zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
   fdio_ptr io = unbind_from_fd(fd);
   if (io == nullptr) {
-    return ZX_ERR_NOT_FOUND;
+    return ZX_ERR_INVALID_ARGS;
   }
   std::variant reference = GetLastReference(std::move(io));
   auto* ptr = std::get_if<fdio::last_reference>(&reference);

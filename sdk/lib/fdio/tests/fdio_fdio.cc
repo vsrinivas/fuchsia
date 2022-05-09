@@ -137,8 +137,8 @@ TEST(FDIOTest, GetServiceHandle) {
   ASSERT_EQ(-1, fcntl(unused_fd, F_GETFD));
 
   zx::channel h1;
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, fdio_get_service_handle(unused_fd, h1.reset_and_get_address()));
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, fdio_get_service_handle(-1, h1.reset_and_get_address()));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdio_get_service_handle(unused_fd, h1.reset_and_get_address()));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdio_get_service_handle(-1, h1.reset_and_get_address()));
 
   fdio_t* io = fdio_default_create();
   fbl::unique_fd fd(fdio_bind_to_fd(io, -1, 0));

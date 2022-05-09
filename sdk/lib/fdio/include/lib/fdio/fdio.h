@@ -85,7 +85,7 @@ zx_status_t fdio_unbind_from_fd(int fd, fdio_t** io_out) ZX_AVAILABLE_SINCE(1);
 //
 // # Errors
 //
-// ZX_ERR_NOT_FOUND: |fd| is not a valid file descriptor.
+// ZX_ERR_INVALID_ARGS: |fd| is not a valid file descriptor.
 //
 // ZX_ERR_NOT_SUPPORTED: |fd| is not backed by a channel.
 //
