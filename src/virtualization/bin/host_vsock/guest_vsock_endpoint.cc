@@ -12,6 +12,6 @@ GuestVsockEndpoint::GuestVsockEndpoint(
 }
 
 void GuestVsockEndpoint::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-                                zx::handle handle, AcceptCallback callback) {
-  acceptor_->Accept(src_cid, src_port, port, std::move(handle), std::move(callback));
+                                zx::socket socket, AcceptCallback callback) {
+  acceptor_->Accept(src_cid, src_port, port, std::move(socket), std::move(callback));
 }

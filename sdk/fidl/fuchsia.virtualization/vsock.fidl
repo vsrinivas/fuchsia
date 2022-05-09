@@ -22,10 +22,8 @@ protocol GuestVsockAcceptor {
         src_cid uint32;
         src_port uint32;
         port uint32;
-        handle zx.handle:optional;
-    }) -> (struct {
-        status zx.status;
-    });
+        socket zx.handle:SOCKET;
+    }) -> (struct {}) error zx.status;
 };
 
 /// Exposed by a host capable of listening via vsocks. A variant of a

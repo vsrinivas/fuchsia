@@ -23,7 +23,7 @@ class TestVsockAcceptorBase : public T {
     uint32_t src_cid;
     uint32_t src_port;
     uint32_t port;
-    zx::handle handle;
+    zx::socket socket;
     typename T::AcceptCallback callback;
   };
 
@@ -40,10 +40,10 @@ class TestVsockAcceptor
     : public TestVsockAcceptorBase<fuchsia::virtualization::GuestVsockAcceptor> {
  private:
   // |fuchsia::virtualization::GuestVsockAcceptor|
-  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
+  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::socket socket,
               AcceptCallback callback) override {
     connection_requests_.emplace_back(
-        ConnectionRequest{src_cid, src_port, port, std::move(handle), std::move(callback)});
+        ConnectionRequest{src_cid, src_port, port, std::move(socket), std::move(callback)});
   }
 };
 
@@ -54,7 +54,7 @@ class TestHostVsockAcceptor
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override {
     connection_requests_.emplace_back(
-        ConnectionRequest{src_cid, src_port, port, zx::handle(), std::move(callback)});
+        ConnectionRequest{src_cid, src_port, port, zx::socket(), std::move(callback)});
   }
 };
 
@@ -101,9 +101,9 @@ TEST_F(HostVsockEndpointTest, ConnectGuestToGuest) {
   EXPECT_EQ(kOtherGuestCid, requests[0].src_cid);
   EXPECT_EQ(1022u, requests[0].src_port);
   EXPECT_EQ(22u, requests[0].port);
-  EXPECT_TRUE(requests[0].handle.is_valid());
+  EXPECT_TRUE(requests[0].socket.is_valid());
 
-  requests[0].callback(ZX_OK);
+  requests[0].callback(fuchsia::virtualization::GuestVsockAcceptor_Accept_Result::WithResponse({}));
 
   EXPECT_EQ(ZX_OK, connection.status);
   EXPECT_TRUE(connection.handle.is_valid());
@@ -148,9 +148,9 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuest) {
   EXPECT_EQ(fuchsia::virtualization::HOST_CID, requests[0].src_cid);
   EXPECT_EQ(kFirstEphemeralPort, requests[0].src_port);
   EXPECT_EQ(22u, requests[0].port);
-  EXPECT_TRUE(requests[0].handle.is_valid());
+  EXPECT_TRUE(requests[0].socket.is_valid());
 
-  requests[0].callback(ZX_OK);
+  requests[0].callback(fuchsia::virtualization::GuestVsockAcceptor_Accept_Result::WithResponse({}));
 
   EXPECT_EQ(ZX_OK, connection.status);
 }
@@ -230,7 +230,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestMultipleTimes) {
     EXPECT_EQ(fuchsia::virtualization::HOST_CID, request.src_cid);
     EXPECT_EQ(port++, request.src_port);
     EXPECT_EQ(22u, request.port);
-    EXPECT_TRUE(request.handle.is_valid());
+    EXPECT_TRUE(request.socket.is_valid());
   }
 }
 

@@ -9,6 +9,8 @@
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/lib/fsl/handles/object_info.h"
+
 HostVsockEndpoint::HostVsockEndpoint(async_dispatcher_t* dispatcher,
                                      AcceptorProvider acceptor_provider)
     : dispatcher_(dispatcher), acceptor_provider_(std::move(acceptor_provider)) {}
@@ -43,9 +45,12 @@ void HostVsockEndpoint::Connect(
       callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
       return;
     }
+
     acceptor->Accept(src_cid, src_port, port, std::move(h1),
                      [callback = std::move(callback), h2 = std::move(h2)](
-                         zx_status_t status) mutable { callback(status, std::move(h2)); });
+                         fuchsia::virtualization::GuestVsockAcceptor_Accept_Result result) mutable {
+                       callback(result.is_err() ? result.err() : ZX_OK, std::move(h2));
+                     });
   }
 }
 
@@ -90,10 +95,20 @@ void HostVsockEndpoint::Connect(
     callback(status);
     return;
   }
+
+  // Ensure the user gave us a socket handle.
+  zx_obj_type_t type = fsl::GetType(handle.get());
+  if (type != zx::socket::TYPE) {
+    callback(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+
   // Get access to the guests.
-  acceptor->Accept(fuchsia::virtualization::HOST_CID, src_port, port, std::move(handle),
-                   [this, src_port, callback = std::move(callback)](zx_status_t status) mutable {
-                     ConnectCallback(status, src_port, std::move(callback));
+  acceptor->Accept(fuchsia::virtualization::HOST_CID, src_port, port, zx::socket(handle.release()),
+                   [this, src_port, callback = std::move(callback)](
+                       fuchsia::virtualization::GuestVsockAcceptor_Accept_Result result) mutable {
+                     ConnectCallback(result.is_err() ? result.err() : ZX_OK, src_port,
+                                     std::move(callback));
                    });
 }
 

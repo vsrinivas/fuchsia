@@ -64,9 +64,9 @@ class TestConnection {
   zx_status_t status = ZX_ERR_BAD_STATE;
 
   fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback callback() {
-    return [this](zx_status_t st) {
+    return [this](fuchsia::virtualization::GuestVsockAcceptor_Accept_Result result) {
       count++;
-      status = st;
+      status = result.is_err() ? result.err() : ZX_OK;
     };
   }
 
@@ -217,7 +217,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
 
   void HostConnectOnPortRequest(uint32_t host_port, TestConnection* connection) {
     acceptor_->Accept(fuchsia::virtualization::HOST_CID, host_port, kVirtioVsockGuestPort,
-                      std::move(connection->take_remote()), connection->callback());
+                      connection->take_remote(), connection->callback());
 
     RxBuffer* rx_buffer = DoReceive();
     ASSERT_NE(nullptr, rx_buffer);
@@ -403,7 +403,7 @@ TEST_F(VirtioVsockTest, ConnectMultipleTimesSamePort) {
 
   TestConnection connection;
   acceptor_->Accept(fuchsia::virtualization::HOST_CID, kVirtioVsockHostPort, kVirtioVsockGuestPort,
-                    std::move(connection.take_remote()), connection.callback());
+                    connection.take_remote(), connection.callback());
   RunLoopUntilIdle();
   ASSERT_EQ(1u, connection.count);
   ASSERT_EQ(ZX_ERR_ALREADY_BOUND, connection.status);
@@ -436,22 +436,6 @@ TEST_F(VirtioVsockTest, ConnectRefused) {
   ASSERT_TRUE(connection.remote_closed());
   EXPECT_FALSE(vsock_.HasConnection(fuchsia::virtualization::HOST_CID, kVirtioVsockHostPort,
                                     kVirtioVsockGuestPort));
-}
-
-TEST_F(VirtioVsockTest, ConnectWrongHandleType) {
-  // Create a channel.
-  zx::channel channel, remote_channel;
-  ASSERT_EQ(ZX_OK, zx::channel::create(ZX_SOCKET_STREAM, &channel, &remote_channel));
-
-  // Attempt to establish a new connection to the guest using the channel.
-  TestConnection connection;
-  acceptor_->Accept(fuchsia::virtualization::HOST_CID, kVirtioVsockHostPort, kVirtioVsockGuestPort,
-                    std::move(remote_channel), connection.callback());
-  RunLoopUntilIdle();
-
-  // Ensure we received ZX_ERR_NOT_SUPPORTED.
-  ASSERT_EQ(1u, connection.count);
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, connection.status);
 }
 
 TEST_F(VirtioVsockTest, Listen) {

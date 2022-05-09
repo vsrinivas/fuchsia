@@ -19,7 +19,7 @@ class GuestVsockEndpoint : public fuchsia::virtualization::GuestVsockAcceptor {
 
  private:
   // |fuchsia::virtualization::GuestVsockAcceptor|
-  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
+  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::socket socket,
               AcceptCallback callback) override;
 
   fidl::Binding<fuchsia::virtualization::HostVsockConnector> connector_binding_;

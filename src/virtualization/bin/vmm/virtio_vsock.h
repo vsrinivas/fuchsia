@@ -160,7 +160,7 @@ class VirtioVsock
       uint32_t cid, fidl::InterfaceHandle<fuchsia::virtualization::HostVsockConnector> connector,
       fidl::InterfaceRequest<fuchsia::virtualization::GuestVsockAcceptor> acceptor) override;
   // |fuchsia::virtualization::GuestVsockAcceptor|
-  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
+  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::socket socket,
               fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback callback) override;
   void ConnectCallback(ConnectionKey key, zx_status_t status, zx::handle handle, uint32_t buf_alloc,
                        uint32_t fwd_cnt);
@@ -266,10 +266,9 @@ class VirtioVsock::Connection {
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header);
 
   zx_status_t Shutdown(uint32_t flags);
-  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                   const VirtioDescriptor& desc, uint32_t* used);
-  zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                            const VirtioDescriptor& desc);
+  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, const VirtioDescriptor& desc,
+                   uint32_t* used);
+  zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header, const VirtioDescriptor& desc);
 
   void OnReady(zx_status_t status, const zx_packet_signal_t* signal);
 

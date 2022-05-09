@@ -168,7 +168,8 @@ VirtioVsock::Connection::Connection(
 
 VirtioVsock::Connection::~Connection() {
   if (accept_callback_) {
-    accept_callback_(ZX_ERR_CONNECTION_REFUSED);
+    accept_callback_(fuchsia::virtualization::GuestVsockAcceptor_Accept_Result::WithErr(
+        ZX_ERR_CONNECTION_REFUSED));
   }
 
   // We must cancel the async wait before the socket is destroyed.
@@ -208,7 +209,7 @@ zx_status_t VirtioVsock::Connection::Accept() {
   // connection.
   if (accept_callback_) {
     UpdateOp(VIRTIO_VSOCK_OP_RW);
-    accept_callback_(ZX_OK);
+    accept_callback_(fuchsia::virtualization::GuestVsockAcceptor_Accept_Result::WithResponse({}));
     accept_callback_ = nullptr;
     return WaitOnReceive();
   }
@@ -531,28 +532,23 @@ void VirtioVsock::SetContextId(
   }
 }
 
-void VirtioVsock::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
+void VirtioVsock::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::socket socket,
                          fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback callback) {
   if (HasConnection(src_cid, src_port, port)) {
-    callback(ZX_ERR_ALREADY_BOUND);
-    return;
-  }
-
-  // Ensure the user gave us a socket handle.
-  zx_obj_type_t type = fsl::GetType(handle.get());
-  if (type != zx::socket::TYPE) {
-    callback(ZX_ERR_NOT_SUPPORTED);
+    callback(
+        fuchsia::virtualization::GuestVsockAcceptor_Accept_Result::WithErr(ZX_ERR_ALREADY_BOUND));
     return;
   }
 
   ConnectionKey key{src_cid, src_port, guest_cid(), port};
-  auto conn = Connection::Create(key, zx::socket(handle.release()), dispatcher_,
-                                 std::move(callback), [this, key] {
-                                   std::lock_guard<std::mutex> lock(mutex_);
-                                   WaitOnQueueLocked(key);
-                                 });
+  auto conn =
+      Connection::Create(key, std::move(socket), dispatcher_, std::move(callback), [this, key] {
+        std::lock_guard<std::mutex> lock(mutex_);
+        WaitOnQueueLocked(key);
+      });
   if (!conn) {
-    callback(ZX_ERR_CONNECTION_REFUSED);
+    callback(fuchsia::virtualization::GuestVsockAcceptor_Accept_Result::WithErr(
+        ZX_ERR_CONNECTION_REFUSED));
     return;
   }
 
