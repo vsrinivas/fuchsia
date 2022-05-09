@@ -6,7 +6,6 @@
 
 #include <lib/cmdline/args_parser.h>
 #include <lib/syslog/cpp/log_settings.h>
-#include <regex.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -16,6 +15,8 @@
 #include <set>
 #include <string>
 #include <vector>
+
+#include <re2/re2.h>
 
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "tools/fidlcat/lib/decode_options.h"
@@ -439,54 +440,46 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   decode_options->stay_alive = options->stay_alive;
   decode_options->stack_level = options->stack_level;
   if (options->syscall_filters.empty()) {
-    regex_t r;
-    regcomp(&r, "zx_channel_.*", REG_EXTENDED);
-    decode_options->syscall_filters.emplace_back(std::make_unique<Regex>(r));
-    regcomp(&r, "zx_handle_close", REG_EXTENDED);
-    decode_options->syscall_filters.emplace_back(std::make_unique<Regex>(r));
-    regcomp(&r, "zx_handle_close_many", REG_EXTENDED);
-    decode_options->syscall_filters.emplace_back(std::make_unique<Regex>(r));
+    decode_options->syscall_filters.emplace_back(std::make_unique<re2::RE2>("zx_channel_.*"));
+    decode_options->syscall_filters.emplace_back(std::make_unique<re2::RE2>("zx_handle_close"));
+    decode_options->syscall_filters.emplace_back(
+        std::make_unique<re2::RE2>("zx_handle_close_many"));
   } else if ((options->syscall_filters.size() != 1) || (options->syscall_filters[0] != ".*")) {
     for (const auto& filter : options->syscall_filters) {
-      regex_t r;
-      if (regcomp(&r, filter.c_str(), REG_EXTENDED) == 0) {
-        decode_options->syscall_filters.emplace_back(std::make_unique<Regex>(r));
-      } else {
+      auto r = std::make_unique<re2::RE2>(filter);
+      if (!r->ok()) {
         return "Bad filter for --syscalls: " + filter;
       }
+      decode_options->syscall_filters.push_back(std::move(r));
     }
   }
   for (const auto& filter : options->exclude_syscall_filters) {
-    regex_t r;
-    if (regcomp(&r, filter.c_str(), REG_EXTENDED) == 0) {
-      decode_options->exclude_syscall_filters.emplace_back(std::make_unique<Regex>(r));
-    } else {
+    auto r = std::make_unique<re2::RE2>(filter);
+    if (!r->ok()) {
       return "Bad filter for --exclude-syscalls: " + filter;
     }
+    decode_options->exclude_syscall_filters.push_back(std::move(r));
   }
   for (const auto& filter : options->message_filters) {
-    regex_t r;
-    if (regcomp(&r, filter.c_str(), REG_EXTENDED) == 0) {
-      decode_options->message_filters.emplace_back(std::make_unique<Regex>(r));
-    } else {
+    auto r = std::make_unique<re2::RE2>(filter);
+    if (!r->ok()) {
       return "Bad filter for --messages: " + filter;
     }
+    decode_options->message_filters.push_back(std::move(r));
   }
   for (const auto& filter : options->exclude_message_filters) {
-    regex_t r;
-    if (regcomp(&r, filter.c_str(), REG_EXTENDED) == 0) {
-      decode_options->exclude_message_filters.emplace_back(std::make_unique<Regex>(r));
-    } else {
+    auto r = std::make_unique<re2::RE2>(filter);
+    if (!r->ok()) {
       return "Bad filter for --exclude-messages: " + filter;
     }
+    decode_options->exclude_message_filters.push_back(std::move(r));
   }
   for (const auto& filter : options->trigger_filters) {
-    regex_t r;
-    if (regcomp(&r, filter.c_str(), REG_EXTENDED) == 0) {
-      decode_options->trigger_filters.emplace_back(std::make_unique<Regex>(r));
-    } else {
+    auto r = std::make_unique<re2::RE2>(filter);
+    if (!r->ok()) {
       return "Bad filter for --trigger: " + filter;
     }
+    decode_options->trigger_filters.push_back(std::move(r));
   }
   for (const auto& filter : options->thread_filters) {
     decode_options->thread_filters.emplace_back(static_cast<zx_koid_t>(std::stol(filter)));

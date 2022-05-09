@@ -44,7 +44,10 @@ if (is_host) {
       "//zircon/system/ulib/cmdline",
     ]
 
-    public_deps = [ "//src/lib/analytics/cpp/core_dev_tools" ]
+    public_deps = [
+      "//src/lib/analytics/cpp/core_dev_tools",
+      "//third_party/re2",
+    ]
   }
 
   test("fidlcat_host_tests") {

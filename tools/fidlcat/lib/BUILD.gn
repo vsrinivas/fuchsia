@@ -65,6 +65,7 @@ if (is_host) {
     ]
 
     public_deps = [
+      "//third_party/re2",
       "//tools/fidlcat:lib",
       "//zircon/system/public",
     ]

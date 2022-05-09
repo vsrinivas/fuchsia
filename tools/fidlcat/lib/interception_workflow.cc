@@ -539,7 +539,7 @@ void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* zxdb_process, uint64_
         put_breakpoint = false;
         for (const auto& syscall_filter :
              syscall_decoder_dispatcher()->decode_options().syscall_filters) {
-          if (syscall_filter->Matches(syscall.second->name())) {
+          if (re2::RE2::FullMatch(syscall.second->name(), *syscall_filter)) {
             put_breakpoint = true;
             break;
           }
@@ -548,7 +548,7 @@ void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* zxdb_process, uint64_
       if (put_breakpoint) {
         for (const auto& syscall_filter :
              syscall_decoder_dispatcher()->decode_options().exclude_syscall_filters) {
-          if (syscall_filter->Matches(syscall.second->name())) {
+          if (re2::RE2::FullMatch(syscall.second->name(), *syscall_filter)) {
             put_breakpoint = false;
             break;
           }
