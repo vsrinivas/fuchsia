@@ -49,6 +49,11 @@ void FshostIntegrationTest::TearDown() {
   ASSERT_TRUE(destroy_res.ok() && !destroy_res->result.is_err());
 }
 
+void FshostIntegrationTest::ResetFshost() {
+  TearDown();
+  SetUp();
+}
+
 void FshostIntegrationTest::PauseWatcher() const {
   auto res = block_watcher_->Pause();
   ASSERT_EQ(res.status(), ZX_OK);

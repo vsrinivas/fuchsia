@@ -622,6 +622,9 @@ zx_status_t BlockDevice::FormatFilesystem() {
     return status;
   }
 
+  // There might be a previously cached content format; forget that now since it could change.
+  content_format_ = fs_management::kDiskFormatUnknown;
+
   switch (format_) {
     case fs_management::kDiskFormatBlobfs: {
       FX_LOGS(ERROR) << "Not formatting blobfs.";
@@ -867,7 +870,12 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
       FX_LOGS(INFO) << "mounting data partition with format " << DiskFormatString(GetFormat())
                     << ": format on corruption is "
                     << (format_on_corruption ? "enabled" : "disabled");
-      if (zx_status_t status = CheckFilesystem(); status != ZX_OK) {
+      if (content_format() != GetFormat()) {
+        FX_LOGS(INFO) << "Data doesn't appear to be formatted yet.  Formatting...";
+        if (zx_status_t status = FormatFilesystem(); status != ZX_OK) {
+          return status;
+        }
+      } else if (zx_status_t status = CheckFilesystem(); status != ZX_OK) {
         if (!format_on_corruption) {
           FX_LOGS(INFO) << "formatting data partition on this target is disabled";
           return status;

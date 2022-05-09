@@ -13,7 +13,9 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/storage/fs_management/cpp/admin.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/storage/fshost/block-device-manager.h"
+#include "src/storage/fshost/config.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/fshost_integration_test.h"
 #include "src/storage/minfs/format.h"
@@ -74,79 +76,87 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   ASSERT_EQ(res->num_filed, 0ul);
 }
 
-TEST_F(FsRecoveryTest, CorruptMinfsRecoveryTest) {
-  PauseWatcher();  // Pause whilst we create a ramdisk.
+TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
+  // TODO(fxbug.dev/99714): This is a kludge!  We should instead read the configured filesystem
+  // (data_filesystem_binary_path), and target the specific behaviour we actually want.  We can't do
+  // this right now because (a) the test harness can't access the config and (b) the test inherits
+  // the global configuration, so we instead have to run the test twice, and check that exactly one
+  // of the two cases (minfs or Fxfs) resulted in a crash.
+  struct Params {
+    fs_management::DiskFormat disk_format;
+  };
+  const std::array<Params, 2> kParams = {Params{.disk_format = fs_management::kDiskFormatMinfs},
+                                         Params{.disk_format = fs_management::kDiskFormatFxfs}};
+  int num_crashes = 0;
+  for (const auto& params : kParams) {
+    std::cerr << "Running test with disk format "
+              << fs_management::DiskFormatString(params.disk_format) << std::endl;
+    PauseWatcher();  // Pause whilst we create a ramdisk.
 
-  // Create a ramdisk with an unformatted minfs partitition.
-  zx::vmo vmo;
-  ASSERT_EQ(zx::vmo::create(kDeviceSize, 0, &vmo), ZX_OK);
+    // Create a ramdisk with an unformatted minfs partitition.
+    zx::vmo vmo;
+    ASSERT_EQ(zx::vmo::create(kDeviceSize, 0, &vmo), ZX_OK);
 
-  // Create a child VMO so that we can keep hold of the original.
-  zx::vmo child_vmo;
-  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_SLICE, 0, kDeviceSize, &child_vmo), ZX_OK);
-
-  // Now create the ram-disk with a single FVM partition.
-  {
-    auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(child_vmo), kBlockSize);
-    ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-    storage::FvmOptions options{
-        .name = kDataPartitionLabel,
-        .type = std::array<uint8_t, BLOCK_GUID_LEN>{GUID_DATA_VALUE},
-    };
-    auto fvm_partition_or = storage::CreateFvmPartition(ramdisk_or->path(), kSliceSize, options);
-    ASSERT_EQ(fvm_partition_or.status_value(), ZX_OK);
-
-    auto zxcrypt_device_path_or = storage::CreateZxcryptVolume(fvm_partition_or.value());
-    ASSERT_EQ(zxcrypt_device_path_or.status_value(), ZX_OK);
-    std::string zxcrypt_device_path = std::move(zxcrypt_device_path_or.value());
+    // Create a child VMO so that we can keep hold of the original.
+    zx::vmo child_vmo;
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_SLICE, 0, kDeviceSize, &child_vmo), ZX_OK);
 
     {
-      ASSERT_EQ(fs_management::Mkfs(zxcrypt_device_path.c_str(), fs_management::kDiskFormatMinfs,
-                                    fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
-                ZX_OK);
+      auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(child_vmo), kBlockSize);
+      ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
+      storage::FvmOptions options{
+          .name = kDataPartitionLabel,
+          .type = std::array<uint8_t, BLOCK_GUID_LEN>{GUID_DATA_VALUE},
+      };
+      auto fvm_partition_or = storage::CreateFvmPartition(ramdisk_or->path(), kSliceSize, options);
+      ASSERT_EQ(fvm_partition_or.status_value(), ZX_OK);
 
-      fbl::unique_fd minfs_fd(open(zxcrypt_device_path.c_str(), O_RDWR));
-      ASSERT_TRUE(minfs_fd);
-      // Write some garbage values to the block data bitmap. It's an empty minfs partition, so there
-      // should be no block data, which means any values should trigger an fsck failure. We have to
-      // write a whole block at a time or it throws errors.
-      char garbage[minfs::kMinfsBlockSize] = {'g', 'a', 'r', 'b', 'a', 'g', 'e'};
-      errno = 0;
-      ASSERT_EQ(pwrite(minfs_fd.get(), garbage, sizeof(garbage),
-                       minfs::kFVMBlockDataBmStart * minfs::kMinfsBlockSize),
-                static_cast<ssize_t>(sizeof(garbage)))
-          << "errno: " << strerror(errno);
+      auto zxcrypt_device_path_or = storage::CreateZxcryptVolume(fvm_partition_or.value());
+      ASSERT_EQ(zxcrypt_device_path_or.status_value(), ZX_OK);
+      std::string zxcrypt_device_path = std::move(zxcrypt_device_path_or.value());
+
+      // To make it look like there's a filesystem there but it is corrupt, write out the
+      // appropriate magic into the otherwise empty block device.
+      {
+        fbl::unique_fd data_fd(open(zxcrypt_device_path.c_str(), O_RDWR));
+        ASSERT_TRUE(data_fd);
+        char buf[4096];
+        if (params.disk_format == fs_management::kDiskFormatMinfs) {
+          ::memcpy(buf, fs_management::kMinfsMagic, sizeof(fs_management::kMinfsMagic));
+        } else {
+          ::memcpy(buf, fs_management::kFxfsMagic, sizeof(fs_management::kFxfsMagic));
+        }
+        ASSERT_EQ(pwrite(data_fd.get(), buf, sizeof(buf), 0), static_cast<ssize_t>(sizeof(buf)))
+            << "errno: " << strerror(errno);
+      }
     }
 
-    // Confirm we messed it up enough to trigger an fsck failure.
-    ASSERT_NE(fs_management::Fsck(zxcrypt_device_path.c_str(), fs_management::kDiskFormatMinfs,
-                                  fs_management::FsckOptions(), fs_management::LaunchStdioSync),
-              ZX_OK);
+    ResumeWatcher();
+
+    // Now reattach the ram-disk and fshost should format it.
+    auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
+    ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
+
+    // Minfs should be automatically mounted.
+    auto [fd, fs_type] = WaitForMount("minfs");
+    EXPECT_TRUE(fd);
+    EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
+
+    // If fshost was configured to use (e.g.) Fxfs and the magic was Fxfs' magic, then fshost will
+    // treat this as a corruption and file a crash report.  If the magic was something else, fshost
+    // treats this as a first boot and just silently reformats.
+    auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
+    ASSERT_EQ(client_end.status_value(), ZX_OK);
+    auto client = fidl::BindSyncClient(std::move(*client_end));
+    auto res = client->WatchFile();
+    ASSERT_EQ(res.status(), ZX_OK);
+    num_crashes += res->num_filed;
+
+    // We need to restart fshost between each test case, because fshost won't bind multiple FVM
+    // instances.
+    ResetFshost();
   }
-
-  ResumeWatcher();
-
-  // No crash reports should have been filed yet.
-  auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
-  ASSERT_EQ(client_end.status_value(), ZX_OK);
-  auto client = fidl::BindSyncClient(std::move(*client_end));
-  auto res = client->WatchFile();
-  ASSERT_EQ(res.status(), ZX_OK);
-  ASSERT_EQ(res->num_filed, 0ul);
-
-  // Now reattach the ram-disk and fshost should format it.
-  auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
-  ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-
-  // Minfs should be automatically mounted.
-  auto [fd, fs_type] = WaitForMount("minfs");
-  EXPECT_TRUE(fd);
-  EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
-
-  // A crash report should have been filed with the crash reporting service.
-  auto res2 = client->WatchFile();
-  ASSERT_EQ(res2.status(), ZX_OK);
-  ASSERT_EQ(res2->num_filed, 1ul);
+  ASSERT_EQ(num_crashes, 1);
 }
 
 }  // namespace

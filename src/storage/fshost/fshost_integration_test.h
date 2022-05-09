@@ -21,6 +21,8 @@ class FshostIntegrationTest : public testing::Test {
   void SetUp() override;
   void TearDown() override;
 
+  void ResetFshost();
+
   const fidl::WireSyncClient<fuchsia_io::Directory>& exposed_dir() const { return exposed_dir_; }
 
   const fidl::WireSyncClient<fuchsia_fshost::BlockWatcher>& block_watcher() const {

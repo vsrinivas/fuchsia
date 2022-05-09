@@ -17,6 +17,7 @@
 #include <ramdevice-client/ramdisk.h>
 
 #include "src/lib/files/glob.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-watcher-test-data.h"
@@ -302,6 +303,9 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDeviceWithFormatOnCorruptionEnabled) {
       MockMinfsDevice::CheckFilesystem();
       return ZX_ERR_BAD_STATE;
     }
+    fs_management::DiskFormat content_format() const final {
+      return fs_management::kDiskFormatMinfs;
+    }
   };
   auto config = fshost::DefaultConfig();
   EXPECT_TRUE(config.format_data_on_corruption);
@@ -325,6 +329,9 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDeviceWithFormatOnCorruptionDisabled) {
     zx_status_t CheckFilesystem() final {
       MockMinfsDevice::CheckFilesystem();
       return ZX_ERR_BAD_STATE;
+    }
+    fs_management::DiskFormat content_format() const final {
+      return fs_management::kDiskFormatMinfs;
     }
   };
   auto config = fshost::DefaultConfig();
@@ -481,6 +488,9 @@ TEST(AddDeviceTestCase, AddValidDurableDevice) {
    public:
     using MockBlockDevice::MockBlockDevice;
 
+    fs_management::DiskFormat content_format() const final {
+      return fs_management::kDiskFormatMinfs;
+    }
     const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
       static fuchsia_hardware_block_partition::wire::Guid guid = GPT_DURABLE_TYPE_GUID;
       return guid;
