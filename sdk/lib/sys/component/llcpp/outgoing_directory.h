@@ -128,11 +128,20 @@ class OutgoingDirectory final {
   template <typename Protocol>
   zx::status<> AddProtocol(fidl::WireServer<Protocol>* impl,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
+    return AddProtocolAt(kServiceDirectory, impl, name);
+  }
+
+  // Same as above but allows overriding the parent directory in which the
+  // protocol will be hosted.
+  template <typename Protocol>
+  zx::status<> AddProtocolAt(cpp17::string_view path, fidl::WireServer<Protocol>* impl,
+                             cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
     if (impl == nullptr || dispatcher_ == nullptr) {
       return zx::make_status(ZX_ERR_INVALID_ARGS);
     }
 
-    return AddProtocol<Protocol>(
+    return AddProtocolAt<Protocol>(
+        path,
         [=](fidl::ServerEnd<Protocol> request) {
           fidl::ServerBindingRef<Protocol> server =
               fidl::BindServer(dispatcher_, std::move(request), impl);
@@ -189,17 +198,26 @@ class OutgoingDirectory final {
   template <typename Protocol>
   zx::status<> AddProtocol(TypedHandler<Protocol> handler,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
+    return AddProtocolAt<Protocol>(kServiceDirectory, std::move(handler), name);
+  }
+
+  template <typename Protocol>
+  zx::status<> AddProtocolAt(cpp17::string_view path, TypedHandler<Protocol> handler,
+                             cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
     auto bridge_func = [handler = std::move(handler)](zx::channel request) {
       fidl::ServerEnd<Protocol> server_end(std::move(request));
       (void)handler(std::move(server_end));
     };
 
-    return AddNamedProtocol(std::move(bridge_func), name);
+    return AddNamedProtocolAt(path, name, std::move(bridge_func));
   }
 
   // Same as above but is untyped. This method is generally discouraged but
   // is made available if a generic handler needs to be provided.
   zx::status<> AddNamedProtocol(AnyHandler handler, cpp17::string_view name);
+
+  zx::status<> AddNamedProtocolAt(cpp17::string_view path, cpp17::string_view name,
+                                  AnyHandler handler);
 
   // Adds an instance of a FIDL Service.
   //
@@ -275,6 +293,15 @@ class OutgoingDirectory final {
 
   // Same as above but untyped.
   zx::status<> RemoveNamedProtocol(cpp17::string_view name);
+
+  template <typename Protocol>
+  zx::status<> RemoveProtocolAt(
+      cpp17::string_view directory,
+      cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
+    return RemoveNamedProtocolAt(directory, name);
+  }
+
+  zx::status<> RemoveNamedProtocolAt(cpp17::string_view directory, cpp17::string_view name);
 
   // Removes an instance of a FIDL Service.
   //
@@ -353,7 +380,8 @@ class OutgoingDirectory final {
   //
   // The OnConnectContext has to be stored in the heap because its pointer
   // is used by |OnConnect|, a static function, during channel connection attempt.
-  std::map<std::string, std::map<std::string, OnConnectContext>> registered_handlers_ = {};
+  std::map<std::string, std::map<std::string, std::unique_ptr<OnConnectContext>>>
+      registered_handlers_ = {};
 
   // Protocol bindings used to initiate teardown when protocol is removed. We
   // store this in a callback as opposed to a map of fidl::ServerBindingRef<T>

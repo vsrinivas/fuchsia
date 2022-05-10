@@ -92,7 +92,7 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
   component::OutgoingDirectory* GetOutgoingDirectory() { return outgoing_directory_.get(); }
 
   fidl::ClientEnd<fuchsia_io::Directory> TakeSvcClientEnd(
-      fidl::ClientEnd<fuchsia_io::Directory> root) {
+      fidl::ClientEnd<fuchsia_io::Directory> root, fidl::StringView path = kSvcDirectoryPath) {
     zx::channel server_end, client_end;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &server_end, &client_end));
     // Check if this has already be initialized.
@@ -102,9 +102,10 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
 
     auto status = svc_client_->Open(
         fuchsia_io::wire::OpenFlags::kRightWritable | fuchsia_io::wire::OpenFlags::kRightReadable,
-        fuchsia_io::wire::kModeTypeDirectory, kSvcDirectoryPath,
+        fuchsia_io::wire::kModeTypeDirectory, path,
         fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)));
-    ZX_ASSERT_MSG(status.ok(), "Failed to open /svc client: %s", status.status_string());
+    ZX_ASSERT_MSG(status.ok(), "Failed to open /%s client: %s", path.data(),
+                  status.status_string());
     return fidl::ClientEnd<fuchsia_io::Directory>(std::move(client_end));
   }
 
@@ -356,6 +357,36 @@ TEST_F(OutgoingDirectoryTest, RemoveProtocolClosesAllConnections) {
   }
 }
 
+// Test that serving a FIDL Protocol from a non-svc directory works as expected.
+TEST_F(OutgoingDirectoryTest, AddProtocolAtServesProtocol) {
+  constexpr static char kDirectory[] = "test";
+
+  // Setup fuchsia.examples.Echo servers
+  EchoImpl regular_impl(/*reversed=*/false);
+  ASSERT_EQ(GetOutgoingDirectory()
+                ->AddProtocolAt<fuchsia_examples::Echo>(kDirectory, &regular_impl)
+                .status_value(),
+            ZX_OK);
+
+  auto client_end = service::ConnectAt<fuchsia_examples::Echo>(
+      TakeSvcClientEnd(TakeRootClientEnd(), /*path=*/kDirectory));
+  ASSERT_EQ(client_end.status_value(), ZX_OK);
+  fidl::WireClient<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
+
+  std::string reply_received;
+  client->EchoString(kTestString)
+      .ThenExactlyOnce([&reply_received, quit_loop = QuitLoopClosure()](
+                           fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
+        ASSERT_TRUE(result.ok()) << "EchoString failed: " << result.error().FormatDescription();
+        auto* response = result.Unwrap();
+        reply_received = std::string(response->response.data(), response->response.size());
+        quit_loop();
+      });
+  RunLoop();
+
+  EXPECT_EQ(reply_received, kTestString);
+}
+
 TEST_F(OutgoingDirectoryTest, AddDirectoryCanServeADirectory) {
   static constexpr char kTestDirectory[] = "diagnostics";
   static constexpr char kTestFile[] = "sample.txt";
@@ -537,6 +568,14 @@ TEST_F(OutgoingDirectoryTest, AddProtocolFailsIfEntryExists) {
       ZX_ERR_ALREADY_EXISTS);
 }
 
+TEST_F(OutgoingDirectoryTest, AddProtocolAtFailsIfDirectoryIsEmpty) {
+  EchoImpl regular_impl(/*reversed=*/false);
+  EXPECT_EQ(GetOutgoingDirectory()
+                ->AddProtocolAt<fuchsia_examples::Echo>(/*directory=*/"", &regular_impl)
+                .status_value(),
+            ZX_ERR_INVALID_ARGS);
+}
+
 TEST_F(OutgoingDirectoryTest, AddDirectoryFailsIfRemoteDirInvalid) {
   fidl::ClientEnd<fuchsia_io::Directory> dangling_client_end;
   ASSERT_FALSE(dangling_client_end.is_valid());
@@ -566,6 +605,22 @@ TEST_F(OutgoingDirectoryTest, AddDirectoryFailsIfEntryExists) {
                   .status_value(),
               expected_status);
   }
+}
+
+TEST_F(OutgoingDirectoryTest, AddDirectoryFailsIfNameUsedForAddProtocolAt) {
+  constexpr char kDirectoryName[] = "diagnostics";
+
+  EchoImpl regular_impl(/*reversed=*/false);
+  ASSERT_EQ(GetOutgoingDirectory()
+                ->AddProtocolAt<fuchsia_examples::Echo>(kDirectoryName, &regular_impl)
+                .status_value(),
+            ZX_OK);
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  EXPECT_EQ(GetOutgoingDirectory()
+                ->AddDirectory(std::move(endpoints->client), kDirectoryName)
+                .status_value(),
+            ZX_ERR_ALREADY_EXISTS);
 }
 
 TEST_F(OutgoingDirectoryTest, RemoveServiceFailsIfEntryDoesNotExist) {

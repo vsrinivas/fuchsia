@@ -74,22 +74,35 @@ zx::status<> OutgoingDirectory::ServeFromStartupInfo() {
 }
 
 zx::status<> OutgoingDirectory::AddNamedProtocol(AnyHandler handler, cpp17::string_view name) {
-  if (name.empty()) {
+  return AddNamedProtocolAt(kServiceDirectory, name, std::move(handler));
+}
+
+zx::status<> OutgoingDirectory::AddNamedProtocolAt(cpp17::string_view path, cpp17::string_view name,
+                                                   AnyHandler handler) {
+  // More thorough path validation is done in |svc_add_service|.
+  if (path.empty() || name.empty()) {
     return zx::error_status(ZX_ERR_INVALID_ARGS);
   }
 
-  auto& svc_root_handlers = registered_handlers_[kServiceDirectory];
-  std::string protocol_entry = std::string(name);
-  if (svc_root_handlers.count(protocol_entry) != 0) {
+  std::string directory_entry(path);
+  std::string protocol_entry(name);
+  if (registered_handlers_.count(directory_entry) != 0 &&
+      registered_handlers_[directory_entry].count(protocol_entry) != 0) {
     return zx::make_status(ZX_ERR_ALREADY_EXISTS);
   }
 
-  // Add value and then fetch its reference immediately after.
-  svc_root_handlers[protocol_entry] = OnConnectContext{.handler = std::move(handler), .self = this};
-  auto& context = svc_root_handlers[protocol_entry];
-
+  // |svc_dir_add_service_by_path| takes in a void* |context| that is passed to
+  // the |handler| callback passed as the last argument to the function call.
+  // The context will first be stored in the heap for this path, then a pointer
+  // to it will be passed to this function. The callback, in this case |OnConnect|,
+  // will then cast the void* type to OnConnectContext*.
+  auto context = std::make_unique<OnConnectContext>(
+      OnConnectContext{.handler = std::move(handler), .self = this});
   zx_status_t status =
-      svc_dir_add_service(root_, kServiceDirectory, name.data(), &context, OnConnect);
+      svc_dir_add_service(root_, directory_entry.c_str(), name.data(), context.get(), OnConnect);
+
+  auto& directory_handlers = registered_handlers_[directory_entry];
+  directory_handlers[protocol_entry] = std::move(context);
 
   return zx::make_status(status);
 }
@@ -114,33 +127,19 @@ zx::status<> OutgoingDirectory::AddNamedService(ServiceHandler handler, cpp17::s
     return zx::error_status(ZX_ERR_INVALID_ARGS);
   }
 
-  std::string basepath = MakePath(service, instance);
-  if (registered_handlers_.count(basepath) != 0) {
-    return zx::make_status(ZX_ERR_ALREADY_EXISTS);
-  }
-
   auto handlers = handler.GetMemberHandlers();
   if (handlers.empty()) {
     return zx::make_status(ZX_ERR_INVALID_ARGS);
   }
 
-  auto& service_instance_handlers = registered_handlers_[basepath];
+  std::string basepath = MakePath(service, instance);
   for (auto& [member_name, member_handler] : handlers) {
-    // |svc_dir_add_service_by_path| takes in a void* |context| that is passed to
-    // the |handler| callback passed as the last argument to the function call.
-    // The context will first be stored in the heap for this path, then a pointer
-    // to it will be passed to this function. The callback, in this case |OnConnect|,
-    // will then cast the void* type to OnConnectContext*.
-    service_instance_handlers[member_name] =
-        OnConnectContext{.handler = std::move(member_handler), .self = this};
-
-    // Retrieve reference to entry added in previous line so that a pointer to
-    // it can be passed to |svc_dir_add_service_by_path|.
-    auto& context = service_instance_handlers[member_name];
-    zx_status_t status = svc_dir_add_service_by_path(root_, basepath.c_str(), member_name.c_str(),
-                                                     reinterpret_cast<void*>(&context), OnConnect);
-    if (status != ZX_OK) {
-      return zx::make_status(status);
+    zx::status<> status = AddNamedProtocolAt(basepath, member_name, std::move(member_handler));
+    if (status.is_error()) {
+      // If we encounter an error with any of the instance members, scrub entire
+      // directory entry.
+      registered_handlers_.erase(basepath);
+      return status;
     }
   }
 
@@ -148,11 +147,18 @@ zx::status<> OutgoingDirectory::AddNamedService(ServiceHandler handler, cpp17::s
 }
 
 zx::status<> OutgoingDirectory::RemoveNamedProtocol(cpp17::string_view name) {
-  if (registered_handlers_.count(kServiceDirectory) == 0) {
+  return RemoveNamedProtocolAt(kServiceDirectory, name);
+}
+
+zx::status<> OutgoingDirectory::RemoveNamedProtocolAt(cpp17::string_view directory,
+                                                      cpp17::string_view name) {
+  std::string key(directory);
+
+  if (registered_handlers_.count(key) == 0) {
     return zx::make_status(ZX_ERR_NOT_FOUND);
   }
 
-  auto& svc_root_handlers = registered_handlers_[kServiceDirectory];
+  auto& svc_root_handlers = registered_handlers_[key];
   std::string entry_key = std::string(name);
   if (svc_root_handlers.count(entry_key) == 0) {
     return zx::make_status(ZX_ERR_NOT_FOUND);
