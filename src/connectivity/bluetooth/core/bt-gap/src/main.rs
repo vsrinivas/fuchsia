@@ -242,7 +242,6 @@ async fn serve_fidl(hd: HostDispatcher, inspect: fuchsia_inspect::Inspector) -> 
         // we have a better solution.
         .add_fidl_service(|request_stream| {
             let hd = hd.clone();
-            info!("Serving Bootstrap Service");
             fasync::Task::spawn(
                 services::bootstrap::run(hd, request_stream)
                     .unwrap_or_else(|e| warn!("Bootstrap service failed: {:?}", e)),
@@ -251,7 +250,6 @@ async fn serve_fidl(hd: HostDispatcher, inspect: fuchsia_inspect::Inspector) -> 
         })
         .add_fidl_service(|request_stream| {
             let hd = hd.clone();
-            info!("Serving Access Service");
             fasync::Task::spawn(
                 services::access::run(hd, request_stream)
                     .unwrap_or_else(|e| warn!("Access service failed: {:?}", e)),
@@ -260,7 +258,6 @@ async fn serve_fidl(hd: HostDispatcher, inspect: fuchsia_inspect::Inspector) -> 
         })
         .add_fidl_service(|request_stream| {
             let hd = hd.clone();
-            info!("Serving Configuration Service");
             fasync::Task::spawn(
                 services::configuration::run(hd, request_stream)
                     .unwrap_or_else(|e| warn!("Configuration service failed: {:?}", e)),
@@ -268,11 +265,18 @@ async fn serve_fidl(hd: HostDispatcher, inspect: fuchsia_inspect::Inspector) -> 
             .detach();
         })
         .add_fidl_service(|request_stream| {
-            info!("Serving HostWatcher Service");
             let hd = hd.clone();
             fasync::Task::spawn(
                 services::host_watcher::run(hd, request_stream)
                     .unwrap_or_else(|e| warn!("HostWatcher service failed: {:?}", e)),
+            )
+            .detach();
+        })
+        .add_fidl_service(|request_stream| {
+            let hd = hd.clone();
+            fasync::Task::spawn(
+                services::pairing::run(hd, request_stream)
+                    .unwrap_or_else(|e| warn!("Pairing service failed: {:?}", e)),
             )
             .detach();
         });

@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_bluetooth_gatt as fbgatt, fidl_fuchsia_bluetooth_le as fble,
     fidl_fuchsia_bluetooth_sys::{
         AccessMarker, AccessProxy, BootstrapMarker, BootstrapProxy, ConfigurationMarker,
-        ConfigurationProxy, HostWatcherMarker, HostWatcherProxy,
+        ConfigurationProxy, HostWatcherMarker, HostWatcherProxy, PairingMarker, PairingProxy,
     },
     fidl_fuchsia_device::{NameProviderMarker, NameProviderRequestStream},
     fidl_fuchsia_io as fio,
@@ -48,6 +48,7 @@ enum Event {
     HostWatcher(Option<HostWatcherProxy>),
     Bootstrap(Option<BootstrapProxy>),
     Config(Option<ConfigurationProxy>),
+    Pairing(Option<PairingProxy>),
     NameProvider(Option<NameProviderRequestStream>),
     // bt-gap will not start up without a working SecureStore, so instead of just notifying the
     // test of requests, we also forward along the requests to a working implementation. As such,
@@ -55,7 +56,8 @@ enum Event {
     SecureStore,
 }
 
-const NUMBER_OF_EVENTS: usize = 10;
+/// The expected number of FIDL capability events.
+const NUMBER_OF_EVENTS: usize = 11;
 
 impl From<NameProviderRequestStream> for Event {
     fn from(src: NameProviderRequestStream) -> Self {
@@ -116,6 +118,9 @@ async fn mock_client(
         .send(Event::HostWatcher(Some(host_watcher_svc)))
         .await
         .expect("failed sending ack to test");
+
+    let pairing_svc = handles.connect_to_protocol::<PairingMarker>()?;
+    sender.send(Event::Pairing(Some(pairing_svc))).await.expect("failed sending ack to test");
 
     Ok(())
 }
@@ -215,6 +220,7 @@ async fn bt_gap_component_topology() {
     route_from_bt_gap_to_mock_client::<BootstrapMarker>(&builder).await;
     route_from_bt_gap_to_mock_client::<ConfigurationMarker>(&builder).await;
     route_from_bt_gap_to_mock_client::<HostWatcherMarker>(&builder).await;
+    route_from_bt_gap_to_mock_client::<PairingMarker>(&builder).await;
 
     // Add proxy route between secure store and mock provider
     builder
@@ -292,6 +298,7 @@ async fn bt_gap_component_topology() {
         Event::Bootstrap(None),
         Event::Config(None),
         Event::HostWatcher(None),
+        Event::Pairing(None),
         Event::NameProvider(None),
         Event::SecureStore,
     ] {

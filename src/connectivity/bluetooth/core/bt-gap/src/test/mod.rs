@@ -9,3 +9,4 @@ mod configuration;
 mod discovery;
 mod host_device;
 mod host_dispatcher;
+mod pairing;

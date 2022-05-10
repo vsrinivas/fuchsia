@@ -33,7 +33,6 @@ struct AccessSession {
 }
 
 pub async fn run(hd: HostDispatcher, mut stream: AccessRequestStream) -> Result<(), Error> {
-    info!("fuchsia.bluetooth.sys.Access session started");
     let mut watch_peers_subscriber = hd.watch_peers().await;
     let mut session: AccessSession = Default::default();
     let mut discovery_pending = pending().boxed();
@@ -56,8 +55,6 @@ pub async fn run(hd: HostDispatcher, mut stream: AccessRequestStream) -> Result<
             }
         };
     }
-
-    info!("fuchsia.bluetooth.sys.Access session terminated");
     Ok(())
 }
 
@@ -72,10 +69,12 @@ async fn handler(
             info!("fuchsia.bluetooth.sys.Access.SetPairingDelegate({:?}, {:?})", input, output);
             match delegate.into_proxy() {
                 Ok(proxy) => {
-                    // Attempt to set the pairing delagate for the HostDispatcher. The
+                    // Attempt to set the pairing delegate for the HostDispatcher. The
                     // HostDispatcher will reject if there is currently an active delegate; in this
                     // case `proxy` will be dropped, closing the channel.
-                    let _ = hd.set_pairing_delegate(proxy, input, output);
+                    if let Err(e) = hd.set_pairing_delegate(proxy, input, output) {
+                        warn!("Couldn't set PairingDelegate: {e:?}");
+                    }
                 }
                 Err(err) => {
                     warn!("Invalid Pairing Delegate passed to SetPairingDelegate: {}", err);

@@ -7,14 +7,17 @@ implementation are:
   - Provides thin wrappers over some of the [private Bluetooth API](/src/connectivity/bluetooth/fidl/host.fidl), for use by HostDispatcher.
 - [AccessService](src/services/access.rs): Implements the `fuchsia.bluetooth.sys.Access`
    interface, calling into HostDispatcher for help.
+- [PairingService](src/services/pairing.rs): Implements the `fuchsia.bluetooth.sys.Pairing`
+   interface, calling into HostDispatcher for help.
 - [HostDispatcher](src/host_dispatcher.rs):
   - Implements all stateful logic for the `fuchsia.bluetooth.sys.Access` interface.
   - Provides a Future to monitor `/dev/class/bt-host`, and react to the arrival
     and departure of Bluetooth hosts appropriately.
 - [main](src/main.rs):
-  - Binds the Access, Central, Peripheral, and Server FIDL APIs to code within
+  - Binds the Access, Central, Pairing, Peripheral, and Server FIDL APIs to code within
     this component (`bt-gap`).
     - The Access API is bound to AccessService.
+    - The Pairing API is bound to the PairingService.
     - Other APIs are proxied directly to their private API counterparts.
   - Instantiates the `/dev/class/bt-host`-monitoring future from HostDispatcher.
   - Configures an Executor to process API events and `/dev/class/bt-host` VFS events.

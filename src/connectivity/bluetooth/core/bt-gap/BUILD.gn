@@ -71,6 +71,7 @@ rustc_binary("bin") {
     "src/test/host_device.rs",
     "src/test/host_dispatcher.rs",
     "src/test/mod.rs",
+    "src/test/pairing.rs",
     "src/types.rs",
     "src/watch_peers.rs",
   ]

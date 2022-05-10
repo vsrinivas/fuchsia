@@ -228,11 +228,10 @@ impl HostDispatcherState {
         delegate: PairingDelegateProxy,
         input: InputCapability,
         output: OutputCapability,
-    ) -> bool {
+    ) -> types::Result<()> {
         match self.pairing_dispatcher.as_ref() {
             Some(dispatcher) if !dispatcher.is_closed() => {
-                warn!("Failed to set PairingDelegate; another Delegate is active");
-                false
+                Err(format_err!("Another Delegate is active"))?
             }
             _ => {
                 self.inspect.input_capability.set(&input.debug());
@@ -248,7 +247,7 @@ impl HostDispatcherState {
                 // TODO(fxbug.dev/72961) - We should avoid detach() here, and consider a more
                 // explicit way to track this task
                 fasync::Task::spawn(dispatcher.run()).detach();
-                true
+                Ok(())
             }
         }
     }
@@ -432,7 +431,7 @@ impl HostDispatcher {
         delegate: PairingDelegateProxy,
         input: InputCapability,
         output: OutputCapability,
-    ) -> bool {
+    ) -> types::Result<()> {
         self.state.write().set_pairing_delegate(delegate, input, output)
     }
 
