@@ -55,11 +55,13 @@ pub struct PackageSetBudget {
     /// Number of bytes allotted for the packages of this group.
     pub budget_bytes: u64,
     /// Allowed usage increase allowed for a given commit.
+    #[serde(default)]
     pub creep_budget_bytes: u64,
     /// List of paths to `package_manifest.json` files for each package of the set of the group.
     pub packages: Vec<PathBuf>,
     /// Blobs are de-duplicated by hash across the packages of this set.
     /// This is intended to approximate the process of merging packages.
+    #[serde(default)]
     pub merge: bool,
 }
 
@@ -456,7 +458,7 @@ fn to_json_output(
 mod tests {
     use crate::operations::size_check::{
         compute_budget_results, verify_budgets_with_tools, BlobInstance, BlobSizeAndCount,
-        BudgetBlobs, BudgetResult,
+        BudgetBlobs, BudgetConfig, BudgetResult,
     };
     use crate::util::read_config;
     use crate::util::write_json_file;
@@ -513,6 +515,23 @@ mod tests {
                 prefix
             ),
         }
+    }
+
+    #[test]
+    fn default_merge_and_creep() {
+        let budgets: BudgetConfig = serde_json::from_value(json!({
+        "package_set_budgets":[
+            {
+                "name": "budget_name",
+                "budget_bytes": 10,
+                "packages": [],
+            },
+        ]}))
+        .unwrap();
+        assert_eq!(budgets.package_set_budgets.len(), 1);
+        let package_set_budget = &budgets.package_set_budgets[0];
+        assert_eq!(package_set_budget.merge, false);
+        assert_eq!(package_set_budget.creep_budget_bytes, 0);
     }
 
     #[test]
