@@ -5,6 +5,8 @@
 //! General-purpose socket utilities common to device layer and IP layer
 //! sockets.
 
+pub(crate) mod posix;
+
 use alloc::collections::HashMap;
 use core::fmt::Debug;
 use core::hash::Hash;
