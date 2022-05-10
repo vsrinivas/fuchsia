@@ -258,6 +258,31 @@
     "name": "thermal_state_handler"
   },
   {
+    "type": "ThermalLoadDriver",
+    "name": "thermal_load_driver",
+    "config": {
+      "temperature_input_configs": [
+        {
+          "temperature_handler_node_name": "temperature_soc_pll",
+          "onset_temperature_c": 70.0,
+          "reboot_temperature_c": 120.0,
+          "poll_interval_s": 1,
+          "filter_time_constant_s": 5
+        }
+      ]
+    },
+    "dependencies": {
+      "system_shutdown_node": "sys_shutdown",
+      "thermal_load_notify_nodes": [
+        "thermal_limiter",
+        "thermal_state_handler"
+      ],
+      "temperature_handler_node_names": [
+        "temperature_soc_pll"
+      ]
+    }
+  },
+  {
     "type": "PlatformMetrics",
     "name": "platform_metrics",
     "config": {
@@ -277,10 +302,7 @@
         "cpu_manager"
       ],
       "system_power_handler_node": "sys_shutdown",
-      "thermal_load_notify_nodes": [
-        "thermal_limiter",
-        "thermal_state_handler"
-      ],
+      "thermal_load_notify_nodes": [],
       "platform_metrics_node": "platform_metrics"
     },
     "config": {
