@@ -80,7 +80,6 @@ group("tests") {
     "console:shell-console-unittests",
     "interpreter:shell_server",
     "interpreter:tests",
-    "mirror:shell-mirror-tests",
     "parser:shell-parser-unittests",
   ]
 }
