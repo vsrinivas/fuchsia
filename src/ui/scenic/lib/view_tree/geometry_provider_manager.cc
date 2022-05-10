@@ -90,6 +90,7 @@ fuog_ViewTreeSnapshotPtr GeometryProviderManager::ExtractObservationSnapshot(
 
   // Empty snapshot case.
   if (context_view == ZX_KOID_INVALID && snapshot->view_tree.empty()) {
+    view_tree_snapshot->set_views({});
     return view_tree_snapshot;
   }
 

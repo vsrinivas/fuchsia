@@ -371,6 +371,16 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
     node_c.gfx_inset = std::move(inset);
   }
 
+  // Client should receive an empty views vector in the response when a view_tree::Snapshot has no
+  // views.
+  {
+    auto view_tree_snapshot = view_tree::GeometryProviderManager::ExtractObservationSnapshot(
+        /*context_view*/ std::nullopt, snapshot);
+    ASSERT_TRUE(view_tree_snapshot);
+    ASSERT_TRUE(view_tree_snapshot->has_views());
+    EXPECT_TRUE(view_tree_snapshot->views().empty());
+  }
+
   snapshot->root = node_a_koid;
   snapshot->view_tree.try_emplace(node_a_koid, std::move(node_a));
   snapshot->view_tree.try_emplace(node_b_koid, std::move(node_b));
