@@ -21,7 +21,11 @@ class Device {
   zx::status<> AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
                          cpp20::span<zx_device_str_prop_t> str_props, uint32_t flags);
 
-  zx_status_t DdkAddComposite(const char* name, composite_device_desc_t* desc) { return ZX_OK; }
+  zx_status_t DdkAddComposite(const char* name, composite_device_desc_t* desc) {
+    // Delete ourselves, because device-builder will immediately release the unique_ptr.
+    delete this;
+    return ZX_OK;
+  }
   zx_device_t* zxdev();
 };
 

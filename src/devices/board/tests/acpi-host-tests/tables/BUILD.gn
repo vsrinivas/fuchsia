@@ -1,0 +1,32 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/host_test_data.gni")
+
+template("fake_acpi_table") {
+  assert(defined(invoker.sources))
+
+  # Fake tables used for everything.
+  fake_acpi_tables = [ "fake-fadt/facp.aml" ]
+
+  host_test_data(target_name) {
+    sources = fake_acpi_tables + invoker.sources
+
+    outputs = [ "$target_out_dir/$target_name/{{source_file_part}}" ]
+  }
+}
+
+if (is_host) {
+  fake_acpi_table("device-child-of-scope") {
+    sources = [ "device-child-of-scope/dsdt.aml" ]
+  }
+
+  group("test-data") {
+    testonly = true
+    public_deps = [ ":device-child-of-scope" ]
+  }
+} else {
+  group("test-data") {
+  }
+}

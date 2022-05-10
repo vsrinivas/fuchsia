@@ -44,11 +44,13 @@ sdk_static_library("ddk") {
     "include/lib/ddk/fidl-protodefs.h",
   ]
 
-  sources = [
-    "io-buffer.c",
-    "macros.h",
-    "phys-iter.c",
-  ]
+  if (is_fuchsia) {
+    sources = [
+      "io-buffer.c",
+      "macros.h",
+      "phys-iter.c",
+    ]
+  }
 
   public_configs = [ ":include" ]
 
@@ -59,9 +61,13 @@ sdk_static_library("ddk") {
     "//zircon/system/ulib/async:async",
     "//zircon/system/ulib/ddk-platform-defs",
     "//zircon/system/ulib/syslog:syslog-headers",
-    "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/trace-engine",
   ]
+  if (is_fuchsia) {
+    public_deps += [
+      "//zircon/system/ulib/trace",
+      "//zircon/system/ulib/trace-engine",
+    ]
+  }
 
   deps = [ "//zircon/system/ulib/sync" ]
 
