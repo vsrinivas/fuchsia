@@ -23,7 +23,7 @@ use tracing::{debug, info, trace, warn};
 
 use crate::error::Error;
 use crate::gatt_service::FAST_PAIR_SERVICE_UUID;
-use crate::types::ModelId;
+use crate::types::{AccountKeyList, ModelId};
 
 /// Item type returned by `<LowEnergyAdvertiser as Stream>::poll_next`.
 #[derive(Debug)]
@@ -215,7 +215,23 @@ impl LowEnergyAdvertiser {
         let _ = self.stop_advertising().await;
 
         let model_id_bytes: [u8; 3] = model_id.into();
-        self.start_advertising(model_id_bytes.to_vec())
+        self.start_advertising(model_id_bytes.to_vec(), AdvertisingModeHint::VeryFast)
+    }
+
+    /// Attempts to start advertising the set of Fast Pair Account `keys` over Low Energy.
+    /// Clears the existing advertisement, if set.
+    /// Returns Ok on success, or Error if advertising was unable to be started for any reason.
+    // TODO(fxbug.dev/95542): Uncomment when this is used by the toplevel Fast Pair server.
+    #[allow(unused)]
+    pub async fn advertise_account_keys(&mut self, keys: &AccountKeyList) -> Result<(), Error> {
+        let _ = self.stop_advertising().await;
+
+        // First byte is reserved (0x00).
+        let mut advertisement_bytes = vec![0];
+        // Next bytes are the formatted account key service data.
+        advertisement_bytes.extend(keys.service_data()?);
+
+        self.start_advertising(advertisement_bytes, AdvertisingModeHint::Fast)
     }
 
     /// Clears the active advertisement.
@@ -229,7 +245,11 @@ impl LowEnergyAdvertiser {
         false
     }
 
-    fn start_advertising(&mut self, service_data_bytes: Vec<u8>) -> Result<(), Error> {
+    fn start_advertising(
+        &mut self,
+        service_data_bytes: Vec<u8>,
+        mode: AdvertisingModeHint,
+    ) -> Result<(), Error> {
         let parameters = AdvertisingParameters {
             data: Some(AdvertisingData {
                 service_uuids: Some(vec![Uuid::new16(FAST_PAIR_SERVICE_UUID).into()]),
@@ -244,7 +264,7 @@ impl LowEnergyAdvertiser {
                 bondable_mode: Some(true),
                 ..ConnectionOptions::EMPTY
             }),
-            mode_hint: Some(AdvertisingModeHint::VeryFast),
+            mode_hint: Some(mode),
             ..AdvertisingParameters::EMPTY
         };
 
@@ -310,6 +330,8 @@ mod tests {
     };
     use fuchsia_async as fasync;
     use futures::{pin_mut, stream::StreamExt};
+
+    use crate::types::AccountKey;
 
     fn make_model_id_advertise(
         exec: &mut fasync::TestExecutor,
@@ -394,10 +416,11 @@ mod tests {
         assert!(!adv_peripheral_client.is_closed());
         expect_stream_pending(&mut exec, &mut advertiser);
 
-        // Make another request to advertise the Model ID - this time manually because stopping the
+        // Make another request to advertise the Account Keys - this time manually because stopping the
         // previous advertisement is async.
         let (_client, _responder) = {
-            let adv_fut = advertiser.advertise_model_id(ModelId::try_from(4).unwrap());
+            let example_account_keys = AccountKeyList { keys: vec![AccountKey::new([1; 16])] };
+            let adv_fut = advertiser.advertise_account_keys(&example_account_keys);
             pin_mut!(adv_fut);
             let _ =
                 exec.run_until_stalled(&mut adv_fut).expect_pending("waiting for stop advertise");

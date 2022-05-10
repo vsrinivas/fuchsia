@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::format_err;
 use fidl_fuchsia_bluetooth_gatt2 as gatt;
 use fidl_fuchsia_bluetooth_le as le;
 use thiserror::Error;
@@ -31,6 +32,12 @@ pub enum Error {
 
     #[error("Fidl Error: {0}")]
     Fidl(#[from] fidl::Error),
+}
+
+impl Error {
+    pub fn internal(msg: &str) -> Self {
+        Self::InternalError(format_err!("{}", msg))
+    }
 }
 
 impl From<gatt::Error> for Error {

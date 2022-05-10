@@ -5,16 +5,16 @@
 use anyhow::Error;
 use tracing::{debug, info};
 
+mod advertisement;
 mod config;
 mod error;
 mod gatt_service;
 mod host_watcher;
-mod low_energy_advertiser;
 mod types;
 
+use advertisement::LowEnergyAdvertiser;
 use config::Config;
 use gatt_service::GattService;
-use low_energy_advertiser::LowEnergyAdvertiser;
 
 #[fuchsia::main(logging_tags = ["bt-fastpair-provider"])]
 async fn main() -> Result<(), Error> {

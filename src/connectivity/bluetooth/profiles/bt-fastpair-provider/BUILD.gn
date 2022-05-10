@@ -20,8 +20,10 @@ rustc_binary("bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:sha2",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
@@ -33,11 +35,13 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/advertisement/bloom_filter.rs",
+    "src/advertisement/low_energy_advertiser.rs",
+    "src/advertisement/mod.rs",
     "src/config.rs",
     "src/error.rs",
     "src/gatt_service.rs",
     "src/host_watcher.rs",
-    "src/low_energy_advertiser.rs",
     "src/main.rs",
     "src/types.rs",
   ]
