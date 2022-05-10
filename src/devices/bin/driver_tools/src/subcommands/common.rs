@@ -211,7 +211,7 @@ pub async fn get_registrar_proxy(
                 .await?
         }
         false => {
-            "bootstrap/driver_manager:expose:fuchsia.driver.registrar.DriverRegistrar".to_string()
+            "bootstrap/driver_index:expose:fuchsia.driver.registrar.DriverRegistrar".to_string()
         }
     };
     remotecontrol_connect::<fidl_fuchsia_driver_registrar::DriverRegistrarMarker>(

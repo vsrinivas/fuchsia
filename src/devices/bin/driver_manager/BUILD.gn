@@ -70,8 +70,6 @@ source_set("lib") {
     "driver_host_loader_service.h",
     "driver_loader.cc",
     "driver_loader.h",
-    "driver_registrar_service.cc",
-    "driver_registrar_service.h",
     "inspect.cc",
     "package_resolver.cc",
     "system_instance.cc",
@@ -266,6 +264,7 @@ source_set("driver_runner") {
     "//src/devices/lib/log",
     "//src/lib/fxl",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   public_deps = [
@@ -312,6 +311,7 @@ executable("driver_runner_test") {
     "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,

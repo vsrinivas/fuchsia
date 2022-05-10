@@ -19,7 +19,7 @@ namespace fdf = fuchsia_driver_framework;
 
 namespace driver_manager {
 
-DriverDevelopmentService::DriverDevelopmentService(const DriverRunner& driver_runner,
+DriverDevelopmentService::DriverDevelopmentService(DriverRunner& driver_runner,
                                                    async_dispatcher_t* dispatcher)
     : driver_runner_(driver_runner), dispatcher_(dispatcher) {}
 
@@ -199,6 +199,16 @@ void DriverDevelopmentService::RestartDriverHosts(RestartDriverHostsRequestView 
                                                   RestartDriverHostsCompleter::Sync& completer) {
   // TODO(fxbug.dev/90735): Implement RestartDriverHost
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
+void DriverDevelopmentService::BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
+                                                   BindAllUnboundNodesCompleter::Sync& completer) {
+  auto callback =
+      [completer = completer.ToAsync()](
+          fidl::VectorView<fuchsia_driver_development::wire::NodeBindingInfo> result) mutable {
+        completer.ReplySuccess(result);
+      };
+  driver_runner_.TryBindAllOrphans(std::move(callback));
 }
 
 }  // namespace driver_manager

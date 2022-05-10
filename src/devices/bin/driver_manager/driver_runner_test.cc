@@ -1805,6 +1805,64 @@ TEST_F(DriverRunnerTest, TestTearDownNodeTreeWithManyChildren) {
   Unbind();
 }
 
+TEST_F(DriverRunnerTest, TestBindResultTracker) {
+  bool callback_called = false;
+  bool* callback_called_ptr = &callback_called;
+
+  auto callback = [callback_called_ptr](
+                      fidl::VectorView<fuchsia_driver_development::wire::NodeBindingInfo> results) {
+    ASSERT_EQ(std::string_view("node_name"), results[0].node_name().get());
+    ASSERT_EQ(std::string_view("driver_url"), results[0].driver_url().get());
+    ASSERT_EQ(1ul, results.count());
+    *callback_called_ptr = true;
+  };
+
+  BindResultTracker tracker(3, std::move(callback));
+  ASSERT_EQ(false, callback_called);
+  tracker.ReportNoBind();
+  ASSERT_EQ(false, callback_called);
+  tracker.ReportSuccessfulBind(std::string_view("node_name"), std::string_view("driver_url"));
+  ASSERT_EQ(false, callback_called);
+  tracker.ReportNoBind();
+  ASSERT_EQ(true, callback_called);
+
+  callback_called = false;
+  auto callback_two =
+      [callback_called_ptr](
+          fidl::VectorView<fuchsia_driver_development::wire::NodeBindingInfo> results) {
+        ASSERT_EQ(0ul, results.count());
+        *callback_called_ptr = true;
+      };
+
+  BindResultTracker tracker_two(3, std::move(callback_two));
+  ASSERT_EQ(false, callback_called);
+  tracker_two.ReportNoBind();
+  ASSERT_EQ(false, callback_called);
+  tracker_two.ReportNoBind();
+  ASSERT_EQ(false, callback_called);
+  tracker_two.ReportNoBind();
+  ASSERT_EQ(true, callback_called);
+
+  callback_called = false;
+  auto callback_three =
+      [callback_called_ptr](
+          fidl::VectorView<fuchsia_driver_development::wire::NodeBindingInfo> results) {
+        ASSERT_EQ(std::string_view("node_name"), results[0].node_name().get());
+        ASSERT_EQ(std::string_view("driver_url"), results[0].driver_url().get());
+        ASSERT_EQ(1ul, results.count());
+        *callback_called_ptr = true;
+      };
+
+  BindResultTracker tracker_three(3, std::move(callback_three));
+  ASSERT_EQ(false, callback_called);
+  tracker_three.ReportNoBind();
+  ASSERT_EQ(false, callback_called);
+  tracker_three.ReportNoBind();
+  ASSERT_EQ(false, callback_called);
+  tracker_three.ReportSuccessfulBind(std::string_view("node_name"), std::string_view("driver_url"));
+  ASSERT_EQ(true, callback_called);
+}
+
 TEST(CompositeDirOfferTest, WorkingOffer) {
   const std::string_view kServiceName = "fuchsia.service";
   fidl::Arena<> arena;

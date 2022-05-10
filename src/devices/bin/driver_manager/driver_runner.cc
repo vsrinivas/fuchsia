@@ -12,6 +12,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/errors.h>
 #include <zircon/rights.h>
@@ -327,6 +328,47 @@ zx::status<uint64_t> DriverHostComponent::GetProcessKoid() {
     return zx::error(result->result.err());
   }
   return zx::ok(result->result.response().koid);
+}
+
+BindResultTracker::BindResultTracker(size_t expected_result_count,
+                                     NodeBindingInfoResultCallback result_callback)
+    : expected_result_count_(expected_result_count),
+      currently_reported_(0),
+      result_callback_(std::move(result_callback)) {}
+
+void BindResultTracker::ReportNoBind() {
+  size_t current;
+  {
+    std::scoped_lock guard(lock_);
+    currently_reported_++;
+    current = currently_reported_;
+  }
+
+  Complete(current);
+}
+
+void BindResultTracker::ReportSuccessfulBind(const std::string_view& node_name,
+                                             const std::string_view& driver) {
+  size_t current;
+  {
+    std::scoped_lock guard(lock_);
+    currently_reported_++;
+    auto node_binding_info = fuchsia_driver_development::wire::NodeBindingInfo::Builder(arena_)
+                                 .node_name(node_name)
+                                 .driver_url(driver)
+                                 .Build();
+    results_.emplace_back(node_binding_info);
+    current = currently_reported_;
+  }
+
+  Complete(current);
+}
+
+void BindResultTracker::Complete(size_t current) {
+  if (current == expected_result_count_) {
+    result_callback_(
+        fidl::VectorView<fuchsia_driver_development::wire::NodeBindingInfo>(arena_, results_));
+  }
 }
 
 Node::Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driver_binder,
@@ -683,7 +725,8 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
         [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
     child->set_node_ref(std::move(bind_node));
   } else {
-    (*driver_binder_)->Bind(*child);
+    // We don't care about tracking binds here, sending nullptr is fine.
+    (*driver_binder_)->Bind(*child, nullptr);
   }
   child->AddToParents();
   // We do not block a driver from operation after it has added a child. If the
@@ -695,7 +738,7 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
                            fidl::ClientEnd<fdf::DriverIndex> driver_index,
                            inspect::Inspector& inspector, async_dispatcher_t* dispatcher)
     : realm_(std::move(realm), dispatcher),
-      driver_index_(std::move(driver_index), dispatcher, this),
+      driver_index_(std::move(driver_index), dispatcher),
       dispatcher_(dispatcher),
       root_node_(std::make_shared<Node>("root", std::vector<Node*>{}, this, dispatcher)) {
   inspector.GetRoot().CreateLazyNode(
@@ -749,8 +792,34 @@ void DriverRunner::ScheduleBaseDriversBinding() {
           return;
         }
 
-        TryBindAllOrphans();
+        TryBindAllOrphansUntracked();
       });
+}
+
+void DriverRunner::TryBindAllOrphans(NodeBindingInfoResultCallback result_callback) {
+  // Clear our stored vector of orphaned nodes, we will repopulate it with the
+  // new orphans.
+  std::vector<std::weak_ptr<Node>> orphaned_nodes = std::move(orphaned_nodes_);
+  orphaned_nodes_ = {};
+
+  std::shared_ptr<BindResultTracker> tracker =
+      std::make_shared<BindResultTracker>(orphaned_nodes.size(), std::move(result_callback));
+
+  for (auto& weak_node : orphaned_nodes) {
+    auto node = weak_node.lock();
+    if (!node) {
+      tracker->ReportNoBind();
+      continue;
+    }
+
+    Bind(*node, tracker);
+  }
+}
+
+void DriverRunner::TryBindAllOrphansUntracked() {
+  NodeBindingInfoResultCallback empty_callback =
+      [](fidl::VectorView<fuchsia_driver_development::wire::NodeBindingInfo>) {};
+  TryBindAllOrphans(std::move(empty_callback));
 }
 
 zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url,
@@ -779,12 +848,6 @@ zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url,
   }
   driver_args_.emplace(info.koid, node);
   return zx::ok();
-}
-
-void DriverRunner::OnNewDriverAvailable(
-    fidl::WireEvent<fuchsia_driver_framework::DriverIndex::OnNewDriverAvailable>* event) {
-  LOGF(INFO, "Received an OnNewDriverAvailable. Re-binding orphan nodes.");
-  TryBindAllOrphans();
 }
 
 void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& completer) {
@@ -875,10 +938,17 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   drivers_.push_back(std::move(driver));
 }
 
-void DriverRunner::Bind(Node& node) {
-  auto match_callback = [this, weak_node = node.weak_from_this()](
+void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) {
+  auto match_callback = [this, weak_node = node.weak_from_this(), result_tracker](
                             fidl::WireUnownedResult<fdf::DriverIndex::MatchDriver>& result) {
     auto shared_node = weak_node.lock();
+
+    auto report_no_bind = fit::defer([&result_tracker]() {
+      if (result_tracker) {
+        result_tracker->ReportNoBind();
+      }
+    });
+
     if (!shared_node) {
       LOGF(WARNING, "Node was freed before it could be bound");
       return;
@@ -899,8 +969,16 @@ void DriverRunner::Bind(Node& node) {
 
     if (result->result.is_err()) {
       orphaned();
-      LOGF(WARNING, "Failed to match Node '%s': %s", driver_node->name().data(),
-           zx_status_get_string(result->result.err()));
+      // Log the failed MatchDriver only if we are not tracking the results with a tracker
+      // or if the error is not a ZX_ERR_NOT_FOUND error (meaning it could not find a driver).
+      // When we have a tracker, the bind is happening for all the orphan nodes and the
+      // not found errors get very noisy.
+      zx_status_t match_error = result->result.err();
+      if (!result_tracker || match_error != ZX_ERR_NOT_FOUND) {
+        LOGF(WARNING, "Failed to match Node '%s': %s", driver_node->name().data(),
+             zx_status_get_string(match_error));
+      }
+
       return;
     }
 
@@ -952,8 +1030,14 @@ void DriverRunner::Bind(Node& node) {
       orphaned();
       LOGF(ERROR, "Failed to start driver '%s': %s", driver_node->name().data(),
            zx_status_get_string(start_result.error_value()));
+      return;
     }
+
     node.OnBind();
+    report_no_bind.cancel();
+    if (result_tracker) {
+      result_tracker->ReportSuccessfulBind(node.TopoName(), driver_info.url().get());
+    }
   };
   fidl::Arena<> arena;
   driver_index_->MatchDriver(node.CreateAddArgs(arena)).Then(std::move(match_callback));
@@ -1056,21 +1140,6 @@ zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost()
   auto driver_host =
       std::make_unique<DriverHostComponent>(std::move(*client_end), dispatcher_, &driver_hosts_);
   return zx::ok(std::move(driver_host));
-}
-
-void DriverRunner::TryBindAllOrphans() {
-  // Clear our stored vector of orphaned nodes, we will repopulate it with the
-  // new orphans.
-  std::vector<std::weak_ptr<Node>> orphaned_nodes = std::move(orphaned_nodes_);
-  orphaned_nodes_ = {};
-
-  for (auto& weak_node : orphaned_nodes) {
-    auto node = weak_node.lock();
-    if (!node) {
-      continue;
-    }
-    Bind(*node);
-  }
 }
 
 zx::status<> DriverRunner::CreateComponent(std::string name, Collection collection, std::string url,

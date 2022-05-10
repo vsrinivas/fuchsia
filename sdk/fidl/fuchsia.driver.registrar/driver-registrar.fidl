@@ -6,11 +6,11 @@ library fuchsia.driver.registrar;
 using fuchsia.pkg;
 using zx;
 
-/// Protocol for registering additional driver packages with the driver manager.
+/// Protocol for registering ephemeral driver packages.
 @discoverable
 protocol DriverRegistrar {
-    /// Informs the driver manager that a new driver package is available.
-    /// The driver manager will cache a copy of the driver.
+    /// Informs the driver framework of an ephemeral driver. The metadata will
+    /// be cached by the driver index to be used in future matching operations.
     /// * error a zx_status value indicating failure. One of the following:
     ///     * `ZX_ERR_ACCESS_DENIED` if the device does not have permissions
     ///       to fetch the package.

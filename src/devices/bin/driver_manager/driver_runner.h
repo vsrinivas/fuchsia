@@ -7,14 +7,15 @@
 
 #include <fidl/fuchsia.component.runner/cpp/wire.h>
 #include <fidl/fuchsia.component/cpp/wire.h>
+#include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <fidl/fuchsia.driver.framework/cpp/wire_types.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/function.h>
 #include <lib/fpromise/promise.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
 
 #include <list>
@@ -23,6 +24,9 @@
 #include <fbl/intrusive_double_list.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+
+using NodeBindingInfoResultCallback =
+    fit::callback<void(fidl::VectorView<fuchsia_driver_development::wire::NodeBindingInfo>)>;
 
 // Note, all of the logic here assumes we are operating on a single-threaded
 // dispatcher. It is not safe to use a multi-threaded dispatcher with this code.
@@ -156,12 +160,32 @@ class OwnedMessage {
   fidl::unstable::DecodedMessage<T> decoded_;
 };
 
+class BindResultTracker {
+ public:
+  explicit BindResultTracker(size_t expected_result_count,
+                             NodeBindingInfoResultCallback result_callback);
+
+  void ReportSuccessfulBind(const std::string_view& node_name, const std::string_view& driver);
+  void ReportNoBind();
+
+ private:
+  void Complete(size_t current);
+  fidl::Arena<> arena_;
+  size_t expected_result_count_;
+  size_t currently_reported_ TA_GUARDED(lock_);
+  std::mutex lock_;
+  NodeBindingInfoResultCallback result_callback_;
+  std::vector<fuchsia_driver_development::wire::NodeBindingInfo> results_;
+};
+
 class DriverBinder {
  public:
   virtual ~DriverBinder() = default;
 
   // Attempt to bind `node`.
-  virtual void Bind(Node& node) = 0;
+  // A nullptr for result_tracker is acceptable if the caller doesn't intend to
+  // track the results.
+  virtual void Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) = 0;
 };
 
 class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
@@ -243,8 +267,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
 };
 
-class DriverRunner : public fidl::WireAsyncEventHandler<fuchsia_driver_framework::DriverIndex>,
-                     public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
+class DriverRunner : public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
                      public DriverBinder {
  public:
   DriverRunner(fidl::ClientEnd<fuchsia_component::Realm> realm,
@@ -259,19 +282,23 @@ class DriverRunner : public fidl::WireAsyncEventHandler<fuchsia_driver_framework
   // This function schedules a callback to attempt to bind all orphaned nodes against
   // the base drivers.
   void ScheduleBaseDriversBinding();
+  // Goes through the orphan list and attempts the bind them again. Sends nodes that are still
+  // orphaned back to the orphan list. Tracks the result of the bindings and then when finished
+  // uses the result_callback to report the results.
+  void TryBindAllOrphans(NodeBindingInfoResultCallback result_callback);
 
  private:
   using CompositeArgs = std::vector<std::weak_ptr<Node>>;
   using DriverUrl = std::string;
   using CompositeArgsIterator = std::unordered_multimap<DriverUrl, CompositeArgs>::iterator;
 
-  // fidl::WireAsyncEventHandler<fuchsia_driver_framework::DriverIndex>
-  void OnNewDriverAvailable(
-      fidl::WireEvent<fuchsia_driver_framework::DriverIndex::OnNewDriverAvailable>* event) override;
   // fidl::WireServer<fuchsia_component_runner::ComponentRunner>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
   // DriverBinder
-  void Bind(Node& node) override;
+  // Attempt to bind `node`.
+  // A nullptr for result_tracker is acceptable if the caller doesn't intend to
+  // track the results.
+  void Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) override;
 
   // Create a composite node. Returns a `Node` that is owned by its parents.
   zx::status<Node*> CreateCompositeNode(
@@ -286,10 +313,8 @@ class DriverRunner : public fidl::WireAsyncEventHandler<fuchsia_driver_framework
                            fuchsia_driver_framework::DriverPackageType package_type);
 
   zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();
-
-  // Goes through the orphan list attempts the bind them again. Sends nodes that are still
-  // orphaned back to the orphan list.
-  void TryBindAllOrphans();
+  // The untracked version of TryBindAllOrphans.
+  void TryBindAllOrphansUntracked();
 
   struct CreateComponentOpts {
     const Node* node = nullptr;

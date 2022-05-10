@@ -1002,10 +1002,13 @@
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.manager.SystemStateTransition",
-                "fuchsia.driver.registrar.DriverRegistrar",
                 "fuchsia.hardware.usb.DeviceWatcher",
             ],
             from: "#driver_manager",
+        },
+        {
+            protocol: "fuchsia.driver.registrar.DriverRegistrar",
+            from: "#driver_index",
         },
         {
             protocol: [ "fuchsia.vboot.FirmwareParam" ],

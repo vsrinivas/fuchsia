@@ -8,6 +8,8 @@ using fuchsia.driver.framework;
 using fuchsia.url;
 using zx;
 
+const BINDING_RESULT_MAX uint8 = 10;
+
 type BindRulesBytecode = strict union {
     /// Bind rules in the old bytecode format.
     1: bytecode_v1
@@ -110,6 +112,14 @@ type DeviceInfo = table {
             vector<fuchsia.driver.framework.NodeProperty>:fuchsia.driver.framework.MAX_PROPERTY_COUNT;
 };
 
+/// Information about a driver binding to a node.
+type NodeBindingInfo = table {
+    /// Full topological name of the node that was bound to.
+    1: node_name string:fuchsia.device.manager.DEVICE_PATH_MAX;
+    /// The component url for the driver that bound to the node.
+    2: driver_url string:fuchsia.url.MAX_URL_LENGTH;
+};
+
 protocol DriverInfoIterator {
     /// Return 0 drivers when no more entries left.
     GetNext() -> (struct {
@@ -171,4 +181,11 @@ protocol DriverDevelopment {
         device_filter vector<string:MAX>:MAX;
         iterator server_end:DeviceInfoIterator;
     });
+
+    /// (DFv2) Attempts to bind all unbound nodes in the topology.
+    /// Returns new successful binds.
+    BindAllUnboundNodes() -> (struct {
+        /// List of new bindings that happened as a result of this.
+        binding_result vector<NodeBindingInfo>:BINDING_RESULT_MAX;
+    }) error zx.status;
 };

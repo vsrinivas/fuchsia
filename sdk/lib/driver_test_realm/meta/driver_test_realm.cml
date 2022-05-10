@@ -108,6 +108,7 @@
             protocol: [
                 "fuchsia.driver.development.DriverIndex",
                 "fuchsia.driver.framework.DriverIndex",
+                "fuchsia.driver.registrar.DriverRegistrar",
             ],
             from: "#driver-index",
             to: [ "#driver_manager" ],
@@ -149,11 +150,14 @@
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.manager.SystemStateTransition",
                 "fuchsia.driver.development.DriverDevelopment",
-                "fuchsia.driver.registrar.DriverRegistrar",
                 "fuchsia.hardware.pci.DeviceWatcher",
                 "fuchsia.hardware.usb.DeviceWatcher",
             ],
             from: "#driver_manager",
+        },
+        {
+            protocol: "fuchsia.driver.registrar.DriverRegistrar",
+            from: "#driver-index",
         },
         {
             runner: "driver",

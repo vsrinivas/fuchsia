@@ -119,9 +119,4 @@ protocol DriverIndex {
         topological_path string:MAX;
         nodes vector<DeviceGroupNode>:MAX;
     }) -> (struct {}) error zx.status;
-
-    /// This event fires when there is a new driver available in the Driver Index.
-    /// This happens when a new driver is registered successfully through the
-    /// fuchsia.driver.registrar.Register FIDL call.
-    -> OnNewDriverAvailable();
 };

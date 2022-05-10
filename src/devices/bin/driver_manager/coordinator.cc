@@ -1250,6 +1250,12 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
   fidl::BindServer(dispatcher(), std::move(request->iterator), std::move(iterator));
 }
 
+void Coordinator::BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
+                                      BindAllUnboundNodesCompleter::Sync& completer) {
+  LOGF(WARNING, "BindAllUnboundNodes is only supported in DFv2.");
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
 void Coordinator::UnregisterSystemStorageForShutdown(
     UnregisterSystemStorageForShutdownRequestView request,
     UnregisterSystemStorageForShutdownCompleter::Sync& completer) {

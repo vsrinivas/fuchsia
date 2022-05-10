@@ -268,6 +268,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
                      GetDriverInfoCompleter::Sync& completer) override;
   void GetDeviceInfo(GetDeviceInfoRequestView request,
                      GetDeviceInfoCompleter::Sync& completer) override;
+  void BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
+                           BindAllUnboundNodesCompleter::Sync& completer) override;
 
   // fuchsia.device.manager/Administrator interface
   void UnregisterSystemStorageForShutdown(

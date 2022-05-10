@@ -42,7 +42,6 @@
 #include "src/devices/bin/driver_manager/devfs_exporter.h"
 #include "src/devices/bin/driver_manager/device_watcher.h"
 #include "src/devices/bin/driver_manager/driver_development_service.h"
-#include "src/devices/bin/driver_manager/driver_registrar_service.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -373,7 +372,6 @@ int main(int argc, char** argv) {
   std::optional<DriverRunner> driver_runner;
   std::optional<driver_manager::DriverDevelopmentService> driver_development_service;
   std::optional<driver_manager::DevfsExporter> devfs_exporter;
-  std::optional<driver_manager::DriverRegistrarService> driver_registrar_service;
 
   // Find and load v1 or v2 Drivers.
   if (!driver_manager_params.use_dfv2) {
@@ -440,22 +438,6 @@ int main(int argc, char** argv) {
     auto devfs_publish = devfs_exporter->PublishExporter(outgoing.svc_dir());
     if (devfs_publish.is_error()) {
       return devfs_publish.error_value();
-    }
-
-    if (config.enable_ephemeral) {
-      auto driver_registrar_result = service::Connect<fuchsia_driver_registrar::DriverRegistrar>();
-      if (driver_registrar_result.is_error()) {
-        LOGF(ERROR, "Failed to connect to driver_registrar: %d",
-             driver_registrar_result.error_value());
-        return driver_registrar_result.error_value();
-      }
-
-      driver_registrar_service.emplace(loop.dispatcher(),
-                                       std::move(driver_registrar_result.value()));
-      auto publish_driver_registrar_service = driver_registrar_service->Publish(outgoing.svc_dir());
-      if (publish_driver_registrar_service.is_error()) {
-        return publish_driver_registrar_service.error_value();
-      }
     }
 
     driver_runner->ScheduleBaseDriversBinding();
