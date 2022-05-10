@@ -445,19 +445,20 @@ void DisplaySwapchain::Flip(uint64_t layer_id, FrameRecord* frame_record) {
       (*display_controller_)
           ->SetLayerImage(layer_id, framebuffer_id, wait_event_id, signal_event_id);
   // TODO(fxbug.dev/23490): handle this more robustly.
-  FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed";
+  FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed on SetLayerImage.";
 
   auto before = zx::clock::get_monotonic();
 
   status = (*display_controller_)->ApplyConfig();
 
   // TODO(fxbug.dev/23490): handle this more robustly.
-  FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed. Waited "
+  FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed on ApplyConfig. Waited "
                             << (zx::clock::get_monotonic() - before).to_msecs() << "msecs";
 
   fuchsia::hardware::display::ConfigStamp pending_config_stamp;
   status = (*display_controller_)->GetLatestAppliedConfigStamp(&pending_config_stamp);
-  FX_CHECK(status == ZX_OK) << "GetLatestAppliedConfigStamp() failed: " << status;
+  FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed on GetLatestAppliedConfigStamp: "
+                            << status;
 
   pending_frame_.push_back({
       .config_stamp = pending_config_stamp,
