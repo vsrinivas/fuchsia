@@ -101,8 +101,7 @@ static void test_shutdown(uint32_t iters) {
         test_base->ShutdownDevice();
         test_base.reset();
 
-        const char* kDriverPath = "/system/driver/libmsd_arm.so";
-        magma::TestDeviceBase::BindDriver(parent_device, kDriverPath);
+        magma::TestDeviceBase::AutobindDriver(parent_device);
         count += kRestartCount;
       }
       std::this_thread::yield();

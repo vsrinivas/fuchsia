@@ -43,6 +43,5 @@ TEST(UnitTests, UnitTests) {
   test_base.reset();
 
   // Reload the production driver so later tests shouldn't be affected.
-  const char* kDriverPath = "/system/driver/libmsd_vsi.so";
-  magma::TestDeviceBase::BindDriver(parent_device, kDriverPath);
+  magma::TestDeviceBase::AutobindDriver(parent_device);
 }
