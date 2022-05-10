@@ -90,6 +90,9 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   // CreatePagedNodeVmo().
   virtual void VmoDirty(uint64_t offset, uint64_t length);
 
+  // This is called by PagedVfs to tear down the node.
+  void TearDown();
+
  protected:
   friend fbl::RefPtr<PagedVnode>;
 

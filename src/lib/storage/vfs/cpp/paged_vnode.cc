@@ -135,4 +135,9 @@ void PagedVnode::StopWatchingForZeroVmoClones() {
   clone_watcher_.set_object(ZX_HANDLE_INVALID);
 }
 
+void PagedVnode::TearDown() {
+  std::lock_guard lock(mutex_);
+  auto node = FreePagedVmo();
+}
+
 }  // namespace fs

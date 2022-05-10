@@ -68,6 +68,20 @@ zx::status<> PagedVfs::Init() {
 void PagedVfs::TearDown() {
   // See the assertion at the top of ~PagedVfs.
   pager_pool_.reset();
+
+  // After tearing down the pager pool, there's no more opportunity to receive on-no-children events
+  // so we should forcibly tear down the nodes to prevent reference cycles (which will manifest as
+  // leaks).
+  std::vector<fbl::RefPtr<PagedVnode>> nodes;
+  {
+    std::lock_guard lock(live_nodes_lock_);
+    for (const auto& [id, node] : paged_nodes_) {
+      nodes.push_back(fbl::RefPtr(node));
+    }
+  }
+  for (auto& node : nodes) {
+    node->TearDown();
+  }
 }
 
 std::vector<zx::unowned_thread> PagedVfs::GetPagerThreads() const {
