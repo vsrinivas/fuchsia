@@ -177,16 +177,16 @@ pub fn name_to_scope_id(name: &str) -> u32 {
 ///
 /// example with a scoped link local address:
 /// ```rust
-/// let (addr, scope, port) = parse_address_parts("fe80::1%eno1");
-/// assert_eq!(addr, Some("fe80::1".parse::<IpAddr>().unwrap()));
+/// let (addr, scope, port) = parse_address_parts("fe80::1%eno1").unwrap();
+/// assert_eq!(addr, "fe80::1".parse::<IpAddr>().unwrap());
 /// assert_eq!(scope, Some("eno1"));
 /// assert_eq!(port, None);
 /// ```
 ///
 /// example with a scoped link local address and port:
 /// ```rust
-/// let (addr, scope, port) = parse_address_parts("[fe80::1%eno1]:1234");
-/// assert_eq!(addr, Some("fe80::1".parse::<IpAddr>().unwrap()));
+/// let (addr, scope, port) = parse_address_parts("[fe80::1%eno1]:1234").unwrap();
+/// assert_eq!(addr, "fe80::1".parse::<IpAddr>().unwrap());
 /// assert_eq!(scope, Some("eno1"));
 /// assert_eq!(port, Some(1234));
 /// ```
@@ -195,8 +195,7 @@ pub fn name_to_scope_id(name: &str) -> u32 {
 ///
 /// Returns:
 ///
-/// If the `Option<IpAddr>` is `None`, then none of the response should be considered valid (all
-/// other values will be set to `None` as well.
+/// `Ok(_)` if the address is in a valid format. [anyhow::Error] otherwise.
 ///
 /// Returned values should not be considered correct and should be verified. For example,
 /// `"[::1%foobar]:9898"` would parse, but there is no scope for the loopback device, and
