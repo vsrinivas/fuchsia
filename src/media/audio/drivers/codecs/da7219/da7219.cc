@@ -32,7 +32,18 @@ static const audio::DaiSupportedFormats kSupportedDaiDaiFormats = {
     .bits_per_sample = kSupportedDaiBitsPerSample,
 };
 
-zx_status_t Da7219::Shutdown() { return ZX_OK; }
+Da7219::Da7219(zx_device_t* parent, fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c,
+               zx::interrupt irq)
+    : SimpleCodecServer(parent), i2c_(std::move(i2c)), irq_(std::move(irq)) {
+  irq_handler_.set_object(irq_.get());
+  irq_handler_.Begin(dispatcher());
+}
+
+zx_status_t Da7219::Shutdown() {
+  irq_handler_.Cancel();
+  irq_.destroy();
+  return ZX_OK;
+}
 
 zx::status<DriverIds> Da7219::Initialize() {
   auto chip_id1 = ChipId1::Read(i2c_);
@@ -69,23 +80,20 @@ zx_status_t Da7219::Reset() {
     return status;
 
   status = PllCtrl::Get()
-               .set_pll_mode(2)  // Sampling Rate Matching SRM mode.
-                                 // The PLL is enabled, and the system clock tracks WCLK.
+               .set_pll_mode(PllCtrl::kPllModeSrm)  // Sampling Rate Matching SRM mode.
+               // The PLL is enabled, and the system clock tracks WCLK.
                .set_pll_mclk_sqr_en(false)
-               .set_pll_indiv(3)  // 18 to 36 MHz.
+               .set_pll_indiv(PllCtrl::kPllIndiv18to36MHz)
                .Write(i2c_);
   if (status != ZX_OK)
     return status;
 
   // The HP amplifiers are configured to operate in true-ground (Charge Pump) mode.
-  status = CpCtrl::Get()
-               .set_cp_en(true)
-               .set_cp_mchange(2)  // Voltage level is controlled by the DAC volume level.
-               .Write(i2c_);
+  status = CpCtrl::Get().set_cp_en(true).set_cp_mchange(CpCtrl::kCpMchangeDacVol).Write(i2c_);
   if (status != ZX_OK)
     return status;
 
-  // Routing, enable headphones.
+  // Routing, configure headphones and leave disabled for AAD (Advanced Accessory Detect).
   status = MixoutLSelect::Get().set_mixout_l_mix_select(true).Write(i2c_);
   if (status != ZX_OK)
     return status;
@@ -99,23 +107,42 @@ zx_status_t Da7219::Reset() {
   if (status != ZX_OK)
     return status;
   status = HpLCtrl::Get()
-               .set_hp_l_amp_en(true)  // HP_L_AMP amplifier control.
+               .set_hp_l_amp_en(false)  // HP_L_AMP amplifier control.
                .set_hp_l_amp_mute_en(false)
                .set_hp_l_amp_ramp_en(false)
                .set_hp_l_amp_zc_en(false)
-               .set_hp_l_amp_oe(true)  // Output control, output is driven.
+               .set_hp_l_amp_oe(false)  // Output control, output is driven.
                .set_hp_l_amp_min_gain_en(false)
                .Write(i2c_);
   if (status != ZX_OK)
     return status;
   status = HpRCtrl::Get()
-               .set_hp_r_amp_en(true)  // HP_R_AMP amplifier control.
+               .set_hp_r_amp_en(false)  // HP_R_AMP amplifier control.
                .set_hp_r_amp_mute_en(false)
                .set_hp_r_amp_ramp_en(false)
                .set_hp_r_amp_zc_en(false)
-               .set_hp_r_amp_oe(true)  // Output control, output is driven.
+               .set_hp_r_amp_oe(false)  // Output control, output is driven.
                .set_hp_r_amp_min_gain_en(false)
                .Write(i2c_);
+  if (status != ZX_OK)
+    return status;
+
+  // Enable AAD (Advanced Accessory Detect).
+  status = AccdetConfig1::Get()
+               .set_pin_order_det_en(true)
+               .set_jack_type_det_en(true)
+               .set_mic_det_thresh(AccdetConfig1::kMicDetThresh500Ohms)
+               .set_button_config(AccdetConfig1::kButtonConfig10ms)
+               .set_accdet_en(true)
+               .Write(i2c_);
+  if (status != ZX_OK)
+    return status;
+
+  auto status_a = AccdetStatusA::Read(i2c_);
+  if (!status_a.is_ok())
+    return status_a.error_value();
+  PlugDetected(status_a->jack_insertion_sts());
+
   return status;
 }
 
@@ -153,10 +180,10 @@ zx::status<CodecFormatInfo> Da7219::SetDaiFormat(const DaiFormat& format) {
   uint8_t dai_word_length = 0;
   // clang-format off
   switch (format.bits_per_sample) {
-    case 16: dai_word_length = 0; break;
-    case 20: dai_word_length = 1; break;
-    case 24: dai_word_length = 2; break;
-    case 32: dai_word_length = 3; break;
+    case 16: dai_word_length = DaiCtrl::kDaiWordLength16BitsPerChannel; break;
+    case 20: dai_word_length = DaiCtrl::kDaiWordLength20BitsPerChannel; break;
+    case 24: dai_word_length = DaiCtrl::kDaiWordLength24BitsPerChannel; break;
+    case 32: dai_word_length = DaiCtrl::kDaiWordLength32BitsPerChannel; break;
     default: return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
   // clang-format on
@@ -170,13 +197,71 @@ zx::status<CodecFormatInfo> Da7219::SetDaiFormat(const DaiFormat& format) {
     return zx::error(status);
   status = DaiCtrl::Get()
                .set_dai_en(true)
-               .set_dai_ch_num(2)  // Left and right channels are enabled.
+               .set_dai_ch_num(DaiCtrl::kDaiChNumLeftAndRightChannelsAreEnabled)
                .set_dai_word_length(dai_word_length)
-               .set_dai_format(0)  // I2S.
+               .set_dai_format(DaiCtrl::kDaiFormatI2sMode)
                .Write(i2c_);
   if (status != ZX_OK)
     return zx::error(status);
   return zx::ok(CodecFormatInfo{});
+}
+
+void Da7219::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
+                       const zx_packet_interrupt_t* interrupt) {
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "IRQ wait: %s", zx_status_get_string(status));
+    return;
+  }
+
+  auto event_a = AccdetIrqEventA::Read(i2c_);
+  if (!event_a.is_ok())
+    return;
+
+  if (event_a->e_jack_detect_complete()) {
+    PlugDetected(true);  // Only report once we are done with detection.
+  } else if (event_a->e_jack_removed()) {
+    PlugDetected(false);
+  }
+
+  irq_.ack();
+  status = AccdetIrqEventA::Get()
+               .set_e_jack_detect_complete(true)  // Set to clear.
+               .set_e_jack_removed(true)          // Set to clear.
+               .set_e_jack_inserted(true)         // Set to clear.
+               .Write(i2c_);
+  if (status != ZX_OK)
+    return;
+}
+
+void Da7219::PlugDetected(bool plugged) {
+  zxlogf(INFO, "Plug event: %s", plugged ? "plug" : "unplug");
+
+  // Enable/disable HP left.
+  auto hplctrl = HpLCtrl::Read(i2c_);
+  if (!hplctrl.is_ok()) {
+    return;
+  }
+  zx_status_t status = hplctrl
+                           ->set_hp_l_amp_en(plugged)  // HP_L_AMP amplifier control.
+                           .set_hp_l_amp_oe(plugged)   // Output control, output is driven.
+                           .Write(i2c_);
+  if (status != ZX_OK)
+    return;
+
+  // Enable/disable HP right.
+  auto hprctrl = HpRCtrl::Read(i2c_);
+  if (!hprctrl.is_ok()) {
+    return;
+  }
+  status = hprctrl
+               ->set_hp_r_amp_en(plugged)  // HP_R_AMP amplifier control.
+               .set_hp_r_amp_oe(plugged)   // Output control, output is driven.
+               .Write(i2c_);
+  if (status != ZX_OK)
+    return;
+
+  // No errors, update plugged_.
+  plugged_ = plugged;
 }
 
 zx_status_t Da7219::Bind(void* ctx, zx_device_t* dev) {
@@ -196,7 +281,16 @@ zx_status_t Da7219::Bind(void* ctx, zx_device_t* dev) {
       return ZX_ERR_NO_RESOURCES;
     }
 
-    return SimpleCodecServer::CreateAndAddToDdk<Da7219>(dev, std::move(endpoints->client));
+    auto result = client->borrow()->MapInterrupt(0);
+    if (!result.ok() || result->result.is_err()) {
+      zxlogf(WARNING, "Could not get IRQ: %s",
+             result.ok() ? zx_status_get_string(result->result.err())
+                         : result.FormatDescription().data());
+      return ZX_ERR_NO_RESOURCES;
+    }
+
+    return SimpleCodecServer::CreateAndAddToDdk<Da7219>(dev, std::move(endpoints->client),
+                                                        std::move(result->result.response().irq));
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

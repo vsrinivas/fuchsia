@@ -39,16 +39,35 @@ struct I2cRegister : public hwreg::I2cRegisterBase<DerivedType, uint8_t, 1> {
 // PLL_CTRL.
 struct PllCtrl : public I2cRegister<PllCtrl, 0x20> {
   DEF_FIELD(7, 6, pll_mode);
+  static constexpr uint8_t kPllModeBypassMode = 0;
+  static constexpr uint8_t kPllModeNormalMode = 1;
+  static constexpr uint8_t kPllModeSrm = 2;
   DEF_BIT(5, pll_mclk_sqr_en);
   DEF_FIELD(4, 2, pll_indiv);
+  static constexpr uint8_t kPllIndiv2to4p5MHz = 0;
+  static constexpr uint8_t kPllIndiv4p5to9MHz = 1;
+  static constexpr uint8_t kPllIndiv9to18MHz = 2;
+  static constexpr uint8_t kPllIndiv18to36MHz = 3;
+  static constexpr uint8_t kPllIndiv36plusMHz = 4;
 };
 
 // DAI_CTRL.
 struct DaiCtrl : public I2cRegister<DaiCtrl, 0x2c> {
   DEF_BIT(7, dai_en);
   DEF_FIELD(5, 4, dai_ch_num);
+  static constexpr uint8_t kDaiChNumNoChannelsAreEnabled = 0;
+  static constexpr uint8_t kDaiChNumLeftChannelIsEnabled = 1;
+  static constexpr uint8_t kDaiChNumLeftAndRightChannelsAreEnabled = 2;
   DEF_FIELD(3, 2, dai_word_length);
+  static constexpr uint8_t kDaiWordLength16BitsPerChannel = 0;
+  static constexpr uint8_t kDaiWordLength20BitsPerChannel = 1;
+  static constexpr uint8_t kDaiWordLength24BitsPerChannel = 2;
+  static constexpr uint8_t kDaiWordLength32BitsPerChannel = 3;
   DEF_FIELD(1, 0, dai_format);
+  static constexpr uint8_t kDaiFormatI2sMode = 0;
+  static constexpr uint8_t kDaiFormatLeftJustifiedMode = 1;
+  static constexpr uint8_t kDaiFormatRightJustifiedMode = 2;
+  static constexpr uint8_t kDaiFormatDspMode = 3;
 };
 
 // DAI_TDM_CTRL.
@@ -62,6 +81,9 @@ struct DaiTdmCtrl : public I2cRegister<DaiTdmCtrl, 0x2d> {
 struct CpCtrl : public I2cRegister<CpCtrl, 0x47> {
   DEF_BIT(7, cp_en);
   DEF_FIELD(5, 4, cp_mchange);
+  static constexpr uint8_t kCpMchangeLargestOutputVolumeLevel = 1;
+  static constexpr uint8_t kCpMchangeDacVol = 2;
+  static constexpr uint8_t kCpMchangeSignalMagnitude = 3;
 };
 
 // MIXOUT_L_SELECT.
@@ -118,6 +140,78 @@ struct ChipId2 : public I2cRegister<ChipId2, 0x82> {
 struct ChipRevision : public I2cRegister<ChipRevision, 0x83> {
   DEF_FIELD(7, 4, chip_major);
   DEF_FIELD(3, 0, chip_minor);
+};
+
+// ACCDET_STATUS_A.
+struct AccdetStatusA : public I2cRegister<AccdetStatusA, 0xc0> {
+  DEF_BIT(3, micbias_up_sts);
+  DEF_BIT(2, jack_pin_order_sts);
+  DEF_BIT(1, jack_type_sts);
+  DEF_BIT(0, jack_insertion_sts);
+};
+
+// ACCDET_STATUS_B.
+struct AccdetStatusB : public I2cRegister<AccdetStatusB, 0xc1> {
+  DEF_FIELD(7, 0, button_type_sts);
+};
+
+// ACCDET_IRQ_EVENT_A.
+struct AccdetIrqEventA : public I2cRegister<AccdetIrqEventA, 0xc2> {
+  DEF_BIT(2, e_jack_detect_complete);
+  DEF_BIT(1, e_jack_removed);
+  DEF_BIT(0, e_jack_inserted);
+};
+
+// ACCDET_IRQ_EVENT_B.
+struct AccdetIrqEventB : public I2cRegister<AccdetIrqEventB, 0xc3> {
+  DEF_BIT(7, e_button_a_released);
+  DEF_BIT(6, e_button_b_released);
+  DEF_BIT(5, e_button_c_released);
+  DEF_BIT(4, e_button_d_released);
+  DEF_BIT(3, e_button_d_pressed);
+  DEF_BIT(2, e_button_c_pressed);
+  DEF_BIT(1, e_button_b_pressed);
+  DEF_BIT(0, e_button_a_pressed);
+};
+
+// ACCDET_IRQ_MASK_A
+struct AccdetIrqMaskA : public I2cRegister<AccdetIrqMaskA, 0xc4> {
+  DEF_BIT(2, m_jack_detect_comp);
+  DEF_BIT(1, m_jack_removed);
+  DEF_BIT(0, m_jack_inserted);
+};
+
+// ACCDET_IRQ_MASK_B.
+struct AccdetIrqMaskB : public I2cRegister<AccdetIrqMaskB, 0xc5> {
+  DEF_BIT(7, m_button_a_release);
+  DEF_BIT(6, m_button_b_release);
+  DEF_BIT(5, m_button_c_release);
+  DEF_BIT(4, m_button_d_release);
+  DEF_BIT(3, m_button_d_pressed);
+  DEF_BIT(2, m_button_c_pressed);
+  DEF_BIT(1, m_button_b_pressed);
+  DEF_BIT(0, m_button_a_pressed);
+};
+
+// ACCDET_CONFIG_1.
+struct AccdetConfig1 : public I2cRegister<AccdetConfig1, 0xc6> {
+  DEF_BIT(7, pin_order_det_en);
+  DEF_BIT(6, jack_type_det_en);
+  DEF_FIELD(5, 4, mic_det_thresh);
+  static constexpr uint8_t kMicDetThresh200Ohms = 0;
+  static constexpr uint8_t kMicDetThresh500Ohms = 1;
+  static constexpr uint8_t kMicDetThresh750Ohms = 2;
+  static constexpr uint8_t kMicDetThresh1000Ohms = 3;
+  DEF_FIELD(3, 1, button_config);
+  static constexpr uint8_t kButtonConfigDisabled = 0;
+  static constexpr uint8_t kButtonConfig2ms = 1;
+  static constexpr uint8_t kButtonConfig5ms = 2;
+  static constexpr uint8_t kButtonConfig10ms = 3;
+  static constexpr uint8_t kButtonConfig50ms = 4;
+  static constexpr uint8_t kButtonConfig100ms = 5;
+  static constexpr uint8_t kButtonConfig200ms = 6;
+  static constexpr uint8_t kButtonConfig500ms = 7;
+  DEF_BIT(0, accdet_en);
 };
 
 // SYSTEM_ACTIVE.

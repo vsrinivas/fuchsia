@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_DA7219_DA7219_H_
 
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
+#include <lib/async/cpp/irq.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/simple-codec/simple-codec-server.h>
 
@@ -15,8 +16,8 @@ namespace audio {
 
 class Da7219 : public SimpleCodecServer {
  public:
-  explicit Da7219(zx_device_t* parent, fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c)
-      : SimpleCodecServer(parent), i2c_(std::move(i2c)) {}
+  explicit Da7219(zx_device_t* parent, fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c,
+                  zx::interrupt irq);
   ~Da7219() override = default;
 
   // Implementation for SimpleCodecServer.
@@ -39,13 +40,15 @@ class Da7219 : public SimpleCodecServer {
   GainState GetGainState() override;
   void SetGainState(GainState state) override;
 
-  zx_status_t WriteReg(uint8_t reg, uint8_t value);
-  zx_status_t WriteRegs(uint8_t* regs, size_t count);
-  zx_status_t ReadReg(uint8_t reg, uint8_t* value);
-  zx_status_t UpdateReg(uint8_t reg, uint8_t mask, uint8_t value);
+  void HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
+                 const zx_packet_interrupt_t* interrupt);
+  void PlugDetected(bool plugged);
 
   inspect::Inspector inspect_;
   fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
+  zx::interrupt irq_;
+  async::IrqMethod<Da7219, &Da7219::HandleIrq> irq_handler_{this};
+  bool plugged_ = false;
 };
 
 }  // namespace audio
