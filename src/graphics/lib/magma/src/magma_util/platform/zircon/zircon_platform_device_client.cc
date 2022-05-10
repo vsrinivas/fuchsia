@@ -50,14 +50,14 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
                       ->Query(fuchsia_gpu_magma::wire::QueryId(query_id));
 
     if (result.status() != ZX_OK)
-      return DRETF(result.status(), "magma_DeviceQuery failed");
+      return DRET_MSG(result.status(), "magma_DeviceQuery failed");
 
     if (result->result.is_err())
-      return DRETF(result->result.err(), "Got error response");
+      return DRET_MSG(result->result.err(), "Got error response");
 
     if (result->result.response().is_buffer_result()) {
       if (!result_buffer_out)
-        return DRETF(MAGMA_STATUS_INVALID_ARGS, "Can't return query result buffer");
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Can't return query result buffer");
 
       *result_buffer_out = result->result.response().buffer_result().release();
 
@@ -66,7 +66,7 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
 
     if (result->result.response().is_simple_result()) {
       if (!result_out)
-        return DRETF(MAGMA_STATUS_INVALID_ARGS, "Can't return query simple result");
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Can't return query simple result");
 
       *result_out = result->result.response().simple_result();
 
@@ -76,7 +76,7 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
       return MAGMA_STATUS_OK;
     }
 
-    return DRETF(false, "Unknown result type");
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Unknown result type");
   }
 
  private:
