@@ -124,6 +124,10 @@ impl<'ast> Visit<'ast> for Finder {
         self.narrow_unless(i.span().into(), &["clippy::serde_api_misuse"]);
         visit::visit_impl_item(self, i);
     }
+    fn visit_trait_item(&mut self, i: &'ast syn::TraitItem) {
+        self.narrow(i.span().into());
+        visit::visit_trait_item(self, i);
+    }
     fn visit_attribute(&mut self, a: &'ast syn::Attribute) {
         self.narrow(a.span().into());
         visit::visit_attribute(self, a);
@@ -268,6 +272,11 @@ impl Foo for Bar {
     }
 }";
 
+    const TRAIT: &'static str = "
+trait Foo {
+    fn method(&self);
+}";
+
     #[test]
     fn test_basic() {
         let name = "LINTNAME".to_owned();
@@ -351,6 +360,17 @@ fn main() {
         assert_eq!(
             apply_insertions(NESTED, insertions).lines().nth(4).unwrap(),
             "        #[allow(LINTNAME)] // TODO(INSERT_LINT_BUG)"
+        );
+    }
+
+    #[test]
+    fn test_trait_narrowing() {
+        let name = "LINTNAME".to_owned();
+        let insertions =
+            calculate_insertions(TRAIT, &[lint(name.clone(), (3, 5), (3, 6))]).unwrap();
+        assert_eq!(
+            apply_insertions(TRAIT, insertions).lines().nth(2).unwrap(),
+            "    #[allow(LINTNAME)] // TODO(INSERT_LINT_BUG)"
         );
     }
 }
