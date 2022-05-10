@@ -37,7 +37,6 @@ constexpr uint32_t kGdcFRWidth = 2240;
 constexpr uint32_t kGdcFRHeight = 1792;
 
 // ML Video FR Parameters
-
 constexpr uint32_t kMlFRWidth = 640;
 constexpr uint32_t kMlFRHeight = 512;
 constexpr uint32_t kMlFRFrameRate = 5;
@@ -49,7 +48,7 @@ constexpr uint32_t kVideoWidth1 = 896;
 constexpr uint32_t kVideoHeight1 = 504;
 constexpr uint32_t kVideoWidth2 = 640;
 constexpr uint32_t kVideoHeight2 = 360;
-constexpr uint32_t kVideoFrameRate = 30;
+constexpr uint32_t kVideoFrameRate = 30;  // As advertised to clients
 
 constexpr auto kMlStreamType = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
                                fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |

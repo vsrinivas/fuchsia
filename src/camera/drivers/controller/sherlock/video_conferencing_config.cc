@@ -63,7 +63,7 @@ static fuchsia::camera2::hal::StreamConfig VideoConfig(bool extended_fov) {
   stream.AddImageFormat(kVideoWidth2, kVideoHeight2, kFramePixelFormat, kGdcFRWidth, kGdcFRHeight);
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
-  stream.set_frames_per_second(kVideoFrameRate);
+  stream.set_frames_per_second(kVideoThrottledOutputFrameRate);
   stream.set_buffer_count_for_camping(kGe2dBufferForCamping);
   stream.set_min_buffer_count(kGe2dBufferForCamping + kNumClientBuffers + kExtraBuffers);
   return stream.ConvertToStreamConfig();
@@ -111,7 +111,7 @@ static InternalConfigNode OutputVideoConferencing(bool extended_fov) {
       .type = kOutputStream,
       .output_frame_rate =
           {
-              .frames_per_sec_numerator = kVideoFrameRate,
+              .frames_per_sec_numerator = kVideoThrottledOutputFrameRate,
               .frames_per_sec_denominator = 1,
           },
       .supported_streams =
@@ -190,7 +190,7 @@ static InternalConfigNode Ge2d(bool extended_fov) {
       .type = kGe2d,
       .output_frame_rate =
           {
-              .frames_per_sec_numerator = kVideoFrameRate,
+              .frames_per_sec_numerator = kVideoThrottledOutputFrameRate,
               .frames_per_sec_denominator = 1,
           },
       .supported_streams =
@@ -265,7 +265,7 @@ static InternalConfigNode GdcVideo1(bool extended_fov) {
       .type = kGdc,
       .output_frame_rate =
           {
-              .frames_per_sec_numerator = kVideoFrameRate,
+              .frames_per_sec_numerator = kVideoThrottledOutputFrameRate,
               .frames_per_sec_denominator = 1,
           },
       .supported_streams =
@@ -329,7 +329,7 @@ InternalConfigNode VideoConfigFullRes(bool extended_fov) {
       .type = kInputStream,
       .output_frame_rate =
           {
-              .frames_per_sec_numerator = kVideoFrameRate,
+              .frames_per_sec_numerator = kSensorMaxFramesPerSecond,
               .frames_per_sec_denominator = 1,
           },
       .input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
