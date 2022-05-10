@@ -50,7 +50,7 @@ impl GuestType {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Launch a guest image. Usage: guest-rs launch guest_type [--cmdline-add <arg>...] [--interrupt <interrupt>...] [--default-net <bool>] [--memory <memory-size>] [--cpus <num-cpus>] [--virtio-* <bool>]
+/// Launch a guest image. Usage: guest launch guest_type [--cmdline-add <arg>...] [--interrupt <interrupt>...] [--default-net <bool>] [--memory <memory-size>] [--cpus <num-cpus>] [--virtio-* <bool>]
 #[argh(subcommand, name = "launch")]
 pub struct LaunchArgs {
     #[argh(positional)]

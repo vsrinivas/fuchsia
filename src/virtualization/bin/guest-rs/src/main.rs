@@ -32,7 +32,7 @@ enum SubCommands {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Modify the size of a memory balloon. Usage: guest-rs balloon env-id cid num-pages
+/// Modify the size of a memory balloon. Usage: guest balloon env-id cid num-pages
 #[argh(subcommand, name = "balloon")]
 struct BalloonArgs {
     #[argh(positional)]
@@ -47,7 +47,7 @@ struct BalloonArgs {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// See the stats of a guest's memory balloon. Usage: guest-rs balloon-stats env-id cid
+/// See the stats of a guest's memory balloon. Usage: guest balloon-stats env-id cid
 #[argh(subcommand, name = "balloon-stats")]
 struct BalloonStatsArgs {
     #[argh(positional)]
@@ -59,7 +59,7 @@ struct BalloonStatsArgs {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Access the serial output for a guest. Usage: guest-rs serial env-id cid
+/// Access the serial output for a guest. Usage: guest serial env-id cid
 #[argh(subcommand, name = "serial")]
 struct SerialArgs {
     #[argh(positional)]
@@ -71,12 +71,12 @@ struct SerialArgs {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// List existing guest environments. Usage: guest-rs list
+/// List existing guest environments. Usage: guest list
 #[argh(subcommand, name = "list")]
 struct ListArgs {}
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Create a socat connection on the specified port. Usage: guest-rs socat env-id cid port
+/// Create a socat connection on the specified port. Usage: guest socat env-id cid port
 #[argh(subcommand, name = "socat")]
 struct SocatArgs {
     #[argh(positional)]
@@ -91,19 +91,19 @@ struct SocatArgs {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Listen through socat on the specified port. Usage: guest-rs socat-listen env-id host-port
+/// Listen through socat on the specified port. Usage: guest socat-listen env-id host-port
 #[argh(subcommand, name = "socat-listen")]
 struct SocatListenArgs {
     #[argh(positional)]
     /// environment id of host.
     env_id: u32,
     #[argh(positional)]
-    /// port number of host (see `guest-rs socat`)
+    /// port number of host (see `guest socat`)
     host_port: u32,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Create virtual shell for a guest or connect via virtual shell. Usage: guest-rs vsh [env_id [cid [port]]] [--args <arg>]
+/// Create virtual shell for a guest or connect via virtual shell. Usage: guest vsh [env_id [cid [port]]] [--args <arg>]
 #[argh(subcommand, name = "vsh")]
 struct VshArgs {
     #[argh(option)]

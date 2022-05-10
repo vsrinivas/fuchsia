@@ -3,25 +3,23 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/dist/renamed_binary.gni")
+
+group("guest") {
+  deps = [
+    ":vsh",
+
+    # TODO(fxbug.dev/89427): Remove this once we complete the rename of guest-rs to guest.
+    "//src/virtualization/bin/guest-rs",
+  ]
+}
 
 executable("bin") {
-  output_name = "guest"
+  output_name = "vsh"
 
   sources = [
-    "balloon.cc",
-    "balloon.h",
-    "launch.cc",
-    "launch.h",
-    "list.cc",
-    "list.h",
     "main.cc",
-    "serial.cc",
-    "serial.h",
     "services.cc",
     "services.h",
-    "socat.cc",
-    "socat.h",
     "vshc.cc",
     "vshc.h",
   ]
@@ -32,13 +30,11 @@ executable("bin") {
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//src/virtualization/lib/guest_config",
     "//src/virtualization/lib/vsh:util",
     "//src/virtualization/third_party/vm_tools:vsh_cc_proto",
     "//third_party/protobuf:protobuf_lite",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/virtio",
   ]
 
   public_deps = [ "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp" ]
@@ -49,16 +45,6 @@ executable("bin") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-renamed_binary("vsh-bin") {
-  dest = "bin/vsh"
-  source = "$root_out_dir/guest"
-  source_deps = [ ":bin" ]
-  keep_original = true
-}
-
-fuchsia_shell_package("guest") {
-  deps = [
-    ":bin",
-    ":vsh-bin",
-  ]
+fuchsia_shell_package("vsh") {
+  deps = [ ":bin" ]
 }

@@ -5,13 +5,17 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("guest-rs") {
+  deps = [ ":guest" ]
+}
+
 group("tests") {
   testonly = true
   deps = [ ":guest_tests" ]
 }
 
 rustc_binary("bin") {
-  output_name = "guest-rs"
+  output_name = "guest"
   deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
@@ -53,6 +57,6 @@ fuchsia_unittest_package("guest_tests") {
   deps = [ ":bin_test" ]
 }
 
-fuchsia_shell_package("guest-rs") {
+fuchsia_shell_package("guest") {
   deps = [ ":bin" ]
 }
