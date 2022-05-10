@@ -15,7 +15,7 @@ use crate::execution::*;
 use crate::fs::*;
 use crate::loader::*;
 use crate::lock::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use crate::logging::not_implemented;
+use crate::logging::{not_implemented, set_zx_name};
 use crate::mm::MemoryManager;
 use crate::signals::signal_handling::dequeue_signal;
 use crate::signals::types::*;
@@ -810,10 +810,12 @@ impl CurrentTask {
 
         // TODO: POSIX timers are not preserved.
 
-        self.thread_group.mark_executed(&path)?;
+        self.thread_group.write().did_exec = true;
+        set_zx_name(&self.thread_group.process, path.as_bytes());
+        set_zx_name(&fuchsia_runtime::thread_self(), path.as_bytes());
 
         // Get the basename of the path, which will be used as the name displayed with
-        // `prtcl(PR_GET_NAME)` and `/proc/self/stat`
+        // `prctl(PR_GET_NAME)` and `/proc/self/stat`
         let basename = if let Some(idx) = memchr::memrchr(b'/', path.to_bytes()) {
             // SAFETY: Substring of a CString will contain no null bytes.
             CString::new(&path.to_bytes()[idx + 1..]).unwrap()

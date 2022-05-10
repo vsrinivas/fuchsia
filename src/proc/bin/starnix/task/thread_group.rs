@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::sys;
-use fuchsia_zircon::{self as zx, AsHandleRef};
+use fuchsia_zircon as zx;
 use std::collections::BTreeMap;
-use std::ffi::CStr;
 use std::fmt;
 use std::sync::{Arc, Weak};
 
@@ -348,27 +346,6 @@ impl ThreadGroup {
             if let Some(parent) = state.parent.as_ref() {
                 parent.read().interrupt(InterruptionType::ChildChange);
             }
-        }
-    }
-
-    /// Mark the process as having run exec and sets the name of process associated with this
-    /// thread group.
-    ///
-    /// - `name`: The name to set for the process. If the length of `name` is >= `ZX_MAX_NAME_LEN`,
-    /// a truncated version of the name will be used.
-    pub fn mark_executed(self: &Arc<ThreadGroup>, name: &CStr) -> Result<(), Errno> {
-        let mut state = self.write();
-        state.did_exec = true;
-        if name.to_bytes().len() >= sys::ZX_MAX_NAME_LEN {
-            // TODO: Might want to use [..sys::ZX_MAX_NAME_LEN] of only the last path component.
-            #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95057)
-            let mut clone = name.to_owned().into_bytes();
-            clone[sys::ZX_MAX_NAME_LEN - 1] = 0;
-            let name = CStr::from_bytes_with_nul(&clone[..sys::ZX_MAX_NAME_LEN])
-                .map_err(|_| errno!(EINVAL))?;
-            self.process.set_name(name).map_err(|status| from_status_like_fdio!(status))
-        } else {
-            self.process.set_name(name).map_err(|status| from_status_like_fdio!(status))
         }
     }
 
@@ -778,40 +755,6 @@ mod test {
     use super::*;
     use crate::testing::*;
     use itertools::Itertools;
-    use std::ffi::CString;
-
-    #[::fuchsia::test]
-    fn test_long_name() {
-        let (_kernel, current_task) = create_kernel_and_task();
-        let bytes = [1; sys::ZX_MAX_NAME_LEN];
-        let name = CString::new(bytes).unwrap();
-
-        let max_bytes = [1; sys::ZX_MAX_NAME_LEN - 1];
-        let expected_name = CString::new(max_bytes).unwrap();
-
-        assert!(current_task.thread_group.mark_executed(&name).is_ok());
-        assert_eq!(current_task.thread_group.process.get_name(), Ok(expected_name));
-    }
-
-    #[::fuchsia::test]
-    fn test_max_length_name() {
-        let (_kernel, current_task) = create_kernel_and_task();
-        let bytes = [1; sys::ZX_MAX_NAME_LEN - 1];
-        let name = CString::new(bytes).unwrap();
-
-        assert!(current_task.thread_group.mark_executed(&name).is_ok());
-        assert_eq!(current_task.thread_group.process.get_name(), Ok(name));
-    }
-
-    #[::fuchsia::test]
-    fn test_short_name() {
-        let (_kernel, current_task) = create_kernel_and_task();
-        let bytes = [1; sys::ZX_MAX_NAME_LEN - 10];
-        let name = CString::new(bytes).unwrap();
-
-        assert!(current_task.thread_group.mark_executed(&name).is_ok());
-        assert_eq!(current_task.thread_group.process.get_name(), Ok(name));
-    }
 
     #[::fuchsia::test]
     fn test_setsid() {

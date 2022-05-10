@@ -18,6 +18,7 @@ use std::sync::Arc;
 use tracing::info;
 
 use super::shared::*;
+use crate::logging::set_zx_name;
 use crate::logging::strace;
 use crate::mm::MemoryManager;
 use crate::signals::*;
@@ -75,6 +76,7 @@ fn start_task_thread(current_task: &CurrentTask) -> Result<zx::Channel, zx::Stat
     current_task.thread.wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
     current_task.thread.write_state_general_regs(current_task.registers.into())?;
     mem::drop(suspend_token);
+    set_zx_name(&fuchsia_runtime::thread_self(), current_task.read().command.as_bytes());
     Ok(exceptions)
 }
 
