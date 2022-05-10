@@ -46,6 +46,7 @@ class TestDeviceBase {
       magma_device_release(device_);
       device_ = 0;
     }
+    GTEST_FAIL();
   }
 
   // Get a channel to the parent device, so we can rebind the driver to it. This
@@ -75,6 +76,10 @@ class TestDeviceBase {
     auto res = fidl::WireCall<fuchsia_device::Controller>(device_controller_)->ScheduleUnbind();
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
+  }
+
+  static void AutobindDriver(fidl::UnownedClientEnd<fuchsia_device::Controller> parent_device) {
+    BindDriver(std::move(parent_device), "");
   }
 
   static void BindDriver(fidl::UnownedClientEnd<fuchsia_device::Controller> parent_device,
