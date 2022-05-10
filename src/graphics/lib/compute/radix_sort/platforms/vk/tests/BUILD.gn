@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  public_deps = [ "radix_sort_vk_bench" ]
+  public_deps = [
+    "radix_sort_vk_bench",
+    "radix_sort_vk_bench:tests",
+  ]
 }

@@ -37,6 +37,7 @@ group("tests") {
   # These tests require a Vulkan environment
   #
   public_deps += [
+    "radix_sort/platforms/vk/tests/radix_sort_vk_bench/tests",
     "spinel-vk-rs:tests",
     "spinel/platforms/vk/tests/spinel_vk_tests",
     "tools/bench/platforms/vk/tests",

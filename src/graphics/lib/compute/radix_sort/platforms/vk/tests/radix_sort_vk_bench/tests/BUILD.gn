@@ -1,0 +1,35 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+#
+#
+#
+graphics_compute_unittests("radix-sort-vk-bench-unittests") {
+  testonly = true
+  sources = [ "radix_sort_vk_bench_unittests.cc" ]
+  deps = [ "${graphics_compute_dir}/radix_sort/platforms/vk/tests/radix_sort_vk_bench:radix_sort_vk_bench_sources" ]
+}
+
+graphics_compute_unittests_package("radix-sort-vk-bench-tests") {
+  needs_vulkan = true
+  testonly = true
+  deps = [ ":radix-sort-vk-bench-unittests" ]
+
+  #
+  # Ensure that a host executable is built on Linux hosts
+  #
+  if (is_fuchsia && host_os == "linux") {
+    data_deps = [ ":radix-sort-vk-bench-tests($host_toolchain)" ]
+  }
+}
+
+#
+#
+#
+group("tests") {
+  testonly = true
+  public_deps = [ ":radix-sort-vk-bench-tests" ]
+}
