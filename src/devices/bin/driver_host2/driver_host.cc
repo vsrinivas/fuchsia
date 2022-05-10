@@ -273,6 +273,17 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
                        converted_message = std::move(converted_message),
                        driver = std::move(*driver),
                        driver_dispatcher = std::move(driver_dispatcher)]() mutable {
+      // We have to add the driver to this list before calling Start in order to have an accurate
+      // count of how many drivers exist in this driver host.
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        drivers_.push_back(driver);
+      }
+      auto remove_driver = fit::defer([this, driver = driver.get()]() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        drivers_.erase(*driver);
+      });
+
       // Save a ptr to the dispatcher so we can shut it down if starting the driver fails.
       fdf::UnownedDispatcher unowned_dispatcher = driver_dispatcher.borrow();
       auto start =
@@ -324,9 +335,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       auto bind = fidl::BindServer(loop_.dispatcher(), std::move(request), driver.get(),
                                    std::move(unbind_callback));
       driver->set_binding(std::move(bind));
-
-      std::lock_guard<std::mutex> lock(mutex_);
-      drivers_.push_back(std::move(driver));
+      remove_driver.cancel();
     };
     async::PostTask(driver_async_dispatcher, std::move(start_task));
   };

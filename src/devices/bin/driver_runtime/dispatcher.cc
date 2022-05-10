@@ -990,7 +990,7 @@ fdf_status_t DispatcherCoordinator::ShutdownDispatchersAsync(
     }
   }
   for (auto& dispatcher : dispatchers) {
-    dispatcher->ShutdownAsync();
+    async::PostTask(dispatcher->GetAsyncDispatcher(), [=]() { dispatcher->ShutdownAsync(); });
   }
   if (dispatchers.empty()) {
     // The dispatchers have already been shutdown and no calls to |NotifyDispatcherShutdown|
