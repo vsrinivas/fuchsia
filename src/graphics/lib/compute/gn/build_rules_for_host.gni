@@ -24,7 +24,9 @@ graphics_compute_gtest_main_target = "//src/lib/fxl/test:gtest_main"
 # Accepts same variables as GN executable() rule, as well as:
 #   needs_vulkan: Optional flag. Set to true to add Vulkan dependencies.
 template("graphics_compute_executable_rule") {
-  executable(target_name) {
+  _binary_target = "bin_${target_name}"
+
+  executable(_binary_target) {
     forward_variables_from(invoker,
                            "*",
                            [
@@ -32,6 +34,9 @@ template("graphics_compute_executable_rule") {
                              "configs",
                              "needs_vulkan",
                            ])
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
     if (defined(invoker.configs)) {
       configs += invoker.configs
     }
@@ -42,13 +47,26 @@ template("graphics_compute_executable_rule") {
       deps += [ graphics_compute_vulkan_loader_target ]
     }
   }
+
+  group(target_name) {
+    # This host executable is never a tool to be used outside the build
+    if (is_host) {
+      metadata = {
+        tool_barrier = []
+      }
+    }
+    if (defined(invoker.testonly)) {
+      testonly = invoker.testonly
+    }
+    public_deps = [ ":${_binary_target}" ]
+  }
 }
 
 # Accepts same variables as GN executable() rule, as well as:
 #   needs_vulkan: Optional flag. Set to true to add Vulkan dependencies.
 template("graphics_compute_test_rule") {
-  # Generate the executable
   _binary_target = "bin_${target_name}"
+
   graphics_compute_executable_rule(_binary_target) {
     testonly = true
     output_name = invoker.target_name
@@ -72,6 +90,10 @@ template("graphics_compute_test_rule") {
   }
 
   group(target_name) {
+    # This executable is *never* a tool to be used outside the build
+    metadata = {
+      tool_barrier = []
+    }
     testonly = true
     deps = _deps
   }

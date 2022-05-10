@@ -92,12 +92,9 @@ template("target_archive") {
     _struct_sources_executable = "_target_archive.$target_name.executable"
     _struct_sources_image = "_target_archive.$target_name.image"
 
-    # When host and Fuchsia tool "name", "cpu", and "os" attributes
-    # match there will be a conflict. This happens when the Fuchsia
-    # toolchain is "linux_x64".
-    if (is_host) {
-      _struct_sources_executable = "host" + _struct_sources_executable
-      _struct_sources_image = "host" + _struct_sources_image
+    # This executable is not a tool to be used outside the build
+    metadata = {
+      tool_barrier = []
     }
 
     # First build a tiny executable that is specially linked to use no normal
