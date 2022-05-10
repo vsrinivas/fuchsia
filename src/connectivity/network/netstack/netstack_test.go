@@ -62,12 +62,12 @@ const (
 func TestMain(m *testing.M) {
 	flag.Parse()
 	if testing.Verbose() {
-		appCtx := component.NewContextFromStartupInfo()
+		componentCtx := component.NewContextFromStartupInfo()
 		req, logSink, err := logger.NewLogSinkWithCtxInterfaceRequest()
 		if err != nil {
 			panic(err)
 		}
-		appCtx.ConnectToEnvService(req)
+		componentCtx.ConnectToEnvService(req)
 		options := syslog.LogInitOptions{
 			LogLevel: math.MinInt8,
 		}

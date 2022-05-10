@@ -216,16 +216,16 @@ func (*impl) ActLazy(fidl.Context, validate.LazyAction) (validate.TestResult, er
 }
 
 func main() {
-	appCtx := component.NewContextFromStartupInfo()
+	componentCtx := component.NewContextFromStartupInfo()
 
 	i := impl{
 		nodes: make(map[uint32]uint32),
 	}
-	appCtx.OutgoingService.AddDiagnostics("root", &component.DirectoryWrapper{
+	componentCtx.OutgoingService.AddDiagnostics("root", &component.DirectoryWrapper{
 		Directory: &i,
 	})
 	stub := validate.ValidateWithCtxStub{Impl: &i}
-	appCtx.OutgoingService.AddService(
+	componentCtx.OutgoingService.AddService(
 		validate.ValidateName,
 		func(ctx context.Context, c zx.Channel) error {
 			go component.Serve(ctx, &stub, c, component.ServeOptions{
@@ -237,5 +237,5 @@ func main() {
 		},
 	)
 
-	appCtx.BindStartupHandle(context.Background())
+	componentCtx.BindStartupHandle(context.Background())
 }

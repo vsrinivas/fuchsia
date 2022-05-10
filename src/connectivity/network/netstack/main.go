@@ -185,14 +185,14 @@ func (*glogEmitter) Emit(depth int, level glog.Level, timestamp time.Time, forma
 	}
 }
 
-func InstallThreadProfiles(ctx context.Context, appCtx *component.Context) {
+func InstallThreadProfiles(ctx context.Context, componentCtx *component.Context) {
 	const threadProfile = "fuchsia.netstack.go-worker"
 	channel := zx.GetThreadsChannel()
 	req, provider, err := scheduler.NewProfileProviderWithCtxInterfaceRequest()
 	if err != nil {
 		panic(fmt.Sprintf("failed to create ProfileProvider request: %s", err))
 	}
-	appCtx.ConnectToEnvService(req)
+	componentCtx.ConnectToEnvService(req)
 	for {
 		_, err := zxwait.WaitContext(ctx, channel.Handle().Load(), zx.SignalChannelReadable)
 		if err != nil {
@@ -231,8 +231,8 @@ func Main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	appCtx := component.NewContextFromStartupInfo()
-	go InstallThreadProfiles(ctx, appCtx)
+	componentCtx := component.NewContextFromStartupInfo()
+	go InstallThreadProfiles(ctx, componentCtx)
 
 	logLevel := syslog.InfoLevel
 
@@ -259,7 +259,7 @@ func Main() {
 		if err != nil {
 			panic(fmt.Sprintf("failed to create syslog request: %s", err))
 		}
-		appCtx.ConnectToEnvService(req)
+		componentCtx.ConnectToEnvService(req)
 
 		options := syslog.LogInitOptions{
 			LogLevel: logLevel,
@@ -283,7 +283,7 @@ func Main() {
 
 	var opaqueIIDOpts ipv6.OpaqueInterfaceIdentifierOptions
 	if !noOpaqueIID {
-		secretKeyForOpaqueIID, err := getSecretKeyForOpaqueIID(appCtx)
+		secretKeyForOpaqueIID, err := getSecretKeyForOpaqueIID(componentCtx)
 		if err != nil {
 			panic(fmt.Sprintf("failed to get secret key for opaque IIDs: %s", err))
 		}
@@ -393,7 +393,7 @@ func Main() {
 	ndpDisp.ns = ns
 	ndpDisp.dynamicAddressSourceTracker.init(ns)
 
-	filter.AddOutgoingService(appCtx, f)
+	filter.AddOutgoingService(componentCtx, f)
 
 	{
 		if err := ns.addLoopback(); err != nil {
@@ -429,7 +429,7 @@ func Main() {
 		// Trace manager can not be running, or not available in the namespace. We can continue.
 	}
 
-	appCtx.OutgoingService.AddDiagnostics("counters", &component.DirectoryWrapper{
+	componentCtx.OutgoingService.AddDiagnostics("counters", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
 				inner: &statCounterInspectImpl{
@@ -439,7 +439,7 @@ func Main() {
 			}).asService,
 		},
 	})
-	appCtx.OutgoingService.AddDiagnostics("interfaces", &component.DirectoryWrapper{
+	componentCtx.OutgoingService.AddDiagnostics("interfaces", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			// asService is late-bound so that each call retrieves fresh NIC info.
 			asService: func() *component.Service {
@@ -449,7 +449,7 @@ func Main() {
 			},
 		},
 	})
-	appCtx.OutgoingService.AddDiagnostics("sockets", &component.DirectoryWrapper{
+	componentCtx.OutgoingService.AddDiagnostics("sockets", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
 				inner: &socketInfoMapInspectImpl{
@@ -458,7 +458,7 @@ func Main() {
 			}).asService,
 		},
 	})
-	appCtx.OutgoingService.AddDiagnostics("routes", &component.DirectoryWrapper{
+	componentCtx.OutgoingService.AddDiagnostics("routes", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			// asService is late-bound so that each call retrieves fresh routing table info.
 			asService: func() *component.Service {
@@ -499,7 +499,7 @@ func Main() {
 		if err != nil {
 			_ = syslog.Fatalf("%s", err)
 		}
-		appCtx.OutgoingService.AddDiagnostics("pprof", dir)
+		componentCtx.OutgoingService.AddDiagnostics("pprof", dir)
 		go func() {
 			if err := run(); err != nil {
 				_ = syslog.Errorf("pprof directory serving error; snapshots will not include pprof data: %s", err)
@@ -509,7 +509,7 @@ func Main() {
 
 	{
 		stub := netstack.NetstackWithCtxStub{Impl: &netstackImpl{ns: ns}}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			netstack.NetstackName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &stub, c, component.ServeOptions{
@@ -528,7 +528,7 @@ func Main() {
 			ns:          ns,
 			dnsWatchers: dnsWatchers,
 		}}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			stack.StackName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &stub, c, component.ServeOptions{
@@ -545,7 +545,7 @@ func Main() {
 		stub := stack.LogWithCtxStub{Impl: &logImpl{
 			logPackets: &sniffer.LogPackets,
 		}}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			stack.LogName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &stub, c, component.ServeOptions{
@@ -559,7 +559,7 @@ func Main() {
 
 	{
 		stub := socket.ProviderWithCtxStub{Impl: &providerImpl{ns: ns}}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			socket.ProviderName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &stub, c, component.ServeOptions{
@@ -574,7 +574,7 @@ func Main() {
 
 	{
 		stub := rawsocket.ProviderWithCtxStub{Impl: &rawProviderImpl{ns: ns}}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			rawsocket.ProviderName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &stub, c, component.ServeOptions{
@@ -589,7 +589,7 @@ func Main() {
 
 	{
 		stub := packetsocket.ProviderWithCtxStub{Impl: &packetProviderImpl{ns: ns}}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			packetsocket.ProviderName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &stub, c, component.ServeOptions{
@@ -604,7 +604,7 @@ func Main() {
 
 	{
 		stub := routes.StateWithCtxStub{Impl: &routesImpl{stack: ns.stack}}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			routes.StateName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &stub, c, component.ServeOptions{
@@ -619,7 +619,7 @@ func Main() {
 
 	{
 		stub := interfaces.StateWithCtxStub{Impl: &interfaceStateImpl{watcherChan: watcherChan}}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			interfaces.StateName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &stub, c, component.ServeOptions{
@@ -634,7 +634,7 @@ func Main() {
 
 	{
 		stub := admin.InstallerWithCtxStub{Impl: &interfacesAdminInstallerImpl{ns: ns}}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			admin.InstallerName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &stub, c, component.ServeOptions{
@@ -649,7 +649,7 @@ func Main() {
 
 	{
 		stub := debug.InterfacesWithCtxStub{Impl: &debugInterfacesImpl{ns: ns}}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			debug.InterfacesName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &stub, c, component.ServeOptions{
@@ -666,7 +666,7 @@ func Main() {
 		impl := &neighborImpl{stack: stk}
 
 		viewStub := neighbor.ViewWithCtxStub{Impl: impl}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			neighbor.ViewName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &viewStub, c, component.ServeOptions{
@@ -679,7 +679,7 @@ func Main() {
 		)
 
 		controllerStub := neighbor.ControllerWithCtxStub{Impl: impl}
-		appCtx.OutgoingService.AddService(
+		componentCtx.OutgoingService.AddService(
 			neighbor.ControllerName,
 			func(ctx context.Context, c zx.Channel) error {
 				go component.Serve(ctx, &controllerStub, c, component.ServeOptions{
@@ -692,7 +692,7 @@ func Main() {
 		)
 	}
 
-	appCtx.BindStartupHandle(context.Background())
+	componentCtx.BindStartupHandle(context.Background())
 }
 
 // newSecretKey returns a new secret key.
@@ -712,7 +712,7 @@ func newSecretKeyForOpaqueIID() ([]byte, error) {
 // getSecretKeyForOpaqueIID gets a secret key for opaque IID generation from the
 // secure stash store service, or attempts to create one. If the stash service
 // is unavailable, a temporary secret key will be returned.
-func getSecretKeyForOpaqueIID(appCtx *component.Context) ([]byte, error) {
+func getSecretKeyForOpaqueIID(componentCtx *component.Context) ([]byte, error) {
 	syslog.VLogf(syslog.DebugVerbosity, "getting or creating secret key for opaque IID from secure stash store")
 
 	// Connect to the secure stash store service.
@@ -724,7 +724,7 @@ func getSecretKeyForOpaqueIID(appCtx *component.Context) ([]byte, error) {
 	defer func() {
 		_ = store.Close()
 	}()
-	appCtx.ConnectToEnvService(storeReq)
+	componentCtx.ConnectToEnvService(storeReq)
 
 	// Use our secure stash.
 	if err := store.Identify(context.Background(), stashStoreIdentificationName); err != nil {
