@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -15,7 +16,6 @@
 #include <thread>
 
 #include "src/developer/debug/debug_agent/debug_agent.h"
-#include "src/developer/debug/debug_agent/fidl_server.h"
 #include "src/developer/debug/debug_agent/socket_connection.h"
 #include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/debug_agent/zircon_system_interface.h"
@@ -148,15 +148,35 @@ int main(int argc, const char* argv[]) {
       // communication.
       while (true) {
         if (options.channel_mode) {
-          // Connect to FIDL service which will wait for an incoming connection from a client.
-          // This happens within the message_loop so it does not need a new thread.
-          debug_agent::DebugAgentImpl fidl_agent(&debug_agent);
-          fidl::BindingSet<fuchsia::debugger::DebugAgent> bindings;
-          auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-          context->outgoing()->AddPublicService(bindings.GetHandler(&fidl_agent));
+          // Must correspond to main_launcher.cc.
+          zx::socket socket(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+          FX_CHECK(socket.is_valid());
 
-          FX_LOGS(INFO) << "Start listening on FIDL fuchsia::debugger::DebugAgent.";
+          debug::BufferedZxSocket buffer(std::move(socket));
+
+          // Route data from the router_buffer -> RemoteAPIAdapter -> DebugAgent.
+          debug_agent::RemoteAPIAdapter adapter(&debug_agent, &buffer.stream());
+          buffer.set_data_available_callback([&adapter]() { adapter.OnStreamReadable(); });
+
+          // Exit the message loop on error.
+          buffer.set_error_callback([&debug_agent]() {
+            DEBUG_LOG(Agent) << "Remote socket connection lost";
+            debug::MessageLoop::Current()->QuitNow();
+            debug_agent.Disconnect();
+          });
+
+          // Connect the buffer into the agent.
+          debug_agent.Connect(&buffer.stream());
+          if (!buffer.Start()) {
+            FX_LOGS(ERROR) << "Fail to connect to the FIDL socket";
+            break;
+          }
+
+          FX_LOGS(INFO) << "Remote client connected to debug_agent";
           message_loop->Run();
+
+          // Always quit in this mode.
+          break;
         } else {
           // Start a new thread that will listen on a socket from an incoming connection from a
           // client. In the meantime, the main thread will block waiting for something to be posted

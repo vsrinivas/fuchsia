@@ -2,8 +2,7 @@
     include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/debug_agent",
-        args: [ "--channel-mode" ],
+        binary: "bin/debug_agent_launcher",
     },
     capabilities: [
         {

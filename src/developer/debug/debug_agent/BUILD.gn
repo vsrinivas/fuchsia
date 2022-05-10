@@ -146,10 +146,7 @@ if (include_test_app) {
 
 executable("bin") {
   output_name = "debug_agent"
-  sources = [
-    "fidl_server.cc",
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -168,10 +165,26 @@ fuchsia_component("debug_agent-component-legacy") {
   deps = [ ":bin" ]
 }
 
+executable("launcher") {
+  output_name = "debug_agent_launcher"
+  sources = [ "main_launcher.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.debugger",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
 fuchsia_component("debug_agent-component") {
   component_name = "debug_agent"
   manifest = "meta/debug_agent.cml"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    ":launcher",
+  ]
 }
 
 fuchsia_package("debug_agent") {
