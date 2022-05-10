@@ -16,6 +16,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BCDC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BCDC_H_
 
+#include <lib/stdcompat/span.h>
+
+#include <wlan/drivers/components/frame.h>
+
 #include "core.h"
 #include "fwil_types.h"
 #include "netbuf.h"
@@ -100,5 +104,8 @@ void brcmf_proto_bcdc_detach(brcmf_pub* drvr);
 zx_status_t brcmf_proto_bcdc_reset(brcmf_pub* drvr);
 void brcmf_proto_bcdc_txflowblock(brcmf_pub* drvr, bool state);
 void brcmf_proto_bcdc_txcomplete(brcmf_pub* drvr, brcmf_netbuf* txp, bool success);
+void brcmf_proto_bcdc_txcomplete(brcmf_pub* drvr,
+                                 cpp20::span<wlan::drivers::components::Frame> frames,
+                                 zx_status_t result);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BCDC_H_

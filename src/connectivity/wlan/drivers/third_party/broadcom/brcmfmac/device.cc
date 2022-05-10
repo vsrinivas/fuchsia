@@ -17,6 +17,7 @@
 
 #include <ddktl/fidl.h>
 #include <ddktl/init-txn.h>
+#include <wlan/common/ieee80211.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
@@ -29,10 +30,12 @@ namespace wlan {
 namespace brcmfmac {
 namespace {
 
+constexpr char kNetDevDriverName[] = "brcmfmac-netdev";
 constexpr char kClientInterfaceName[] = "brcmfmac-wlan-fullmac-client";
-constexpr uint16_t kClientInterfaceId = 0;
+constexpr uint8_t kClientInterfaceId = 0;
 constexpr char kApInterfaceName[] = "brcmfmac-wlan-fullmac-ap";
-constexpr uint16_t kApInterfaceId = 1;
+constexpr uint8_t kApInterfaceId = 1;
+constexpr uint8_t kMaxBufferParts = 1;
 
 }  // namespace
 
@@ -42,7 +45,8 @@ Device::Device(zx_device_t* parent)
     : DeviceType(parent),
       brcmf_pub_(std::make_unique<brcmf_pub>()),
       client_interface_(nullptr),
-      ap_interface_(nullptr) {
+      ap_interface_(nullptr),
+      network_device_(parent, this) {
   brcmf_pub_->device = this;
   for (auto& entry : brcmf_pub_->if2bss) {
     entry = BRCMF_BSSIDX_INVALID;
@@ -59,6 +63,9 @@ Device::~Device() = default;
 
 void Device::DdkInit(ddk::InitTxn txn) {
   zx_status_t status = Init();
+  if (status == ZX_OK && IsNetworkDeviceBus()) {
+    status = network_device_.Init(kNetDevDriverName);
+  }
   txn.Reply(status);
 }
 
@@ -153,12 +160,14 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
       }
 
       WlanInterface* interface = nullptr;
-      if ((status = WlanInterface::Create(this, kClientInterfaceName, wdev, &interface)) != ZX_OK) {
+      if ((status = WlanInterface::Create(this, kClientInterfaceName, wdev, req->role,
+                                          &interface)) != ZX_OK) {
         return status;
       }
 
       client_interface_ = interface;  // The lifecycle of `interface` is owned by the devhost.
       iface_id = kClientInterfaceId;
+
       break;
     }
     case WLAN_MAC_ROLE_AP: {
@@ -183,12 +192,14 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
       }
 
       WlanInterface* interface = nullptr;
-      if ((status = WlanInterface::Create(this, kApInterfaceName, wdev, &interface)) != ZX_OK) {
+      if ((status = WlanInterface::Create(this, kApInterfaceName, wdev, req->role, &interface)) !=
+          ZX_OK) {
         return status;
       }
 
       ap_interface_ = interface;  // The lifecycle of `interface` is owned by the devhost.
       iface_id = kApInterfaceId;
+
       break;
     };
     default: {
@@ -292,6 +303,61 @@ zx_status_t Device::WlanphyImplGetPsMode(wlanphy_ps_mode_t* out_ps_mode) {
   }
   return brcmf_get_ps_mode(brcmf_pub_.get(), out_ps_mode);
 }
+
+zx_status_t Device::NetDevInit() { return ZX_OK; }
+
+void Device::NetDevRelease() {
+  // Don't need to do anything here, the release of wlanif should take care of all releasing
+}
+
+void Device::NetDevStart(wlan::drivers::components::NetworkDevice::Callbacks::StartTxn txn) {
+  txn.Reply(ZX_OK);
+}
+
+void Device::NetDevStop(wlan::drivers::components::NetworkDevice::Callbacks::StopTxn txn) {
+  // Flush all buffers in response to this call. They are no longer valid for use.
+  brcmf_flush_buffers(drvr());
+  txn.Reply();
+}
+
+void Device::NetDevGetInfo(device_info_t* out_info) {
+  std::lock_guard<std::mutex> lock(lock_);
+
+  memset(out_info, 0, sizeof(*out_info));
+  zx_status_t err = brcmf_get_tx_depth(drvr(), &out_info->tx_depth);
+  ZX_ASSERT(err == ZX_OK);
+  err = brcmf_get_rx_depth(drvr(), &out_info->rx_depth);
+  ZX_ASSERT(err == ZX_OK);
+  out_info->rx_threshold = out_info->rx_depth / 3;
+  out_info->max_buffer_parts = kMaxBufferParts;
+  out_info->max_buffer_length = ZX_PAGE_SIZE;
+  out_info->buffer_alignment = ZX_PAGE_SIZE;
+  out_info->min_rx_buffer_length = IEEE80211_MSDU_SIZE_MAX;
+
+  out_info->tx_head_length = drvr()->hdrlen;
+  brcmf_get_tail_length(drvr(), &out_info->tx_tail_length);
+  // No hardware acceleration supported yet.
+  out_info->rx_accel_count = 0;
+  out_info->tx_accel_count = 0;
+}
+
+void Device::NetDevQueueTx(cpp20::span<wlan::drivers::components::Frame> frames) {
+  brcmf_start_xmit(drvr(), frames);
+}
+
+void Device::NetDevQueueRxSpace(const rx_space_buffer_t* buffers_list, size_t buffers_count,
+                                uint8_t* vmo_addrs[]) {
+  brcmf_queue_rx_space(drvr(), buffers_list, buffers_count, vmo_addrs);
+}
+
+zx_status_t Device::NetDevPrepareVmo(uint8_t vmo_id, zx::vmo vmo, uint8_t* mapped_address,
+                                     size_t mapped_size) {
+  return brcmf_prepare_vmo(drvr(), vmo_id, vmo.get(), mapped_address, mapped_size);
+}
+
+void Device::NetDevReleaseVmo(uint8_t vmo_id) { brcmf_release_vmo(drvr(), vmo_id); }
+
+void Device::NetDevSetSnoopEnabled(bool snoop) {}
 
 void Device::DestroyAllIfaces(void) {
   zx_status_t status = WlanphyImplDestroyIface(kClientInterfaceId);

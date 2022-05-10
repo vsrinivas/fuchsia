@@ -45,6 +45,7 @@ class StubDdkDevice : public Device {
 
   async_dispatcher_t* GetDispatcher() override { return nullptr; }
   DeviceInspect* GetInspect() override { return nullptr; }
+  bool IsNetworkDeviceBus() const override { return false; }
   zx_status_t Init() override { return ZX_OK; }
 
  protected:

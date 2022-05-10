@@ -238,6 +238,17 @@ done:
   return ret;
 }
 
+static void brcmf_proto_bcdc_hdrpopulate(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
+                                         int priority, brcmf_proto_bcdc_header* hdr) {
+  hdr->flags = (BCDC_PROTO_VER << BCDC_FLAG_VER_SHIFT);
+
+  hdr->priority = (priority & BCDC_PRIORITY_MASK);
+  hdr->flags2 = 0;
+  hdr->data_offset = offset;
+  ZX_DEBUG_ASSERT(0 <= ifidx && ifidx <= std::numeric_limits<uint8_t>::max());
+  BCDC_SET_IF_IDX(hdr, static_cast<uint8_t>(ifidx));
+}
+
 static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
                                      struct brcmf_netbuf* pktbuf) {
   struct brcmf_proto_bcdc_header* h;
@@ -247,62 +258,81 @@ static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t 
   /* Push BDC header used to convey priority for buses that don't */
   brcmf_netbuf_grow_head(pktbuf, BCDC_HEADER_LEN);
   h = reinterpret_cast<struct brcmf_proto_bcdc_header*>(pktbuf->data);
-
-  h->flags = (BCDC_PROTO_VER << BCDC_FLAG_VER_SHIFT);
-  if (pktbuf->ip_summed == CHECKSUM_PARTIAL) {
-    h->flags |= BCDC_FLAG_SUM_NEEDED;
-  }
-
-  h->priority = (pktbuf->priority & BCDC_PRIORITY_MASK);
-  h->flags2 = 0;
-  h->data_offset = offset;
-  ZX_DEBUG_ASSERT(0 <= ifidx && ifidx <= std::numeric_limits<uint8_t>::max());
-  BCDC_SET_IF_IDX(h, static_cast<uint8_t>(ifidx));
+  brcmf_proto_bcdc_hdrpopulate(drvr, ifidx, offset, pktbuf->priority, h);
 }
 
-static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* pktbuf,
-                                            struct brcmf_if** ifp) {
-  struct brcmf_proto_bcdc_header* h;
-  struct brcmf_if* tmp_if;
-
-  BRCMF_DBG(BCDC, "Enter");
-
-  /* Pop BCDC header used to convey priority for buses that don't */
-  if (pktbuf->len <= BCDC_HEADER_LEN) {
-    BRCMF_DBG(BCDC, "rx data too short (%d <= %d)", pktbuf->len, BCDC_HEADER_LEN);
+static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, brcmf_proto_bcdc_header* hdr,
+                                            uint32_t size, struct brcmf_if** ifp,
+                                            uint32_t* shrinkage, int* priority) {
+  if (size <= BCDC_HEADER_LEN) {
+    BRCMF_DBG(BCDC, "rx data too short (%u <= %d)", size, BCDC_HEADER_LEN);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-  h = reinterpret_cast<struct brcmf_proto_bcdc_header*>(pktbuf->data);
-
-  tmp_if = brcmf_get_ifp(drvr, BCDC_GET_IF_IDX(h));
+  struct brcmf_if* tmp_if = brcmf_get_ifp(drvr, BCDC_GET_IF_IDX(hdr));
   if (!tmp_if) {
     BRCMF_ERR("no matching ifp found");
     return ZX_ERR_NOT_FOUND;
   }
-  if (((h->flags & BCDC_FLAG_VER_MASK) >> BCDC_FLAG_VER_SHIFT) != BCDC_PROTO_VER) {
-    BRCMF_ERR("%s: non-BCDC packet received, flags 0x%x", brcmf_ifname(tmp_if), h->flags);
+  if (((hdr->flags & BCDC_FLAG_VER_MASK) >> BCDC_FLAG_VER_SHIFT) != BCDC_PROTO_VER) {
+    BRCMF_ERR("%s: non-BCDC packet received, flags 0x%x", brcmf_ifname(tmp_if), hdr->flags);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-  if (h->flags & BCDC_FLAG_SUM_GOOD) {
-    BRCMF_DBG(BCDC, "%s: BDC rcv, good checksum, flags 0x%x", brcmf_ifname(tmp_if), h->flags);
-    pktbuf->ip_summed = CHECKSUM_UNNECESSARY;
+  if (hdr->flags & BCDC_FLAG_SUM_GOOD) {
+    BRCMF_DBG(BCDC, "%s: BDC rcv, good checksum, flags 0x%x", brcmf_ifname(tmp_if), hdr->flags);
   }
 
-  pktbuf->priority = h->priority & BCDC_PRIORITY_MASK;
+  *priority = hdr->priority & BCDC_PRIORITY_MASK;
 
-  brcmf_netbuf_shrink_head(pktbuf, BCDC_HEADER_LEN);
-  brcmf_netbuf_shrink_head(pktbuf, h->data_offset << 2);
+  *shrinkage = BCDC_HEADER_LEN + (hdr->data_offset << 2);
 
-  if (pktbuf->len == 0) {
+  if (*shrinkage >= size) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  if (ifp != nullptr) {
+  if (ifp) {
     *ifp = tmp_if;
   }
+
   return ZX_OK;
+}
+
+static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* pktbuf,
+                                            struct brcmf_if** ifp) {
+  BRCMF_DBG(BCDC, "Enter");
+
+  auto hdr = reinterpret_cast<struct brcmf_proto_bcdc_header*>(pktbuf->data);
+
+  uint32_t shrinkage = 0;
+  int priority = 0;
+  zx_status_t err = brcmf_proto_bcdc_hdrpull(drvr, hdr, pktbuf->len, ifp, &shrinkage, &priority);
+
+  if (err == ZX_OK) {
+    pktbuf->priority = priority;
+    brcmf_netbuf_shrink_head(pktbuf, shrinkage);
+  }
+
+  return err;
+}
+
+static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr,
+                                            wlan::drivers::components::Frame& frame,
+                                            struct brcmf_if** ifp) {
+  BRCMF_DBG(BCDC, "Enter");
+
+  auto hdr = reinterpret_cast<struct brcmf_proto_bcdc_header*>(frame.Data());
+
+  uint32_t shrinkage = 0;
+  int priority = 0;
+  zx_status_t err = brcmf_proto_bcdc_hdrpull(drvr, hdr, frame.Size(), ifp, &shrinkage, &priority);
+
+  if (err == ZX_OK) {
+    frame.SetPriority(priority);
+    frame.ShrinkHead(shrinkage);
+  }
+
+  return err;
 }
 
 static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
@@ -340,6 +370,16 @@ static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int if
   return ret;
 }
 
+static zx_status_t brcmf_proto_bcdc_tx_queue_frames(
+    struct brcmf_pub* drvr, cpp20::span<wlan::drivers::components::Frame> frames) {
+  for (auto& frame : frames) {
+    frame.GrowHead(BCDC_HEADER_LEN);
+    auto h = reinterpret_cast<struct brcmf_proto_bcdc_header*>(frame.Data());
+    brcmf_proto_bcdc_hdrpopulate(drvr, frame.PortId(), 0, frame.Priority(), h);
+  }
+  return brcmf_bus_tx_frames(drvr->bus_if, frames);
+}
+
 static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
                                    struct brcmf_netbuf* pktbuf) {
   brcmf_proto_bcdc_hdrpush(drvr, ifidx, offset, pktbuf);
@@ -358,6 +398,16 @@ void brcmf_proto_bcdc_txcomplete(brcmf_pub* drvr, struct brcmf_netbuf* txp, bool
     txp->ifc_netbuf->Return(success ? ZX_OK : ZX_ERR_IO);
   }
   brcmu_pkt_buf_free_netbuf(txp);
+}
+
+void brcmf_proto_bcdc_txcomplete(brcmf_pub* drvr,
+                                 cpp20::span<wlan::drivers::components::Frame> frames,
+                                 zx_status_t result) {
+  if (frames.empty()) {
+    return;
+  }
+
+  brcmf_tx_complete(drvr, std::move(frames), result);
 }
 
 static void brcmf_proto_bcdc_add_iface(struct brcmf_pub* drvr, int ifidx) {}
@@ -403,9 +453,11 @@ zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
   proto->set_dcmd = brcmf_proto_bcdc_set_dcmd;
   proto->tx_queue_data = brcmf_proto_bcdc_tx_queue_data;
   proto->reset = brcmf_proto_bcdc_reset;
+  proto->tx_queue_frames = brcmf_proto_bcdc_tx_queue_frames;
   proto->pd = bcdc;
 
   proto->hdrpull = brcmf_proto_bcdc_hdrpull;
+  proto->hdrpull_frame = brcmf_proto_bcdc_hdrpull;
   proto->txdata = brcmf_proto_bcdc_txdata;
   proto->delete_peer = brcmf_proto_bcdc_delete_peer;
   proto->add_tdls_peer = brcmf_proto_bcdc_add_tdls_peer;

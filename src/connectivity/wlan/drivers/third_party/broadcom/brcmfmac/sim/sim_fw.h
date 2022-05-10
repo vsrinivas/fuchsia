@@ -243,7 +243,6 @@ class SimFirmware {
   zx_status_t BusTxCtl(unsigned char* msg, uint len);
   zx_status_t BusTxData(struct brcmf_netbuf* netbuf);
   zx_status_t BusRxCtl(unsigned char* msg, uint len, int* rxlen_out);
-  struct pktq* BusGetTxQueue();
   zx_status_t BusFlushTxQueue(int ifidx);
   zx_status_t BusGetBootloaderMacAddr(uint8_t* mac_addr);
   // This function returns the wsec_key_list for an iface to outside.

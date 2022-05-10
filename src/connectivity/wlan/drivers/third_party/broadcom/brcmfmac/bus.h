@@ -16,12 +16,17 @@
 
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_
+#include <fuchsia/hardware/network/device/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/time.h>
 
 #include <functional>
 #include <memory>
+
+#include <wlan/drivers/components/frame.h>
+#include <wlan/drivers/components/frame_container.h>
 
 #include "netbuf.h"
 
@@ -66,12 +71,21 @@ struct brcmf_bus_ops {
   zx_status_t (*preinit)(brcmf_bus* bus);
   void (*stop)(brcmf_bus* bus);
   zx_status_t (*txdata)(brcmf_bus* bus, struct brcmf_netbuf* netbuf);
+  zx_status_t (*txframes)(brcmf_bus* bus, cpp20::span<wlan::drivers::components::Frame> frames);
   zx_status_t (*txctl)(brcmf_bus* bus, unsigned char* msg, uint len);
   zx_status_t (*rxctl)(brcmf_bus* bus, unsigned char* msg, uint len, int* rxlen_out);
-  struct pktq* (*gettxq)(brcmf_bus* bus);
   zx_status_t (*flush_txq)(brcmf_bus* bus, int ifidx);
+  zx_status_t (*flush_buffers)(brcmf_bus* bus);
+  zx_status_t (*get_tx_depth)(brcmf_bus* bus, uint16_t* tx_depth_out);
+  zx_status_t (*get_rx_depth)(brcmf_bus* bus, uint16_t* rx_depth_out);
   zx_status_t (*recovery)(brcmf_bus* bus);
   void (*log_stats)(brcmf_bus* bus);
+  zx_status_t (*prepare_vmo)(brcmf_bus* bus, uint8_t vmo_id, zx_handle_t vmo, uint8_t* mapped_addr,
+                             size_t mapped_size);
+  zx_status_t (*release_vmo)(brcmf_bus* bus, uint8_t vmo_id);
+  zx_status_t (*queue_rx_space)(brcmf_bus* bus, const rx_space_buffer_t* buffers_list,
+                                size_t buffers_count, uint8_t* vmo_addrs[]);
+  wlan::drivers::components::FrameContainer (*acquire_tx_space)(brcmf_bus* bus, size_t count);
 };
 
 namespace wlan {
@@ -120,6 +134,11 @@ static inline int brcmf_bus_txdata(struct brcmf_bus* bus, struct brcmf_netbuf* n
   return bus->ops->txdata(bus, netbuf);
 }
 
+static inline zx_status_t brcmf_bus_tx_frames(
+    struct brcmf_bus* bus, cpp20::span<wlan::drivers::components::Frame> frames) {
+  return bus->ops->txframes(bus, frames);
+}
+
 static inline int brcmf_bus_txctl(struct brcmf_bus* bus, unsigned char* msg, uint len) {
   return bus->ops->txctl(bus, msg, len);
 }
@@ -129,23 +148,20 @@ static inline int brcmf_bus_rxctl(struct brcmf_bus* bus, unsigned char* msg, uin
   return bus->ops->rxctl(bus, msg, len, rxlen_out);
 }
 
-static inline zx_status_t brcmf_bus_gettxq(struct brcmf_bus* bus, struct pktq** txq_out) {
-  if (!bus->ops->gettxq) {
-    if (txq_out) {
-      *txq_out = NULL;
-    }
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (txq_out) {
-    *txq_out = bus->ops->gettxq(bus);
-    if (!(*txq_out))
-      return ZX_ERR_INVALID_ARGS;
-  }
-  return ZX_OK;
+static inline zx_status_t brcmf_bus_get_tx_depth(struct brcmf_bus* bus, uint16_t* tx_depth_out) {
+  return bus->ops->get_tx_depth(bus, tx_depth_out);
+}
+
+static inline zx_status_t brcmf_bus_get_rx_depth(struct brcmf_bus* bus, uint16_t* rx_depth_out) {
+  return bus->ops->get_rx_depth(bus, rx_depth_out);
 }
 
 static inline zx_status_t brcmf_bus_flush_txq(struct brcmf_bus* bus, int ifidx) {
   return bus->ops->flush_txq(bus, ifidx);
+}
+
+static inline zx_status_t brcmf_bus_flush_buffers(struct brcmf_bus* bus) {
+  return bus->ops->flush_buffers(bus);
 }
 
 static inline zx_status_t brcmf_bus_get_bootloader_macaddr(struct brcmf_bus* bus,
@@ -163,5 +179,26 @@ static inline zx_status_t brcmf_bus_recovery(struct brcmf_bus* bus) {
 }
 
 static inline void brcmf_bus_log_stats(struct brcmf_bus* bus) { bus->ops->log_stats(bus); }
+
+static inline zx_status_t brcmf_bus_prepare_vmo(struct brcmf_bus* bus, uint8_t vmo_id,
+                                                zx_handle_t vmo, uint8_t* mapped_addr,
+                                                size_t mapped_size) {
+  return bus->ops->prepare_vmo(bus, vmo_id, vmo, mapped_addr, mapped_size);
+}
+
+static inline zx_status_t brcmf_bus_release_vmo(struct brcmf_bus* bus, uint8_t vmo_id) {
+  return bus->ops->release_vmo(bus, vmo_id);
+}
+
+static inline zx_status_t brcmf_bus_queue_rx_space(struct brcmf_bus* bus,
+                                                   const rx_space_buffer_t* buffers_list,
+                                                   size_t buffers_count, uint8_t* vmo_addrs[]) {
+  return bus->ops->queue_rx_space(bus, buffers_list, buffers_count, vmo_addrs);
+}
+
+static inline wlan::drivers::components::FrameContainer brcmf_bus_acquire_tx_space(
+    struct brcmf_bus* bus, size_t count) {
+  return bus->ops->acquire_tx_space(bus, count);
+}
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_

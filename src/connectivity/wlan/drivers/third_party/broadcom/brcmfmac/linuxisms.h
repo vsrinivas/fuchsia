@@ -216,6 +216,7 @@ struct wireless_dev {
 
 struct sdio_func {
     pthread_mutex_t lock;
+    uint16_t blocksize;
 };
 
 void sdio_claim_host(struct sdio_func* func);

@@ -20,6 +20,8 @@
 #include <memory>
 #include <shared_mutex>
 
+#include <wlan/drivers/components/network_port.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 
 struct wireless_dev;
@@ -29,14 +31,13 @@ namespace brcmfmac {
 
 class Device;
 
-class WlanInterface {
+class WlanInterface : public wlan::drivers::components::NetworkPort,
+                      public wlan::drivers::components::NetworkPort::Callbacks {
  public:
-  ~WlanInterface();
-
   // Static factory function.  The returned instance is unowned, since its lifecycle is managed by
   // the devhost.
   static zx_status_t Create(Device* device, const char* name, wireless_dev* wdev,
-                            WlanInterface** out_interface);
+                            wlan_mac_role_t role, WlanInterface** out_interface);
 
   // Accessors.
   void set_wdev(wireless_dev* wdev);
@@ -89,9 +90,17 @@ class WlanInterface {
   void SaeHandshakeResp(const wlan_fullmac_sae_handshake_resp_t* resp);
   void SaeFrameTx(const wlan_fullmac_sae_frame_t* frame);
   void WmmStatusReq();
+  void OnLinkStateChanged(bool online);
+
+ protected:
+  // NetworkPort::Callbacks implementation
+  uint32_t PortGetMtu() override;
+  void MacGetAddress(uint8_t out_mac[6]) override;
+  void MacGetFeatures(features_t* out_features) override;
+  void MacSetMode(mode_t mode, cpp20::span<const uint8_t> multicast_macs) override;
 
  private:
-  WlanInterface();
+  WlanInterface(const network_device_ifc_protocol_t& proto, uint8_t port_id);
 
   zx_device_t* zxdev();
   const zx_device_t* zxdev() const;

@@ -21,9 +21,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_
 
+#include <fuchsia/hardware/network/device/c/banjo.h>
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <netinet/if_ether.h>
@@ -34,6 +36,9 @@
 #include <list>
 #include <mutex>
 #include <shared_mutex>
+
+#include <wlan/drivers/components/frame.h>
+#include <wlan/drivers/components/frame_container.h>
 
 #include "bus.h"
 #include "fuchsia/wlan/internal/c/banjo.h"
@@ -247,6 +252,8 @@ void brcmf_free_net_device(struct net_device* dev);
 void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp);
 void brcmf_netdev_start_xmit(struct net_device* ndev,
                              std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf);
+zx_status_t brcmf_start_xmit(struct brcmf_pub* drvr,
+                             cpp20::span<wlan::drivers::components::Frame> frames);
 
 /* Return pointer to interface name */
 const char* brcmf_ifname(struct brcmf_if* ifp);
@@ -263,8 +270,13 @@ void brcmf_txfinalize(struct brcmf_if* ifp, const struct ethhdr* eh, bool succes
 void brcmf_netif_rx(struct brcmf_if* ifp, const void* data, size_t size);
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
 
+void brcmf_tx_complete(struct brcmf_pub* drvr, cpp20::span<wlan::drivers::components::Frame> frames,
+                       zx_status_t result);
+
 const char kPrimaryNetworkInterfaceName[] = "wlan";
 #define NET_DEVICE_NAME_MAX_LEN 123
+
+constexpr uint16_t kInternalBufferId = std::numeric_limits<uint16_t>::max();
 
 struct net_device {
   bool initialized_for_ap;
@@ -337,8 +349,12 @@ struct net_device {
 
 /* Receive frame for delivery to OS.  Callee disposes of rxp. */
 void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* rxp, bool handle_event);
+void brcmf_rx_frame(brcmf_pub* drvr, wlan::drivers::components::Frame&& frame, bool handle_event);
+void brcmf_rx_frames(brcmf_pub* drvr, wlan::drivers::components::FrameContainer&& frames);
+
 /* Receive async event packet from firmware. Callee disposes of rxp. */
 void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* rxp);
+void brcmf_rx_event(brcmf_pub* drvr, wlan::drivers::components::Frame&& frame);
 
 /* Indication from bus module regarding presence/insertion of dongle. */
 zx_status_t brcmf_attach(brcmf_pub* drvr);
@@ -348,6 +364,8 @@ void brcmf_detach(brcmf_pub* drvr);
 void brcmf_dev_reset(brcmf_pub* drvr);
 /* Reset brcmf during crash recovery*/
 zx_status_t brcmf_reset(brcmf_pub* drvr);
+
+void brcmf_flush_buffers(brcmf_pub* drvr);
 
 void brcmf_restart_client_if(brcmf_pub* drvr);
 
@@ -362,5 +380,20 @@ zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, 
                                  bcme_status_t* fwerr_ptr);
 void brcmf_bus_add_txhdrlen(brcmf_pub* drvr, uint len);
 zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, uint8_t* addr);
+
+void brcmf_queue_rx_space(brcmf_pub* drvr, const rx_space_buffer_t* buffers_list,
+                          size_t buffers_count, uint8_t* vmo_addrs[]);
+zx_status_t brcmf_prepare_vmo(brcmf_pub* drvr, uint8_t vmo_id, zx_handle_t vmo,
+                              uint8_t* mapped_addr, size_t mapped_size);
+void brcmf_release_vmo(brcmf_pub* drvr, uint8_t vmo_id);
+
+zx_status_t brcmf_get_tx_depth(struct brcmf_pub* drvr, uint16_t* tx_depth_out);
+zx_status_t brcmf_get_rx_depth(struct brcmf_pub* drvr, uint16_t* rx_depth_out);
+zx_status_t brcmf_get_head_length(struct brcmf_pub* drvr, uint16_t* head_length_out);
+zx_status_t brcmf_get_tail_length(struct brcmf_pub* drvr, uint16_t* tail_length_out);
+
+inline bool brcmf_frame_is_internal(const wlan::drivers::components::Frame& frame) {
+  return frame.BufferId() == kInternalBufferId;
+}
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_

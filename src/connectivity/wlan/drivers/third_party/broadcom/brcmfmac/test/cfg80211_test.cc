@@ -48,38 +48,6 @@ TEST(Cfg80211, FindSsidInIes_Empty) {
   ASSERT_THAT(ssid, SizeIs(0));
 }
 
-TEST(Cfg80211, Classify8021d_Ipv4) {
-  uint8_t ip_payload[] = {
-      0x01, 0x01,      0x01, 0x01, 0x01, 0x01,  // dst addr
-      0x02, 0x02,      0x02, 0x02, 0x02, 0x02,  // src addr
-      0x08, 0x00,                               // ipv4 ethertype
-      0xff, 0b10110000                          // part of ipv4 header
-  };
-  uint8_t priority = brcmf_cfg80211_classify8021d(ip_payload, sizeof(ip_payload));
-  ASSERT_EQ(priority, 6);
-}
-
-TEST(Cfg80211, Classify8021d_Ipv6) {
-  uint8_t ip_payload[] = {
-      0x01,       0x01,      0x01, 0x01, 0x01, 0x01,  // dst addr
-      0x02,       0x02,      0x02, 0x02, 0x02, 0x02,  // src addr
-      0x86,       0xdd,                               // ipv6 ethertype
-      0b11110101, 0b10000000                          // part of ipv6 header
-  };
-  uint8_t priority = brcmf_cfg80211_classify8021d(ip_payload, sizeof(ip_payload));
-  ASSERT_EQ(priority, 3);
-}
-
-TEST(Cfg80211, Classify8021d_PayloadTooSmall) {
-  uint8_t ip_payload[] = {
-      0x01, 0x01, 0x01, 0x01, 0x01, 0x01,  // dst addr
-      0x02, 0x02, 0x02, 0x02, 0x02, 0x02,  // src addr
-      0x08, 0x00,                          // ipv4 ethertype
-  };
-  uint8_t priority = brcmf_cfg80211_classify8021d(ip_payload, sizeof(ip_payload));
-  ASSERT_EQ(priority, 0);
-}
-
 TEST(Cfg80211, SetConfWmmParam) {
   uint8_t ie[] = {
       0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,  // Supported rates

@@ -775,11 +775,6 @@ zx_status_t SimFirmware::BusRxCtl(unsigned char* msg, uint len, int* rxlen_out) 
   return status;
 }
 
-struct pktq* SimFirmware::BusGetTxQueue() {
-  BRCMF_ERR("%s unimplemented", __FUNCTION__);
-  return nullptr;
-}
-
 zx_status_t SimFirmware::BusFlushTxQueue(int /* ifidx */) {
   // Sim firmware doesn't have a queue
   return ZX_OK;

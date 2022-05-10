@@ -25,6 +25,8 @@
 #include <algorithm>
 #include <atomic>
 
+#include <wlan/drivers/components/priority.h>
+
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
@@ -267,7 +269,8 @@ void brcmf_netdev_start_xmit(struct net_device* ndev,
     ifp->pend_8021x_cnt.fetch_add(1);
   }
 
-  netbuf->SetPriority(brcmf_cfg80211_classify8021d((uint8_t*)netbuf->data(), netbuf->size()));
+  netbuf->SetPriority(wlan::drivers::components::Get80211UserPriority(
+      reinterpret_cast<const uint8_t*>(netbuf->data()), netbuf->size()));
 
   ret = brcmf_proto_tx_queue_data(drvr, ifp->ifidx, std::move(netbuf));
   if (ret != ZX_OK) {
@@ -282,6 +285,50 @@ done:
     ndev->stats.tx_bytes += netbuf_size;
   }
   /* No status to return: we always eat the packet */
+}
+
+void brcmf_tx_complete(struct brcmf_pub* drvr, cpp20::span<wlan::drivers::components::Frame> frames,
+                       zx_status_t result) {
+  drvr->device->NetDev().CompleteTx(frames, result);
+}
+
+zx_status_t brcmf_start_xmit(struct brcmf_pub* drvr,
+                             cpp20::span<wlan::drivers::components::Frame> frames) {
+  /* Can the device send data? */
+  if (drvr->bus_if->state != BRCMF_BUS_UP) {
+    BRCMF_ERR("xmit rejected state=%d", drvr->bus_if->state);
+    for (auto& frame : frames) {
+      brcmf_if* ifp = brcmf_get_ifp(drvr, frame.PortId());
+      ++ifp->ndev->stats.tx_dropped;
+    }
+    return ZX_ERR_UNAVAILABLE;
+  }
+
+  uint32_t bytes_per_port[MAX_PORTS] = {0};
+  int frames_per_port[MAX_PORTS] = {0};
+  uint8_t highest_port = 0;
+  {
+    for (auto& frame : frames) {
+      frame.SetPriority(
+          wlan::drivers::components::Get80211UserPriority(frame.Data(), frame.Size()));
+      const uint8_t port = frame.PortId();
+      bytes_per_port[port] += frame.Size();
+      ++frames_per_port[port];
+      highest_port = std::max(highest_port, port);
+    }
+  }
+
+  {
+    zx_status_t status = brcmf_tx_queue_frames(drvr, frames);
+    if (status == ZX_OK) {
+      for (uint8_t port = 0; port <= highest_port; ++port) {
+        brcmf_if* ifp = brcmf_get_ifp(drvr, port);
+        ifp->ndev->stats.tx_bytes += static_cast<int>(bytes_per_port[port]);
+        ifp->ndev->stats.tx_packets += frames_per_port[port];
+      }
+    }
+    return status;
+  }
 }
 
 void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason reason, bool state) {
@@ -342,6 +389,19 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
   return ZX_OK;
 }
 
+static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, wlan::drivers::components::Frame& frame,
+                                    struct brcmf_if** ifp) {
+  zx_status_t ret = brcmf_proto_hdrpull_frame(drvr, frame, ifp);
+  if (ret != ZX_OK || *ifp == nullptr || (*ifp)->ndev == nullptr) {
+    if (ret != ZX_ERR_BUFFER_TOO_SMALL && *ifp) {
+      (*ifp)->ndev->stats.rx_errors++;
+    }
+    return ZX_ERR_IO;
+  }
+  frame.SetPortId((*ifp)->ifidx);
+  return ZX_OK;
+}
+
 void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* netbuf, bool handle_event) {
   struct brcmf_if* ifp;
 
@@ -361,6 +421,66 @@ void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* netbuf, bool handle_event) {
   brcmu_pkt_buf_free_netbuf(netbuf);
 }
 
+void brcmf_rx_frame(brcmf_pub* drvr, wlan::drivers::components::Frame&& frame, bool handle_event) {
+  struct brcmf_if* ifp = nullptr;
+  if (frame.Size() > 0 && brcmf_rx_hdrpull(drvr, frame, &ifp) != ZX_OK) {
+    BRCMF_DBG(TEMP, "hdrpull failed");
+    return;
+  }
+
+  if (handle_event) {
+    auto event = reinterpret_cast<brcmf_event*>(frame.Data());
+    brcmf_fweh_process_event(ifp->drvr, event, frame.Size());
+  }
+
+  const ethhdr& eh = *reinterpret_cast<const ethhdr*>(frame.Data());
+  if (frame.Size() >= sizeof(eh) && address_is_multicast(eh.h_dest) &&
+      !address_is_broadcast(eh.h_dest)) {
+    ifp->ndev->stats.multicast++;
+  }
+
+  if (!(ifp->ndev->is_up)) {
+    return;
+  }
+
+  ifp->ndev->stats.rx_bytes += static_cast<int>(frame.Size());
+  ifp->ndev->stats.rx_packets++;
+
+  brcmf_cfg80211_rx(ifp, std::move(frame));
+}
+
+void brcmf_rx_frames(brcmf_pub* drvr, wlan::drivers::components::FrameContainer&& frames) {
+  if (frames.empty()) {
+    return;
+  }
+
+  struct brcmf_if* ifp = nullptr;
+  for (auto& frame : frames) {
+    if (frame.Size() == 0) {
+      continue;
+    }
+    if (brcmf_rx_hdrpull(drvr, frame, &ifp) != ZX_OK) {
+      BRCMF_DBG(TEMP, "hdrpull failed");
+      return;
+    }
+
+    const ethhdr& eh = *reinterpret_cast<const ethhdr*>(frame.Data());
+    if (frame.Size() >= sizeof(eh) && address_is_multicast(eh.h_dest) &&
+        !address_is_broadcast(eh.h_dest)) {
+      ifp->ndev->stats.multicast++;
+    }
+
+    if (!(ifp->ndev->is_up)) {
+      return;
+    }
+
+    ifp->ndev->stats.rx_bytes += static_cast<int>(frame.Size());
+    ifp->ndev->stats.rx_packets++;
+  }
+
+  brcmf_cfg80211_rx(drvr, std::move(frames));
+}
+
 void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* netbuf) {
   struct brcmf_if* ifp;
 
@@ -372,6 +492,17 @@ void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* netbuf) {
 
   brcmf_fweh_process_event(ifp->drvr, reinterpret_cast<brcmf_event*>(netbuf->data), netbuf->len);
   brcmu_pkt_buf_free_netbuf(netbuf);
+}
+
+void brcmf_rx_event(brcmf_pub* drvr, wlan::drivers::components::Frame&& frame) {
+  struct brcmf_if* ifp = nullptr;
+  if (brcmf_rx_hdrpull(drvr, frame, &ifp) != ZX_OK) {
+    BRCMF_ERR("Failed to pull event header");
+    return;
+  }
+
+  auto event = reinterpret_cast<brcmf_event*>(frame.Data());
+  brcmf_fweh_process_event(ifp->drvr, event, frame.Size());
 }
 
 void brcmf_txfinalize(struct brcmf_if* ifp, const struct ethhdr* eh, bool success) {
@@ -772,6 +903,8 @@ zx_status_t brcmf_reset(brcmf_pub* drvr) {
   return ZX_OK;
 }
 
+void brcmf_flush_buffers(brcmf_pub* drvr) { brcmf_bus_flush_buffers(drvr->bus_if); }
+
 zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, uint32_t len,
                                  bcme_status_t* fwerr_ptr) {
   struct brcmf_if* ifp = drvr->iflist[0];
@@ -861,4 +994,60 @@ zx_status_t brcmf_schedule_recovery_worker(struct brcmf_pub* drvr) {
   }
 
   return ZX_OK;
+}
+
+zx_status_t brcmf_get_tx_depth(struct brcmf_pub* drvr, uint16_t* tx_depth_out) {
+  if (tx_depth_out == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return brcmf_bus_get_tx_depth(drvr->bus_if, tx_depth_out);
+}
+
+zx_status_t brcmf_get_rx_depth(struct brcmf_pub* drvr, uint16_t* rx_depth_out) {
+  if (rx_depth_out == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return brcmf_bus_get_rx_depth(drvr->bus_if, rx_depth_out);
+}
+
+zx_status_t brcmf_get_head_length(struct brcmf_pub* drvr, uint16_t* head_length_out) {
+  if (head_length_out == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  *head_length_out = drvr->hdrlen;
+
+  return ZX_OK;
+}
+
+zx_status_t brcmf_get_tail_length(struct brcmf_pub* drvr, uint16_t* tail_length_out) {
+  if (tail_length_out == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // No tail space needed at the moment.
+  *tail_length_out = 0;
+
+  return ZX_OK;
+}
+
+void brcmf_queue_rx_space(brcmf_pub* drvr, const rx_space_buffer_t* buffers_list,
+                          size_t buffers_count, uint8_t* vmo_addrs[]) {
+  brcmf_bus_queue_rx_space(drvr->bus_if, buffers_list, buffers_count, vmo_addrs);
+}
+
+zx_status_t brcmf_prepare_vmo(brcmf_pub* drvr, uint8_t vmo_id, zx_handle_t vmo,
+                              uint8_t* mapped_addr, size_t mapped_size) {
+  zx_status_t err = brcmf_bus_prepare_vmo(drvr->bus_if, vmo_id, vmo, mapped_addr, mapped_size);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Bus unable to prepare VMO: %s", zx_status_get_string(err));
+    return err;
+  }
+  return ZX_OK;
+}
+
+void brcmf_release_vmo(brcmf_pub* drvr, uint8_t vmo_id) {
+  brcmf_bus_release_vmo(drvr->bus_if, vmo_id);
 }

@@ -13,6 +13,8 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/wlan_interface.h"
 
+#include <fuchsia/hardware/network/device/c/banjo.h>
+#include <fuchsia/hardware/network/mac/c/banjo.h>
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -32,6 +34,8 @@
 namespace wlan {
 namespace brcmfmac {
 namespace {
+
+constexpr uint32_t kEthernetMtu = 1500;
 
 constexpr zx_protocol_device_t kWlanInterfaceDeviceOps = {
     .version = DEVICE_OPS_VERSION,
@@ -155,19 +159,23 @@ wlan_fullmac_impl_protocol_ops_t wlan_interface_proto_ops = {
           return static_cast<WlanInterface*>(ctx)->DataQueueTx(options, netbuf, completion_cb,
                                                                cookie);
         },
+    .on_link_state_changed =
+        [](void* ctx, bool online) {
+          static_cast<WlanInterface*>(ctx)->OnLinkStateChanged(online);
+        },
 };
 
 }  // namespace
 
-WlanInterface::WlanInterface() : zx_device_(nullptr), wdev_(nullptr), device_(nullptr) {}
-
-WlanInterface::~WlanInterface() {}
+WlanInterface::WlanInterface(const network_device_ifc_protocol_t& proto, uint8_t port_id)
+    : NetworkPort(proto, *this, port_id), zx_device_(nullptr), wdev_(nullptr), device_(nullptr) {}
 
 zx_status_t WlanInterface::Create(Device* device, const char* name, wireless_dev* wdev,
-                                  WlanInterface** out_interface) {
+                                  wlan_mac_role_t role, WlanInterface** out_interface) {
   zx_status_t status = ZX_OK;
 
-  std::unique_ptr<WlanInterface> interface(new WlanInterface());
+  std::unique_ptr<WlanInterface> interface(
+      new WlanInterface(device->NetDev().NetDevIfcProto(), ndev_to_if(wdev->netdev)->ifidx));
   {
     std::lock_guard<std::shared_mutex> guard(interface->lock_);
     interface->device_ = device;
@@ -184,6 +192,23 @@ zx_status_t WlanInterface::Create(Device* device, const char* name, wireless_dev
   };
   if (device->DeviceAdd(&device_args, &interface->zx_device_) != ZX_OK) {
     return status;
+  }
+
+  NetworkPort::Role net_port_role;
+  switch (role) {
+    case WLAN_MAC_ROLE_CLIENT:
+      net_port_role = NetworkPort::Role::Client;
+      break;
+    case WLAN_MAC_ROLE_AP:
+      net_port_role = NetworkPort::Role::Ap;
+      break;
+    default:
+      BRCMF_ERR("Unsupported role %u", role);
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (device->IsNetworkDeviceBus()) {
+    interface->NetworkPort::Init(net_port_role);
   }
 
   *out_interface = interface.release();  // This now has its lifecycle managed by the devhost.
@@ -476,6 +501,41 @@ void WlanInterface::WmmStatusReq() {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_wmm_status_req(wdev_->netdev);
+  }
+}
+
+void WlanInterface::OnLinkStateChanged(bool online) {
+  if (device_->IsNetworkDeviceBus()) {
+    std::shared_lock<std::shared_mutex> guard(lock_);
+    SetPortOnline(online);
+  }
+}
+
+uint32_t WlanInterface::PortGetMtu() { return kEthernetMtu; }
+
+void WlanInterface::MacGetAddress(uint8_t out_mac[MAC_SIZE]) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  memcpy(out_mac, ndev_to_if(wdev_->netdev)->mac_addr, MAC_SIZE);
+}
+
+void WlanInterface::MacGetFeatures(features_t* out_features) {
+  *out_features = {
+      .multicast_filter_count = 0,
+      .supported_modes = MODE_MULTICAST_FILTER | MODE_MULTICAST_PROMISCUOUS,
+  };
+}
+
+void WlanInterface::MacSetMode(mode_t mode, cpp20::span<const uint8_t> multicast_macs) {
+  switch (mode) {
+    case MODE_MULTICAST_FILTER:
+      SetMulticastPromisc(false);
+      break;
+    case MODE_MULTICAST_PROMISCUOUS:
+      SetMulticastPromisc(true);
+      break;
+    default:
+      BRCMF_ERR("Unsupported MAC mode: %u", mode);
+      break;
   }
 }
 

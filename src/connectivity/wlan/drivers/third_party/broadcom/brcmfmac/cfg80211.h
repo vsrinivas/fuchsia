@@ -542,8 +542,8 @@ zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf
                                         void* data);
 
 void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size);
-
-uint8_t brcmf_cfg80211_classify8021d(const uint8_t* data, size_t size);
+void brcmf_cfg80211_rx(struct brcmf_if* ifp, wlan::drivers::components::Frame&& frame);
+void brcmf_cfg80211_rx(struct brcmf_pub* drvr, wlan::drivers::components::FrameContainer&& frames);
 
 // TODO: Move to core.h
 zx_status_t brcmf_netdev_open(struct net_device* ndev);

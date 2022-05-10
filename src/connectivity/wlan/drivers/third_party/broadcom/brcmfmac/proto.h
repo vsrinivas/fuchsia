@@ -16,7 +16,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PROTO_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PROTO_H_
 
+#include <lib/stdcompat/span.h>
+
 #include <memory>
+
+#include <wlan/drivers/components/frame.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
@@ -36,11 +40,15 @@ struct brcmf_proto {
   zx_status_t (*tx_queue_data)(struct brcmf_pub* drvr, int ifidx,
                                std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf);
   zx_status_t (*reset)(struct brcmf_pub* drvr);
+  zx_status_t (*tx_queue_frames)(struct brcmf_pub* drvr,
+                                 cpp20::span<wlan::drivers::components::Frame> frames);
   void* pd;
 
   // Deprecated entry points.
   zx_status_t (*hdrpull)(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf,
                          struct brcmf_if** ifp);
+  zx_status_t (*hdrpull_frame)(struct brcmf_pub* drvr, wlan::drivers::components::Frame& frame,
+                               struct brcmf_if** ifp);
   int (*txdata)(struct brcmf_pub* drvr, int ifidx, uint8_t offset, struct brcmf_netbuf* netbuf);
 
   // Unimplemented entry points.
@@ -102,6 +110,11 @@ static inline zx_status_t brcmf_proto_tx_queue_data(
   return drvr->proto->tx_queue_data(drvr, ifidx, std::move(netbuf));
 }
 
+static inline zx_status_t brcmf_tx_queue_frames(
+    struct brcmf_pub* drvr, cpp20::span<wlan::drivers::components::Frame> frames) {
+  return drvr->proto->tx_queue_frames(drvr, frames);
+}
+
 static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf,
                                       struct brcmf_if** ifp) {
   struct brcmf_if* tmp = NULL;
@@ -121,6 +134,21 @@ static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbu
   }
   return drvr->proto->hdrpull(drvr, netbuf, ifp);
 }
+
+inline int brcmf_proto_hdrpull_frame(struct brcmf_pub* drvr,
+                                     wlan::drivers::components::Frame& frame,
+                                     struct brcmf_if** ifp) {
+  struct brcmf_if* tmp = nullptr;
+
+  // Assure protocol is always called with non-null initialized pointer.
+  if (ifp) {
+    *ifp = nullptr;
+  } else {
+    ifp = &tmp;
+  }
+  return drvr->proto->hdrpull_frame(drvr, frame, ifp);
+}
+
 static inline zx_status_t brcmf_proto_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
                                              struct brcmf_netbuf* netbuf) {
   if (drvr->proto == nullptr) {

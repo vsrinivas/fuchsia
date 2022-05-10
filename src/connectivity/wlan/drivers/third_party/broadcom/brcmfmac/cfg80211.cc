@@ -2570,65 +2570,39 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
   }
 }
 
-uint8_t brcmf_cfg80211_classify8021d(const uint8_t* data, size_t size) {
-  // Make sure packet is sufficiently large to contain the DS field
-  const size_t kDsFieldLength = 2;
-  if (size < sizeof(ethhdr) + kDsFieldLength) {
-    return 0;
+static bool brcmf_is_eapol_frame(const wlan::drivers::components::Frame& frame) {
+  if (frame.Size() >= sizeof(ethhdr)) {
+    const uint16_t eth_type = reinterpret_cast<const uint16_t*>(frame.Data())[6];
+    return eth_type == EAPOL_ETHERNET_TYPE_UINT16;
+  }
+  return false;
+}
+
+void brcmf_cfg80211_rx(struct brcmf_if* ifp, wlan::drivers::components::Frame&& frame) {
+  // First check if this is an EAPOL frame, if it is it should not go back to the network device.
+  if (brcmf_is_eapol_frame(frame)) {
+    // Queue up the eapol frame along with events to ensure processing order.
+    brcmf_fweh_queue_eapol_frame(ifp, frame.Data(), frame.Size());
+    return;
   }
 
-  auto* eh = (struct ethhdr*)data;
-  uint8_t ds_field = 0;
-  const uint8_t* eth_body = data + sizeof(ethhdr);
-  if (eh->h_proto == htobe16(ETH_P_IP)) {
-    ds_field = eth_body[1];
-  } else if (eh->h_proto == htobe16(ETH_P_IPV6)) {
-    ds_field = ((eth_body[0] & 0x0f) << 4) | ((eth_body[1] & 0xf0) >> 4);
+  ifp->drvr->device->NetDev().CompleteRx(std::move(frame));
+}
+
+void brcmf_cfg80211_rx(struct brcmf_pub* drvr, wlan::drivers::components::FrameContainer&& frames) {
+  // Make sure we process and exclude any EAPOL frames first
+  for (auto& frame : frames) {
+    if (brcmf_is_eapol_frame(frame)) {
+      // queue up the eapol frame along with events to ensure processing order
+      brcmf_fweh_queue_eapol_frame(brcmf_get_ifp(drvr, frame.PortId()), frame.Data(), frame.Size());
+      // The data plane shouldn't do anything with the EAPOL data so set the size to zero here to
+      // ensure that it's not processed after this point. The frame will still be passed around, the
+      // data just won't be accessed because if it's zero in size there is technically  no data.
+      frame.SetSize(0);
+    }
   }
 
-  // DSCP is the 6 most significant bits of the DS field
-  uint8_t dscp = ds_field >> 2;
-  // Given the 6-bit DSCP from IPv4 or IPv6 header, convert it to UP
-  // This follows RFC 8325 - https://tools.ietf.org/html/rfc8325#section-4.3
-  // For list of DSCP, see https://www.iana.org/assignments/dscp-registry/dscp-registry.xhtml
-  switch (dscp) {
-    // Network Control - CS6, CS7
-    case 0b110000:
-    case 0b111000:
-      return 7;
-    // Telephony - EF
-    case 0b101110:
-    // VOICE-ADMIT - VA
-    case 0b101100:
-      return 6;
-    // Signaling - CS5
-    case 0b101000:
-      return 5;
-    // Multimedia Conferencing - AF41, AF42, AF43
-    case 0b100010:
-    case 0b100100:
-    case 0b100110:
-    // Real-Time Interactive - CS4
-    case 0b100000:
-    // Multimedia Streaming - AF31, AF32, AF33
-    case 0b011010:
-    case 0b011100:
-    case 0b011110:
-    // Broadcast Video - CS3
-    case 0b011000:
-      return 4;
-    // Low-Latency Data - AF21, AF22, AF23
-    case 0b010010:
-    case 0b010100:
-    case 0b010110:
-      return 3;
-    // Low-Priority Data - CS1
-    case 0b001000:
-      return 1;
-    // OAM, High-Throughput Data, Standard, and unused code points
-    default:
-      return 0;
-  }
+  drvr->device->NetDev().CompleteRx(std::move(frames));
 }
 
 static void brcmf_iedump(uint8_t* ies, size_t total_len) {
@@ -3440,6 +3414,7 @@ void brcmf_if_stop(net_device* ndev) {
   std::lock_guard<std::shared_mutex> guard(ndev->if_proto_lock);
   ndev->if_proto.ops = nullptr;
   ndev->if_proto.ctx = nullptr;
+  ndev->is_up = false;
   BRCMF_IFDBG(WLANIF, ndev, "wlan_fullmac interface stopped");
 }
 
@@ -3936,6 +3911,64 @@ void brcmf_if_del_keys_req(net_device* ndev, const wlan_fullmac_del_keys_req_t* 
   BRCMF_ERR("Unimplemented");
 }
 
+static void brcmf_send_eapol_confirm(net_device* ndev, const wlan_fullmac_eapol_req_t* req,
+                                     zx_status_t result) {
+  wlan_fullmac_eapol_confirm_t confirm;
+  confirm.result_code =
+      result == ZX_OK ? WLAN_EAPOL_RESULT_SUCCESS : WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE;
+  std::memcpy(confirm.dst_addr, req->dst_addr, ETH_ALEN);
+
+  BRCMF_IFDBG(WLANIF, ndev, "Sending EAPOL xmit confirm to SME. result: %s",
+              confirm.result_code == WLAN_EAPOL_RESULT_SUCCESS                ? "success"
+              : confirm.result_code == WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE ? "failure"
+                                                                              : "unknown");
+  wlan_fullmac_impl_ifc_eapol_conf(&ndev->if_proto, &confirm);
+}
+
+static void brcmf_populate_eapol_eth_header(uint8_t* dest, const wlan_fullmac_eapol_req_t* req) {
+  // IEEE Std. 802.3-2015, 3.1.1
+  memcpy(dest, req->dst_addr, ETH_ALEN);
+  memcpy(dest + ETH_ALEN, req->src_addr, ETH_ALEN);
+  *reinterpret_cast<uint16_t*>(dest + 2 * ETH_ALEN) = EAPOL_ETHERNET_TYPE_UINT16;
+  memcpy(dest + 2 * ETH_ALEN + sizeof(uint16_t), req->data_list, req->data_count);
+}
+
+static void brcmf_if_eapol_req_ethernet(net_device* ndev, const wlan_fullmac_eapol_req_t* req,
+                                        int length) {
+  auto packet_data = std::make_unique<char[]>(length);
+
+  brcmf_populate_eapol_eth_header(reinterpret_cast<uint8_t*>(packet_data.get()), req);
+
+  auto packet = std::make_unique<wlan::brcmfmac::AllocatedNetbuf>(std::move(packet_data), length);
+  brcmf_netdev_start_xmit(ndev, std::move(packet));
+
+  brcmf_send_eapol_confirm(ndev, req, ZX_OK);
+}
+
+static void brcmf_if_eapol_req_netdev(net_device* ndev, const wlan_fullmac_eapol_req_t* req,
+                                      int length) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  struct brcmf_pub* drvr = ifp->drvr;
+  wlan::drivers::components::FrameContainer frames = brcmf_bus_acquire_tx_space(drvr->bus_if, 1);
+  if (frames.empty()) {
+    BRCMF_ERR("Failed to allocate space for EAPOL transmittion");
+    return;
+  }
+
+  wlan::drivers::components::Frame& frame = *frames.begin();
+  frame.ShrinkHead(drvr->hdrlen);
+  frame.SetPortId(ifp->ifidx);
+  frame.SetPriority(0);
+  frame.SetSize(length);
+
+  brcmf_populate_eapol_eth_header(frame.Data(), req);
+
+  cpp20::span<wlan::drivers::components::Frame> frame_span(frames);
+  zx_status_t result = brcmf_start_xmit(drvr, frame_span);
+
+  brcmf_send_eapol_confirm(ndev, req, result);
+}
+
 void brcmf_if_eapol_req(net_device* ndev, const wlan_fullmac_eapol_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
@@ -3945,29 +3978,16 @@ void brcmf_if_eapol_req(net_device* ndev, const wlan_fullmac_eapol_req_t* req) {
 
   BRCMF_IFDBG(WLANIF, ndev, "EAPOL xmit request from SME. data_len: %zu", req->data_count);
 
-  wlan_fullmac_eapol_confirm_t confirm;
   int packet_length;
 
   // Ethernet header length + EAPOL PDU length
   packet_length = 2 * ETH_ALEN + sizeof(uint16_t) + req->data_count;
-  auto packet_data = std::make_unique<char[]>(packet_length);
-  // IEEE Std. 802.3-2015, 3.1.1
-  memcpy(packet_data.get(), req->dst_addr, ETH_ALEN);
-  memcpy(packet_data.get() + ETH_ALEN, req->src_addr, ETH_ALEN);
-  *(uint16_t*)(packet_data.get() + 2 * ETH_ALEN) = EAPOL_ETHERNET_TYPE_UINT16;
-  memcpy(packet_data.get() + 2 * ETH_ALEN + sizeof(uint16_t), req->data_list, req->data_count);
 
-  auto packet =
-      std::make_unique<wlan::brcmfmac::AllocatedNetbuf>(std::move(packet_data), packet_length);
-  brcmf_netdev_start_xmit(ndev, std::move(packet));
-  confirm.result_code = WLAN_EAPOL_RESULT_SUCCESS;
-  std::memcpy(confirm.dst_addr, req->dst_addr, ETH_ALEN);
-  BRCMF_IFDBG(WLANIF, ndev, "Sending EAPOL xmit confirm to SME. result: %s",
-              confirm.result_code == WLAN_EAPOL_RESULT_SUCCESS                ? "success"
-              : confirm.result_code == WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE ? "failure"
-                                                                              : "unknown");
-
-  wlan_fullmac_impl_ifc_eapol_conf(&ndev->if_proto, &confirm);
+  if (ndev_to_if(ndev)->drvr->device->IsNetworkDeviceBus()) {
+    brcmf_if_eapol_req_netdev(ndev, req, packet_length);
+  } else {
+    brcmf_if_eapol_req_ethernet(ndev, req, packet_length);
+  }
 }
 
 static void brcmf_get_bwcap(struct brcmf_if* ifp, uint32_t bw_cap[]) {
@@ -4467,7 +4487,11 @@ void brcmf_if_query_mac_sublayer_support(net_device* ndev, mac_sublayer_support_
   BRCMF_IFDBG(WLANIF, ndev, "Query MAC sublayer feature support request received from SME.");
 
   memset(resp, 0, sizeof(*resp));
-  resp->data_plane.data_plane_type = DATA_PLANE_TYPE_ETHERNET_DEVICE;
+  if (ndev_to_if(ndev)->drvr->device->IsNetworkDeviceBus()) {
+    resp->data_plane.data_plane_type = DATA_PLANE_TYPE_GENERIC_NETWORK_DEVICE;
+  } else {
+    resp->data_plane.data_plane_type = DATA_PLANE_TYPE_ETHERNET_DEVICE;
+  }
   resp->device.mac_implementation_type = MAC_IMPLEMENTATION_TYPE_FULLMAC;
 }
 

@@ -27,7 +27,7 @@ class PhyPsModeTest : public SimTest {
   zx_status_t GetPsMode(wlanphy_ps_mode_t* ps_mode);
   void GetPsModeFromFirmware(uint32_t* ps_mode);
   zx_status_t ClearCountryCode();
-  uint32_t DeviceCount();
+  uint32_t DeviceCountByProtocolId(uint32_t proto_id);
 
  private:
   SimInterface client_ifc_;
@@ -44,7 +44,9 @@ void PhyPsModeTest::CreateInterface() {
 
 void PhyPsModeTest::DeleteInterface() { EXPECT_EQ(SimTest::DeleteInterface(&client_ifc_), ZX_OK); }
 
-uint32_t PhyPsModeTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
+uint32_t PhyPsModeTest::DeviceCountByProtocolId(uint32_t proto_id) {
+  return (dev_mgr_->DeviceCountByProtocolId(proto_id));
+}
 
 zx_status_t PhyPsModeTest::SetPsMode(const wlanphy_ps_mode_t* ps_mode) {
   return device_->WlanphyImplSetPsMode(ps_mode);
@@ -72,7 +74,8 @@ TEST_F(PhyPsModeTest, SetPsMode) {
 
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANPHY_IMPL), 1u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 1u);
 
   // Get the country code and verify that it is set to WW.
   GetPsModeFromFirmware(&fw_ps_mode);
@@ -100,7 +103,8 @@ TEST_F(PhyPsModeTest, CheckFWPsMode) {
 
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANPHY_IMPL), 1u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 1u);
 
   // Get the country code and verify that it is set to WW.
   GetPsModeFromFirmware(&fw_ps_mode);

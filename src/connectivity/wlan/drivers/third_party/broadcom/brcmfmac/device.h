@@ -24,6 +24,7 @@
 #include <mutex>
 
 #include <ddktl/device.h>
+#include <wlan/drivers/components/network_device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 
@@ -38,17 +39,21 @@ using DeviceType =
     ::ddk::Device<Device, ddk::Initializable, ddk::Messageable<fuchsia_factory_wlan::Iovar>::Mixin,
                   ddk::Suspendable>;
 
-class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
+class Device : public DeviceType,
+               public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol>,
+               public ::wlan::drivers::components::NetworkDevice::Callbacks {
  public:
   virtual ~Device();
 
   // State accessors.
   brcmf_pub* drvr();
   const brcmf_pub* drvr() const;
+  ::wlan::drivers::components::NetworkDevice& NetDev() { return network_device_; }
 
   // Virtual state accessors.
   virtual async_dispatcher_t* GetDispatcher() = 0;
   virtual DeviceInspect* GetInspect() = 0;
+  virtual bool IsNetworkDeviceBus() const = 0;
 
   // ::ddk::Device implementation.
   void DdkInit(ddk::InitTxn txn);
@@ -67,6 +72,20 @@ class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::dd
   zx_status_t WlanphyImplGetCountry(wlanphy_country_t* out_country);
   zx_status_t WlanphyImplSetPsMode(const wlanphy_ps_mode_t* ps_mode);
   zx_status_t WlanphyImplGetPsMode(wlanphy_ps_mode_t* out_ps_mode);
+
+  // NetworkDevice::Callbacks implementation
+  zx_status_t NetDevInit() override;
+  void NetDevRelease() override;
+  void NetDevStart(wlan::drivers::components::NetworkDevice::Callbacks::StartTxn txn) override;
+  void NetDevStop(wlan::drivers::components::NetworkDevice::Callbacks::StopTxn txn) override;
+  void NetDevGetInfo(device_info_t* out_info) override;
+  void NetDevQueueTx(cpp20::span<wlan::drivers::components::Frame> frames) override;
+  void NetDevQueueRxSpace(const rx_space_buffer_t* buffers_list, size_t buffers_count,
+                          uint8_t* vmo_addrs[]) override;
+  zx_status_t NetDevPrepareVmo(uint8_t vmo_id, zx::vmo vmo, uint8_t* mapped_address,
+                               size_t mapped_size) override;
+  void NetDevReleaseVmo(uint8_t vmo_id) override;
+  void NetDevSetSnoopEnabled(bool snoop) override;
 
   // Trampolines for DDK functions, for platforms that support them.
   virtual zx_status_t Init() = 0;
@@ -99,6 +118,8 @@ class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::dd
   // Two fixed interfaces supported; the default instance as a client, and a second one as an AP.
   WlanInterface* client_interface_;
   WlanInterface* ap_interface_;
+
+  ::wlan::drivers::components::NetworkDevice network_device_;
 
   // fidl::WireServer<fuchsia_factory_wlan_iovar::Iovar> Implementation
   void Get(GetRequestView request, GetCompleter::Sync& _completer) override;

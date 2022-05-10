@@ -115,6 +115,7 @@ source_set("bcdc") {
   public_deps = [
     ":core",
     ":linuxisms",
+    "//sdk/lib/stdcompat",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -190,10 +191,13 @@ source_set("core") {
     ":debug",
     ":linuxisms",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlan.fullmac:fuchsia.hardware.wlan.fullmac_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_llcpp",
     "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/lib/stdcompat",
+    "//src/connectivity/wlan/drivers/lib/components:cpp",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/recovery",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/broadcom",

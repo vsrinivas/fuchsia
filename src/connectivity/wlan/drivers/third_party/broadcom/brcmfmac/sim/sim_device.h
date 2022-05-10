@@ -45,6 +45,7 @@ class SimDevice : public Device {
 
   async_dispatcher_t* GetDispatcher() override;
   DeviceInspect* GetInspect() override;
+  bool IsNetworkDeviceBus() const override { return false; }
 
   // Trampolines for DDK functions, for platforms that support them.
   zx_status_t Init() override;

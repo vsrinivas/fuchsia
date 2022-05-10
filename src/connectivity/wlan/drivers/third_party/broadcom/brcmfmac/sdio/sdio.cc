@@ -2330,13 +2330,6 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
   }
 }
 
-static struct pktq* brcmf_sdio_bus_gettxq(brcmf_bus* bus_if) {
-  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
-  struct brcmf_sdio* bus = sdiodev->bus;
-
-  return &bus->txq;
-}
-
 static zx_status_t brcmf_sdio_bus_flush_txq(brcmf_bus* bus_if, int ifidx) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
@@ -3695,7 +3688,6 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .txdata = brcmf_sdio_bus_txdata,
     .txctl = brcmf_sdio_bus_txctl,
     .rxctl = brcmf_sdio_bus_rxctl,
-    .gettxq = brcmf_sdio_bus_gettxq,
     .flush_txq = brcmf_sdio_bus_flush_txq,
     .recovery = brcmf_sdio_recovery,
     .log_stats = brcmf_sdio_log_stats,
