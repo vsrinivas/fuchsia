@@ -7,7 +7,6 @@ use {
     async_trait::async_trait,
     diagnostics_data::Data,
     errors::ffx_error,
-    ffx_lib_sub_command::Subcommand,
     ffx_writer::Writer,
     fidl::{endpoints::create_proxy, AsyncSocket},
     fidl_fuchsia_developer_remotecontrol::{
@@ -26,7 +25,7 @@ use {
     io_util,
     iquery::{
         commands::DiagnosticsProvider,
-        types::{Error, Format, ToText},
+        types::{Error, ToText},
     },
     lazy_static::lazy_static,
     regex::Regex,
@@ -36,16 +35,6 @@ use {
 lazy_static! {
     static ref EXPECTED_FILE_RE: &'static str = r"fuchsia\.diagnostics\..*ArchiveAccessor$";
     static ref READDIR_TIMEOUT_SECONDS: u64 = 15;
-}
-
-pub fn get_writer(writer: Writer) -> Writer {
-    let ffx: ffx_lib_args::Ffx = argh::from_env();
-    match ffx.subcommand {
-        Some(Subcommand::FfxInspect(inspect)) if inspect.format == Format::Json => {
-            Writer::new(Some(ffx_writer::Format::Json))
-        }
-        _ => writer,
-    }
 }
 
 pub async fn run_command(

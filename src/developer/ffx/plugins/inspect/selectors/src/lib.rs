@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     ffx_core::ffx_plugin,
-    ffx_inspect_common::{get_writer, run_command},
+    ffx_inspect_common::run_command,
     ffx_inspect_selectors_args::SelectorsCommand,
     ffx_writer::Writer,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, RemoteDiagnosticsBridgeProxy},
@@ -21,8 +21,7 @@ pub async fn selectors(
     #[ffx(machine = Vec<String>)] writer: Writer,
     cmd: SelectorsCommand,
 ) -> Result<()> {
-    run_command(rcs_proxy, diagnostics_proxy, iq::SelectorsCommand::from(cmd), get_writer(writer))
-        .await
+    run_command(rcs_proxy, diagnostics_proxy, iq::SelectorsCommand::from(cmd), writer).await
 }
 
 #[cfg(test)]

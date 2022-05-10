@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     ffx_core::ffx_plugin,
-    ffx_inspect_common::{get_writer, run_command},
+    ffx_inspect_common::run_command,
     ffx_inspect_show_args::ShowCommand,
     ffx_writer::Writer,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, RemoteDiagnosticsBridgeProxy},
@@ -21,7 +21,7 @@ pub async fn show(
     #[ffx(machine = Vec<ShowCommandResultItem>)] writer: Writer,
     cmd: ShowCommand,
 ) -> Result<()> {
-    run_command(rcs_proxy, diagnostics_proxy, iq::ShowCommand::from(cmd), get_writer(writer)).await
+    run_command(rcs_proxy, diagnostics_proxy, iq::ShowCommand::from(cmd), writer).await
 }
 
 #[cfg(test)]
