@@ -220,6 +220,43 @@ func TestExecute(t *testing.T) {
 				fuchsiaTestSpec("affected-nonhermetic-test").Name,
 			},
 		},
+		{
+			name: "multiply unaffected hermetic tests",
+			flags: testsharderFlags{
+				skipUnaffected: true,
+			},
+			testSpecs: []build.TestSpec{
+				fuchsiaTestSpec("unaffected-hermetic-test"),
+				fuchsiaTestSpec("unaffected-nonhermetic-test"),
+				fuchsiaTestSpec("unaffected-hermetic-multiplied-test"),
+			},
+			testList: []build.TestListEntry{
+				{
+					Name: packageURL("unaffected-hermetic-test"),
+					Tags: []build.TestTag{
+						{Key: "hermetic", Value: "true"},
+					},
+				},
+				{
+					Name: packageURL("unaffected-nonhermetic-test"),
+					Tags: []build.TestTag{
+						{Key: "hermetic", Value: "false"},
+					},
+				},
+				{
+					Name: packageURL("unaffected-hermetic-multiplied-test"),
+					Tags: []build.TestTag{
+						{Key: "hermetic", Value: "true"},
+					},
+				},
+			},
+			modifiers: []testsharder.TestModifier{
+				{
+					Name:      "unaffected-hermetic-multiplied-test",
+					TotalRuns: 100,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

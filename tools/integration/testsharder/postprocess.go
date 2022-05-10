@@ -40,7 +40,7 @@ const (
 	AffectedShardPrefix = "affected:"
 
 	// The prefix added to the names of shards that run multiplied tests.
-	multipliedShardPrefix = "multiplied:"
+	MultipliedShardPrefix = "multiplied:"
 
 	// The prefix added to the names of shards that run unaffected tests.
 	UnaffectedShardPrefix = "unaffected:"
@@ -216,13 +216,13 @@ func MultiplyShards(
 			shardName := strings.TrimPrefix(shards[m.shardIdx].Name, AffectedShardPrefix)
 			// If the test was already multiplied by another modifier, keep the same
 			// multiplier shard but prefer the lower number of runs.
-			alreadyMultiplied := strings.HasPrefix(shardName, multipliedShardPrefix)
+			alreadyMultiplied := strings.HasPrefix(shardName, MultipliedShardPrefix)
 			if alreadyMultiplied {
 				test := shards[m.shardIdx].Tests[m.testIdx]
 				shards[m.shardIdx].Tests[m.testIdx].Runs = min(test.Runs, m.test.Runs)
 			} else {
 				shards = append(shards, &Shard{
-					Name:  multipliedShardPrefix + shardName + "-" + normalizeTestName(m.test.Name),
+					Name:  MultipliedShardPrefix + shardName + "-" + normalizeTestName(m.test.Name),
 					Tests: []Test{m.test},
 					Env:   shards[m.shardIdx].Env,
 				})

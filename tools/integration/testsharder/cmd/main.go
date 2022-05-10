@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -185,13 +186,30 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		return err
 	}
 
+	shards, err = testsharder.MultiplyShards(ctx, shards, modifiers, testDurations, targetDuration, flags.targetTestCount)
+	if err != nil {
+		return err
+	}
+	// Remove the multiplied shards from the set of shards to analyze for
+	// affected tests, as we want to run these shards regardless of whether
+	// the associated tests are affected.
+	var multipliedShards []*testsharder.Shard
+	var nonMultipliedShards []*testsharder.Shard
+	for _, shard := range shards {
+		if strings.HasPrefix(shard.Name, testsharder.MultipliedShardPrefix) {
+			multipliedShards = append(multipliedShards, shard)
+		} else {
+			nonMultipliedShards = append(nonMultipliedShards, shard)
+		}
+	}
+
 	var skippedShards []*testsharder.Shard
 	if flags.skipUnaffected {
-		// Filter out the affected, hermetic shards.
+		// Filter out the affected, hermetic shards from the non-multiplied shards.
 		hermeticAndAffected := func(t testsharder.Test) bool {
 			return t.Affected && t.Hermetic()
 		}
-		affectedHermeticShards, unaffectedOrNonhermeticShards := testsharder.PartitionShards(shards, hermeticAndAffected, testsharder.AffectedShardPrefix)
+		affectedHermeticShards, unaffectedOrNonhermeticShards := testsharder.PartitionShards(nonMultipliedShards, hermeticAndAffected, testsharder.AffectedShardPrefix)
 
 		// Filter out unaffected hermetic shards from the remaining shards.
 		hermetic := func(t testsharder.Test) bool {
@@ -215,17 +233,14 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		isAffected := func(t testsharder.Test) bool {
 			return t.Affected
 		}
-		affectedShards, unaffectedShards := testsharder.PartitionShards(shards, isAffected, testsharder.AffectedShardPrefix)
+		affectedShards, unaffectedShards := testsharder.PartitionShards(nonMultipliedShards, isAffected, testsharder.AffectedShardPrefix)
 		shards = affectedShards
 		if !flags.affectedOnly {
 			shards = append(shards, unaffectedShards...)
 		}
 	}
-
-	shards, err = testsharder.MultiplyShards(ctx, shards, modifiers, testDurations, targetDuration, flags.targetTestCount)
-	if err != nil {
-		return err
-	}
+	// Add the multiplied shards back into the list of shards to run.
+	shards = append(shards, multipliedShards...)
 
 	shards = testsharder.WithTargetDuration(shards, targetDuration, flags.targetTestCount, flags.maxShardsPerEnvironment, testDurations)
 

@@ -1,0 +1,130 @@
+[
+    {
+        "name": "AEMU",
+        "tests": [
+            {
+                "name": "fuchsia-pkg://fuchsia.com/unaffected-nonhermetic-test#meta/unaffected-nonhermetic-test.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/unaffected-nonhermetic-test#meta/unaffected-nonhermetic-test.cm",
+                "path": "",
+                "label": "//src/something:unaffected-nonhermetic-test(//build/toolchain/fuchsia:x64)",
+                "os": "fuchsia",
+                "cpu": "x64",
+                "log_settings": {},
+                "runs": 1,
+                "tags": [
+                    {
+                        "key": "hermetic",
+                        "value": "false"
+                    },
+                    {
+                        "key": "expected_duration_milliseconds",
+                        "value": "0"
+                    }
+                ]
+            }
+        ],
+        "environment": {
+            "dimensions": {
+                "device_type": "AEMU"
+            },
+            "is_emu": true
+        },
+        "timeout_secs": 0,
+        "summary": {
+            "tests": null
+        }
+    },
+    {
+        "name": "multiplied:AEMU-fuchsia-pkg:__fuchsia.com_unaffected-hermetic-multiplied-test#meta_unaffected-hermetic-multiplied-test.cm",
+        "tests": [
+            {
+                "name": "fuchsia-pkg://fuchsia.com/unaffected-hermetic-multiplied-test#meta/unaffected-hermetic-multiplied-test.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/unaffected-hermetic-multiplied-test#meta/unaffected-hermetic-multiplied-test.cm",
+                "path": "",
+                "label": "//src/something:unaffected-hermetic-multiplied-test(//build/toolchain/fuchsia:x64)",
+                "os": "fuchsia",
+                "cpu": "x64",
+                "log_settings": {},
+                "runs": 100,
+                "run_algorithm": "STOP_ON_FAILURE",
+                "tags": [
+                    {
+                        "key": "hermetic",
+                        "value": "true"
+                    },
+                    {
+                        "key": "expected_duration_milliseconds",
+                        "value": "0"
+                    }
+                ]
+            }
+        ],
+        "environment": {
+            "dimensions": {
+                "device_type": "AEMU"
+            },
+            "is_emu": true
+        },
+        "timeout_secs": 0,
+        "summary": {
+            "tests": null
+        }
+    },
+    {
+        "name": "unaffected:AEMU",
+        "tests": [
+            {
+                "name": "fuchsia-pkg://fuchsia.com/unaffected-hermetic-test#meta/unaffected-hermetic-test.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/unaffected-hermetic-test#meta/unaffected-hermetic-test.cm",
+                "path": "",
+                "label": "//src/something:unaffected-hermetic-test(//build/toolchain/fuchsia:x64)",
+                "os": "fuchsia",
+                "cpu": "x64",
+                "log_settings": {},
+                "runs": 1,
+                "tags": [
+                    {
+                        "key": "hermetic",
+                        "value": "true"
+                    },
+                    {
+                        "key": "expected_duration_milliseconds",
+                        "value": "0"
+                    }
+                ]
+            }
+        ],
+        "environment": {
+            "dimensions": {
+                "device_type": "AEMU"
+            },
+            "is_emu": true
+        },
+        "timeout_secs": 0,
+        "summary": {
+            "tests": [
+                {
+                    "name": "fuchsia-pkg://fuchsia.com/unaffected-hermetic-test#meta/unaffected-hermetic-test.cm",
+                    "gn_label": "//src/something:unaffected-hermetic-test(//build/toolchain/fuchsia:x64)",
+                    "output_files": null,
+                    "result": "SKIP",
+                    "cases": null,
+                    "start_time": "0001-01-01T00:00:00Z",
+                    "duration_milliseconds": 0,
+                    "is_testing_failure_mode": false,
+                    "affected": false,
+                    "tags": [
+                        {
+                            "key": "hermetic",
+                            "value": "true"
+                        },
+                        {
+                            "key": "expected_duration_milliseconds",
+                            "value": "0"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+]

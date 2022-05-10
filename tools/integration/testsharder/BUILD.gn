@@ -69,6 +69,7 @@ if (is_host) {
     "hermetic deps",
     "multiply",
     "multiply affected test",
+    "multiply unaffected hermetic tests",
     "sharding by time",
     "skip unaffected tests",
     "target test count",
