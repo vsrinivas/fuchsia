@@ -69,20 +69,28 @@ fn new_executable_file() -> Result<Arc<dyn DirectoryEntry>, Error> {
 }
 
 fn add_entry(
-    entry: &io_test::DirectoryEntry,
+    entry: io_test::DirectoryEntry,
     dest: &Arc<Simple<MutableConnection>>,
 ) -> Result<(), Error> {
     match entry {
         io_test::DirectoryEntry::Directory(dir) => {
-            let name = dir.name.as_ref().expect("Directory must have name");
+            let name = dir.name.expect("Directory must have name");
             let new_dir = simple();
-            if let Some(entries) = dir.entries.as_ref() {
+            if let Some(entries) = dir.entries {
                 for entry in entries {
-                    let entry = entry.as_ref().expect("Directory entries must not be null");
+                    let entry = *entry.expect("Directory entries must not be null");
                     add_entry(entry, &new_dir)?;
                 }
             }
             dest.add_entry(name, new_dir)?;
+        }
+        io_test::DirectoryEntry::RemoteDirectory(dir) => {
+            let name = dir.name.expect("RemoteDirectory must have name");
+            let dir_proxy = dir
+                .remote_client
+                .expect("RemoteDirectory must have a remote client")
+                .into_proxy()?;
+            dest.add_entry(name, remote_dir(dir_proxy))?;
         }
         io_test::DirectoryEntry::File(file) => {
             let name = file.name.as_ref().expect("File must have name");
@@ -92,12 +100,12 @@ fn add_entry(
             dest.add_entry(name, new_file)?;
         }
         io_test::DirectoryEntry::VmoFile(vmo_file) => {
-            let name = vmo_file.name.as_ref().expect("VMO file must have a name");
-            let buffer = vmo_file.buffer.as_ref().expect("VMO file must have a buffer");
-            dest.add_entry(name, new_vmo_file(buffer)?)?;
+            let name = vmo_file.name.expect("VMO file must have a name");
+            let buffer = vmo_file.buffer.expect("VMO file must have a buffer");
+            dest.add_entry(name, new_vmo_file(&buffer)?)?;
         }
         io_test::DirectoryEntry::ExecutableFile(executable_file) => {
-            let name = executable_file.name.as_ref().expect("Exec file must have a name");
+            let name = executable_file.name.expect("Exec file must have a name");
             dest.add_entry(name, new_executable_file()?)?;
         }
     }
@@ -139,23 +147,11 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
             } => {
                 let dir = simple();
                 if let Some(entries) = root.entries {
-                    for entry in &entries {
-                        let entry = entry.as_ref().expect("Directory entries must not be null");
-                        add_entry(entry, &dir)?;
+                    for entry in entries {
+                        let entry = entry.expect("Directory entries must not be null");
+                        add_entry(*entry, &dir)?;
                     }
                 }
-                (dir, flags, directory_request)
-            }
-            Io1HarnessRequest::GetDirectoryWithRemoteDirectory {
-                remote_directory,
-                name,
-                flags,
-                directory_request,
-                control_handle: _,
-            } => {
-                let remote = remote_dir(remote_directory.into_proxy()?);
-                let dir = simple();
-                dir.add_entry(name, remote)?;
                 (dir, flags, directory_request)
             }
         };

@@ -93,13 +93,6 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     callback(std::move(config));
   }
 
-  void GetDirectoryWithRemoteDirectory(
-      fidl::InterfaceHandle<fuchsia::io::Directory> remote_directory, std::string dirname,
-      fuchsia::io::OpenFlags flags,
-      fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
-    ZX_PANIC("Method not supported");
-  }
-
   void GetDirectory(fuchsia::io::test::Directory root, fuchsia::io::OpenFlags flags,
                     fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
     // Create a unique directory within the root of minfs for each request and popuplate it with the
@@ -156,12 +149,14 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
         file->Close();
         break;
       }
+      case fuchsia::io::test::DirectoryEntry::Tag::kRemoteDirectory:
+        ZX_PANIC("Remote directories are not supported");
       case fuchsia::io::test::DirectoryEntry::Tag::kVmoFile:
         ZX_PANIC("VMO files are not supported");
       case fuchsia::io::test::DirectoryEntry::Tag::kExecutableFile:
         ZX_PANIC("Executable files are not supported");
       case fuchsia::io::test::DirectoryEntry::Tag::Invalid:
-        ZX_PANIC("Unknown DirectoryEntry type");
+        ZX_PANIC("Unknown/Invalid DirectoryEntry type!");
     }
   }
 

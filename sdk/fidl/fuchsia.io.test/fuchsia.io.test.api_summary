@@ -4,6 +4,7 @@ resource table fuchsia.io.test/Directory
 union/member fuchsia.io.test/DirectoryEntry.directory fuchsia.io.test/Directory
 union/member fuchsia.io.test/DirectoryEntry.executable_file fuchsia.io.test/ExecutableFile
 union/member fuchsia.io.test/DirectoryEntry.file fuchsia.io.test/File
+union/member fuchsia.io.test/DirectoryEntry.remote_directory fuchsia.io.test/RemoteDirectory
 union/member fuchsia.io.test/DirectoryEntry.vmo_file fuchsia.io.test/VmoFile
 resource strict union fuchsia.io.test/DirectoryEntry
 table/member fuchsia.io.test/ExecutableFile.name string
@@ -26,10 +27,12 @@ table/member fuchsia.io.test/Io1Config.supports_vmo_file bool
 table fuchsia.io.test/Io1Config
 protocol/member fuchsia.io.test/Io1Harness.GetConfig() -> (fuchsia.io.test/Io1Config config)
 protocol/member fuchsia.io.test/Io1Harness.GetDirectory(fuchsia.io.test/Directory root,fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Directory directory_request)
-protocol/member fuchsia.io.test/Io1Harness.GetDirectoryWithRemoteDirectory(fuchsia.io/Directory remote_directory,string name,fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Directory directory_request)
 protocol fuchsia.io.test/Io1Harness
 protocol/member fuchsia.io.test/Io2Harness.GetEmptyDirectory(zx/handle:CHANNEL directory_request)
 protocol fuchsia.io.test/Io2Harness
+table/member fuchsia.io.test/RemoteDirectory.name string
+table/member fuchsia.io.test/RemoteDirectory.remote_client fuchsia.io/Directory
+resource table fuchsia.io.test/RemoteDirectory
 table/member fuchsia.io.test/VmoFile.buffer fuchsia.mem/Range
 table/member fuchsia.io.test/VmoFile.name string
 resource table fuchsia.io.test/VmoFile

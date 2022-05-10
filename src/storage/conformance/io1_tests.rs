@@ -5,7 +5,7 @@
 use {
     fdio::fdio_sys::V_IRWXU,
     fidl::{
-        endpoints::{create_endpoints, create_proxy, ProtocolMarker, Proxy},
+        endpoints::{create_proxy, ClientEnd, ProtocolMarker, Proxy},
         AsHandleRef,
     },
     fidl_fuchsia_io as fio, fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
@@ -163,6 +163,7 @@ fn get_directory_entry_name(dir_entry: &io_test::DirectoryEntry) -> String {
     use io_test::DirectoryEntry;
     match dir_entry {
         DirectoryEntry::Directory(entry) => entry.name.as_ref(),
+        DirectoryEntry::RemoteDirectory(entry) => entry.name.as_ref(),
         DirectoryEntry::File(entry) => entry.name.as_ref(),
         DirectoryEntry::VmoFile(entry) => entry.name.as_ref(),
         DirectoryEntry::ExecutableFile(entry) => entry.name.as_ref(),
@@ -231,6 +232,18 @@ fn directory(name: &str, entries: Vec<io_test::DirectoryEntry>) -> io_test::Dire
     let mut dir = root_directory(entries);
     dir.name = Some(name.to_string());
     io_test::DirectoryEntry::Directory(dir)
+}
+
+fn remote_directory(name: &str, remote_dir: fio::DirectoryProxy) -> io_test::DirectoryEntry {
+    let remote_client = ClientEnd::<fio::DirectoryMarker>::new(
+        remote_dir.into_channel().unwrap().into_zx_channel(),
+    );
+
+    io_test::DirectoryEntry::RemoteDirectory(io_test::RemoteDirectory {
+        name: Some(name.to_string()),
+        remote_client: Some(remote_client),
+        ..io_test::RemoteDirectory::EMPTY
+    })
 }
 
 fn file(name: &str, contents: Vec<u8>) -> io_test::DirectoryEntry {
@@ -386,28 +399,17 @@ async fn open_remote_directory_test() {
         return;
     }
 
-    let (remote_dir_client, remote_dir_server) =
-        create_endpoints::<fio::DirectoryMarker>().expect("Cannot create endpoints");
-    // Create a logged directory client/server pair so we can intercept the Open() call.
     let remote_name = "remote_directory";
-
-    // Request an extra directory connection from the harness to use as the remote.
-    let root = root_directory(vec![]);
-    harness
-        .proxy
-        .get_directory(
-            root,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-            remote_dir_server,
-        )
-        .expect("Cannot get empty remote directory");
-
-    // Create a directory with a remote directory inside of it.
-    let root_dir = harness.get_directory_with_remote_directory(
-        remote_dir_client,
-        remote_name,
+    let remote_mount = root_directory(vec![]);
+    let remote_client = harness.get_directory(
+        remote_mount,
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
     );
+
+    // Create a directory with the remote directory inside of it.
+    let root = root_directory(vec![remote_directory(remote_name, remote_client)]);
+    let root_dir = harness
+        .get_directory(root, fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
 
     open_node::<fio::DirectoryMarker>(
         &root_dir,
@@ -427,24 +429,14 @@ async fn open_remote_file_test() {
         return;
     }
 
-    let (remote_dir_client, remote_dir_server) =
-        create_endpoints::<fio::DirectoryMarker>().expect("Cannot create endpoints");
-
     let remote_name = "remote_directory";
+    let remote_dir = root_directory(vec![file(TEST_FILE, vec![])]);
+    let remote_client = harness.get_directory(remote_dir, fio::OpenFlags::RIGHT_READABLE);
 
-    // Request an extra directory connection from the harness to use as the remote.
-    let root = root_directory(vec![file(TEST_FILE, vec![])]);
-    harness
-        .proxy
-        .get_directory(root, fio::OpenFlags::RIGHT_READABLE, remote_dir_server)
-        .expect("Cannot get empty remote directory");
-
-    // Create a directory with a remote directory inside of it.
-    let root_dir = harness.get_directory_with_remote_directory(
-        remote_dir_client,
-        remote_name,
-        fio::OpenFlags::RIGHT_READABLE,
-    );
+    // Create a directory with the remote directory inside of it.
+    let root = root_directory(vec![remote_directory(remote_name, remote_client)]);
+    let root_dir = harness
+        .get_directory(root, fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
 
     // Test opening file by opening the remote directory first and then opening the file.
     let remote_dir_proxy = open_node::<fio::DirectoryMarker>(
@@ -471,15 +463,15 @@ async fn open_remote_file_test() {
 /// The test sets up the following hierarchy of nodes:
 ///
 /// ------------------ RW   --------------------------
-/// | test_dir_proxy | ---> | test_dir_server        |
-/// ------------------ (a)  |  - /remote_directory   | RWX  ---------------------
-///                         |    (remote_dir_client) | ---> | remote_dir_server |
+/// | root_dir_proxy | ---> | root_dir_server        |
+/// ------------------ (a)  |  - /mount_point        | RWX  ---------------------
+///                         |    (remote_proxy)      | ---> |   remote_dir      |
 ///                         -------------------------- (b)  ---------------------
 ///
 /// To validate the right escalation issue has been resolved, we call Open() on the test_dir_proxy
 /// passing in OPEN_FLAG_POSIX_DEPRECATED, which if handled correctly, should result in opening
-/// remote_dir_server as RW (and NOT RWX, which can occur if the deprecated POSIX flag is
-/// passed directly to the remote instead of only OPEN_FLAG_POSIX_WRITABLE/EXECUTABLE).
+/// remote_dir as RW (and NOT RWX, which can occur if the deprecated POSIX flag is passed directly
+/// to the remote instead of only OPEN_FLAG_POSIX_WRITABLE/EXECUTABLE).
 /// TODO(fxbug.dev/81185): Replace OPEN_FLAG_POSIX_DEPRECATED with new set of equivalent flags.
 #[fasync::run_singlethreaded(test)]
 async fn open_remote_directory_right_escalation_test() {
@@ -488,45 +480,32 @@ async fn open_remote_directory_right_escalation_test() {
         return;
     }
 
-    // Use the test harness to serve a directory on the remote server with RWX permissions.
-    let (remote_dir_client, remote_dir_server) =
-        create_endpoints::<fio::DirectoryMarker>().expect("Cannot create endpoints");
-    let root = root_directory(vec![]);
-    let remote_name = "remote_directory";
-    harness
-        .proxy
-        .get_directory(
-            root,
-            fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE
-                | fio::OpenFlags::RIGHT_EXECUTABLE,
-            remote_dir_server,
-        )
-        .expect("Cannot get empty remote directory");
+    let mount_point = "mount_point";
 
-    // Mount the remote node through test_dir_proxy, and ensure that the root connection has
-    // only RW permissions (and thus is a sub-set of those in the remote).
-    let (test_dir_proxy, test_dir_server) =
-        create_proxy::<fio::DirectoryMarker>().expect("Cannot create proxy");
-    harness
-        .proxy
-        .get_directory_with_remote_directory(
-            remote_dir_client,
-            remote_name,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-            test_dir_server,
-        )
-        .expect("Cannot get test harness directory");
+    // Use the test harness to serve a directory with RWX permissions.
+    let remote_dir = root_directory(vec![]);
+    let remote_proxy = harness.get_directory(
+        remote_dir,
+        fio::OpenFlags::RIGHT_READABLE
+            | fio::OpenFlags::RIGHT_WRITABLE
+            | fio::OpenFlags::RIGHT_EXECUTABLE,
+    );
+
+    // Mount the remote directory through root, and ensure that the connection only has RW
+    // RW permissions (which is thus a sub-set of the permissions the remote_proxy has).
+    let root = root_directory(vec![remote_directory(mount_point, remote_proxy)]);
+    let root_proxy = harness
+        .get_directory(root, fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
 
     // Create a new proxy/server for opening the remote node through test_dir_proxy.
     // Here we pass the POSIX flag, which should only expand to the maximum set of
     // rights available along the open chain.
     let (node_proxy, node_server) = create_proxy::<fio::NodeMarker>().expect("Cannot create proxy");
-    test_dir_proxy
+    root_proxy
         .open(
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_DEPRECATED,
             fio::MODE_TYPE_DIRECTORY,
-            remote_name,
+            mount_point,
             node_server,
         )
         .expect("Cannot open remote directory");

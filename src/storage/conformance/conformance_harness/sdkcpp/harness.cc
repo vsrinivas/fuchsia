@@ -23,16 +23,17 @@
 #include "fuchsia/io/cpp/fidl.h"
 #include "fuchsia/io/test/cpp/fidl.h"
 
-zx_status_t DummyWriter(std::vector<uint8_t>) { return ZX_OK; }
+namespace fio_test = fuchsia::io::test;
 
-class SdkCppHarness : public fuchsia::io::test::Io1Harness {
+zx_status_t DummyWriter(std::vector<uint8_t>) { return ZX_OK; }
+class SdkCppHarness : public fio_test::Io1Harness {
  public:
   explicit SdkCppHarness() = default;
 
   ~SdkCppHarness() override = default;
 
   void GetConfig(GetConfigCallback callback) final {
-    fuchsia::io::test::Io1Config config;
+    fio_test::Io1Config config;
 
     // Supported configuration options:
     config.set_mutable_file(true);         // Files are mutable.
@@ -55,28 +56,13 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
     callback(std::move(config));
   }
 
-  void GetDirectoryWithRemoteDirectory(
-      fidl::InterfaceHandle<fuchsia::io::Directory> remote_directory, std::string dirname,
-      fuchsia::io::OpenFlags flags,
-      fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
-    auto root = std::make_unique<vfs::PseudoDir>();
-    auto remote_dir_entry = std::make_unique<vfs::RemoteDir>(std::move(remote_directory));
-
-    zx_status_t status = root->AddEntry(dirname, std::move(remote_dir_entry));
-    ZX_ASSERT_MSG(status == ZX_OK, "Failed to add Remote directory entry!");
-    status = root->Serve(flags, directory_request.TakeChannel());
-    ZX_ASSERT_MSG(status == ZX_OK, "Failed to serve remote directory!");
-
-    directories_.push_back(std::move(root));
-  }
-
-  void GetDirectory(fuchsia::io::test::Directory root, fuchsia::io::OpenFlags flags,
+  void GetDirectory(fio_test::Directory root, fuchsia::io::OpenFlags flags,
                     fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
     auto dir = std::make_unique<vfs::PseudoDir>();
 
     if (root.has_entries()) {
-      for (const auto& entry : root.entries()) {
-        AddEntry(*entry, *dir);
+      for (auto& entry : *root.mutable_entries()) {
+        AddEntry(std::move(*entry), *dir);
       }
     }
 
@@ -86,51 +72,56 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
   }
 
  private:
-  void AddEntry(const fuchsia::io::test::DirectoryEntry& entry, vfs::PseudoDir& dest) {
+  void AddEntry(fio_test::DirectoryEntry entry, vfs::PseudoDir& dest) {
     switch (entry.Which()) {
-      case fuchsia::io::test::DirectoryEntry::Tag::kDirectory: {
+      case fio_test::DirectoryEntry::Tag::kDirectory: {
+        fio_test::Directory directory = std::move(entry.directory());
         auto dir_entry = std::make_unique<vfs::PseudoDir>();
-        if (entry.directory().has_entries()) {
-          for (const auto& child_entry : entry.directory().entries()) {
-            AddEntry(*child_entry, *dir_entry);
+        if (directory.has_entries()) {
+          for (auto& child_entry : *directory.mutable_entries()) {
+            AddEntry(std::move(*child_entry), *dir_entry);
           }
         }
-        ZX_ASSERT_MSG(dest.AddEntry(entry.directory().name(), std::move(dir_entry)) == ZX_OK,
+        ZX_ASSERT_MSG(dest.AddEntry(directory.name(), std::move(dir_entry)) == ZX_OK,
                       "Failed to add Directory entry!");
         break;
       }
-      case fuchsia::io::test::DirectoryEntry::Tag::kFile: {
-        std::vector<uint8_t> contents = entry.file().contents();
-        auto read_handler = [contents](std::vector<uint8_t>* output,
-                                       size_t max_bytes) -> zx_status_t {
+      case fio_test::DirectoryEntry::Tag::kRemoteDirectory: {
+        fio_test::RemoteDirectory remote_directory = std::move(entry.remote_directory());
+        auto remote_dir_entry =
+            std::make_unique<vfs::RemoteDir>(std::move(*remote_directory.mutable_remote_client()));
+        dest.AddEntry(remote_directory.name(), std::move(remote_dir_entry));
+        break;
+      }
+      case fio_test::DirectoryEntry::Tag::kFile: {
+        fio_test::File file = std::move(entry.file());
+        std::vector<uint8_t> contents = std::move(*file.mutable_contents());
+        auto read_handler = [contents = std::move(contents)](std::vector<uint8_t>* output,
+                                                             size_t max_bytes) -> zx_status_t {
           ZX_ASSERT(contents.size() <= max_bytes);
           *output = std::vector<uint8_t>(contents);
           return ZX_OK;
         };
         auto file_entry = std::make_unique<vfs::PseudoFile>(std::numeric_limits<size_t>::max(),
                                                             read_handler, DummyWriter);
-        ZX_ASSERT_MSG(dest.AddEntry(entry.file().name(), std::move(file_entry)) == ZX_OK,
+        ZX_ASSERT_MSG(dest.AddEntry(file.name(), std::move(file_entry)) == ZX_OK,
                       "Failed to add File entry!");
         break;
       }
-      case fuchsia::io::test::DirectoryEntry::Tag::kVmoFile: {
-        const auto& buffer = entry.vmo_file().buffer();
-        // The VMO backing the buffer is duplicated so that tests using VMO_FLAG_EXACT can ensure
-        // the same VMO is returned by subsequent GetBuffer calls.
-        zx::vmo vmo_clone;
-        ZX_ASSERT_MSG(buffer.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_clone) == ZX_OK,
-                      "Failed to duplicate VMO!");
-
+      case fio_test::DirectoryEntry::Tag::kVmoFile: {
+        fio_test::VmoFile vmo_file = std::move(entry.vmo_file());
+        fuchsia::mem::Range buffer = std::move(*vmo_file.mutable_buffer());
         auto vmo_file_entry = std::make_unique<vfs::VmoFile>(
-            std::move(vmo_clone), buffer.offset, buffer.size, vfs::VmoFile::WriteOption::WRITABLE);
-
-        ZX_ASSERT_MSG(dest.AddEntry(entry.vmo_file().name(), std::move(vmo_file_entry)) == ZX_OK,
+            std::move(buffer.vmo), buffer.offset, buffer.size, vfs::VmoFile::WriteOption::WRITABLE);
+        ZX_ASSERT_MSG(dest.AddEntry(vmo_file.name(), std::move(vmo_file_entry)) == ZX_OK,
                       "Failed to add VmoFile entry!");
         break;
       }
-      case fuchsia::io::test::DirectoryEntry::Tag::Invalid:
-      default:
-        ZX_ASSERT_MSG(false, "Unknown/Invalid DirectoryEntry type!");
+      case fio_test::DirectoryEntry::Tag::kExecutableFile:
+        ZX_PANIC("Executable files are not supported!");
+        break;
+      case fio_test::DirectoryEntry::Tag::Invalid:
+        ZX_PANIC("Unknown/Invalid DirectoryEntry type!");
         break;
     }
   }
@@ -143,7 +134,7 @@ int main(int argc, const char** argv) {
   syslog::SetTags({"io_conformance_harness_sdkcpp"});
 
   SdkCppHarness harness;
-  fidl::BindingSet<fuchsia::io::test::Io1Harness> bindings;
+  fidl::BindingSet<fio_test::Io1Harness> bindings;
 
   // Expose the Io1Harness protocol as an outgoing service.
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();

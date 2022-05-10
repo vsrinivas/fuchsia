@@ -85,6 +85,15 @@ type Directory = resource table {
     2: entries vector<DirectoryEntry:optional>;
 };
 
+/// Remote directory which forwards FIDL requests from the server to the specified directory.
+type RemoteDirectory = resource table {
+    /// Name not required for root directory.
+    1: name string;
+
+    /// Remote client to forward Directory requests to.
+    2: remote_client client_end:fuchsia.io.Directory;
+};
+
 /// File object which supports reading, and if `mutable_file` is true, also supports writing.
 ///
 /// As the conformance tests verify W^X enforcement, attempting to open a File with RIGHT_EXECUTABLE
@@ -121,9 +130,10 @@ type ExecutableFile = table {
 
 type DirectoryEntry = strict resource union {
     1: directory Directory;
-    2: file File;
-    3: vmo_file VmoFile;
-    4: executable_file ExecutableFile;
+    2: remote_directory RemoteDirectory;
+    3: file File;
+    4: vmo_file VmoFile;
+    5: executable_file ExecutableFile;
 };
 
 @discoverable
@@ -141,24 +151,6 @@ protocol Io1Harness {
     /// given `flags`.
     GetDirectory(resource struct {
         root Directory;
-        flags fuchsia.io.OpenFlags;
-        directory_request server_end:fuchsia.io.Directory;
-    });
-
-    /// Serves a directory that holds a child `remote_directory` with name
-    /// `dir_name`. The `directory_request` connection to the root directory
-    /// has rights defined by `flags`.
-    ///
-    /// + `remote_directory` the client end of the child remote directory.
-    /// + `name` the name of the child remote directory in the root directory.
-    /// + `flags` the flags the served directory connection has.
-    /// + `directory_request` the server end of the root directory connection.
-    ///
-    /// TODO(fxbug.dev/33880): Add suppport for remote directories to
-    /// GetDirectory and then delete this method.
-    GetDirectoryWithRemoteDirectory(resource struct {
-        remote_directory client_end:fuchsia.io.Directory;
-        name string;
         flags fuchsia.io.OpenFlags;
         directory_request server_end:fuchsia.io.Directory;
     });
