@@ -9,19 +9,8 @@ source_set("ui_test_manager") {
   testonly = true
 
   sources = [
-    "flatland_scene_manager_scene.cc",
-    "flatland_scene_manager_scene.h",
-    "flatland_test_manager_scene.h",
-    "gfx_root_presenter_scene.cc",
-    "gfx_root_presenter_scene.h",
-    "gfx_scene_manager_scene.cc",
-    "gfx_scene_manager_scene.h",
-    "gfx_test_manager_scene.h",
-    "gfx_test_view.cc",
-    "gfx_test_view.h",
     "ui_test_manager.cc",
     "ui_test_manager.h",
-    "ui_test_scene.h",
   ]
 
   public_deps = [
@@ -39,6 +28,7 @@ source_set("ui_test_manager") {
     "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.observation.test",
     "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
     "//sdk/fidl/fuchsia.ui.policy",

@@ -445,7 +445,8 @@ TEST_P(WebSemanticsTest, PerformAction) {
   RunLoopUntilNodeExistsWithLabel("1");
 }
 
-TEST_P(WebSemanticsTest, HitTesting) {
+// TODO(fxbug.dev/99748): Re-enable once we can stabilize WaitForScaleFactor().
+TEST_P(WebSemanticsTest, DISABLED_HitTesting) {
   LoadHtml(kStaticHtml);
 
   FX_LOGS(INFO) << "Wait for scale factor";
@@ -473,7 +474,8 @@ TEST_P(WebSemanticsTest, HitTesting) {
   ASSERT_EQ(*hit_node, node->node_id());
 }
 
-TEST_P(WebSemanticsTest, ScrollToMakeVisible) {
+// TODO(fxbug.dev/99748): Re-enable once we can stabilize WaitForScaleFactor().
+TEST_P(WebSemanticsTest, DISABLED_ScrollToMakeVisible) {
   LoadHtml(kOffscreenNodeHtml);
 
   FX_LOGS(INFO) << "Wait for scale factor";

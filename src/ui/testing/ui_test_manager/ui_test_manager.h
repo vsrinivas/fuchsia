@@ -5,6 +5,9 @@
 #ifndef SRC_UI_TESTING_UI_TEST_MANAGER_UI_TEST_MANAGER_H_
 #define SRC_UI_TESTING_UI_TEST_MANAGER_UI_TEST_MANAGER_H_
 
+#include <fuchsia/session/scene/cpp/fidl.h>
+#include <fuchsia/ui/observation/test/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -13,7 +16,6 @@
 #include <optional>
 
 #include "src/lib/fxl/macros.h"
-#include "src/ui/testing/ui_test_manager/ui_test_scene.h"
 
 namespace ui_testing {
 
@@ -250,18 +252,25 @@ class UITestManager {
   // MUST be called AFTER BuildRealm().
   void InitializeScene();
 
-  // Returns true if the client view is connected to the scene.
-  bool ClientViewIsAttached();
-
-  // Returns true if the client view is connected to the scene, and has rendered
-  // at least one frame of content.
-  bool ClientViewIsRendering();
-
-  // Returns the view ref koid of the client view if it's been attached to the
-  // scene, and std::nullopt otherwise.
+  // Returns the view ref koid of the client view if it's available, and false
+  // otherwise.
+  //
+  // NOTE: Different scene owners have different policies about client view
+  // refs, so users should NOT use this method as a proxy for determining that
+  // the client view is attached to the scene. Use |ClientViewIsRendering| for
+  // that purpose.
   std::optional<zx_koid_t> ClientViewRefKoid();
 
-  // Returns the scale factor applied to the client view.
+  // Convenience method to inform the client if its view is rendering.
+  //
+  // Returns true if the client's view ref koid is present in the most recent
+  // view tree snapshot received from scenic.
+  bool ClientViewIsRendering();
+
+  // Convenience method to inform the client of its view scale factor.
+  //
+  // Returns the scale factor applied to the client view, as reported in the
+  // Layout information received from the geometry observer.
   float ClientViewScaleFactor();
 
  private:
@@ -280,10 +289,28 @@ class UITestManager {
   void RouteServices(std::vector<std::string> services, component_testing::Ref source,
                      std::vector<component_testing::Ref> targets);
 
+  // Helper method to monitor the state of the view tree continuously.
+  void WatchViewTree();
+
   Config config_;
   component_testing::RealmBuilder realm_builder_ = component_testing::RealmBuilder::Create();
   std::shared_ptr<component_testing::RealmRoot> realm_root_;
-  std::unique_ptr<UITestScene> scene_;
+  fuchsia::ui::observation::test::RegistrySyncPtr observer_registry_;
+  fuchsia::ui::observation::geometry::ProviderPtr geometry_provider_;
+
+  // Connection to scene owner service. At most one will be active for a given
+  // UITestManager instance.
+  fuchsia::session::scene::ManagerPtr scene_manager_;
+  fuchsia::ui::policy::PresenterPtr root_presenter_;
+
+  std::optional<fuchsia::ui::views::ViewRef> client_view_ref_ = std::nullopt;
+
+  // Holds the most recent view tree snapshot received from the geometry
+  // observer.
+  //
+  // From this snapshot, we can retrieve relevant view tree state on demand,
+  // e.g. if the client view is rendering content.
+  std::optional<fuchsia::ui::observation::geometry::ViewTreeSnapshot> last_view_tree_snapshot_;
 
   // Some tests may not need a dedicated subrealm. Those clients will not call
   // AddSubrealm(), so UITestManager will crash if it tries to add routes

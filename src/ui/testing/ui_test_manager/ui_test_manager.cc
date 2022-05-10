@@ -25,14 +25,14 @@
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <test/accessibility/cpp/fidl.h>
 #include <test/inputsynthesis/cpp/fidl.h>
 
 #include "sdk/lib/syslog/cpp/macros.h"
-#include "src/ui/testing/ui_test_manager/flatland_scene_manager_scene.h"
-#include "src/ui/testing/ui_test_manager/gfx_root_presenter_scene.h"
-#include "src/ui/testing/ui_test_manager/gfx_scene_manager_scene.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace ui_testing {
 
@@ -70,12 +70,31 @@ constexpr auto kUseFlatlandScenicConfig = R"(
 }
 )";
 
+constexpr auto kDefaultScale = 0.f;
+
 // Set of low-level system services that components in the realm can consume
 // from parent (test_manager).
 std::vector<std::string> DefaultSystemServices() {
   return {fuchsia::logger::LogSink::Name_, fuchsia::scheduler::ProfileProvider::Name_,
           fuchsia::sysmem::Allocator::Name_, fuchsia::tracing::provider::Registry::Name_,
           fuchsia::vulkan::loader::Loader::Name_};
+}
+
+std::optional<fuchsia::ui::observation::geometry::ViewDescriptor> ViewDescriptorFromSnapshot(
+    const fuchsia::ui::observation::geometry::ViewTreeSnapshot& snapshot, zx_koid_t view_ref_koid) {
+  if (!snapshot.has_views()) {
+    return std::nullopt;
+  }
+
+  auto it = std::find_if(snapshot.views().begin(), snapshot.views().end(),
+                         [view_ref_koid](const auto& view) {
+                           return view.has_view_ref_koid() && view.view_ref_koid() == view_ref_koid;
+                         });
+  if (it == snapshot.views().end()) {
+    return std::nullopt;
+  }
+
+  return fidl::Clone(*it);
 }
 
 }  // namespace
@@ -224,6 +243,7 @@ void UITestManager::ConfigureScenic() {
       {fuchsia::ui::composition::Allocator::Name_, fuchsia::ui::composition::Flatland::Name_,
        fuchsia::ui::composition::FlatlandDisplay::Name_,
        fuchsia::ui::focus::FocusChainListenerRegistry::Name_, fuchsia::ui::scenic::Scenic::Name_,
+       fuchsia::ui::observation::test::Registry::Name_,
        fuchsia::ui::views::ViewRefInstalled::Name_},
       /* source = */ ChildRef{kTestRealmName}, /* targets = */ {ParentRef()});
 }
@@ -290,29 +310,112 @@ std::unique_ptr<sys::ServiceDirectory> UITestManager::TakeExposedServicesDirecto
 }
 
 void UITestManager::InitializeScene() {
+  FX_CHECK(realm_root_) << "BuildRealm() must be called before InitializeScene()";
   FX_CHECK(config_.scene_owner.has_value()) << "Scene owner must be specified";
+  FX_CHECK(!observer_registry_ && !geometry_provider_) << "InitializeScene() called twice";
+
+  // Register geometry observer. We should do this before attaching the client
+  // view, so that we see all the view tree snapshots.
+  realm_root_->Connect<fuchsia::ui::observation::test::Registry>(observer_registry_.NewRequest());
+  observer_registry_->RegisterGlobalGeometryProvider(geometry_provider_.NewRequest());
 
   if (*config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
-    scene_ = std::make_unique<ui_testing::GfxRootPresenterScene>(realm_root_);
+    root_presenter_ = realm_root_->Connect<fuchsia::ui::policy::Presenter>();
+
+    auto client_view_tokens = scenic::ViewTokenPair::New();
+    root_presenter_->PresentOrReplaceView(std::move(client_view_tokens.view_holder_token),
+                                          /* presentation */ nullptr);
+
+    auto client_view_provider = realm_root_->Connect<fuchsia::ui::app::ViewProvider>();
+    auto [client_control_ref, client_view_ref] = scenic::ViewRefPair::New();
+    client_view_ref_ = fidl::Clone(client_view_ref);
+
+    client_view_provider->CreateViewWithViewRef(std::move(client_view_tokens.view_token.value),
+                                                std::move(client_control_ref),
+                                                std::move(client_view_ref));
   } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
-    if (config_.use_flatland) {
-      scene_ = std::make_unique<ui_testing::FlatlandSceneManagerScene>(realm_root_);
-    } else {
-      scene_ = std::make_unique<ui_testing::GfxSceneManagerScene>(realm_root_);
-    }
+    scene_manager_ = realm_root_->Connect<fuchsia::session::scene::Manager>();
+    auto view_provider = realm_root_->Connect<fuchsia::ui::app::ViewProvider>();
+    scene_manager_->SetRootView(
+        std::move(view_provider),
+        [this](fuchsia::ui::views::ViewRef view_ref) { client_view_ref_ = std::move(view_ref); });
   } else {
     FX_LOGS(FATAL) << "Unsupported scene owner";
   }
 
-  scene_->Initialize();
+  WatchViewTree();
 }
 
-bool UITestManager::ClientViewIsAttached() { return scene_->ClientViewIsAttached(); }
+void UITestManager::WatchViewTree() {
+  FX_CHECK(geometry_provider_)
+      << "Geometry observer must be registered before calling WatchViewTree()";
 
-bool UITestManager::ClientViewIsRendering() { return scene_->ClientViewIsRendering(); }
+  geometry_provider_->Watch([this](auto response) {
+    if (!response.has_error()) {
+      std::vector<fuchsia::ui::observation::geometry::ViewTreeSnapshot>* updates =
+          response.mutable_updates();
+      if (updates && !updates->empty()) {
+        last_view_tree_snapshot_ = std::move(updates->back());
+      }
 
-std::optional<zx_koid_t> UITestManager::ClientViewRefKoid() { return scene_->ClientViewRefKoid(); }
+      WatchViewTree();
+      return;
+    }
 
-float UITestManager::ClientViewScaleFactor() { return scene_->ClientViewScaleFactor(); }
+    const auto& error = response.error();
+
+    if (error.has_channel_overflow() && error.channel_overflow()) {
+      FX_LOGS(FATAL) << "Geometry provider channel overflowed";
+    } else if (error.has_buffer_overflow() && error.buffer_overflow()) {
+      FX_LOGS(FATAL) << "Geometry provider buffer overflowed";
+    } else if (error.has_views_overflow() && error.views_overflow()) {
+      FX_LOGS(FATAL) << "Geometry provider attempted to report too many views";
+    }
+  });
+}
+
+bool UITestManager::ClientViewIsRendering() {
+  if (!last_view_tree_snapshot_) {
+    return false;
+  }
+
+  auto client_view_ref_koid = ClientViewRefKoid();
+  if (!client_view_ref_koid) {
+    return false;
+  }
+
+  return ViewDescriptorFromSnapshot(*last_view_tree_snapshot_, *client_view_ref_koid) !=
+         std::nullopt;
+}
+
+std::optional<zx_koid_t> UITestManager::ClientViewRefKoid() {
+  if (!client_view_ref_) {
+    return std::nullopt;
+  }
+
+  return fsl::GetKoid(client_view_ref_->reference.get());
+}
+
+float UITestManager::ClientViewScaleFactor() {
+  if (!last_view_tree_snapshot_) {
+    return kDefaultScale;
+  }
+
+  auto client_view_ref_koid = ClientViewRefKoid();
+  if (!client_view_ref_koid) {
+    return kDefaultScale;
+  }
+
+  const auto client_view_descriptor =
+      ViewDescriptorFromSnapshot(*last_view_tree_snapshot_, *client_view_ref_koid);
+
+  if (!client_view_descriptor || !client_view_descriptor->has_layout()) {
+    return kDefaultScale;
+  }
+
+  const auto& pixel_scale = client_view_descriptor->layout().pixel_scale;
+
+  return std::max(pixel_scale[0], pixel_scale[1]);
+}
 
 }  // namespace ui_testing

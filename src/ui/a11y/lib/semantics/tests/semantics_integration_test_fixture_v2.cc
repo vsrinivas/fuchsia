@@ -83,7 +83,7 @@ void SemanticsIntegrationTestV2::SetUp() {
 
   // Launch client view, and wait until it's attached to proceed with the test.
   ui_test_manager_->InitializeScene();
-  RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsAttached(); });
+  RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsRendering(); });
 
   auto view_ref_koid = ui_test_manager_->ClientViewRefKoid();
   ASSERT_TRUE(view_ref_koid.has_value());
