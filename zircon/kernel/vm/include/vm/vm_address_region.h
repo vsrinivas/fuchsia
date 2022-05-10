@@ -187,9 +187,8 @@ class VmAddressRegionOrMapping
 
   // Returns true if the instance is alive and reporting information that
   // reflects the address space layout. |aspace()->lock()| must be held.
-  bool IsAliveLocked() const {
+  bool IsAliveLocked() const TA_REQ(lock()) {
     canary_.Assert();
-    DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
     return state_ == LifeCycleState::ALIVE;
   }
 
@@ -203,7 +202,7 @@ class VmAddressRegionOrMapping
 
   // current state of the VMAR.  If LifeCycleState::DEAD, then all other
   // fields are invalid.
-  LifeCycleState state_ = LifeCycleState::ALIVE;
+  LifeCycleState state_ TA_GUARDED(lock()) = LifeCycleState::ALIVE;
 
   // address/size within the container address space
   vaddr_t base_;
@@ -217,7 +216,7 @@ class VmAddressRegionOrMapping
   const fbl::RefPtr<VmAspace> aspace_;
 
   // pointer back to our parent region (nullptr if root or destroyed)
-  VmAddressRegion* parent_;
+  VmAddressRegion* parent_ TA_GUARDED(lock());
 };
 
 // A list of regions ordered by virtual address. Templated to allow for test code to avoid needing
@@ -507,8 +506,8 @@ class RegionList final {
 class VmAddressRegion final : public VmAddressRegionOrMapping {
  public:
   // Create a root region.  This will span the entire aspace
-  static zx_status_t CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
-                                fbl::RefPtr<VmAddressRegion>* out);
+  static zx_status_t CreateRootLocked(VmAspace& aspace, uint32_t vmar_flags,
+                                      fbl::RefPtr<VmAddressRegion>* out) TA_REQ(aspace.lock());
   // Create a subregion of this region
   zx_status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2, uint32_t vmar_flags,
                             const char* name, fbl::RefPtr<VmAddressRegion>* out);
@@ -984,6 +983,13 @@ class VmMapping final : public VmAddressRegionOrMapping,
     DEBUG_ASSERT(protection_ranges_.DebugNodesWithinRange(base_, new_size));
     size_ = new_size;
     IncrementMappingGenerationCountLocked();
+  }
+
+  // For a VmMapping |state_| is only modified either with the object_ lock held, or if there is no
+  // |object_|. Therefore it is safe to read state if just the object lock is held.
+  LifeCycleState get_state_locked_object() const
+      TA_REQ(object_->lock()) TA_NO_THREAD_SAFETY_ANALYSIS {
+    return state_;
   }
 
   // pointer and region of the object we are mapping

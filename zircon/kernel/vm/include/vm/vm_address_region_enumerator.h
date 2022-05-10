@@ -66,8 +66,9 @@ class VmAddressRegionEnumerator {
     }
     ktl::optional<NextResult> ret = ktl::nullopt;
     while (!ret && itr_.IsValid() && itr_->base() < max_addr_) {
-      DEBUG_ASSERT(itr_->IsAliveLocked());
       auto curr = itr_++;
+      AssertHeld(curr->lock_ref());
+      DEBUG_ASSERT(curr->IsAliveLocked());
       VmAddressRegion* up = curr->parent_;
 
       if (curr->is_mapping()) {
@@ -149,6 +150,7 @@ class VmAddressRegionEnumerator {
     static_assert(Type == VmAddressRegionEnumeratorType::PausableMapping);
     ASSERT(state_.paused_);
     if (state_.region_or_mapping_) {
+      AssertHeld(itr_->lock_ref());
       if (!itr_->IsAliveLocked()) {
         // Generate a new iterator that starts at the right offset, but back at the top. The next
         // call to next() will walk back down if necessary to find a mapping.

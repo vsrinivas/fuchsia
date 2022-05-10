@@ -54,8 +54,8 @@ VmAddressRegion::VmAddressRegion(VmAspace& kernel_aspace)
   state_ = LifeCycleState::ALIVE;
 }
 
-zx_status_t VmAddressRegion::CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
-                                        fbl::RefPtr<VmAddressRegion>* out) {
+zx_status_t VmAddressRegion::CreateRootLocked(VmAspace& aspace, uint32_t vmar_flags,
+                                              fbl::RefPtr<VmAddressRegion>* out) {
   DEBUG_ASSERT(out);
 
   fbl::AllocChecker ac;
@@ -63,6 +63,8 @@ zx_status_t VmAddressRegion::CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+
+  AssertHeld(vmar->lock_ref());
 
   vmar->state_ = LifeCycleState::ALIVE;
   *out = fbl::AdoptRef(vmar);

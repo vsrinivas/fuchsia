@@ -280,6 +280,8 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     return ZX_ERR_BAD_STATE;
   }
 
+  AssertHeld(parent_->lock_ref());
+
   // Should never be unmapping everything, otherwise should destroy.
   DEBUG_ASSERT(base != base_ || size != size_);
 
@@ -404,7 +406,7 @@ void VmMapping::AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
   // Avoids a race with DestroyLocked() since it removes ourself from the VMO's
   // mapping list with the VMO lock held before dropping this state to DEAD. The
   // VMO cant call back to us once we're out of their list.
-  DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
+  DEBUG_ASSERT(get_state_locked_object() == LifeCycleState::ALIVE);
 
   DEBUG_ASSERT(object_);
 
@@ -446,7 +448,7 @@ void VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) c
   // Avoids a race with DestroyLocked() since it removes ourself from the VMO's
   // mapping list with the VMO lock held before dropping this state to DEAD. The
   // VMO cant call back to us once we're out of their list.
-  DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
+  DEBUG_ASSERT(get_state_locked_object() == LifeCycleState::ALIVE);
 
   DEBUG_ASSERT(object_);
 
@@ -994,12 +996,12 @@ void VmMapping::Activate() {
 }
 
 void VmMapping::TryMergeRightNeighborLocked(VmMapping* right_candidate) {
+  AssertHeld(right_candidate->lock_ref());
+
   // This code is tolerant of many 'miss calls' if mappings aren't mergeable or are not neighbours
   // etc, but the caller should not be attempting to merge if these mappings are not actually from
   // the same vmar parent. Doing so indicates something structurally wrong with the hierarchy.
   DEBUG_ASSERT(parent_ == right_candidate->parent_);
-
-  AssertHeld(right_candidate->lock_ref());
 
   // These tests are intended to be ordered such that we fail as fast as possible. As such testing
   // for mergeability, which we commonly expect to succeed and not fail, is done last.

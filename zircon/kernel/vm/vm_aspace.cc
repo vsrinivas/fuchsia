@@ -159,7 +159,7 @@ zx_status_t VmAspace::Init() {
   Guard<Mutex> guard{&lock_};
 
   if (likely(!root_vmar_)) {
-    return VmAddressRegion::CreateRoot(*this, VMAR_FLAG_CAN_MAP_SPECIFIC, &root_vmar_);
+    return VmAddressRegion::CreateRootLocked(*this, VMAR_FLAG_CAN_MAP_SPECIFIC, &root_vmar_);
   }
   return ZX_OK;
 }
@@ -656,8 +656,8 @@ zx_status_t VmAspace::EnumerateChildren(VmEnumerator* ve) {
     // Aspace hasn't been initialized or has already been destroyed.
     return ZX_ERR_BAD_STATE;
   }
-  DEBUG_ASSERT(root_vmar_->IsAliveLocked());
   AssertHeld(root_vmar_->lock_ref());
+  DEBUG_ASSERT(root_vmar_->IsAliveLocked());
   if (!ve->OnVmAddressRegion(root_vmar_.get(), 0)) {
     return ZX_ERR_CANCELED;
   }
