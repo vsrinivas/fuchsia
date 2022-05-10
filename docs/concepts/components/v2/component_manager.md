@@ -1,3 +1,4 @@
+# Component manager
 
 <<../_v2_banner.md>>
 
