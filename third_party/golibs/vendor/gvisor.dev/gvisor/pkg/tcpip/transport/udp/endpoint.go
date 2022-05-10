@@ -115,7 +115,7 @@ func newEndpoint(s *stack.Stack, netProto tcpip.NetworkProtocolNumber, waiterQue
 	e.ops.SetMulticastLoop(true)
 	e.ops.SetSendBufferSize(32*1024, false /* notify */)
 	e.ops.SetReceiveBufferSize(32*1024, false /* notify */)
-	e.net.Init(s, netProto, header.UDPProtocolNumber, &e.ops)
+	e.net.Init(s, netProto, header.UDPProtocolNumber, &e.ops, waiterQueue)
 
 	// Override with stack defaults.
 	var ss tcpip.SendBufferSizeOption
@@ -129,6 +129,11 @@ func newEndpoint(s *stack.Stack, netProto tcpip.NetworkProtocolNumber, waiterQue
 	}
 
 	return e
+}
+
+// WakeupWriters implements tcpip.SocketOptionsHandler.
+func (e *endpoint) WakeupWriters() {
+	e.net.MaybeSignalWritable()
 }
 
 // UniqueID implements stack.TransportEndpoint.
@@ -401,7 +406,7 @@ func (e *endpoint) prepareForWrite(p tcpip.Payloader, opts tcpip.WriteOptions) (
 		// errors aren't report to the error queue at all.
 		if ctx.PacketInfo().NetProto == header.IPv6ProtocolNumber {
 			so := e.SocketOptions()
-			if so.GetRecvError() {
+			if so.GetIPv6RecvError() {
 				so.QueueLocalErr(
 					&tcpip.ErrMessageTooLong{},
 					e.net.NetProto(),
@@ -453,10 +458,10 @@ func (e *endpoint) write(p tcpip.Payloader, opts tcpip.WriteOptions) (int64, tcp
 	defer udpInfo.ctx.Release()
 
 	pktInfo := udpInfo.ctx.PacketInfo()
-	pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-		ReserveHeaderBytes: header.UDPMinimumSize + int(pktInfo.MaxHeaderLength),
-		Data:               udpInfo.data.ToVectorisedView(),
-	})
+	pkt := udpInfo.ctx.TryNewPacketBuffer(header.UDPMinimumSize+int(pktInfo.MaxHeaderLength), udpInfo.data.ToVectorisedView())
+	if pkt == nil {
+		return 0, &tcpip.ErrWouldBlock{}
+	}
 	defer pkt.DecRef()
 
 	// Initialize the UDP header.
@@ -857,8 +862,11 @@ func (e *endpoint) GetRemoteAddress() (tcpip.FullAddress, tcpip.Error) {
 // Readiness returns the current readiness of the endpoint. For example, if
 // waiter.EventIn is set, the endpoint is immediately readable.
 func (e *endpoint) Readiness(mask waiter.EventMask) waiter.EventMask {
-	// The endpoint is always writable.
-	result := waiter.WritableEvents & mask
+	var result waiter.EventMask
+
+	if e.net.HasSendSpace() {
+		result |= waiter.WritableEvents & mask
+	}
 
 	// Determine if the endpoint is readable if requested.
 	if mask&waiter.ReadableEvents != 0 {
@@ -996,8 +1004,17 @@ func (e *endpoint) onICMPError(err tcpip.Error, transErr stack.TransportError, p
 	e.lastError = err
 	e.lastErrorMu.Unlock()
 
-	// Update the error queue if IP_RECVERR is enabled.
-	if e.SocketOptions().GetRecvError() {
+	var recvErr bool
+	switch pkt.NetworkProtocolNumber {
+	case header.IPv4ProtocolNumber:
+		recvErr = e.SocketOptions().GetIPv4RecvError()
+	case header.IPv6ProtocolNumber:
+		recvErr = e.SocketOptions().GetIPv6RecvError()
+	default:
+		panic(fmt.Sprintf("unhandled network protocol number = %d", pkt.NetworkProtocolNumber))
+	}
+
+	if recvErr {
 		// Linux passes the payload without the UDP header.
 		var payload []byte
 		udp := header.UDP(pkt.Data().AsRange().ToOwnedView())
