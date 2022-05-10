@@ -78,6 +78,7 @@ core_realm("core") {
     "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
     "//src/connectivity/wlan/wlanstack:wlanstack-core-shard",
     "//src/recovery/factory_reset:factory_reset_core_shard",
+    "//src/ui/bin/brightness_manager:auto-brightness_core_shard",
   ]
 }
 
@@ -105,6 +106,7 @@ recovery_packages = [
   "//src/sys/pkg:recovery",
   "//src/sys/stash:pkg",
   "//src/sys/time:recovery",
+  "//src/ui/bin/brightness_manager:auto-brightness",
 ]
 
 recovery_system_image_deps = [ "//garnet/packages/prod:broadcom" ]
