@@ -248,19 +248,28 @@ impl UnixSocket {
     }
 
     fn get_send_capacity(&self) -> usize {
-        if let Some(peer) = self.lock().peer() {
-            let peer = downcast_socket_to_unix(&peer);
-            peer.lock().messages.capacity()
-        } else {
-            0
-        }
+        let peer = {
+            if let Some(peer) = self.lock().peer() {
+                peer.clone()
+            } else {
+                return 0;
+            }
+        };
+        let unix_socket = downcast_socket_to_unix(&peer);
+        let capacity = unix_socket.lock().messages.capacity();
+        capacity
     }
 
     fn set_send_capacity(&self, requested_capacity: usize) {
-        if let Some(peer) = self.lock().peer() {
-            let unix_socket = downcast_socket_to_unix(&peer);
-            unix_socket.lock().set_capacity(requested_capacity);
-        }
+        let peer = {
+            if let Some(peer) = self.lock().peer() {
+                peer.clone()
+            } else {
+                return;
+            }
+        };
+        let unix_socket = downcast_socket_to_unix(&peer);
+        unix_socket.lock().set_capacity(requested_capacity);
     }
 
     fn get_linger(&self) -> uapi::linger {
@@ -848,5 +857,38 @@ impl UnixSocketInner {
         }
 
         present_events
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::*;
+    use std::convert::TryInto;
+
+    #[::fuchsia::test]
+    fn test_socket_send_capacity() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
+        socket.bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
+        socket.listen(10).expect("Failed to listen.");
+        let connecting_socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
+        connecting_socket
+            .connect(&socket, current_task.as_ucred())
+            .expect("Failed to connect socket.");
+        assert_eq!(FdEvents::POLLIN, socket.query_events(&current_task));
+        let server_socket = socket.accept(current_task.as_ucred()).unwrap();
+
+        let opt_size = std::mem::size_of::<socklen_t>();
+        let user_address = map_memory(&current_task, UserAddress::default(), opt_size as u64);
+        let send_capacity: socklen_t = 4 * 4096;
+        current_task.mm.write_memory(user_address, &send_capacity.to_ne_bytes()).unwrap();
+        let user_buffer = UserBuffer { address: user_address, length: opt_size as usize };
+        server_socket.setsockopt(&current_task, SOL_SOCKET, SO_SNDBUF, user_buffer).unwrap();
+
+        let opt_bytes = server_socket.getsockopt(SOL_SOCKET, SO_SNDBUF).unwrap();
+        let retrieved_capacity = socklen_t::from_ne_bytes(opt_bytes.try_into().unwrap());
+        // Setting SO_SNDBUF actually sets it to double the size
+        assert_eq!(2 * send_capacity, retrieved_capacity);
     }
 }
