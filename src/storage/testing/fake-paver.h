@@ -128,6 +128,9 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
   void WriteFirmware(WriteFirmwareRequestView request,
                      WriteFirmwareCompleter::Sync& completer) override;
 
+  void ReadFirmware(ReadFirmwareRequestView request,
+                    ReadFirmwareCompleter::Sync& completer) override;
+
   void WriteVolumes(WriteVolumesRequestView request,
                     WriteVolumesCompleter::Sync& completer) override;
 

@@ -533,6 +533,16 @@ void DataSink::WriteFirmware(WriteFirmwareRequestView request,
   completer.Reply(CreateWriteFirmwareResult(&variant));
 }
 
+void DataSink::ReadFirmware(ReadFirmwareRequestView request,
+                            ReadFirmwareCompleter::Sync& completer) {
+  auto status = sink_.ReadFirmware(request->configuration, request->type);
+  if (status.is_ok()) {
+    completer.ReplySuccess(std::move(status.value()));
+  } else {
+    completer.ReplyError(status.error_value());
+  }
+}
+
 void DataSink::WipeVolume(WipeVolumeRequestView request, WipeVolumeCompleter::Sync& completer) {
   auto status = sink_.WipeVolume();
   if (status.is_ok()) {
@@ -612,6 +622,12 @@ std::variant<zx_status_t, bool> DataSinkImpl::WriteFirmware(Configuration config
 
   // unsupported_type = true.
   return true;
+}
+
+zx::status<fuchsia_mem::wire::Buffer> DataSinkImpl::ReadFirmware(Configuration configuration,
+                                                                 fidl::StringView type) {
+  // TODO(http://b/226666264): To implement.
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
 zx::status<> DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
@@ -879,6 +895,16 @@ void DynamicDataSink::WriteFirmware(WriteFirmwareRequestView request,
   auto variant =
       sink_.WriteFirmware(request->configuration, request->type, std::move(request->payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
+}
+
+void DynamicDataSink::ReadFirmware(ReadFirmwareRequestView request,
+                                   ReadFirmwareCompleter::Sync& completer) {
+  auto status = sink_.ReadFirmware(request->configuration, request->type);
+  if (status.is_ok()) {
+    completer.ReplySuccess(std::move(status.value()));
+  } else {
+    completer.ReplyError(status.error_value());
+  }
 }
 
 void DynamicDataSink::WipeVolume(WipeVolumeRequestView request,

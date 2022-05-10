@@ -82,6 +82,9 @@ class DataSinkImpl {
                                                 fidl::StringView type,
                                                 fuchsia_mem::wire::Buffer payload);
 
+  zx::status<fuchsia_mem::wire::Buffer> ReadFirmware(
+      fuchsia_paver::wire::Configuration configuration, fidl::StringView type);
+
   zx::status<> WriteVolumes(zx::channel payload_stream);
 
   zx::status<> WriteBootloader(fuchsia_mem::wire::Buffer payload);
@@ -119,6 +122,9 @@ class DataSink : public fidl::WireServer<fuchsia_paver::DataSink> {
 
   void WriteFirmware(WriteFirmwareRequestView request,
                      WriteFirmwareCompleter::Sync& completer) override;
+
+  void ReadFirmware(ReadFirmwareRequestView request,
+                    ReadFirmwareCompleter::Sync& completer) override;
 
   void WriteVolumes(WriteVolumesRequestView request,
                     WriteVolumesCompleter::Sync& completer) override {
@@ -171,6 +177,9 @@ class DynamicDataSink : public fidl::WireServer<fuchsia_paver::DynamicDataSink> 
 
   void WriteFirmware(WriteFirmwareRequestView request,
                      WriteFirmwareCompleter::Sync& completer) override;
+
+  void ReadFirmware(ReadFirmwareRequestView request,
+                    ReadFirmwareCompleter::Sync& completer) override;
 
   void WriteVolumes(WriteVolumesRequestView request,
                     WriteVolumesCompleter::Sync& completer) override {

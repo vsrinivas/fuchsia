@@ -186,6 +186,11 @@ void FakePaver::WriteFirmware(WriteFirmwareRequestView request,
   }
 }
 
+void FakePaver::ReadFirmware(ReadFirmwareRequestView request,
+                             ReadFirmwareCompleter::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
 void FakePaver::WriteVolumes(WriteVolumesRequestView request,
                              WriteVolumesCompleter::Sync& completer) {
   {

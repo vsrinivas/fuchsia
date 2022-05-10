@@ -64,6 +64,9 @@ type WriteFirmwareResult = strict union {
     2: unsupported bool;
 };
 
+// The maximum string length for the `firmware type` parameter.
+const MAX_FIRMWARE_TYPE_LENGTH uint32 = 256;
+
 /// Protocol for streaming the FVM payload.
 protocol PayloadStream {
     /// Registers a VMO to stream into.
@@ -178,11 +181,24 @@ protocol DataSink {
     /// VMO that was created with `ZX_VMO_CHILD_RESIZABLE`.
     WriteFirmware(resource struct {
         configuration Configuration;
-        type string:256;
+        type string:MAX_FIRMWARE_TYPE_LENGTH;
         payload fuchsia.mem.Buffer;
     }) -> (struct {
         result WriteFirmwareResult;
     });
+
+    /// Read firmware corresponding to `configuration` and `type`.
+    ///
+    /// Parameter `configuration` and `type` are the same as WriteFirmware.
+    ///
+    /// If ReadFirmware returns error, caller should assume that firmware image does not exist
+    /// or is in a bad state, or firmware read is not defined for the product.
+    ReadFirmware(resource struct {
+        configuration Configuration;
+        type string:MAX_FIRMWARE_TYPE_LENGTH;
+    }) -> (resource struct {
+        asset fuchsia.mem.Buffer;
+    }) error zx.status;
 
     /// Writes FVM with data from streamed via `payload`. This potentially affects all
     /// configurations.
