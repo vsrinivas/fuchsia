@@ -7,8 +7,8 @@ the developer's workstation.
 
 ### User documentation
 
-Please see the debugger [setup](../../../../garnet/docs/debugger.md) and
-[usage](../../../../garnet/docs/debugger_usage.md) documentation.
+Please see the debugger [setup](../../../../docs/development/debugger/running.md) and
+[usage](../../../../docs/development/debugger/README.md) documentation.
 
 ### Manual testing
 

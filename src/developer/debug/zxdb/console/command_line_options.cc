@@ -117,11 +117,11 @@ const char kVersionHelp[] = R"(  --version
   -v
       Prints the version.)";
 
-const char kEnableDebugAdapterHelp[] = R"( --enable-debug-adapter
+const char kEnableDebugAdapterHelp[] = R"(  --enable-debug-adapter
       Starts the debug adapter that serves debug adapter protocol.
       This is useful for connecting the debugger with an IDE.)";
 
-const char kDebugAdapterPortHelp[] = R"( --debug-adapter-port=<port>
+const char kDebugAdapterPortHelp[] = R"(  --debug-adapter-port=<port>
       Uses this port number to serve debug adapter protocol.
       By default 15678 is used.)";
 
