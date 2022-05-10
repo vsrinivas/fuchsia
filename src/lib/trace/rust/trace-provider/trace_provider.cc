@@ -7,7 +7,6 @@
 #include <lib/trace-provider/provider.h>
 #include <zircon/compiler.h>
 
-#include <functional>
 #include <thread>
 
 __BEGIN_CDECLS
@@ -27,20 +26,7 @@ static void trace_provider_with_fdio_thread_entry() {
   loop.Run();
 }
 
-// Detaches the loop cleanly for shutdown.  A thread must be either detached, or
-// joined before it is destroyed.
-class LoopShutdown {
- public:
-  explicit LoopShutdown(std::function<void()> f) : thread_(std::make_unique<std::thread>(f)) {}
-  ~LoopShutdown() { thread_->detach(); }
-
- private:
-  std::unique_ptr<std::thread> thread_;
-};
-
 void trace_provider_create_with_fdio_rust() {
-  // Keep a reference to the thread to make LSAN happy.  At the same time, ensures exactly-once
-  // semantics in C++11 and beyond.
-  static const auto trace_provider_thread =
-      std::make_unique<LoopShutdown>(&trace_provider_with_fdio_thread_entry);
+  std::thread thread(trace_provider_with_fdio_thread_entry);
+  thread.detach();
 }
