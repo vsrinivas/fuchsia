@@ -41,7 +41,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting password authenticator");
 
-    let config = password_authenticator_config::Config::from_args();
+    let config = password_authenticator_config::Config::take_from_startup_handle();
     // validate that at least one account metadata type is enabled
     if !config.allow_scrypt && !config.allow_pinweaver {
         let err = anyhow!("No account types allowed by config, exiting");

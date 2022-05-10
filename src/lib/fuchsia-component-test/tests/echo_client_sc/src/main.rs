@@ -8,7 +8,8 @@ use fuchsia_component::client::connect_to_protocol;
 
 #[fuchsia::main]
 async fn main() {
-    let Config { echo_string, echo_string_vector, echo_bool, echo_num } = Config::from_args();
+    let Config { echo_string, echo_string_vector, echo_bool, echo_num } =
+        Config::take_from_startup_handle();
 
     // Connect to FIDL protocol
     let echo = connect_to_protocol::<EchoMarker>().expect("error connecting to echo");

@@ -39,7 +39,8 @@ pub async fn main() -> Result<(), Error> {
     // Starting service.
     inspect::component::health().set_starting_up();
 
-    let component_config = ComponentConfig::from_args().record_to_inspect(inspector.root());
+    let component_config = ComponentConfig::take_from_startup_handle();
+    component_config.record_inspect(inspector.root());
 
     let sampler_config = format!("{}/metrics", component_config.configs_path);
     let fire_config = format!("{}/fire", component_config.configs_path);

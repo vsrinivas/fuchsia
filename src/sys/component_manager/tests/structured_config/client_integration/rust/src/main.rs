@@ -19,7 +19,8 @@ async fn main() {
     let inspector = fuchsia_inspect::component::inspector();
     inspect_runtime::serve(inspector, &mut fs).unwrap();
 
-    let config = Config::from_args().record_to_inspect(inspector.root());
+    let config = Config::take_from_startup_handle();
+    config.record_inspect(inspector.root());
     let receiver_config = generated_to_puppet_defined(config);
 
     fs.dir("svc").add_fidl_service(IncomingRequest::Puppet);

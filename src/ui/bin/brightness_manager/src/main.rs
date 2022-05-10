@@ -152,7 +152,8 @@ async fn run_brightness_service(
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["brightness"])?;
     fx_log_info!("Started");
-    let config = Config::from_args().record_to_inspect(inspector().root());
+    let config = Config::take_from_startup_handle();
+    config.record_inspect(inspector().root());
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(|stream: ControlRequestStream| stream);

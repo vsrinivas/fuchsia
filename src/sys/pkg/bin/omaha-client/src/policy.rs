@@ -294,9 +294,10 @@ impl FuchsiaPolicyEngineBuilder {
         FuchsiaPolicyEngineBuilder { config: config.into() }
     }
     pub fn new_from_args() -> FuchsiaPolicyEngineBuilder {
-        let policy_config: PolicyConfig = omaha_client_structured_config::Config::from_args()
-            .try_into()
-            .expect("Invalid config arguments.");
+        let policy_config: PolicyConfig =
+            omaha_client_structured_config::Config::take_from_startup_handle()
+                .try_into()
+                .expect("Invalid config arguments.");
         FuchsiaPolicyEngineBuilder::new(policy_config)
     }
     pub fn time_source<T>(self, time_source: T) -> FuchsiaPolicyEngineBuilderWithTime<T>

@@ -86,9 +86,13 @@ fn load_v1_config(options: Vec<ArchivistOptionV1>) -> Config {
 
 fn main() -> Result<(), Error> {
     let args: Args = argh::from_env();
-    let mut config = if args.v1.is_empty() { Config::from_args() } else { load_v1_config(args.v1) };
+    let config = if args.v1.is_empty() {
+        Config::take_from_startup_handle()
+    } else {
+        load_v1_config(args.v1)
+    };
     init_diagnostics(&config).context("initializing diagnostics")?;
-    config = config.record_to_inspect(component::inspector().root());
+    config.record_inspect(component::inspector().root());
 
     let num_threads = config.num_threads;
     debug!("Running executor with {} threads.", num_threads);

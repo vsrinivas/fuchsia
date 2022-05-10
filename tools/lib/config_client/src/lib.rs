@@ -212,7 +212,7 @@ type Config = struct {
             }
 
             impl Config {
-                pub fn from_args() -> Self {
+                pub fn take_from_startup_handle() -> Self {
                     let config_vmo: zx::Vmo = take_startup_handle(HandleInfo::new(HandleType::ConfigVmo, 0))
                         .expect("must have been provided with a config vmo")
                         .into();
@@ -249,7 +249,7 @@ type Config = struct {
                         server_mode_: fidl_config.server_mode_
                     }
                 }
-               pub fn record_to_inspect(self, root_node : & Node) -> Self {
+                pub fn record_inspect(&self, root_node : & Node) {
                     root_node.record_child("config", |inspector_node| {
                         inspector_node.record_bool("snake_case_string", self.snake_case_string);
                         inspector_node.record_bool("lowerCamelCaseString", self.lower_camel_case_string);
@@ -262,7 +262,6 @@ type Config = struct {
                         inspector_node.record_bool("unsafe", self.unsafe_);
                         inspector_node.record_bool("ServerMode", self.server_mode_);
                     });
-                    self
                 }
             }
         }.to_string();

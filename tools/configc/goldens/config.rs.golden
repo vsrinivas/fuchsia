@@ -26,7 +26,7 @@ pub struct Config {
     pub my_vector_of_uint8: Vec<u8>,
 }
 impl Config {
-    pub fn from_args() -> Self {
+    pub fn take_from_startup_handle() -> Self {
         let config_vmo: zx::Vmo = take_startup_handle(HandleInfo::new(HandleType::ConfigVmo, 0))
             .expect("must have been provided with a config vmo")
             .into();
@@ -73,7 +73,7 @@ impl Config {
             my_vector_of_uint8: fidl_config.my_vector_of_uint8,
         }
     }
-    pub fn record_to_inspect(self, root_node: &Node) -> Self {
+    pub fn record_inspect(&self, root_node: &Node) {
         root_node.record_child("config", |inspector_node| {
             inspector_node.record_bool("my_flag", self.my_flag);
             inspector_node.record_int("my_int16", self.my_int16 as i64);
@@ -146,6 +146,5 @@ impl Config {
             }
             inspector_node.record(arr);
         });
-        self
     }
 }

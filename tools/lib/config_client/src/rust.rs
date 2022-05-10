@@ -26,14 +26,14 @@ pub fn create_rust_wrapper(
     let mut field_declarations = vec![];
     let mut field_conversions = vec![];
 
-    let mut record_to_inspect_ops = vec![];
+    let mut record_inspect_ops = vec![];
     let mut inspect_uses = vec![quote!(Node)];
 
     let mut needs_array_property = false;
     let mut needs_arithmetic_array_property = false;
 
     for field in &config_decl.fields {
-        let RustTokens { decl, conversion, record_to_inspect } =
+        let RustTokens { decl, conversion, record_inspect } =
             get_rust_tokens(&field.key, &field.type_)?;
 
         if let ConfigValueType::Vector {
@@ -45,7 +45,7 @@ pub fn create_rust_wrapper(
             needs_arithmetic_array_property = true;
         }
 
-        record_to_inspect_ops.push(record_to_inspect);
+        record_inspect_ops.push(record_inspect);
         field_declarations.push(decl);
         field_conversions.push(conversion)
     }
@@ -69,7 +69,7 @@ pub fn create_rust_wrapper(
         }
 
         impl Config {
-            pub fn from_args() -> Self {
+            pub fn take_from_startup_handle() -> Self {
                 let config_vmo: zx::Vmo = take_startup_handle(HandleInfo::new(HandleType::ConfigVmo, 0))
                     .expect("must have been provided with a config vmo")
                     .into();
@@ -94,11 +94,10 @@ pub fn create_rust_wrapper(
                 }
             }
 
-            pub fn record_to_inspect(self, root_node: &Node)->Self{
+            pub fn record_inspect(&self, root_node: &Node) {
                 root_node.record_child("config", |inspector_node| {
-                    #(#record_to_inspect_ops)*
+                    #(#record_inspect_ops)*
                 });
-                self
             }
         }
     };
@@ -109,7 +108,7 @@ pub fn create_rust_wrapper(
 struct RustTokens {
     decl: TokenStream,
     conversion: TokenStream,
-    record_to_inspect: TokenStream,
+    record_inspect: TokenStream,
 }
 
 fn get_rust_tokens(key: &str, value_type: &ConfigValueType) -> Result<RustTokens, SourceGenError> {
@@ -117,7 +116,7 @@ fn get_rust_tokens(key: &str, value_type: &ConfigValueType) -> Result<RustTokens
     let field = parse_str::<Ident>(&identifier)
         .map_err(|source| SourceGenError::InvalidIdentifier { input: key.to_string(), source })?;
 
-    let (record_to_inspect, decl) = match value_type {
+    let (record_inspect, decl) = match value_type {
         ConfigValueType::Bool => (
             quote! {
                 inspector_node.record_bool(#key, self.#field);
@@ -324,5 +323,5 @@ fn get_rust_tokens(key: &str, value_type: &ConfigValueType) -> Result<RustTokens
     let conversion = quote! {
         #field: fidl_config.#field
     };
-    Ok(RustTokens { decl, conversion, record_to_inspect })
+    Ok(RustTokens { decl, conversion, record_inspect })
 }

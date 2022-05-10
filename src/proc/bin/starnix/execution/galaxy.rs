@@ -20,7 +20,7 @@ use crate::types::*;
 lazy_static::lazy_static! {
     /// The configuration for the starnix runner. This is static because reading the configuration
     /// consumes a startup handle, and thus can only be done once per component-run.
-    static ref CONFIG: Config = Config::from_args();
+    static ref CONFIG: Config = Config::take_from_startup_handle();
 }
 
 // Creates a CString from a String. Calling this with an invalid CString will panic.

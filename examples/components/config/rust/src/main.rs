@@ -13,7 +13,7 @@ use tracing::info;
 async fn main() {
     // [START get_config]
     // Retrieve configuration
-    let config = Config::from_args();
+    let config = Config::take_from_startup_handle();
     // [END get_config]
 
     // Print greeting to the log
@@ -22,7 +22,7 @@ async fn main() {
     // [START inspect]
     // Record configuration to inspect
     let inspector = fuchsia_inspect::component::inspector();
-    config.record_to_inspect(inspector.root());
+    config.record_inspect(inspector.root());
     // [END inspect]
 
     let mut fs = ServiceFs::new_local();

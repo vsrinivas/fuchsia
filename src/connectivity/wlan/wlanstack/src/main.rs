@@ -71,8 +71,9 @@ async fn main() -> Result<(), Error> {
     let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
     inspect_runtime::serve(&inspector, &mut fs)?;
 
-    let cfg: ServiceCfg =
-        wlanstack_config::Config::from_args().record_to_inspect(inspector.root()).into();
+    let cfg = wlanstack_config::Config::take_from_startup_handle();
+    cfg.record_inspect(inspector.root());
+    let cfg: ServiceCfg = cfg.into();
     info!("{:?}", cfg);
 
     let persistence_proxy = fuchsia_component::client::connect_to_protocol_at_path::<
