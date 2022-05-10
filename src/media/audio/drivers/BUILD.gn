@@ -17,6 +17,7 @@ group("drivers") {
     "codecs/tas5782",
     "codecs/tas58xx",
     "codecs/test:test-codec",
+    "codecs/test:test-codec2",
     "dai-test",
     "intel-hda/codecs/hdmi:hdmi-audio-codec",
     "intel-hda/codecs/qemu:qemu-audio-codec",

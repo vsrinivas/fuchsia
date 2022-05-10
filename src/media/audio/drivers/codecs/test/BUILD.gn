@@ -12,6 +12,12 @@ driver_bind_rules("codec_test-bind") {
   bind_output = "codec_test.bindbc"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
+driver_bind_rules("codec_test2-bind") {
+  rules = "test2.bind"
+  header_output = "codec_test2-bind.h"
+  bind_output = "codec_test2.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
 
 fuchsia_driver("codec-test-driver") {
   output_name = "codec-test-driver"
@@ -31,10 +37,35 @@ fuchsia_driver("codec-test-driver") {
     "//zircon/system/ulib/zxtest",
   ]
 }
+fuchsia_driver("codec-test-driver2") {
+  output_name = "codec-test-driver2"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  sources = [ "test2.cc" ]
+  deps = [
+    ":codec_test2-bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//src/media/audio/lib/simple-codec",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
 
 fuchsia_driver_component("test-codec") {
   component_name = "test-codec"
   deps = [ ":codec-test-driver" ]
   info = "test-codec-info.json"
+  colocate = true
+}
+
+fuchsia_driver_component("test-codec2") {
+  component_name = "test-codec2"
+  deps = [ ":codec-test-driver2" ]
+  info = "test-codec2-info.json"
   colocate = true
 }

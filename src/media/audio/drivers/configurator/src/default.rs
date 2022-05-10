@@ -39,6 +39,17 @@ impl Configurator for DefaultConfigurator {
             }
             Ok(formats) => formats.unwrap(),
         };
+        if formats.len() == 0
+            || formats[0].number_of_channels.len() == 0
+            || formats[0].sample_formats.len() == 0
+            || formats[0].frame_formats.len() == 0
+            || formats[0].frame_rates.len() == 0
+            || formats[0].bits_per_slot.len() == 0
+            || formats[0].bits_per_sample.len() == 0
+        {
+            tracing::warn!("Codec with bad format reported");
+            return;
+        }
         // Use the last channel as long as it is not larger than the number of channels used.
         let channel = self.last_channel_used as u32 % formats[0].number_of_channels[0];
         let bitmask: u64 = 1 << channel;

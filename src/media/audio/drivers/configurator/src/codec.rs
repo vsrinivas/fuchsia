@@ -102,8 +102,23 @@ mod tests {
             assert_eq!(info.product_name, "789");
 
             let formats = device.get_dai_formats().await.unwrap().unwrap();
-            assert_eq!(formats[0].number_of_channels[0], 2);
+            // We have 2 test codecs, one with good behavior (formats listed) and one with bad
+            // behavior (empty formats), we only set_dai_formats for the the one that reported
+            // at least one format.
+            if formats.len() == 0
+                || formats[0].number_of_channels.len() == 0
+                || formats[0].sample_formats.len() == 0
+                || formats[0].frame_formats.len() == 0
+                || formats[0].frame_rates.len() == 0
+                || formats[0].bits_per_slot.len() == 0
+                || formats[0].bits_per_sample.len() == 0
+            {
+                tracing::warn!("Codec with bad format reported");
+                return;
+            }
 
+            // Good test codec checks.
+            assert_eq!(formats[0].number_of_channels[0], 2);
             // Configure the first option for each field supported by the test codec.
             let format = fidl_fuchsia_hardware_audio::DaiFormat {
                 number_of_channels: formats[0].number_of_channels[0],
