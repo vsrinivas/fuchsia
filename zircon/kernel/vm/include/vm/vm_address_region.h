@@ -841,7 +841,17 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   // Apis intended for use by VmObject
 
-  Lock<Mutex>* object_lock() TA_RET_CAP(object_->lock()) { return object_->lock(); }
+  // |assert_object_lock| exists to satisfy clang capability analysis since there are circumstances
+  // when the object_->lock() is actually being held, but it was not acquired by dereferencing
+  // object_. In this scenario we need to explain to the analysis that the lock held is actually the
+  // same as object_->lock(), and even though we otherwise have no intention of using object_, the
+  // only way to do this is to notionally dereferencing object_ to compare the lock.
+  // Since this is asserting that the lock is held, and not just returning a reference to the lock,
+  // this method is logically correct since object_ itself is only modified if object_->lock() is
+  // held.
+  void assert_object_lock() TA_ASSERT(object_->lock()) TA_NO_THREAD_SAFETY_ANALYSIS {
+    AssertHeld(object_->lock_ref());
+  }
 
   // Unmap any pages that map the passed in vmo range from the arch aspace.
   // May not intersect with this range.
@@ -993,7 +1003,7 @@ class VmMapping final : public VmAddressRegionOrMapping,
   }
 
   // pointer and region of the object we are mapping
-  fbl::RefPtr<VmObject> object_;
+  fbl::RefPtr<VmObject> object_ TA_GUARDED(aspace_->lock());
   // This can be read with either lock hold, but requires both locks to write it.
   uint64_t object_offset_ TA_GUARDED(object_->lock()) TA_GUARDED(aspace_->lock()) = 0;
 

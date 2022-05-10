@@ -180,7 +180,7 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
       return 0;
     }
     // Remove write from the mapping to ensure it's not being concurrently modified.
-    AssertHeld(*m.object_lock());
+    m.assert_object_lock();
     m.AspaceRemoveWriteVmoRangeLocked(0, size_locked());
   }
 
@@ -1457,7 +1457,7 @@ void VmObjectPaged::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, Range
   const uint64_t aligned_len = ROUNDUP(offset + len, PAGE_SIZE) - aligned_offset;
 
   for (auto& m : mapping_list_) {
-    AssertHeld(*m.object_lock());
+    m.assert_object_lock();
     if (op == RangeChangeOp::Unmap) {
       m.AspaceUnmapVmoRangeLocked(aligned_offset, aligned_len);
     } else if (op == RangeChangeOp::RemoveWrite) {

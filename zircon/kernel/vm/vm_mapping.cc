@@ -353,7 +353,7 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
   protection_ranges_.DiscardAbove(base);
   set_size_locked(base - base_);
   AssertHeld(mapping->lock_ref());
-  AssertHeld(*mapping->object_lock());
+  mapping->assert_object_lock();
   mapping->ActivateLocked();
   return ZX_OK;
 }
@@ -408,7 +408,11 @@ void VmMapping::AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
   // VMO cant call back to us once we're out of their list.
   DEBUG_ASSERT(get_state_locked_object() == LifeCycleState::ALIVE);
 
-  DEBUG_ASSERT(object_);
+  // |object_| itself is not accessed in this method, and we do not hold the correct lock for it,
+  // but we know the object_->lock() is held and so therefore object_ is valid and will not be
+  // modified. Therefore it's correct to read object_ here for the purposes of an assert, but cannot
+  // be expressed nicely with regular annotations.
+  [&]() TA_NO_THREAD_SAFETY_ANALYSIS { DEBUG_ASSERT(object_); }();
 
   LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
           this, object_offset_locked_object(), size_, offset, len);
@@ -450,7 +454,11 @@ void VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) c
   // VMO cant call back to us once we're out of their list.
   DEBUG_ASSERT(get_state_locked_object() == LifeCycleState::ALIVE);
 
-  DEBUG_ASSERT(object_);
+  // |object_| itself is not accessed in this method, and we do not hold the correct lock for it,
+  // but we know the object_->lock() is held and so therefore object_ is valid and will not be
+  // modified. Therefore it's correct to read object_ here for the purposes of an assert, but cannot
+  // be expressed nicely with regular annotations.
+  [&]() TA_NO_THREAD_SAFETY_ANALYSIS { DEBUG_ASSERT(object_); }();
 
   // If this doesn't support writing then nothing to be done, as we know we have no write mappings.
   if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE)) {
@@ -599,7 +607,7 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit, bool ign
   DEBUG_ASSERT(!currently_faulting_);
   currently_faulting_ = true;
   auto cleanup = fit::defer([&]() {
-    AssertHeld(object_->lock_ref());
+    assert_object_lock();
     currently_faulting_ = false;
   });
 
@@ -608,8 +616,8 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit, bool ign
   return EnumerateProtectionRangesLocked(
       base_ + offset, len,
       [this, commit, dirty_tracked, ignore_existing](vaddr_t base, size_t len, uint mmu_flags) {
-        AssertHeld(object_->lock_ref());
         AssertHeld(aspace_->lock_ref());
+        AssertHeld(object_->lock_ref());
         // Remove the write permission if this maps a vmo that supports dirty tracking, in order to
         // trigger write permission faults when writes occur, enabling us to track when pages are
         // dirtied.
@@ -838,7 +846,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
   DEBUG_ASSERT(!currently_faulting_);
   currently_faulting_ = true;
   auto cleanup = fit::defer([&]() {
-    AssertHeld(object_->lock_ref());
+    assert_object_lock();
     currently_faulting_ = false;
   });
 
