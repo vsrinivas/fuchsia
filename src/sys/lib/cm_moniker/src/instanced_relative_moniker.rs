@@ -42,11 +42,11 @@ pub struct InstancedRelativeMoniker {
 impl InstancedRelativeMoniker {
     /// Create and allocate a `RelativeMoniker`, without instance ids
     /// from this instanced moniker
-    pub fn to_relative_moniker(&self) -> RelativeMoniker {
+    pub fn without_instance_ids(&self) -> RelativeMoniker {
         let up_path: Vec<ChildMoniker> =
-            self.up_path().iter().map(|p| p.to_child_moniker()).collect();
+            self.up_path().iter().map(|p| p.without_instance_id()).collect();
         let down_path: Vec<ChildMoniker> =
-            self.down_path().iter().map(|p| p.to_child_moniker()).collect();
+            self.down_path().iter().map(|p| p.without_instance_id()).collect();
         RelativeMoniker::new(up_path, down_path)
     }
 }

@@ -116,7 +116,7 @@ impl InstancedChildMoniker {
 
     /// Convert an InstancedChildMoniker to an allocated ChildMoniker
     /// without an InstanceId
-    pub fn to_child_moniker(&self) -> ChildMoniker {
+    pub fn without_instance_id(&self) -> ChildMoniker {
         ChildMoniker::new(self.name.clone(), self.collection.clone())
     }
 
@@ -167,7 +167,7 @@ mod tests {
         assert_eq!("test:42", m.as_str());
         assert_eq!("test:42", format!("{}", m));
         assert_eq!(m, InstancedChildMoniker::from("test:42"));
-        assert_eq!("test", m.to_child_moniker().as_str());
+        assert_eq!("test", m.without_instance_id().as_str());
         assert_eq!(m, InstancedChildMoniker::from_child_moniker(&"test".into(), 42));
 
         let m = InstancedChildMoniker::new("test".to_string(), Some("coll".to_string()), 42);
@@ -177,7 +177,7 @@ mod tests {
         assert_eq!("coll:test:42", m.as_str());
         assert_eq!("coll:test:42", format!("{}", m));
         assert_eq!(m, InstancedChildMoniker::from("coll:test:42"));
-        assert_eq!("coll:test", m.to_child_moniker().as_str());
+        assert_eq!("coll:test", m.without_instance_id().as_str());
         assert_eq!(m, InstancedChildMoniker::from_child_moniker(&"coll:test".into(), 42));
 
         let max_coll_length_part = "f".repeat(MAX_NAME_LENGTH);

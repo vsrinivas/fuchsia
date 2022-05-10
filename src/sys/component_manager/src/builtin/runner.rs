@@ -76,7 +76,7 @@ impl Hook for BuiltinRunner {
                 if *runner_name == self.name {
                     let checker = ScopedPolicyChecker::new(
                         self.config.clone(),
-                        target_moniker.to_absolute_moniker(),
+                        target_moniker.without_instance_ids(),
                     );
                     let runner = self.runner.clone().get_scoped_runner(checker);
                     *capability_provider.lock().await =

@@ -715,7 +715,7 @@ mod tests {
             root.clone(),
             "fuchsia-pkg://root",
             Err(EventError::new(
-                &ModelError::instance_not_found(root.to_absolute_moniker()),
+                &ModelError::instance_not_found(root.without_instance_ids()),
                 EventErrorPayload::Resolved,
             )),
         );

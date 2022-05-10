@@ -429,13 +429,13 @@ async fn bind_action_sequence() {
 
     // Start child and check that it gets resolved, with a Resolve event and action.
     let bind = async {
-        model.start_instance(&m.to_absolute_moniker(), &StartReason::Root).await.unwrap();
+        model.start_instance(&m.without_instance_ids(), &StartReason::Root).await.unwrap();
     };
     let check_events = async {
         let event = event_stream.wait_until(EventType::Resolved, m.clone()).await.unwrap();
         // While the Resolved hook is handled, it should be possible to look up the component
         // without deadlocking.
-        let component = model.look_up(&m.to_absolute_moniker()).await.unwrap();
+        let component = model.look_up(&m.without_instance_ids()).await.unwrap();
         {
             let actions = component.lock_actions().await;
             assert!(actions.contains(&ActionKey::Resolve));

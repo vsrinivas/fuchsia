@@ -54,7 +54,7 @@ impl AddableDirectory for Directory {
     ) -> Result<(), ModelError> {
         self.clone()
             .add_entry(name, entry)
-            .map_err(|_| ModelError::add_entry_error(moniker.to_absolute_moniker(), name))
+            .map_err(|_| ModelError::add_entry_error(moniker.without_instance_ids(), name))
     }
 }
 
@@ -67,7 +67,7 @@ impl AddableDirectoryWithResult for Directory {
     ) -> Result<(), ModelError> {
         self.clone()
             .add_entry(String::from(name), entry)
-            .map_err(|_| ModelError::add_entry_error(moniker.to_absolute_moniker(), name))
+            .map_err(|_| ModelError::add_entry_error(moniker.without_instance_ids(), name))
     }
 
     fn remove_node<'a>(

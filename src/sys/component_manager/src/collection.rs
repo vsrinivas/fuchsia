@@ -91,7 +91,7 @@ impl Hook for CollectionCapabilityHost {
             *capability_provider = self
                 .on_collection_capability_routed_async(
                     component.clone(),
-                    target_moniker.to_absolute_moniker(),
+                    target_moniker.without_instance_ids(),
                     aggregate_capability_provider.clone_boxed(),
                     &capability,
                     capability_provider.take(),

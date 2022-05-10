@@ -30,8 +30,8 @@ pub struct InstancedAbsoluteMoniker {
 
 impl InstancedAbsoluteMoniker {
     /// Convert an InstancedAbsoluteMoniker into an allocated AbsoluteMoniker without InstanceIds
-    pub fn to_absolute_moniker(&self) -> AbsoluteMoniker {
-        let path: Vec<ChildMoniker> = self.path().iter().map(|p| p.to_child_moniker()).collect();
+    pub fn without_instance_ids(&self) -> AbsoluteMoniker {
+        let path: Vec<ChildMoniker> = self.path().iter().map(|p| p.without_instance_id()).collect();
         AbsoluteMoniker::new(path)
     }
 }

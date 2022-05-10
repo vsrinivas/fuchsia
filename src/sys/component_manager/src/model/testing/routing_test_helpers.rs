@@ -779,7 +779,7 @@ impl RoutingTestModel for RoutingTest {
                 let relative_moniker_string = format!("{}", storage_relation);
                 let component_abs_moniker = AbsoluteMoniker::from_relative(
                     &moniker,
-                    &storage_relation.to_relative_moniker(),
+                    &storage_relation.without_instance_ids(),
                 )
                 .unwrap();
                 let component_instance_id = self

@@ -86,7 +86,7 @@ impl DirectoryReadyNotifier {
 
         // Don't block the handling on the event on the exposed capabilities being ready
         let this = self.clone();
-        let moniker = target_moniker.to_absolute_moniker();
+        let moniker = target_moniker.without_instance_ids();
         fasync::Task::spawn(async move {
             // If we can't find the component then we can't dispatch any DirectoryReady event,
             // error or otherwise. This isn't necessarily an error as the model or component might've been
@@ -127,10 +127,10 @@ impl DirectoryReadyNotifier {
         match events.next().await {
             Some(Ok(fio::NodeEvent::OnOpen_ { s: status, info: _ })) => zx::Status::ok(status)
                 .map_err(|_| {
-                    ModelError::open_directory_error(target_moniker.to_absolute_moniker(), path)
+                    ModelError::open_directory_error(target_moniker.without_instance_ids(), path)
                 }),
             Some(Ok(fio::NodeEvent::OnConnectionInfo { .. })) => Ok(()),
-            _ => Err(ModelError::open_directory_error(target_moniker.to_absolute_moniker(), path)),
+            _ => Err(ModelError::open_directory_error(target_moniker.without_instance_ids(), path)),
         }
     }
 
@@ -372,10 +372,10 @@ async fn clone_outgoing_root(
         &outgoing_dir,
         fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::DESCRIBE,
     )
-    .map_err(|_| ModelError::open_directory_error(target_moniker.to_absolute_moniker(), "/"))?;
-    let outgoing_dir_channel = outgoing_dir
-        .into_channel()
-        .map_err(|_| ModelError::open_directory_error(target_moniker.to_absolute_moniker(), "/"))?;
+    .map_err(|_| ModelError::open_directory_error(target_moniker.without_instance_ids(), "/"))?;
+    let outgoing_dir_channel = outgoing_dir.into_channel().map_err(|_| {
+        ModelError::open_directory_error(target_moniker.without_instance_ids(), "/")
+    })?;
     Ok(fio::NodeProxy::from_channel(outgoing_dir_channel))
 }
 

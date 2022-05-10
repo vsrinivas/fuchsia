@@ -263,7 +263,7 @@ where
                         let child_moniker = child_component
                             .instanced_child_moniker()
                             .expect("InstancedChildMoniker should exist")
-                            .to_child_moniker();
+                            .without_instance_id();
                         <U as ErrorNotFoundInChild>::error_not_found_in_child(
                             use_target.abs_moniker().clone(),
                             child_moniker,
@@ -1034,7 +1034,7 @@ where
                             let child_moniker = child_component
                                 .instanced_child_moniker()
                                 .expect("InstancedChildMoniker should exist")
-                                .to_child_moniker();
+                                .without_instance_id();
                             <R as ErrorNotFoundInChild>::error_not_found_in_child(
                                 target.abs_moniker().clone(),
                                 child_moniker,
@@ -1246,7 +1246,7 @@ where
                         let child_moniker = child_component
                             .instanced_child_moniker()
                             .expect("ChildMoniker should exist")
-                            .to_child_moniker();
+                            .without_instance_id();
                         <O as ErrorNotFoundInChild>::error_not_found_in_child(
                             component.abs_moniker().clone(),
                             child_moniker,
@@ -1345,7 +1345,7 @@ where
                                 let child_moniker = child_component
                                     .instanced_child_moniker()
                                     .expect("ChildMoniker should exist")
-                                    .to_child_moniker();
+                                    .without_instance_id();
                                 <E as ErrorNotFoundInChild>::error_not_found_in_child(
                                     target.abs_moniker().clone(),
                                     child_moniker,

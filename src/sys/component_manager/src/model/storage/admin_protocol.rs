@@ -208,7 +208,7 @@ impl StorageAdmin {
                         InstancedRelativeMoniker::try_from(relative_moniker.as_str())?;
                     let abs_moniker = AbsoluteMoniker::from_relative(
                         component.abs_moniker(),
-                        &instanced_relative_moniker.to_relative_moniker(),
+                        &instanced_relative_moniker.without_instance_ids(),
                     )?;
                     let instance_id = component
                         .try_get_component_id_index()?
@@ -300,7 +300,7 @@ impl StorageAdmin {
                         Ok(instanced_relative_moniker) => {
                             let abs_moniker = AbsoluteMoniker::from_relative(
                                 component.abs_moniker(),
-                                &instanced_relative_moniker.to_relative_moniker(),
+                                &instanced_relative_moniker.without_instance_ids(),
                             )?;
                             let instance_id = component
                                 .try_get_component_id_index()?

@@ -66,7 +66,7 @@ impl ComponentInstance {
         let mut s: String = self
             .instanced_moniker
             .leaf()
-            .map_or(String::new(), |m| m.to_child_moniker().to_string());
+            .map_or(String::new(), |m| m.without_instance_id().to_string());
         let mut children = self.children.lock().await;
         if children.is_empty() {
             return s;

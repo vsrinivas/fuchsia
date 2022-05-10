@@ -46,7 +46,7 @@ async fn do_destroyed(
         let state = component.lock_state().await;
         match *state {
             InstanceState::Resolved(ref s) => {
-                s.get_live_child(&moniker.to_child_moniker()).map(|r| r.clone())
+                s.get_live_child(&moniker.without_instance_id()).map(|r| r.clone())
             }
             InstanceState::Purged => None,
             InstanceState::New | InstanceState::Discovered => {
@@ -79,7 +79,7 @@ async fn do_destroyed(
         let mut state = component.lock_state().await;
         match *state {
             InstanceState::Resolved(ref mut s) => {
-                s.mark_child_deleted(&moniker.to_child_moniker());
+                s.mark_child_deleted(&moniker.without_instance_id());
             }
             InstanceState::Purged => {}
             InstanceState::New | InstanceState::Discovered => {

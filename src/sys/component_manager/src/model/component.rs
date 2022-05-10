@@ -381,7 +381,7 @@ impl ComponentInstance {
         hooks: Arc<Hooks>,
         numbered_handles: Option<Vec<fprocess::HandleInfo>>,
     ) -> Arc<Self> {
-        let abs_moniker = instanced_moniker.to_absolute_moniker();
+        let abs_moniker = instanced_moniker.without_instance_ids();
         Arc::new(Self {
             environment,
             instanced_moniker,
@@ -1322,7 +1322,7 @@ impl shutdown::Component for ResolvedInstanceState {
                 // moniker, and the `instance_id` of the live child matches.
                 is_live: self
                     .live_children
-                    .get(&moniker.to_child_moniker())
+                    .get(&moniker.without_instance_id())
                     .map(|(live_instance_id, _)| *live_instance_id)
                     == Some(moniker.instance()),
             })
@@ -1502,7 +1502,7 @@ impl ResolvedInstanceState {
     pub fn get_deleting_children(&self) -> HashMap<InstancedChildMoniker, Arc<ComponentInstance>> {
         let mut deleting_children = HashMap::new();
         for (m, r) in self.all_children().iter() {
-            if self.get_live_child(&m.to_child_moniker()).is_none() {
+            if self.get_live_child(&m.without_instance_id()).is_none() {
                 deleting_children.insert(m.clone(), r.clone());
             }
         }
@@ -1637,7 +1637,7 @@ impl ResolvedInstanceState {
             collection.map(|c| c.name.clone()),
             instance_id,
         );
-        let child_moniker = instanced_moniker.to_child_moniker();
+        let child_moniker = instanced_moniker.without_instance_id();
         if self.get_live_child(&child_moniker).is_some() {
             return None;
         }
@@ -2557,7 +2557,7 @@ pub mod tests {
         let a_moniker: InstancedAbsoluteMoniker = vec!["a:0"].into();
         let b_moniker: InstancedAbsoluteMoniker = vec!["a:0", "b:0"].into();
 
-        let component_b = test.look_up(b_moniker.to_absolute_moniker()).await;
+        let component_b = test.look_up(b_moniker.without_instance_ids()).await;
 
         // Start the root so it and its eager children start.
         let _root = test
@@ -2591,7 +2591,7 @@ pub mod tests {
         // Verify that a parent of the exited component can still be stopped
         // properly.
         ActionSet::register(
-            test.look_up(a_moniker.to_absolute_moniker()).await,
+            test.look_up(a_moniker.without_instance_ids()).await,
             ShutdownAction::new(),
         )
         .await

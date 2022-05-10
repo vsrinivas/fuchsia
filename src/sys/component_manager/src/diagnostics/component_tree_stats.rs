@@ -370,7 +370,7 @@ impl Hook for ComponentTreeStats<DiagnosticsTask> {
         let target_moniker = event
             .target_moniker
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?
-            .to_absolute_moniker()
+            .without_instance_ids()
             .into();
         match event.event_type() {
             EventType::Started => {

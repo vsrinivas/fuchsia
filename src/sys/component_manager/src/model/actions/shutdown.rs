@@ -3235,12 +3235,12 @@ mod tests {
         let moniker_e: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
         let moniker_f: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
         let test = ActionsTest::new("root", components, None).await;
-        let component_a = test.look_up(moniker_a.to_absolute_moniker()).await;
-        let component_b = test.look_up(moniker_b.to_absolute_moniker()).await;
-        let component_c = test.look_up(moniker_c.to_absolute_moniker()).await;
-        let component_d = test.look_up(moniker_d.to_absolute_moniker()).await;
-        let component_e = test.look_up(moniker_e.to_absolute_moniker()).await;
-        let component_f = test.look_up(moniker_f.to_absolute_moniker()).await;
+        let component_a = test.look_up(moniker_a.without_instance_ids()).await;
+        let component_b = test.look_up(moniker_b.without_instance_ids()).await;
+        let component_c = test.look_up(moniker_c.without_instance_ids()).await;
+        let component_d = test.look_up(moniker_d.without_instance_ids()).await;
+        let component_e = test.look_up(moniker_e.without_instance_ids()).await;
+        let component_f = test.look_up(moniker_f.without_instance_ids()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
@@ -3450,12 +3450,12 @@ mod tests {
         let moniker_e: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
         let moniker_f: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
         let test = ActionsTest::new("root", components, None).await;
-        let component_a = test.look_up(moniker_a.to_absolute_moniker()).await;
-        let component_b = test.look_up(moniker_b.to_absolute_moniker()).await;
-        let component_c = test.look_up(moniker_c.to_absolute_moniker()).await;
-        let component_d = test.look_up(moniker_d.to_absolute_moniker()).await;
-        let component_e = test.look_up(moniker_e.to_absolute_moniker()).await;
-        let component_f = test.look_up(moniker_f.to_absolute_moniker()).await;
+        let component_a = test.look_up(moniker_a.without_instance_ids()).await;
+        let component_b = test.look_up(moniker_b.without_instance_ids()).await;
+        let component_c = test.look_up(moniker_c.without_instance_ids()).await;
+        let component_d = test.look_up(moniker_d.without_instance_ids()).await;
+        let component_e = test.look_up(moniker_e.without_instance_ids()).await;
+        let component_f = test.look_up(moniker_f.without_instance_ids()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model

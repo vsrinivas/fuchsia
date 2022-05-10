@@ -151,7 +151,7 @@ impl Hook for BinderCapabilityHost {
             *capability_provider = self
                 .on_scoped_framework_capability_routed_async(
                     component.clone(),
-                    target_moniker.to_absolute_moniker(),
+                    target_moniker.without_instance_ids(),
                     &capability,
                     capability_provider.take(),
                 )
@@ -227,12 +227,12 @@ mod tests {
             let builtin_environment = self.builtin_environment.lock().await;
             let source = builtin_environment
                 .model
-                .look_up(&source.to_absolute_moniker())
+                .look_up(&source.without_instance_ids())
                 .await
                 .expect("failed to look up source moniker");
             let target = builtin_environment
                 .model
-                .look_up(&target.to_absolute_moniker())
+                .look_up(&target.without_instance_ids())
                 .await
                 .expect("failed to look up target moniker");
 

@@ -216,7 +216,7 @@ impl EventRegistry {
                 .collect(),
             SubscriptionType::Component(target_moniker) => {
                 let route_result =
-                    self.route_events(&target_moniker.to_absolute_moniker(), &event_names).await?;
+                    self.route_events(&target_moniker.without_instance_ids(), &event_names).await?;
                 // Each target name that we routed, will have an associated scope. The number of
                 // scopes must be equal to the number of target names.
                 let total_scopes: usize =
@@ -481,7 +481,7 @@ mod tests {
             root.clone(),
             "fuchsia-pkg://root",
             Err(EventError::new(
-                &ModelError::instance_not_found(root.to_absolute_moniker()),
+                &ModelError::instance_not_found(root.without_instance_ids()),
                 EventErrorPayload::Resolved,
             )),
         );

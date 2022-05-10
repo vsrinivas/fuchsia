@@ -1490,7 +1490,7 @@ impl RunningSuite {
                 .map(Clone::clone)
                 .collect::<Vec<cm_moniker::InstancedChildMoniker>>();
             let instanced_moniker = cm_moniker::InstancedRelativeMoniker::new(vec![], down_path);
-            let moniker_relative_to_test_root = instanced_moniker.to_relative_moniker();
+            let moniker_relative_to_test_root = instanced_moniker.without_instance_ids();
             sender
                 .send(Ok(SuiteEvents::suite_custom_artifact(ftest_manager::CustomArtifact {
                     directory_and_token: Some(ftest_manager::DirectoryAndToken {

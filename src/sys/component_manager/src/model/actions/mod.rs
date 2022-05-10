@@ -418,7 +418,7 @@ pub(crate) mod test_utils {
         component: &ComponentInstance,
         instanced_moniker: &InstancedChildMoniker,
     ) -> bool {
-        let moniker = instanced_moniker.to_child_moniker();
+        let moniker = instanced_moniker.without_instance_id();
         match *component.lock_state().await {
             InstanceState::Resolved(ref s) => match s.get_child(instanced_moniker) {
                 Some(child) => {

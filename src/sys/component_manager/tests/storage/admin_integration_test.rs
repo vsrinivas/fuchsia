@@ -110,7 +110,7 @@ async fn single_storage_user() {
             .iter()
             .map(|moniker_with_instances| InstancedRelativeMoniker::parse(moniker_with_instances)
                 .unwrap()
-                .to_relative_moniker()
+                .without_instance_ids()
                 .to_string())
             .collect::<HashSet<_>>(),
         hashset! {
@@ -182,7 +182,7 @@ async fn multiple_storage_users() {
             .iter()
             .map(|moniker_with_instances| InstancedRelativeMoniker::parse(moniker_with_instances)
                 .unwrap()
-                .to_relative_moniker()
+                .without_instance_ids()
                 .to_string())
             .collect::<HashSet<_>>(),
         expected_storage_users
@@ -218,7 +218,7 @@ async fn purged_storage_user() {
             .iter()
             .map(|moniker_with_instances| InstancedRelativeMoniker::parse(moniker_with_instances)
                 .unwrap()
-                .to_relative_moniker()
+                .without_instance_ids()
                 .to_string())
             .collect::<HashSet<_>>(),
         hashset! {
@@ -243,7 +243,7 @@ async fn purged_storage_user() {
         .map(|moniker_with_instances| {
             InstancedRelativeMoniker::parse(moniker_with_instances)
                 .unwrap()
-                .to_relative_moniker()
+                .without_instance_ids()
                 .to_string()
         })
         .collect::<HashSet<_>>();
