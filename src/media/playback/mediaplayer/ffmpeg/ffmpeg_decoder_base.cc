@@ -10,9 +10,6 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
-extern "C" {
-#include "libavutil/buffer_internal.h"
-}
 
 namespace media_player {
 
@@ -88,7 +85,7 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input, 
     case 0: {
       // Succeeded, frame produced. We're not done with the input packet.
       auto* payload_buffer_raw_ptr =
-          reinterpret_cast<PayloadBuffer*>(av_frame_ptr_->buf[0]->buffer->opaque);
+          reinterpret_cast<PayloadBuffer*>(av_buffer_get_opaque(av_frame_ptr_->buf[0]));
 
       // Take a fresh reference to the payload_buffer since av_frame_unref will
       // drop the av_frame's reference via ReleaseBufferForAvFrame.
