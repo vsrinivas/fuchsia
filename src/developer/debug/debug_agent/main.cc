@@ -4,7 +4,6 @@
 
 #include <lib/cmdline/args_parser.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/syslog/cpp/log_settings.h>
 #include <lib/zx/thread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -119,15 +118,7 @@ int main(int argc, const char* argv[]) {
   }
 
   debug::SetLogCategories({debug::LogCategory::kAll});
-  if (options.debug_mode) {
-    syslog::LogSettings settings = {.min_log_level = syslog::LOG_TRACE};
-    syslog::SetLogSettings(settings);
-    debug::SetDebugMode(true);
-    FX_LOGS(DEBUG) << "Running the debug agent in debug mode.";
-  } else {
-    syslog::LogSettings settings = {};
-    syslog::SetLogSettings(settings);
-  }
+  debug::SetDebugLogging(options.debug_mode);
 
   if (options.channel_mode || options.port) {
     auto services = sys::ServiceDirectory::CreateFromNamespace();

@@ -142,7 +142,7 @@ debug::Status ZirconComponentManager::LaunchComponent(DebuggedJob* root_job,
 
   root_job->AppendFilter(description.filter);
 
-  if (debug::IsDebugModeActive()) {
+  if (debug::IsDebugLoggingActive()) {
     std::stringstream ss;
 
     ss << "Launching component. " << std::endl
@@ -219,7 +219,7 @@ void ZirconComponentManager::OnComponentTerminated(int64_t return_code,
   // If we couldn't find it, the component was already caught and cleaned.
   expected_components_.erase(description.filter);
 
-  if (debug::IsDebugModeActive()) {
+  if (debug::IsDebugLoggingActive()) {
     std::stringstream ss;
     ss << "Still expecting the following components: " << expected_components_.size();
     for (auto& expected : expected_components_) {

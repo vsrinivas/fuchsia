@@ -61,7 +61,7 @@ std::string LogPreamble(const DebuggedProcess* process) {
 
 void LogRegisterBreakpoint(debug::FileLineFunction location, DebuggedProcess* process,
                            Breakpoint* bp, uint64_t address) {
-  if (!debug::IsDebugModeActive())
+  if (!debug::IsDebugLoggingActive())
     return;
 
   std::stringstream ss;

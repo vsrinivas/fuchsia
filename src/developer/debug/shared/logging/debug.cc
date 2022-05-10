@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/shared/logging/debug.h"
 
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <chrono>
@@ -18,9 +19,7 @@ namespace debug {
 
 namespace {
 
-bool kDebugMode = false;
-
-// This marks the moment SetDebugMode was called.
+// This marks the moment our process starts.
 std::chrono::steady_clock::time_point kStartTime = std::chrono::steady_clock::now();
 
 std::set<LogCategory>& GetLogCategories() {
@@ -29,7 +28,7 @@ std::set<LogCategory>& GetLogCategories() {
 }
 
 bool IsLogCategoryActive(LogCategory category) {
-  if (!IsDebugModeActive())
+  if (!IsDebugLoggingActive())
     return false;
 
   if (category == LogCategory::kAll)
@@ -93,9 +92,15 @@ double SecondsSinceStart() {
 
 }  // namespace
 
-bool IsDebugModeActive() { return kDebugMode; }
+bool IsDebugLoggingActive() { return syslog::ShouldCreateLogMessage(syslog::LOG_DEBUG); }
 
-void SetDebugMode(bool activate) { kDebugMode = activate; }
+void SetDebugLogging(bool activate) {
+  syslog::LogSettings settings;
+  if (activate) {
+    settings.min_log_level = syslog::LOG_DEBUG;
+  }
+  syslog::SetLogSettings(settings);
+}
 
 void SetLogCategories(std::initializer_list<LogCategory> categories) {
   auto& active_categories = GetLogCategories();

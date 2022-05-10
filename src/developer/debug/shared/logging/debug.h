@@ -19,9 +19,15 @@ class DebugLogStatement;
 // This API controls and queries the debug functionality of the debug tools within the debug ipc.
 
 // Activate this flag to activate debug output.
-// False by default.
-void SetDebugMode(bool);
-bool IsDebugModeActive();
+void SetDebugLogging(bool);
+bool IsDebugLoggingActive();
+
+// The debug logging can also be enabled dynamically remotely via
+//   fx log --select core/debug_agent#DEBUG
+// Although you usually want more options such as
+//   fx log --select core/debug_agent#DEBUG --tag debug_agent --since_now --hide_metadata --pretty
+//
+// `ffx log` doesn't work yet because of fxbug.dev/99937.
 
 // Log Categories ----------------------------------------------------------------------------------
 

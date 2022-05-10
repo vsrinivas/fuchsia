@@ -891,9 +891,9 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
     }
   } else if (setting_name == ClientSettings::System::kDebugMode) {
     bool debug_mode = store.GetBool(setting_name);
-    debug::SetDebugMode(debug_mode);
+    debug::SetDebugLogging(debug_mode);
     syslog::SetLogSettings(
-        syslog::LogSettings{.min_log_level = debug_mode ? syslog::LOG_TRACE : syslog::LOG_INFO});
+        syslog::LogSettings{.min_log_level = debug_mode ? syslog::LOG_DEBUG : syslog::LOG_INFO});
   } else if (setting_name == ClientSettings::System::kSecondChanceExceptions) {
     debug_ipc::UpdateGlobalSettingsRequest request;
     auto updates = ParseExceptionStrategyUpdates(store.GetList(setting_name));
