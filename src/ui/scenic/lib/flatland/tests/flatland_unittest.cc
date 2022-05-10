@@ -3023,6 +3023,77 @@ TEST_F(FlatlandTest, SetViewportPropertiesDefaultBehavior) {
   }
 }
 
+// Test to make sure that if we have a transform containing a viewport as content,
+// that itself has two or more parents, that the viewport properties that are returned
+// to the parent_viewport_watcher are those calculated from the subtree containing the
+// smallest overall scale factor.
+TEST_F(FlatlandTest, SetViewportPropertiesMultiParenting) {
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
+
+  const TransformId kTransformId = {1};
+  const TransformId kNormalParentId = {2};
+  const TransformId kMagParentId = {3};
+  const TransformId kChildId = {4};
+  const ContentId kLinkId = {5};
+  const SizeU kMagScale = {5, 5};
+
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  CreateViewport(parent.get(), child.get(), kLinkId, &child_view_watcher, &parent_viewport_watcher);
+
+  // Create the diamond structure used for magnification in the
+  // parent instance, with the magnification transform having a
+  // non-unit scale factor.
+  parent->CreateTransform(kTransformId);
+  parent->CreateTransform(kNormalParentId);
+  parent->CreateTransform(kMagParentId);
+  parent->CreateTransform(kChildId);
+
+  parent->SetScale(kNormalParentId, {1, 1});
+  parent->SetScale(kMagParentId, {5, 5});
+
+  parent->SetRootTransform(kTransformId);
+  parent->AddChild(kTransformId, kNormalParentId);
+  parent->AddChild(kTransformId, kMagParentId);
+  parent->AddChild(kNormalParentId, kChildId);
+  parent->AddChild(kMagParentId, kChildId);
+
+  parent->SetContent(kChildId, kLinkId);
+  PRESENT(parent, true);
+
+  UpdateLinks(parent->GetRoot());
+
+  // Confirm that the initial layout pixel scale is (1,1) since the smaller parent's
+  // scale is (1,1).
+  {
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
+
+    EXPECT_FALSE(layout.has_value());
+    UpdateLinks(parent->GetRoot());
+    EXPECT_TRUE(layout.has_value());
+    EXPECT_EQ(kDefaultSize, layout->pixel_scale().width);
+    EXPECT_EQ(kDefaultSize, layout->pixel_scale().height);
+  }
+
+  // Make the smaller parent's scale bigger than the mag scale. Now the default layout's pixel
+  // scale should be (5,5).
+  parent->SetScale(kNormalParentId, {9, 9});
+  PRESENT(parent, true);
+  UpdateLinks(parent->GetRoot());
+  {
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
+
+    EXPECT_FALSE(layout.has_value());
+    UpdateLinks(parent->GetRoot());
+    EXPECT_TRUE(layout.has_value());
+    EXPECT_EQ(kMagScale.width, layout->pixel_scale().width);
+    EXPECT_EQ(kMagScale.height, layout->pixel_scale().height);
+  }
+}
+
 TEST_F(FlatlandTest, SetViewportPropertiesMultisetBehavior) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();

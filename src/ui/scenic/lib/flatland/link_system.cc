@@ -202,6 +202,7 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
     }
   }
 
+  std::unordered_map<std::shared_ptr<ParentViewportWatcherImpl>, LayoutInfo> layout_map;
   for (size_t i = 0; i < global_topology.size(); ++i) {
     const auto& handle = global_topology[i];
 
@@ -221,10 +222,28 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
           info.set_logical_size(properties_kv->second.logical_size());
           info.set_pixel_scale(
               {static_cast<uint32_t>(pixel_scale.x), static_cast<uint32_t>(pixel_scale.y)});
-          graph_kv->second.impl->UpdateLayoutInfo(std::move(info));
+
+          // A transform handle may have multiple parents, resulting in the same handle appearing
+          // in the global topology vector multiple times, with multiple global matrices. We only
+          // want to update the LayoutInfo for the instance that has the lowest scale value.
+          auto watcher = graph_kv->second.impl;
+          if (layout_map.find(watcher) == layout_map.end()) {
+            layout_map[watcher] = std::move(info);
+          } else {
+            const auto& curr_info = layout_map[watcher];
+            if (curr_info.pixel_scale().width > info.pixel_scale().width) {
+              layout_map[watcher] = std::move(info);
+            }
+          }
         }
       }
     }
+  }
+
+  // Now that we've determined which layout information to associate with a
+  // ParentViewportWatcherImpl, we can now update each one.
+  for (auto& [watcher, info] : layout_map) {
+    watcher->UpdateLayoutInfo(std::move(info));
   }
 }
 
