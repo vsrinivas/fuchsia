@@ -98,13 +98,7 @@
         {{else}}
             {{#if (eq host.networking "tap")}}
                 "-netdev",
-                "type=tap,ifname=qemu,id=net0,script=
-                    {{~#if runtime.upscript~}}
-                        {{runtime.upscript}}
-                    {{~else~}}
-                        no
-                    {{~/if~}}
-                    ,downscript=no",
+                "type=tap,ifname=qemu,id=net0,script=no,downscript=no",
                 "-device",
                 "virtio-net-pci,vectors=8,netdev=net0,mac={{runtime.mac_address}}",
             {{else}}

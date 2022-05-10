@@ -228,6 +228,27 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             }
         }
 
+        if let Some(script) = &self.emu_config().runtime.upscript {
+            let status = Command::new(&script)
+                // TODO(fxbug.dev/100022): Make this configurable.
+                // The interface name, "qemu", provided here used to be provided by the qemu
+                // executable when it was left for qemu to start the upscript. Since we need
+                // to time the sudo prompt and the socket creation, we now launch the script
+                // ourselves, so we also have to provide the interface name. This will likely
+                // need to eventually be configurable to support running emulators on
+                // multiple tap interfaces.
+                .arg("qemu")
+                .status()
+                .expect(&format!("Couldn't execute upscript {}", script.display()));
+            if !status.success() {
+                return Err(anyhow!(
+                    "Upscript {} returned non-zero exit code {}",
+                    script.display(),
+                    status.code().map_or("None".to_string(), |v| format!("{}", v))
+                ));
+            }
+        }
+
         let shared_process = SharedChild::spawn(&mut emulator_cmd)?;
         let child_arc = Arc::new(shared_process);
 
