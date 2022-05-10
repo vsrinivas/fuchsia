@@ -4,6 +4,7 @@
 
 import("//build/images/args.gni")
 import("//build/images/assemble_system.gni")
+import("//build/images/assembly/generated_partitions_config.gni")
 import("//build/images/assembly/update_package.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/product.gni")
@@ -434,13 +435,17 @@ assemble_system("fuchsia_assembly") {
   }
 }
 
+partitions_config = "$target_out_dir/partitions_config.json"
+generated_partitions_config("partitions_config") {
+  output_path = partitions_config
+}
+
 update_package("update") {
   files = {
     _fuchsia_out =
         get_label_info(":fuchsia_assembly", "target_out_dir") + "/fuchsia"
     _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
                     get_label_info(recovery_label, "name")
-    fuchsia_partitions = "${_fuchsia_out}_partitions.json"
     fuchsia_packages = "${_fuchsia_out}/packages.json"
     fuchsia_images = "${_fuchsia_out}/images.json"
     recovery_images = "${_recovery_out}/images.json"
@@ -449,10 +454,11 @@ update_package("update") {
   testonly = fuchsia_zbi_testonly
   deps = [
     ":fuchsia_assembly",
+    ":partitions_config",
     "//build/info:latest-commit-date",
     recovery_label,
   ]
-  partitions = files.fuchsia_partitions
+  partitions = partitions_config
   packages = files.fuchsia_packages
   system_a = files.fuchsia_images
   system_r = files.recovery_images
@@ -496,7 +502,6 @@ update_package("fuchsia_prime") {
                    "/fuchsia_prime_assembly"
     _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
                     get_label_info(recovery_label, "name")
-    fuchsia_partitions = "${_fuchsia_out}_partitions.json"
     fuchsia_packages = "${_fuchsia_out}/packages.json"
     fuchsia_images = "${_fuchsia_out}/images.json"
     recovery_images = "${_recovery_out}/images.json"
@@ -505,11 +510,12 @@ update_package("fuchsia_prime") {
   testonly = fuchsia_zbi_testonly
   deps = [
     ":fuchsia_prime_assembly",
+    ":partitions_config",
     "//build/info:latest-commit-date",
     recovery_label,
   ]
   name = "update_prime"
-  partitions = files.fuchsia_partitions
+  partitions = partitions_config
   packages = files.fuchsia_packages
   system_a = files.fuchsia_images
   system_r = files.recovery_images

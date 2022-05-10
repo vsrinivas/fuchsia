@@ -10,7 +10,6 @@ import("//build/images/assembly/compare_json_list.gni")
 import("//build/images/assembly/generated_assembly_inputs.gni")
 import("//build/images/assembly/generated_image_assembly_config.gni")
 import("//build/images/assembly/generated_images_config.gni")
-import("//build/images/assembly/generated_partitions_config.gni")
 import("//build/images/assembly/hermetic_inputs_for_image_assembly.gni")
 import("//build/images/fvm.gni")
 import("//build/images/shell_commands.gni")
@@ -225,7 +224,6 @@ template("assemble_system") {
     compare_image_assembly_configs =
         "${image_name}_compare_image_assembly_configs"
     images_config = "${image_name}_images_config"
-    partitions_config = "${image_name}_partitions_config"
     product_assembler = "${image_name}_product_assembler"
     image_assembler = "${image_name}_image_assembler"
     copy_vbmeta = "${image_name}_copy_vbmeta"
@@ -253,7 +251,6 @@ template("assemble_system") {
         "$target_out_dir/${image_name}_image_assembly_inputs"
 
     images_config = "$target_out_dir/${image_name}_images_config.json"
-    partitions_config = "$target_out_dir/${image_name}_partitions.json"
 
     outdir = "$target_out_dir/$image_name"
     gendir = "$outdir/gen"
@@ -571,16 +568,6 @@ template("assemble_system") {
     if (defined(invoker.assembly_include_account_in_fvm)) {
       empty_account_partition = invoker.assembly_include_account_in_fvm
     }
-  }
-
-  generated_partitions_config(labels.partitions_config) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-
-    output_path = files.partitions_config
   }
 
   check_production_tag = false
@@ -1016,7 +1003,6 @@ template("assemble_system") {
       ":${labels.compare_image_assembly_configs}",
       ":${labels.image_assembler}",
       ":${labels.images_config}",
-      ":${labels.partitions_config}",
     ]
     if (defined(invoker.output_dir)) {
       public_deps += [ ":${labels.copy_images}" ]

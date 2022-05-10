@@ -9,6 +9,7 @@ import("//build/config.gni")
 import("//build/dist/resource.gni")
 import("//build/dist/zip_resource.gni")
 import("//build/images/assemble_system.gni")
+import("//build/images/assembly/generated_partitions_config.gni")
 import("//build/images/assembly/update_package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/security/pkg_test/assemblies/build_info.gni")
@@ -256,6 +257,10 @@ template("assemble_security_pkg_test_system") {
       "--in-domain",
       "fuchsia.com",
     ]
+  }
+
+  generated_partitions_config(labels.assembly_partitions_config) {
+    output_path = files.partitions_json
   }
 
   # Construct an update package for the system assembly.
