@@ -83,7 +83,10 @@ write_file(board_name_file, "${board_name}")
 group("universe_packages") {
   testonly = fuchsia_zbi_testonly
   visibility = [ ":*" ]
-  public_deps = [ "//:additional_universe_packages" ]
+  public_deps = [
+    "//:developer_universe_packages",
+    "//:legacy_universe_packages",
+  ]
 }
 
 group("packages") {

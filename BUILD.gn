@@ -1248,8 +1248,7 @@ group("developer_universe_packages") {
 group("legacy_base_driver_packages") {
   testonly = base_cache_packages_testonly
   visibility = [ "//build/images/*" ]
-  public_deps = legacy_base_driver_package_labels +
-                board_driver_package_labels + base_driver_package_labels
+  public_deps = legacy_base_driver_package_labels + board_driver_package_labels
 }
 
 # Product+Board base packages
@@ -1259,8 +1258,7 @@ group("legacy_base_packages") {
     "//build/assembly/*",
     "//build/images/*",
   ]
-  public_deps =
-      legacy_base_package_labels + board_package_labels + base_package_labels
+  public_deps = legacy_base_package_labels + board_package_labels
 }
 
 # Product+Board cache packages
@@ -1270,59 +1268,14 @@ group("legacy_cache_packages") {
     "//build/assembly/*",
     "//build/images/*",
   ]
-  public_deps = legacy_cache_package_labels + cache_package_labels
+  public_deps = legacy_cache_package_labels
 }
 
 # Product+Board universe packages
 group("legacy_universe_packages") {
   testonly = fuchsia_zbi_testonly
   visibility = [ "//build/images/*" ]
-  public_deps = legacy_universe_package_labels + universe_package_labels
-}
-
-##
-# "Additional" groups.
-#
-#  These are all deprecated, and in the process of being removed for the above
-#  two groups.  They are currently a mirror of the "legacy_*" groups during the
-#  transition.
-#
-#  See http://fxbug.dev/99024 for more information.
-
-# deprecated, and are in the process of being removed.
-group("additional_base_driver_packages") {
-  testonly = base_cache_packages_testonly
-  visibility = [ "//build/images/*" ]
-  public_deps = base_driver_package_labels + legacy_base_driver_package_labels +
-                board_driver_package_labels
-}
-
-# deprecated, and are in the process of being removed.
-group("additional_base_packages") {
-  testonly = base_cache_packages_testonly
-  visibility = [
-    "//build/assembly/*",
-    "//build/images/*",
-  ]
-  public_deps =
-      base_package_labels + legacy_base_package_labels + board_package_labels
-}
-
-# deprecated, and are in the process of being removed.
-group("additional_cache_packages") {
-  testonly = base_cache_packages_testonly
-  visibility = [
-    "//build/assembly/*",
-    "//build/images/*",
-  ]
-  public_deps = cache_package_labels + legacy_cache_package_labels
-}
-
-# deprecated, and are in the process of being removed.
-group("additional_universe_packages") {
-  testonly = fuchsia_zbi_testonly
-  visibility = [ "//build/images/*" ]
-  public_deps = universe_package_labels + legacy_universe_package_labels
+  public_deps = legacy_universe_package_labels
 }
 
 group("host") {

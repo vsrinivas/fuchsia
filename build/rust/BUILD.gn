@@ -73,11 +73,8 @@ action("cargo_toml_gen_desc") {
 #  1) Existing `args.gn` files created by `fx set --cargo-toml-gen` will have
 #     added the target to the `base_package_labels` list.  This list assumes the
 #     default toolchain.
-#  2) `base_package_labels` currently feeds into `//:additional_base_packages`,
-#     but that group is being split into multiple groups, and the list will
-#     temporarily be used to create the following groups:
+#  2) `base_package_labels` currently feeds into
 #       - `//:developer_base_package_labels`
-#       - `//:legacy_base_package_labels`
 #  3) New `args.gn` files created by `fx set --cargo-toml-gen` will instead use
 #     the `host_labels` arg (which assumes the host toolchain).  That list is
 #     currently being used with the `//:host` group, but it's being split into
@@ -87,14 +84,12 @@ action("cargo_toml_gen_desc") {
 #         the build.
 #   4) Developers _may_ have added `//build/rust:cargo_toml_gen` to either of
 #      following:
-#        - `cache_package_labels` (`//:additional_cache_packages`)
-#        - `universe_package_labels` (`//:additional_universe_packages`)
+#        - `cache_package_labels` (`//:developer_cache_packages`)
+#        - `universe_package_labels` (`//:developer_universe_packages`)
 #      and those are being split as well, and so the following groups will need
 #      to be added to visibility:
 #        - `//:developer_cache_packages`
 #        - `//:developer_universe_packages`
-#        - `//:legacy_cache_packages`
-#        - `//:legacy_universe_packages`
 #
 if (current_toolchain != default_toolchain) {
   # This is a redirect from the host toolchain to the default toolchain, as it
@@ -115,26 +110,14 @@ if (current_toolchain != default_toolchain) {
       ":cargo_toml_gen",
 
       # `fx set ... --cargo-toml-gen` previously used the `base_package_labels`
-      # GN arg, which fed into `//:additional_base_packages`.  This is here for
+      # GN arg, which feeds into `//:developer_base_packages`.  This is here for
       # providing a transition for developers' existing `args.gn` files.
-      "//:additional_base_packages",
-
-      # That GN arg will feed into these as well, but using this target in these
-      # groups is deprecated, and will be removed in the future.
       "//:developer_base_packages",
-      "//:legacy_base_packages",
 
       # Developers may have used these as well (also deprecated for this
       # target).
-      "//:additional_cache_packages",
-      "//:additional_universe_packages",
-
-      # And those are being split into the following (also deprecated for this
-      # target).
       "//:developer_cache_packages",
       "//:developer_universe_packages",
-      "//:legacy_cache_packages",
-      "//:legacy_universe_packages",
 
       # via --with-host or `host_labels`, and specifying the fuchsia toolchain:
       "//:host",

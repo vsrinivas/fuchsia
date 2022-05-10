@@ -37,8 +37,10 @@ fuchsia_base = {
   cmdline_deps = [ "//build/input:bootfs" ]
 
   base_packages = [
-    "//:additional_base_driver_packages",
-    "//:additional_base_packages",
+    "//:developer_base_driver_packages",
+    "//:developer_base_packages",
+    "//:legacy_base_driver_packages",
+    "//:legacy_base_packages",
     ":core_realm",
   ]
 
@@ -72,10 +74,19 @@ fuchsia_base = {
     }
   }
 
-  base_driver_packages = [ "//:additional_base_driver_packages" ]
-  cache_packages = [ "//:additional_cache_packages" ]
+  base_driver_packages = [
+    "//:developer_base_driver_packages",
+    "//:legacy_base_driver_packages",
+  ]
+  cache_packages = [
+    "//:developer_cache_packages",
+    "//:legacy_cache_packages",
+  ]
   system_image_deps = [ "//build/input:system_image" ]
-  universe_packages = [ "//:additional_universe_packages" ]
+  universe_packages = [
+    "//:developer_universe_packages",
+    "//:legacy_universe_packages",
+  ]
   bootfs_labels = [ "//build/input:bootfs" ]
 
   if (!bootfs_only) {

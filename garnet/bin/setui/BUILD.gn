@@ -17,7 +17,6 @@ group("setui") {
   visibility = []
   visibility = [
     ":*",
-    "//:additional_universe_packages",
     "//:developer_universe_packages",
     "//:legacy_universe_packages",
     "//garnet/bin/*",
@@ -31,7 +30,6 @@ group("setui_service") {
   visibility = []
   visibility = [
     ":*",
-    "//:additional_base_packages",
     "//:developer_base_packages",
     "//:legacy_base_packages",
     "//src/developer/forensics/feedback/tests/*",
