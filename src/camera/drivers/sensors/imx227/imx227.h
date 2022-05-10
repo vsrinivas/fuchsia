@@ -188,6 +188,10 @@ class Imx227Device : public DeviceType,
   // Timing data
   fpromise::result<uint32_t, zx_status_t> GetLinesPerSecond();
 
+  // Throttle the sensor frame rate.
+  // This routine can reduce, but not increase, the frame rate.
+  zx_status_t ThrottleFrameRate(uint32_t mode) __TA_REQUIRES(lock_);
+
   // Exposure data
 
   // Analog gain

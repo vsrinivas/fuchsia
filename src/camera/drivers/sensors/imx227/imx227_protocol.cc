@@ -66,6 +66,29 @@ zx_status_t Imx227Device::CameraSensor2GetAvailableModes(operating_mode_t* out_m
   return ZX_OK;
 }
 
+zx_status_t Imx227Device::ThrottleFrameRate(uint32_t mode) {
+  if (mode >= available_modes.size()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto configured_fps = available_modes[mode].fps;
+  auto throttled_fps = std::min(configured_fps, kThrottledFramesPerSecond);
+
+  // Read the FrameLengthLines value from the mode table.
+  auto result = GetRegisterValueFromSequence16(available_modes[mode].idx, kFrameLengthLinesReg);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+  auto configured_frame_length_lines = result.value();
+
+  uint32_t throttled_frame_length_lines =
+      (configured_frame_length_lines * configured_fps) / throttled_fps;
+  throttled_frame_length_lines = std::min(throttled_frame_length_lines, 0xffffU);
+
+  auto write_result = Write16(kFrameLengthLinesReg, throttled_frame_length_lines);
+  return write_result;
+}
+
 zx_status_t Imx227Device::CameraSensor2SetMode(uint32_t mode) {
   std::lock_guard guard(lock_);
 
@@ -76,6 +99,10 @@ zx_status_t Imx227Device::CameraSensor2SetMode(uint32_t mode) {
     return ZX_ERR_INTERNAL;
   }
   InitSensor(available_modes[mode].idx);
+  auto status = ThrottleFrameRate(mode);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Unable to throttle frame rate: %d\n", status);
+  }
   InitMipiCsi(mode);
   current_mode_ = mode;
   return ZX_OK;

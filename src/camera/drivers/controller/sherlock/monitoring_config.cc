@@ -98,7 +98,7 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMonitoringConfig() {
                         kOutputStreamMonitoringPixelFormat);
   stream.set_bytes_per_row_divisor(kGe2dBytesPerRowDivisor);
   stream.set_contiguous(true);
-  stream.set_frames_per_second(kMaxOutputStreamMonitoringFrameRate);
+  stream.set_frames_per_second(kMonitoringThrottledOutputFrameRate);
   stream.set_buffer_count_for_camping(kExtraBuffers);
   stream.set_min_buffer_count(kGe2dBufferForCamping + kNumClientBuffers + kExtraBuffers);
   return stream.ConvertToStreamConfig();
@@ -228,7 +228,7 @@ InternalConfigNode MonitorConfigFullRes() {
       .type = kInputStream,
       .output_frame_rate =
           {
-              .frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
+              .frames_per_sec_numerator = kSensorMaxFramesPerSecond,
               .frames_per_sec_denominator = 1,
           },
       .input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
@@ -271,7 +271,7 @@ static InternalConfigNode OutputStreamMonitoring() {
       .type = kOutputStream,
       .output_frame_rate =
           {
-              .frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
+              .frames_per_sec_numerator = kMonitoringThrottledOutputFrameRate,
               .frames_per_sec_denominator = 1,
           },
       .supported_streams =
@@ -316,7 +316,7 @@ static InternalConfigNode Ge2dMonitoring() {
       .type = kGe2d,
       .output_frame_rate =
           {
-              .frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
+              .frames_per_sec_numerator = kMonitoringThrottledOutputFrameRate,
               .frames_per_sec_denominator = 1,
           },
       .supported_streams =
@@ -388,7 +388,7 @@ static InternalConfigNode Gdc2() {
       .type = kGdc,
       .output_frame_rate =
           {
-              .frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
+              .frames_per_sec_numerator = kMonitoringThrottledOutputFrameRate,
               .frames_per_sec_denominator = 1,
           },
       .supported_streams =
@@ -436,7 +436,7 @@ InternalConfigNode MonitorConfigDownScaledRes() {
       .type = kInputStream,
       .output_frame_rate =
           {
-              .frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
+              .frames_per_sec_numerator = kSensorMaxFramesPerSecond,
               .frames_per_sec_denominator = 1,
           },
       .input_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,

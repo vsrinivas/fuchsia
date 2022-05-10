@@ -11,6 +11,10 @@
 
 namespace camera {
 
+// The sensor throttled frame rate should match kSensorMaxFramesPerSecond
+// in src/camera/drivers/controller/sherlock/common_util.h.
+constexpr uint32_t kThrottledFramesPerSecond = 24;
+
 constexpr uint8_t kByteMask = 0xFF;
 constexpr uint8_t kByteShift = 8;
 constexpr uint8_t kRaw10Bits = 10;
