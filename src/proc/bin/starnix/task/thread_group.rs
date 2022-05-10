@@ -170,12 +170,12 @@ impl ThreadGroup {
     pub fn new(
         kernel: Arc<Kernel>,
         process: zx::Process,
-        parent: Option<&mut ThreadGroupWriteGuard<'_>>,
+        parent: Option<ThreadGroupWriteGuard<'_>>,
         leader: pid_t,
         process_group: Arc<ProcessGroup>,
         signal_actions: Arc<SignalActions>,
     ) -> Arc<ThreadGroup> {
-        let result = Arc::new(ThreadGroup {
+        let thread_group = Arc::new(ThreadGroup {
             kernel,
             process,
             leader,
@@ -194,12 +194,15 @@ impl ThreadGroup {
                 terminating: false,
             }),
         });
-        process_group.write().insert(&result);
 
-        if let Some(parent) = parent {
-            parent.children.insert(leader, Arc::downgrade(&result));
+        if let Some(mut parent) = parent {
+            parent.children.insert(leader, Arc::downgrade(&thread_group));
         }
-        result
+        {
+            let thread_group_read_guard = thread_group.read();
+            process_group.insert(&thread_group_read_guard);
+        }
+        thread_group
     }
 
     state_accessor!(ThreadGroup, mutable_state);
@@ -251,7 +254,7 @@ impl ThreadGroup {
         if !pids.get_process_group(self.leader).is_none() {
             return error!(EPERM);
         }
-        let process_group = ProcessGroup::new(Session::new(self.leader), self.leader);
+        let process_group = ProcessGroup::new(self.leader, None);
         pids.add_process_group(&process_group);
         self.write().set_process_group(process_group, &mut pids);
 
@@ -310,7 +313,7 @@ impl ThreadGroup {
             } else {
                 // Create a new process group
                 new_process_group =
-                    ProcessGroup::new(target_process_group.session.clone(), target_pgid);
+                    ProcessGroup::new(target_pgid, Some(target_process_group.session.clone()));
                 pids.add_process_group(&new_process_group);
             }
         }
@@ -336,8 +339,8 @@ impl ThreadGroup {
     pub fn set_stopped(self: &Arc<ThreadGroup>, stopped: bool, siginfo: SignalInfo) {
         let mut state = self.write();
         if stopped != state.stopped {
-            // TODO(qsr): When task can be running_status inside user code, task will need to be
-            // either restarted or running_status here.
+            // TODO(qsr): When task can be stopped inside user code, task will need to be
+            // either restarted or stopped here.
             state.stopped = stopped;
             state.waitable = Some(siginfo);
             if !stopped {
@@ -365,15 +368,18 @@ impl ThreadGroup {
         self.write().get_waitable_child(children_state, selector, options, &pids)
     }
 
-    /// Returns whether |session| is the controlling session inside of |controlling_session|.
-    fn is_controlling_session(
+    /// Ensures |session| is the controlling session inside of |controlling_session|, and returns a
+    /// reference to the |ControllingSession|.
+    fn check_controlling_session<'a>(
         session: &Arc<Session>,
-        controlling_session: &Option<ControllingSession>,
-    ) -> bool {
-        controlling_session
-            .as_ref()
-            .map(|cs| cs.session.upgrade().as_ref() == Some(session))
-            .unwrap_or(false)
+        controlling_session: &'a Option<ControllingSession>,
+    ) -> Result<&'a ControllingSession, Errno> {
+        if let Some(controlling_session) = controlling_session {
+            if controlling_session.session.as_ptr() == Arc::as_ptr(session) {
+                return Ok(controlling_session);
+            }
+        }
+        error!(ENOTTY)
     }
 
     pub fn get_foreground_process_group(
@@ -387,43 +393,52 @@ impl ThreadGroup {
 
         // "When fd does not refer to the controlling terminal of the calling
         // process, -1 is returned" - tcgetpgrp(3)
-        if !Self::is_controlling_session(&process_group.session, &controlling_session) {
-            return error!(ENOTTY);
-        }
-        Ok(controlling_session.as_ref().unwrap().foregound_process_group)
+        let cs = Self::check_controlling_session(&process_group.session, &controlling_session)?;
+        Ok(cs.foregound_process_group)
     }
 
     pub fn set_foreground_process_group(
         self: &Arc<ThreadGroup>,
+        current_task: &CurrentTask,
         terminal: &Arc<Terminal>,
         is_main: bool,
         pgid: pid_t,
     ) -> Result<(), Errno> {
-        // Keep locks to ensure atomicity.
-        let pids = self.kernel.pids.read();
-        let state = self.read();
-        let process_group = &state.process_group;
-        let mut controlling_session = terminal.get_controlling_session_mut(is_main);
+        let process_group;
+        let send_ttou;
+        {
+            // Keep locks to ensure atomicity.
+            let pids = self.kernel.pids.read();
+            let state = self.read();
+            process_group = Arc::clone(&state.process_group);
+            let mut controlling_session = terminal.get_controlling_session_mut(is_main);
+            let cs = Self::check_controlling_session(&process_group.session, &controlling_session)?;
 
-        // TODO(qsr): Handle SIGTTOU
+            // pgid must be positive.
+            if pgid < 0 {
+                return error!(EINVAL);
+            }
 
-        // tty must be the controlling terminal.
-        if !Self::is_controlling_session(&process_group.session, &controlling_session) {
-            return error!(ENOTTY);
+            let new_process_group = pids.get_process_group(pgid).ok_or(ESRCH)?;
+            if new_process_group.session != process_group.session {
+                return error!(EPERM);
+            }
+
+            // If the calling process is a member of a background group and not ignoring SIGTTOU, a
+            // SIGTTOU signal is sent to all members of this background process group.
+            send_ttou = process_group.leader != cs.foregound_process_group
+                && !SIGTTOU.is_in_set(current_task.read().signals.mask)
+                && self.signal_actions.get(SIGTTOU).sa_handler != SIG_IGN;
+
+            *controlling_session =
+                controlling_session.as_ref().unwrap().set_foregound_process_group(pgid);
         }
 
-        // pgid must be positive.
-        if pgid < 0 {
-            return error!(EINVAL);
+        // Locks must not be held when sending signals.
+        if send_ttou {
+            process_group.send_signals(&[SIGTTOU]);
         }
 
-        let new_process_group = pids.get_process_group(pgid).ok_or(ESRCH)?;
-        if new_process_group.session != process_group.session {
-            return error!(EPERM);
-        }
-
-        *controlling_session =
-            controlling_session.as_ref().unwrap().set_foregound_process_group(pgid);
         Ok(())
     }
 
@@ -488,31 +503,30 @@ impl ThreadGroup {
         terminal: &Arc<Terminal>,
         is_main: bool,
     ) -> Result<(), Errno> {
-        // Keep locks to ensure atomicity.
-        let state = self.read();
-        let process_group = &state.process_group;
-        let mut controlling_session = terminal.get_controlling_session_mut(is_main);
-        let mut session_writer = process_group.session.write();
+        let process_group;
+        {
+            // Keep locks to ensure atomicity.
+            let state = self.read();
+            process_group = Arc::clone(&state.process_group);
+            let mut controlling_session = terminal.get_controlling_session_mut(is_main);
+            let mut session_writer = process_group.session.write();
 
-        // tty must be the controlling terminal.
-        if !Self::is_controlling_session(&process_group.session, &controlling_session) {
-            return error!(ENOTTY);
+            // tty must be the controlling terminal.
+            Self::check_controlling_session(&process_group.session, &controlling_session)?;
+
+            // "If the process was session leader, then send SIGHUP and SIGCONT to the foreground
+            // process group and all processes in the current session lose their controlling terminal."
+            // - tty_ioctl(4)
+
+            // Remove tty as the controlling tty for each process in the session, then
+            // send them SIGHUP and SIGCONT.
+
+            session_writer.controlling_terminal = None;
+            *controlling_session = None;
         }
 
-        // "If the process was session leader, then send SIGHUP and SIGCONT to the foreground
-        // process group and all processes in the current session lose their controlling terminal."
-        // - tty_ioctl(4)
-
-        // Remove tty as the controlling tty for each process in the session, then
-        // send them SIGHUP and SIGCONT.
-
-        let _foreground_process_group_id =
-            controlling_session.as_ref().unwrap().foregound_process_group;
-        session_writer.controlling_terminal = None;
-        *controlling_session = None;
-
         if process_group.session.leader == self.leader {
-            // TODO(qsr): If the process is the session leader, send signals.
+            process_group.send_signals(&[SIGHUP, SIGCONT]);
         }
 
         Ok(())
@@ -549,15 +563,12 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         }
         self.leave_process_group(pids);
         self.process_group = process_group;
-        self.process_group.write().insert(self.base());
+        self.process_group.insert(self);
     }
 
     pub fn leave_process_group(&self, pids: &mut PidTable) {
-        let process_group_empty = self.process_group.write().remove(self.leader());
-        if process_group_empty {
-            if self.process_group.session.write().remove(self.process_group.leader) {
-                // TODO(qsr): Handle signals ?
-            }
+        if self.process_group.remove(self) {
+            self.process_group.session.write().remove(self.process_group.leader);
             pids.remove_process_group(self.process_group.leader);
         }
     }

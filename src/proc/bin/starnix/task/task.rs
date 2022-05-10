@@ -200,17 +200,21 @@ impl Task {
         let mut pids = kernel.pids.write();
         let pid = pids.allocate_pid();
 
-        let process_group = ProcessGroup::new(Session::new(pid), pid);
+        let process_group = ProcessGroup::new(pid, None);
         pids.add_process_group(&process_group);
 
         let (thread, thread_group, mm) = create_zircon_process(
             kernel,
             None,
             pid,
-            process_group,
+            process_group.clone(),
             SignalActions::default(),
             &initial_name,
         )?;
+        {
+            let thread_group_read_guard = thread_group.read();
+            process_group.insert(&thread_group_read_guard);
+        }
 
         let task = Self::new(
             pid,
@@ -294,14 +298,22 @@ impl Task {
 
         let kernel = &self.thread_group.kernel;
         let mut pids = kernel.pids.write();
-        let mut thread_group_state = self.thread_group.write();
+        let thread_group_state = self.thread_group.write();
         let state = self.read();
 
         let pid = pids.allocate_pid();
         let comm = state.command.clone();
+        let argv = state.argv.clone();
+        let creds = state.creds.clone();
         let (thread, thread_group, mm) = if clone_thread {
+            // Drop both locks when leaving this block
+            let (state, _thread_group_state) = (state, thread_group_state);
             create_zircon_thread(self, &state)?
         } else {
+            // Drop the lock on this task before entering `create_zircon_process`, because it will
+            // take a lock on the new thread group, and locks on thread groups have a higher
+            // priority than locks on the task in the thread group.
+            std::mem::drop(state);
             let signal_actions = if clone_sighand {
                 self.thread_group.signal_actions.clone()
             } else {
@@ -310,25 +322,24 @@ impl Task {
             let process_group = thread_group_state.process_group.clone();
             create_zircon_process(
                 kernel,
-                Some(&mut thread_group_state),
+                Some(thread_group_state),
                 pid,
                 process_group,
                 signal_actions,
                 &comm,
             )?
         };
-        drop(thread_group_state);
 
         let child = Self::new(
             pid,
             comm,
-            state.argv.clone(),
+            argv,
             thread_group,
             thread,
             files,
             mm,
             fs,
-            state.creds.clone(),
+            creds,
             self.abstract_socket_namespace.clone(),
             self.abstract_vsock_namespace.clone(),
             child_exit_signal,
@@ -336,7 +347,6 @@ impl Task {
 
         // Child lock must be taken before this lock. Drop the lock on the task, take a writable
         // lock on the child and take the current state back.
-        std::mem::drop(state);
 
         #[cfg(any(test, debug_assertions))]
         {

@@ -56,9 +56,8 @@ impl Session {
 
 state_implementation!(Session, SessionMutableState, {
     /// Removes the process group from the session. Returns whether the session is empty.
-    pub fn remove(&mut self, pid: pid_t) -> bool {
+    pub fn remove(&mut self, pid: pid_t) {
         self.process_groups.remove(&pid);
-        return self.process_groups.is_empty();
     }
 
     pub fn insert(&mut self, process_group: &Arc<ProcessGroup>) {

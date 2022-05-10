@@ -360,7 +360,12 @@ fn shared_ioctl(
             let mut pgid = 0;
             current_task.mm.read_object(UserRef::<pid_t>::new(user_addr), &mut pgid)?;
 
-            current_task.thread_group.set_foreground_process_group(terminal, is_main, pgid)?;
+            current_task.thread_group.set_foreground_process_group(
+                current_task,
+                terminal,
+                is_main,
+                pgid,
+            )?;
             Ok(SUCCESS)
         }
         _ => {
