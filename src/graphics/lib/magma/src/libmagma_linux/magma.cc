@@ -303,10 +303,14 @@ magma_status_t magma_query(magma_device_t device, uint64_t id, magma_handle_t* r
 
   int fd = static_cast<int>(response.result_buffer_out);
   if (fd < 0) {
+    if (!result_out)
+      return DRET(MAGMA_STATUS_INVALID_ARGS);
+
+    *result_out = response.result_out;
+
     if (result_buffer_out)
       *result_buffer_out = -1;
 
-    *result_out = response.result_out;
     return MAGMA_STATUS_OK;
   }
 
