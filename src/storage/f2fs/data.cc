@@ -402,7 +402,7 @@ zx_status_t VnodeF2fs::WriteDataPage(LockedPage &page, bool is_reclaim) {
     // this page does not have to be written to disk.
     unsigned offset = GetSize() & (kPageSize - 1);
     if ((page->GetIndex() >= end_index + 1) || !offset) {
-      if (page->ClearDirtyForIo(true)) {
+      if (page->ClearDirtyForIo(false)) {
         page->SetWriteback();
       }
       return ZX_ERR_OUT_OF_RANGE;

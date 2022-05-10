@@ -181,10 +181,9 @@ zx_status_t Dir::ConvertInlineDir() {
 #if 0  // porting needed
 //   kunmap(page);
 #endif
-  page->SetUptodate();
   page->SetDirty();
   // TODO: Use writeback() while keeping the lock
-  if (page->ClearDirtyForIo(true)) {
+  if (page->ClearDirtyForIo(false)) {
     page->SetWriteback();
     Vfs()->GetSegmentManager().WriteDataPage(this, page, ipage->NidOfNode(), ofs_in_dnode,
                                              data_blkaddr, &data_blkaddr);
