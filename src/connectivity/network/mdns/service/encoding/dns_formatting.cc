@@ -108,8 +108,13 @@ std::ostream& operator<<(std::ostream& os, const DnsResourceDataPtr& value) {
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataTxt& value) {
   os << fostr::NewLine << "text: ";
   os << fostr::Indent;
-  for (auto& string : value.strings_) {
-    os << fostr::NewLine << "\"" << string << "\"";
+  for (const auto& byte_string : value.strings_) {
+    if (std::all_of(byte_string.cbegin(), byte_string.cend(),
+                    [](uint8_t b) { return b >= ' ' && b <= '~'; })) {
+      os << fostr::NewLine << "\"" << std::string(byte_string.begin(), byte_string.end()) << "\"";
+    } else {
+      os << fostr::NewLine << fostr::HexDump(byte_string);
+    }
   }
   return os << fostr::Outdent;
 }

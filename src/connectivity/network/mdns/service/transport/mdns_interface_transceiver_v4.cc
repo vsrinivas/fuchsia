@@ -14,9 +14,9 @@
 namespace mdns {
 
 MdnsInterfaceTransceiverV4::MdnsInterfaceTransceiverV4(inet::IpAddress address,
-                                                       const std::string& name, uint32_t index,
+                                                       const std::string& name, uint32_t id,
                                                        Media media)
-    : MdnsInterfaceTransceiver(address, name, index, media) {}
+    : MdnsInterfaceTransceiver(address, name, id, media) {}
 
 MdnsInterfaceTransceiverV4::~MdnsInterfaceTransceiverV4() {}
 
@@ -34,7 +34,7 @@ int MdnsInterfaceTransceiverV4::SetOptionJoinMulticastGroup() {
   ip_mreqn param;
   param.imr_multiaddr.s_addr = MdnsAddresses::v4_multicast().as_sockaddr_in().sin_addr.s_addr;
   param.imr_address = address().as_in_addr();
-  param.imr_ifindex = index();
+  param.imr_ifindex = id();
   int result = setsockopt(socket_fd().get(), IPPROTO_IP, IP_ADD_MEMBERSHIP, &param, sizeof(param));
   if (result < 0) {
     FX_LOGS(ERROR) << "Failed to set socket option IP_ADD_MEMBERSHIP, " << strerror(errno);

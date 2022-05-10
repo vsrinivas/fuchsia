@@ -55,15 +55,13 @@ class MdnsDeprecatedServiceImpl : public fuchsia::net::mdns::Resolver,
 
     // Mdns::Subscriber implementation:
     void InstanceDiscovered(const std::string& service, const std::string& instance,
-                            const inet::SocketAddress& v4_address,
-                            const inet::SocketAddress& v6_address,
-                            const std::vector<std::string>& text, uint16_t srv_priority,
+                            const std::vector<inet::SocketAddress>& addresses,
+                            const std::vector<std::vector<uint8_t>>& text, uint16_t srv_priority,
                             uint16_t srv_weight, const std::string& target) override;
 
     void InstanceChanged(const std::string& service, const std::string& instance,
-                         const inet::SocketAddress& v4_address,
-                         const inet::SocketAddress& v6_address,
-                         const std::vector<std::string>& text, uint16_t srv_priority,
+                         const std::vector<inet::SocketAddress>& addresses,
+                         const std::vector<std::vector<uint8_t>>& text, uint16_t srv_priority,
                          uint16_t srv_weight, const std::string& target) override;
 
     void InstanceLost(const std::string& service, const std::string& instance) override;

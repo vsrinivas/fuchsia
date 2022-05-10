@@ -39,6 +39,7 @@ class AddressProberTest : public AgentTest {
 constexpr char kHostFullName[] = "test2host.local.";
 const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
                                               inet::IpAddress(192, 168, 1, 201)};
+constexpr uint32_t kInterfaceId = 1;
 
 // Tests nominal behavior of the prober when there are no conflicts.
 TEST_F(AddressProberTest, Nominal) {
@@ -100,8 +101,8 @@ TEST_F(AddressProberTest, Conflict) {
 
   // Send a reply.
   ReplyAddress sender_address(
-      inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWireless, IpVersions::kV4);
+      inet::SocketAddress(192, 168, 1, kInterfaceId, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kV4);
   under_test->ReceiveResource(DnsResource(kLocalHostFullName, inet::IpAddress(192, 168, 1, 1)),
                               MdnsResourceSection::kAnswer, sender_address);
 
@@ -327,7 +328,7 @@ TEST_F(AddressProberTest, ConflictWiredV6) {
   // Send a reply wired/V4. Expect it to be ignored, because it's V4
   ReplyAddress sender_address0(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kV4);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kV4);
   under_test->ReceiveResource(DnsResource(kHostFullName, inet::IpAddress(192, 168, 1, 1)),
                               MdnsResourceSection::kAnswer, sender_address0);
   EXPECT_FALSE(callback_called);
@@ -335,7 +336,8 @@ TEST_F(AddressProberTest, ConflictWiredV6) {
 
   // Send a reply wireless/V6. Expect it to be ignored, because it's wireless
   ReplyAddress sender_address1(inet::SocketAddress(0xfe80, 1, inet::IpPort::From_uint16_t(5353)),
-                               inet::IpAddress(0xfe80, 100), Media::kWireless, IpVersions::kV6);
+                               inet::IpAddress(0xfe80, 100), kInterfaceId, Media::kWireless,
+                               IpVersions::kV6);
   under_test->ReceiveResource(DnsResource(kHostFullName, inet::IpAddress(0xfe80, 1)),
                               MdnsResourceSection::kAnswer, sender_address1);
   EXPECT_FALSE(callback_called);
@@ -343,7 +345,8 @@ TEST_F(AddressProberTest, ConflictWiredV6) {
 
   // Send a reply wired/V6. Expect it to be ignored, because it's wireless
   ReplyAddress sender_address2(inet::SocketAddress(0xfe80, 1, inet::IpPort::From_uint16_t(5353)),
-                               inet::IpAddress(0xfe80, 100), Media::kWired, IpVersions::kV6);
+                               inet::IpAddress(0xfe80, 100), kInterfaceId, Media::kWired,
+                               IpVersions::kV6);
   under_test->ReceiveResource(DnsResource(kHostFullName, inet::IpAddress(0xfe80, 1)),
                               MdnsResourceSection::kAnswer, sender_address2);
 

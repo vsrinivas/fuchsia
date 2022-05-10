@@ -1,0 +1,70 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.mdns;
+
+/// Discoverable protocol for finding service instances.
+// TODO(dalesat): rename `ServiceSubscriber`.
+@discoverable
+protocol ServiceSubscriber2 {
+    /// Subscribes to a service. The subscription lasts until `subscriber` is unbound.
+    ///
+    /// + request `service` name of the type of service to which to subscribe. For example, cast
+    ///   uses '_googlecast._tcp.'. If this value is not a valid service name, `subscriber` is
+    ///   closed immediately and an error message is logged.
+    /// + request `options` options to be applied to the subscription.
+    /// + request `listener` client end of the `ServiceSubscriptionListener` channel.
+    SubscribeToService(resource struct {
+        service service_name;
+        options ServiceSubscriptionOptions;
+        listener client_end:ServiceSubscriptionListener;
+    });
+};
+
+/// Options for `ServiceSubscriber.SubscribeToService`.
+type ServiceSubscriptionOptions = table {
+    /// The media (wired, wireless, both) of the interfaces on which the service should be
+    /// susbsribed. The default is both wired and wireless media.
+    1: media Media;
+
+    /// The IP versions (V4, V6, both) with which the service should subscribed. The default value
+    /// is both IPv4 and IPv6.
+    2: ip_versions IpVersions;
+};
+
+/// Client-implemented interface for subscribers. Method replies are used to
+/// throttle traffic. The service won't necessarily wait for a reply before
+/// calling another method.
+protocol ServiceSubscriptionListener {
+    /// Notifies the subscriber that a service instance has been discovered.
+    OnInstanceDiscovered(struct {
+        instance ServiceInstance;
+    }) -> ();
+
+    /// Notifies the subscriber that addresses or text for a known service
+    /// instance have changed.
+    OnInstanceChanged(struct {
+        instance ServiceInstance;
+    }) -> ();
+
+    /// Notifies the subscriber that a known service instance has been lost.
+    OnInstanceLost(struct {
+        service service_name;
+        instance instance_name;
+    }) -> ();
+
+    /// Notifies the subscriber that a PTR query has been sent.
+    OnQuery(struct {
+        resource_type ResourceType;
+    }) -> ();
+};
+
+/// DNS resource types.
+type ResourceType = flexible enum {
+    /// Domain name pointer.
+    PTR = 12;
+
+    /// Any (wildcard) type.
+    ANY = 255;
+};

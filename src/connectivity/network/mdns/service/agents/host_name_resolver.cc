@@ -12,10 +12,13 @@
 namespace mdns {
 
 HostNameResolver::HostNameResolver(MdnsAgent::Owner* owner, const std::string& host_name,
-                                   zx::time timeout, Mdns::ResolveHostNameCallback callback)
+                                   Media media, IpVersions ip_versions, zx::duration timeout,
+                                   Mdns::ResolveHostNameCallback callback)
     : MdnsAgent(owner),
       host_name_(host_name),
       host_full_name_(MdnsNames::HostFullName(host_name)),
+      media_(media),
+      ip_versions_(ip_versions),
       timeout_(timeout),
       callback_(std::move(callback)) {
   FX_DCHECK(callback_);
@@ -30,31 +33,34 @@ void HostNameResolver::Start(const std::string& local_host_full_name) {
   MdnsAgent::Start(local_host_full_name);
 
   SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA),
-               ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+               ReplyAddress::Multicast(media_, ip_versions_));
   SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kAaaa),
-               ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+               ReplyAddress::Multicast(media_, ip_versions_));
 
   PostTaskForTime(
       [this]() {
         if (callback_) {
-          callback_(host_name_, v4_address_, v6_address_);
+          callback_(host_name_, addresses());
           callback_ = nullptr;
           RemoveSelf();
         }
       },
-      timeout_);
+      now() + timeout_);
 }
 
 void HostNameResolver::ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
                                        ReplyAddress sender_address) {
-  if (resource.name_.dotted_string_ != host_full_name_) {
+  if (!sender_address.Matches(media_) || !sender_address.Matches(ip_versions_) ||
+      resource.name_.dotted_string_ != host_full_name_) {
     return;
   }
 
   if (resource.type_ == DnsType::kA) {
-    v4_address_ = resource.a_.address_.address_;
+    addresses_.insert(HostAddress(resource.a_.address_.address_, sender_address.interface_id(),
+                                  zx::sec(resource.time_to_live_)));
   } else if (resource.type_ == DnsType::kAaaa) {
-    v6_address_ = resource.aaaa_.address_.address_;
+    addresses_.insert(HostAddress(resource.aaaa_.address_.address_, sender_address.interface_id(),
+                                  zx::sec(resource.time_to_live_)));
   }
 }
 
@@ -65,8 +71,8 @@ void HostNameResolver::EndOfMessage() {
     return;
   }
 
-  if (v4_address_ || v6_address_) {
-    callback_(host_name_, v4_address_, v6_address_);
+  if (!addresses_.empty()) {
+    callback_(host_name_, addresses());
     callback_ = nullptr;
     PostTaskForTime([this]() { RemoveSelf(); }, now());
   }
@@ -74,7 +80,7 @@ void HostNameResolver::EndOfMessage() {
 
 void HostNameResolver::Quit() {
   if (callback_) {
-    callback_(host_name_, v4_address_, v6_address_);
+    callback_(host_name_, addresses());
     callback_ = nullptr;
   }
 

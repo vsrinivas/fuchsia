@@ -21,6 +21,7 @@ class TestServiceImpl : public fuchsia::net::mdns::ServiceInstanceResolver {
   ~TestServiceImpl() override { set_on_deletion_ = true; }
 
   void ResolveServiceInstance(std::string service, std::string instance, int64_t timeout,
+                              fuchsia::net::mdns::ServiceInstanceResolutionOptions options,
                               ResolveServiceInstanceCallback callback) override {}
 
   bool& set_on_deletion_;

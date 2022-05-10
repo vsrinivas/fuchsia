@@ -19,7 +19,7 @@ constexpr char kServiceFullName[] = "_yardapult._tcp.local.";
 constexpr char kInstanceName[] = "my";
 constexpr char kInstanceFullName[] = "my._yardapult._tcp.local.";
 static const ReplyAddress kReplyAddress({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
-                                        {192, 168, 1, 1}, Media::kWired, IpVersions::kBoth);
+                                        {192, 168, 1, 1}, 1, Media::kWired, IpVersions::kBoth);
 constexpr char kAlternateHostName[] = "test_alt_host_name";
 constexpr char kAlternateHostFullName[] = "test_alt_host_name.local.";
 const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
@@ -121,7 +121,7 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
     auto message = std::make_unique<DnsMessage>();
     auto ptr_resource = std::make_shared<DnsResource>(kServiceFullName, DnsType::kPtr);
     ptr_resource->time_to_live_ = DnsResource::kShortTimeToLive;
-    ptr_resource->ptr_.pointer_domain_name_ = kInstanceFullName;
+    ptr_resource->ptr_.pointer_domain_name_ = DnsName(kInstanceFullName);
     message->answers_.push_back(ptr_resource);
 
     auto srv_resource = std::make_shared<DnsResource>(kInstanceFullName, DnsType::kSrv);
@@ -129,7 +129,7 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
     srv_resource->srv_.priority_ = 0;
     srv_resource->srv_.weight_ = 0;
     srv_resource->srv_.port_ = inet::IpPort::From_uint16_t(5353);
-    srv_resource->srv_.target_ = kLocalHostFullName;
+    srv_resource->srv_.target_ = DnsName(kLocalHostFullName);
     message->additionals_.push_back(srv_resource);
 
     message->additionals_.push_back(
@@ -291,16 +291,15 @@ class Subscriber : public Mdns::Subscriber {
 
   // Mdns::Subscriber implementation.
   void InstanceDiscovered(const std::string& service, const std::string& instance,
-                          const inet::SocketAddress& v4_address,
-                          const inet::SocketAddress& v6_address,
-                          const std::vector<std::string>& text, uint16_t srv_priority,
+                          const std::vector<inet::SocketAddress>& addresses,
+                          const std::vector<std::vector<uint8_t>>& text, uint16_t srv_priority,
                           uint16_t srv_weight, const std::string& target) override {
     instance_discovered_called_ = true;
   }
 
   void InstanceChanged(const std::string& service, const std::string& instance,
-                       const inet::SocketAddress& v4_address, const inet::SocketAddress& v6_address,
-                       const std::vector<std::string>& text, uint16_t srv_priority,
+                       const std::vector<inet::SocketAddress>& addresses,
+                       const std::vector<std::vector<uint8_t>>& text, uint16_t srv_priority,
                        uint16_t srv_weight, const std::string& target) override {}
 
   void InstanceLost(const std::string& service, const std::string& instance) override {}
@@ -389,7 +388,7 @@ TEST_F(MdnsUnitTests, Subscribe) {
   Subscriber subscriber;
 
   // Subscribe.
-  under_test().SubscribeToService(kServiceName, &subscriber);
+  under_test().SubscribeToService(kServiceName, Media::kBoth, IpVersions::kBoth, &subscriber);
   RunLoopUntilIdle();
   EXPECT_FALSE(subscriber.InstanceDiscoveredCalled());
 
@@ -413,7 +412,7 @@ TEST_F(MdnsUnitTests, Regression55116) {
   Subscriber subscriber;
 
   // Subscribe.
-  under_test().SubscribeToService(kServiceName, &subscriber);
+  under_test().SubscribeToService(kServiceName, Media::kBoth, IpVersions::kBoth, &subscriber);
   RunLoopUntilIdle();
   EXPECT_FALSE(subscriber.InstanceDiscoveredCalled());
 
@@ -422,7 +421,7 @@ TEST_F(MdnsUnitTests, Regression55116) {
   RunLoopUntilIdle();
 
   // Subscribe again.
-  under_test().SubscribeToService(kServiceName, &subscriber);
+  under_test().SubscribeToService(kServiceName, Media::kBoth, IpVersions::kBoth, &subscriber);
   RunLoopUntilIdle();
   EXPECT_FALSE(subscriber.InstanceDiscoveredCalled());
 
@@ -693,14 +692,14 @@ TEST_F(MdnsUnitTests, PublishHostWiredOnly) {
 
   // Expect no response to wireless query.
   ReplyAddress sender_address0({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
-                               {192, 168, 1, 1}, Media::kWireless, IpVersions::kBoth);
+                               {192, 168, 1, 1}, 1, Media::kWireless, IpVersions::kBoth);
   ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address0);
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
 
   // Expect response to wired query.
   ReplyAddress sender_address1({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
-                               {192, 168, 1, 1}, Media::kWired, IpVersions::kBoth);
+                               {192, 168, 1, 1}, 1, Media::kWired, IpVersions::kBoth);
   ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address1);
   RunLoopUntilIdle();
 
@@ -727,14 +726,14 @@ TEST_F(MdnsUnitTests, PublishHostWirelessOnly) {
 
   // Expect no response to wired query.
   ReplyAddress sender_address0({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
-                               {192, 168, 1, 1}, Media::kWired, IpVersions::kBoth);
+                               {192, 168, 1, 1}, 1, Media::kWired, IpVersions::kBoth);
   ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address0);
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
 
   // Expect response to wireless query.
   ReplyAddress sender_address1({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
-                               {192, 168, 1, 1}, Media::kWireless, IpVersions::kBoth);
+                               {192, 168, 1, 1}, 1, Media::kWireless, IpVersions::kBoth);
   ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address1);
   RunLoopUntilIdle();
 
@@ -761,7 +760,7 @@ TEST_F(MdnsUnitTests, PublishHostV4Only) {
   ExpectSendMessageNotCalled();
 
   // Expect no response to an IPv6 query.
-  ReplyAddress sender_address0({0xfe80, 9, inet::IpPort::From_uint16_t(5353)}, {0xfe80, 1},
+  ReplyAddress sender_address0({0xfe80, 9, inet::IpPort::From_uint16_t(5353)}, {0xfe80, 1}, 1,
                                Media::kBoth, IpVersions::kV6);
   ReceiveQuery(kAlternateHostFullName, DnsType::kAaaa, sender_address0);
   RunLoopUntilIdle();
@@ -769,7 +768,7 @@ TEST_F(MdnsUnitTests, PublishHostV4Only) {
 
   // Expect response to an IPv4 query.
   ReplyAddress sender_address1({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
-                               {192, 168, 1, 1}, Media::kBoth, IpVersions::kV4);
+                               {192, 168, 1, 1}, 1, Media::kBoth, IpVersions::kV4);
   ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address1);
   RunLoopUntilIdle();
 
@@ -796,13 +795,13 @@ TEST_F(MdnsUnitTests, PublishHostV6Only) {
 
   // Expect no response to an IPv4 query.
   ReplyAddress sender_address0({192, 168, 78, 9, inet::IpPort::From_uint16_t(5353)},
-                               {192, 168, 1, 1}, Media::kBoth, IpVersions::kV4);
+                               {192, 168, 1, 1}, 1, Media::kBoth, IpVersions::kV4);
   ReceiveQuery(kAlternateHostFullName, DnsType::kA, sender_address0);
   RunLoopUntilIdle();
   ExpectSendMessageNotCalled();
 
   // Expect response to an IPv6 query.
-  ReplyAddress sender_address1({0xfe80, 9, inet::IpPort::From_uint16_t(5353)}, {0xfe80, 1},
+  ReplyAddress sender_address1({0xfe80, 9, inet::IpPort::From_uint16_t(5353)}, {0xfe80, 1}, 1,
                                Media::kBoth, IpVersions::kV6);
   ReceiveQuery(kAlternateHostFullName, DnsType::kAaaa, sender_address1);
   RunLoopUntilIdle();

@@ -1,0 +1,53 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.mdns;
+
+using fuchsia.net;
+using zx;
+
+/// Discoverable protocol for resolving host names to IP addresses.
+@discoverable
+protocol HostNameResolver {
+    /// Gets the addresses for the specified host.
+    ///
+    /// + request `host` the simple name of the host.
+    /// + request `timeout` specifies how long the service should wait before giving up when
+    ///   waiting for a response to a resolution query. In typical use, a timeout of two or three
+    ///   seconds is recommended.
+    /// + request `options` options to be applied to the resolution.
+    /// - response `addresses` the addresses of the specified host, if it was found, an empty vector
+    ///   if not.
+    ResolveHostName(struct {
+        host host_name;
+        timeout zx.duration;
+        options HostNameResolutionOptions;
+    }) -> (struct {
+        addresses vector<HostAddress>:MAX_ADDRESSES;
+    });
+};
+
+/// Options for `HostNameResolver.ResolveHostName`.
+type HostNameResolutionOptions = table {
+    /// The media (wired, wireless, both) of the interfaces on which the host name should be
+    /// resolved. The default is both wired and wireless media.
+    1: media Media;
+
+    /// The IP versions (V4, V6, both) with which the host name should resolved. The default
+    /// value is both IPv4 and IPv6.
+    2: ip_versions IpVersions;
+};
+
+/// An IPv4 or IPv6 host address with the id of the interface through which the address was
+/// received.
+type HostAddress = struct {
+    /// IPv4 or IPv6 host address.
+    address fuchsia.net.IpAddress;
+
+    /// Interface through which the address was received.
+    interface fuchsia.net.interface_id;
+
+    /// Time-to-live of the relevant A or AAAA resource.
+    ttl zx.duration;
+};

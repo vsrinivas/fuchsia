@@ -76,9 +76,12 @@ class MdnsServiceImpl {
 
   MdnsDeprecatedServiceImpl deprecated_services_;
 
+  ServiceImplManager<fuchsia::net::mdns::HostNameResolver> host_name_resolver_manager_;
+  ServiceImplManager<fuchsia::net::mdns::HostNameSubscriber> host_name_subscriber_manager_;
   ServiceImplManager<fuchsia::net::mdns::ProxyHostPublisher> proxy_host_publisher_manager_;
   ServiceImplManager<fuchsia::net::mdns::ServiceInstancePublisher>
       service_instance_publisher_manager_;
+  ServiceImplManager<fuchsia::net::mdns::ServiceSubscriber2> service_subscriber_manager_;
   ServiceImplManager<fuchsia::net::mdns::ServiceInstanceResolver>
       service_instance_resolver_manager_;
 

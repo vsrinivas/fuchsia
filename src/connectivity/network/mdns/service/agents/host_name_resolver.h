@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 #include "src/connectivity/network/mdns/service/agents/mdns_agent.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
@@ -20,7 +21,8 @@ namespace mdns {
 class HostNameResolver : public MdnsAgent {
  public:
   // Creates a |HostNameResolver|.
-  HostNameResolver(MdnsAgent::Owner* owner, const std::string& host_name, zx::time timeout,
+  HostNameResolver(MdnsAgent::Owner* owner, const std::string& host_name, Media media,
+                   IpVersions ip_versions, zx::duration timeout,
                    Mdns::ResolveHostNameCallback callback);
 
   ~HostNameResolver() override;
@@ -36,12 +38,19 @@ class HostNameResolver : public MdnsAgent {
   void Quit() override;
 
  private:
+  std::vector<HostAddress> addresses() const {
+    std::vector<HostAddress> result;
+    result.assign(addresses_.begin(), addresses_.end());
+    return result;
+  }
+
   std::string host_name_;
   std::string host_full_name_;
-  zx::time timeout_;
+  Media media_;
+  IpVersions ip_versions_;
+  zx::duration timeout_;
   Mdns::ResolveHostNameCallback callback_;
-  inet::IpAddress v4_address_;
-  inet::IpAddress v6_address_;
+  std::unordered_set<HostAddress, HostAddress::Hash> addresses_;
 
  public:
   // Disallow copy, assign and move.

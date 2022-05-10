@@ -40,7 +40,7 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
   // closure and the actual scheduled time.
   std::pair<fit::closure, zx::time> ExpectPostTaskForTime(zx::duration earliest,
                                                           zx::duration latest);
-  // Calls |ExpectNoPostTaskForTime|, advances the time to the scheduled time of the task, and
+  // Calls |ExpectPostTaskForTime|, advances the time to the scheduled time of the task, and
   // invokes the task.
   void ExpectPostTaskForTimeAndInvoke(zx::duration earliest, zx::duration latest);
 
@@ -52,6 +52,15 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
 
   // Expects that the agent has not called |Renew|.
   void ExpectNoRenewCalls() { EXPECT_TRUE(renew_calls_.empty()); }
+
+  // Expects that the agent has asked |resource| to be renewed.
+  void ExpectRenewCall(DnsResource resource);
+
+  // Expects that the agent has not asked for any resources to be expired.
+  void ExpectNoExpirations() { EXPECT_TRUE(expirations_.empty()); }
+
+  // Expects that the agent has asked |resource| to be expired.
+  void ExpectExpiration(DnsResource resource);
 
   // Expects that the agent has not called |RemoveAgent|.
   void ExpectNoRemoveAgentCall() { EXPECT_FALSE(remove_agent_called_); }
@@ -119,8 +128,9 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
     std::size_t operator()(const ReplyAddress& reply_address) const noexcept {
       return std::hash<inet::SocketAddress>{}(reply_address.socket_address()) ^
              (std::hash<inet::IpAddress>{}(reply_address.interface_address()) << 1) ^
-             (std::hash<Media>{}(reply_address.media()) << 2) ^
-             (std::hash<IpVersions>{}(reply_address.ip_versions()) << 3);
+             (std::hash<uint32_t>{}(reply_address.interface_id()) << 2) ^
+             (std::hash<Media>{}(reply_address.media()) << 3) ^
+             (std::hash<IpVersions>{}(reply_address.ip_versions()) << 4);
     }
   };
 
@@ -138,7 +148,7 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
 
   void SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_address) override;
 
-  void Renew(const DnsResource& resource) override;
+  void Renew(const DnsResource& resource, Media media, IpVersions ip_versions) override;
 
   void RemoveAgent(std::shared_ptr<MdnsAgent> agent) override;
 
@@ -153,7 +163,8 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
   std::queue<PostTaskForTimeCall> post_task_for_time_calls_;
   std::unordered_map<ReplyAddress, std::unique_ptr<DnsMessage>, ReplyAddressHash>
       outbound_messages_by_reply_address_;
-  std::queue<RenewCall> renew_calls_;
+  std::vector<DnsResource> renew_calls_;
+  std::vector<DnsResource> expirations_;
   bool remove_agent_called_ = false;
   bool flush_sent_items_called_ = false;
 };

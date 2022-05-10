@@ -450,4 +450,28 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value) {
   }
 }
 
+IpAddress::operator fuchsia::net::Ipv4Address() const {
+  FX_DCHECK(is_v4());
+  auto v4_ptr = reinterpret_cast<const uint8_t*>(&v4_);
+  fuchsia::net::Ipv4Address result;
+  std::copy(v4_ptr, v4_ptr + sizeof(result.addr), result.addr.begin());
+  return result;
+}
+
+IpAddress::operator fuchsia::net::Ipv6Address() const {
+  FX_DCHECK(is_v6());
+  auto v6_ptr = reinterpret_cast<const uint8_t*>(&v6_);
+  fuchsia::net::Ipv6Address result;
+  std::copy(v6_ptr, v6_ptr + sizeof(result.addr), result.addr.begin());
+  return result;
+}
+
+IpAddress::operator fuchsia::net::IpAddress() const {
+  if (is_v4()) {
+    return fuchsia::net::IpAddress::WithIpv4(static_cast<fuchsia::net::Ipv4Address>(*this));
+  }
+
+  return fuchsia::net::IpAddress::WithIpv6(static_cast<fuchsia::net::Ipv6Address>(*this));
+}
+
 }  // namespace inet

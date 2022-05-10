@@ -22,6 +22,7 @@ constexpr char kHostFullName[] = "test2host.local.";
 const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
                                               inet::IpAddress(192, 168, 1, 201)};
 static constexpr size_t kMaxSenderAddresses = 64;
+constexpr uint32_t kInterfaceId = 1;
 
 class InstanceResponderTest : public AgentTest, public Mdns::Publisher {
  public:
@@ -205,10 +206,10 @@ TEST_F(InstanceResponderTest, MulticastRateLimit) {
 
   ReplyAddress sender_address0(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
   ReplyAddress sender_address1(
       inet::SocketAddress(192, 168, 1, 2, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
 
   // First question.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
@@ -269,10 +270,10 @@ TEST_F(InstanceResponderTest, SourceAddresses) {
 
   ReplyAddress sender_address0(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
   ReplyAddress sender_address1(
       inet::SocketAddress(192, 168, 1, 2, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
 
   // Irrelevant question.
   under_test.ReceiveQuestion(
@@ -304,7 +305,7 @@ TEST_F(InstanceResponderTest, SourceAddressLimit) {
 
   ReplyAddress sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
 
   // First question.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
@@ -379,11 +380,11 @@ TEST_F(InstanceResponderTest, WirelessOnly) {
 
   ReplyAddress wired_sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
 
   ReplyAddress wireless_sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWireless, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kBoth);
 
   // Question from wired should be ignored.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
@@ -417,7 +418,7 @@ TEST_F(InstanceResponderTest, WiredOnly) {
 
   ReplyAddress wireless_sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWireless, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kBoth);
 
   // Question from wireless should be ignored.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
@@ -428,7 +429,7 @@ TEST_F(InstanceResponderTest, WiredOnly) {
 
   ReplyAddress wired_sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
 
   // Question from wired should be answered.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
@@ -454,11 +455,12 @@ TEST_F(InstanceResponderTest, V4Only) {
   ExpectAnnouncements(Media::kBoth, IpVersions::kV4);
 
   ReplyAddress v6_sender_address(inet::SocketAddress(0xfe80, 1, inet::IpPort::From_uint16_t(5353)),
-                                 inet::IpAddress(0xfe80, 100), Media::kWired, IpVersions::kV6);
+                                 inet::IpAddress(0xfe80, 100), kInterfaceId, Media::kWired,
+                                 IpVersions::kV6);
 
   ReplyAddress v4_sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWireless, IpVersions::kV4);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kV4);
 
   // Question from IPv6 should be ignored.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
@@ -491,10 +493,11 @@ TEST_F(InstanceResponderTest, V6Only) {
 
   ReplyAddress v4_sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWireless, IpVersions::kV4);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kV4);
 
   ReplyAddress v6_sender_address(inet::SocketAddress(0xfe80, 1, inet::IpPort::From_uint16_t(5353)),
-                                 inet::IpAddress(0xfe80, 100), Media::kWired, IpVersions::kV6);
+                                 inet::IpAddress(0xfe80, 100), kInterfaceId, Media::kWired,
+                                 IpVersions::kV6);
 
   // Question from IPv4 should be ignored.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
@@ -525,7 +528,8 @@ TEST_F(InstanceResponderTest, Unicast) {
   ExpectAnnouncements();
 
   ReplyAddress sender_address(inet::SocketAddress(192, 168, 1, 1, kPort),
-                              inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kBoth);
+                              inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired,
+                              IpVersions::kBoth);
 
   auto question = DnsQuestion(service_full_name(), DnsType::kPtr);
   question.unicast_response_ = true;
@@ -547,7 +551,8 @@ TEST_F(InstanceResponderTest, Subtype) {
   ExpectAnnouncements();
 
   ReplyAddress sender_address(inet::SocketAddress(192, 168, 1, 1, kPort),
-                              inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kBoth);
+                              inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired,
+                              IpVersions::kBoth);
 
   under_test.ReceiveQuestion(DnsQuestion("_cookies._sub." + service_full_name(), DnsType::kPtr),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
@@ -571,7 +576,7 @@ TEST_F(InstanceResponderTest, HostAndAddresses) {
 
   ReplyAddress sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
 
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
