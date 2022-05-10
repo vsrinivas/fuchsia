@@ -121,9 +121,10 @@ pub trait Cupv2Verifier {
     fn verify_response_with_signature(
         &self,
         ecdsa_signature: DerSignature,
-        request_metadata: &RequestMetadata,
+        request_body: &[u8],
         response_body: &[u8],
         public_key_id: PublicKeyId,
+        nonce: &Nonce,
     ) -> Result<(), CupVerificationError>;
 }
 
@@ -225,18 +226,25 @@ impl Cupv2RequestHandler for StandardCupv2Handler {
                 .map_err(|_| CupVerificationError::SignatureMalformed)?,
         )?;
 
-        self.verify_response_with_signature(signature, request_metadata, resp.body(), public_key_id)
+        self.verify_response_with_signature(
+            signature,
+            &request_metadata.request_body,
+            resp.body(),
+            public_key_id,
+            &request_metadata.nonce,
+        )
     }
 }
 
 pub fn make_transaction_hash(
-    request_metadata: &RequestMetadata,
+    request_body: &[u8],
     response_body: &[u8],
+    public_key_id: PublicKeyId,
+    nonce: &Nonce,
 ) -> digest::Output<Sha256> {
-    let request_hash = Sha256::digest(&request_metadata.request_body);
+    let request_hash = Sha256::digest(request_body);
     let response_hash = Sha256::digest(response_body);
-    let cup2_urlparam =
-        format!("{}:{}", request_metadata.public_key_id, hex::encode(request_metadata.nonce));
+    let cup2_urlparam = format!("{}:{}", public_key_id, hex::encode(nonce));
 
     let mut hasher = Sha256::new();
     hasher.update(&request_hash);
@@ -249,11 +257,13 @@ impl Cupv2Verifier for StandardCupv2Handler {
     fn verify_response_with_signature(
         &self,
         ecdsa_signature: DerSignature,
-        request_metadata: &RequestMetadata,
+        request_body: &[u8],
         response_body: &[u8],
         public_key_id: PublicKeyId,
+        nonce: &Nonce,
     ) -> Result<(), CupVerificationError> {
-        let transaction_hash = make_transaction_hash(request_metadata, response_body);
+        let transaction_hash =
+            make_transaction_hash(request_body, response_body, public_key_id, nonce);
 
         let public_key: &PublicKey = self
             .parameters_by_id
@@ -351,9 +361,10 @@ pub mod test_support {
         fn verify_response_with_signature(
             &self,
             _ecdsa_signature: DerSignature,
-            _request_metadata: &RequestMetadata,
+            _request_body: &[u8],
             _response_body: &[u8],
             _public_key_id: PublicKeyId,
+            _nonce: &Nonce,
         ) -> Result<(), CupVerificationError> {
             match (self.verification_error)() {
                 Some(e) => Err(e),
@@ -392,7 +403,12 @@ mod tests {
         response_body: &[u8],
     ) -> String {
         use signature::Signer;
-        let transaction_hash = make_transaction_hash(request_metadata, response_body);
+        let transaction_hash = make_transaction_hash(
+            &request_metadata.request_body,
+            response_body,
+            request_metadata.public_key_id,
+            &request_metadata.nonce,
+        );
         hex::encode(signing_key.sign(&transaction_hash).to_der().as_bytes())
     }
 
