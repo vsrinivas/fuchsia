@@ -581,10 +581,6 @@ template("assemble_system") {
                            ])
 
     output_path = files.partitions_config
-    if (defined(invoker.use_esp) && invoker.use_esp) {
-      esp_image_path = "${root_build_dir}/fuchsia.esp.blk"
-      deps = [ "//build/images:esp" ]
-    }
   }
 
   check_production_tag = false

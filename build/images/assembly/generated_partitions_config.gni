@@ -10,9 +10,6 @@ import("//build/images/args.gni")
 #   output_path (required)
 #     [path] Board config output location.
 #
-#   esp_image_path (optional)
-#     [string] The path on host to the ESP bootloader.
-#
 template("generated_partitions_config") {
   assert(defined(invoker.output_path), "Need to define output_path")
 
@@ -46,17 +43,6 @@ template("generated_partitions_config") {
         partition.name = firmware.partition
       }
       _bootloader_partitions += [ partition ]
-    }
-
-    # Add the ESP partition if necessary.
-    if (defined(invoker.esp_image_path)) {
-      _bootloader_partitions += [
-        {
-          name = "bootloader"
-          type = "esp"
-          image = rebase_path("${invoker.esp_image_path}", root_build_dir)
-        },
-      ]
     }
 
     # Aggregate all the non-bootloader partitions.
