@@ -25,14 +25,9 @@ uint32_t discardable(fuchsia::virtualization::BlockFormat format) {
 
 bool UseRustDevice(fuchsia::virtualization::BlockMode mode,
                    fuchsia::virtualization::BlockFormat format) {
-  // TODO(fxbug.dev/95529): These configurations are not yet implemented in the rust device, but we
-  // prefer to rust device for configurations that are supported.
-  if (mode == fuchsia::virtualization::BlockMode::VOLATILE_WRITE) {
-    FX_LOGS(INFO) << "Selecting legacy block device for VOLATILE_WRITE device";
-    return false;
-  }
-
-  FX_LOGS(INFO) << "Using rust block device implementation";
+  // The rust device supports all configurations.
+  //
+  // TODO(fxbug.dev/95529): Delete this and all the support for using the C++ virtio-block device.
   return true;
 }
 
