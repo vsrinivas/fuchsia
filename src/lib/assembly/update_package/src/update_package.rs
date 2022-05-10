@@ -445,12 +445,15 @@ mod tests {
 
         let fake_bootloader = NamedTempFile::new().unwrap();
         let partitions_config = PartitionsConfig {
+            bootstrap_partitions: vec![],
+            unlock_credentials: vec![],
             bootloader_partitions: vec![BootloaderPartition {
                 partition_type: "tpl".into(),
                 name: Some("firmware_tpl".into()),
                 image: fake_bootloader.path().to_path_buf(),
             }],
             partitions: vec![Partition::ZBI { name: "zircon_a".into(), slot: PartitionSlot::A }],
+            hardware_revision: "hw".into(),
         };
         let epoch = EpochFile::Version1 { epoch: 0 };
         let mut fake_version = NamedTempFile::new().unwrap();
@@ -609,12 +612,15 @@ mod tests {
 
         let fake_bootloader = NamedTempFile::new().unwrap();
         let partitions_config = PartitionsConfig {
+            bootstrap_partitions: vec![],
+            unlock_credentials: vec![],
             bootloader_partitions: vec![BootloaderPartition {
                 partition_type: "tpl".into(),
                 name: Some("firmware_tpl".into()),
                 image: fake_bootloader.path().to_path_buf(),
             }],
             partitions: vec![Partition::ZBI { name: "zircon_a".into(), slot: PartitionSlot::A }],
+            hardware_revision: "hw".into(),
         };
         let epoch = EpochFile::Version1 { epoch: 0 };
         let mut fake_version = NamedTempFile::new().unwrap();
@@ -798,8 +804,7 @@ mod tests {
         let outdir = tempdir().unwrap();
         let tools = FakeToolProvider::default();
 
-        let partitions_config =
-            PartitionsConfig { bootloader_partitions: vec![], partitions: vec![] };
+        let partitions_config = PartitionsConfig::default();
         let epoch = EpochFile::Version1 { epoch: 0 };
         let mut fake_version = NamedTempFile::new().unwrap();
         writeln!(fake_version, "1.2.3.4").unwrap();

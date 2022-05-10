@@ -438,6 +438,9 @@ assemble_system("fuchsia_assembly") {
 partitions_config = "$target_out_dir/partitions_config.json"
 generated_partitions_config("partitions_config") {
   output_path = partitions_config
+  hw_revision = board_name
+  bootstrap_partitions = bootstrap_files
+  unlock_credentials = board_fastboot_unlock_credentials
 }
 
 update_package("update") {

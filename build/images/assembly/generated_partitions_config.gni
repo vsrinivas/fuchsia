@@ -10,8 +10,51 @@ import("//build/images/args.gni")
 #   output_path (required)
 #     [path] Board config output location.
 #
+#   hw_revision (required)
+#     [string] The name of the hardware revision.
+#     This is placed in the flash manifest to ensure partitions are not
+#     flashed to the wrong hardware.
+#
+#   bootstrap_partitions (optional)
+#     [list] List of OEM images to flash when using:
+#       ffx target flash --product fuchsia
+#
+#     Each entry will have the following format. A file is only flashed to the
+#     partition if the conditional fastboot arg equals the specified value.
+#       {
+#         path = "path/to/image"
+#         partition = "partition_name"
+#         condition = {
+#           variable = "variable_name"
+#           value = "value
+#         }
+#       }
+#
+#   unlock_credentials (optional)
+#     [list] List of zip files containing the credentials used to unlock
+#     a device in fastboot mode.
+#
 template("generated_partitions_config") {
   assert(defined(invoker.output_path), "Need to define output_path")
+  assert(defined(invoker.hw_revision), "Need to define hw_revision")
+
+  bootstrap = []
+  if (defined(invoker.bootstrap_partitions)) {
+    foreach(part, invoker.bootstrap_partitions) {
+      bootstrap += [
+        {
+          image = part.path
+          name = part.partition
+          condition = part.condition
+        },
+      ]
+    }
+  }
+
+  credentials = []
+  if (defined(invoker.unlock_credentials)) {
+    credentials += invoker.unlock_credentials
+  }
 
   generated_file(target_name) {
     forward_variables_from(invoker,
@@ -93,8 +136,11 @@ template("generated_partitions_config") {
     }
 
     contents = {
+      hardware_revision = invoker.hw_revision
       bootloader_partitions = _bootloader_partitions
       partitions = _partitions
+      bootstrap_partitions = bootstrap
+      unlock_credentials = credentials
     }
   }
 }

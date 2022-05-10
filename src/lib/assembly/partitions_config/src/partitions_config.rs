@@ -8,14 +8,29 @@ use std::io::Read;
 use std::path::PathBuf;
 
 /// The configuration file specifying where the generated images should be placed when flashing of
-/// OTAing.
+/// OTAing. This file lists the partitions used in three different flashing configurations:
+///   fuchsia      - primary images in A/B, recovery in R, bootloaders, bootstrap
+///   fuchsia_only - primary images in A/B, recovery in R, bootloaders
+///   recovery     - recovery in A/B/R, bootloaders
 #[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
 pub struct PartitionsConfig {
+    /// Partitions that are only flashed in "fuchsia" configurations.
+    #[serde(default)]
+    pub bootstrap_partitions: Vec<BootstrapPartition>,
+
     /// Partitions designated for bootloaders, which are not slot-specific.
     pub bootloader_partitions: Vec<BootloaderPartition>,
 
     /// Non-bootloader partitions, which are slot-specific.
     pub partitions: Vec<Partition>,
+
+    /// The name of the hardware to assert before flashing images to partitions.
+    pub hardware_revision: String,
+
+    /// Zip files containing the fastboot unlock credentials.
+    #[serde(default)]
+    pub unlock_credentials: Vec<PathBuf>,
 }
 
 impl PartitionsConfig {
@@ -28,6 +43,30 @@ impl PartitionsConfig {
         reader.read_to_string(&mut data).context("Cannot read the config")?;
         serde_json5::from_str(&data).context("Cannot parse the config")
     }
+}
+
+/// A partition to flash in "fuchsia" configurations.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BootstrapPartition {
+    /// The name of the partition known to fastboot.
+    pub name: String,
+
+    /// The path on host to the bootloader image.
+    pub image: PathBuf,
+
+    /// The condition that must be met before attempting to flash.
+    pub condition: BootstrapCondition,
+}
+
+/// The fastboot variable condition that must equal the value before a bootstrap partition should
+/// be flashed.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BootstrapCondition {
+    /// The name of the fastboot variable.
+    variable: String,
+
+    /// The expected value.
+    value: String,
 }
 
 /// A single bootloader partition, which is not slot-specific.
@@ -118,11 +157,16 @@ mod tests {
                         name: "fvm",
                     },
                 ],
+                hardware_revision: "hw",
+                unlock_credentials: [
+                    "path/to/zip",
+                ],
             }
         "#;
         let mut cursor = std::io::Cursor::new(json);
         let config: PartitionsConfig = PartitionsConfig::from_reader(&mut cursor).unwrap();
         assert_eq!(config.partitions.len(), 3);
+        assert_eq!(config.hardware_revision, "hw");
     }
 
     #[test]
@@ -137,6 +181,7 @@ mod tests {
                         slot: "SlotA",
                     }
                 ],
+                "hardware_revision": "hw",
             }
         "#;
         let mut cursor = std::io::Cursor::new(json);

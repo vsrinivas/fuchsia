@@ -261,6 +261,7 @@ template("assemble_security_pkg_test_system") {
 
   generated_partitions_config(labels.assembly_partitions_config) {
     output_path = files.partitions_json
+    hw_revision = board_name
   }
 
   # Construct an update package for the system assembly.
