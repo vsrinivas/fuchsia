@@ -119,9 +119,10 @@ recovery_eng_packages =
       # Use eng allowlists:
       "//src/security/policy:appmgr_policy_eng",
 
-      # Allow recovery to be discoverable via mDNS:
+      # Enable ffx support.
       "//src/connectivity/network/mdns/bundles:services",
       "//src/connectivity/network/mdns/service:mdns_fuchsia_udp_config",
+      "//src/developer/ffx:runtime",
 
       # Enable SSH (for engineering builds):
       "//src/developer/sshd-host",
