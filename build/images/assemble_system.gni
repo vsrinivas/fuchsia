@@ -8,9 +8,9 @@ import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/assembly/compare_json_list.gni")
 import("//build/images/assembly/generated_assembly_inputs.gni")
+import("//build/images/assembly/generated_image_assembly_config.gni")
 import("//build/images/assembly/generated_images_config.gni")
 import("//build/images/assembly/generated_partitions_config.gni")
-import("//build/images/assembly/generated_product_config.gni")
 import("//build/images/assembly/hermetic_inputs_for_image_assembly.gni")
 import("//build/images/fvm.gni")
 import("//build/images/shell_commands.gni")
@@ -479,7 +479,7 @@ template("assemble_system") {
   # Build the images using the Image Assembler.
   #
 
-  generated_product_config(labels.image_assembly_config) {
+  generated_image_assembly_config(labels.image_assembly_config) {
     forward_variables_from(invoker,
                            [
                              "testonly",

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/assembly/legacy.gni")
-import("//build/images/assembly/generated_product_config.gni")
+import("//build/images/assembly/generated_image_assembly_config.gni")
 import("//build/python/python_action.gni")
 import("//build/python/python_binary.gni")
 import("//build/testing/host_test.gni")
@@ -57,7 +57,7 @@ legacy_assembly_input_bundle("input_bundle") {
 }
 
 # NOTE: target named this way for legacy_assembly_input_bundle's label inference
-generated_product_config("test_image_assembly_config") {
+generated_image_assembly_config("test_image_assembly_config") {
   testonly = true
 
   # NOTE: legacy_assembly_input_bundle assumes this file path

@@ -9,7 +9,7 @@ import("//build/images/args.gni")
 import("//build/info/info.gni")
 import("//build/zbi/kernel_cmdline.gni")
 
-# Generates a product config to be consumed by the Image Assembler.
+# Generates an Image Assembly Config to be consumed by the Image Assembler.
 #
 # Arguments
 #   output_path (required)
@@ -42,7 +42,7 @@ import("//build/zbi/kernel_cmdline.gni")
 #     [list of labels] Dependencies with metadata including additional kernel
 #     command arguments to add to the ZBI.
 #
-template("generated_product_config") {
+template("generated_image_assembly_config") {
   assert(defined(invoker.output_path), "Need to define output_path")
   assert(defined(invoker.kernel_image), "Need to define kernel_image")
 
@@ -103,7 +103,7 @@ template("generated_product_config") {
     boot_args = "$target_out_dir/${target_name}_boot_args"
   }
 
-  # Construct a list of Base packages to add to the product config.
+  # Construct a list of Base packages to add to the image assembly config.
   list_package_manifests(labels.base_package_list) {
     forward_variables_from(invoker,
                            [
@@ -114,7 +114,7 @@ template("generated_product_config") {
     deps = base_packages
   }
 
-  # Construct a list of Cache packages to add to the product config.
+  # Construct a list of Cache packages to add to the image assembly config.
   list_package_manifests(labels.cache_package_list) {
     forward_variables_from(invoker,
                            [
@@ -220,7 +220,7 @@ template("generated_product_config") {
     deps = bootfs_labels
   }
 
-  # Construct a list of bootfs packages to add to the product config.
+  # Construct a list of bootfs packages to add to the image assembly config.
   # Ignores any fuchsia_driver_packages and fuchsia_shell_packages
   list_package_manifests(labels.bootfs_package_list) {
     forward_variables_from(invoker,
@@ -239,7 +239,7 @@ template("generated_product_config") {
                              "testonly",
                              "visibility",
                            ])
-    script = "//build/images/assembly/make_assembly_config.py"
+    script = "//build/images/assembly/make_image_assembly_config.py"
 
     outputs = [ invoker.output_path ]
     inputs = [
