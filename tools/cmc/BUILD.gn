@@ -142,11 +142,8 @@ fuchsia_structured_config_values("example_component_config_values") {
 
 group("tests") {
   testonly = true
-  deps = [ ":cmc_test($host_toolchain)" ]
-
-  # TODO(https://fxbug.dev/99631): fix cmc_integration_test in coverage and
-  # re-enable.
-  if (!is_coverage) {
-    deps += [ ":cmc_integration_test" ]
-  }
+  deps = [
+    ":cmc_integration_test",
+    ":cmc_test($host_toolchain)",
+  ]
 }

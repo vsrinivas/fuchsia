@@ -31,6 +31,7 @@ fn main() {
                             source: Some(Ref::Debug(DebugRef {})),
                             source_name: Some(protocol),
                             target_path: Some(target_path),
+                            availability: Some(Availability::Required),
                             ..UseProtocol::EMPTY
                         }
                     );
