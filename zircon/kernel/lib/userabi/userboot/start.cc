@@ -6,6 +6,7 @@
 
 #include <lib/elf-psabi/sp.h>
 #include <lib/processargs/processargs.h>
+#include <lib/stdcompat/source_location.h>
 #include <lib/userabi/userboot.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <lib/zx/channel.h>
@@ -204,6 +205,19 @@ std::array<zx_handle_t, kChildHandleCount> ExtractHandles(zx::channel bootstrap)
   return handles;
 }
 
+template <typename T>
+T DuplicateOrDie(const zx::debuglog& log, const T& typed_handle,
+                 unsigned int line = cpp20::source_location::current().line()) {
+  T dup;
+  auto status = typed_handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  check(log, status, "[start.cc:%d]: Failed to duplicate handle.", line);
+  return dup;
+}
+
+zx::debuglog DuplicateOrDie(const zx::debuglog& log,
+                            unsigned int line = cpp20::source_location::current().line()) {
+  return DuplicateOrDie(log, log, line);
+}
 // This is the main logic:
 // 1. Read the kernel's bootstrap message.
 // 2. Load up the child process from ELF file(s) on the bootfs.
@@ -254,10 +268,7 @@ std::array<zx_handle_t, kChildHandleCount> ExtractHandles(zx::channel bootstrap)
   // kProcessArgsMaxBytes, this function will fail process creation.
   ParseNextProcessArguments(log, opts, child_message.header.args_num, child_message.args.data());
 
-  zx::debuglog log_dup;
-  status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
-  check(log, status, "zx_handle_duplicate failed on debuglog handle");
-  handles[kDebugLog] = log_dup.release();
+  handles[kDebugLog] = DuplicateOrDie(log).release();
 
   // Strips any arguments passed along with the filename to userboot.next.
   std::string_view filename = GetUserbootNextFilename(opts);
@@ -265,19 +276,13 @@ std::array<zx_handle_t, kChildHandleCount> ExtractHandles(zx::channel bootstrap)
   zx::process proc;
   {
     // Map in the bootfs so we can look for files in it.
-    zx::vmo bootfs_vmo_dup;
-    zx::debuglog log_dup;
     zx::resource vmex_resource;
-    zx_status_t status = bootfs_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &bootfs_vmo_dup);
-    check(log, status, "zx_handle_duplicate failed on bootfs VMO handle");
-    status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
-    check(log, status, "zx_handle_duplicate failed on debuglog handle");
     zx::unowned_resource system_resource(handles[kSystemResource]);
     status = zx::resource::create(*system_resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_VMEX_BASE,
                                   1, nullptr, 0, &vmex_resource);
     check(log, status, "zx_resource_create failed");
-    Bootfs bootfs{vmar_self.borrow(), std::move(bootfs_vmo_dup), std::move(vmex_resource),
-                  std::move(log_dup)};
+    Bootfs bootfs{vmar_self.borrow(), DuplicateOrDie(log, bootfs_vmo), std::move(vmex_resource),
+                  DuplicateOrDie(log)};
 
     // Pass the decompressed bootfs VMO on.
     handles[kBootfsVmo] = bootfs_vmo.release();
@@ -335,12 +340,8 @@ std::array<zx_handle_t, kChildHandleCount> ExtractHandles(zx::channel bootstrap)
     handles[kVmarRootSelf] = vmar.release();
 
     // Duplicate the child's process handle to pass to it.
-    status = zx_handle_duplicate(proc.get(), ZX_RIGHT_SAME_RIGHTS, &handles[kProcSelf]);
-    check(log, status, "zx_handle_duplicate failed on child process handle");
-
-    // Duplicate the child's thread handle to pass to it.
-    status = zx_handle_duplicate(thread.get(), ZX_RIGHT_SAME_RIGHTS, &handles[kThreadSelf]);
-    check(log, status, "zx_handle_duplicate failed on child thread handle");
+    handles[kProcSelf] = DuplicateOrDie(log, proc).release();
+    handles[kThreadSelf] = DuplicateOrDie(log, thread).release();
 
     for (const auto& h : handles) {
       zx_info_handle_basic_t info;
@@ -364,11 +365,7 @@ std::array<zx_handle_t, kChildHandleCount> ExtractHandles(zx::channel bootstrap)
 
     // Now become the loader service for as long as that's needed.
     if (loader_service_channel) {
-      zx::debuglog log_dup;
-      status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
-      check(log, status, "zx_handle_duplicate failed on debuglog handle");
-
-      LoaderService ldsvc(std::move(log_dup), &bootfs, opts.root);
+      LoaderService ldsvc(DuplicateOrDie(log), &bootfs, opts.root);
       ldsvc.Serve(std::move(loader_service_channel));
     }
 
