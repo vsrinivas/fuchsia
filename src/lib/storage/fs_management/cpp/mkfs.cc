@@ -36,7 +36,6 @@ namespace {
 
 zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCallback cb,
                          const MkfsOptions& options, bool support_fvm) {
-  zx::channel crypt_client(options.crypt_client);
   fbl::unique_fd device_fd;
   device_fd.reset(open(device_path, O_RDWR));
   if (!device_fd) {
@@ -51,9 +50,8 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
   }
   std::vector<std::pair<uint32_t, zx::handle>> handles;
   handles.push_back({FS_HANDLE_BLOCK_DEVICE_ID, std::move(block_device)});
-  if (crypt_client) {
-    handles.push_back({PA_HND(PA_USER0, 2), std::move(crypt_client)});
-  }
+  if (options.crypt_client)
+    handles.push_back({PA_HND(PA_USER0, 2), options.crypt_client()});
   return cb(options.as_argv(binary), std::move(handles));
 }
 
@@ -69,8 +67,6 @@ zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const MkfsOption
 
 zx::status<> MkfsComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                              const std::string& device_path, const MkfsOptions& options) {
-  zx::channel crypt_client(options.crypt_client);
-
   auto device = service::Connect<fuchsia_hardware_block::Block>(device_path.c_str());
   if (device.is_error())
     return device.take_error();
@@ -94,18 +90,15 @@ zx::status<> MkfsComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> expos
 __EXPORT
 zx_status_t Mkfs(const char* device_path, DiskFormat df, LaunchCallback cb,
                  const MkfsOptions& options) {
-  // N.B. Make sure to release crypt_client in any new error paths here.
-
   if (options.component_child_name != nullptr) {
-    std::string_view url = DiskFormatComponentUrl(df);
+    std::string_view url =
+        options.component_url.empty() ? DiskFormatComponentUrl(df) : options.component_url;
     // If we don't know the url, fall back on the old launching method.
     if (!url.empty()) {
       // Otherwise, launch the component way.
       auto exposed_dir_or = ConnectNativeFsComponent(url, options.component_child_name,
                                                      options.component_collection_name);
       if (exposed_dir_or.is_error()) {
-        if (options.crypt_client != ZX_HANDLE_INVALID)
-          zx_handle_close(options.crypt_client);
         return exposed_dir_or.status_value();
       }
       return MkfsComponentFs(*exposed_dir_or, device_path, options).status_value();
@@ -127,11 +120,8 @@ zx_status_t Mkfs(const char* device_path, DiskFormat df, LaunchCallback cb,
       return MkfsNativeFs(GetBinaryPath("f2fs").c_str(), device_path, cb, options, true);
     default:
       auto* format = CustomDiskFormat::Get(df);
-      if (format == nullptr) {
-        if (options.crypt_client != ZX_HANDLE_INVALID)
-          zx_handle_close(options.crypt_client);
+      if (format == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
-      }
       return MkfsNativeFs(format->binary_path().c_str(), device_path, cb, options, true);
   }
 }

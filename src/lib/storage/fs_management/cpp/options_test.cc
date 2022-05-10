@@ -12,8 +12,8 @@ namespace {
 
 const std::string kTestBinary = "/test/binary";
 
-void AssertStartOptionsEqual(const fuchsia_fs_startup::wire::StartOptions a,
-                             const fuchsia_fs_startup::wire::StartOptions b) {
+void AssertStartOptionsEqual(const fuchsia_fs_startup::wire::StartOptions& a,
+                             const fuchsia_fs_startup::wire::StartOptions& b) {
   ASSERT_EQ(a.read_only, b.read_only);
   ASSERT_EQ(a.verbose, b.verbose);
   ASSERT_EQ(a.sandbox_decompression, b.sandbox_decompression);
@@ -22,8 +22,8 @@ void AssertStartOptionsEqual(const fuchsia_fs_startup::wire::StartOptions a,
   ASSERT_EQ(a.cache_eviction_policy_override, b.cache_eviction_policy_override);
 }
 
-void AssertFormatOptionsEqual(const fuchsia_fs_startup::wire::FormatOptions a,
-                              const fuchsia_fs_startup::wire::FormatOptions b) {
+void AssertFormatOptionsEqual(const fuchsia_fs_startup::wire::FormatOptions& a,
+                              const fuchsia_fs_startup::wire::FormatOptions& b) {
   ASSERT_EQ(a.verbose, b.verbose);
   ASSERT_EQ(a.num_inodes, b.num_inodes);
   ASSERT_EQ(a.deprecated_padded_blobfs_format, b.deprecated_padded_blobfs_format);

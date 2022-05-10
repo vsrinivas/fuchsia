@@ -13,7 +13,7 @@ use {
     fxfs::{
         filesystem::{mkfs, FxFilesystem, OpenOptions},
         fsck,
-        platform::{FxfsServer, RemoteCrypt},
+        platform::{component::Component, FxfsServer, RemoteCrypt},
         serialized_types::LATEST_VERSION,
     },
     remote_block_device::RemoteBlockClient,
@@ -35,6 +35,7 @@ struct TopLevel {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
 enum SubCommand {
+    Component(ComponentSubCommand),
     Format(FormatSubCommand),
     Mount(MountSubCommand),
     Fsck(FsckSubCommand),
@@ -59,6 +60,11 @@ struct MountSubCommand {
 #[argh(subcommand, name = "fsck")]
 struct FsckSubCommand {}
 
+#[derive(FromArgs, PartialEq, Debug)]
+/// Component
+#[argh(subcommand, name = "component")]
+struct ComponentSubCommand {}
+
 // The number of threads chosen here must exceed the number of concurrent system calls to paged VMOs
 // that we allow since otherwise deadlocks are possible.  Search for CONCURRENT_SYSCALLS.
 #[fasync::run(10)]
@@ -71,6 +77,10 @@ async fn main() -> Result<(), Error> {
     log::info!("fxfs version {} started {:?}", LATEST_VERSION, std::env::args());
 
     let args: TopLevel = argh::from_env();
+
+    if let TopLevel { nested: SubCommand::Component(_), .. } = args {
+        return Component::new().run().await;
+    }
 
     let client = RemoteBlockClient::new(zx::Channel::from(
         fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
@@ -119,5 +129,6 @@ async fn main() -> Result<(), Error> {
             options.verbose = verbose;
             fsck::fsck_with_options(&fs, Some(crypt), options).await
         }
+        TopLevel { nested: SubCommand::Component(_), .. } => unreachable!(),
     }
 }

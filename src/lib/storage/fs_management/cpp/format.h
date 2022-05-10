@@ -14,6 +14,7 @@
 namespace fs_management {
 
 constexpr std::string_view kBlobfsComponentUrl = "fuchsia-boot://#meta/blobfs.cm";
+constexpr std::string_view kFxfsComponentUrl = "fuchsia-boot://#meta/fxfs.cm";
 
 enum DiskFormat {
   kDiskFormatUnknown = 0,

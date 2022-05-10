@@ -13,7 +13,7 @@ use {
         },
         platform::fuchsia::{
             errors::map_to_status,
-            volume::{FxVolume, FxVolumeAndRoot, DEFAULT_FLUSH_PERIOD},
+            volume::{FxVolumeAndRoot, DEFAULT_FLUSH_PERIOD},
         },
     },
     anyhow::{ensure, Error},
@@ -141,16 +141,6 @@ impl VolumesDirectory {
             self.directory_node.add_entry(name, Arc::new(VolumesDirectoryEntry(store_id))).unwrap();
         }
         Ok(volume)
-    }
-
-    /// Fetches a reference to an already-opened volume.
-    pub async fn get_volume(&self, name: &str) -> Result<Arc<FxVolume>, Status> {
-        self.mounted_volumes
-            .lock()
-            .unwrap()
-            .get(name)
-            .map(|v| v.volume().clone())
-            .ok_or(Status::NOT_FOUND)
     }
 
     /// Terminates all opened volumes.

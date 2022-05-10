@@ -246,12 +246,14 @@ zx::status<> FormatBlockDevice(const std::string &block_device_path,
   fs_management::MkfsOptions mkfs_options;
 
   if (format == fs_management::kDiskFormatFxfs) {
-    if (auto service_or = GetCryptService(); service_or.is_error()) {
-      fprintf(stderr, "Failed to get crypt service: %s\n", service_or.status_string());
-      return service_or.take_error();
-    } else {
-      mkfs_options.crypt_client = service_or->release();
-    }
+    mkfs_options.crypt_client = [] {
+      if (auto service_or = GetCryptService(); service_or.is_error()) {
+        fprintf(stderr, "Failed to get crypt service: %s\n", service_or.status_string());
+        return zx::channel();
+      } else {
+        return *std::move(service_or);
+      }
+    };
   }
 
   zx::status<> status = zx::make_status(fs_management::Mkfs(
@@ -270,12 +272,14 @@ zx::status<std::unique_ptr<RunningFilesystem>> StartBlockDeviceFilesystem(
   fs_management::MountOptions mount_options;
   fbl::unique_fd volume_fd(open(block_device_path.c_str(), O_RDWR));
   if (format == fs_management::kDiskFormatFxfs) {
-    if (auto service_or = GetCryptService(); service_or.is_error()) {
-      fprintf(stderr, "Failed to get crypt service: %s\n", service_or.status_string());
-      return service_or.take_error();
-    } else {
-      mount_options.crypt_client = service_or->release();
-    }
+    mount_options.crypt_client = [] {
+      if (auto service_or = GetCryptService(); service_or.is_error()) {
+        fprintf(stderr, "Failed to get crypt service: %s\n", service_or.status_string());
+        return zx::channel();
+      } else {
+        return *std::move(service_or);
+      }
+    };
   }
   auto mounted_filesystem = fs_management::Mount(std::move(volume_fd), nullptr, format,
                                                  mount_options, fs_management::LaunchStdioAsync);

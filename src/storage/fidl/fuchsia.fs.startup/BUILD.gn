@@ -6,5 +6,8 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.fs.startup") {
   sources = [ "startup.fidl" ]
-  public_deps = [ "//sdk/fidl/fuchsia.hardware.block" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.block",
+    "//src/storage/fxfs:fuchsia.fxfs",
+  ]
 }

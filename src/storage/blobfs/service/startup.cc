@@ -80,7 +80,7 @@ void StartupService::Start(StartRequestView request, StartCompleter::Sync& compl
     FX_LOGS(ERROR) << "Could not initialize block device";
     completer.ReplyError(status);
   }
-  zx::status<> res = configure_(std::move(device), ParseMountOptions(request->options));
+  zx::status<> res = configure_(std::move(device), ParseMountOptions(std::move(request->options)));
   if (res.is_error()) {
     completer.ReplyError(res.status_value());
     return;

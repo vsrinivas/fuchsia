@@ -110,7 +110,8 @@ zx::status<fidl::ClientEnd<Directory>> FsInit(zx::channel device, DiskFormat df,
                                               const MountOptions& options, LaunchCallback cb,
                                               zx::channel crypt_client) {
   if (options.component_child_name != nullptr) {
-    std::string_view url = DiskFormatComponentUrl(df);
+    std::string_view url =
+        options.component_url.empty() ? DiskFormatComponentUrl(df) : options.component_url;
     // If we don't know the url, fall back on the old launching method.
     if (!url.empty()) {
       // Otherwise, launch the component way.
@@ -237,7 +238,9 @@ zx::status<> Shutdown(fidl::UnownedClientEnd<Directory> export_root) {
 __EXPORT
 zx::status<MountedFilesystem> Mount(fbl::unique_fd device_fd, const char* mount_path, DiskFormat df,
                                     const MountOptions& options, LaunchCallback cb) {
-  zx::channel crypt_client(options.crypt_client);
+  zx::channel crypt_client;
+  if (options.crypt_client)
+    crypt_client = options.crypt_client();
 
   auto result = StartFilesystem(std::move(device_fd), df, options, cb, std::move(crypt_client));
   if (result.is_error())

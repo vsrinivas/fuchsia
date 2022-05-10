@@ -52,6 +52,11 @@
             "description": "True if the filesystem is case sensitive",
             "type": "boolean"
         },
+        "is_component": {
+            "default": false,
+            "description": "True if the filesystem runs as a component",
+            "type": "boolean"
+        },
         "is_journaled": {
             "default": true,
             "description": "True if the filesystem implements journaling and can recover from sudden failure",

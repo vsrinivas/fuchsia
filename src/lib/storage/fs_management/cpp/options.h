@@ -39,8 +39,8 @@ struct MountOptions {
   // If true, puts decompression in a sandboxed process.
   bool sandbox_decompression = false;
 
-  // If set, handle to the crypt client. The handle is *always* consumed, even on error.
-  zx_handle_t crypt_client = ZX_HANDLE_INVALID;
+  // If set, a callable that returns a handle to the crypt client.
+  std::function<zx::channel()> crypt_client;
 
   // If set, and the filesystem type supports it, use the provided child name to connect to an
   // existing filesystem component instance that implements and is serving the
@@ -56,6 +56,9 @@ struct MountOptions {
   //
   // See //src/storage/docs/launching.md for more information.
   const char* component_collection_name = nullptr;
+
+  // If set, use the specified component URL rather than a default.
+  std::string component_url;
 
   // Generate the argv list for launching a process based on this set of options.
   __EXPORT
@@ -81,9 +84,8 @@ struct MkfsOptions {
   // for blobfs.
   uint64_t num_inodes = 0;
 
-  // Handle to the crypt client for filesystems that need it.  The handle is *always* consumed, even
-  // on error.
-  zx_handle_t crypt_client = ZX_HANDLE_INVALID;
+  // If set, a callable that returns a handle to the crypt client.
+  std::function<zx::channel()> crypt_client;
 
   // If set, and the filesystem type supports it, use the provided child name to connect to an
   // existing filesystem component instance that implements and is serving the
@@ -99,6 +101,9 @@ struct MkfsOptions {
   //
   // See //src/storage/docs/launching.md for more information.
   const char* component_collection_name = nullptr;
+
+  // If set, use the specified component URL rather than a default.
+  std::string component_url;
 
   // Generate the argv list for launching a process based on this set of options.
   __EXPORT
@@ -118,9 +123,8 @@ struct FsckOptions {
   bool always_modify = false;  // Fsck never asks to resolve problems; it will always do it.
   bool force = false;          // Force fsck to check the filesystem integrity, even if "clean".
 
-  // Handle to the crypt client for filesystems that need it.  The handle is *always* consumed, even
-  // on error.
-  zx_handle_t crypt_client = ZX_HANDLE_INVALID;
+  // If set, a callable that returns a handle to the crypt client.
+  std::function<zx::channel()> crypt_client;
 
   // If set, and the filesystem type supports it, use the provided child name to connect to an
   // existing filesystem component instance that implements and is serving the
@@ -136,6 +140,9 @@ struct FsckOptions {
   //
   // See //src/storage/docs/launching.md for more information.
   const char* component_collection_name = nullptr;
+
+  // If set, use the specified component URL rather than a default.
+  std::string component_url;
 
   // Generate the argv list for launching a process based on this set of options.
   __EXPORT

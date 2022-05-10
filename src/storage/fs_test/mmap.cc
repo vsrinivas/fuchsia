@@ -42,47 +42,32 @@ enum class DeathTestOp {
 };
 
 // Helper function for death tests.
-void mmap_crash(const std::string& path, int prot, int flags, DeathTestOp rw) {
-  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
+void mmap_crash(const TestFilesystemOptions& options, int prot, int flags, DeathTestOp rw) {
+  auto fs = TestFilesystem::Create(options).value();
+
+  const std::string inaccessible = fs.mount_path() + "inaccessible";
+  fbl::unique_fd fd(open(inaccessible.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
+  char tmp[] = "this is a temporary buffer";
+  ASSERT_EQ(write(fd.get(), tmp, sizeof(tmp)), static_cast<ssize_t>(sizeof(tmp)));
   void* addr = mmap(nullptr, PAGE_SIZE, prot, flags, fd.get(), 0);
   ASSERT_NE(addr, MAP_FAILED);
   ASSERT_EQ(close(fd.release()), 0);
 
   switch (rw) {
-    case DeathTestOp::Read:
-      ASSERT_DEATH([[maybe_unused]] int v = *static_cast<volatile int*>(addr), _);
-      ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
-      break;
+    case DeathTestOp::Read: {
+      [[maybe_unused]] int v = *static_cast<volatile int*>(addr);
+    } break;
     case DeathTestOp::Write:
-      ASSERT_DEATH(*static_cast<int*>(addr) = 5, _);
-      ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
+      *static_cast<int*>(addr) = 5;
       break;
     case DeathTestOp::ReadAfterUnmap:
-      ASSERT_DEATH(
-          {
-            // Perform the munmap here as ASSERT_DEATH creates a thread and performs allocations,
-            // which could then reuse the slot we just unmapped. As there are no other active
-            // threads performing allocations in these tests, unmapping here should prevent any
-            // races between the unmap and the access.
-            munmap(addr, PAGE_SIZE);
-            [[maybe_unused]] int v = *static_cast<volatile int*>(addr);
-          },
-          _);
-      ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
+      munmap(addr, PAGE_SIZE);
+      { [[maybe_unused]] int v = *static_cast<volatile int*>(addr); }
       break;
     case DeathTestOp::WriteAfterUnmap:
-      ASSERT_DEATH(
-          {
-            // Perform the munmap here as ASSERT_DEATH creates a thread and performs allocations,
-            // which could then reuse the slot we just unmapped. As there are no other active
-            // threads performing allocations in these tests, unmapping here should prevent any
-            // races between the unmap and the access.
-            munmap(addr, PAGE_SIZE);
-            *static_cast<int*>(addr) = 5;
-          },
-          _);
-      ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
+      munmap(addr, PAGE_SIZE);
+      *static_cast<int*>(addr) = 5;
       break;
   }
 }
@@ -549,32 +534,36 @@ TEST_P(MmapSharedWriteTest, TruncateWriteExtend) {
   ASSERT_EQ(unlink(mmap_write_extend.c_str()), 0);
 }
 
-TEST_P(MmapTest, Death) {
-  const std::string inaccessible = GetPath("inaccessible");
-  fbl::unique_fd fd(open(inaccessible.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
-  ASSERT_TRUE(fd);
-  char tmp[] = "this is a temporary buffer";
-  ASSERT_EQ(write(fd.get(), tmp, sizeof(tmp)), static_cast<ssize_t>(sizeof(tmp)));
-  ASSERT_EQ(close(fd.release()), 0);
+class MmapDeathTest : public testing::Test,
+                      public testing::WithParamInterface<TestFilesystemOptions> {};
+
+TEST_P(MmapDeathTest, Death) {
+  // Death tests on Fuchsia work by running a copy in a new process with a filter set to only run a
+  // specific case.  This means that any code outside of ASSERT_DEATH statements will get run for
+  // *every* instance of the process including the parent process that monitors all the children.
+  // For this reason, we don't instantiate a filesystem in the constructor since it's wasteful, and
+  // also causes problems when filesystems run as components because the component is shared between
+  // the parent and child processes.
+  const TestFilesystemOptions& options = GetParam();
 
   // Crashes while mapped
-  mmap_crash(inaccessible, PROT_READ, MAP_PRIVATE, DeathTestOp::Write);
-  mmap_crash(inaccessible, PROT_READ, MAP_SHARED, DeathTestOp::Write);
+  ASSERT_DEATH(mmap_crash(options, PROT_READ, MAP_PRIVATE, DeathTestOp::Write), _);
+  ASSERT_DEATH(mmap_crash(options, PROT_READ, MAP_SHARED, DeathTestOp::Write), _);
 
   // Write-only is not possible
-  mmap_crash(inaccessible, PROT_NONE, MAP_SHARED, DeathTestOp::Read);
-  mmap_crash(inaccessible, PROT_NONE, MAP_SHARED, DeathTestOp::Write);
-  mmap_crash(inaccessible, PROT_NONE, MAP_SHARED, DeathTestOp::WriteAfterUnmap);
+  ASSERT_DEATH(mmap_crash(options, PROT_NONE, MAP_SHARED, DeathTestOp::Read), _);
+  ASSERT_DEATH(mmap_crash(options, PROT_NONE, MAP_SHARED, DeathTestOp::Write), _);
+  ASSERT_DEATH(mmap_crash(options, PROT_NONE, MAP_SHARED, DeathTestOp::WriteAfterUnmap), _);
 
   // Crashes after unmapped
-  mmap_crash(inaccessible, PROT_READ, MAP_PRIVATE, DeathTestOp::ReadAfterUnmap);
-  mmap_crash(inaccessible, PROT_READ, MAP_SHARED, DeathTestOp::ReadAfterUnmap);
-  mmap_crash(inaccessible, PROT_WRITE | PROT_READ, MAP_PRIVATE, DeathTestOp::WriteAfterUnmap);
-  if (fs().GetTraits().supports_mmap_shared_write) {
-    mmap_crash(inaccessible, PROT_WRITE | PROT_READ, MAP_SHARED, DeathTestOp::WriteAfterUnmap);
+  ASSERT_DEATH(mmap_crash(options, PROT_READ, MAP_PRIVATE, DeathTestOp::ReadAfterUnmap), _);
+  ASSERT_DEATH(mmap_crash(options, PROT_READ, MAP_SHARED, DeathTestOp::ReadAfterUnmap), _);
+  ASSERT_DEATH(
+      mmap_crash(options, PROT_WRITE | PROT_READ, MAP_PRIVATE, DeathTestOp::WriteAfterUnmap), _);
+  if (options.filesystem->GetTraits().supports_mmap_shared_write) {
+    ASSERT_DEATH(
+        mmap_crash(options, PROT_WRITE | PROT_READ, MAP_SHARED, DeathTestOp::WriteAfterUnmap), _);
   }
-
-  ASSERT_EQ(unlink(inaccessible.c_str()), 0);
 }
 
 std::vector<TestFilesystemOptions> GetMmapTestCombinations() {
@@ -609,6 +598,11 @@ INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MmapSharedWriteTest,
                          testing::PrintToStringParamName());
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MmapSharedWriteTest);
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MmapDeathTest, testing::ValuesIn(GetMmapTestCombinations()),
+                         testing::PrintToStringParamName());
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MmapDeathTest);
 
 }  // namespace
 }  // namespace fs_test

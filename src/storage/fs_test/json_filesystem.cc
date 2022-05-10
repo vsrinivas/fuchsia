@@ -49,7 +49,7 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
               ConfigGetOrDefault<bool>(config, "supports_shutdown_on_no_connections", false),
           .uses_crypt = ConfigGetOrDefault<bool>(config, "uses_crypt", false),
       },
-      format, sectors_per_cluster));
+      format, sectors_per_cluster, ConfigGetOrDefault<bool>(config, "is_component", false)));
 }
 
 class JsonInstance : public FilesystemInstance {
@@ -63,18 +63,31 @@ class JsonInstance : public FilesystemInstance {
     fs_management::MkfsOptions mkfs_options;
     mkfs_options.sectors_per_cluster = filesystem_.sectors_per_cluster();
     if (filesystem_.GetTraits().uses_crypt) {
-      if (auto service_or = GetCryptService(); service_or.is_error()) {
-        return service_or.take_error();
-      } else {
-        mkfs_options.crypt_client = service_or->release();
-      }
+      mkfs_options.crypt_client = [] {
+        if (auto service_or = GetCryptService(); service_or.is_error()) {
+          return zx::channel();
+        } else {
+          return *std::move(service_or);
+        }
+      };
+    }
+    if (filesystem_.is_component()) {
+      const std::string& name = filesystem_.GetTraits().name;
+      mkfs_options.component_child_name = name.c_str();
+      mkfs_options.component_url = "#meta/" + name;
     }
     return FsFormat(device_path_, filesystem_.format(), mkfs_options);
   }
 
   zx::status<> Mount(const std::string& mount_path,
                      const fs_management::MountOptions& options) override {
-    auto export_root_or = FsMount(device_path_, mount_path, filesystem_.format(), options);
+    fs_management::MountOptions mount_options = options;
+    if (filesystem_.is_component()) {
+      const std::string& name = filesystem_.GetTraits().name;
+      mount_options.component_child_name = name.c_str();
+      mount_options.component_url = "#meta/" + name;
+    }
+    auto export_root_or = FsMount(device_path_, mount_path, filesystem_.format(), mount_options);
     if (export_root_or.is_error())
       return export_root_or.take_error();
     outgoing_directory_ = std::move(*export_root_or);
@@ -88,12 +101,19 @@ class JsonInstance : public FilesystemInstance {
         .always_modify = false,
         .force = true,
     };
+    if (filesystem_.is_component()) {
+      const std::string& name = filesystem_.GetTraits().name;
+      options.component_child_name = name.c_str();
+      options.component_url = "#meta/" + name;
+    }
     if (filesystem_.GetTraits().uses_crypt) {
-      if (auto service_or = GetCryptService(); service_or.is_error()) {
-        return service_or.take_error();
-      } else {
-        options.crypt_client = service_or->release();
-      }
+      options.crypt_client = [] {
+        if (auto service_or = GetCryptService(); service_or.is_error()) {
+          return zx::channel();
+        } else {
+          return *std::move(service_or);
+        }
+      };
     }
     return zx::make_status(fs_management::Fsck(device_path_.c_str(), filesystem_.format(), options,
                                                fs_management::LaunchStdioSync));

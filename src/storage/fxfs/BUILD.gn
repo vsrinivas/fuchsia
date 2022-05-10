@@ -123,6 +123,7 @@ if (is_fuchsia) {
     "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup-rustc",
   ]
   if (tracing_enabled) {
     fxfs_deps += [ "//src/lib/trace/rust:trace" ]
@@ -138,6 +139,7 @@ if (is_fuchsia) {
   ]
   fxfs_sources += [
     "src/platform/fuchsia.rs",
+    "src/platform/fuchsia/component.rs",
     "src/platform/fuchsia/device.rs",
     "src/platform/fuchsia/directory.rs",
     "src/platform/fuchsia/errors.rs",
@@ -241,6 +243,12 @@ rustc_binary("fxfs") {
   }
 }
 
+fuchsia_component("fxfs_component") {
+  manifest = "meta/fxfs.cml"
+  component_name = "fxfs"
+  deps = [ ":fxfs" ]
+}
+
 fuchsia_shell_package("fxfs-bin") {
   deps = [ ":fxfs" ]
 }
@@ -254,14 +262,15 @@ fidl("fuchsia.fxfs") {
 }
 
 fs_test_config("fxfs") {
-  timestamp_granularity = 1
+  is_component = true
+  max_file_size = 9223372036854775807
   supports_hard_links = true
   supports_inspect = true
   supports_resize = true
   supports_mmap = true
   supports_mmap_shared_write = false
   supports_shutdown_on_no_connections = true
-  max_file_size = 9223372036854775807
+  timestamp_granularity = 1
   uses_crypt = true
 
   options = [
@@ -294,26 +303,42 @@ test("fxfs-interop-fs") {
 }
 
 storage_driver_test_realm_v2_component("fxfs-interop-fs-tests") {
-  deps = [ ":fxfs-interop-fs" ]
+  deps = [
+    ":fxfs-interop-fs",
+    ":test_fxfs_component_manifest_shard",
+  ]
+}
+
+expect_includes("test_fxfs_component_manifest_shard") {
+  testonly = true
+  includes = [ "meta/test_fxfs.shard.cml" ]
 }
 
 fs_test_suite("fxfs") {
   deps = [
+    ":fxfs_component",
     ":fxfs_fs_test_config",
     "//src/storage/fxfs",
     "//src/storage/fxfs-crypt",
   ]
   extra_components = [ ":fxfs-interop-fs-tests" ]
-  component_deps = [ "//src/storage/fs_test:test_crypt_service" ]
+  component_deps = [
+    ":test_fxfs_component_manifest_shard",
+    "//src/storage/fs_test:test_crypt_service",
+  ]
 }
 
 slow_fs_test_suite("fxfs") {
   deps = [
+    ":fxfs_component",
     ":fxfs_fs_test_config",
     "//src/storage/fxfs",
     "//src/storage/fxfs-crypt",
   ]
-  component_deps = [ "//src/storage/fs_test:test_crypt_service" ]
+  component_deps = [
+    ":test_fxfs_component_manifest_shard",
+    "//src/storage/fs_test:test_crypt_service",
+  ]
 }
 
 group("tests") {
@@ -322,6 +347,7 @@ group("tests") {
     ":fxfs-fs-tests",
     ":fxfs-slow-fs-tests",
     ":fxfs-tests",
+    ":fxfs_component",
     ":lib_test($host_toolchain)",
     "//src/storage/fxfs/tools:tests",
   ]

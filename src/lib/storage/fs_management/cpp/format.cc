@@ -224,11 +224,13 @@ __EXPORT std::string_view DiskFormatString(DiskFormat fs_type) {
 
 __EXPORT std::string_view DiskFormatComponentUrl(DiskFormat fs_type) {
   switch (fs_type) {
-    case kDiskFormatCount:
-    case kDiskFormatUnknown:
-      break;
     case kDiskFormatBlobfs:
       return kBlobfsComponentUrl;
+    case kDiskFormatFxfs:
+      // TODO(fxbug.dev/99591): Enable this when ready.
+      // return kFxfsComponentUrl;
+    case kDiskFormatCount:
+    case kDiskFormatUnknown:
     case kDiskFormatGpt:
     case kDiskFormatMbr:
     case kDiskFormatMinfs:
@@ -239,7 +241,6 @@ __EXPORT std::string_view DiskFormatComponentUrl(DiskFormat fs_type) {
     case kDiskFormatBlockVerity:
     case kDiskFormatVbmeta:
     case kDiskFormatBootpart:
-    case kDiskFormatFxfs:
     case kDiskFormatF2fs:
     case kDiskFormatNandBroker:
       break;

@@ -235,7 +235,7 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status ret = LaunchFsComponent(std::move(block_device), options, "blobfs");
+  zx::status ret = LaunchFsComponent(std::move(block_device), std::move(options), "blobfs");
   if (ret.is_error()) {
     return ret.error_value();
   }

@@ -5,6 +5,7 @@
 use {
     crate::{
         errors::FxfsError,
+        filesystem::SyncOptions,
         object_store::{
             directory::{self, Directory, ObjectDescriptor, ReplacedChild},
             transaction::{LockKey, Options},
@@ -16,12 +17,14 @@ use {
             file::FxFile,
             node::{FxNode, GetResult, NodeCache},
             pager::Pager,
+            runtime::{TOTAL_NODES, VFS_TYPE_FXFS},
             vmo_data_buffer::VmoDataBuffer,
         },
+        serialized_types::LATEST_VERSION,
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_zircon::Status,
     futures::{self, channel::oneshot, FutureExt},
     std::{
@@ -31,12 +34,16 @@ use {
         time::Duration,
     },
     vfs::{
+        execution_scope::ExecutionScope,
         filesystem::{Filesystem, FilesystemRename},
+        inspect::{FsInspect, InfoData, UsageData, VolumeData},
         path::Path,
+        registry::token_registry,
     },
 };
 
 pub const DEFAULT_FLUSH_PERIOD: Duration = Duration::from_secs(20);
+const FXFS_INFO_NAME: &'static str = "fxfs";
 
 /// FxVolume represents an opened volume. It is also a (weak) cache for all opened Nodes within the
 /// volume.
@@ -46,11 +53,14 @@ pub struct FxVolume {
     pager: Pager,
     executor: fasync::EHandle,
 
-    /// A tuple of the actual task and a channel to signal to terminate the task.
+    // A tuple of the actual task and a channel to signal to terminate the task.
     flush_task: Mutex<Option<(fasync::Task<()>, oneshot::Sender<()>)>>,
 
-    /// Unique identifier of the filesystem that owns this volume.
+    // Unique identifier of the filesystem that owns this volume.
     fs_id: u64,
+
+    // The execution scope for this volume.
+    scope: ExecutionScope,
 }
 
 impl FxVolume {
@@ -62,6 +72,7 @@ impl FxVolume {
             executor: fasync::EHandle::local(),
             flush_task: Mutex::new(None),
             fs_id,
+            scope: ExecutionScope::build().token_registry(token_registry::Simple::new()).new(),
         })
     }
 
@@ -85,7 +96,21 @@ impl FxVolume {
         self.fs_id
     }
 
+    pub fn scope(&self) -> &ExecutionScope {
+        &self.scope
+    }
+
     pub async fn terminate(&self) {
+        self.scope.shutdown();
+        self.scope.wait().await;
+        let sync_status = self
+            .store
+            .filesystem()
+            .sync(SyncOptions { flush_device: true, ..Default::default() })
+            .await;
+        if sync_status.is_err() {
+            log::error!("Failed to sync filesystem; data may be lost: {:?}", sync_status);
+        }
         self.pager.terminate().await;
         let task = std::mem::replace(&mut *self.flush_task.lock().unwrap(), None);
         if let Some((task, terminate)) = task {
@@ -360,10 +385,49 @@ impl Filesystem for FxVolume {
     }
 }
 
+#[async_trait]
+impl FsInspect for FxVolume {
+    fn get_info_data(&self) -> InfoData {
+        InfoData {
+            id: self.fs_id,
+            fs_type: VFS_TYPE_FXFS.into(),
+            name: FXFS_INFO_NAME.into(),
+            version_major: LATEST_VERSION.major.into(),
+            version_minor: LATEST_VERSION.minor.into(),
+            block_size: self.block_size().into(),
+            max_filename_length: fio::MAX_FILENAME,
+            // TODO(fxbug.dev/93770): Determine how to report oldest on-disk version if required.
+            oldest_version: None,
+        }
+    }
+
+    async fn get_usage_data(&self) -> UsageData {
+        let info = self.store.filesystem().get_info();
+        let object_count = self.store().object_count();
+        UsageData {
+            total_bytes: info.total_bytes,
+            used_bytes: info.used_bytes,
+            total_nodes: TOTAL_NODES,
+            used_nodes: object_count,
+        }
+    }
+
+    fn get_volume_data(&self) -> VolumeData {
+        // Since we're not using FVM these values should all be set to zero.
+        VolumeData {
+            size_bytes: 0,
+            size_limit_bytes: 0,
+            available_space_bytes: 0,
+            // TODO(fxbug.dev/93770): Handle out of space events.
+            out_of_space_events: 0,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct FxVolumeAndRoot {
     volume: Arc<FxVolume>,
-    root: Arc<dyn FxNode>,
+    root: Arc<FxDirectory>,
 }
 
 impl FxVolumeAndRoot {
@@ -371,10 +435,12 @@ impl FxVolumeAndRoot {
         let volume = Arc::new(FxVolume::new(store, unique_id)?);
         let root_object_id = volume.store().root_directory_object_id();
         let root_dir = Directory::open(&volume, root_object_id).await?;
-        let root: Arc<dyn FxNode> = Arc::new(FxDirectory::new(None, root_dir));
+        let root = Arc::new(FxDirectory::new(None, root_dir));
         match volume.cache.get_or_reserve(root_object_id).await {
             GetResult::Node(_) => unreachable!(),
-            GetResult::Placeholder(placeholder) => placeholder.commit(&root),
+            GetResult::Placeholder(placeholder) => {
+                placeholder.commit(&(root.clone() as Arc<dyn FxNode>))
+            }
         }
         Ok(Self { volume, root })
     }
@@ -383,8 +449,8 @@ impl FxVolumeAndRoot {
         &self.volume
     }
 
-    pub fn root(&self) -> Arc<FxDirectory> {
-        self.root.clone().into_any().downcast::<FxDirectory>().expect("Invalid type for root")
+    pub fn root(&self) -> &Arc<FxDirectory> {
+        &self.root
     }
 
     #[cfg(test)]

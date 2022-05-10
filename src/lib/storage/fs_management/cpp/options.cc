@@ -48,6 +48,8 @@ zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_option
   options.verbose = verbose_mount;
   options.sandbox_decompression = sandbox_decompression;
   options.write_compression_level = write_compression_level;
+  if (crypt_client)
+    options.crypt = fidl::ClientEnd<fuchsia_fxfs::Crypt>(crypt_client());
 
   if (write_compression_algorithm != nullptr) {
     std::string write_compression_algorithm_string(write_compression_algorithm);
@@ -75,7 +77,7 @@ zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_option
     }
   }
 
-  return zx::ok(options);
+  return zx::ok(std::move(options));
 }
 
 std::vector<std::string> MkfsOptions::as_argv(const char *binary) const {
@@ -112,6 +114,8 @@ fuchsia_fs_startup::wire::FormatOptions MkfsOptions::as_format_options() const {
   options.verbose = verbose;
   options.deprecated_padded_blobfs_format = deprecated_padded_blobfs_format;
   options.num_inodes = num_inodes;
+  if (crypt_client)
+    options.crypt = fidl::ClientEnd<fuchsia_fxfs::Crypt>(crypt_client());
 
   return options;
 }
@@ -148,6 +152,8 @@ std::vector<std::string> FsckOptions::as_argv_fat32(const char *binary,
 
 fuchsia_fs_startup::wire::CheckOptions FsckOptions::as_check_options() const {
   fuchsia_fs_startup::wire::CheckOptions options;
+  if (crypt_client)
+    options.crypt = fidl::ClientEnd<fuchsia_fxfs::Crypt>(crypt_client());
   return options;
 }
 

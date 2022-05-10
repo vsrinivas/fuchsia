@@ -19,7 +19,7 @@ fs_management::MountOptions TestFilesystem::DefaultMountOptions() const {
         blobfs::CompressionAlgorithmToString(*options_.blob_compression_algorithm);
   }
   if (GetTraits().uses_crypt)
-    options.crypt_client = GetCryptService()->release();
+    options.crypt_client = [] { return *GetCryptService(); };
   return options;
 }
 

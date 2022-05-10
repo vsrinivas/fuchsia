@@ -30,22 +30,26 @@ enum State {
   kStarted,
 };
 
-constexpr MountOptions kEmptyOptions = {};
+MountOptions ReadonlyOptions() {
+  return MountOptions{
+      .readonly = true,
+      // Remaining options are same as default values.
+  };
+}
 
-constexpr MountOptions kReadonlyOptions = {
-    .readonly = true,
-    // Remaining options are same as default values.
-};
+MountOptions DynamicComponentOptions() {
+  return MountOptions{
+      .component_child_name = "test-blobfs", .component_collection_name = "fs-collection",
+      // Remaining options are same as default values.
+  };
+}
 
-constexpr MountOptions kDynamicComponentOptions = {
-    .component_child_name = "test-blobfs", .component_collection_name = "fs-collection",
-    // Remaining options are same as default values.
-};
-
-constexpr MountOptions kStaticComponentOptions = {
-    .component_child_name = "static-test-blobfs",
-    // Remaining options are same as default values.
-};
+MountOptions StaticComponentOptions() {
+  return MountOptions{
+      .component_child_name = "static-test-blobfs",
+      // Remaining options are same as default values.
+  };
+}
 
 constexpr char kTestFilePath[] = "test_file";
 
@@ -65,11 +69,14 @@ class OutgoingDirectoryFixture : public testing::Test {
         .component_collection_name = options_.component_collection_name,
     };
     if (format_ == kDiskFormatFxfs) {
-      if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
-        ADD_FAILURE() << "Unable to get crypt service";
-      } else {
-        mkfs_options.crypt_client = service_or->release();
-      }
+      mkfs_options.crypt_client = [] {
+        if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
+          ADD_FAILURE() << "Unable to get crypt service";
+          return zx::channel();
+        } else {
+          return *std::move(service_or);
+        }
+      };
     }
     ASSERT_EQ(status = Mkfs(ramdisk_.path().c_str(), format_, LaunchStdioSync, mkfs_options), ZX_OK)
         << zx_status_get_string(status);
@@ -80,11 +87,14 @@ class OutgoingDirectoryFixture : public testing::Test {
         .component_collection_name = options_.component_collection_name,
     };
     if (format_ == kDiskFormatFxfs) {
-      if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
-        ADD_FAILURE() << "Unable to get crypt service";
-      } else {
-        fsck_options.crypt_client = service_or->release();
-      }
+      fsck_options.crypt_client = [] {
+        if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
+          ADD_FAILURE() << "Unable to get crypt service";
+          return zx::channel();
+        } else {
+          return *std::move(service_or);
+        }
+      };
     }
     ASSERT_EQ(status = Fsck(ramdisk_.path().c_str(), format_, fsck_options, LaunchStdioSync), ZX_OK)
         << zx_status_get_string(status);
@@ -113,11 +123,14 @@ class OutgoingDirectoryFixture : public testing::Test {
 
     MountOptions actual_options = options;
     if (format_ == kDiskFormatFxfs) {
-      if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
-        ADD_FAILURE() << "Unable to get crypt service";
-      } else {
-        actual_options.crypt_client = service_or->release();
-      }
+      actual_options.crypt_client = [] {
+        if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
+          ADD_FAILURE() << "Unable to get crypt service";
+          return zx::channel();
+        } else {
+          return *std::move(service_or);
+        }
+      };
     }
 
     auto fs_or = Mount(std::move(device_fd), nullptr, format_, actual_options, LaunchStdioAsync);
@@ -196,9 +209,9 @@ INSTANTIATE_TEST_SUITE_P(OutgoingDirectoryTest, OutgoingDirectoryTest,
                                           // Filesystems that don't yet support launching as
                                           // components should be able to fall back to launching
                                           // the old way.
-                                          testing::Values(kEmptyOptions, kReadonlyOptions,
-                                                          kStaticComponentOptions,
-                                                          kDynamicComponentOptions)),
+                                          testing::Values(MountOptions(), ReadonlyOptions(),
+                                                          StaticComponentOptions(),
+                                                          DynamicComponentOptions())),
                          PrintTestSuffix);
 
 // Minfs-Specific Tests (can be generalized to work with any mutable filesystem by parameterizing
@@ -247,7 +260,7 @@ class OutgoingDirectoryMinfs : public OutgoingDirectoryFixture {
 TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
   // restart the filesystem in read-only mode
   ASSERT_NO_FATAL_FAILURE(StopFilesystem());
-  ASSERT_NO_FATAL_FAILURE(StartFilesystem(kReadonlyOptions));
+  ASSERT_NO_FATAL_FAILURE(StartFilesystem(ReadonlyOptions()));
 
   auto fail_file_ends = fidl::CreateEndpoints<fio::File>();
   ASSERT_TRUE(fail_file_ends.is_ok()) << fail_file_ends.status_string();

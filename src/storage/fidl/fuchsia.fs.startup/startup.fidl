@@ -4,6 +4,7 @@
 
 library fuchsia.fs.startup;
 
+using fuchsia.fxfs;
 using fuchsia.hardware.block;
 using zx;
 
@@ -43,6 +44,9 @@ type StartOptions = resource struct {
     /// An optional eviction policy specifier for the filesystem to use for in-memory structures
     /// (if the filesystem supports it), specifically for pager-backed files.
     cache_eviction_policy_override EvictionPolicyOverride;
+
+    /// An optional connection to a crypt client (for encrypted filesystems).
+    crypt client_end:<fuchsia.fxfs.Crypt, optional>;
 };
 
 /// Options for how to format filesystems.
@@ -54,10 +58,16 @@ type FormatOptions = resource struct {
     /// The initial number of inodes to allocate space for. If zero, a default is used. Only
     /// supported for blobfs.
     num_inodes uint64 = 0;
+
+    /// An optional connection to a crypt client (for encrypted filesystems).
+    crypt client_end:<fuchsia.fxfs.Crypt, optional>;
 };
 
 /// Options for running consistency checks on filesystems.
-type CheckOptions = resource struct {};
+type CheckOptions = resource struct {
+    /// An optional connection to a crypt client (for encrypted filesystems).
+    crypt client_end:<fuchsia.fxfs.Crypt, optional>;
+};
 
 // TODO(fxbug.dev/90702): Figure out a more flexible configuration option strategy.
 @discoverable
