@@ -62,7 +62,7 @@ TEST(NaturalResponsePayload, Decode) {
   fidl_message_header_t header;
   fidl::InitTxnHeader(&header, 0, 0, fidl::MessageDynamicFlags::kStrictMethod);
   header.at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
-  auto metadata = fidl::internal::WireFormatMetadata::FromTransactionalHeader(header);
+  auto metadata = fidl::WireFormatMetadata::FromTransactionalHeader(header);
 
   // Perform decoding.
   fitx::result result =

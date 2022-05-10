@@ -86,11 +86,10 @@ Output RoundTrip(const Input& input) {
       BytePart(oubgoing_body.bytes(), 0),
       HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size())));
   oubgoing_body.ClearHandlesUnsafe();
-  EXPECT_EQ(
-      ZX_OK,
-      incoming_body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV2Header),
-                           Output::FidlType, &err_msg),
-      "%s", err_msg);
+  EXPECT_EQ(ZX_OK,
+            incoming_body.Decode(fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header),
+                                 Output::FidlType, &err_msg),
+            "%s", err_msg);
 
   fidl::Decoder decoder(std::move(incoming_body));
   Output output;
@@ -106,7 +105,7 @@ Output DecodedBytes(std::vector<uint8_t> input) {
 
   const char* error = nullptr;
   EXPECT_EQ(ZX_OK,
-            body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV2Header),
+            body.Decode(fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header),
                         Output::FidlType, &error),
             "%s", error);
 
@@ -129,8 +128,8 @@ Output DecodedBytes(const fidl_message_header_t& header, std::vector<uint8_t> by
 
   const char* error = nullptr;
   EXPECT_EQ(ZX_OK,
-            body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(header),
-                        Output::FidlType, &error),
+            body.Decode(fidl::WireFormatMetadata::FromTransactionalHeader(header), Output::FidlType,
+                        &error),
             "%s", error);
 
   fidl::Decoder decoder(std::move(body));
@@ -208,8 +207,8 @@ void CheckDecodeFailure(const fidl_message_header_t& header, std::vector<uint8_t
 
   const char* error = nullptr;
   EXPECT_EQ(expected_failure_code,
-            body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(header),
-                        Output::FidlType, &error),
+            body.Decode(fidl::WireFormatMetadata::FromTransactionalHeader(header), Output::FidlType,
+                        &error),
             "%s", error);
 }
 

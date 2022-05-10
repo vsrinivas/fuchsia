@@ -12,6 +12,9 @@
 #include <cstring>
 
 namespace fidl {
+
+class WireFormatMetadata;
+
 namespace internal {
 
 enum class WireFormatVersion {
@@ -23,6 +26,11 @@ enum class WireFormatVersion {
   // envelopes.
   kV2 = FIDL_WIRE_FORMAT_VERSION_V2,
 };
+
+// Constructs a |WireFormatMetadata| corresponding to the version.
+WireFormatMetadata WireFormatMetadataForVersion(WireFormatVersion version);
+
+}  // namespace internal
 
 // Wire format metadata describing the format and revision of an encoded FIDL
 // message. This class is shared by the various C++ FIDL bindings.
@@ -47,7 +55,7 @@ class WireFormatMetadata {
   // Will panic if the metadata is invalid (e.g. unknown magic number). Callers
   // should first validate the metadata or the transactional header from which
   // it is derived.
-  WireFormatVersion wire_format_version() const;
+  internal::WireFormatVersion wire_format_version() const;
 
   // Returns the wire format version as a C enum.
   //
@@ -57,7 +65,8 @@ class WireFormatMetadata {
   ::FidlWireFormatVersion c_wire_format_version() const;
 
  private:
-  friend WireFormatMetadata WireFormatMetadataForVersion(WireFormatVersion version);
+  friend WireFormatMetadata internal::WireFormatMetadataForVersion(
+      internal::WireFormatVersion version);
 
   WireFormatMetadata() = default;
 
@@ -67,10 +76,6 @@ class WireFormatMetadata {
   uint8_t reserved_[4] = {};
 };
 
-// Constructs a |WireFormatMetadata| corresponding to the version.
-WireFormatMetadata WireFormatMetadataForVersion(WireFormatVersion version);
-
-}  // namespace internal
 }  // namespace fidl
 
 #endif  // LIB_FIDL_CPP_WIRE_FORMAT_METADATA_H_

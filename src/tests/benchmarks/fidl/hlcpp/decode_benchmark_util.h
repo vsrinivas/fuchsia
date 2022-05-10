@@ -57,7 +57,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
           fidl::HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size()),
                                static_cast<uint32_t>(handle_infos.size())));
       const char* error_msg;
-      const auto metadata = fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV2Header);
+      const auto metadata = fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header);
 
       ZX_ASSERT_MSG(ZX_OK == decode_body.Decode(metadata, FidlType::FidlType, &error_msg), "%s",
                     error_msg);

@@ -17,8 +17,8 @@
 
 namespace cpp_benchmarks {
 
-const fidl::internal::WireFormatMetadata kV2WireformatMetadata =
-    fidl::internal::WireFormatMetadata::FromTransactionalHeader({
+const fidl::WireFormatMetadata kV2WireformatMetadata =
+    fidl::WireFormatMetadata::FromTransactionalHeader({
         .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
         .dynamic_flags = 0,
         .magic_number = kFidlWireFormatMagicNumberInitial,

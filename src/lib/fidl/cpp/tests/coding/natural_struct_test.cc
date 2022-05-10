@@ -38,7 +38,7 @@ TEST(NaturalStruct, Decode) {
       fidl::IncomingMessage::kSkipMessageHeaderValidation);
 
   // Indicate V2 wire format.
-  auto wire_format = ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV2Header);
+  auto wire_format = ::fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header);
 
   // Perform decoding.
   fitx::result result =
@@ -78,7 +78,7 @@ TEST(NaturalStructWithHandle, Decode) {
       fidl::IncomingMessage::kSkipMessageHeaderValidation);
 
   // Indicate V2 wire format.
-  auto wire_format = ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV2Header);
+  auto wire_format = ::fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header);
 
   // Perform decoding.
   fitx::result result =

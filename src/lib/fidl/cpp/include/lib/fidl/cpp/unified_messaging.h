@@ -75,7 +75,7 @@ static auto DecodeTransactionalMessage(::fidl::IncomingMessage&& message)
   ZX_DEBUG_ASSERT(message.is_transactional());
   constexpr bool kHasPayload = !std::is_same_v<Payload, cpp17::nullopt_t>;
   const fidl_message_header& header = *message.header();
-  auto metadata = ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(header);
+  auto metadata = ::fidl::WireFormatMetadata::FromTransactionalHeader(header);
   fidl::IncomingMessage body_message = message.SkipTransactionHeader();
 
   if constexpr (kHasPayload) {

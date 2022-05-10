@@ -75,8 +75,8 @@ HLCPPIncomingBody& HLCPPIncomingBody::operator=(HLCPPIncomingBody&& other) {
   return *this;
 }
 
-zx_status_t HLCPPIncomingBody::Decode(const internal::WireFormatMetadata& metadata,
-                                      const fidl_type_t* type, const char** error_msg_out) {
+zx_status_t HLCPPIncomingBody::Decode(const WireFormatMetadata& metadata, const fidl_type_t* type,
+                                      const char** error_msg_out) {
   if (!metadata.is_valid()) {
     *error_msg_out = "invalid wire format metadata";
     return ZX_ERR_INVALID_ARGS;
@@ -113,8 +113,8 @@ HLCPPIncomingMessage& HLCPPIncomingMessage::operator=(HLCPPIncomingMessage&& oth
 }
 
 zx_status_t HLCPPIncomingMessage::Decode(const fidl_type_t* type, const char** error_msg_out) {
-  zx_status_t status = body_view_.Decode(
-      internal::WireFormatMetadata::FromTransactionalHeader(header()), type, error_msg_out);
+  zx_status_t status =
+      body_view_.Decode(WireFormatMetadata::FromTransactionalHeader(header()), type, error_msg_out);
   return status;
 }
 
@@ -222,8 +222,7 @@ zx_status_t HLCPPOutgoingMessage::Encode(const fidl_type_t* type, const char** e
 
 zx_status_t HLCPPOutgoingMessage::Validate(const fidl_type_t* type,
                                            const char** error_msg_out) const {
-  internal::WireFormatMetadata wire_format_metadata =
-      internal::WireFormatMetadata::FromTransactionalHeader(header());
+  WireFormatMetadata wire_format_metadata = WireFormatMetadata::FromTransactionalHeader(header());
   if (!wire_format_metadata.is_valid()) {
     *error_msg_out = "invalid wire format metadata";
     return ZX_ERR_INVALID_ARGS;

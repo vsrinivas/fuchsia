@@ -72,7 +72,7 @@ class HLCPPIncomingBody {
   // Decodes the transactional message body in-place.
   //
   // |metadata| describes features/revision information about the wire format.
-  zx_status_t Decode(const internal::WireFormatMetadata& metadata, const fidl_type_t* type,
+  zx_status_t Decode(const WireFormatMetadata& metadata, const fidl_type_t* type,
                      const char** error_msg_out);
 
   // Stop tracking the handles in stored in handles(), without closing them.

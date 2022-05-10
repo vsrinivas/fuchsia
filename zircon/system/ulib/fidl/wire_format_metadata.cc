@@ -8,7 +8,6 @@
 #include <cstring>
 
 namespace fidl {
-namespace internal {
 
 WireFormatMetadata WireFormatMetadata::FromOpaque(fidl_opaque_wire_format_metadata_t opaque) {
   uint8_t bytes[8] = {};
@@ -64,24 +63,26 @@ bool WireFormatMetadata::is_valid() const {
   return magic_number_ == kFidlWireFormatMagicNumberInitial;
 }
 
-WireFormatVersion WireFormatMetadata::wire_format_version() const {
+internal::WireFormatVersion WireFormatMetadata::wire_format_version() const {
   ZX_ASSERT_MSG(is_valid(), "Invalid metadata %d %d %d", at_rest_flags_[0], at_rest_flags_[1],
                 magic_number_);
   if ((at_rest_flags_[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) == 0) {
-    return WireFormatVersion::kV1;
+    return internal::WireFormatVersion::kV1;
   }
-  return WireFormatVersion::kV2;
+  return internal::WireFormatVersion::kV2;
 }
 
 ::FidlWireFormatVersion WireFormatMetadata::c_wire_format_version() const {
   switch (wire_format_version()) {
-    case WireFormatVersion::kV1:
+    case internal::WireFormatVersion::kV1:
       return FIDL_WIRE_FORMAT_VERSION_V1;
-    case WireFormatVersion::kV2:
+    case internal::WireFormatVersion::kV2:
       return FIDL_WIRE_FORMAT_VERSION_V2;
   }
   ZX_PANIC("Unsupported wire format version %d", static_cast<int>(wire_format_version()));
 }
+
+namespace internal {
 
 // Constructs a |WireFormatMetadata| corresponding to the version.
 WireFormatMetadata WireFormatMetadataForVersion(WireFormatVersion version) {

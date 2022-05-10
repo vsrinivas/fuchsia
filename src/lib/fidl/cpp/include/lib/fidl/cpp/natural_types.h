@@ -133,7 +133,7 @@ class EncodeResult {
 // TODO(fxbug.dev/82681): Make this API comply with the requirements in FIDL-at-rest.
 template <typename FidlType>
 ::fitx::result<::fidl::Error, FidlType> DecodeFrom(::fidl::IncomingMessage&& message,
-                                                   ::fidl::internal::WireFormatMetadata metadata) {
+                                                   ::fidl::WireFormatMetadata metadata) {
   static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
   ZX_ASSERT(!message.is_transactional());
 
