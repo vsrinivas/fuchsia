@@ -19,16 +19,14 @@ import 'package:zircon/zircon.dart';
 class CrashReportingRunner {
   CrashReporter? reporter;
   SizedVmo Function(String)? vmoBuilder;
-  final DateTime _startTime;
 
-  CrashReportingRunner({this.reporter, this.vmoBuilder})
-      : _startTime = DateTime.now();
+  CrashReportingRunner({this.reporter, this.vmoBuilder});
 
   /// Run the function [body] in a error zone to catch unhandled errors.
   Future<void> run(Future<void> Function() body) async {
-    FlutterError.onError = _report;
-    runZoned(
+    runZonedGuarded(
       () {
+        FlutterError.onError = _report;
         // Use try-catch for non-flutter framework errors or synchronous errors.
         try {
           body();
@@ -39,22 +37,22 @@ class CrashReportingRunner {
           throw _SynchronousException(e, stackTrace);
         }
       },
-      // ignore: deprecated_member_use
-      onError: _onError,
+      _onError,
     );
   }
 
   // Creates and files a [CrashReport] upon receiving [FlutterErrorDetails].
   void _report(FlutterErrorDetails details) {
-    final uptime = DateTime.now().difference(_startTime);
+    final uptime = System.clockGetMonotonic();
 
+    final error = details.exception.toString();
     var errorType = 'UnknownError';
-    var errorMessage = details.summary.toString();
-    final index = errorMessage.toString().indexOf(':');
+    var errorMessage = error;
+    final index = error.toString().indexOf(':');
     if (index >= 0) {
-      errorType = errorMessage.substring(0, index);
+      errorType = error.substring(0, index);
       errorMessage =
-          errorMessage.substring(index + 2 /*to get rid of the leading ': '*/);
+          error.substring(index + 2 /*to get rid of the leading ': '*/);
     }
 
     // Optionally you can print the error to console. This is the default
@@ -68,8 +66,8 @@ class CrashReportingRunner {
 
     // Generate [CrashReport] from errorType, errorMessage and stackTrace.
     final report = CrashReport(
-      programName: 'ermine.cm',
-      programUptime: uptime.inMilliseconds * 1000,
+      programName: 'fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cm',
+      programUptime: uptime,
       specificReport: SpecificCrashReport.withDart(
         RuntimeCrashReport(
           exceptionType: errorType,
