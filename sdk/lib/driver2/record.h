@@ -8,6 +8,18 @@
 #include <lib/fdf/dispatcher.h>
 #include <zircon/fidl.h>
 
+struct EncodedDriverStartArgs {
+  // |msg| is an encoded `fuchsia.driver.framework/DriverStartArgs` table. The
+  // ownership of handles in |msg| are transferred to the driver. The driver may
+  // mutate the bytes referenced by |msg|, but those are only alive until the
+  // |DriverRecordV1::start| method returns.
+  fidl_incoming_msg_t* msg;
+
+  // |wire_format_metadata| describes the the revision of the FIDL wire format
+  // used to encode |msg|.
+  fidl_opaque_wire_format_metadata wire_format_metadata;
+};
+
 struct DriverRecordV1 {
   // This is the version of `DriverRecord` and all structures used by it.
   uint64_t version;
@@ -15,12 +27,12 @@ struct DriverRecordV1 {
   // Pointer to a function that can start execution of the driver. This
   // function is executed on the shared driver thread within a `driver_host`.
   //
-  // |msg| contains a `fuchsia.driver.framework.DriverStartArgs` table. The
-  // table is "moved" to the driver, and is then presumed to be owned by it.
+  // |start_args| contains the arguments for starting a driver.
   // |dispatcher| is the default fdf dispatcher on which to run the driver.
   // The driver is free to ignore this and use its own.
   // |driver| provides a place to store the opaque driver structure.
-  zx_status_t (*start)(fidl_incoming_msg_t* msg, fdf_dispatcher_t* dispatcher, void** driver);
+  zx_status_t (*start)(EncodedDriverStartArgs start_args, fdf_dispatcher_t* dispatcher,
+                       void** driver);
 
   // Pointer to a function that can stop execution of the driver. This function
   // is executed on the shared driver thread within a `driver_host`.

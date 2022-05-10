@@ -66,11 +66,13 @@ class TestDriver {
   component::OutgoingDirectory outgoing_;
 };
 
-zx_status_t test_driver_start(fidl_incoming_msg_t* msg, fdf_dispatcher_t* dispatcher,
-                              void** driver) {
+zx_status_t test_driver_start(EncodedDriverStartArgs encoded_start_args,
+                              fdf_dispatcher_t* dispatcher, void** driver) {
   // TODO(fxbug.dev/45252): Use FIDL at rest.
+  auto wire_format_metadata =
+      fidl::WireFormatMetadata::FromOpaque(encoded_start_args.wire_format_metadata);
   fidl::unstable::DecodedMessage<fdf::wire::DriverStartArgs> decoded(
-      fidl::internal::WireFormatVersion::kV2, msg);
+      wire_format_metadata.wire_format_version(), encoded_start_args.msg);
   if (!decoded.ok()) {
     return decoded.status();
   }

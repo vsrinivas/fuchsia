@@ -36,7 +36,9 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
   // Starts the driver.
   //
   // The handles in `message` will be consumed.
-  zx::status<> Start(fidl::IncomingMessage& message, fdf::Dispatcher driver_dispatcher);
+  zx::status<> Start(fidl::IncomingMessage& message,
+                     fidl_opaque_wire_format_metadata_t wire_format_metadata,
+                     fdf::Dispatcher driver_dispatcher);
 
  private:
   std::string url_;

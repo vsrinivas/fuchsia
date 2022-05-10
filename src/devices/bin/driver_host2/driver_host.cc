@@ -87,14 +87,17 @@ void Driver::set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver
 
 void Driver::Stop(StopRequestView request, StopCompleter::Sync& completer) { binding_->Unbind(); }
 
-zx::status<> Driver::Start(fidl::IncomingMessage& start_args, fdf::Dispatcher dispatcher) {
+zx::status<> Driver::Start(fidl::IncomingMessage& start_args,
+                           fidl_opaque_wire_format_metadata_t wire_format_metadata,
+                           fdf::Dispatcher dispatcher) {
   initial_dispatcher_ = std::move(dispatcher);
 
   // After calling |record_->start|, we assume it has taken ownership of
   // the handles from |start_args|, and can therefore relinquish ownership.
   fidl_incoming_msg_t c_msg = std::move(start_args).ReleaseToEncodedCMessage();
   void* opaque = nullptr;
-  zx_status_t status = record_->start(&c_msg, initial_dispatcher_.get(), &opaque);
+  zx_status_t status =
+      record_->start({&c_msg, wire_format_metadata}, initial_dispatcher_.get(), &opaque);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -187,6 +190,8 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
     completer.Close(message.status());
     return;
   }
+  fidl_opaque_wire_format_metadata_t wire_format_metadata =
+      message.wire_format_metadata().ToOpaque();
 
   // We convert the outgoing message into an incoming message to provide to the
   // driver on start.
@@ -206,7 +211,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
                               std::make_unique<FileEventHandler>(url));
   auto callback = [this, request = std::move(request->driver), completer = completer.ToAsync(),
                    url = std::move(url), converted_message = std::move(converted_message),
-                   _ = file.Clone()](
+                   wire_format_metadata, _ = file.Clone()](
                       fidl::WireUnownedResult<fio::File::GetBackingMemory>& result) mutable {
     if (!result.ok()) {
       LOGF(ERROR, "Failed to start driver '%s', could not get library VMO: %s", url.data(),
@@ -270,7 +275,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
 
     // Task to start the driver. Post this to the driver dispatcher thread.
     auto start_task = [this, request = std::move(request), completer = std::move(completer),
-                       converted_message = std::move(converted_message),
+                       converted_message = std::move(converted_message), wire_format_metadata,
                        driver = std::move(*driver),
                        driver_dispatcher = std::move(driver_dispatcher)]() mutable {
       // We have to add the driver to this list before calling Start in order to have an accurate
@@ -286,8 +291,8 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
 
       // Save a ptr to the dispatcher so we can shut it down if starting the driver fails.
       fdf::UnownedDispatcher unowned_dispatcher = driver_dispatcher.borrow();
-      auto start =
-          driver->Start(converted_message->incoming_message(), std::move(driver_dispatcher));
+      auto start = driver->Start(converted_message->incoming_message(), wire_format_metadata,
+                                 std::move(driver_dispatcher));
       if (start.is_error()) {
         LOGF(ERROR, "Failed to start driver '%s': %s", driver->url().data(), start.status_string());
         completer.Close(start.error_value());

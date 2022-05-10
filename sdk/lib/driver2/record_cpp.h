@@ -25,11 +25,14 @@ namespace driver::internal {
 //      driver::Namespace ns,
 //      driver::Logger logger)
 template <typename T>
-zx_status_t Start(fidl_incoming_msg_t* msg, fdf_dispatcher_t* dispatcher, void** driver) {
+zx_status_t Start(EncodedDriverStartArgs encoded_start_args, fdf_dispatcher_t* dispatcher,
+                  void** driver) {
   // Decode the incoming `msg`.
   // TODO(fxbug.dev/45252): Use FIDL at rest.
+  auto wire_format_metadata =
+      fidl::WireFormatMetadata::FromOpaque(encoded_start_args.wire_format_metadata);
   fidl::unstable::DecodedMessage<fuchsia_driver_framework::wire::DriverStartArgs> decoded(
-      fidl::internal::WireFormatVersion::kV2, msg);
+      wire_format_metadata.wire_format_version(), encoded_start_args.msg);
   if (!decoded.ok()) {
     return decoded.status();
   }
