@@ -16,32 +16,6 @@ group("audio") {
   ]
 }
 
-group("drivers") {
-  testonly = true
-  deps = [
-    "drivers/aml-g12-pdm:aml-g12-pdm",
-    "drivers/aml-g12-tdm",
-    "drivers/aml-g12-tdm:aml-g12-tdm-dai",
-    "drivers/codecs/alc5514",
-    "drivers/codecs/alc5663",
-    "drivers/codecs/da7219",
-    "drivers/codecs/max98373",
-    "drivers/codecs/max98927",
-    "drivers/codecs/tas27xx",
-    "drivers/codecs/tas5720",
-    "drivers/codecs/tas5782",
-    "drivers/codecs/tas58xx",
-    "drivers/codecs/test:test-codec",
-    "drivers/dai-test",
-    "drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
-    "drivers/intel-hda/codecs/qemu:qemu-audio-codec",
-    "drivers/intel-hda/codecs/realtek:realtek-audio-codec",
-    "drivers/intel-hda/controller:intel-hda",
-    "drivers/usb-audio",
-    "drivers/virtual_audio:virtual_audio_driver",
-  ]
-}
-
 fuzzers_package("audio_fuzzers") {
   fuzzers = [
     "audio_core:audio_core_fuzzer",

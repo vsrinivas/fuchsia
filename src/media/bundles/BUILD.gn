@@ -4,7 +4,7 @@
 
 group("drivers") {
   testonly = true
-  deps = [ "//src/media/audio:drivers" ]
+  deps = [ "//src/media/audio/drivers" ]
 
   if (target_cpu == "arm64") {
     deps += [
