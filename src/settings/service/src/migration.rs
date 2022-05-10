@@ -1,6 +1,8 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// TODO(fxbug.dev/91407) Remove allow once used.
 #![cfg_attr(not(test), allow(dead_code))]
 
 //! The `migration` module exposes structs and traits that can be used to write data migrations for
@@ -23,7 +25,8 @@ use fidl_fuchsia_io::{DirectoryProxy, FileProxy, UnlinkOptions};
 use files_async::{readdir, DirEntry, DirentKind};
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
-use io_util::node::OpenError;
+use io_util::file::WriteError;
+use io_util::node::{OpenError, RenameError};
 use io_util::OpenFlags;
 use std::collections::BTreeMap;
 
@@ -143,52 +146,22 @@ impl MigrationManager {
             .skip_while(|&(id, _)| id != last_migration.migration_id)
             .skip(1)
         {
-            let file_generator = FileGenerator::new(new_last_migration, id, &self.dir_proxy);
-            new_last_migration = id;
-            migration.migrate(file_generator).await.map_err(|e| match e {
-                MigrationError::NoData => {
-                    fx_log_err!("Missing data necessary for running migration {id}");
-                    MigrationError::NoData
-                }
-                MigrationError::Unrecoverable(e) => {
-                    MigrationError::Unrecoverable(e.context(format!("Migration {id} failed")))
-                }
-                _ => e,
-            })?;
-        }
-
-        // If the last migration is newer than the previously recorded value, update the
-        // migration file.
-        if new_last_migration != last_migration.migration_id {
-            // Write to a temporary file before renaming so we can ensure the update is atomic.
-            let tmp_migration_file = io_util::directory::open_file(
-                &self.dir_proxy,
-                TMP_MIGRATION_FILE_NAME,
-                OpenFlags::NOT_DIRECTORY | OpenFlags::CREATE | OpenFlags::RIGHT_WRITABLE,
-            )
-            .await
-            .context("unable to create migrations file")?;
-            io_util::write_file(&tmp_migration_file, &new_last_migration.to_string())
+            Self::run_single_migration(&self.dir_proxy, new_last_migration, migration)
                 .await
-                .context("failed to write new migration number")?;
-            drop(tmp_migration_file);
-
-            if let Err(e) = io_util::directory::rename(
-                &self.dir_proxy,
-                TMP_MIGRATION_FILE_NAME,
-                MIGRATION_FILE_NAME,
-            )
-            .await
-            {
-                return Err(match e {
-                    io_util::node::RenameError::RenameError(zx::Status::NO_SPACE) => {
-                        MigrationError::DiskFull
+                .map_err(|e| match e {
+                    MigrationError::NoData => {
+                        fx_log_err!("Missing data necessary for running migration {id}");
+                        MigrationError::NoData
                     }
-                    _ => Error::from(e).context("failed to rename tmp to migrations.txt").into(),
-                });
-            };
+                    MigrationError::Unrecoverable(e) => {
+                        MigrationError::Unrecoverable(e.context(format!("Migration {id} failed")))
+                    }
+                    _ => e,
+                })?;
+            new_last_migration = id;
         }
 
+        // Remove old files that don't match the current pattern.
         let file_suffix = format!("_{new_last_migration}.pfidl");
         let entries: Vec<DirEntry> = readdir(&self.dir_proxy).await.context("another error")?;
         let files = entries.into_iter().filter_map(|entry| {
@@ -215,6 +188,57 @@ impl MigrationManager {
         Ok(())
     }
 
+    async fn run_single_migration(
+        dir_proxy: &DirectoryProxy,
+        old_id: u64,
+        migration: Box<dyn Migration>,
+    ) -> Result<(), MigrationError> {
+        let new_id = migration.id();
+        let file_generator = FileGenerator::new(old_id, new_id, Clone::clone(dir_proxy));
+        migration.migrate(file_generator).await?;
+
+        // Write to a temporary file before renaming so we can ensure the update is atomic.
+        let tmp_migration_file = io_util::directory::open_file(
+            dir_proxy,
+            TMP_MIGRATION_FILE_NAME,
+            OpenFlags::NOT_DIRECTORY
+                | OpenFlags::CREATE
+                | OpenFlags::RIGHT_READABLE
+                | OpenFlags::RIGHT_WRITABLE,
+        )
+        .await
+        .context("unable to create migrations file")?;
+        if let Err(e) = io_util::file::write(&tmp_migration_file, dbg!(new_id).to_string()).await {
+            return Err(match e {
+                WriteError::WriteError(zx::Status::NO_SPACE) => MigrationError::DiskFull,
+                _ => Error::from(e).context("failed to write tmp migration").into(),
+            });
+        };
+        if let Err(e) =
+            tmp_migration_file.sync().await.map_err(Error::from).context("failed to sync")?
+        {
+            fx_log_err!("Failed to sync tmp migration file to disk: {:?}", zx::Status::from_raw(e));
+        }
+        if let Err(e) =
+            tmp_migration_file.close().await.map_err(Error::from).context("failed to close")?
+        {
+            fx_log_err!("Failed to properly close migration file: {:?}", zx::Status::from_raw(e));
+        }
+        drop(tmp_migration_file);
+
+        if let Err(e) =
+            io_util::directory::rename(dir_proxy, TMP_MIGRATION_FILE_NAME, MIGRATION_FILE_NAME)
+                .await
+        {
+            return Err(match e {
+                RenameError::RenameError(zx::Status::NO_SPACE) => MigrationError::DiskFull,
+                _ => Error::from(e).context("failed to rename tmp to migrations.txt").into(),
+            });
+        };
+
+        Ok(())
+    }
+
     /// Runs the initial migration. If it fails due to a [MigrationError::NoData] error, then it
     /// will return the last migration to initialize all of the data sources.
     async fn initialize_migrations(&mut self) -> Result<Option<u64>, MigrationError> {
@@ -227,11 +251,9 @@ impl MigrationManager {
             return Ok(None);
         };
         let migration = self.migrations.remove(&id).unwrap();
-
-        let file_generator = FileGenerator::new(0, id, &self.dir_proxy);
-
-        let migration_result = migration.migrate(file_generator).await;
-        if let Err(migration_error) = migration_result {
+        if let Err(migration_error) =
+            Self::run_single_migration(&self.dir_proxy, 0, migration).await
+        {
             match migration_error {
                 MigrationError::NoData => {
                     // There was no previous data. We just need to use the default value for all
@@ -251,35 +273,43 @@ impl MigrationManager {
     }
 }
 
-pub(crate) struct FileGenerator<'a> {
+pub(crate) struct FileGenerator {
+    // TODO(fxbug.dev/91407) Remove allow once used.
+    #[allow(dead_code)]
     old_id: u64,
     new_id: u64,
-    dir_proxy: &'a DirectoryProxy,
+    dir_proxy: DirectoryProxy,
 }
 
-#[allow(dead_code)]
-impl<'a> FileGenerator<'a> {
-    pub(crate) fn new(old_id: u64, new_id: u64, dir_proxy: &'a DirectoryProxy) -> Self {
+impl FileGenerator {
+    pub(crate) fn new(old_id: u64, new_id: u64, dir_proxy: DirectoryProxy) -> Self {
         Self { old_id, new_id, dir_proxy }
     }
 
+    // TODO(fxbug.dev/91407) Remove allow once used.
+    #[allow(dead_code)]
     pub(crate) async fn old_file(
         &self,
         file_name: impl AsRef<str>,
     ) -> Result<FileProxy, OpenError> {
-        self.file(file_name.as_ref(), self.old_id).await
+        let file_name = file_name.as_ref();
+        let id = self.new_id;
+        io_util::directory::open_file(
+            &self.dir_proxy,
+            &format!("{file_name}_{id}.pfidl"),
+            OpenFlags::NOT_DIRECTORY | OpenFlags::RIGHT_READABLE,
+        )
+        .await
     }
 
     pub(crate) async fn new_file(
         &self,
         file_name: impl AsRef<str>,
     ) -> Result<FileProxy, OpenError> {
-        self.file(file_name.as_ref(), self.new_id).await
-    }
-
-    async fn file(&self, file_name: &str, id: u64) -> Result<FileProxy, OpenError> {
+        let file_name = file_name.as_ref();
+        let id = self.new_id;
         io_util::directory::open_file(
-            self.dir_proxy,
+            &self.dir_proxy,
             &format!("{file_name}_{id}.pfidl"),
             OpenFlags::NOT_DIRECTORY
                 | OpenFlags::CREATE
@@ -293,10 +323,8 @@ impl<'a> FileGenerator<'a> {
 #[async_trait]
 pub(crate) trait Migration {
     fn id(&self) -> u64;
-    async fn migrate<'a>(&'a self, file_generator: FileGenerator<'a>)
-        -> Result<(), MigrationError>;
-    async fn cleanup<'a>(&'a self, file_generator: FileGenerator<'a>)
-        -> Result<(), MigrationError>;
+    async fn migrate(&self, file_generator: FileGenerator) -> Result<(), MigrationError>;
+    async fn cleanup(&self, file_generator: FileGenerator) -> Result<(), MigrationError>;
 }
 
 pub(crate) struct LastMigration {
@@ -308,35 +336,37 @@ mod tests {
     use super::*;
     use assert_matches::assert_matches;
     use fidl::endpoints::{create_proxy, ServerEnd};
+    use fidl::Vmo;
     use fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy};
     use fuchsia_async as fasync;
     use futures::future::BoxFuture;
+    use futures::lock::Mutex;
     use futures::FutureExt;
     use io_util::OpenFlags;
+    use std::collections::HashMap;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
     use vfs::directory::entry::DirectoryEntry;
+    use vfs::directory::mutable::simple::tree_constructor;
     use vfs::execution_scope::ExecutionScope;
     use vfs::file::vmo::asynchronous::{read_write, simple_init_vmo_resizable_with_capacity};
     use vfs::mut_pseudo_directory;
+    use vfs::registry::{inode_registry, token_registry};
 
     #[async_trait]
     impl<T> Migration for (u64, T)
     where
-        T: Fn(FileGenerator<'_>) -> BoxFuture<'static, Result<(), MigrationError>> + Send + Sync,
+        T: Fn(FileGenerator) -> BoxFuture<'static, Result<(), MigrationError>> + Send + Sync,
     {
         fn id(&self) -> u64 {
             self.0
         }
 
-        async fn migrate<'a>(
-            &'a self,
-            file_generator: FileGenerator<'a>,
-        ) -> Result<(), MigrationError> {
+        async fn migrate(&self, file_generator: FileGenerator) -> Result<(), MigrationError> {
             (self.1)(file_generator).await
         }
 
-        async fn cleanup<'a>(&'a self, _: FileGenerator<'a>) -> Result<(), MigrationError> {
+        async fn cleanup(&self, _: FileGenerator) -> Result<(), MigrationError> {
             Ok(())
         }
     }
@@ -346,10 +376,10 @@ mod tests {
         let mut builder = MigrationManagerBuilder::new();
         const ID: u64 = 1;
         builder
-            .register((ID, Box::new(|_: FileGenerator<'_>| async move { Ok(()) }.boxed())))
+            .register((ID, Box::new(|_| async move { Ok(()) }.boxed())))
             .expect("should register once");
         let result = builder
-            .register((ID, Box::new(|_: FileGenerator<'_>| async move { Ok(()) }.boxed())))
+            .register((ID, Box::new(|_| async move { Ok(()) }.boxed())))
             .map_err(|e| format!("{e:}"));
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "migration with id 1 already registered");
@@ -371,8 +401,17 @@ mod tests {
         let _migration_manager = builder.build();
     }
 
-    fn serve_vfs_dir(root: Arc<impl DirectoryEntry>) -> DirectoryProxy {
-        let fs_scope = ExecutionScope::new();
+    fn serve_vfs_dir(
+        root: Arc<impl DirectoryEntry>,
+    ) -> (DirectoryProxy, Arc<Mutex<HashMap<String, Vmo>>>) {
+        let vmo_map = Arc::new(Mutex::new(HashMap::new()));
+        let fs_scope = ExecutionScope::build()
+            .token_registry(token_registry::Simple::new())
+            .inode_registry(inode_registry::Simple::new())
+            .entry_constructor(tree_constructor(move |_, _| {
+                Ok(read_write(simple_init_vmo_resizable_with_capacity(b"", 100)))
+            }))
+            .new();
         let (client, server) = create_proxy::<DirectoryMarker>().unwrap();
         root.open(
             fs_scope,
@@ -381,14 +420,14 @@ mod tests {
             vfs::path::Path::dot(),
             ServerEnd::new(server.into_channel()),
         );
-        client
+        (client, vmo_map)
     }
 
     // Test for initial migration
     #[fasync::run_until_stalled(test)]
     async fn if_no_migration_file_runs_initial_migration() {
         let fs = mut_pseudo_directory! {};
-        let directory = serve_vfs_dir(fs);
+        let (directory, _vmo_map) = serve_vfs_dir(fs);
         let mut builder = MigrationManagerBuilder::new();
         let migration_ran = Arc::new(AtomicBool::new(false));
 
@@ -397,7 +436,7 @@ mod tests {
                 1,
                 Box::new({
                     let migration_ran = Arc::clone(&migration_ran);
-                    move |_: FileGenerator<'_>| {
+                    move |_| {
                         let migration_ran = Arc::clone(&migration_ran);
                         async move {
                             migration_ran.store(true, Ordering::SeqCst);
@@ -408,11 +447,22 @@ mod tests {
                 }),
             ))
             .expect("can register");
-        builder.set_migration_dir(directory);
+        builder.set_migration_dir(Clone::clone(&directory));
         let migration_manager = builder.build();
 
         let result = migration_manager.run_migrations().await;
         assert_matches!(result, Ok(()));
+        let migration_file = io_util::directory::open_file(
+            &directory,
+            MIGRATION_FILE_NAME,
+            OpenFlags::RIGHT_READABLE,
+        )
+        .await
+        .expect("migration file should exist");
+        let migration_number =
+            io_util::read_file(&migration_file).await.expect("should be able to read file");
+        let migration_number: u64 = dbg!(migration_number).parse().expect("should be a number");
+        assert_eq!(migration_number, 1);
     }
 
     #[fasync::run_until_stalled(test)]
@@ -425,7 +475,7 @@ mod tests {
                 simple_init_vmo_resizable_with_capacity(b"", 1)
             ),
         };
-        let directory = serve_vfs_dir(fs);
+        let (directory, _vmo_map) = serve_vfs_dir(fs);
         let mut builder = MigrationManagerBuilder::new();
         let migration_ran = Arc::new(AtomicBool::new(false));
 
@@ -434,7 +484,7 @@ mod tests {
                 1,
                 Box::new({
                     let migration_ran = Arc::clone(&migration_ran);
-                    move |_: FileGenerator<'_>| {
+                    move |_| {
                         let migration_ran = Arc::clone(&migration_ran);
                         async move {
                             migration_ran.store(true, Ordering::SeqCst);
@@ -460,7 +510,7 @@ mod tests {
                 simple_init_vmo_resizable_with_capacity(b"1", 1)
             ),
         };
-        let directory = serve_vfs_dir(fs);
+        let (directory, _vmo_map) = serve_vfs_dir(fs);
         let mut builder = MigrationManagerBuilder::new();
         let initial_migration_ran = Arc::new(AtomicBool::new(false));
 
@@ -469,7 +519,7 @@ mod tests {
                 1,
                 Box::new({
                     let initial_migration_ran = Arc::clone(&initial_migration_ran);
-                    move |_: FileGenerator<'_>| {
+                    move |_| {
                         let initial_migration_ran = Arc::clone(&initial_migration_ran);
                         async move {
                             initial_migration_ran.store(true, Ordering::SeqCst);
@@ -487,7 +537,7 @@ mod tests {
                 2,
                 Box::new({
                     let second_migration_ran = Arc::clone(&second_migration_ran);
-                    move |_: FileGenerator<'_>| {
+                    move |_| {
                         let second_migration_ran = Arc::clone(&second_migration_ran);
                         async move {
                             second_migration_ran.store(true, Ordering::SeqCst);
@@ -505,6 +555,83 @@ mod tests {
         assert_matches!(result, Err(MigrationError::NoData));
         assert!(!initial_migration_ran.load(Ordering::SeqCst));
         assert!(second_migration_ran.load(Ordering::SeqCst));
+    }
+
+    // Tests that a migration newer than the latest one tracked in the migration file can run.
+    #[fasync::run_until_stalled(test)]
+    async fn migration_file_exists_and_newer_migrations_should_update() {
+        let fs = mut_pseudo_directory! {
+            MIGRATION_FILE_NAME => read_write(
+                simple_init_vmo_resizable_with_capacity(b"1", 1)
+            ),
+            "test_1.pfidl" => read_write(
+                simple_init_vmo_resizable_with_capacity(b"", 1)
+            ),
+        };
+        let (directory, _vmo_map) = serve_vfs_dir(fs);
+        let mut builder = MigrationManagerBuilder::new();
+        let migration_ran = Arc::new(AtomicBool::new(false));
+
+        builder
+            .register((
+                1,
+                Box::new({
+                    let migration_ran = Arc::clone(&migration_ran);
+                    move |_| {
+                        let migration_ran = Arc::clone(&migration_ran);
+                        async move {
+                            migration_ran.store(true, Ordering::SeqCst);
+                            Ok(())
+                        }
+                        .boxed()
+                    }
+                }),
+            ))
+            .expect("can register");
+
+        builder
+            .register((
+                2,
+                Box::new({
+                    let migration_ran = Arc::clone(&migration_ran);
+                    move |file_generator: FileGenerator| {
+                        let migration_ran = Arc::clone(&migration_ran);
+                        async move {
+                            migration_ran.store(true, Ordering::SeqCst);
+                            let file = file_generator.new_file("test").await.expect("can get file");
+                            io_util::file::write(&file, b"test2").await.expect("can wite file");
+                            Ok(())
+                        }
+                        .boxed()
+                    }
+                }),
+            ))
+            .expect("can register");
+        builder.set_migration_dir(Clone::clone(&directory));
+        let migration_manager = builder.build();
+
+        let result = migration_manager.run_migrations().await;
+        assert_matches!(result, Ok(()));
+        let migration_file = io_util::directory::open_file(
+            &directory,
+            MIGRATION_FILE_NAME,
+            OpenFlags::RIGHT_READABLE,
+        )
+        .await
+        .expect("migration file should exist");
+        let migration_number: u64 = io_util::read_file(&migration_file)
+            .await
+            .expect("should be able to read file")
+            .parse()
+            .expect("should be a number");
+        assert_eq!(migration_number, 2);
+
+        let data_file =
+            io_util::directory::open_file(&directory, "test_2.pfidl", OpenFlags::RIGHT_READABLE)
+                .await
+                .expect("migration file should exist");
+        let data = io_util::file::read(&data_file).await.expect("should be able to read file");
+        assert_eq!(data, b"test2");
     }
 
     // TODO(fxbug.dev/91407) Test for disk full behavior
