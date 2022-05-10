@@ -65,10 +65,10 @@ group("setui_service_core_shard") {
   visibility = []
   visibility = [
     ":*",
-    "//build/images/*",
+    "//build/images/fuchsia:*",
     "//vendor/google/*",
   ]
-  public_deps = [ ":setui_service_core_shard_internal" ]
+  public_deps = [ "//src/settings/service:setui_service_core_shard" ]
 }
 
 group("setui_service_with_camera_core_shard") {
@@ -78,15 +78,6 @@ group("setui_service_with_camera_core_shard") {
     "//build/images/fuchsia:*",
     "//vendor/google/*",
   ]
-  public_deps = [ ":setui_service_with_camera_core_shard_internal" ]
-}
-
-# Core shard for products that don't have a camera.
-core_shard("setui_service_core_shard_internal") {
-  shard_file = "meta/setui_service.core_shard.cml"
-}
-
-# Core shard for products that have a camera.
-core_shard("setui_service_with_camera_core_shard_internal") {
-  shard_file = "meta/setui_service_with_camera.core_shard.cml"
+  public_deps =
+      [ "//src/settings/service:setui_service_with_camera_core_shard" ]
 }

@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 group("service") {
   testonly = true
@@ -373,13 +374,55 @@ fuchsia_component("setui_service_with_camera") {
 }
 
 fuchsia_package("setui_service") {
-  package_name = "setui_service"
+  visibility = []
+  visibility = [
+    ":*",
+    "//:additional_base_packages",
+    "//:developer_base_packages",
+    "//:legacy_base_packages",
+
+    # TODO(fxbug.dev/98207): remove //garnet/bin visibility once migration is
+    # complete
+    "//garnet/bin/*",
+    "//src/developer/forensics/feedback/tests/*",
+    "//src/intl/intl_services/tests/*",
+  ]
   deps = [
     ":setui_service_v1",
     ":setui_service_v2",
     ":setui_service_with_camera",
     "//src/intl:icudtl",
   ]
+}
+
+# Core shard for products that don't have a camera.
+core_shard("setui_service_core_shard") {
+  visibility = []
+  visibility = [
+    ":*",
+
+    # TODO(fxbug.dev/98207): remove //garnet/bin visibility once migration is
+    # complete
+    "//build/images/fuchsia:*",
+    "//garnet/bin/*",
+    "//vendor/google/*",
+  ]
+  shard_file = "meta/setui_service.core_shard.cml"
+}
+
+# Core shard for products that have a camera.
+core_shard("setui_service_with_camera_core_shard") {
+  visibility = []
+  visibility = [
+    ":*",
+
+    # TODO(fxbug.dev/98207): remove //garnet/bin visibility once migration is
+    # complete
+    "//build/images/fuchsia:*",
+    "//garnet/bin/*",
+    "//vendor/google/*",
+  ]
+  shard_file = "meta/setui_service_with_camera.core_shard.cml"
 }
 
 rustc_binary("setui-config-test") {
