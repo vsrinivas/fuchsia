@@ -81,7 +81,7 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				{{ .EqualityCheckKoidArrayVar }} = append({{ .EqualityCheckKoidArrayVar }}, info.Koid)
 			}
 		}
-		{{- end }}
+	{{- end }}
 		decodeSuccessCase{
 			name: {{ .Name }},
 			context: {{ .Context }},

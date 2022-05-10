@@ -137,8 +137,17 @@ func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue gidlir.Val
 		b.expectEquals(actualExpr, fmt.Sprintf("%q", expectedValue))
 		return
 	case gidlir.HandleWithRights:
-		b.visitHandle(actualExpr, expectedValue, decl.(*gidlmixer.HandleDecl))
-		return
+		switch decl := decl.(type) {
+		case *gidlmixer.HandleDecl:
+			b.visitHandle(actualExpr, expectedValue, decl)
+			return
+		case *gidlmixer.ClientEndDecl:
+			b.visitClientEnd(actualExpr, expectedValue, decl)
+			return
+		case *gidlmixer.ServerEndDecl:
+			b.visitServerEnd(actualExpr, expectedValue, decl)
+			return
+		}
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:
@@ -186,6 +195,14 @@ func (b *equalityCheckBuilder) visitHandle(actualExpr string, expectedValue gidl
 	b.expectTrue(fmt.Sprintf("%[1]s.Type == %[2]d || %[2]d == zx.ObjectTypeNone", infoVar, expectedValue.Type))
 	b.expectTrue(fmt.Sprintf("%[1]s.Rights == %[2]d || %[2]d == zx.RightSameRights", infoVar, expectedValue.Rights))
 	b.write("}\n")
+}
+
+func (b *equalityCheckBuilder) visitClientEnd(actualExpr string, expectedValue gidlir.HandleWithRights, decl *gidlmixer.ClientEndDecl) {
+	b.visitHandle(actualExpr, expectedValue, decl.UnderlyingHandleDecl())
+}
+
+func (b *equalityCheckBuilder) visitServerEnd(actualExpr string, expectedValue gidlir.HandleWithRights, decl *gidlmixer.ServerEndDecl) {
+	b.visitHandle(actualExpr, expectedValue, decl.UnderlyingHandleDecl())
 }
 
 func (b *equalityCheckBuilder) visitStruct(actualExpr string, expectedValue gidlir.Record, decl *gidlmixer.StructDecl) {

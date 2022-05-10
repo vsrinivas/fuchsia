@@ -439,7 +439,7 @@ func TestAllEncodeSuccessCases(t *testing.T) {
 			// #0:
 			{
 				subtype: zx.ObjectTypeEvent,
-				rights:  2147483648,
+				rights:  53251,
 			},
 		}
 		handles := createHandlesFromHandleDef(handleDefs)
@@ -1230,7 +1230,7 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			// #0:
 			{
 				subtype: zx.ObjectTypeEvent,
-				rights:  2147483648,
+				rights:  53251,
 			},
 		}
 		handles := createHandlesFromHandleDef(handleDefs)

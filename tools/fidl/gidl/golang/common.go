@@ -61,11 +61,28 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 	builder.WriteString("[]handleDef{\n")
 	for i, d := range defs {
 		var subtype string
+		rights := d.Rights
 		switch d.Subtype {
 		case fidlgen.Channel:
 			subtype = "zx.ObjectTypeChannel"
+			// Always use real rights instead of a "same rights" placeholder.
+			if rights == fidlgen.HandleRightsSameRights {
+				r, ok := gidlir.HandleRightsByName("channel_default")
+				if !ok {
+					panic("channel_default should be a supported rights name")
+				}
+				rights = r
+			}
 		case fidlgen.Event:
 			subtype = "zx.ObjectTypeEvent"
+			// Always use real rights instead of a "same rights" placeholder.
+			if rights == fidlgen.HandleRightsSameRights {
+				r, ok := gidlir.HandleRightsByName("event_default")
+				if !ok {
+					panic("event_default should be a supported rights name")
+				}
+				rights = r
+			}
 		default:
 			panic(fmt.Sprintf("unsupported handle subtype: %s", d.Subtype))
 		}
@@ -76,7 +93,7 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 		subtype: %s,
 		rights: %d,
 	},
-`, i, subtype, d.Rights))
+`, i, subtype, rights))
 	}
 	builder.WriteString("}")
 	return builder.String()
@@ -165,16 +182,22 @@ func visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 		return strconv.Quote(value)
 	case gidlir.HandleWithRights:
 		rawHandle := fmt.Sprintf("handles[%d]", value.Handle)
-		handleDecl := decl.(*gidlmixer.HandleDecl)
-		switch handleDecl.Subtype() {
-		case fidlgen.Handle:
-			return rawHandle
-		case fidlgen.Channel:
-			return fmt.Sprintf("zx.Channel(%s)", rawHandle)
-		case fidlgen.Event:
-			return fmt.Sprintf("zx.Event(%s)", rawHandle)
-		default:
-			panic(fmt.Sprintf("Handle subtype not supported %s", handleDecl.Subtype()))
+		switch decl := decl.(type) {
+		case *gidlmixer.ClientEndDecl:
+			return fmt.Sprintf("%s{Channel: zx.Channel(%s)}", endpointDeclName(decl), rawHandle)
+		case *gidlmixer.ServerEndDecl:
+			return fmt.Sprintf("%s{Channel: zx.Channel(%s)}", endpointDeclName(decl), rawHandle)
+		case *gidlmixer.HandleDecl:
+			switch decl.Subtype() {
+			case fidlgen.Handle:
+				return rawHandle
+			case fidlgen.Channel:
+				return fmt.Sprintf("zx.Channel(%s)", rawHandle)
+			case fidlgen.Event:
+				return fmt.Sprintf("zx.Event(%s)", rawHandle)
+			default:
+				panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))
+			}
 		}
 	case gidlir.Record:
 		if decl, ok := decl.(gidlmixer.RecordDeclaration); ok {
@@ -303,6 +326,17 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 
 func declName(decl gidlmixer.NamedDeclaration) string {
 	return identifierName(decl.Name())
+}
+
+func endpointDeclName(decl gidlmixer.EndpointDeclaration) string {
+	switch decl.(type) {
+	case *gidlmixer.ClientEndDecl:
+		return fmt.Sprintf("%sWithCtxInterface", identifierName(decl.ProtocolName()))
+	case *gidlmixer.ServerEndDecl:
+		return fmt.Sprintf("%sWithCtxInterfaceRequest", identifierName(decl.ProtocolName()))
+	default:
+		panic(fmt.Sprintf("unhandled case %T", decl))
+	}
 }
 
 // TODO(fxbug.dev/39407): Move into a common library outside GIDL.
