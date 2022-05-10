@@ -7,8 +7,8 @@
 use crate::device::DeviceOps;
 use crate::fs::devtmpfs::dev_tmp_fs;
 use crate::fs::{
-    FdEvents, FileObject, FileOps, FileSystem, FileSystemHandle, FileSystemOps, FsNode, FsStr,
-    NamespaceNode, ROMemoryDirectory, SeekOrigin, SpecialNode,
+    FdEvents, FdNumber, FileObject, FileOps, FileSystem, FileSystemHandle, FileSystemOps, FsNode,
+    FsStr, NamespaceNode, ROMemoryDirectory, SeekOrigin, SpecialNode,
 };
 use crate::lock::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::not_implemented;
@@ -1618,6 +1618,7 @@ impl BinderDriver {
             // Translate any handles/fds from the source process' handle table to the target
             // process' handle table.
             let transaction_refs = self.translate_handles(
+                current_task,
                 source_proc,
                 source_thread,
                 target_proc,
@@ -1646,6 +1647,7 @@ impl BinderDriver {
     /// are released.
     fn translate_handles(
         &self,
+        current_task: &CurrentTask,
         source_proc: &Arc<BinderProcess>,
         source_thread: &Arc<BinderThread>,
         target_proc: &Arc<BinderProcess>,
@@ -1667,7 +1669,7 @@ impl BinderDriver {
             };
             // SAFETY: The object may not be aligned, so read a copy.
             let flat_object = unsafe { object_ptr.read_unaligned() };
-            match flat_object.hdr.type_ {
+            let patched = match flat_object.hdr.type_ {
                 BINDER_TYPE_HANDLE => {
                     // The `flat_binder_object` is a binder handle.
                     // SAFETY: Union access is safe because backing memory was initialized by a VMO.
@@ -1675,13 +1677,16 @@ impl BinderDriver {
                     match handle {
                         Handle::SpecialServiceManager => {
                             // The special handle 0 does not need to be translated. It is universal.
+                            struct_with_union_into_bytes!(flat_binder_object {
+                                hdr.type_: BINDER_TYPE_HANDLE,
+                                __bindgen_anon_1.handle: 0,
+                                flags: flat_object.flags,
+                                cookie: flat_object.cookie,
+                            })
                         }
                         Handle::Object { index } => {
                             let proxy = source_proc.handles.lock().get(index)?;
-                            let patched = if std::ptr::eq(
-                                Arc::as_ptr(target_proc),
-                                proxy.owner.as_ptr(),
-                            ) {
+                            if std::ptr::eq(Arc::as_ptr(target_proc), proxy.owner.as_ptr()) {
                                 // The binder object belongs to the receiving process, so convert it
                                 // from a handle to a local object.
                                 struct_with_union_into_bytes!(flat_binder_object {
@@ -1706,20 +1711,7 @@ impl BinderDriver {
                                     flags: flat_object.flags,
                                     cookie: flat_object.cookie,
                                 })
-                            };
-
-                            // Write the translated `flat_binder_object` back to the buffer.
-                            // SAFETY: `struct_with_union_into_bytes!` is used to ensure there are
-                            // no uninitialized fields. The result of this is a byte slice, so we
-                            // operate below on a byte slice instead of a pointer to
-                            // `flat_binder_object`.
-                            unsafe {
-                                std::slice::from_raw_parts_mut(
-                                    object_ptr as *mut u8,
-                                    std::mem::size_of::<flat_binder_object>(),
-                                )
-                                .copy_from_slice(&patched[..]);
-                            };
+                            }
                         }
                     }
                 }
@@ -1750,31 +1742,52 @@ impl BinderDriver {
                     handles.push(handle);
 
                     // Translate the `flat_binder_object` to refer to the handle.
-                    let patched = struct_with_union_into_bytes!(flat_binder_object {
+                    struct_with_union_into_bytes!(flat_binder_object {
                         hdr.type_: BINDER_TYPE_HANDLE,
                         __bindgen_anon_1.handle: handle.into(),
                         flags: flat_object.flags,
                         cookie: 0,
-                    });
+                    })
+                }
+                BINDER_TYPE_FD => {
+                    // SAFETY: Union access is safe because backing memory was initialized by a VMO.
+                    let fd =
+                        FdNumber::from_raw(unsafe { flat_object.__bindgen_anon_1.handle } as i32);
+                    let file = current_task.files.get(fd)?;
+                    let fd_flags = current_task.files.get_fd_flags(fd)?;
+                    let target_task = current_task
+                        .kernel()
+                        .pids
+                        .read()
+                        .get_task(target_proc.pid)
+                        .ok_or_else(|| errno!(EINVAL))?;
+                    let new_fd = target_task.files.add_with_flags(file, fd_flags)?;
 
-                    // Write the translated `flat_binder_object` back to the buffer.
-                    // SAFETY: `struct_with_union_into_bytes!` is used to ensure there are
-                    // no uninitialized fields. The result of this is a byte slice, so we
-                    // operate below on a byte slice instead of a pointer to
-                    // `flat_binder_object`.
-                    unsafe {
-                        std::slice::from_raw_parts_mut(
-                            object_ptr as *mut u8,
-                            std::mem::size_of::<flat_binder_object>(),
-                        )
-                        .copy_from_slice(&patched[..]);
-                    };
+                    struct_with_union_into_bytes!(flat_binder_object {
+                        hdr.type_: BINDER_TYPE_FD,
+                        __bindgen_anon_1.handle: new_fd.raw() as u32,
+                        flags: flat_object.flags,
+                        cookie: flat_object.cookie,
+                    })
                 }
                 _ => {
                     tracing::error!("unknown object type {}", flat_object.hdr.type_);
                     return error!(EINVAL);
                 }
-            }
+            };
+
+            // Write the translated `flat_binder_object` back to the buffer.
+            // SAFETY: `struct_with_union_into_bytes!` is used to ensure there are
+            // no uninitialized fields. The result of this is a byte slice, so we
+            // operate below on a byte slice instead of a pointer to
+            // `flat_binder_object`.
+            unsafe {
+                std::slice::from_raw_parts_mut(
+                    object_ptr as *mut u8,
+                    std::mem::size_of::<flat_binder_object>(),
+                )
+                .copy_from_slice(&patched[..]);
+            };
         }
         Ok(TransactionRefs { handles })
     }
@@ -1885,6 +1898,7 @@ pub fn create_binders(kernel: &Kernel) -> Result<(), Errno> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fs::{fuchsia::SyslogFile, FdFlags};
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
     use assert_matches::assert_matches;
@@ -2274,6 +2288,7 @@ mod tests {
 
     #[fuchsia::test]
     fn transaction_translate_binder_leaving_process() {
+        let (_kernel, task) = create_kernel_and_task();
         let driver = BinderDriver::new();
         let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
         let receiver = driver.create_process(2);
@@ -2299,6 +2314,7 @@ mod tests {
 
         let transaction_refs = driver
             .translate_handles(
+                &task,
                 &sender_proc,
                 &sender_thread,
                 &receiver,
@@ -2341,6 +2357,7 @@ mod tests {
 
     #[fuchsia::test]
     fn transaction_translate_binder_handle_entering_owning_process() {
+        let (_kernel, task) = create_kernel_and_task();
         let driver = BinderDriver::new();
         let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
         let receiver = driver.create_process(2);
@@ -2370,6 +2387,7 @@ mod tests {
 
         driver
             .translate_handles(
+                &task,
                 &sender_proc,
                 &sender_thread,
                 &receiver,
@@ -2392,6 +2410,7 @@ mod tests {
 
     #[fuchsia::test]
     fn transaction_translate_binder_handle_passed_between_non_owning_processes() {
+        let (_kernel, task) = create_kernel_and_task();
         let driver = BinderDriver::new();
         let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
         let receiver = driver.create_process(2);
@@ -2436,6 +2455,7 @@ mod tests {
 
         let transaction_refs = driver
             .translate_handles(
+                &task,
                 &sender_proc,
                 &sender_thread,
                 &receiver,
@@ -2683,5 +2703,69 @@ mod tests {
 
         // The client process should have no notification.
         assert!(client_proc.command_queue.lock().is_empty());
+    }
+
+    #[fuchsia::test]
+    fn send_fd_in_transaction() {
+        let (kernel, sender_task) = create_kernel_and_task();
+        let receiver_task = create_task(&kernel, "test-task2");
+
+        let driver = BinderDriver::new();
+        let (sender_proc, sender_thread) = driver.create_process_and_thread(sender_task.id);
+        let receiver_proc = driver.create_process(receiver_task.id);
+
+        // Open a file in the sender process.
+        let file = SyslogFile::new(&kernel);
+        let sender_fd =
+            sender_task.files.add_with_flags(file.clone(), FdFlags::CLOEXEC).expect("add file");
+
+        // Send the fd in a transaction. `flags` and `cookie` are set so that we can ensure binder
+        // driver doesn't touch them/passes them through.
+        let mut transaction_data = struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_FD,
+            flags: 42,
+            cookie: 51,
+            __bindgen_anon_1.handle: sender_fd.raw() as u32,
+        });
+        let offsets = [0];
+
+        let _ = driver
+            .translate_handles(
+                &sender_task,
+                &sender_proc,
+                &sender_thread,
+                &receiver_proc,
+                &offsets,
+                &mut transaction_data,
+            )
+            .expect("failed to translate handles");
+
+        // The receiver should now have a file.
+        let receiver_fd =
+            receiver_task.files.get_all_fds().first().cloned().expect("receiver should have FD");
+
+        // The FD should have the same flags.
+        assert_eq!(
+            receiver_task.files.get_fd_flags(receiver_fd).expect("get flags"),
+            FdFlags::CLOEXEC
+        );
+
+        // The FD should point to the same file.
+        assert!(
+            Arc::ptr_eq(
+                &receiver_task.files.get(receiver_fd).expect("receiver should have FD"),
+                &file
+            ),
+            "FDs from sender and receiver don't point to the same file"
+        );
+
+        let expected_transaction_data = struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_FD,
+            flags: 42,
+            cookie: 51,
+            __bindgen_anon_1.handle: receiver_fd.raw() as u32,
+        });
+
+        assert_eq!(expected_transaction_data, transaction_data);
     }
 }

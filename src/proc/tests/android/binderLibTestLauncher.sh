@@ -39,5 +39,9 @@ GTEST_FILTER="$GTEST_FILTER:BinderLibTest.PromoteLocal"
 GTEST_FILTER="$GTEST_FILTER:BinderLibTest.LocalGetExtension"
 GTEST_FILTER="$GTEST_FILTER:BinderLibTest.RemoteGetExtension"
 
+# File tests.
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.PassFile"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.PassParcelFileDescriptor"
+
 # Start the actual test.
 /vendor/data/nativetest64/binderLibTest/binderLibTest "--gtest_filter=${GTEST_FILTER}"
