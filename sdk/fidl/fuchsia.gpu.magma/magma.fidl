@@ -27,9 +27,6 @@ type QueryId = flexible enum : uint64 {
     /// Returns the hardware device ID (simple result)
     DEVICE_ID = 1;
 
-    /// Returns true if restart for testing is supported (simple result)
-    IS_TEST_RESTART_SUPPORTED = 2;
-
     /// Returns true if MAGMA_QUERY_TOTAL_TIME is supported (simple result)
     IS_TOTAL_TIME_SUPPORTED = 3;
 
@@ -127,25 +124,21 @@ protocol IcdLoaderDevice {
     });
 };
 
-/// Methods are exposed for the purposes of testing the MSD and should not be used by ICDs.
-protocol TestDevice {
-    /// Tears down and restarts the Magma Device. For testing only; if run on a non-test build of
-    /// the driver this will be a no-op.
-    TestRestart();
-
-    /// For testing only - on non-test drivers this will close the channel.
-    GetUnitTestStatus() -> (struct {
-        status zx.status;
-    });
-};
-
-/// A combination of all the |Device| protocols. This protocol is implemented on the Magma service
-/// side and should not be used by clients.
+/// A combination of all the production |Device| protocols. This protocol is implemented on the
+/// Magma service side and should not be used by clients.
 protocol CombinedDevice {
     compose Device;
     compose DiagnosticDevice;
     compose IcdLoaderDevice;
-    compose TestDevice;
+};
+
+/// Additional device methods for the purposes of testing the MSD and should not be used by ICDs.
+protocol TestDevice {
+    compose CombinedDevice;
+
+    GetUnitTestStatus() -> (struct {
+        status zx.status;
+    });
 };
 
 type ObjectType = strict enum {

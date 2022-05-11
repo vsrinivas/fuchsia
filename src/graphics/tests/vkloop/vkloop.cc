@@ -34,8 +34,7 @@ class VkLoopTest {
   explicit VkLoopTest(bool hang_on_event) : hang_on_event_(hang_on_event) {}
 
   bool Initialize();
-  bool Exec(bool kill_driver, AllowSuccess allow_success,
-            zx_handle_t magma_device_channel = ZX_HANDLE_INVALID);
+  bool Exec(bool kill_driver, AllowSuccess allow_success);
 
   uint32_t get_vendor_id() { return ctx_->physical_device().getProperties().vendorID; }
 
@@ -322,8 +321,7 @@ bool VkLoopTest::InitCommandBuffer() {
   return true;
 }
 
-bool VkLoopTest::Exec(bool kill_driver, AllowSuccess allow_success,
-                      zx_handle_t magma_device_channel) {
+bool VkLoopTest::Exec(bool kill_driver, AllowSuccess allow_success) {
   auto rv_wait = ctx_->queue().waitIdle();
   if (vk::Result::eSuccess != rv_wait) {
     RTN_MSG(false, "VK Error: 0x%x - Queue wait idle.\n", rv_wait);
@@ -341,11 +339,12 @@ bool VkLoopTest::Exec(bool kill_driver, AllowSuccess allow_success,
   }
 
   if (kill_driver) {
-    // TODO: Unbind and rebind driver once that supports forcibly tearing down client connections.
-    auto result =
-        fidl::WireCall<fuchsia_gpu_magma::TestDevice>(zx::unowned_channel(magma_device_channel))
-            ->TestRestart();
-    EXPECT_EQ(ZX_OK, result.status());
+    magma::TestDeviceBase test_device(get_vendor_id());
+
+    fidl::ClientEnd parent_device = test_device.GetParentDevice();
+    test_device.ShutdownDevice();
+
+    magma::TestDeviceBase::AutobindDriver(parent_device);
   }
 
   constexpr int kReps = 5;
@@ -384,16 +383,11 @@ TEST(VkLoop, DriverDeath) {
   VkLoopTest test(true);
   ASSERT_TRUE(test.Initialize());
 
-  magma::TestDeviceBase test_device(test.get_vendor_id());
-  uint64_t is_supported = 0;
-  magma_status_t status = magma_query(test_device.device(), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED,
-                                      nullptr, &is_supported);
-  if (status != MAGMA_STATUS_OK || !is_supported) {
-    fprintf(stderr, "Test restart not supported: status %d is_supported %lu\n", status,
-            is_supported);
+  // TODO(fxbug.dev/100070) - enable for ARM/Mali
+  if (test.get_vendor_id() == 0x13B5)
     GTEST_SKIP();
-  }
-  ASSERT_TRUE(test.Exec(true, VkLoopTest::AllowSuccess::kDisallow, test_device.channel()->get()));
+
+  ASSERT_TRUE(test.Exec(true, VkLoopTest::AllowSuccess::kDisallow));
 }
 
 }  // namespace

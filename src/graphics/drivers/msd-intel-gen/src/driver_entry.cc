@@ -38,9 +38,13 @@
 
 #if MAGMA_TEST_DRIVER
 zx_status_t magma_indriver_test(magma::PlatformPciDevice* platform_device);
+
+using DeviceType = fuchsia_gpu_magma::TestDevice;
+#else
+using DeviceType = fuchsia_gpu_magma::CombinedDevice;
 #endif
 
-struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevice> {
+struct sysdrv_device_t : public fidl::WireServer<DeviceType> {
  public:
   template <typename T>
   bool CheckSystemDevice(T& completer) MAGMA_REQUIRES(magma_mutex) {
@@ -60,20 +64,10 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevi
     DASSERT(this->magma_system_device);
 
     uint64_t result;
-    switch (request->query_id) {
-      case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
-#if MAGMA_TEST_DRIVER
-        result = 1;
-#else
-        result = 0;
-#endif
-        break;
-      default:
-        magma::Status status = this->magma_system_device->Query(request->query_id, &result);
-        if (!status.ok()) {
-          _completer.ReplyError(magma::ToZxStatus(status.get()));
-          return;
-        }
+    magma::Status status = this->magma_system_device->Query(request->query_id, &result);
+    if (!status.ok()) {
+      _completer.ReplyError(magma::ToZxStatus(status.get()));
+      return;
     }
     DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, request->query_id, result);
 
@@ -114,21 +108,11 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevi
     zx_handle_t result_buffer = ZX_HANDLE_INVALID;
     uint64_t result = 0;
 
-    switch (request->query_id) {
-      case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
-#if MAGMA_TEST_DRIVER
-        result = 1;
-#else
-        result = 0;
-#endif
-        break;
-      default:
-        magma::Status status =
-            this->magma_system_device->Query(request->query_id, &result_buffer, &result);
-        if (!status.ok()) {
-          _completer.ReplyError(magma::ToZxStatus(status.get()));
-          return;
-        }
+    magma::Status status =
+        this->magma_system_device->Query(request->query_id, &result_buffer, &result);
+    if (!status.ok()) {
+      _completer.ReplyError(magma::ToZxStatus(status.get()));
+      return;
     }
 
     if (result_buffer != ZX_HANDLE_INVALID) {
@@ -239,31 +223,16 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevi
     completer.Reply(fidl::VectorView<fuchsia_gpu_magma::wire::IcdInfo>::FromExternal(icd_infos));
   }
 
-  void TestRestart(TestRestartRequestView request,
-                   TestRestartCompleter::Sync& _completer) override {
 #if MAGMA_TEST_DRIVER
-    DLOG("sysdrv_device_t::TestRestart");
-    std::lock_guard lock(magma_mutex);
-    if (!CheckSystemDevice(_completer))
-      return;
-    MagmaStop();
-    zx_status_t status = MagmaStart();
-    if (status != ZX_OK) {
-      DLOG("magma_start failed: %d", status);
-    }
-#endif
-  }
-
   void GetUnitTestStatus(GetUnitTestStatusRequestView request,
                          GetUnitTestStatusCompleter::Sync& _completer) override {
-#if MAGMA_TEST_DRIVER
     DLOG("sysdrv_device_t::GetUnitTestStatus");
     std::lock_guard<std::mutex> lock(magma_mutex);
     if (!CheckSystemDevice(_completer))
       return;
     _completer.Reply(this->unit_test_status);
-#endif
   }
+#endif  // MAGMA_TEST_DRIVER
 
   int MagmaStart() MAGMA_REQUIRES(magma_mutex) {
     DLOG("magma_start");
@@ -324,8 +293,8 @@ static zx_status_t sysdrv_gpu_message(void* context, fidl_incoming_msg_t* messag
                                       fidl_txn_t* transaction) {
   sysdrv_device_t* device = get_device(context);
   DdkTransaction ddk_transaction(transaction);
-  fidl::WireDispatch<fuchsia_gpu_magma::CombinedDevice>(
-      device, fidl::IncomingMessage::FromEncodedCMessage(message), &ddk_transaction);
+  fidl::WireDispatch<DeviceType>(device, fidl::IncomingMessage::FromEncodedCMessage(message),
+                                 &ddk_transaction);
   return ddk_transaction.Status();
 }
 

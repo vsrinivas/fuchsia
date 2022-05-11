@@ -34,6 +34,10 @@
 
 #if MAGMA_TEST_DRIVER
 zx_status_t magma_indriver_test(zx_device_t* device);
+
+using DeviceType = fuchsia_gpu_magma::TestDevice;
+#else
+using DeviceType = fuchsia_gpu_magma::CombinedDevice;
 #endif
 
 class GpuDevice;
@@ -41,7 +45,7 @@ class GpuDevice;
 using DdkDeviceType =
     ddk::Device<GpuDevice, ddk::MessageableManual, ddk::Unbindable, ddk::Initializable>;
 
-class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevice>,
+class GpuDevice : public fidl::WireServer<DeviceType>,
                   public magma::MagmaDependencyInjectionDevice::Owner,
                   public DdkDeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_GPU> {
@@ -66,21 +70,11 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevice>,
     zx::vmo result_buffer;
     uint64_t result = 0;
 
-    switch (request->query_id) {
-      case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
-#if MAGMA_TEST_DRIVER
-        result = 1;
-#else
-        result = 0;
-#endif
-        break;
-      default:
-        magma::Status status = this->magma_system_device_->Query(
-            request->query_id, result_buffer.reset_and_get_address(), &result);
-        if (!status.ok()) {
-          _completer.ReplyError(magma::ToZxStatus(status.get()));
-          return;
-        }
+    magma::Status status = this->magma_system_device_->Query(
+        request->query_id, result_buffer.reset_and_get_address(), &result);
+    if (!status.ok()) {
+      _completer.ReplyError(magma::ToZxStatus(status.get()));
+      return;
     }
 
     if (result_buffer) {
@@ -123,21 +117,11 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevice>,
     zx::vmo result_buffer;
     uint64_t result = 0;
 
-    switch (request->query_id) {
-      case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
-#if MAGMA_TEST_DRIVER
-        result = 1;
-#else
-        result = 0;
-#endif
-        break;
-      default:
-        magma::Status status = this->magma_system_device_->Query(
-            request->query_id, result_buffer.reset_and_get_address(), &result);
-        if (!status.ok()) {
-          _completer.ReplyError(magma::ToZxStatus(status.get()));
-          return;
-        }
+    magma::Status status = this->magma_system_device_->Query(
+        request->query_id, result_buffer.reset_and_get_address(), &result);
+    if (!status.ok()) {
+      _completer.ReplyError(magma::ToZxStatus(status.get()));
+      return;
     }
 
     if (result_buffer) {
@@ -269,35 +253,16 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevice>,
     completer.Reply(fidl::VectorView<fuchsia_gpu_magma::wire::IcdInfo>::FromExternal(icd_infos));
   }
 
-  void TestRestart(TestRestartRequestView request,
-                   TestRestartCompleter::Sync& _completer) override {
 #if MAGMA_TEST_DRIVER
-    DLOG("GpuDevice::TestRestart");
-    std::lock_guard<std::mutex> lock(magma_mutex_);
-    if (!CheckSystemDevice(_completer))
-      return;
-    zx_status_t status = MagmaStop();
-    if (status != ZX_OK) {
-      DLOG("magma_stop failed: %d", status);
-    } else {
-      status = MagmaStart();
-      if (status != ZX_OK) {
-        DLOG("magma_start failed: %d", status);
-      }
-    }
-#endif
-  }
-
   void GetUnitTestStatus(GetUnitTestStatusRequestView request,
                          GetUnitTestStatusCompleter::Sync& _completer) override {
-#if MAGMA_TEST_DRIVER
     DLOG("GpuDevice::GetUnitTestStatus");
     std::lock_guard<std::mutex> lock(magma_mutex_);
     if (!CheckSystemDevice(_completer))
       return;
     _completer.Reply(this->unit_test_status_);
-#endif
   }
+#endif  // MAGMA_TEST_DRIVER
 
   // magma::MagmaDependencyInjection::Owner implementation.
   void SetMemoryPressureLevel(MagmaMemoryPressureLevel level) override {
@@ -373,7 +338,7 @@ void GpuDevice::DdkUnbind(ddk::UnbindTxn txn) {
 }
 
 void GpuDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
-  fidl::WireDispatch<fuchsia_gpu_magma::CombinedDevice>(this, std::move(msg), &txn);
+  fidl::WireDispatch<DeviceType>(this, std::move(msg), &txn);
 }
 
 void GpuDevice::DdkRelease() {

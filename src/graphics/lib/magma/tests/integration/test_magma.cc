@@ -950,15 +950,6 @@ class TestConnection {
     }
   }
 
-  void QueryTestRestartSupported() {
-    ASSERT_TRUE(device_);
-
-    uint64_t is_supported = 0;
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_query(device_, MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, nullptr, &is_supported));
-    // We don't care about the value of |is_supported|, just that the query returns ok.
-  }
-
 #if defined(__Fuchsia__)
   void CheckAccessWithInvalidToken(magma_status_t expected_result) {
     FakePerfCountAccessServer server;
@@ -1182,11 +1173,6 @@ TEST_F(Magma, QueryReturnsBufferCalibratedTimestamps) {
   constexpr bool kCheckClock = true;
   TestConnection test;
   test.QueryReturnsBufferImported(kLeaky, kCheckClock);
-}
-
-TEST_F(Magma, QueryTestRestartSupported) {
-  TestConnection test;
-  test.QueryTestRestartSupported();
 }
 
 TEST_F(Magma, TracingInit) {
