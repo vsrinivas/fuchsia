@@ -13,7 +13,9 @@ configuration.
 
 1. Configure network
     + Go to Network Setup > TCP/IP Settings > Wired LAN IPV4 Configuration.
-    + Disable __DHCP Mode__ and set a static __IPV4 Address__.
+    + Disable __DHCP Mode__ and set a static __IPV4 Address__. You need to pick an address that
+      will be reachable from your host (for example, an address on the same network as the IPv4
+      interface of your host machine).
     + Return to AMT Configuration and enable __Activate Network Access__.
     + Exit Intel ME settings and save your changes.
 
