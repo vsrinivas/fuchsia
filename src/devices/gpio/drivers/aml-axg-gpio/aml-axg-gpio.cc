@@ -55,10 +55,9 @@ enum {
 zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
 
-  pbus_protocol_t pbus;
+  ddk::PBusProtocolClient pbus(parent);
   if ((status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus)) != ZX_OK) {
-    zxlogf(ERROR, "AmlAxgGpio::Create: ZX_PROTOCOL_PBUS not available");
-    return status;
+    zxlogf(WARNING, "AmlAxgGpio::Create: ZX_PROTOCOL_PBUS not available");
   }
 
   ddk::PDev pdev(parent);
@@ -127,7 +126,9 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  device->Bind(pbus);
+  if (pbus.is_valid()) {
+    device->Bind(pbus);
+  }
 
   if ((status = device->DdkAdd(
            ddk::DeviceAddArgs("aml-axg-gpio").set_proto_id(ZX_PROTOCOL_GPIO_IMPL))) != ZX_OK) {
@@ -140,14 +141,14 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-void AmlAxgGpio::Bind(const pbus_protocol_t& pbus) {
+void AmlAxgGpio::Bind(const ddk::PBusProtocolClient& pbus) {
   gpio_impl_protocol_t gpio_proto = {
       .ops = &gpio_impl_protocol_ops_,
       .ctx = this,
   };
 
-  pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, reinterpret_cast<uint8_t*>(&gpio_proto),
-                         sizeof(gpio_proto));
+  pbus.RegisterProtocol(ZX_PROTOCOL_GPIO_IMPL, reinterpret_cast<uint8_t*>(&gpio_proto),
+                        sizeof(gpio_proto));
 }
 
 zx_status_t AmlAxgGpio::AmlPinToBlock(const uint32_t pin, const AmlGpioBlock** out_block,
