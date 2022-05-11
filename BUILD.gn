@@ -93,6 +93,10 @@ if (host_os == "mac") {
   import("//build/config/mac/mac_sdk.gni")
 }
 
+assert(
+    current_toolchain == default_toolchain,
+    "The root build file (//BUILD.gn) can only be processed in the `default_toolchain`.")
+
 ###
 ### fx integration.
 ###
@@ -803,7 +807,7 @@ build_api_module("tool_paths") {
     # so should always be included in the tools manifest.
     "//src/developer/ffx($host_toolchain)",
 
-    ":tool_paths.llvm-profdata-rust($host_toolchain)",
+    "//build/rust:tool_paths.llvm-profdata-rust($host_toolchain)",
     ":tool_paths.llvm-tools",
     ":tool_paths.metadata",
     "//build/images:packages",
@@ -907,28 +911,6 @@ group("tool_paths.llvm-tools") {
           name = tool
           os = host_os
           path = rebase_path("$clang_tool_dir/$tool", root_build_dir)
-        },
-      ]
-    }
-  }
-}
-
-# This target adds llvm-profdata for the rust toolchain to tool_paths.json.
-# Since this tool has the same name as the clang counterpart, we need to
-# append -rust to the name to differentiate them. It also needs to be built
-# in the host_toolchain in order for the tool path to be correct.
-if (is_host) {
-  group("tool_paths.llvm-profdata-rust") {
-    visibility = [ ":tool_paths" ]
-    deps = [ "//build/rust:make_toolchain_host_binaries" ]
-    metadata = {
-      tool_paths = [
-        {
-          cpu = host_cpu
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = "llvm-profdata-rust"
-          os = host_os
-          path = "$out_rustc_prefix/llvm-profdata"
         },
       ]
     }
