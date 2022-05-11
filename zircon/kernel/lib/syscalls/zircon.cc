@@ -176,7 +176,8 @@ zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options,
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<LogDispatcher> log;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(log_handle, ZX_RIGHT_WRITE, &log);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, log_handle, ZX_RIGHT_WRITE, &log);
   if (status != ZX_OK)
     return status;
 
@@ -252,7 +253,8 @@ zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_out
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<LogDispatcher> log;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(log_handle, ZX_RIGHT_READ, &log);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, log_handle, ZX_RIGHT_READ, &log);
   if (status != ZX_OK)
     return status;
 

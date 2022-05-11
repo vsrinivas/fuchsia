@@ -233,7 +233,7 @@ static zx_status_t vmo_coalesce_pages(zx_handle_t vmo_hdl, const size_t extra_by
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<VmObjectDispatcher> vmo_dispatcher;
   zx_status_t st =
-      up->handle_table().GetDispatcherWithRights(vmo_hdl, ZX_RIGHT_READ, &vmo_dispatcher);
+      up->handle_table().GetDispatcherWithRights(*up, vmo_hdl, ZX_RIGHT_READ, &vmo_dispatcher);
   if (st != ZX_OK)
     return st;
 
@@ -530,10 +530,11 @@ zx_status_t sys_system_get_event(zx_handle_t root_job, uint32_t kind, user_out_h
   fbl::RefPtr<JobDispatcher> job;
   zx_status_t status;
   if (kind == ZX_SYSTEM_EVENT_OUT_OF_MEMORY) {
-    status = up->handle_table().GetDispatcherWithRights(root_job, ZX_RIGHT_MANAGE_PROCESS, &job);
+    status =
+        up->handle_table().GetDispatcherWithRights(*up, root_job, ZX_RIGHT_MANAGE_PROCESS, &job);
   } else {
     // We check for the root job below. We should not need to enforce rights beyond that.
-    status = up->handle_table().GetDispatcherWithRights(root_job, ZX_RIGHT_NONE, &job);
+    status = up->handle_table().GetDispatcherWithRights(*up, root_job, ZX_RIGHT_NONE, &job);
   }
   if (status != ZX_OK) {
     return status;

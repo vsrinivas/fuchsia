@@ -151,7 +151,7 @@ static zx_status_t channel_read(zx_handle_t handle_value, uint32_t options,
 
   fbl::RefPtr<ChannelDispatcher> channel;
   zx_status_t result =
-      up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_READ, &channel);
+      up->handle_table().GetDispatcherWithRights(*up, handle_value, ZX_RIGHT_READ, &channel);
   if (result != ZX_OK)
     return result;
 
@@ -325,7 +325,7 @@ static zx_status_t channel_write(zx_handle_t handle_value, uint32_t options,
 
   fbl::RefPtr<ChannelDispatcher> channel;
   zx_status_t status =
-      up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_WRITE, &channel);
+      up->handle_table().GetDispatcherWithRights(*up, handle_value, ZX_RIGHT_WRITE, &channel);
   if (status != ZX_OK) {
     return status;
   }
@@ -386,8 +386,8 @@ zx_status_t channel_call_noretry(zx_handle_t handle_value, uint32_t options, zx_
   }
 
   fbl::RefPtr<ChannelDispatcher> channel;
-  status = up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_WRITE | ZX_RIGHT_READ,
-                                                      &channel);
+  status = up->handle_table().GetDispatcherWithRights(*up, handle_value,
+                                                      ZX_RIGHT_WRITE | ZX_RIGHT_READ, &channel);
   if (status != ZX_OK) {
     return status;
   }

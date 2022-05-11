@@ -41,7 +41,7 @@ zx_status_t RemoveUserHandles(T user_handles, size_t num_handles, ProcessDispatc
       break;
     }
 
-    status = process->handle_table().RemoveHandles(ktl::span(handles, chunk_size));
+    status = process->handle_table().RemoveHandles(*process, ktl::span(handles, chunk_size));
     offset += chunk_size;
   }
   return status;

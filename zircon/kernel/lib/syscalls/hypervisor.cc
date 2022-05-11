@@ -51,14 +51,15 @@ zx_status_t sys_guest_set_trap(zx_handle_t handle, uint32_t kind, zx_vaddr_t add
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<GuestDispatcher> guest;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &guest);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_WRITE, &guest);
   if (status != ZX_OK) {
     return status;
   }
 
   fbl::RefPtr<PortDispatcher> port;
   if (port_handle != ZX_HANDLE_INVALID) {
-    status = up->handle_table().GetDispatcherWithRights(port_handle, ZX_RIGHT_WRITE, &port);
+    status = up->handle_table().GetDispatcherWithRights(*up, port_handle, ZX_RIGHT_WRITE, &port);
     if (status != ZX_OK) {
       return status;
     }
@@ -75,8 +76,8 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options, zx_vaddr
 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<GuestDispatcher> guest;
-  zx_status_t status =
-      up->handle_table().GetDispatcherWithRights(guest_handle, ZX_RIGHT_MANAGE_PROCESS, &guest);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(*up, guest_handle,
+                                                                  ZX_RIGHT_MANAGE_PROCESS, &guest);
   if (status != ZX_OK) {
     return status;
   }
@@ -95,7 +96,8 @@ zx_status_t sys_vcpu_enter(zx_handle_t handle, user_out_ptr<zx_port_packet_t> us
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<VcpuDispatcher> vcpu;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_EXECUTE, &vcpu);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_EXECUTE, &vcpu);
   if (status != ZX_OK) {
     return status;
   }
@@ -118,7 +120,8 @@ zx_status_t sys_vcpu_kick(zx_handle_t handle) {
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<VcpuDispatcher> vcpu;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_EXECUTE, &vcpu);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_EXECUTE, &vcpu);
   if (status != ZX_OK) {
     return status;
   }
@@ -131,7 +134,8 @@ zx_status_t sys_vcpu_interrupt(zx_handle_t handle, uint32_t vector) {
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<VcpuDispatcher> vcpu;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_SIGNAL, &vcpu);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_SIGNAL, &vcpu);
   if (status != ZX_OK) {
     return status;
   }
@@ -145,7 +149,8 @@ zx_status_t sys_vcpu_read_state(zx_handle_t handle, uint32_t kind, user_out_ptr<
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<VcpuDispatcher> vcpu;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_READ, &vcpu);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_READ, &vcpu);
   if (status != ZX_OK) {
     return status;
   }
@@ -182,7 +187,8 @@ zx_status_t sys_vcpu_write_state(zx_handle_t handle, uint32_t kind,
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<VcpuDispatcher> vcpu;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &vcpu);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_WRITE, &vcpu);
   if (status != ZX_OK) {
     return status;
   }

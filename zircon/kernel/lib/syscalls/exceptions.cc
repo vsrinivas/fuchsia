@@ -48,8 +48,9 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
   fbl::RefPtr<Dispatcher> task;
   zx_rights_t task_rights;
   status = up->handle_table().GetDispatcherWithRights(
-      handle, ZX_RIGHT_INSPECT | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_MANAGE_THREAD,
-      &task, &task_rights);
+      *up, handle,
+      ZX_RIGHT_INSPECT | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_MANAGE_THREAD, &task,
+      &task_rights);
   if (status != ZX_OK)
     return status;
 
@@ -120,7 +121,7 @@ zx_status_t sys_exception_get_thread(zx_handle_t handle, user_out_handle* thread
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<ExceptionDispatcher> exception;
-  zx_status_t status = up->handle_table().GetDispatcher(handle, &exception);
+  zx_status_t status = up->handle_table().GetDispatcher(*up, handle, &exception);
   if (status != ZX_OK) {
     return status;
   }
@@ -139,7 +140,7 @@ zx_status_t sys_exception_get_process(zx_handle_t handle, user_out_handle* proce
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<ExceptionDispatcher> exception;
-  zx_status_t status = up->handle_table().GetDispatcher(handle, &exception);
+  zx_status_t status = up->handle_table().GetDispatcher(*up, handle, &exception);
   if (status != ZX_OK) {
     return status;
   }

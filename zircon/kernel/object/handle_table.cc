@@ -84,17 +84,17 @@ zx_handle_t HandleTable::MapHandleToValue(const HandleOwner& handle) const {
   return map_handle_to_value(handle.get(), random_value_);
 }
 
-Handle* HandleTable::GetHandleLocked(zx_handle_t handle_value, bool skip_policy) {
+Handle* HandleTable::GetHandleLocked(ProcessDispatcher* caller, zx_handle_t handle_value) {
   auto handle = map_value_to_handle(handle_value, random_value_);
   if (handle && handle->process_id() == process_->get_koid())
     return handle;
 
-  if (likely(!skip_policy)) {
+  if (likely(caller)) {
     // Handle lookup failed.  We potentially generate an exception or kill the process,
     // depending on the job policy. Note that we don't use the return value from
     // EnforceBasicPolicy() here: ZX_POL_ACTION_ALLOW and ZX_POL_ACTION_DENY are equivalent for
     // ZX_POL_BAD_HANDLE.
-    __UNUSED auto result = process_->EnforceBasicPolicy(ZX_POL_BAD_HANDLE);
+    __UNUSED auto result = caller->EnforceBasicPolicy(ZX_POL_BAD_HANDLE);
   }
 
   return nullptr;
@@ -129,45 +129,46 @@ HandleOwner HandleTable::RemoveHandleLocked(Handle* handle) {
   return HandleOwner(handle);
 }
 
-HandleOwner HandleTable::RemoveHandle(zx_handle_t handle_value) {
+HandleOwner HandleTable::RemoveHandle(ProcessDispatcher& caller, zx_handle_t handle_value) {
   Guard<BrwLockPi, BrwLockPi::Writer> guard{&lock_};
-  return RemoveHandleLocked(handle_value);
+  return RemoveHandleLocked(caller, handle_value);
 }
 
-HandleOwner HandleTable::RemoveHandleLocked(zx_handle_t handle_value) {
-  auto handle = GetHandleLocked(handle_value);
+HandleOwner HandleTable::RemoveHandleLocked(ProcessDispatcher& caller, zx_handle_t handle_value) {
+  auto handle = GetHandleLocked(caller, handle_value);
   if (!handle)
     return nullptr;
   return RemoveHandleLocked(handle);
 }
 
-zx_status_t HandleTable::RemoveHandles(ktl::span<const zx_handle_t> handles) {
+zx_status_t HandleTable::RemoveHandles(ProcessDispatcher& caller,
+                                       ktl::span<const zx_handle_t> handles) {
   zx_status_t status = ZX_OK;
   Guard<BrwLockPi, BrwLockPi::Writer> guard{get_lock()};
 
   for (zx_handle_t handle_value : handles) {
     if (handle_value == ZX_HANDLE_INVALID)
       continue;
-    auto handle = RemoveHandleLocked(handle_value);
+    auto handle = RemoveHandleLocked(caller, handle_value);
     if (!handle)
       status = ZX_ERR_BAD_HANDLE;
   }
   return status;
 }
 
-zx_koid_t HandleTable::GetKoidForHandle(zx_handle_t handle_value) {
+zx_koid_t HandleTable::GetKoidForHandle(ProcessDispatcher& caller, zx_handle_t handle_value) {
   Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
-  Handle* handle = GetHandleLocked(handle_value);
+  Handle* handle = GetHandleLocked(caller, handle_value);
   if (!handle)
     return ZX_KOID_INVALID;
   return handle->dispatcher()->get_koid();
 }
 
-zx_status_t HandleTable::GetDispatcherInternal(zx_handle_t handle_value,
+zx_status_t HandleTable::GetDispatcherInternal(ProcessDispatcher& caller, zx_handle_t handle_value,
                                                fbl::RefPtr<Dispatcher>* dispatcher,
                                                zx_rights_t* rights) {
   Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
-  Handle* handle = GetHandleLocked(handle_value);
+  Handle* handle = GetHandleLocked(caller, handle_value);
   if (!handle)
     return ZX_ERR_BAD_HANDLE;
 
@@ -204,11 +205,6 @@ zx_status_t HandleTable::GetHandleInfo(fbl::Array<zx_info_handle_extended_t>* ha
     }
     return ZX_OK;
   }
-}
-
-bool HandleTable::IsHandleValid(zx_handle_t handle_value) {
-  Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
-  return (GetHandleLocked(handle_value) != nullptr);
 }
 
 HandleTable::HandleCursor::HandleCursor(HandleTable* handle_table) : handle_table_(handle_table) {

@@ -231,7 +231,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       fbl::RefPtr<Dispatcher> dispatcher;
       zx_rights_t rights;
-      auto status = up->handle_table().GetDispatcherAndRights(handle, &dispatcher, &rights);
+      auto status = up->handle_table().GetDispatcherAndRights(*up, handle, &dispatcher, &rights);
       if (status != ZX_OK)
         return status;
 
@@ -253,7 +253,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       // Grab a reference to the dispatcher.
       fbl::RefPtr<ProcessDispatcher> process;
-      auto error = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);
+      auto error =
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &process);
       if (error != ZX_OK)
         return error;
 
@@ -264,7 +265,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_PROCESS_THREADS: {
       // grab a reference to the dispatcher
       fbl::RefPtr<ProcessDispatcher> process;
-      auto error = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_ENUMERATE, &process);
+      auto error =
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_ENUMERATE, &process);
       if (error != ZX_OK)
         return error;
 
@@ -304,7 +306,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_JOB_CHILDREN:
     case ZX_INFO_JOB_PROCESSES: {
       fbl::RefPtr<JobDispatcher> job;
-      auto error = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_ENUMERATE, &job);
+      auto error =
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_ENUMERATE, &job);
       if (error != ZX_OK)
         return error;
 
@@ -336,7 +339,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       // grab a reference to the dispatcher
       fbl::RefPtr<ThreadDispatcher> thread;
-      auto error = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &thread);
+      auto error =
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &thread);
       if (error != ZX_OK)
         return error;
 
@@ -353,7 +357,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_THREAD_EXCEPTION_REPORT: {
       // grab a reference to the dispatcher
       fbl::RefPtr<ThreadDispatcher> thread;
-      auto error = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &thread);
+      auto error =
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &thread);
       if (error != ZX_OK)
         return error;
 
@@ -381,7 +386,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       // grab a reference to the dispatcher
       fbl::RefPtr<ThreadDispatcher> thread;
-      auto error = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &thread);
+      auto error =
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &thread);
       if (error != ZX_OK)
         return error;
 
@@ -401,7 +407,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       // Grab a reference to the dispatcher. Only supports processes for
       // now, but could support jobs or threads in the future.
       fbl::RefPtr<ProcessDispatcher> process;
-      auto error = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);
+      auto error =
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &process);
       if (error != ZX_OK)
         return error;
 
@@ -417,7 +424,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_TASK_RUNTIME_V1:
     case ZX_INFO_TASK_RUNTIME: {
       fbl::RefPtr<Dispatcher> dispatcher;
-      auto err = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &dispatcher);
+      auto err =
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &dispatcher);
       if (err != ZX_OK) {
         return err;
       }
@@ -456,7 +464,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_PROCESS_MAPS: {
       fbl::RefPtr<ProcessDispatcher> process;
       zx_status_t status =
-          up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &process);
       if (status != ZX_OK)
         return status;
 
@@ -481,7 +489,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_PROCESS_VMOS: {
       fbl::RefPtr<ProcessDispatcher> process;
       zx_status_t status =
-          up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &process);
       if (status != ZX_OK)
         return status;
 
@@ -515,7 +523,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       // lookup the dispatcher from handle
       fbl::RefPtr<VmObjectDispatcher> vmo;
       zx_rights_t rights;
-      zx_status_t status = up->handle_table().GetDispatcherAndRights(handle, &vmo, &rights);
+      zx_status_t status = up->handle_table().GetDispatcherAndRights(*up, handle, &vmo, &rights);
       if (status != ZX_OK)
         return status;
       zx_info_vmo_t entry = vmo->GetVmoInfo(rights);
@@ -530,7 +538,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_VMAR: {
       fbl::RefPtr<VmAddressRegionDispatcher> vmar;
       zx_status_t status =
-          up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &vmar);
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &vmar);
       if (status != ZX_OK)
         return status;
 
@@ -771,7 +779,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       // grab a reference to the dispatcher
       fbl::RefPtr<ResourceDispatcher> resource;
       zx_status_t error =
-          up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &resource);
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &resource);
       if (error != ZX_OK) {
         return error;
       }
@@ -789,7 +797,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_HANDLE_COUNT: {
       fbl::RefPtr<Dispatcher> dispatcher;
       auto status =
-          up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &dispatcher);
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &dispatcher);
       if (status != ZX_OK)
         return status;
 
@@ -800,7 +808,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_BTI: {
       fbl::RefPtr<BusTransactionInitiatorDispatcher> dispatcher;
       auto status =
-          up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &dispatcher);
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &dispatcher);
       if (status != ZX_OK)
         return status;
 
@@ -815,7 +823,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     }
     case ZX_INFO_PROCESS_HANDLE_STATS: {
       fbl::RefPtr<ProcessDispatcher> process;
-      auto status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);
+      auto status =
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &process);
       if (status != ZX_OK)
         return status;
 
@@ -834,7 +843,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
     case ZX_INFO_SOCKET: {
       fbl::RefPtr<SocketDispatcher> socket;
-      auto status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &socket);
+      auto status =
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &socket);
       if (status != ZX_OK)
         return status;
 
@@ -846,7 +856,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
     case ZX_INFO_JOB: {
       fbl::RefPtr<JobDispatcher> job;
-      auto error = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &job);
+      auto error = up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &job);
       if (error != ZX_OK)
         return error;
 
@@ -858,7 +868,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
     case ZX_INFO_TIMER: {
       fbl::RefPtr<TimerDispatcher> timer;
-      auto error = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &timer);
+      auto error =
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &timer);
       if (error != ZX_OK)
         return error;
 
@@ -871,7 +882,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_STREAM: {
       fbl::RefPtr<StreamDispatcher> stream;
       zx_status_t status =
-          up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &stream);
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &stream);
       if (status != ZX_OK) {
         return status;
       }
@@ -885,7 +896,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_HANDLE_TABLE: {
       fbl::RefPtr<ProcessDispatcher> process;
       auto error = up->handle_table().GetDispatcherWithRights(
-          handle, ZX_RIGHT_INSPECT | ZX_RIGHT_MANAGE_PROCESS | ZX_RIGHT_MANAGE_THREAD, &process);
+          *up, handle, ZX_RIGHT_INSPECT | ZX_RIGHT_MANAGE_PROCESS | ZX_RIGHT_MANAGE_THREAD,
+          &process);
       if (error != ZX_OK)
         return error;
 
@@ -924,7 +936,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_MSI: {
       fbl::RefPtr<MsiDispatcher> allocation;
       zx_status_t status =
-          up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &allocation);
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &allocation);
       if (status != ZX_OK) {
         return status;
       }
@@ -938,7 +950,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     case ZX_INFO_VCPU: {
       fbl::RefPtr<VcpuDispatcher> vcpu;
       zx_status_t status =
-          up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &vcpu);
+          up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_INSPECT, &vcpu);
       if (status != ZX_OK) {
         return status;
       }
@@ -962,8 +974,8 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<Dispatcher> dispatcher;
-  zx_status_t status =
-      up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_GET_PROPERTY, &dispatcher);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(
+      *up, handle_value, ZX_RIGHT_GET_PROPERTY, &dispatcher);
   if (status != ZX_OK)
     return status;
   switch (property) {
@@ -1116,8 +1128,8 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<Dispatcher> dispatcher;
 
-  const zx_status_t get_dispatcher_status =
-      up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_SET_PROPERTY, &dispatcher);
+  const zx_status_t get_dispatcher_status = up->handle_table().GetDispatcherWithRights(
+      *up, handle_value, ZX_RIGHT_SET_PROPERTY, &dispatcher);
   if (get_dispatcher_status != ZX_OK)
     return get_dispatcher_status;
 
@@ -1312,7 +1324,7 @@ zx_status_t sys_object_signal(zx_handle_t handle_value, uint32_t clear_mask, uin
   fbl::RefPtr<Dispatcher> dispatcher;
 
   auto status =
-      up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_SIGNAL, &dispatcher);
+      up->handle_table().GetDispatcherWithRights(*up, handle_value, ZX_RIGHT_SIGNAL, &dispatcher);
   if (status != ZX_OK)
     return status;
 
@@ -1327,8 +1339,8 @@ zx_status_t sys_object_signal_peer(zx_handle_t handle_value, uint32_t clear_mask
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<Dispatcher> dispatcher;
 
-  auto status =
-      up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_SIGNAL_PEER, &dispatcher);
+  auto status = up->handle_table().GetDispatcherWithRights(*up, handle_value, ZX_RIGHT_SIGNAL_PEER,
+                                                           &dispatcher);
   if (status != ZX_OK)
     return status;
 
@@ -1344,7 +1356,7 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
 
   fbl::RefPtr<Dispatcher> dispatcher;
   uint32_t parent_rights;
-  auto status = up->handle_table().GetDispatcherAndRights(handle, &dispatcher, &parent_rights);
+  auto status = up->handle_table().GetDispatcherAndRights(*up, handle, &dispatcher, &parent_rights);
   if (status != ZX_OK)
     return status;
 

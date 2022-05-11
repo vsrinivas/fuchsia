@@ -46,7 +46,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value, zx_signals_t signals, 
   {
     Guard<BrwLockPi, BrwLockPi::Reader> guard{up->handle_table().get_lock()};
 
-    Handle* handle = up->handle_table().GetHandleLocked(handle_value);
+    Handle* handle = up->handle_table().GetHandleLocked(*up, handle_value);
     if (!handle)
       return ZX_ERR_BAD_HANDLE;
     if (!handle->HasRights(ZX_RIGHT_WAIT))
@@ -136,7 +136,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     Guard<BrwLockPi, BrwLockPi::Reader> guard{up->handle_table().get_lock()};
 
     for (; num_added != count; ++num_added) {
-      Handle* handle = up->handle_table().GetHandleLocked(items[num_added].handle);
+      Handle* handle = up->handle_table().GetHandleLocked(*up, items[num_added].handle);
       if (!handle) {
         result = ZX_ERR_BAD_HANDLE;
         break;
@@ -204,7 +204,7 @@ zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_han
     // Second, MakeObserver takes a Handle. By holding the lock we ensure the Handle isn't
     // destroyed out from under it.
 
-    Handle* port_handle = up->handle_table().GetHandleLocked(port_handle_value);
+    Handle* port_handle = up->handle_table().GetHandleLocked(*up, port_handle_value);
     if (!port_handle) {
       return ZX_ERR_BAD_HANDLE;
     }
@@ -217,7 +217,7 @@ zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_han
       return ZX_ERR_ACCESS_DENIED;
     }
 
-    Handle* handle = up->handle_table().GetHandleLocked(handle_value);
+    Handle* handle = up->handle_table().GetHandleLocked(*up, handle_value);
     if (!handle) {
       return ZX_ERR_BAD_HANDLE;
     }

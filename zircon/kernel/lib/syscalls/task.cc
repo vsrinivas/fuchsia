@@ -97,8 +97,8 @@ zx_status_t sys_thread_create(zx_handle_t process_handle, user_in_ptr<const char
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<ProcessDispatcher> process;
-  result =
-      up->handle_table().GetDispatcherWithRights(process_handle, ZX_RIGHT_MANAGE_THREAD, &process);
+  result = up->handle_table().GetDispatcherWithRights(*up, process_handle, ZX_RIGHT_MANAGE_THREAD,
+                                                      &process);
   if (result != ZX_OK) {
     return result;
   }
@@ -135,7 +135,7 @@ zx_status_t sys_thread_start(zx_handle_t handle, zx_vaddr_t thread_entry, zx_vad
 
   fbl::RefPtr<ThreadDispatcher> thread;
   zx_status_t status =
-      up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_MANAGE_THREAD, &thread);
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_MANAGE_THREAD, &thread);
   if (status != ZX_OK) {
     return status;
   }
@@ -159,7 +159,8 @@ zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t kind, user_out_pt
 
   // TODO(fxbug.dev/30915): debug rights
   fbl::RefPtr<ThreadDispatcher> thread;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_READ, &thread);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_READ, &thread);
   if (status != ZX_OK)
     return status;
 
@@ -179,7 +180,8 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t kind,
 
   // TODO(fxbug.dev/30915): debug rights
   fbl::RefPtr<ThreadDispatcher> thread;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &thread);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_WRITE, &thread);
   if (status != ZX_OK)
     return status;
 
@@ -204,7 +206,8 @@ zx_status_t sys_task_suspend(zx_handle_t handle, user_out_handle* token) {
 
   // TODO(fxbug.dev/30807): Add support for jobs
   fbl::RefPtr<Dispatcher> task;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &task);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_WRITE, &task);
   if (status != ZX_OK)
     return status;
 
@@ -255,11 +258,11 @@ zx_status_t sys_process_create(zx_handle_t job_handle, user_in_ptr<const char> _
 
   fbl::RefPtr<JobDispatcher> job;
   auto status =
-      up->handle_table().GetDispatcherWithRights(job_handle, ZX_RIGHT_MANAGE_PROCESS, &job);
+      up->handle_table().GetDispatcherWithRights(*up, job_handle, ZX_RIGHT_MANAGE_PROCESS, &job);
   if (status != ZX_OK) {
     // Try again, but with the WRITE right.
     // TODO(fxbug.dev/32803) Remove this when all callers are using MANAGE_PROCESS.
-    status = up->handle_table().GetDispatcherWithRights(job_handle, ZX_RIGHT_WRITE, &job);
+    status = up->handle_table().GetDispatcherWithRights(*up, job_handle, ZX_RIGHT_WRITE, &job);
     if (status != ZX_OK) {
       return status;
     }
@@ -309,21 +312,21 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
   // get process dispatcher
   fbl::RefPtr<ProcessDispatcher> process;
   zx_status_t status =
-      up->handle_table().GetDispatcherWithRights(process_handle, ZX_RIGHT_WRITE, &process);
+      up->handle_table().GetDispatcherWithRights(*up, process_handle, ZX_RIGHT_WRITE, &process);
   if (status != ZX_OK) {
-    up->handle_table().RemoveHandle(arg_handle_value);
+    up->handle_table().RemoveHandle(*up, arg_handle_value);
     return status;
   }
 
   // get thread_dispatcher
   fbl::RefPtr<ThreadDispatcher> thread;
-  status = up->handle_table().GetDispatcherWithRights(thread_handle, ZX_RIGHT_WRITE, &thread);
+  status = up->handle_table().GetDispatcherWithRights(*up, thread_handle, ZX_RIGHT_WRITE, &thread);
   if (status != ZX_OK) {
-    up->handle_table().RemoveHandle(arg_handle_value);
+    up->handle_table().RemoveHandle(*up, arg_handle_value);
     return status;
   }
 
-  HandleOwner arg_handle = up->handle_table().RemoveHandle(arg_handle_value);
+  HandleOwner arg_handle = up->handle_table().RemoveHandle(*up, arg_handle_value);
 
   // test that the thread belongs to the starting process
   if (thread->process() != process.get())
@@ -342,7 +345,7 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
                     /* initial_thread */ true);
   if (status != ZX_OK) {
     // Remove |arg_handle| from the process that failed to start.
-    process->handle_table().RemoveHandle(arg_nhv);
+    process->handle_table().RemoveHandle(*process, arg_nhv);
     return status;
   }
 
@@ -369,8 +372,8 @@ zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_o
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<ProcessDispatcher> process;
-  zx_status_t status =
-      up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &process);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(
+      *up, handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &process);
   if (status != ZX_OK)
     return status;
 
@@ -428,7 +431,8 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<ProcessDispatcher> process;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &process);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_WRITE, &process);
   if (status != ZX_OK)
     return status;
 
@@ -492,7 +496,7 @@ zx_status_t sys_task_kill(zx_handle_t task_handle) {
 
   fbl::RefPtr<Dispatcher> dispatcher;
   auto status =
-      up->handle_table().GetDispatcherWithRights(task_handle, ZX_RIGHT_DESTROY, &dispatcher);
+      up->handle_table().GetDispatcherWithRights(*up, task_handle, ZX_RIGHT_DESTROY, &dispatcher);
   if (status != ZX_OK)
     return status;
 
@@ -518,11 +522,11 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options, user_out_ha
 
   fbl::RefPtr<JobDispatcher> parent;
   zx_status_t status =
-      up->handle_table().GetDispatcherWithRights(parent_job, ZX_RIGHT_MANAGE_JOB, &parent);
+      up->handle_table().GetDispatcherWithRights(*up, parent_job, ZX_RIGHT_MANAGE_JOB, &parent);
   if (status != ZX_OK) {
     // Try again, but with the WRITE right.
     // TODO(kulakowski) Remove this when all callers are using MANAGE_JOB.
-    status = up->handle_table().GetDispatcherWithRights(parent_job, ZX_RIGHT_WRITE, &parent);
+    status = up->handle_table().GetDispatcherWithRights(*up, parent_job, ZX_RIGHT_WRITE, &parent);
     if (status != ZX_OK) {
       return status;
     }
@@ -560,7 +564,7 @@ static zx_status_t job_set_policy_basic(zx_handle_t handle, uint32_t options,
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<JobDispatcher> job;
-  status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_SET_POLICY, &job);
+  status = up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_SET_POLICY, &job);
   if (status != ZX_OK) {
     return status;
   }
@@ -586,7 +590,7 @@ static zx_status_t job_set_policy_timer_slack(zx_handle_t handle, uint32_t optio
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<JobDispatcher> job;
-  status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_SET_POLICY, &job);
+  status = up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_SET_POLICY, &job);
   if (status != ZX_OK) {
     return status;
   }
@@ -622,13 +626,13 @@ zx_status_t sys_job_set_critical(zx_handle_t job_handle, uint32_t options,
 
   fbl::RefPtr<JobDispatcher> job;
   zx_status_t status =
-      up->handle_table().GetDispatcherWithRights(job_handle, ZX_RIGHT_DESTROY, &job);
+      up->handle_table().GetDispatcherWithRights(*up, job_handle, ZX_RIGHT_DESTROY, &job);
   if (status != ZX_OK) {
     return status;
   }
 
   fbl::RefPtr<ProcessDispatcher> process;
-  status = up->handle_table().GetDispatcherWithRights(process_handle, ZX_RIGHT_WAIT, &process);
+  status = up->handle_table().GetDispatcherWithRights(*up, process_handle, ZX_RIGHT_WAIT, &process);
   if (status != ZX_OK) {
     return status;
   }

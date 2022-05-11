@@ -36,7 +36,7 @@ zx_status_t sys_profile_create(zx_handle_t root_job, uint32_t options,
   }
 
   fbl::RefPtr<JobDispatcher> job;
-  status = up->handle_table().GetDispatcherWithRights(root_job, ZX_RIGHT_MANAGE_PROCESS, &job);
+  status = up->handle_table().GetDispatcherWithRights(*up, root_job, ZX_RIGHT_MANAGE_PROCESS, &job);
   if (status != ZX_OK) {
     return status;
   }
@@ -72,13 +72,14 @@ zx_status_t sys_object_set_profile(zx_handle_t handle, zx_handle_t profile_handl
   // TODO(cpu): support more than thread objects, and actually do something.
 
   fbl::RefPtr<ThreadDispatcher> thread;
-  auto status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_MANAGE_THREAD, &thread);
+  auto status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_MANAGE_THREAD, &thread);
   if (status != ZX_OK)
     return status;
 
   fbl::RefPtr<ProfileDispatcher> profile;
-  zx_status_t result =
-      up->handle_table().GetDispatcherWithRights(profile_handle, ZX_RIGHT_APPLY_PROFILE, &profile);
+  zx_status_t result = up->handle_table().GetDispatcherWithRights(*up, profile_handle,
+                                                                  ZX_RIGHT_APPLY_PROFILE, &profile);
   if (result != ZX_OK)
     return result;
 

@@ -77,7 +77,7 @@ zx_status_t sys_vmo_read(zx_handle_t handle, user_out_ptr<void> _data, uint64_t 
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmObjectDispatcher> vmo;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_READ, &vmo);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_READ, &vmo);
   if (status != ZX_OK)
     return status;
 
@@ -93,7 +93,8 @@ zx_status_t sys_vmo_write(zx_handle_t handle, user_in_ptr<const void> _data, uin
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmObjectDispatcher> vmo;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &vmo);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_WRITE, &vmo);
   if (status != ZX_OK)
     return status;
 
@@ -108,7 +109,7 @@ zx_status_t sys_vmo_get_size(zx_handle_t handle, user_out_ptr<uint64_t> _size) {
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmObjectDispatcher> vmo;
-  zx_status_t status = up->handle_table().GetDispatcher(handle, &vmo);
+  zx_status_t status = up->handle_table().GetDispatcher(*up, handle, &vmo);
   if (status != ZX_OK)
     return status;
 
@@ -132,7 +133,8 @@ zx_status_t sys_vmo_set_size(zx_handle_t handle, uint64_t size) {
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmObjectDispatcher> vmo;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &vmo);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_WRITE, &vmo);
   if (status != ZX_OK)
     return status;
 
@@ -152,7 +154,7 @@ zx_status_t sys_vmo_op_range(zx_handle_t handle, uint32_t op, uint64_t offset, u
   // save the rights and pass down into the dispatcher for further testing
   fbl::RefPtr<VmObjectDispatcher> vmo;
   zx_rights_t rights;
-  zx_status_t status = up->handle_table().GetDispatcherAndRights(handle, &vmo, &rights);
+  zx_status_t status = up->handle_table().GetDispatcherAndRights(*up, handle, &vmo, &rights);
   if (status != ZX_OK) {
     return status;
   }
@@ -172,7 +174,7 @@ zx_status_t sys_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy) 
   }
 
   // lookup the dispatcher from handle.
-  status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_MAP, &vmo);
+  status = up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_MAP, &vmo);
   if (status != ZX_OK) {
     return status;
   }
@@ -213,8 +215,8 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options, uint64_t 
   // any destruction from occurring.
   fbl::RefPtr<VmObjectDispatcher> vmo;
   zx_rights_t in_rights;
-  status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_DUPLICATE | ZX_RIGHT_READ,
-                                                      &vmo, &in_rights);
+  status = up->handle_table().GetDispatcherWithRights(
+      *up, handle, ZX_RIGHT_DUPLICATE | ZX_RIGHT_READ, &vmo, &in_rights);
   if (status != ZX_OK)
     return status;
 
@@ -278,7 +280,7 @@ zx_status_t sys_vmo_replace_as_executable(zx_handle_t handle, zx_handle_t vmex,
   }
 
   Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table().get_lock()};
-  auto source = up->handle_table().GetHandleLocked(handle);
+  auto source = up->handle_table().GetHandleLocked(*up, handle);
   if (!source)
     return ZX_ERR_BAD_HANDLE;
 

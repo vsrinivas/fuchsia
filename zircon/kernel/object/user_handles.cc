@@ -68,7 +68,7 @@ zx_status_t get_user_handles_to_consume(user_inout_ptr<zx_handle_disposition_t> 
 zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
                                                   const Dispatcher* channel,
                                                   const zx_handle_t* handle_val) {
-  Handle* source = process->handle_table().GetHandleLocked(*handle_val);
+  Handle* source = process->handle_table().GetHandleLocked(*process, *handle_val);
 
   auto status = handle_checks_locked(source, channel, ZX_HANDLE_OP_MOVE, ZX_RIGHT_SAME_RIGHTS,
                                      ZX_OBJ_TYPE_NONE);
@@ -82,7 +82,7 @@ zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
 zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
                                                   const Dispatcher* channel,
                                                   zx_handle_disposition_t* handle_disposition) {
-  Handle* source = process->handle_table().GetHandleLocked(handle_disposition->handle);
+  Handle* source = process->handle_table().GetHandleLocked(*process, handle_disposition->handle);
 
   const zx_handle_op_t operation = handle_disposition->operation;
   const zx_rights_t desired_rights = handle_disposition->rights;
