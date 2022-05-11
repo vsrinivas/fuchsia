@@ -5,6 +5,7 @@
 mod client_cpp;
 mod client_fidl;
 mod client_rust;
+mod common;
 mod cvf;
 mod validate_package;
 

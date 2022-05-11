@@ -30,6 +30,7 @@ if (is_host) {
       "src/client_cpp.rs",
       "src/client_fidl.rs",
       "src/client_rust.rs",
+      "src/common.rs",
       "src/cvf.rs",
       "src/main.rs",
       "src/validate_package.rs",

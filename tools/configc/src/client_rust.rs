@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::common::load_manifest;
 use anyhow::{format_err, Context as _, Error};
 use argh::FromArgs;
-use cm_rust::FidlIntoNative;
-use fidl::encoding::decode_persistent;
-use fidl_fuchsia_component_decl as fdecl;
 use std::{
     fs,
     io::Write,
@@ -42,11 +40,7 @@ pub struct GenerateRustSource {
 
 impl GenerateRustSource {
     pub fn generate(self) -> Result<(), Error> {
-        // load & parse the manifest
-        let cm_raw = fs::read(self.cm).context("reading component manifest")?;
-        let component: fdecl::Component =
-            decode_persistent(&cm_raw).context("decoding component manifest")?;
-        let component = component.fidl_into_native();
+        let component = load_manifest(&self.cm).context("loading component manifest")?;
         let config_decl = component
             .config
             .as_ref()
