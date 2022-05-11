@@ -4,9 +4,9 @@
 
 use {
     crate::{
-        debug_data_server::{serve_debug_data, DebugDataFile},
         diagnostics::IsolatedLogsProvider,
         error::*,
+        run_events::{RunEvent, SuiteEvents},
     },
     anyhow::{anyhow, format_err, Context, Error},
     cm_rust,
@@ -22,14 +22,12 @@ use {
     fidl_fuchsia_test_manager as ftest_manager,
     ftest::Invocation,
     ftest_manager::{
-        CaseStatus, DebugDataIteratorMarker, LaunchError, RunControllerRequest,
-        RunControllerRequestStream, RunEvent as FidlRunEvent,
-        RunEventPayload as FidlRunEventPayload, SuiteControllerRequest,
-        SuiteControllerRequestStream, SuiteEvent as FidlSuiteEvent,
-        SuiteEventPayload as FidlSuiteEventPayload, SuiteStatus,
+        CaseStatus, LaunchError, RunControllerRequest, RunControllerRequestStream,
+        SuiteControllerRequest, SuiteControllerRequestStream, SuiteEvent as FidlSuiteEvent,
+        SuiteStatus,
     },
     fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_component::client::{connect_channel_to_protocol, connect_to_protocol},
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
         error::Error as RealmBuilderError, Capability, ChildOptions, Event, LocalComponentHandles,
@@ -51,9 +49,8 @@ use {
     std::{
         collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
-        path::PathBuf,
         sync::{
-            atomic::{AtomicU32, AtomicU64, Ordering},
+            atomic::{AtomicU32, Ordering},
             Arc,
         },
     },
@@ -63,9 +60,11 @@ use {
 
 mod debug_data_server;
 mod diagnostics;
+mod enclosing_env;
 mod error;
 mod facet;
 mod resolver;
+mod run_events;
 mod self_diagnostics;
 
 pub use self_diagnostics::RootInspectNode;
@@ -80,6 +79,8 @@ const ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm";
 const HERMETIC_RESOLVER_REALM_NAME: &'static str = "hermetic_resolver";
 const HERMETIC_RESOLVER_CAPABILITY_NAME: &'static str = "hermetic_resolver";
+
+// TODO(fxbug.dev/100034): Delete this.
 const HERMETIC_ENVIRONMENT_NAME: &'static str = "hermetic";
 const HERMETIC_TESTS_COLLECTION: &'static str = "tests";
 const HERMETIC_TIER_2_TESTS_COLLECTION: &'static str = "tier-2-tests";
@@ -238,7 +239,7 @@ impl TestRunBuilder {
         let (stop_sender, mut stop_recv) = oneshot::channel::<()>();
         let (event_sender, event_recv) = mpsc::channel::<RunEvent>(16);
 
-        let debug_event_fut = send_debug_data_if_produced(
+        let debug_event_fut = debug_data_server::send_debug_data_if_produced(
             event_sender.clone(),
             debug_controller.take_event_stream(),
             debug_iterator,
@@ -267,7 +268,7 @@ impl TestRunBuilder {
 
             // Collect run artifacts
             let mut kernel_debug_tasks = vec![];
-            kernel_debug_tasks.push(send_kernel_debug_data(event_sender));
+            kernel_debug_tasks.push(debug_data_server::send_kernel_debug_data(event_sender));
             join_all(kernel_debug_tasks).await;
             inspect_node_ref.set_execution_state(self_diagnostics::RunExecutionState::Complete);
         };
@@ -292,114 +293,6 @@ impl TestRunBuilder {
             warn!("Controller terminated early. Last known state: {:#?}", &inspect_node);
             inspect_node.persist();
         }
-    }
-}
-
-async fn send_debug_data_if_produced(
-    mut event_sender: mpsc::Sender<RunEvent>,
-    mut controller_events: ftest_internal::DebugDataSetControllerEventStream,
-    debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
-    inspect_node: &self_diagnostics::RunInspectNode,
-) {
-    inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::PendingDebugDataProduced);
-    match controller_events.next().await {
-        Some(Ok(ftest_internal::DebugDataSetControllerEvent::OnDebugDataProduced {})) => {
-            let _ = event_sender.send(RunEvent::debug_data(debug_iterator).into()).await;
-            inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::DebugDataProduced);
-        }
-        Some(Err(_)) | None => {
-            inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::NoDebugData);
-        }
-    }
-}
-
-const PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS: i64 = 15;
-const DYNAMIC_PROFILE_PREFIX: &'static str = "/prof-data/dynamic";
-const STATIC_PROFILE_PREFIX: &'static str = "/prof-data/static";
-
-async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
-    let prefixes = vec![DYNAMIC_PROFILE_PREFIX, STATIC_PROFILE_PREFIX];
-    let directories = prefixes
-        .iter()
-        .filter_map(|path| {
-            match io_util::open_directory_in_namespace(path, io_util::OpenFlags::RIGHT_READABLE) {
-                Ok(d) => Some((*path, d)),
-                Err(e) => {
-                    warn!("Failed to open {} profile directory: {:?}", path, e);
-                    None
-                }
-            }
-        })
-        .collect::<Vec<(&str, fio::DirectoryProxy)>>();
-
-    // Iterate over files as tuples containing an entry and the prefix the entry was found at.
-    struct IteratedEntry {
-        prefix: &'static str,
-        entry: files_async::DirEntry,
-    }
-
-    // Create a single stream over the files in all directories
-    let mut file_stream = futures::stream::iter(
-        directories
-            .iter()
-            .map(move |val| {
-                let (prefix, directory) = val;
-                files_async::readdir_recursive(
-                    directory,
-                    Some(fasync::Duration::from_seconds(
-                        PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS,
-                    )),
-                )
-                .map_ok(move |file| IteratedEntry { prefix: prefix, entry: file })
-            })
-            .collect::<Vec<_>>(),
-    )
-    .flatten();
-
-    let mut file_futs = vec![];
-    while let Some(Ok(IteratedEntry { prefix, entry })) = file_stream.next().await {
-        file_futs.push(async move {
-            let prefix = PathBuf::from(prefix);
-            let name = entry.name;
-            let path = prefix.join(&name).to_string_lossy().to_string();
-            let file = io_util::open_file_in_namespace(&path, io_util::OpenFlags::RIGHT_READABLE)?;
-            let content = io_util::read_file_bytes(&file).await;
-
-            // Store the file in a directory prefixed with the last part of the file path (i.e.
-            // "static" or "dynamic").
-            let name_prefix = prefix
-                .file_stem()
-                .map(|v| v.to_string_lossy().to_string())
-                .unwrap_or_else(|| "".to_string());
-            let name = format!("{}/{}", name_prefix, name);
-
-            Ok::<_, Error>((name, content))
-        });
-    }
-
-    let file_futs: Vec<(String, Result<Vec<u8>, Error>)> =
-        join_all(file_futs).await.into_iter().filter_map(|v| v.ok()).collect();
-
-    let files = file_futs
-        .into_iter()
-        .filter_map(|v| {
-            let (name, result) = v;
-            match result {
-                Ok(contents) => Some(DebugDataFile { name: name.to_string(), contents }),
-                Err(e) => {
-                    warn!("Failed to read debug data file {}: {:?}", name, e);
-                    None
-                }
-            }
-        })
-        .collect::<Vec<_>>();
-
-    if !files.is_empty() {
-        let (client, fut) = serve_debug_data(files);
-        let task = fasync::Task::spawn(fut);
-        let _ = event_sender.send(RunEvent::debug_data(client).into()).await;
-        event_sender.disconnect(); // No need to hold this open while we serve the task.
-        task.await;
     }
 }
 
@@ -500,212 +393,6 @@ fn concat_suite_status(initial: SuiteStatus, new: SuiteStatus) -> SuiteStatus {
         return initial;
     }
     return new;
-}
-
-enum RunEventPayload {
-    DebugData(ClientEnd<DebugDataIteratorMarker>),
-}
-
-struct RunEvent {
-    timestamp: i64,
-    payload: RunEventPayload,
-}
-
-impl Into<FidlRunEvent> for RunEvent {
-    fn into(self) -> FidlRunEvent {
-        match self.payload {
-            RunEventPayload::DebugData(client) => FidlRunEvent {
-                timestamp: Some(self.timestamp),
-                payload: Some(FidlRunEventPayload::Artifact(ftest_manager::Artifact::DebugData(
-                    client,
-                ))),
-                ..FidlRunEvent::EMPTY
-            },
-        }
-    }
-}
-
-impl RunEvent {
-    fn debug_data(client: ClientEnd<DebugDataIteratorMarker>) -> Self {
-        Self {
-            timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: RunEventPayload::DebugData(client),
-        }
-    }
-}
-
-enum SuiteEventPayload {
-    CaseFound(String, u32),
-    CaseStarted(u32),
-    CaseStopped(u32, CaseStatus),
-    CaseFinished(u32),
-    CaseStdout(u32, zx::Socket),
-    CaseStderr(u32, zx::Socket),
-    CustomArtifact(ftest_manager::CustomArtifact),
-    SuiteSyslog(ftest_manager::Syslog),
-    SuiteStarted,
-    SuiteStopped(SuiteStatus),
-}
-
-struct SuiteEvents {
-    timestamp: i64,
-    payload: SuiteEventPayload,
-}
-
-impl Into<FidlSuiteEvent> for SuiteEvents {
-    fn into(self) -> FidlSuiteEvent {
-        match self.payload {
-            SuiteEventPayload::CaseFound(name, identifier) => FidlSuiteEvent {
-                timestamp: Some(self.timestamp),
-                payload: Some(FidlSuiteEventPayload::CaseFound(ftest_manager::CaseFound {
-                    test_case_name: name,
-                    identifier,
-                })),
-                ..FidlSuiteEvent::EMPTY
-            },
-            SuiteEventPayload::CaseStarted(identifier) => FidlSuiteEvent {
-                timestamp: Some(self.timestamp),
-                payload: Some(FidlSuiteEventPayload::CaseStarted(ftest_manager::CaseStarted {
-                    identifier,
-                })),
-                ..FidlSuiteEvent::EMPTY
-            },
-            SuiteEventPayload::CaseStopped(identifier, status) => FidlSuiteEvent {
-                timestamp: Some(self.timestamp),
-                payload: Some(FidlSuiteEventPayload::CaseStopped(ftest_manager::CaseStopped {
-                    identifier,
-                    status,
-                })),
-                ..FidlSuiteEvent::EMPTY
-            },
-            SuiteEventPayload::CaseFinished(identifier) => FidlSuiteEvent {
-                timestamp: Some(self.timestamp),
-                payload: Some(FidlSuiteEventPayload::CaseFinished(ftest_manager::CaseFinished {
-                    identifier,
-                })),
-                ..FidlSuiteEvent::EMPTY
-            },
-            SuiteEventPayload::CaseStdout(identifier, socket) => FidlSuiteEvent {
-                timestamp: Some(self.timestamp),
-                payload: Some(FidlSuiteEventPayload::CaseArtifact(ftest_manager::CaseArtifact {
-                    identifier,
-                    artifact: ftest_manager::Artifact::Stdout(socket),
-                })),
-                ..FidlSuiteEvent::EMPTY
-            },
-            SuiteEventPayload::CaseStderr(identifier, socket) => FidlSuiteEvent {
-                timestamp: Some(self.timestamp),
-                payload: Some(FidlSuiteEventPayload::CaseArtifact(ftest_manager::CaseArtifact {
-                    identifier,
-                    artifact: ftest_manager::Artifact::Stderr(socket),
-                })),
-                ..FidlSuiteEvent::EMPTY
-            },
-            SuiteEventPayload::CustomArtifact(custom) => FidlSuiteEvent {
-                timestamp: Some(self.timestamp),
-                payload: Some(FidlSuiteEventPayload::SuiteArtifact(ftest_manager::SuiteArtifact {
-                    artifact: ftest_manager::Artifact::Custom(custom),
-                })),
-                ..FidlSuiteEvent::EMPTY
-            },
-            SuiteEventPayload::SuiteSyslog(syslog) => FidlSuiteEvent {
-                timestamp: Some(self.timestamp),
-                payload: Some(FidlSuiteEventPayload::SuiteArtifact(ftest_manager::SuiteArtifact {
-                    artifact: ftest_manager::Artifact::Log(syslog),
-                })),
-                ..FidlSuiteEvent::EMPTY
-            },
-            SuiteEventPayload::SuiteStarted => FidlSuiteEvent {
-                timestamp: Some(self.timestamp),
-                payload: Some(FidlSuiteEventPayload::SuiteStarted(ftest_manager::SuiteStarted {})),
-                ..FidlSuiteEvent::EMPTY
-            },
-            SuiteEventPayload::SuiteStopped(status) => FidlSuiteEvent {
-                timestamp: Some(self.timestamp),
-                payload: Some(FidlSuiteEventPayload::SuiteStopped(ftest_manager::SuiteStopped {
-                    status,
-                })),
-                ..FidlSuiteEvent::EMPTY
-            },
-        }
-    }
-}
-
-impl SuiteEvents {
-    fn case_found(identifier: u32, name: String) -> Self {
-        Self {
-            timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: SuiteEventPayload::CaseFound(name, identifier),
-        }
-    }
-
-    fn case_started(identifier: u32) -> Self {
-        Self {
-            timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: SuiteEventPayload::CaseStarted(identifier),
-        }
-    }
-
-    fn case_stopped(identifier: u32, status: CaseStatus) -> Self {
-        Self {
-            timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: SuiteEventPayload::CaseStopped(identifier, status),
-        }
-    }
-
-    fn case_finished(identifier: u32) -> Self {
-        Self {
-            timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: SuiteEventPayload::CaseFinished(identifier),
-        }
-    }
-
-    fn case_stdout(identifier: u32, socket: zx::Socket) -> Self {
-        Self {
-            timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: SuiteEventPayload::CaseStdout(identifier, socket),
-        }
-    }
-
-    fn case_stderr(identifier: u32, socket: zx::Socket) -> Self {
-        Self {
-            timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: SuiteEventPayload::CaseStderr(identifier, socket),
-        }
-    }
-
-    fn suite_syslog(syslog: ftest_manager::Syslog) -> Self {
-        Self {
-            timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: SuiteEventPayload::SuiteSyslog(syslog),
-        }
-    }
-
-    fn suite_custom_artifact(custom: ftest_manager::CustomArtifact) -> Self {
-        Self {
-            timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: SuiteEventPayload::CustomArtifact(custom),
-        }
-    }
-
-    fn suite_started() -> Self {
-        Self {
-            timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: SuiteEventPayload::SuiteStarted,
-        }
-    }
-
-    fn suite_stopped(status: SuiteStatus) -> Self {
-        Self {
-            timestamp: zx::Time::get_monotonic().into_nanos(),
-            payload: SuiteEventPayload::SuiteStopped(status),
-        }
-    }
-
-    #[cfg(test)]
-    fn into_suite_run_event(self) -> FidlSuiteEvent {
-        self.into()
-    }
 }
 
 /// Runs the test component using `suite` and collects stdout logs and results.
@@ -1782,7 +1469,9 @@ async fn get_realm(
     let enclosing_env = wrapper_realm
         .add_local_child(
             ENCLOSING_ENV_REALM_NAME,
-            move |handles| Box::pin(gen_enclosing_env(handles, allowed_package_names.clone())),
+            move |handles| {
+                Box::pin(enclosing_env::gen_enclosing_env(handles, allowed_package_names.clone()))
+            },
             ChildOptions::new(),
         )
         .await?;
@@ -2014,261 +1703,9 @@ impl AboveRootCapabilitiesForTest {
     }
 }
 
-lazy_static! {
-    static ref ENCLOSING_ENV_ID: AtomicU64 = AtomicU64::new(1);
-}
-
-/// Represents a single CFv1 environment.
-/// Consumer of this protocol have no access to system services.
-/// The logger provided to clients comes from isolated archivist.
-/// TODO(82072): Support collection of inspect by isolated archivist.
-struct EnclosingEnvironment {
-    svc_task: Option<fasync::Task<()>>,
-    env_controller_proxy: Option<fv1sys::EnvironmentControllerProxy>,
-    env_proxy: fv1sys::EnvironmentProxy,
-    service_directory: zx::Channel,
-}
-
-impl Drop for EnclosingEnvironment {
-    fn drop(&mut self) {
-        let svc_task = self.svc_task.take();
-        let env_controller_proxy = self.env_controller_proxy.take();
-        fasync::Task::spawn(async move {
-            if let Some(svc_task) = svc_task {
-                svc_task.cancel().await;
-            }
-            if let Some(env_controller_proxy) = env_controller_proxy {
-                let _ = env_controller_proxy.kill().await;
-            }
-        })
-        .detach();
-    }
-}
-
-impl EnclosingEnvironment {
-    fn new(
-        incoming_svc: fio::DirectoryProxy,
-        allowed_package_names: Option<Arc<HashSet<String>>>,
-    ) -> Result<Arc<Self>, Error> {
-        let sys_env = connect_to_protocol::<fv1sys::EnvironmentMarker>()?;
-        let (additional_svc, additional_directory_request) = zx::Channel::create()?;
-        let incoming_svc = Arc::new(incoming_svc);
-        let incoming_svc_clone = incoming_svc.clone();
-        let mut fs = ServiceFs::new();
-        let mut loader_tasks = vec![];
-        let loader_service = connect_to_protocol::<fv1sys::LoaderMarker>()?;
-        match allowed_package_names {
-            Some(allowed_package_names) => {
-                fs.add_fidl_service(move |stream: fv1sys::LoaderRequestStream| {
-                    let allowed_package_names = allowed_package_names.clone();
-                    let loader_service = loader_service.clone();
-                    loader_tasks.push(fasync::Task::spawn(async move {
-                        resolver::serve_hermetic_loader(
-                            stream,
-                            allowed_package_names,
-                            loader_service.clone(),
-                        )
-                        .await;
-                    }));
-                });
-            }
-            None => {
-                fs.add_service_at(
-                    fv1sys::LoaderMarker::NAME,
-                    move |chan: fuchsia_zircon::Channel| {
-                        if let Err(e) = connect_channel_to_protocol::<fv1sys::LoaderMarker>(chan) {
-                            warn!("Cannot connect to loader: {}", e);
-                        }
-                        None
-                    },
-                );
-            }
-        }
-        fs.add_service_at(
-            fdebugdata::PublisherMarker::NAME,
-            move |chan: fuchsia_zircon::Channel| {
-                if let Err(e) = fdio::service_connect_at(
-                    incoming_svc_clone.as_channel().as_ref(),
-                    fdebugdata::PublisherMarker::NAME,
-                    chan,
-                ) {
-                    warn!("cannot connect to debug data Publisher: {}", e);
-                }
-                None
-            },
-        )
-        .add_service_at("fuchsia.logger.LogSink", move |chan: fuchsia_zircon::Channel| {
-            if let Err(e) = fdio::service_connect_at(
-                incoming_svc.as_channel().as_ref(),
-                "fuchsia.logger.LogSink",
-                chan,
-            ) {
-                warn!("cannot connect to LogSink: {}", e);
-            }
-            None
-        });
-
-        fs.serve_connection(additional_svc)?;
-        let svc_task = fasync::Task::spawn(async move {
-            fs.collect::<()>().await;
-        });
-
-        let mut service_list = fv1sys::ServiceList {
-            names: vec![
-                fv1sys::LoaderMarker::NAME.to_string(),
-                fdebugdata::PublisherMarker::NAME.to_string(),
-                "fuchsia.logger.LogSink".into(),
-            ],
-            provider: None,
-            host_directory: Some(additional_directory_request),
-        };
-
-        let mut opts = fv1sys::EnvironmentOptions {
-            inherit_parent_services: false,
-            use_parent_runners: false,
-            kill_on_oom: true,
-            delete_storage_on_death: true,
-        };
-
-        let (env_proxy, env_server_end) = fidl::endpoints::create_proxy()?;
-        let (service_directory, directory_request) = zx::Channel::create()?;
-
-        let (env_controller_proxy, env_controller_server_end) = fidl::endpoints::create_proxy()?;
-        let name = format!("env-{}", ENCLOSING_ENV_ID.fetch_add(1, Ordering::SeqCst));
-        sys_env
-            .create_nested_environment(
-                env_server_end,
-                env_controller_server_end,
-                &name,
-                Some(&mut service_list),
-                &mut opts,
-            )
-            .context("Cannot create nested env")?;
-        env_proxy.get_directory(directory_request).context("cannot get env directory")?;
-        Ok(Self {
-            svc_task: svc_task.into(),
-            env_controller_proxy: env_controller_proxy.into(),
-            env_proxy,
-            service_directory,
-        }
-        .into())
-    }
-
-    fn get_launcher(&self, launcher: fidl::endpoints::ServerEnd<fv1sys::LauncherMarker>) {
-        if let Err(e) = self.env_proxy.get_launcher(launcher) {
-            warn!("GetLauncher failed: {}", e);
-        }
-    }
-
-    fn connect_to_protocol(&self, protocol_name: &str, chan: zx::Channel) {
-        if let Err(e) = fdio::service_connect_at(&self.service_directory, protocol_name, chan) {
-            warn!("service_connect_at failed for {}: {}", protocol_name, e);
-        }
-    }
-
-    async fn serve(&self, mut req_stream: fv1sys::EnvironmentRequestStream) {
-        while let Some(req) = req_stream
-            .try_next()
-            .await
-            .context("serving V1 stream failed")
-            .map_err(|e| {
-                warn!("{}", e);
-            })
-            .unwrap_or(None)
-        {
-            match req {
-                fv1sys::EnvironmentRequest::GetLauncher { launcher, control_handle } => {
-                    if let Err(e) = self.env_proxy.get_launcher(launcher) {
-                        warn!("GetLauncher failed: {}", e);
-                        control_handle.shutdown();
-                    }
-                }
-                fv1sys::EnvironmentRequest::GetServices { services, control_handle } => {
-                    if let Err(e) = self.env_proxy.get_services(services) {
-                        warn!("GetServices failed: {}", e);
-
-                        control_handle.shutdown();
-                    }
-                }
-                fv1sys::EnvironmentRequest::GetDirectory { directory_request, control_handle } => {
-                    if let Err(e) = self.env_proxy.get_directory(directory_request) {
-                        warn!("GetDirectory failed: {}", e);
-                        control_handle.shutdown();
-                    }
-                }
-                fv1sys::EnvironmentRequest::CreateNestedEnvironment {
-                    environment,
-                    controller,
-                    label,
-                    mut additional_services,
-                    mut options,
-                    control_handle,
-                } => {
-                    let services = match &mut additional_services {
-                        Some(s) => s.as_mut().into(),
-                        None => None,
-                    };
-                    if let Err(e) = self.env_proxy.create_nested_environment(
-                        environment,
-                        controller,
-                        &label,
-                        services,
-                        &mut options,
-                    ) {
-                        warn!("CreateNestedEnvironment failed: {}", e);
-                        control_handle.shutdown();
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Create a new and single enclosing env for every test. Each test only gets a single enclosing env
-/// no matter how many times it connects to Environment service.
-async fn gen_enclosing_env(
-    handles: LocalComponentHandles,
-    allowed_package_names: Option<Arc<HashSet<String>>>,
-) -> Result<(), Error> {
-    // This function should only be called when test tries to connect to Environment or Launcher.
-    let mut fs = ServiceFs::new();
-    let incoming_svc = handles.clone_from_namespace("svc")?;
-    let enclosing_env = EnclosingEnvironment::new(incoming_svc, allowed_package_names)
-        .context("Cannot create enclosing env")?;
-    let enclosing_env_clone = enclosing_env.clone();
-    let enclosing_env_clone2 = enclosing_env.clone();
-
-    fs.dir("svc")
-        .add_fidl_service(move |req_stream: fv1sys::EnvironmentRequestStream| {
-            debug!("Received Env connection request");
-            let enclosing_env = enclosing_env.clone();
-            fasync::Task::spawn(async move {
-                enclosing_env.serve(req_stream).await;
-            })
-            .detach();
-        })
-        .add_service_at(fv1sys::LauncherMarker::NAME, move |chan: fuchsia_zircon::Channel| {
-            enclosing_env_clone.get_launcher(chan.into());
-            None
-        })
-        .add_service_at(fv1sys::LoaderMarker::NAME, move |chan: fuchsia_zircon::Channel| {
-            enclosing_env_clone2.connect_to_protocol(fv1sys::LoaderMarker::NAME, chan);
-            None
-        });
-
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
-    fs.collect::<()>().await;
-
-    // TODO(fxbug.dev/82021): kill and clean environment
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, assert_matches::assert_matches, fidl::endpoints::create_proxy_and_stream,
-        maplit::hashset,
-    };
+    use {super::*, fidl::endpoints::create_proxy_and_stream, maplit::hashset};
 
     #[test]
     fn case_matcher_tests() {
@@ -2487,98 +1924,6 @@ mod tests {
         assert_eq!(
             events[1].payload,
             SuiteEvents::case_found(2, "case2".to_string()).into_suite_run_event().payload,
-        );
-    }
-
-    #[test]
-    fn suite_events() {
-        let event = SuiteEvents::case_found(1, "case1".to_string()).into_suite_run_event();
-        assert_matches!(event.timestamp, Some(_));
-        assert_eq!(
-            event.payload,
-            Some(FidlSuiteEventPayload::CaseFound(ftest_manager::CaseFound {
-                test_case_name: "case1".into(),
-                identifier: 1
-            }))
-        );
-
-        let event = SuiteEvents::case_started(2).into_suite_run_event();
-        assert_matches!(event.timestamp, Some(_));
-        assert_eq!(
-            event.payload,
-            Some(FidlSuiteEventPayload::CaseStarted(ftest_manager::CaseStarted { identifier: 2 }))
-        );
-
-        let event = SuiteEvents::case_stopped(2, CaseStatus::Failed).into_suite_run_event();
-        assert_matches!(event.timestamp, Some(_));
-        assert_eq!(
-            event.payload,
-            Some(FidlSuiteEventPayload::CaseStopped(ftest_manager::CaseStopped {
-                identifier: 2,
-                status: CaseStatus::Failed
-            }))
-        );
-
-        let event = SuiteEvents::case_finished(2).into_suite_run_event();
-        assert_matches!(event.timestamp, Some(_));
-        assert_eq!(
-            event.payload,
-            Some(FidlSuiteEventPayload::CaseFinished(ftest_manager::CaseFinished {
-                identifier: 2
-            }))
-        );
-
-        let (sock1, _sock2) = zx::Socket::create(zx::SocketOpts::empty()).unwrap();
-        let event = SuiteEvents::case_stdout(2, sock1).into_suite_run_event();
-        assert_matches!(event.timestamp, Some(_));
-        assert_matches!(
-            event.payload,
-            Some(FidlSuiteEventPayload::CaseArtifact(ftest_manager::CaseArtifact {
-                identifier: 2,
-                artifact: ftest_manager::Artifact::Stdout(_)
-            }))
-        );
-
-        let (sock1, _sock2) = zx::Socket::create(zx::SocketOpts::empty()).unwrap();
-        let event = SuiteEvents::case_stderr(2, sock1).into_suite_run_event();
-        assert_matches!(event.timestamp, Some(_));
-        assert_matches!(
-            event.payload,
-            Some(FidlSuiteEventPayload::CaseArtifact(ftest_manager::CaseArtifact {
-                identifier: 2,
-                artifact: ftest_manager::Artifact::Stderr(_)
-            }))
-        );
-
-        let event = SuiteEvents::suite_stopped(SuiteStatus::Failed).into_suite_run_event();
-        assert_matches!(event.timestamp, Some(_));
-        assert_eq!(
-            event.payload,
-            Some(FidlSuiteEventPayload::SuiteStopped(ftest_manager::SuiteStopped {
-                status: SuiteStatus::Failed,
-            }))
-        );
-
-        let (client_end, _server_end) = fidl::endpoints::create_endpoints().unwrap();
-        let event = SuiteEvents::suite_syslog(ftest_manager::Syslog::Archive(client_end))
-            .into_suite_run_event();
-        assert_matches!(event.timestamp, Some(_));
-        assert_matches!(
-            event.payload,
-            Some(FidlSuiteEventPayload::SuiteArtifact(ftest_manager::SuiteArtifact {
-                artifact: ftest_manager::Artifact::Log(ftest_manager::Syslog::Archive(_)),
-            }))
-        );
-
-        let (client_end, _server_end) = fidl::endpoints::create_endpoints().unwrap();
-        let event = SuiteEvents::suite_syslog(ftest_manager::Syslog::Batch(client_end))
-            .into_suite_run_event();
-        assert_matches!(event.timestamp, Some(_));
-        assert_matches!(
-            event.payload,
-            Some(FidlSuiteEventPayload::SuiteArtifact(ftest_manager::SuiteArtifact {
-                artifact: ftest_manager::Artifact::Log(ftest_manager::Syslog::Batch(_)),
-            }))
         );
     }
 

@@ -2,21 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_io as fio;
-use fidl_fuchsia_test_manager::{DebugData, DebugDataIteratorMarker, DebugDataIteratorRequest};
-use futures::{Future, TryStreamExt};
-use std::collections::VecDeque;
-use vfs::{
-    directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::vmo::read_only_const,
+use {
+    crate::{run_events::RunEvent, self_diagnostics},
+    anyhow::Error,
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_io as fio, fidl_fuchsia_test_internal as ftest_internal,
+    fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_test_manager::{DebugData, DebugDataIteratorMarker, DebugDataIteratorRequest},
+    fuchsia_async as fasync,
+    futures::{channel::mpsc, future::join_all, prelude::*, Future, StreamExt, TryStreamExt},
+    std::{collections::VecDeque, path::PathBuf},
+    tracing::warn,
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::vmo::read_only_const,
+    },
 };
 
-pub struct DebugDataFile {
+struct DebugDataFile {
     pub name: String,
     pub contents: Vec<u8>,
 }
 
-pub fn serve_debug_data(
+fn serve_debug_data(
     files: Vec<DebugDataFile>,
 ) -> (ClientEnd<DebugDataIteratorMarker>, impl 'static + Future<Output = ()>) {
     let (client, server) = fidl::endpoints::create_endpoints::<DebugDataIteratorMarker>().unwrap();
@@ -70,6 +78,114 @@ pub fn serve_debug_data(
     };
 
     (client, fut)
+}
+
+pub async fn send_debug_data_if_produced(
+    mut event_sender: mpsc::Sender<RunEvent>,
+    mut controller_events: ftest_internal::DebugDataSetControllerEventStream,
+    debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
+    inspect_node: &self_diagnostics::RunInspectNode,
+) {
+    inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::PendingDebugDataProduced);
+    match controller_events.next().await {
+        Some(Ok(ftest_internal::DebugDataSetControllerEvent::OnDebugDataProduced {})) => {
+            let _ = event_sender.send(RunEvent::debug_data(debug_iterator).into()).await;
+            inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::DebugDataProduced);
+        }
+        Some(Err(_)) | None => {
+            inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::NoDebugData);
+        }
+    }
+}
+
+const PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS: i64 = 15;
+const DYNAMIC_PROFILE_PREFIX: &'static str = "/prof-data/dynamic";
+const STATIC_PROFILE_PREFIX: &'static str = "/prof-data/static";
+
+pub async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
+    let prefixes = vec![DYNAMIC_PROFILE_PREFIX, STATIC_PROFILE_PREFIX];
+    let directories = prefixes
+        .iter()
+        .filter_map(|path| {
+            match io_util::open_directory_in_namespace(path, io_util::OpenFlags::RIGHT_READABLE) {
+                Ok(d) => Some((*path, d)),
+                Err(e) => {
+                    warn!("Failed to open {} profile directory: {:?}", path, e);
+                    None
+                }
+            }
+        })
+        .collect::<Vec<(&str, fio::DirectoryProxy)>>();
+
+    // Iterate over files as tuples containing an entry and the prefix the entry was found at.
+    struct IteratedEntry {
+        prefix: &'static str,
+        entry: files_async::DirEntry,
+    }
+
+    // Create a single stream over the files in all directories
+    let mut file_stream = futures::stream::iter(
+        directories
+            .iter()
+            .map(move |val| {
+                let (prefix, directory) = val;
+                files_async::readdir_recursive(
+                    directory,
+                    Some(fasync::Duration::from_seconds(
+                        PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS,
+                    )),
+                )
+                .map_ok(move |file| IteratedEntry { prefix: prefix, entry: file })
+            })
+            .collect::<Vec<_>>(),
+    )
+    .flatten();
+
+    let mut file_futs = vec![];
+    while let Some(Ok(IteratedEntry { prefix, entry })) = file_stream.next().await {
+        file_futs.push(async move {
+            let prefix = PathBuf::from(prefix);
+            let name = entry.name;
+            let path = prefix.join(&name).to_string_lossy().to_string();
+            let file = io_util::open_file_in_namespace(&path, io_util::OpenFlags::RIGHT_READABLE)?;
+            let content = io_util::read_file_bytes(&file).await;
+
+            // Store the file in a directory prefixed with the last part of the file path (i.e.
+            // "static" or "dynamic").
+            let name_prefix = prefix
+                .file_stem()
+                .map(|v| v.to_string_lossy().to_string())
+                .unwrap_or_else(|| "".to_string());
+            let name = format!("{}/{}", name_prefix, name);
+
+            Ok::<_, Error>((name, content))
+        });
+    }
+
+    let file_futs: Vec<(String, Result<Vec<u8>, Error>)> =
+        join_all(file_futs).await.into_iter().filter_map(|v| v.ok()).collect();
+
+    let files = file_futs
+        .into_iter()
+        .filter_map(|v| {
+            let (name, result) = v;
+            match result {
+                Ok(contents) => Some(DebugDataFile { name: name.to_string(), contents }),
+                Err(e) => {
+                    warn!("Failed to read debug data file {}: {:?}", name, e);
+                    None
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+
+    if !files.is_empty() {
+        let (client, fut) = serve_debug_data(files);
+        let task = fasync::Task::spawn(fut);
+        let _ = event_sender.send(RunEvent::debug_data(client).into()).await;
+        event_sender.disconnect(); // No need to hold this open while we serve the task.
+        task.await;
+    }
 }
 
 #[cfg(test)]

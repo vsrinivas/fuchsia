@@ -105,10 +105,12 @@ rustc_library("lib") {
   sources = [
     "src/debug_data_server.rs",
     "src/diagnostics.rs",
+    "src/enclosing_env.rs",
     "src/error.rs",
     "src/facet.rs",
     "src/lib.rs",
     "src/resolver.rs",
+    "src/run_events.rs",
     "src/self_diagnostics.rs",
   ]
 }
