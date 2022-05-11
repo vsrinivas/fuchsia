@@ -266,7 +266,7 @@ need to route through the ‘CWD’ on future requests.
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Fdio (FIDL) | Fdio (FIDL) |
+| Fdio (FIDL)| Fdio (FIDL)|
 +-------------------------+
 | '/' Handle | CWD Handle |
 +-------------------------+
@@ -290,7 +290,7 @@ Zircon Channels, speaking FIDL                   State BEFORE open(‘foo’)
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Fdio (FIDL) | Fdio (FIDL) |
+| Fdio (FIDL)| Fdio (FIDL)|
 +-------------------------+
 | '/' Handle | CWD Handle |   **foo Handle x2**
 +-------------------------+
@@ -314,7 +314,7 @@ Zircon Channels, speaking FIDL                   Client Creates Channel
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Fdio (FIDL) | Fdio (FIDL) |
+| Fdio (FIDL)| Fdio (FIDL)|
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
@@ -338,7 +338,7 @@ Zircon Channels, speaking FIDL                  Client Sends FIDL message to Ser
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Fdio (FIDL) | Fdio (FIDL) |
+| Fdio (FIDL)| Fdio (FIDL)|
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
@@ -362,7 +362,7 @@ Zircon Channels, speaking FIDL                  Server dispatches message to I/O
              | Client Program |
 +-----------------------------+
 |   fd: x    |   fd: y    |
-| Fdio (FIDL) | Fdio (FIDL) |
+| Fdio (FIDL)| Fdio (FIDL)|
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
@@ -386,15 +386,15 @@ Zircon Channels, FIDL         |                   Server allocates I/O state for
              | Client Program |
 +-----------------------------+----------+
 |   fd: x    |   fd: y    |    fd: z     |
-| Fdio (FIDL) | Fdio (FIDL) |  Fdio (FIDL)  |
+| Fdio (FIDL)| Fdio (FIDL)|  Fdio (FIDL) |
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
-      ^            ^          ^
-      |            |          |
+      ^            ^           ^
+      |            |           |
 Zircon Channels, speaking FIDL |                  Client recognizes that ‘foo’ was opened
-      |            |          |                   Allocated Fdio + fd, ‘open’ succeeds.
-      v            v          v
+      |            |           |                  Allocated Fdio + fd, ‘open’ succeeds.
+      v            v           v
 +-------------------------+--------------+
 | '/' Handle | CWD Handle | ‘foo’ Handle |
 +-------------------------+--------------+
