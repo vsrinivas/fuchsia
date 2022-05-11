@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/sdk/sdk_host_tool.gni")
 
 rustc_binary("fake-omaha-client") {
   output_name = "fake-omaha-client"
@@ -21,6 +22,12 @@ rustc_binary("fake-omaha-client") {
   ]
 
   sources = [ "src/main.rs" ]
+}
+
+sdk_host_tool("bin_sdk") {
+  category = "partner"
+  output_name = "fake-omaha-client"
+  deps = [ ":fake-omaha-client" ]
 }
 
 group("fake-omaha-client-host") {
