@@ -1230,6 +1230,7 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
   ssize_t ret;
   {
     Guard<Mutex> a{&lock_};
+    ASSERT(updates_enabled_);
     if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
       ArmVmICacheConsistencyManager cache_cm;
       cache_cm.SyncAddr(reinterpret_cast<vaddr_t>(paddr_to_physmap(paddr)), count * PAGE_SIZE);
@@ -1290,6 +1291,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
   size_t total_mapped = 0;
   {
     Guard<Mutex> a{&lock_};
+    ASSERT(updates_enabled_);
     if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
       ArmVmICacheConsistencyManager cache_cm;
       for (size_t idx = 0; idx < count; ++idx) {
@@ -1366,6 +1368,7 @@ zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, EnlargeOperation
 
   Guard<Mutex> a{&lock_};
 
+  ASSERT(updates_enabled_);
   ssize_t ret;
   {
     ConsistencyManager cm(*this);
@@ -1397,6 +1400,7 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
   }
 
   Guard<Mutex> a{&lock_};
+  ASSERT(updates_enabled_);
   if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
     // If mappings are going to become executable then we first need to sync their caches.
     // Unfortunately this needs to be done on kernel virtual addresses to avoid taking translation
@@ -1653,6 +1657,30 @@ zx_status_t ArmArchVmAspace::Init() {
   return ZX_OK;
 }
 
+void ArmArchVmAspace::AssertEmptyLocked() const {
+  // Check to see if the top level page table is empty. If not the user didn't
+  // properly unmap everything before destroying the aspace
+  if (const int index = first_used_page_table_entry(tt_virt_, page_size_shift_); index != -1) {
+    panic(
+        "top level page table still in use! aspace %p pt_pages_ %zu tt_virt %p index %d entry "
+        "%" PRIx64 "\n",
+        this, pt_pages_, tt_virt_, index, tt_virt_[index]);
+  }
+
+  if (pt_pages_ != 1) {
+    panic("allocated page table count is wrong, aspace %p count %zu (should be 1)\n", this,
+          pt_pages_);
+  }
+}
+
+void ArmArchVmAspace::DisableUpdates() {
+  canary_.Assert();
+
+  Guard<Mutex> a{&lock_};
+  updates_enabled_ = false;
+  AssertEmptyLocked();
+}
+
 zx_status_t ArmArchVmAspace::Destroy() {
   canary_.Assert();
   LTRACEF("aspace %p\n", this);
@@ -1668,19 +1696,7 @@ zx_status_t ArmArchVmAspace::Destroy() {
     return ZX_OK;
   }
 
-  // Check to see if the top level page table is empty. If not the user didn't
-  // properly unmap everything before destroying the aspace
-  if (const int index = first_used_page_table_entry(tt_virt_, page_size_shift_); index != -1) {
-    panic(
-        "top level page table still in use! aspace %p pt_pages_ %zu tt_virt %p index %d entry "
-        "%" PRIx64 "\n",
-        this, pt_pages_, tt_virt_, index, tt_virt_[index]);
-  }
-
-  if (pt_pages_ != 1) {
-    panic("allocated page table count is wrong, aspace %p count %zu (should be 1)\n", this,
-          pt_pages_);
-  }
+  AssertEmptyLocked();
 
   // Need a DSB to synchronize any page table updates prior to flushing the TLBs.
   __dsb(ARM_MB_ISH);

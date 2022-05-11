@@ -31,6 +31,8 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
 
   zx_status_t Init() override;
 
+  void DisableUpdates() override;
+
   zx_status_t Destroy() override;
 
   // main methods
@@ -140,10 +142,18 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
     active_since_last_check_.store(true, ktl::memory_order_relaxed);
   }
 
+  // Panic if the page table is not empty.
+  //
+  // The caller must be holding |lock_|.
+  void AssertEmptyLocked() const TA_REQ(lock_);
+
   // data fields
   fbl::Canary<fbl::magic("VAAS")> canary_;
 
   DECLARE_MUTEX(ArmArchVmAspace) lock_;
+
+  // Whether or not changes to this instance are allowed.
+  bool updates_enabled_ = true;
 
   // Page allocate function, if set will be used instead of the default allocator
   const page_alloc_fn_t test_page_alloc_func_ = nullptr;

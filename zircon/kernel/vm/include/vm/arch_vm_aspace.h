@@ -46,6 +46,17 @@ class ArchVmAspaceInterface {
 
   virtual zx_status_t Init() = 0;
 
+  // This method puts the instance into read-only mode and asserts that it contains no mappings.
+  //
+  // Note, this method may be a no-op on some architectures.  See fxbug.dev/79118.
+  //
+  // It is an error to call this method on an instance that contains mappings.  Once called,
+  // subsequent operations that modify the page table will trigger a panic.
+  //
+  // The purpose of this method is to help enforce lifecycle and state transitions of VmAspace and
+  // ArchVmAspaceInterface.
+  virtual void DisableUpdates() = 0;
+
   // Destroy expects the aspace to be fully unmapped, as any mapped regions
   // indicate incomplete cleanup at the higher layers.
   //
