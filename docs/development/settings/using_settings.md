@@ -12,7 +12,7 @@ application and interacting with Settings.
 ## Prerequisites
 
 The Setting Service supports the Settings protocols in Fuchsia. The service's
-package `/garnet/bin/setui:setui_service` must be present in the product
+package `/src/settings/service:setui_service` must be present in the product
 definition in order to use Settings. The following product definition includes
 Settings:
 
@@ -20,7 +20,7 @@ Settings:
 import("//products/bringup.gni")
 
 base_package_labels += [
-  "//garnet/bin/setui:setui_service",
+  "//src/settings/service:setui_service",
 ]
 ```
 
