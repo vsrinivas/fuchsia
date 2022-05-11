@@ -483,6 +483,51 @@ static bool datagram_write_too_much() {
   END_TEST;
 }
 
+static bool datagram_reuse_mbuf() {
+  BEGIN_TEST;
+
+  const size_t kLargeWrite = MBufChain::mbuf_payload_size() + 10;
+  ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kLargeWrite);
+  auto mem_in = mem->user_in<char>();
+  auto mem_out = mem->user_out<char>();
+
+  // Write two datagrams.
+  size_t written = 0;
+  MBufChain chain;
+  mem->put<char>('a', 0);
+  EXPECT_OK(chain.WriteDatagram(mem_in, 1, &written));
+  mem->put<char>('b', 0);
+  EXPECT_OK(chain.WriteDatagram(mem_in, 1, &written));
+
+  // Now read them both out.
+  size_t actual;
+  EXPECT_OK(chain.Read(mem_out, 1, true, &actual));
+  EXPECT_EQ(mem->get<char>(0), 'a');
+  EXPECT_OK(chain.Read(mem_out, 1, true, &actual));
+  EXPECT_EQ(mem->get<char>(0), 'b');
+
+  // Now write a large datagram that spans two buffers.
+  mem->put<char>('c', 0);
+  EXPECT_OK(chain.WriteDatagram(mem_in, kLargeWrite, &written));
+
+  // Write in a second small datagram.
+  mem->put<char>('d', 0);
+  EXPECT_OK(chain.WriteDatagram(mem_in, 1, &written));
+
+  // Do a short read to consume the first datagram.
+  EXPECT_OK(chain.Read(mem_out, 1, true, &actual));
+  EXPECT_EQ(mem->get<char>(0), 'c');
+
+  // Reading again should give us the second datagram we wrote, as the remaining of the first should
+  // have been discarded.
+  EXPECT_OK(chain.Read(mem_out, 1, true, &actual));
+  EXPECT_EQ(mem->get<char>(0), 'd');
+
+  // At this point the socket should be empty.
+  EXPECT_TRUE(chain.is_empty());
+  END_TEST;
+}
+
 // Tests writing a datagram packet larger than the mbuf's capacity.
 static bool datagram_write_huge_packet() {
   BEGIN_TEST;
@@ -569,6 +614,7 @@ UNITTEST("datagram_read_buffer_too_small", datagram_read_buffer_too_small)
 UNITTEST("datagram_write_basic", datagram_write_basic)
 UNITTEST("datagram_write_zero", datagram_write_zero)
 UNITTEST("datagram_write_too_much", datagram_write_too_much)
+UNITTEST("datagram_reuse_mbuf", datagram_reuse_mbuf)
 UNITTEST("datagram_write_huge_packet", datagram_write_huge_packet)
 UNITTEST("datagram_peek", datagram_peek)
 UNITTEST("datagram_peek_empty", datagram_peek_empty)

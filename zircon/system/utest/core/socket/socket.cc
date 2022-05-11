@@ -951,4 +951,48 @@ TEST(SocketTest, ReadToPartialBadBuffer) {
   EXPECT_TRUE(GetSignals(b) & ZX_SOCKET_WRITABLE);
 }
 
+TEST(SocketTest, ReuseDatagramBuffer) {
+  zx::socket a, b;
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &a, &b));
+
+  char buffer[3000];
+  memset(buffer, 0xAA, sizeof(buffer));
+  // Write two datagrams.
+  buffer[0] = 'a';
+  size_t actual;
+  EXPECT_OK(a.write(0, buffer, 1, &actual));
+  buffer[0] = 'b';
+  EXPECT_OK(a.write(0, buffer, 1, &actual));
+
+  // Now read back both datagrams.
+  EXPECT_OK(b.read(0, buffer, 1, &actual));
+  EXPECT_EQ(actual, 1);
+  EXPECT_EQ(buffer[0], 'a');
+  EXPECT_OK(b.read(0, buffer, 1, &actual));
+  EXPECT_EQ(actual, 1);
+  EXPECT_EQ(buffer[0], 'b');
+
+  // Write a large datagram that might span two buffers internally.
+  buffer[0] = 'c';
+  EXPECT_OK(a.write(0, buffer, sizeof(buffer), &actual));
+  EXPECT_EQ(actual, sizeof(buffer));
+  // Write a second short datagram
+  buffer[0] = 'd';
+  EXPECT_OK(a.write(0, buffer, 1, &actual));
+
+  // Now do a short read to consume the first datagram.
+  EXPECT_OK(b.read(0, buffer, 1, &actual));
+  EXPECT_EQ(actual, 1);
+  EXPECT_EQ(buffer[0], 'c');
+
+  // Reading again should give us the second datagram we wrote, as the remaining of the first should
+  // have been discarded.
+  EXPECT_OK(b.read(0, buffer, 1, &actual));
+  EXPECT_EQ(actual, 1);
+  EXPECT_EQ(buffer[0], 'd');
+
+  // At this point the socket should be empty.
+  EXPECT_FALSE(GetSignals(b) & ZX_SOCKET_READABLE);
+}
+
 }  // namespace

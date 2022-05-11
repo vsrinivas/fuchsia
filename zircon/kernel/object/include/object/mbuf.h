@@ -72,6 +72,10 @@ class MBufChain {
   // Returns the maximum number of bytes that can be stored in the chain.
   static size_t max_size() { return kSizeMax; }
 
+  // Returns the number of bytes that will be placed in a given MBuf in the chain. Exposed only for
+  // testing reasons.
+  static size_t mbuf_payload_size() { return MBuf::kPayloadSize; }
+
  private:
   // An MBuf is a small fixed-size chainable memory buffer.
   struct MBuf : public fbl::SinglyLinkedListable<MBuf*> {

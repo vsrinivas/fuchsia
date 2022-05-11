@@ -250,6 +250,7 @@ MBufChain::MBuf* MBufChain::AllocMBuf() {
 
 void MBufChain::FreeMBuf(MBuf* buf) {
   buf->len_ = 0u;
+  buf->pkt_len_ = 0u;
   freelist_.push_front(buf);
   kcounter_add(mbuf_free_list_bytes_count, sizeof(MBufChain::MBuf));
 }
