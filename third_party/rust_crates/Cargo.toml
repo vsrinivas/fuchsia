@@ -321,6 +321,7 @@ backtrace-sys = { path = "empty/backtrace-sys" }
 crossterm_winapi = { path = "empty/crossterm_winapi" }
 miow = { path = "empty/miow" }
 ntapi = { path = "empty/ntapi" }
+wasi = { path = "empty/wasi" }
 web-sys = { path = "empty/web-sys" }
 wepoll-sys = { path = "empty/wepoll-sys" }
 winapi = { path = "empty/winapi" }
