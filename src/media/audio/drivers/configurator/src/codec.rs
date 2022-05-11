@@ -54,6 +54,11 @@ impl CodecInterface {
         self.get_proxy()?.clone().get_info().err_into().await
     }
 
+    /// Reset codec.
+    pub async fn reset(&self) -> Result<(), Error> {
+        self.get_proxy()?.clone().reset().err_into().await
+    }
+
     /// Get supported DAI formats.
     pub async fn get_dai_formats(
         &self,

@@ -32,6 +32,13 @@ impl Configurator for DefaultConfigurator {
             }
             Ok(props) => props,
         };
+        let _ = match device.reset().await {
+            Err(e) => {
+                tracing::warn!("Couldn't reset device: {:?}", e);
+                return;
+            }
+            Ok(()) => (),
+        };
         let formats = match device.get_dai_formats().await {
             Err(e) => {
                 tracing::warn!("Couldn't get DAI formats for device: {:?}", e);
