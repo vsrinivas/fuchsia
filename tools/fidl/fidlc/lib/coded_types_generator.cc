@@ -21,34 +21,31 @@ coded::MemcpyCompatibility ComputeMemcpyCompatibility(const flat::Type* type) {
 }
 
 CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::StructMember& member)
-    : FlattenedStructMember(
-          member.type_ctor->type, member.name, member.typeshape(WireFormat::kV1NoEe),
-          member.typeshape(WireFormat::kV2), member.fieldshape(WireFormat::kV1NoEe),
-          member.fieldshape(WireFormat::kV2)) {
+    : FlattenedStructMember(member.type_ctor->type, member.name, member.typeshape(WireFormat::kV2),
+                            member.fieldshape(WireFormat::kV2)) {
   assert(padding == member.fieldshape(WireFormat::kV2).padding);
 }
 
-CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(
-    const flat::Type* type, SourceSpan name, fidl::TypeShape typeshape_v1,
-    fidl::TypeShape typeshape_v2, fidl::FieldShape fieldshape_v1, fidl::FieldShape fieldshape_v2)
+CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::Type* type,
+                                                                  SourceSpan name,
+                                                                  fidl::TypeShape typeshape_v2,
+                                                                  fidl::FieldShape fieldshape_v2)
     : type(type),
       name(name),
-      inline_size_v1(typeshape_v1.inline_size),
       inline_size_v2(typeshape_v2.inline_size),
-      offset_v1(fieldshape_v1.offset),
       offset_v2(fieldshape_v2.offset),
-      padding(fieldshape_v1.padding) {
+      padding(fieldshape_v2.padding) {
   assert(padding == fieldshape_v2.padding);
 }
 
-CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(
-    const flat::Type* type, SourceSpan name, uint32_t inline_size_v1, uint32_t inline_size_v2,
-    uint32_t offset_v1, uint32_t offset_v2, uint32_t padding)
+CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::Type* type,
+                                                                  SourceSpan name,
+                                                                  uint32_t inline_size_v2,
+                                                                  uint32_t offset_v2,
+                                                                  uint32_t padding)
     : type(type),
       name(name),
-      inline_size_v1(inline_size_v1),
       inline_size_v2(inline_size_v2),
-      offset_v1(offset_v1),
       offset_v2(offset_v2),
       padding(padding) {}
 
@@ -87,7 +84,6 @@ std::vector<CodedTypesGenerator::FlattenedStructMember> CodedTypesGenerator::Fla
       if (i == flattened_members.size() - 1) {
         inner_member.padding += flattened_member.padding;
       }
-      inner_member.offset_v1 += flattened_member.offset_v1;
       inner_member.offset_v2 += flattened_member.offset_v2;
       result.push_back(inner_member);
     }
@@ -128,15 +124,11 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       if (iter != array_type_map_.end())
         return iter->second;
 
-      uint32_t array_size_v1 = array_type->typeshape(WireFormat::kV1NoEe).inline_size;
       uint32_t array_size_v2 = array_type->typeshape(WireFormat::kV2).inline_size;
-      uint32_t element_size_v1 =
-          array_type->element_type->typeshape(WireFormat::kV1NoEe).inline_size;
       uint32_t element_size_v2 = array_type->element_type->typeshape(WireFormat::kV2).inline_size;
-      auto name = NameCodedArray(coded_element_type->coded_name, array_size_v1);
+      auto name = NameCodedArray(coded_element_type->coded_name, array_size_v2);
       auto coded_array_type = std::make_unique<coded::ArrayType>(
-          std::move(name), coded_element_type, array_size_v1, array_size_v2, element_size_v1,
-          element_size_v2, context);
+          std::move(name), coded_element_type, array_size_v2, element_size_v2, context);
       array_type_map_[array_type] = coded_array_type.get();
       coded_types_.push_back(std::move(coded_array_type));
       return coded_types_.back().get();
@@ -149,13 +141,12 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto coded_element_type =
           CompileType(vector_type->element_type, coded::CodingContext::kOutsideEnvelope);
       uint32_t max_count = vector_type->element_count->value;
-      uint32_t element_size_v1 = coded_element_type->size_v1;
       uint32_t element_size_v2 = coded_element_type->size_v2;
       std::string_view element_name = coded_element_type->coded_name;
       auto name = NameCodedVector(element_name, max_count, vector_type->nullability);
       auto coded_vector_type = std::make_unique<coded::VectorType>(
-          std::move(name), coded_element_type, max_count, element_size_v1, element_size_v2,
-          vector_type->nullability, ComputeMemcpyCompatibility(vector_type->element_type));
+          std::move(name), coded_element_type, max_count, element_size_v2, vector_type->nullability,
+          ComputeMemcpyCompatibility(vector_type->element_type));
       vector_type_map_[vector_type] = coded_vector_type.get();
       coded_types_.push_back(std::move(coded_vector_type));
       return coded_types_.back().get();
@@ -416,14 +407,13 @@ void CodedTypesGenerator::CompileStructFields(const flat::Struct* struct_decl,
     std::string member_name = coded_struct->coded_name + "_" + std::string(member.name.data());
     auto coded_member_type = CompileType(member.type, coded::CodingContext::kOutsideEnvelope);
     if (!coded_member_type->is_noop) {
-      struct_elements.push_back(coded::StructField(member.type->Resourceness(), member.offset_v1,
-                                                   member.offset_v2, coded_member_type));
+      struct_elements.push_back(
+          coded::StructField(member.type->Resourceness(), member.offset_v2, coded_member_type));
       is_noop = false;
     }
     if (member.padding != 0) {
       struct_elements.push_back(coded::StructPadding::FromLength(
-          member.inline_size_v1 + member.offset_v1, member.inline_size_v2 + member.offset_v2,
-          member.padding));
+          member.inline_size_v2 + member.offset_v2, member.padding));
       is_noop = false;
     }
     field_num++;
@@ -624,15 +614,13 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
 
 std::unique_ptr<coded::StructType> CodedTypesGenerator::CompileStructDecl(
     const flat::Struct* struct_decl, std::string name, std::string qname) {
-  auto typeshape_v1 = TypeShape::ForEmptyPayload();
   auto typeshape_v2 = TypeShape::ForEmptyPayload();
 
-  typeshape_v1 = struct_decl->typeshape(WireFormat::kV1NoEe);
   typeshape_v2 = struct_decl->typeshape(WireFormat::kV2);
 
   return std::make_unique<coded::StructType>(std::move(name), std::vector<coded::StructElement>(),
-                                             typeshape_v1.inline_size, typeshape_v2.inline_size,
-                                             typeshape_v1.has_envelope, std::move(qname));
+                                             typeshape_v2.inline_size, typeshape_v2.has_envelope,
+                                             std::move(qname));
 }
 
 std::unique_ptr<coded::XUnionType> CodedTypesGenerator::CompileUnionDecl(

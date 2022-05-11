@@ -39,15 +39,12 @@ static const FidlStructElement unbounded_nonnullable_string_fields[] = {
         &unbounded_nonnullable_string,
         offsetof(unbounded_nonnullable_string_message_layout, inline_struct.string) -
             sizeof(fidl_message_header_t),
-        offsetof(unbounded_nonnullable_string_message_layout, inline_struct.string) -
-            sizeof(fidl_message_header_t),
         kFidlIsResource_NotResource),
 };
 
 const FidlCodedStruct unbounded_nonnullable_string_message_type = {
     .tag = kFidlTypeStruct,
     .element_count = ArrayCount(unbounded_nonnullable_string_fields),
-    .size_v1 = sizeof(unbounded_nonnullable_string_inline_data) - sizeof(fidl_message_header_t),
     .size_v2 = sizeof(unbounded_nonnullable_string_inline_data) - sizeof(fidl_message_header_t),
     .elements = unbounded_nonnullable_string_fields,
     .name = "unbounded_nonnullable_string_message",
@@ -56,7 +53,6 @@ const FidlCodedStruct unbounded_nonnullable_string_message_type = {
 const FidlCodedStruct zero_arg_message_type = {
     .tag = kFidlTypeStruct,
     .element_count = 0,
-    .size_v1 = 0,
     .size_v2 = 0,
     .elements = nullptr,
     .name = "zero_arg_message_type",

@@ -49,7 +49,6 @@ type Arrays = struct {
   EXPECT_TRUE(type1->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type1->kind);
   auto type1_array = static_cast<const fidl::coded::ArrayType*>(type1);
-  EXPECT_EQ(1, type1_array->element_size_v1);
   EXPECT_EQ(1, type1_array->element_size_v2);
   EXPECT_EQ(type0, type1_array->element_type);
 
@@ -58,7 +57,6 @@ type Arrays = struct {
   EXPECT_TRUE(type2->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type2->kind);
   auto type2_array = static_cast<const fidl::coded::ArrayType*>(type2);
-  EXPECT_EQ(7 * 1, type2_array->element_size_v1);
   EXPECT_EQ(7 * 1, type2_array->element_size_v2);
   EXPECT_EQ(type1, type2_array->element_type);
 
@@ -67,7 +65,6 @@ type Arrays = struct {
   EXPECT_TRUE(type3->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type3->kind);
   auto type3_array = static_cast<const fidl::coded::ArrayType*>(type3);
-  EXPECT_EQ(11 * 7 * 1, type3_array->element_size_v1);
   EXPECT_EQ(11 * 7 * 1, type3_array->element_size_v2);
   EXPECT_EQ(type2, type3_array->element_type);
 }
@@ -98,7 +95,6 @@ type Vectors = struct {
   EXPECT_STREQ("example/SomeStruct", type_some_struct_struct->qname.c_str());
   EXPECT_FALSE(type_some_struct_struct->contains_envelope);
   EXPECT_NULL(type_some_struct_struct->maybe_reference_type);
-  EXPECT_EQ(1, type_some_struct_struct->size_v1);
   EXPECT_EQ(1, type_some_struct_struct->size_v2);
 
   ASSERT_EQ(2, gen.coded_types().size());
@@ -110,7 +106,6 @@ type Vectors = struct {
   auto type0_vector = static_cast<const fidl::coded::VectorType*>(type0);
   EXPECT_EQ(type_some_struct, type0_vector->element_type);
   EXPECT_EQ(10, type0_vector->max_count);
-  EXPECT_EQ(1, type0_vector->element_size_v1);
   EXPECT_EQ(1, type0_vector->element_size_v2);
   EXPECT_EQ(fidl::types::Nullability::kNonnullable, type0_vector->nullability);
   EXPECT_EQ(fidl::coded::MemcpyCompatibility::kCanMemcpy,
@@ -124,7 +119,6 @@ type Vectors = struct {
   auto type1_vector = static_cast<const fidl::coded::VectorType*>(type1);
   EXPECT_EQ(type0, type1_vector->element_type);
   EXPECT_EQ(20, type1_vector->max_count);
-  EXPECT_EQ(16, type1_vector->element_size_v1);
   EXPECT_EQ(16, type1_vector->element_size_v2);
   EXPECT_EQ(fidl::types::Nullability::kNonnullable, type1_vector->nullability);
   EXPECT_EQ(fidl::coded::MemcpyCompatibility::kCannotMemcpy,
@@ -228,7 +222,6 @@ protocol UseOfProtocol {
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STREQ("Protocol20example_SomeProtocolnonnullable", type0->coded_name.c_str());
   EXPECT_TRUE(type0->is_coding_needed);
-  EXPECT_EQ(4, type0->size_v1);
   EXPECT_EQ(4, type0->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kProtocolHandle, type0->kind);
   auto type0_ihandle = static_cast<const fidl::coded::ProtocolHandleType*>(type0);
@@ -237,7 +230,6 @@ protocol UseOfProtocol {
   auto type1 = gen.coded_types().at(1).get();
   EXPECT_STREQ("Request20example_SomeProtocolnonnullable", type1->coded_name.c_str());
   EXPECT_TRUE(type1->is_coding_needed);
-  EXPECT_EQ(4, type1->size_v1);
   EXPECT_EQ(4, type1->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type1->kind);
   auto type1_ihandle = static_cast<const fidl::coded::RequestHandleType*>(type1);
@@ -246,14 +238,12 @@ protocol UseOfProtocol {
   auto type2 = gen.coded_types().at(2).get();
   EXPECT_STREQ("example_UseOfProtocolCallRequestMessage", type2->coded_name.c_str());
   EXPECT_TRUE(type2->is_coding_needed);
-  EXPECT_EQ(4, type2->size_v1);
   EXPECT_EQ(4, type2->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type2->kind);
   auto type2_message = static_cast<const fidl::coded::StructType*>(type2);
   EXPECT_FALSE(type2_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolCallRequestMessage", type2_message->qname.c_str());
   EXPECT_EQ(1, type2_message->elements.size());
-  EXPECT_EQ(0, field(type2_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type2_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type0, field(type2_message->elements.at(0)).type);
 
@@ -263,7 +253,6 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
   EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(4, type_named_payload->size_v1);
   EXPECT_EQ(4, type_named_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_named_payload->kind);
   auto type_named_payload_message = static_cast<const fidl::coded::StructType*>(type_named_payload);
@@ -272,7 +261,6 @@ protocol UseOfProtocol {
   EXPECT_NULL(type_named_payload_message->maybe_reference_type);
   EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
   ASSERT_EQ(1, type_named_payload_message->elements.size());
-  EXPECT_EQ(0, field(type_named_payload_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type_named_payload_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type1, field(type_named_payload_message->elements.at(0)).type);
 }
@@ -305,7 +293,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type0->kind);
   auto type0_union = static_cast<const fidl::coded::XUnionType*>(type0);
   ASSERT_EQ(fidl::types::Nullability::kNullable, type0_union->nullability);
-  EXPECT_EQ(24, type0->size_v1);
   EXPECT_EQ(16, type0->size_v2);
   ASSERT_EQ(2, type0_union->fields.size());
   auto type0_field0 = type0_union->fields.at(0);
@@ -319,7 +306,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type1->kind);
   auto type1_union = static_cast<const fidl::coded::XUnionType*>(type1);
   ASSERT_EQ(fidl::types::Nullability::kNullable, type1_union->nullability);
-  EXPECT_EQ(24, type1->size_v1);
   EXPECT_EQ(16, type1->size_v2);
   ASSERT_EQ(2, type1_union->fields.size());
   auto type1_field0 = type1_union->fields.at(0);
@@ -330,7 +316,6 @@ protocol UseOfProtocol {
   auto type2 = gen.coded_types().at(2).get();
   EXPECT_STREQ("Protocol20example_SomeProtocolnonnullable", type2->coded_name.c_str());
   EXPECT_TRUE(type2->is_coding_needed);
-  EXPECT_EQ(4, type2->size_v1);
   EXPECT_EQ(4, type2->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kProtocolHandle, type2->kind);
   auto type2_ihandle = static_cast<const fidl::coded::ProtocolHandleType*>(type2);
@@ -342,7 +327,6 @@ protocol UseOfProtocol {
   auto type4 = gen.coded_types().at(4).get();
   EXPECT_STREQ("Request20example_SomeProtocolnonnullable", type4->coded_name.c_str());
   EXPECT_TRUE(type4->is_coding_needed);
-  EXPECT_EQ(4, type4->size_v1);
   EXPECT_EQ(4, type4->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type4->kind);
   auto type4_ihandle = static_cast<const fidl::coded::RequestHandleType*>(type4);
@@ -351,7 +335,6 @@ protocol UseOfProtocol {
   auto type5 = gen.coded_types().at(5).get();
   EXPECT_STREQ("example_UseOfProtocolMethodResponseMessage", type5->coded_name.c_str());
   EXPECT_TRUE(type5->is_coding_needed);
-  EXPECT_EQ(24, type5->size_v1);
   EXPECT_EQ(16, type5->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type5->kind);
   auto type5_message = static_cast<const fidl::coded::StructType*>(type5);
@@ -362,7 +345,6 @@ protocol UseOfProtocol {
   auto type6 = gen.coded_types().at(6).get();
   EXPECT_STREQ("example_UseOfProtocolOnReceiveEventMessage", type6->coded_name.c_str());
   EXPECT_TRUE(type6->is_coding_needed);
-  EXPECT_EQ(24, type6->size_v1);
   EXPECT_EQ(16, type6->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type6->kind);
   auto type6_message = static_cast<const fidl::coded::StructType*>(type6);
@@ -376,7 +358,6 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_anon_payload);
   EXPECT_STREQ("example_UseOfProtocol_Method_Response", type_anon_payload->coded_name.c_str());
   EXPECT_TRUE(type_anon_payload->is_coding_needed);
-  EXPECT_EQ(4, type_anon_payload->size_v1);
   EXPECT_EQ(4, type_anon_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_anon_payload->kind);
   auto type_anon_payload_message = static_cast<const fidl::coded::StructType*>(type_anon_payload);
@@ -385,7 +366,6 @@ protocol UseOfProtocol {
   EXPECT_NULL(type_anon_payload_message->maybe_reference_type);
   EXPECT_STREQ("example/UseOfProtocol_Method_Response", type_anon_payload_message->qname.c_str());
   ASSERT_EQ(1, type_anon_payload_message->elements.size());
-  EXPECT_EQ(0, field(type_anon_payload_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type_anon_payload_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type2, field(type_anon_payload_message->elements.at(0)).type);
 
@@ -395,7 +375,6 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
   EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(4, type_named_payload->size_v1);
   EXPECT_EQ(4, type_named_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_named_payload->kind);
   auto type_named_payload_message = static_cast<const fidl::coded::StructType*>(type_named_payload);
@@ -404,7 +383,6 @@ protocol UseOfProtocol {
   EXPECT_NULL(type_named_payload_message->maybe_reference_type);
   EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
   ASSERT_EQ(1, type_named_payload_message->elements.size());
-  EXPECT_EQ(0, field(type_named_payload_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type_named_payload_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type4, field(type_named_payload_message->elements.at(0)).type);
 }
@@ -425,7 +403,6 @@ protocol ErrorSyntaxProtocol {
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STREQ("example_ErrorSyntaxProtocol_ErrorSyntaxMethod_ResultNullableRef",
                type0->coded_name.c_str());
-  EXPECT_EQ(24, type0->size_v1);
   EXPECT_EQ(16, type0->size_v2);
 
   auto type1 = gen.coded_types().at(1).get();
@@ -434,7 +411,6 @@ protocol ErrorSyntaxProtocol {
   auto type2 = gen.coded_types().at(2).get();
   EXPECT_STREQ("example_ErrorSyntaxProtocolErrorSyntaxMethodResponseMessage",
                type2->coded_name.c_str());
-  EXPECT_EQ(24, type2->size_v1);
   EXPECT_EQ(16, type2->size_v2);
   auto type2_message = static_cast<const fidl::coded::StructType*>(type2);
   EXPECT_TRUE(type2_message->contains_envelope);
@@ -468,7 +444,6 @@ protocol UseOfProtocolEnds {
   auto type0 = gen.coded_types().at(3).get();
   EXPECT_STREQ("Protocol20example_SomeProtocolnonnullable", type0->coded_name.c_str());
   EXPECT_TRUE(type0->is_coding_needed);
-  EXPECT_EQ(4, type0->size_v1);
   EXPECT_EQ(4, type0->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kProtocolHandle, type0->kind);
   auto type0_ihandle = static_cast<const fidl::coded::ProtocolHandleType*>(type0);
@@ -478,14 +453,12 @@ protocol UseOfProtocolEnds {
   auto type1 = gen.coded_types().at(4).get();
   EXPECT_STREQ("example_UseOfProtocolEndsClientEndsRequestMessage", type1->coded_name.c_str());
   EXPECT_TRUE(type1->is_coding_needed);
-  EXPECT_EQ(4, type1->size_v1);
   EXPECT_EQ(4, type1->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type1->kind);
   auto type1_message = static_cast<const fidl::coded::StructType*>(type1);
   EXPECT_FALSE(type1_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsClientEndsRequestMessage", type1_message->qname.c_str());
   EXPECT_EQ(1, type1_message->elements.size());
-  EXPECT_EQ(0, field(type1_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type1_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type0, field(type1_message->elements.at(0)).type);
 
@@ -493,7 +466,6 @@ protocol UseOfProtocolEnds {
   auto type2 = gen.coded_types().at(2).get();
   EXPECT_STREQ("Protocol20example_SomeProtocolnullable", type2->coded_name.c_str());
   EXPECT_TRUE(type2->is_coding_needed);
-  EXPECT_EQ(4, type2->size_v1);
   EXPECT_EQ(4, type2->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kProtocolHandle, type2->kind);
   auto type2_ihandle = static_cast<const fidl::coded::ProtocolHandleType*>(type2);
@@ -503,14 +475,12 @@ protocol UseOfProtocolEnds {
   auto type3 = gen.coded_types().at(5).get();
   EXPECT_STREQ("example_UseOfProtocolEndsClientEndsResponseMessage", type3->coded_name.c_str());
   EXPECT_TRUE(type3->is_coding_needed);
-  EXPECT_EQ(4, type3->size_v1);
   EXPECT_EQ(4, type3->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type3->kind);
   auto type3_message = static_cast<const fidl::coded::StructType*>(type3);
   EXPECT_FALSE(type3_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsClientEndsResponseMessage", type3_message->qname.c_str());
   EXPECT_EQ(1, type3_message->elements.size());
-  EXPECT_EQ(0, field(type3_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type3_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type2, field(type3_message->elements.at(0)).type);
 
@@ -518,7 +488,6 @@ protocol UseOfProtocolEnds {
   auto type4 = gen.coded_types().at(1).get();
   EXPECT_STREQ("Request20example_SomeProtocolnullable", type4->coded_name.c_str());
   EXPECT_TRUE(type4->is_coding_needed);
-  EXPECT_EQ(4, type4->size_v1);
   EXPECT_EQ(4, type4->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type4->kind);
   auto type4_ihandle = static_cast<const fidl::coded::RequestHandleType*>(type4);
@@ -528,14 +497,12 @@ protocol UseOfProtocolEnds {
   auto type5 = gen.coded_types().at(6).get();
   EXPECT_STREQ("example_UseOfProtocolEndsServerEndsRequestMessage", type5->coded_name.c_str());
   EXPECT_TRUE(type5->is_coding_needed);
-  EXPECT_EQ(4, type5->size_v1);
   EXPECT_EQ(4, type5->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type5->kind);
   auto type5_message = static_cast<const fidl::coded::StructType*>(type5);
   EXPECT_FALSE(type5_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsServerEndsRequestMessage", type5_message->qname.c_str());
   EXPECT_EQ(1, type5_message->elements.size());
-  EXPECT_EQ(0, field(type5_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type5_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type4, field(type5_message->elements.at(0)).type);
 
@@ -543,7 +510,6 @@ protocol UseOfProtocolEnds {
   auto type6 = gen.coded_types().at(0).get();
   EXPECT_STREQ("Request20example_SomeProtocolnonnullable", type6->coded_name.c_str());
   EXPECT_TRUE(type6->is_coding_needed);
-  EXPECT_EQ(4, type6->size_v1);
   EXPECT_EQ(4, type6->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type6->kind);
   auto type6_ihandle = static_cast<const fidl::coded::RequestHandleType*>(type6);
@@ -553,14 +519,12 @@ protocol UseOfProtocolEnds {
   auto type7 = gen.coded_types().at(7).get();
   EXPECT_STREQ("example_UseOfProtocolEndsServerEndsResponseMessage", type7->coded_name.c_str());
   EXPECT_TRUE(type7->is_coding_needed);
-  EXPECT_EQ(4, type7->size_v1);
   EXPECT_EQ(4, type7->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type7->kind);
   auto type7_message = static_cast<const fidl::coded::StructType*>(type7);
   EXPECT_FALSE(type7_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsServerEndsResponseMessage", type7_message->qname.c_str());
   EXPECT_EQ(1, type7_message->elements.size());
-  EXPECT_EQ(0, field(type7_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type7_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type6, field(type7_message->elements.at(0)).type);
 }
@@ -817,9 +781,7 @@ type Complex = struct {
   ASSERT_EQ(type_bool_and_int32_struct->elements.size(), 2);
   EXPECT_EQ(field(type_bool_and_int32_struct->elements[0]).type->kind,
             fidl::coded::Type::Kind::kPrimitive);
-  EXPECT_EQ(field(type_bool_and_int32_struct->elements[0]).offset_v1, 0);
   EXPECT_EQ(field(type_bool_and_int32_struct->elements[0]).offset_v2, 0);
-  EXPECT_EQ(padding(type_bool_and_int32_struct->elements[1]).offset_v1, 0);
   EXPECT_EQ(padding(type_bool_and_int32_struct->elements[1]).offset_v2, 0);
   EXPECT_EQ(std::get<uint32_t>(padding(type_bool_and_int32_struct->elements[1]).mask), 0xffffff00);
 
@@ -832,12 +794,9 @@ type Complex = struct {
   ASSERT_EQ(type_complex_struct->elements.size(), 3);
   EXPECT_EQ(field(type_complex_struct->elements[0]).type->kind,
             fidl::coded::Type::Kind::kPrimitive);
-  EXPECT_EQ(field(type_complex_struct->elements[0]).offset_v1, 4);
   EXPECT_EQ(field(type_complex_struct->elements[0]).offset_v2, 4);
-  EXPECT_EQ(padding(type_complex_struct->elements[1]).offset_v1, 4);
   EXPECT_EQ(padding(type_complex_struct->elements[1]).offset_v2, 4);
   EXPECT_EQ(std::get<uint32_t>(padding(type_complex_struct->elements[1]).mask), 0xffffff00);
-  EXPECT_EQ(padding(type_complex_struct->elements[2]).offset_v1, 16);
   EXPECT_EQ(padding(type_complex_struct->elements[2]).offset_v2, 16);
   EXPECT_EQ(std::get<uint64_t>(padding(type_complex_struct->elements[2]).mask),
             0xffffffffffff0000ull);
@@ -879,10 +838,8 @@ type Level2 = struct {
   auto struct_level0 = static_cast<const fidl::coded::StructType*>(type_level0);
   ASSERT_FALSE(struct_level0->is_empty);
   ASSERT_EQ(struct_level0->elements.size(), 2);
-  EXPECT_EQ(padding(struct_level0->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_level0->elements[0]).offset_v2, 0);
   EXPECT_EQ(std::get<uint32_t>(padding(struct_level0->elements[0]).mask), 0xffffff00);
-  EXPECT_EQ(padding(struct_level0->elements[1]).offset_v1, 8);
   EXPECT_EQ(padding(struct_level0->elements[1]).offset_v2, 8);
   EXPECT_EQ(std::get<uint32_t>(padding(struct_level0->elements[1]).mask), 0xffffff00);
 
@@ -892,10 +849,8 @@ type Level2 = struct {
   auto struct_level1 = static_cast<const fidl::coded::StructType*>(type_level1);
   ASSERT_FALSE(struct_level1->is_empty);
   ASSERT_EQ(struct_level1->elements.size(), 2);
-  EXPECT_EQ(padding(struct_level1->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_level1->elements[0]).offset_v2, 0);
   EXPECT_EQ(std::get<uint32_t>(padding(struct_level1->elements[0]).mask), 0xffffff00);
-  EXPECT_EQ(padding(struct_level1->elements[1]).offset_v1, 8);
   EXPECT_EQ(padding(struct_level1->elements[1]).offset_v2, 8);
   EXPECT_EQ(std::get<uint64_t>(padding(struct_level1->elements[1]).mask), 0xffffffffffffff00);
 
@@ -905,13 +860,10 @@ type Level2 = struct {
   auto struct_level2 = static_cast<const fidl::coded::StructType*>(type_level2);
   ASSERT_FALSE(struct_level2->is_empty);
   ASSERT_EQ(struct_level2->elements.size(), 3);
-  EXPECT_EQ(padding(struct_level2->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_level2->elements[0]).offset_v2, 0);
   EXPECT_EQ(std::get<uint32_t>(padding(struct_level2->elements[0]).mask), 0xffffff00);
-  EXPECT_EQ(padding(struct_level2->elements[1]).offset_v1, 8);
   EXPECT_EQ(padding(struct_level2->elements[1]).offset_v2, 8);
   EXPECT_EQ(std::get<uint64_t>(padding(struct_level2->elements[1]).mask), 0xffffffffffffff00);
-  EXPECT_EQ(padding(struct_level2->elements[2]).offset_v1, 24);
   EXPECT_EQ(padding(struct_level2->elements[2]).offset_v2, 24);
   EXPECT_EQ(std::get<uint64_t>(padding(struct_level2->elements[2]).mask), 0xffffffffffffff00);
 }
@@ -946,7 +898,6 @@ type TwoLevelRecursiveOptionalStructB = struct {
             fidl::coded::Type::Kind::kStructPointer);
   ASSERT_SUBSTR(field(struct_one_level->elements[0]).type->coded_name.c_str(),
                 "OneLevelRecursiveOptionalStruct");
-  EXPECT_EQ(field(struct_one_level->elements[0]).offset_v1, 0);
   EXPECT_EQ(field(struct_one_level->elements[0]).offset_v2, 0);
 
   auto name_two_level_b =
@@ -960,7 +911,6 @@ type TwoLevelRecursiveOptionalStructB = struct {
             fidl::coded::Type::Kind::kStructPointer);
   ASSERT_SUBSTR(field(struct_two_level_b->elements[0]).type->coded_name.c_str(),
                 "TwoLevelRecursiveOptionalStructA");
-  EXPECT_EQ(field(struct_two_level_b->elements[0]).offset_v1, 0);
   EXPECT_EQ(field(struct_two_level_b->elements[0]).offset_v2, 0);
 
   // TwoLevelRecursiveOptionalStructA will be equivalent to TwoLevelRecursiveOptionalStructB
@@ -976,7 +926,6 @@ type TwoLevelRecursiveOptionalStructB = struct {
             fidl::coded::Type::Kind::kStructPointer);
   ASSERT_SUBSTR(field(struct_two_level_a->elements[0]).type->coded_name.c_str(),
                 "TwoLevelRecursiveOptionalStructA");
-  EXPECT_EQ(field(struct_two_level_a->elements[0]).offset_v1, 0);
   EXPECT_EQ(field(struct_two_level_a->elements[0]).offset_v2, 0);
 }
 
@@ -1005,7 +954,6 @@ type OuterStruct = struct {
   auto struct_inner_struct = static_cast<const fidl::coded::StructType*>(type_inner_struct);
   ASSERT_FALSE(struct_inner_struct->is_empty);
   ASSERT_EQ(struct_inner_struct->elements.size(), 1);
-  EXPECT_EQ(padding(struct_inner_struct->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_inner_struct->elements[0]).offset_v2, 0);
   ASSERT_TRUE(std::get<uint16_t>(padding(struct_inner_struct->elements[0]).mask));
   EXPECT_EQ(std::get<uint16_t>(padding(struct_inner_struct->elements[0]).mask), 0xff00);
@@ -1016,11 +964,9 @@ type OuterStruct = struct {
   auto struct_outer_struct = static_cast<const fidl::coded::StructType*>(type_outer_struct);
   ASSERT_FALSE(struct_outer_struct->is_empty);
   ASSERT_EQ(struct_outer_struct->elements.size(), 2);
-  EXPECT_EQ(padding(struct_outer_struct->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_outer_struct->elements[0]).offset_v2, 0);
   ASSERT_TRUE(std::get<uint16_t>(padding(struct_outer_struct->elements[0]).mask));
   EXPECT_EQ(std::get<uint16_t>(padding(struct_outer_struct->elements[0]).mask), 0xff00);
-  EXPECT_EQ(padding(struct_outer_struct->elements[1]).offset_v1, 4);
   EXPECT_EQ(padding(struct_outer_struct->elements[1]).offset_v2, 4);
   ASSERT_TRUE(std::get<uint16_t>(padding(struct_outer_struct->elements[1]).mask));
   EXPECT_EQ(std::get<uint16_t>(padding(struct_outer_struct->elements[1]).mask), 0xff00);
@@ -1060,19 +1006,14 @@ type OuterStruct = resource struct {
   auto struct_outer_struct = static_cast<const fidl::coded::StructType*>(type_outer_struct);
   ASSERT_FALSE(struct_outer_struct->is_empty);
   ASSERT_EQ(struct_outer_struct->elements.size(), 5);
-  EXPECT_EQ(padding(struct_outer_struct->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_outer_struct->elements[0]).offset_v2, 0);
   EXPECT_EQ(std::get<uint16_t>(padding(struct_outer_struct->elements[0]).mask), 0xff00);
   EXPECT_EQ(field(struct_outer_struct->elements[1]).type->kind, fidl::coded::Type::Kind::kHandle);
-  EXPECT_EQ(field(struct_outer_struct->elements[1]).offset_v1, 4);
   EXPECT_EQ(field(struct_outer_struct->elements[1]).offset_v2, 4);
   EXPECT_EQ(field(struct_outer_struct->elements[2]).type->kind, fidl::coded::Type::Kind::kXUnion);
-  EXPECT_EQ(field(struct_outer_struct->elements[2]).offset_v1, 8);
   EXPECT_EQ(field(struct_outer_struct->elements[2]).offset_v2, 8);
-  EXPECT_EQ(padding(struct_outer_struct->elements[3]).offset_v1, 32);
   EXPECT_EQ(padding(struct_outer_struct->elements[3]).offset_v2, 24);
   EXPECT_EQ(std::get<uint16_t>(padding(struct_outer_struct->elements[3]).mask), 0xff00);
-  EXPECT_EQ(padding(struct_outer_struct->elements[4]).offset_v1, 36);
   EXPECT_EQ(padding(struct_outer_struct->elements[4]).offset_v2, 28);
   EXPECT_EQ(std::get<uint32_t>(padding(struct_outer_struct->elements[4]).mask), 0xffffffff);
 }
@@ -1145,7 +1086,6 @@ type MyTable = table {
   EXPECT_TRUE(type3->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type3->kind);
   auto type3_array = static_cast<const fidl::coded::ArrayType*>(type3);
-  EXPECT_EQ(42, type3_array->size_v1);
   EXPECT_EQ(42, type3_array->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type3_array->element_type->kind);
   auto type3_array_element_type =
@@ -1473,7 +1413,6 @@ protocol UseOfProtocol {
   auto anon_payload = gen.coded_types().at(1).get();
   EXPECT_STREQ("example_UseOfProtocolCallRequestMessage", anon_payload->coded_name.c_str());
   EXPECT_TRUE(anon_payload->is_coding_needed);
-  EXPECT_EQ(2, anon_payload->size_v1);
   EXPECT_EQ(2, anon_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, anon_payload->kind);
   auto anon_payload_message = static_cast<const fidl::coded::StructType*>(anon_payload);
@@ -1482,9 +1421,7 @@ protocol UseOfProtocol {
   EXPECT_NULL(anon_payload_message->maybe_reference_type);
   EXPECT_STREQ("example/UseOfProtocolCallRequestMessage", anon_payload_message->qname.c_str());
   ASSERT_EQ(2, anon_payload_message->elements.size());
-  EXPECT_EQ(0, field(anon_payload_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(anon_payload_message->elements.at(0)).offset_v2);
-  EXPECT_EQ(1, field(anon_payload_message->elements.at(1)).offset_v1);
   EXPECT_EQ(1, field(anon_payload_message->elements.at(1)).offset_v2);
 
   auto named_payload_name =
@@ -1493,7 +1430,6 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
   EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(1, type_named_payload->size_v1);
   EXPECT_EQ(1, type_named_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_named_payload->kind);
   auto type_named_payload_message = static_cast<const fidl::coded::StructType*>(type_named_payload);
@@ -1502,7 +1438,6 @@ protocol UseOfProtocol {
   EXPECT_NULL(type_named_payload_message->maybe_reference_type);
   EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
   EXPECT_EQ(1, type_named_payload_message->elements.size());
-  EXPECT_EQ(0, field(type_named_payload_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type_named_payload_message->elements.at(0)).offset_v2);
 }
 
@@ -1533,7 +1468,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type0->kind);
   auto type0_union = static_cast<const fidl::coded::XUnionType*>(type0);
   ASSERT_EQ(fidl::types::Nullability::kNullable, type0_union->nullability);
-  EXPECT_EQ(24, type0->size_v1);
   EXPECT_EQ(16, type0->size_v2);
   ASSERT_EQ(2, type0_union->fields.size());
   auto type0_field0 = type0_union->fields.at(0);
@@ -1547,7 +1481,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type1->kind);
   auto type1_union = static_cast<const fidl::coded::XUnionType*>(type1);
   ASSERT_EQ(fidl::types::Nullability::kNullable, type1_union->nullability);
-  EXPECT_EQ(24, type1->size_v1);
   EXPECT_EQ(16, type1->size_v2);
   ASSERT_EQ(2, type1_union->fields.size());
   auto type1_field0 = type1_union->fields.at(0);
@@ -1564,7 +1497,6 @@ protocol UseOfProtocol {
   auto type4 = gen.coded_types().at(4).get();
   EXPECT_STREQ("example_UseOfProtocolMethodResponseMessage", type4->coded_name.c_str());
   EXPECT_TRUE(type4->is_coding_needed);
-  EXPECT_EQ(24, type4->size_v1);
   EXPECT_EQ(16, type4->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type4->kind);
   auto type4_message = static_cast<const fidl::coded::StructType*>(type4);
@@ -1577,7 +1509,6 @@ protocol UseOfProtocol {
   auto type5 = gen.coded_types().at(5).get();
   EXPECT_STREQ("example_UseOfProtocolOnReceiveEventMessage", type5->coded_name.c_str());
   EXPECT_TRUE(type5->is_coding_needed);
-  EXPECT_EQ(24, type5->size_v1);
   EXPECT_EQ(16, type5->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type5->kind);
   auto type5_message = static_cast<const fidl::coded::StructType*>(type5);
@@ -1593,7 +1524,6 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_anon_payload);
   EXPECT_STREQ("example_UseOfProtocol_Method_Response", type_anon_payload->coded_name.c_str());
   EXPECT_TRUE(type_anon_payload->is_coding_needed);
-  EXPECT_EQ(2, type_anon_payload->size_v1);
   EXPECT_EQ(2, type_anon_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_anon_payload->kind);
   auto type_anon_payload_message = static_cast<const fidl::coded::StructType*>(type_anon_payload);
@@ -1602,9 +1532,7 @@ protocol UseOfProtocol {
   EXPECT_NULL(type_anon_payload_message->maybe_reference_type);
   EXPECT_STREQ("example/UseOfProtocol_Method_Response", type_anon_payload_message->qname.c_str());
   ASSERT_EQ(2, type_anon_payload_message->elements.size());
-  EXPECT_EQ(0, field(type_anon_payload_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type_anon_payload_message->elements.at(0)).offset_v2);
-  EXPECT_EQ(1, field(type_anon_payload_message->elements.at(1)).offset_v1);
   EXPECT_EQ(1, field(type_anon_payload_message->elements.at(1)).offset_v2);
 
   auto named_payload_name =
@@ -1613,7 +1541,6 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
   EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(1, type_named_payload->size_v1);
   EXPECT_EQ(1, type_named_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_named_payload->kind);
   auto type_named_payload_message = static_cast<const fidl::coded::StructType*>(type_named_payload);
@@ -1622,7 +1549,6 @@ protocol UseOfProtocol {
   EXPECT_NULL(type_named_payload_message->maybe_reference_type);
   EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
   ASSERT_EQ(1, type_named_payload_message->elements.size());
-  EXPECT_EQ(0, field(type_named_payload_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type_named_payload_message->elements.at(0)).offset_v2);
 }
 
@@ -1653,16 +1579,13 @@ protocol UseOfProtocol {
   auto anon_payload = gen.coded_types().at(1).get();
   EXPECT_STREQ("example_UseOfProtocolCallRequestMessage", anon_payload->coded_name.c_str());
   EXPECT_TRUE(anon_payload->is_coding_needed);
-  EXPECT_EQ(16, anon_payload->size_v1);
   EXPECT_EQ(16, anon_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kTable, anon_payload->kind);
   auto anon_payload_message = static_cast<const fidl::coded::TableType*>(anon_payload);
   EXPECT_EQ(fidl::types::Resourceness::kValue, anon_payload_message->resourceness);
   EXPECT_STREQ("example/UseOfProtocolCallRequestMessage", anon_payload_message->qname.c_str());
   ASSERT_EQ(2, anon_payload_message->fields.size());
-  EXPECT_EQ(1, anon_payload_message->fields.at(0).type->size_v1);
   EXPECT_EQ(1, anon_payload_message->fields.at(0).type->size_v2);
-  EXPECT_EQ(1, anon_payload_message->fields.at(1).type->size_v1);
   EXPECT_EQ(1, anon_payload_message->fields.at(1).type->size_v2);
 
   auto named_payload_name =
@@ -1671,14 +1594,12 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
   EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(16, type_named_payload->size_v1);
   EXPECT_EQ(16, type_named_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kTable, type_named_payload->kind);
   auto type_named_payload_message = static_cast<const fidl::coded::TableType*>(type_named_payload);
   EXPECT_EQ(fidl::types::Resourceness::kValue, type_named_payload_message->resourceness);
   EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
   ASSERT_EQ(1, type_named_payload_message->fields.size());
-  EXPECT_EQ(1, type_named_payload_message->fields.at(0).type->size_v1);
   EXPECT_EQ(1, type_named_payload_message->fields.at(0).type->size_v2);
 }
 
@@ -1709,7 +1630,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type0->kind);
   auto type0_union = static_cast<const fidl::coded::XUnionType*>(type0);
   ASSERT_EQ(fidl::types::Nullability::kNullable, type0_union->nullability);
-  EXPECT_EQ(24, type0->size_v1);
   EXPECT_EQ(16, type0->size_v2);
   ASSERT_EQ(2, type0_union->fields.size());
   auto type0_field0 = type0_union->fields.at(0);
@@ -1723,7 +1643,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type1->kind);
   auto type1_union = static_cast<const fidl::coded::XUnionType*>(type1);
   ASSERT_EQ(fidl::types::Nullability::kNullable, type1_union->nullability);
-  EXPECT_EQ(24, type1->size_v1);
   EXPECT_EQ(16, type1->size_v2);
   ASSERT_EQ(2, type1_union->fields.size());
   auto type1_field0 = type1_union->fields.at(0);
@@ -1740,7 +1659,6 @@ protocol UseOfProtocol {
   auto type4 = gen.coded_types().at(4).get();
   EXPECT_STREQ("example_UseOfProtocolMethodResponseMessage", type4->coded_name.c_str());
   EXPECT_TRUE(type4->is_coding_needed);
-  EXPECT_EQ(24, type4->size_v1);
   EXPECT_EQ(16, type4->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type4->kind);
   auto type4_message = static_cast<const fidl::coded::StructType*>(type4);
@@ -1751,7 +1669,6 @@ protocol UseOfProtocol {
   auto type5 = gen.coded_types().at(5).get();
   EXPECT_STREQ("example_UseOfProtocolOnReceiveEventMessage", type5->coded_name.c_str());
   EXPECT_TRUE(type5->is_coding_needed);
-  EXPECT_EQ(24, type5->size_v1);
   EXPECT_EQ(16, type5->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type5->kind);
   auto type5_message = static_cast<const fidl::coded::StructType*>(type5);
@@ -1765,16 +1682,13 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_anon_payload);
   EXPECT_STREQ("example_UseOfProtocol_Method_Response", type_anon_payload->coded_name.c_str());
   EXPECT_TRUE(type_anon_payload->is_coding_needed);
-  EXPECT_EQ(16, type_anon_payload->size_v1);
   EXPECT_EQ(16, type_anon_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kTable, type_anon_payload->kind);
   auto type_anon_payload_message = static_cast<const fidl::coded::TableType*>(type_anon_payload);
   EXPECT_EQ(fidl::types::Resourceness::kValue, type_anon_payload_message->resourceness);
   EXPECT_STREQ("example/UseOfProtocol_Method_Response", type_anon_payload_message->qname.c_str());
   ASSERT_EQ(2, type_anon_payload_message->fields.size());
-  EXPECT_EQ(1, type_anon_payload_message->fields.at(0).type->size_v1);
   EXPECT_EQ(1, type_anon_payload_message->fields.at(0).type->size_v2);
-  EXPECT_EQ(1, type_anon_payload_message->fields.at(1).type->size_v1);
   EXPECT_EQ(1, type_anon_payload_message->fields.at(1).type->size_v2);
 
   auto named_payload_name =
@@ -1783,14 +1697,12 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
   EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(16, type_named_payload->size_v1);
   EXPECT_EQ(16, type_named_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kTable, type_named_payload->kind);
   auto type_named_payload_message = static_cast<const fidl::coded::TableType*>(type_named_payload);
   EXPECT_EQ(fidl::types::Resourceness::kValue, type_named_payload_message->resourceness);
   EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
   ASSERT_EQ(1, type_named_payload_message->fields.size());
-  EXPECT_EQ(1, type_named_payload_message->fields.at(0).type->size_v1);
   EXPECT_EQ(1, type_named_payload_message->fields.at(0).type->size_v2);
 }
 
@@ -1821,7 +1733,6 @@ protocol UseOfProtocol {
   auto anon_payload = gen.coded_types().at(3).get();
   EXPECT_STREQ("example_UseOfProtocolCallRequestMessage", anon_payload->coded_name.c_str());
   EXPECT_TRUE(anon_payload->is_coding_needed);
-  EXPECT_EQ(24, anon_payload->size_v1);
   EXPECT_EQ(16, anon_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, anon_payload->kind);
   auto anon_payload_message = static_cast<const fidl::coded::XUnionType*>(anon_payload);
@@ -1829,9 +1740,7 @@ protocol UseOfProtocol {
   EXPECT_EQ(fidl::types::Resourceness::kValue, anon_payload_message->resourceness);
   EXPECT_STREQ("example/UseOfProtocolCallRequestMessage", anon_payload_message->qname.c_str());
   ASSERT_EQ(2, anon_payload_message->fields.size());
-  EXPECT_EQ(1, anon_payload_message->fields.at(0).type->size_v1);
   EXPECT_EQ(1, anon_payload_message->fields.at(0).type->size_v2);
-  EXPECT_EQ(1, anon_payload_message->fields.at(1).type->size_v1);
   EXPECT_EQ(1, anon_payload_message->fields.at(1).type->size_v2);
 
   auto named_payload_name =
@@ -1840,7 +1749,6 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
   EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(24, type_named_payload->size_v1);
   EXPECT_EQ(16, type_named_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type_named_payload->kind);
   auto type_named_payload_message = static_cast<const fidl::coded::XUnionType*>(type_named_payload);
@@ -1848,7 +1756,6 @@ protocol UseOfProtocol {
   EXPECT_EQ(fidl::types::Resourceness::kValue, type_named_payload_message->resourceness);
   EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
   ASSERT_EQ(1, type_named_payload_message->fields.size());
-  EXPECT_EQ(1, type_named_payload_message->fields.at(0).type->size_v1);
   EXPECT_EQ(1, type_named_payload_message->fields.at(0).type->size_v2);
 }
 
@@ -1879,7 +1786,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type1->kind);
   auto type1_union = static_cast<const fidl::coded::XUnionType*>(type1);
   ASSERT_EQ(fidl::types::Nullability::kNullable, type1_union->nullability);
-  EXPECT_EQ(24, type1->size_v1);
   EXPECT_EQ(16, type1->size_v2);
   ASSERT_EQ(2, type1_union->fields.size());
   auto type1_field0 = type1_union->fields.at(0);
@@ -1893,7 +1799,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type3->kind);
   auto type3_union = static_cast<const fidl::coded::XUnionType*>(type3);
   ASSERT_EQ(fidl::types::Nullability::kNullable, type3_union->nullability);
-  EXPECT_EQ(24, type3->size_v1);
   EXPECT_EQ(16, type3->size_v2);
   ASSERT_EQ(2, type3_union->fields.size());
   auto type3_field0 = type3_union->fields.at(0);
@@ -1910,7 +1815,6 @@ protocol UseOfProtocol {
   auto type6 = gen.coded_types().at(6).get();
   EXPECT_STREQ("example_UseOfProtocolMethodResponseMessage", type6->coded_name.c_str());
   EXPECT_TRUE(type6->is_coding_needed);
-  EXPECT_EQ(24, type6->size_v1);
   EXPECT_EQ(16, type6->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type6->kind);
   auto type6_message = static_cast<const fidl::coded::StructType*>(type6);
@@ -1921,7 +1825,6 @@ protocol UseOfProtocol {
   auto type7 = gen.coded_types().at(7).get();
   EXPECT_STREQ("example_UseOfProtocolOnReceiveEventMessage", type7->coded_name.c_str());
   EXPECT_TRUE(type7->is_coding_needed);
-  EXPECT_EQ(24, type7->size_v1);
   EXPECT_EQ(16, type7->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type7->kind);
   auto type7_message = static_cast<const fidl::coded::StructType*>(type7);
@@ -1935,7 +1838,6 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_anon_payload);
   EXPECT_STREQ("example_UseOfProtocol_Method_Response", type_anon_payload->coded_name.c_str());
   EXPECT_TRUE(type_anon_payload->is_coding_needed);
-  EXPECT_EQ(24, type_anon_payload->size_v1);
   EXPECT_EQ(16, type_anon_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type_anon_payload->kind);
   auto type_anon_payload_message = static_cast<const fidl::coded::XUnionType*>(type_anon_payload);
@@ -1943,9 +1845,7 @@ protocol UseOfProtocol {
   EXPECT_EQ(fidl::types::Resourceness::kValue, type_anon_payload_message->resourceness);
   EXPECT_STREQ("example/UseOfProtocol_Method_Response", type_anon_payload_message->qname.c_str());
   ASSERT_EQ(2, type_anon_payload_message->fields.size());
-  EXPECT_EQ(1, type_anon_payload_message->fields.at(0).type->size_v1);
   EXPECT_EQ(1, type_anon_payload_message->fields.at(0).type->size_v2);
-  EXPECT_EQ(1, type_anon_payload_message->fields.at(1).type->size_v1);
   EXPECT_EQ(1, type_anon_payload_message->fields.at(1).type->size_v2);
 
   auto named_payload_name =
@@ -1954,7 +1854,6 @@ protocol UseOfProtocol {
   ASSERT_NOT_NULL(type_named_payload);
   EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
   EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(24, type_named_payload->size_v1);
   EXPECT_EQ(16, type_named_payload->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type_named_payload->kind);
   auto type_named_payload_message = static_cast<const fidl::coded::XUnionType*>(type_named_payload);
@@ -1962,7 +1861,6 @@ protocol UseOfProtocol {
   EXPECT_EQ(fidl::types::Resourceness::kValue, type_named_payload_message->resourceness);
   EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
   ASSERT_EQ(1, type_named_payload_message->fields.size());
-  EXPECT_EQ(1, type_named_payload_message->fields.at(0).type->size_v1);
   EXPECT_EQ(1, type_named_payload_message->fields.at(0).type->size_v2);
 }
 

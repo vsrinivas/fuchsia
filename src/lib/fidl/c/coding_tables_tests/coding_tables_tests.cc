@@ -18,11 +18,9 @@ TEST(SomeStruct, CodingTable) {
   ASSERT_EQ(kFidlStructElementType_Field, some_struct_table.elements[0].header.element_type);
   EXPECT_EQ(&fidl_internal_kBoolTable, some_struct_table.elements[0].field.field_type);
   ASSERT_EQ(kFidlIsResource_NotResource, some_struct_table.elements[0].header.is_resource);
-  EXPECT_EQ(0, some_struct_table.elements[0].field.offset_v1);
   EXPECT_EQ(0, some_struct_table.elements[0].field.offset_v2);
   ASSERT_EQ(kFidlStructElementType_Padding32, some_struct_table.elements[1].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, some_struct_table.elements[1].header.is_resource);
-  EXPECT_EQ(0, some_struct_table.elements[1].padding.offset_v1);
   EXPECT_EQ(0, some_struct_table.elements[1].padding.offset_v2);
   EXPECT_EQ(0xffffff00, some_struct_table.elements[1].padding.mask_32);
 }
@@ -50,11 +48,9 @@ TEST(SomeStruct, RequestPayloadCodingTable) {
   ASSERT_EQ(kFidlStructElementType_Field, some_struct_table.elements[0].header.element_type);
   EXPECT_EQ(&fidl_internal_kBoolTable, some_struct_table.elements[0].field.field_type);
   ASSERT_EQ(kFidlIsResource_NotResource, some_struct_table.elements[0].header.is_resource);
-  EXPECT_EQ(0, some_struct_table.elements[0].field.offset_v1);
   EXPECT_EQ(0, some_struct_table.elements[0].field.offset_v2);
   ASSERT_EQ(kFidlStructElementType_Padding32, some_struct_table.elements[1].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, some_struct_table.elements[1].header.is_resource);
-  EXPECT_EQ(0, some_struct_table.elements[1].padding.offset_v1);
   EXPECT_EQ(0, some_struct_table.elements[1].padding.offset_v2);
   EXPECT_EQ(0xffffff00, some_struct_table.elements[1].padding.mask_32);
 }
@@ -73,19 +69,16 @@ TEST(StructWithSomeFieldsRemoved, CodingTable) {
 
   ASSERT_EQ(kFidlStructElementType_Padding64, coded_struct.elements[0].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, coded_struct.elements[0].header.is_resource);
-  EXPECT_EQ(0, coded_struct.elements[0].padding.offset_v1);
   EXPECT_EQ(0, coded_struct.elements[0].padding.offset_v2);
   EXPECT_EQ(0xffffffffffffff00ull, coded_struct.elements[0].padding.mask_64);
 
   ASSERT_EQ(kFidlStructElementType_Padding64, coded_struct.elements[1].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, coded_struct.elements[1].header.is_resource);
-  EXPECT_EQ(16, coded_struct.elements[1].padding.offset_v1);
   EXPECT_EQ(16, coded_struct.elements[1].padding.offset_v2);
   EXPECT_EQ(0xffffffffff000000ull, coded_struct.elements[1].padding.mask_64);
 
   ASSERT_EQ(kFidlStructElementType_Padding16, coded_struct.elements[2].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, coded_struct.elements[2].header.is_resource);
-  EXPECT_EQ(32, coded_struct.elements[2].padding.offset_v1);
   EXPECT_EQ(32, coded_struct.elements[2].padding.offset_v2);
   EXPECT_EQ(0xff00, coded_struct.elements[2].padding.mask_16);
 
@@ -93,12 +86,10 @@ TEST(StructWithSomeFieldsRemoved, CodingTable) {
   ASSERT_EQ(kFidlIsResource_NotResource, coded_struct.elements[3].header.is_resource);
   EXPECT_EQ(&fidl_internal_kBoolTable,
             coded_struct.elements[3].field.field_type->coded_array().element);
-  EXPECT_EQ(38, coded_struct.elements[3].field.offset_v1);
   EXPECT_EQ(38, coded_struct.elements[3].field.offset_v2);
 
   ASSERT_EQ(kFidlStructElementType_Padding16, coded_struct.elements[4].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, coded_struct.elements[4].header.is_resource);
-  EXPECT_EQ(38, coded_struct.elements[4].padding.offset_v1);
   EXPECT_EQ(38, coded_struct.elements[4].padding.offset_v2);
   EXPECT_EQ(0xff00, coded_struct.elements[4].padding.mask_16);
 }
@@ -113,7 +104,6 @@ TEST(MyXUnion, CodingTableWhenNullable) {
   ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, request_struct.elements[0].header.is_resource);
   const FidlStructField& my_xunion_field = request_struct.elements[0].field;
-  EXPECT_EQ(0, my_xunion_field.offset_v1);
   EXPECT_EQ(0, my_xunion_field.offset_v2);
 
   const fidl_type& my_xunion_type = *my_xunion_field.field_type;
@@ -146,7 +136,6 @@ TEST(MyStrictXUnion, CodingTableWhenNullable) {
   ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, request_struct.elements[0].header.is_resource);
   const FidlStructField& my_strict_xunion_field = request_struct.elements[0].field;
-  EXPECT_EQ(0, my_strict_xunion_field.offset_v1);
   EXPECT_EQ(0, my_strict_xunion_field.offset_v2);
 
   const fidl_type& my_strict_xunion_type = *my_strict_xunion_field.field_type;
@@ -178,7 +167,6 @@ TEST(MyTable, CodingTable) {
   ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, request_struct.elements[0].header.is_resource);
   const FidlStructField& vector_of_my_table_field = request_struct.elements[0].field;
-  EXPECT_EQ(0, vector_of_my_table_field.offset_v1);
   EXPECT_EQ(0, vector_of_my_table_field.offset_v2);
   const fidl_type& vector_of_my_table_type = *vector_of_my_table_field.field_type;
   ASSERT_EQ(kFidlTypeVector, vector_of_my_table_type.type_tag());
@@ -218,7 +206,6 @@ TEST(MyXUnion, CodingTableWhenNonnullable) {
   ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, request_struct.elements[0].header.is_resource);
   const FidlStructField& vector_of_my_xunion_field = request_struct.elements[0].field;
-  EXPECT_EQ(0, vector_of_my_xunion_field.offset_v1);
   EXPECT_EQ(0, vector_of_my_xunion_field.offset_v2);
   const fidl_type& vector_of_my_xunion_type = *vector_of_my_xunion_field.field_type;
   ASSERT_EQ(kFidlTypeVector, vector_of_my_xunion_type.type_tag());
@@ -245,7 +232,6 @@ TEST(MyStrictXUnion, CodingTableWhenNonnullable) {
   ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, request_struct.elements[0].header.is_resource);
   const FidlStructField& vector_of_my_xunion_field = request_struct.elements[0].field;
-  EXPECT_EQ(0, vector_of_my_xunion_field.offset_v1);
   EXPECT_EQ(0, vector_of_my_xunion_field.offset_v2);
   const fidl_type& vector_of_my_xunion_type = *vector_of_my_xunion_field.field_type;
   ASSERT_EQ(kFidlTypeVector, vector_of_my_xunion_type.type_tag());
@@ -271,7 +257,6 @@ TEST(MyBits, CodingTable) {
   ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, request_struct.elements[0].header.is_resource);
   const FidlStructField& my_bits_field = request_struct.elements[0].field;
-  EXPECT_EQ(0, my_bits_field.offset_v1);
   EXPECT_EQ(0, my_bits_field.offset_v2);
   const fidl_type& my_bits_type = *my_bits_field.field_type;
   ASSERT_EQ(kFidlTypeBits, my_bits_type.type_tag());
@@ -290,7 +275,6 @@ TEST(MyEnum, CodingTable) {
   ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, request_struct.elements[0].header.is_resource);
   const FidlStructField& my_enum_field = request_struct.elements[0].field;
-  EXPECT_EQ(0, my_enum_field.offset_v1);
   EXPECT_EQ(0, my_enum_field.offset_v2);
   const fidl_type& my_enum_type = *my_enum_field.field_type;
   ASSERT_EQ(kFidlTypeEnum, my_enum_type.type_tag());

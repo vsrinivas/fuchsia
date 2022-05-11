@@ -43,9 +43,6 @@ static_assert(sizeof(fidl_envelope_v2_t) == 8u, "fidl_envelope_v2_t layout");
 
 static_assert(ZX_HANDLE_INVALID == FIDL_HANDLE_ABSENT, "invalid handle equals absence marker");
 
-#define FIDL_VERSIONED_VALUE(V1_VALUE, V2_VALUE) \
-  ((WireFormatVersion == FIDL_WIRE_FORMAT_VERSION_V1) ? V1_VALUE : V2_VALUE)
-
 constexpr uint32_t PrimitiveSize(const FidlCodedPrimitiveSubtype primitive) {
   switch (primitive) {
     case kFidlCodedPrimitiveSubtype_Bool:
@@ -81,16 +78,15 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
     case kFidlTypeHandle:
       return sizeof(zx_handle_t);
     case kFidlTypeStruct:
-      return FIDL_VERSIONED_VALUE(type->coded_struct().size_v1, type->coded_struct().size_v2);
+      return type->coded_struct().size_v2;
     case kFidlTypeTable:
       return sizeof(fidl_vector_t);
     case kFidlTypeXUnion:
-      return FIDL_VERSIONED_VALUE(sizeof(fidl_xunion_t), sizeof(fidl_xunion_v2_t));
+      return sizeof(fidl_xunion_v2_t);
     case kFidlTypeString:
       return sizeof(fidl_string_t);
     case kFidlTypeArray:
-      return FIDL_VERSIONED_VALUE(type->coded_array().array_size_v1,
-                                  type->coded_array().array_size_v2);
+      return type->coded_array().array_size_v2;
     case kFidlTypeVector:
       return sizeof(fidl_vector_t);
   }
@@ -191,14 +187,8 @@ class Walker final {
                            OutOfLineDepth depth);
   Result WalkEnvelope(Position envelope_position, const fidl_type_t* payload_type,
                       OutOfLineDepth depth, FidlIsResource is_resource);
-  Result WalkEnvelopeV1(Position envelope_position, const fidl_type_t* payload_type,
-                        OutOfLineDepth depth, FidlIsResource is_resource);
-  Result WalkEnvelopeV2(Position envelope_position, const fidl_type_t* payload_type,
-                        OutOfLineDepth depth, FidlIsResource is_resource);
   Result WalkTable(const FidlCodedTable* coded_table, Position position, OutOfLineDepth depth);
   Result WalkXUnion(const FidlCodedXUnion* coded_table, Position position, OutOfLineDepth depth);
-  Result WalkXUnionV1(const FidlCodedXUnion* coded_table, Position position, OutOfLineDepth depth);
-  Result WalkXUnionV2(const FidlCodedXUnion* coded_table, Position position, OutOfLineDepth depth);
   Result WalkArray(const FidlCodedArray* coded_array, Position position, OutOfLineDepth depth);
   Result WalkString(const FidlCodedString* coded_string, Position position, OutOfLineDepth depth);
   Result WalkVector(const FidlCodedVector* coded_vector, Position position, OutOfLineDepth depth);
@@ -373,7 +363,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkStruct(
     const FidlCodedStruct* coded_struct, Walker<VisitorImpl, WireFormatVersion>::Position position,
     OutOfLineDepth depth) {
   if (unlikely(coded_struct->is_empty)) {
-    ZX_DEBUG_ASSERT(FIDL_VERSIONED_VALUE(coded_struct->size_v1, coded_struct->size_v2) == 1);
+    ZX_DEBUG_ASSERT(coded_struct->size_v2 == 1);
     uint8_t value = *PtrTo<uint8_t>(position);
     if (value != 0) {
       visitor_->OnError("invalid empty struct");
@@ -389,29 +379,26 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkStruct(
     switch (element.header.element_type) {
       case kFidlStructElementType_Field: {
         const FidlStructField& field = element.field;
-        Position field_position = position + FIDL_VERSIONED_VALUE(field.offset_v1, field.offset_v2);
+        Position field_position = position + field.offset_v2;
         Result result = WalkInternal(field.field_type, field_position, depth);
         FIDL_RESULT_GUARD(result);
         break;
       }
       case kFidlStructElementType_Padding64: {
         const FidlStructPadding& padding = element.padding;
-        auto status = visitor_->VisitInternalPadding(
-            position + FIDL_VERSIONED_VALUE(padding.offset_v1, padding.offset_v2), padding.mask_64);
+        auto status = visitor_->VisitInternalPadding(position + padding.offset_v2, padding.mask_64);
         FIDL_STATUS_GUARD(status);
         break;
       }
       case kFidlStructElementType_Padding32: {
         const FidlStructPadding& padding = element.padding;
-        auto status = visitor_->VisitInternalPadding(
-            position + FIDL_VERSIONED_VALUE(padding.offset_v1, padding.offset_v2), padding.mask_32);
+        auto status = visitor_->VisitInternalPadding(position + padding.offset_v2, padding.mask_32);
         FIDL_STATUS_GUARD(status);
         break;
       }
       case kFidlStructElementType_Padding16: {
         const FidlStructPadding& padding = element.padding;
-        auto status = visitor_->VisitInternalPadding(
-            position + FIDL_VERSIONED_VALUE(padding.offset_v1, padding.offset_v2), padding.mask_16);
+        auto status = visitor_->VisitInternalPadding(position + padding.offset_v2, padding.mask_16);
         FIDL_STATUS_GUARD(status);
         break;
       }
@@ -433,8 +420,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkStructPointer(
   Position obj_position;
   auto status =
       visitor_->VisitPointer(position, VisitorImpl::PointeeType::kOther, PtrTo<Ptr<void>>(position),
-                             FIDL_VERSIONED_VALUE(coded_struct_pointer->struct_type->size_v1,
-                                                  coded_struct_pointer->struct_type->size_v2),
+                             coded_struct_pointer->struct_type->size_v2,
                              kFidlMemcpyCompatibility_CannotMemcpy, &obj_position);
   FIDL_STATUS_GUARD(status);
   return WalkStruct(coded_struct_pointer->struct_type, obj_position, inner_depth);
@@ -445,59 +431,6 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelope(Position envelope_po
                                                             const fidl_type_t* payload_type,
                                                             OutOfLineDepth depth,
                                                             bool is_resource) {
-  switch (WireFormatVersion) {
-    case FIDL_WIRE_FORMAT_VERSION_V1:
-      return WalkEnvelopeV1(envelope_position, payload_type, depth, is_resource);
-    case FIDL_WIRE_FORMAT_VERSION_V2:
-      return WalkEnvelopeV2(envelope_position, payload_type, depth, is_resource);
-  }
-  __builtin_unreachable();
-}
-
-template <typename VisitorImpl, FidlWireFormatVersion WireFormatVersion>
-Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV1(Position envelope_position,
-                                                              const fidl_type_t* payload_type,
-                                                              OutOfLineDepth depth,
-                                                              bool is_resource) {
-  auto envelope = PtrTo<EnvelopeType>(envelope_position);
-  auto envelope_copy = *envelope;
-  auto v1_envelope = PtrTo<const fidl_envelope_t>(envelope_position);
-
-  EnvelopeCheckpoint checkpoint = visitor_->EnterEnvelope();
-
-  if (v1_envelope->data != nullptr) {
-    OutOfLineDepth obj_depth = INCREASE_DEPTH(depth);
-    FIDL_DEPTH_GUARD(obj_depth);
-
-    uint32_t num_bytes = payload_type != nullptr ? TypeSize<WireFormatVersion>(payload_type)
-                                                 : v1_envelope->num_bytes;
-    Position obj_position;
-    auto status = visitor_->VisitPointer(envelope_position, VisitorImpl::PointeeType::kEnvelope,
-                                         // casting since |envelope_ptr->data| is always void*
-                                         &const_cast<Ptr<void>&>(v1_envelope->data), num_bytes,
-                                         kFidlMemcpyCompatibility_CannotMemcpy, &obj_position);
-    FIDL_STATUS_GUARD(status);
-
-    if (likely(payload_type != nullptr)) {
-      auto result = WalkInternal(payload_type, obj_position, obj_depth);
-      FIDL_RESULT_GUARD(result);
-    } else {
-      status = visitor_->VisitUnknownEnvelope(envelope_copy, envelope, is_resource);
-      FIDL_STATUS_GUARD(status);
-    }
-  }
-
-  auto status = visitor_->LeaveEnvelope(envelope_copy, envelope, checkpoint);
-  FIDL_STATUS_GUARD(status);
-
-  return Result::kContinue;
-}
-
-template <typename VisitorImpl, FidlWireFormatVersion WireFormatVersion>
-Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_position,
-                                                              const fidl_type_t* payload_type,
-                                                              OutOfLineDepth depth,
-                                                              bool is_resource) {
   auto envelope = PtrTo<EnvelopeType>(envelope_position);
   auto envelope_copy = *envelope;
   auto v2_envelope = PtrTo<const fidl_envelope_v2_t>(envelope_position);
@@ -601,8 +534,7 @@ template <typename VisitorImpl, FidlWireFormatVersion WireFormatVersion>
 Result Walker<VisitorImpl, WireFormatVersion>::WalkTable(
     const FidlCodedTable* coded_table, Walker<VisitorImpl, WireFormatVersion>::Position position,
     OutOfLineDepth depth) {
-  uint32_t envelope_size =
-      FIDL_VERSIONED_VALUE(sizeof(fidl_envelope_t), sizeof(fidl_envelope_v2_t));
+  uint32_t envelope_size = sizeof(fidl_envelope_v2_t);
   auto envelope_vector_ptr = PtrTo<fidl_vector_t>(position);
   if (envelope_vector_ptr->data == nullptr) {
     if (unlikely(envelope_vector_ptr->count != 0)) {
@@ -651,56 +583,6 @@ template <typename VisitorImpl, FidlWireFormatVersion WireFormatVersion>
 Result Walker<VisitorImpl, WireFormatVersion>::WalkXUnion(
     const FidlCodedXUnion* coded_xunion, Walker<VisitorImpl, WireFormatVersion>::Position position,
     OutOfLineDepth depth) {
-  switch (WireFormatVersion) {
-    case FIDL_WIRE_FORMAT_VERSION_V1:
-      return WalkXUnionV1(coded_xunion, position, depth);
-    case FIDL_WIRE_FORMAT_VERSION_V2:
-      return WalkXUnionV2(coded_xunion, position, depth);
-  }
-  __builtin_unreachable();
-}
-
-template <typename VisitorImpl, FidlWireFormatVersion WireFormatVersion>
-Result Walker<VisitorImpl, WireFormatVersion>::WalkXUnionV1(
-    const FidlCodedXUnion* coded_xunion, Walker<VisitorImpl, WireFormatVersion>::Position position,
-    OutOfLineDepth depth) {
-  auto xunion = PtrTo<fidl_xunion_t>(position);
-  const auto envelope_pos = position + offsetof(fidl_xunion_t, envelope);
-  auto envelope_ptr = &xunion->envelope;
-
-  // Validate zero-ordinal invariants
-  if (xunion->tag == 0) {
-    if (unlikely(envelope_ptr->data != nullptr || envelope_ptr->num_bytes != 0 ||
-                 envelope_ptr->num_handles != 0)) {
-      visitor_->OnError("xunion with zero as ordinal must be empty");
-      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-    }
-    if (unlikely(!coded_xunion->nullable)) {
-      visitor_->OnError("non-nullable xunion is absent");
-      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-    }
-    return Result::kContinue;
-  } else if (unlikely(envelope_ptr->data == nullptr)) {
-    visitor_->OnError("empty xunion must have zero as ordinal");
-    FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-  }
-
-  const fidl_type_t* payload_type = nullptr;
-  if (xunion->tag <= coded_xunion->field_count) {
-    payload_type = coded_xunion->fields[xunion->tag - 1].type;
-  }
-  if (unlikely(payload_type == nullptr && coded_xunion->strictness == kFidlStrictness_Strict)) {
-    visitor_->OnError("strict xunion has unknown ordinal");
-    FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-  }
-
-  return WalkEnvelopeV1(envelope_pos, payload_type, depth, coded_xunion->is_resource);
-}
-
-template <typename VisitorImpl, FidlWireFormatVersion WireFormatVersion>
-Result Walker<VisitorImpl, WireFormatVersion>::WalkXUnionV2(
-    const FidlCodedXUnion* coded_xunion, Walker<VisitorImpl, WireFormatVersion>::Position position,
-    OutOfLineDepth depth) {
   auto xunion = PtrTo<fidl_xunion_v2_t>(position);
   const auto envelope_pos = position + offsetof(fidl_xunion_v2_t, envelope);
   auto envelope_ptr = &xunion->envelope;
@@ -736,17 +618,15 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkXUnionV2(
     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }
 
-  return WalkEnvelopeV2(envelope_pos, payload_type, depth, coded_xunion->is_resource);
+  return WalkEnvelope(envelope_pos, payload_type, depth, coded_xunion->is_resource);
 }
 
 template <typename VisitorImpl, FidlWireFormatVersion WireFormatVersion>
 Result Walker<VisitorImpl, WireFormatVersion>::WalkArray(
     const FidlCodedArray* coded_array, Walker<VisitorImpl, WireFormatVersion>::Position position,
     OutOfLineDepth depth) {
-  return WalkIterableInternal(
-      coded_array->element, position,
-      FIDL_VERSIONED_VALUE(coded_array->element_size_v1, coded_array->element_size_v2),
-      FIDL_VERSIONED_VALUE(coded_array->array_size_v1, coded_array->array_size_v2), depth);
+  return WalkIterableInternal(coded_array->element, position, coded_array->element_size_v2,
+                              coded_array->array_size_v2, depth);
 }
 
 template <typename VisitorImpl, FidlWireFormatVersion WireFormatVersion>
@@ -838,9 +718,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkVector(
     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }
   uint32_t size;
-  if (unlikely(mul_overflow(
-          count, FIDL_VERSIONED_VALUE(coded_vector->element_size_v1, coded_vector->element_size_v2),
-          &size))) {
+  if (unlikely(mul_overflow(count, coded_vector->element_size_v2, &size))) {
     visitor_->OnError("integer overflow calculating vector size");
     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }
@@ -852,8 +730,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkVector(
                              coded_vector->element_memcpy_compatibility, &array_position);
   FIDL_STATUS_GUARD(status);
 
-  uint32_t stride =
-      FIDL_VERSIONED_VALUE(coded_vector->element_size_v1, coded_vector->element_size_v2);
+  uint32_t stride = coded_vector->element_size_v2;
   ZX_ASSERT(count <= std::numeric_limits<uint32_t>::max());
   uint32_t end_offset = uint32_t(count) * stride;
   return WalkIterableInternal(coded_vector->element, array_position, stride, end_offset,
@@ -906,11 +783,11 @@ zx_status_t PrimaryObjectSize(const fidl_type_t* type, uint32_t buffer_size,
   // The struct case is "likely" because overhead for tables is less of a relative cost.
   uint32_t primary_size;
   if (likely(type->type_tag() == kFidlTypeStruct)) {
-    primary_size = FIDL_VERSIONED_VALUE(type->coded_struct().size_v1, type->coded_struct().size_v2);
+    primary_size = type->coded_struct().size_v2;
   } else if (likely(type->type_tag() == kFidlTypeTable)) {
     primary_size = sizeof(fidl_table_t);
   } else if (likely(type->type_tag() == kFidlTypeXUnion)) {
-    primary_size = FIDL_VERSIONED_VALUE(sizeof(fidl_xunion_t), sizeof(fidl_xunion_v2_t));
+    primary_size = sizeof(fidl_xunion_v2_t);
   } else {
     set_error("Message must be a struct, table, or union");
     return ZX_ERR_INVALID_ARGS;

@@ -70,7 +70,6 @@ static const struct FidlStructElement CodingTableFields[] = {
             FidlStructField{
                 .header = FidlStructElementHeader{.element_type = kFidlStructElementType_Field,
                                                   .is_resource = kFidlIsResource_Resource},
-                .offset_v1 = 0u,
                 .offset_v2 = 0u,
                 .field_type = reinterpret_cast<const fidl_type_t*>(&CodingTableHandle)}},
 };
@@ -78,7 +77,6 @@ const struct FidlCodedStruct CodingTableStruct = {
     .tag = kFidlTypeStruct,
     .contains_envelope = kFidlContainsEnvelope_DoesNotContainEnvelope,
     .element_count = 1u,
-    .size_v1 = 4u,
     .size_v2 = 4u,
     .elements = CodingTableFields,
     .name = "coding/Input"};

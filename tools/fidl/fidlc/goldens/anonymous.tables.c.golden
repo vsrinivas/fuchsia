@@ -24,11 +24,11 @@ __LOCAL extern const struct FidlCodedStruct test_anonymous_SomeProtocolSomeMetho
 __LOCAL extern const struct FidlCodedStruct test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
 
 
-static const struct FidlCodedVector Vector10nonnullable24test_anonymous_TableDataTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&test_anonymous_TableDataTable), .max_count=10u, .element_size_v1=1u, .element_size_v2=1u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
+static const struct FidlCodedVector Vector10nonnullable24test_anonymous_TableDataTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&test_anonymous_TableDataTable), .max_count=10u, .element_size_v2=1u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
 static const struct FidlCodedString String100nonnullableTable = {.tag=kFidlTypeString, .max_size=100u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedVector Vector5nonnullable36test_anonymous_ExpressionNullableRefTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&test_anonymous_ExpressionNullableRefTable), .max_count=5u, .element_size_v1=24u, .element_size_v2=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
+static const struct FidlCodedVector Vector5nonnullable36test_anonymous_ExpressionNullableRefTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&test_anonymous_ExpressionNullableRefTable), .max_count=5u, .element_size_v2=16u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CannotMemcpy};
 
 
 static const struct FidlXUnionField Fields26test_anonymous_UnionMember[] = {
@@ -41,7 +41,7 @@ static const struct FidlXUnionField Fields37test_anonymous_UnionMemberNullableRe
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint8Table)}
 };
 const struct FidlCodedXUnion test_anonymous_UnionMemberNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields37test_anonymous_UnionMemberNullableRef, .nullable=kFidlNullability_Nullable, .name="test.anonymous/UnionMember", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
-const struct FidlCodedStruct test_anonymous_TableDataTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.anonymous/TableData"};
+const struct FidlCodedStruct test_anonymous_TableDataTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=1u, .name="test.anonymous/TableData"};
 
 static const struct FidlTableField Fields26test_anonymous_TableMember[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&Vector10nonnullable24test_anonymous_TableDataTable), .ordinal=2u}
@@ -49,22 +49,22 @@ static const struct FidlTableField Fields26test_anonymous_TableMember[] = {
 const struct FidlCodedTable test_anonymous_TableMemberTable = {.tag=kFidlTypeTable, .fields=Fields26test_anonymous_TableMember, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="test.anonymous/TableMember"};
 
 static const struct FidlStructElement Fields44test_anonymous_SomeProtocolSomeMethodRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_UnionMemberTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=24u, .offset_v2=16u, .field_type=(fidl_type_t*)(&test_anonymous_TableMemberTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_UnionMemberTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=16u, .field_type=(fidl_type_t*)(&test_anonymous_TableMemberTable)}}
 };
-const struct FidlCodedStruct test_anonymous_SomeProtocolSomeMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields44test_anonymous_SomeProtocolSomeMethodRequest, .element_count=2u, .size_v1=40u, .size_v2=32u, .name="test.anonymous/SomeProtocolSomeMethodRequest"};
+const struct FidlCodedStruct test_anonymous_SomeProtocolSomeMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields44test_anonymous_SomeProtocolSomeMethodRequest, .element_count=2u, .size_v2=32u, .name="test.anonymous/SomeProtocolSomeMethodRequest"};
 
 const struct FidlCodedEnum test_anonymous_SomeProtocol_SomeMethod_ErrorTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="test.anonymous/SomeProtocol_SomeMethod_Error"};
 
 const struct FidlCodedEnum test_anonymous_OpTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="test.anonymous/Op"};
 
 static const struct FidlStructElement Fields27test_anonymous_OverrideTest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_OpTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=4u, .offset_v2=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=8u, .offset_v2=8u, .field_type=(fidl_type_t*)(&test_anonymous_ExpressionNullableRefTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=32u, .offset_v2=24u, .field_type=(fidl_type_t*)(&test_anonymous_ExpressionNullableRefTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_OpTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v2=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=8u, .field_type=(fidl_type_t*)(&test_anonymous_ExpressionNullableRefTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=24u, .field_type=(fidl_type_t*)(&test_anonymous_ExpressionNullableRefTable)}}
 };
-const struct FidlCodedStruct test_anonymous_OverrideTestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields27test_anonymous_OverrideTest, .element_count=4u, .size_v1=56u, .size_v2=40u, .name="test.anonymous/OverrideTest"};
+const struct FidlCodedStruct test_anonymous_OverrideTestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields27test_anonymous_OverrideTest, .element_count=4u, .size_v2=40u, .name="test.anonymous/OverrideTest"};
 
 const struct FidlCodedBits test_anonymous_FlagsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint16, .strictness=kFidlStrictness_Flexible, .mask=1ul, .name="test.anonymous/Flags"};
 
@@ -90,9 +90,9 @@ const struct FidlCodedXUnion test_anonymous_ExpressionNullableRefTable = {.tag=k
 const struct FidlCodedBits test_anonymous_BitsMemberTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .mask=3ul, .name="test.anonymous/BitsMember"};
 
 static const struct FidlStructElement Fields47test_anonymous_SomeProtocol_SomeMethod_Response[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_BitsMemberTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_BitsMemberTable)}}
 };
-const struct FidlCodedStruct test_anonymous_SomeProtocol_SomeMethod_ResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields47test_anonymous_SomeProtocol_SomeMethod_Response, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.anonymous/SomeProtocol_SomeMethod_Response"};
+const struct FidlCodedStruct test_anonymous_SomeProtocol_SomeMethod_ResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields47test_anonymous_SomeProtocol_SomeMethod_Response, .element_count=1u, .size_v2=4u, .name="test.anonymous/SomeProtocol_SomeMethod_Response"};
 
 static const struct FidlXUnionField Fields45test_anonymous_SomeProtocol_SomeMethod_Result[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_anonymous_SomeProtocol_SomeMethod_ResponseTable)},
@@ -105,18 +105,18 @@ static const struct FidlXUnionField Fields56test_anonymous_SomeProtocol_SomeMeth
 };
 const struct FidlCodedXUnion test_anonymous_SomeProtocol_SomeMethod_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields56test_anonymous_SomeProtocol_SomeMethod_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.anonymous/SomeProtocol_SomeMethod_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlStructElement Fields48test_anonymous_SomeProtocolSomeMethodTopResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_SomeProtocol_SomeMethod_ResultTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_SomeProtocol_SomeMethod_ResultTable)}}
 };
-const struct FidlCodedStruct test_anonymous_SomeProtocolSomeMethodTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields48test_anonymous_SomeProtocolSomeMethodTopResponse, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.anonymous/SomeProtocolSomeMethodTopResponse"};
+const struct FidlCodedStruct test_anonymous_SomeProtocolSomeMethodTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields48test_anonymous_SomeProtocolSomeMethodTopResponse, .element_count=1u, .size_v2=16u, .name="test.anonymous/SomeProtocolSomeMethodTopResponse"};
 
 static const struct FidlStructElement Fields51test_anonymous_SomeProtocolSomeMethodRequestMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_UnionMemberTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=24u, .offset_v2=16u, .field_type=(fidl_type_t*)(&test_anonymous_TableMemberTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_UnionMemberTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=16u, .field_type=(fidl_type_t*)(&test_anonymous_TableMemberTable)}}
 };
-const struct FidlCodedStruct test_anonymous_SomeProtocolSomeMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields51test_anonymous_SomeProtocolSomeMethodRequestMessage, .element_count=2u, .size_v1=40u, .size_v2=32u, .name="test.anonymous/SomeProtocolSomeMethodRequestMessage"};
+const struct FidlCodedStruct test_anonymous_SomeProtocolSomeMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields51test_anonymous_SomeProtocolSomeMethodRequestMessage, .element_count=2u, .size_v2=32u, .name="test.anonymous/SomeProtocolSomeMethodRequestMessage"};
 
 static const struct FidlStructElement Fields52test_anonymous_SomeProtocolSomeMethodResponseMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_SomeProtocol_SomeMethod_ResultTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_anonymous_SomeProtocol_SomeMethod_ResultTable)}}
 };
-const struct FidlCodedStruct test_anonymous_SomeProtocolSomeMethodResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields52test_anonymous_SomeProtocolSomeMethodResponseMessage, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.anonymous/SomeProtocolSomeMethodResponseMessage"};
+const struct FidlCodedStruct test_anonymous_SomeProtocolSomeMethodResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields52test_anonymous_SomeProtocolSomeMethodResponseMessage, .element_count=1u, .size_v2=16u, .name="test.anonymous/SomeProtocolSomeMethodResponseMessage"};
 

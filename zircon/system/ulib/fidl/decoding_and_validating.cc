@@ -96,16 +96,6 @@ zx_status_t DecodeProcessHandle(const fidl::internal::CodingConfig& encoding_con
 }
 
 void ConvertEnvelopeToDecodedRepresentation(const void* bytes_base_ptr,
-                                            fidl_envelope_t envelope_copy,
-                                            const fidl_envelope_t* envelope_ptr) {
-  // No conversion is needed for v1.
-}
-void ConvertEnvelopeToDecodedRepresentation(const void* bytes_base_ptr,
-                                            fidl_envelope_t envelope_copy,
-                                            fidl_envelope_t* envelope_ptr) {
-  // No conversion is needed for v1.
-}
-void ConvertEnvelopeToDecodedRepresentation(const void* bytes_base_ptr,
                                             fidl_envelope_v2_t envelope_copy,
                                             const fidl_envelope_v2_t* envelope_ptr) {
   // No conversion is needed for v2 validate.
@@ -186,8 +176,7 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
                       FidlMemcpyCompatibility pointee_memcpy_compatibility,
                       Position* out_position) {
-    if (unlikely((WireFormatVersion == FIDL_WIRE_FORMAT_VERSION_V1 ||
-                  pointee_type != PointeeType::kEnvelope) &&
+    if (unlikely(pointee_type != PointeeType::kEnvelope &&
                  reinterpret_cast<uintptr_t>(*object_ptr_ptr) != FIDL_ALLOC_PRESENT)) {
       SetError("invalid presence marker");
       return Status::kMemoryError;
@@ -523,16 +512,6 @@ zx_status_t internal__fidl_decode_etc_hlcpp__v2__may_break(const fidl_type_t* ty
 zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                             const zx_handle_info_t* handle_infos, uint32_t num_handle_infos,
                             const char** out_error_msg) {
-  return fidl_decode_impl_handle_info<FIDL_WIRE_FORMAT_VERSION_V1>(
-      default_channel_encoding_configuration, type, bytes, num_bytes, handle_infos,
-      num_handle_infos, out_error_msg, false);
-}
-
-zx_status_t internal_fidl_decode_etc__v2__may_break(const fidl_type_t* type, void* bytes,
-                                                    uint32_t num_bytes,
-                                                    const zx_handle_info_t* handle_infos,
-                                                    uint32_t num_handle_infos,
-                                                    const char** out_error_msg) {
   return fidl_decode_impl_handle_info<FIDL_WIRE_FORMAT_VERSION_V2>(
       default_channel_encoding_configuration, type, bytes, num_bytes, handle_infos,
       num_handle_infos, out_error_msg, false);
@@ -620,13 +599,6 @@ zx_status_t fidl_validate_impl(const fidl_type_t* type, const void* bytes, uint3
   }
 
   return validator.status();
-}
-
-zx_status_t internal__fidl_validate__v1__may_break(const fidl_type_t* type, const void* bytes,
-                                                   uint32_t num_bytes, uint32_t num_handles,
-                                                   const char** out_error_msg) {
-  return fidl_validate_impl<FIDL_WIRE_FORMAT_VERSION_V1>(type, bytes, num_bytes, num_handles,
-                                                         out_error_msg);
 }
 
 zx_status_t internal__fidl_validate__v2__may_break(const fidl_type_t* type, const void* bytes,

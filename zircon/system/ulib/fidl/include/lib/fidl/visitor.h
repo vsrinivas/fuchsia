@@ -90,8 +90,7 @@ class Visitor {
   using HandlePointer = Ptr<zx_handle_t>;
 
   // EnvelopeType is fidl_envelope_t or fidl_envelope_v2_t
-  using EnvelopeType = typename std::conditional_t<WireFormatVersion == FIDL_WIRE_FORMAT_VERSION_V1,
-                                                   fidl_envelope_t, fidl_envelope_v2_t>;
+  using EnvelopeType = fidl_envelope_v2_t;
 
   // EnvelopePointer is ([const] fidl_envelope_t)* or ([const] fidl_envelope_v2_t)*
   using EnvelopePointer = Ptr<EnvelopeType>;

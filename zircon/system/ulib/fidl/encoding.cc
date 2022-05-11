@@ -63,10 +63,10 @@ struct BufferEncodeArgs {
 };
 
 class FidlEncoder final
-    : public ::fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V1, fidl::MutatingVisitorTrait,
+    : public ::fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V2, fidl::MutatingVisitorTrait,
                              EncodingPosition, EnvelopeCheckpoint> {
  public:
-  using Base = ::fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V1, fidl::MutatingVisitorTrait,
+  using Base = ::fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V2, fidl::MutatingVisitorTrait,
                                EncodingPosition, EnvelopeCheckpoint>;
   using Status = typename Base::Status;
   using PointeeType = typename Base::PointeeType;
@@ -295,7 +295,7 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
   zx_status_t status;
   uint32_t primary_size;
   uint32_t next_out_of_line;
-  if (unlikely((status = fidl::PrimaryObjectSize<FIDL_WIRE_FORMAT_VERSION_V1>(
+  if (unlikely((status = fidl::PrimaryObjectSize<FIDL_WIRE_FORMAT_VERSION_V2>(
                     type, num_bytes, &primary_size, &next_out_of_line, out_error_msg)) != ZX_OK)) {
     return status;
   }
@@ -310,7 +310,7 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     args.handles = handles;
   }
   FidlEncoder encoder(args);
-  fidl::Walk<FIDL_WIRE_FORMAT_VERSION_V1>(encoder, type,
+  fidl::Walk<FIDL_WIRE_FORMAT_VERSION_V2>(encoder, type,
                                           {.dest = reinterpret_cast<uint8_t*>(bytes)});
 
   auto drop_all_handles = [&]() {

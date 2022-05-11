@@ -27,7 +27,7 @@ static const struct FidlTableField Fields19test_versions_Table[] = {
 };
 const struct FidlCodedTable test_versions_TableTable = {.tag=kFidlTypeTable, .fields=Fields19test_versions_Table, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="test.versions/Table"};
 
-const struct FidlCodedStruct test_versions_StructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.versions/Struct"};
+const struct FidlCodedStruct test_versions_StructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=4u, .name="test.versions/Struct"};
 
 const struct FidlCodedEnum test_versions_EnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="test.versions/Enum"};
 

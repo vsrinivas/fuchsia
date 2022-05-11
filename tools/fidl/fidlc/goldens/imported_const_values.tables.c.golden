@@ -9,5 +9,5 @@ __LOCAL extern const struct FidlCodedStruct test_importedconstvalues_MyStructTab
 
 
 
-const struct FidlCodedStruct test_importedconstvalues_MyStructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.importedconstvalues/MyStruct"};
+const struct FidlCodedStruct test_importedconstvalues_MyStructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v2=1u, .name="test.importedconstvalues/MyStruct"};
 

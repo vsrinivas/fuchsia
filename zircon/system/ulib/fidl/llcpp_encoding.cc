@@ -495,12 +495,6 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
   return ZX_OK;
 }
 
-template zx_status_t EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V1>(
-    const CodingConfig& encoding_configuration, const fidl_type_t* type, bool is_transactional,
-    void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs, fidl_handle_t* handles,
-    void* handle_metadata, uint32_t num_handles, uint8_t* backing_buffer,
-    uint32_t num_backing_buffer, uint32_t* out_actual_iovec, uint32_t* out_actual_handles,
-    const char** out_error_msg);
 template zx_status_t EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
     const CodingConfig& encoding_configuration, const fidl_type_t* type, bool is_transactional,
     void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs, fidl_handle_t* handles,

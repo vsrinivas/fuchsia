@@ -294,7 +294,7 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 }
 
 func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
-	return wireFormat == gidlir.V1WireFormat || wireFormat == gidlir.V2WireFormat
+	return wireFormat == gidlir.V2WireFormat
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {

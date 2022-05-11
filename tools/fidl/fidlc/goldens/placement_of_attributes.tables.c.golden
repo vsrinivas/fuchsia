@@ -38,17 +38,17 @@ static const struct FidlTableField Fields39test_placementofattributes_ExampleTab
 };
 const struct FidlCodedTable test_placementofattributes_ExampleTableTable = {.tag=kFidlTypeTable, .fields=Fields39test_placementofattributes_ExampleTable, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="test.placementofattributes/ExampleTable"};
 
-const struct FidlCodedStruct test_placementofattributes_ExampleStructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.placementofattributes/ExampleStruct"};
+const struct FidlCodedStruct test_placementofattributes_ExampleStructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=4u, .name="test.placementofattributes/ExampleStruct"};
 
 static const struct FidlStructElement Fields55test_placementofattributes_ExampleProtocolMethodRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_exampleusing_EmptyTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_exampleusing_EmptyTable)}}
 };
-const struct FidlCodedStruct test_placementofattributes_ExampleProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields55test_placementofattributes_ExampleProtocolMethodRequest, .element_count=1u, .size_v1=1u, .size_v2=1u, .name="test.placementofattributes/ExampleProtocolMethodRequest"};
+const struct FidlCodedStruct test_placementofattributes_ExampleProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields55test_placementofattributes_ExampleProtocolMethodRequest, .element_count=1u, .size_v2=1u, .name="test.placementofattributes/ExampleProtocolMethodRequest"};
 
 static const struct FidlStructElement Fields62test_placementofattributes_ExampleProtocolMethodRequestMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_exampleusing_EmptyTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_exampleusing_EmptyTable)}}
 };
-const struct FidlCodedStruct test_placementofattributes_ExampleProtocolMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields62test_placementofattributes_ExampleProtocolMethodRequestMessage, .element_count=1u, .size_v1=1u, .size_v2=1u, .name="test.placementofattributes/ExampleProtocolMethodRequestMessage"};
+const struct FidlCodedStruct test_placementofattributes_ExampleProtocolMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields62test_placementofattributes_ExampleProtocolMethodRequestMessage, .element_count=1u, .size_v2=1u, .name="test.placementofattributes/ExampleProtocolMethodRequestMessage"};
 
 static bool EnumValidatorFor_test_placementofattributes_ExampleEnum(uint64_t v) {
   switch (v) {

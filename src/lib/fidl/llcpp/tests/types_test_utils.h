@@ -85,9 +85,9 @@ void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handl
     ASSERT_EQ(status, ZX_OK) << decode_error;
   }
 
-  auto status = internal_fidl_decode_etc__v2__may_break(
-      fidl::TypeTraits<FidlType>::kType, trimmed_bytes, trimmed_num_bytes, handle_infos.data(),
-      static_cast<uint32_t>(handle_infos.size()), &decode_error);
+  auto status = fidl_decode_etc(fidl::TypeTraits<FidlType>::kType, trimmed_bytes, trimmed_num_bytes,
+                                handle_infos.data(), static_cast<uint32_t>(handle_infos.size()),
+                                &decode_error);
   ASSERT_EQ(status, ZX_OK) << decode_error;
 
   auto result = reinterpret_cast<FidlType*>(&bytes[0]);

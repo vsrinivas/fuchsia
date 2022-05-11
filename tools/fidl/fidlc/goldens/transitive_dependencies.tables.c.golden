@@ -9,5 +9,5 @@ __LOCAL extern const struct FidlCodedStruct test_transitivedependencies_BazTable
 
 
 
-const struct FidlCodedStruct test_transitivedependencies_BazTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.transitivedependencies/Baz"};
+const struct FidlCodedStruct test_transitivedependencies_BazTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=4u, .name="test.transitivedependencies/Baz"};
 

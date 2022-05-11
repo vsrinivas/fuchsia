@@ -48,11 +48,6 @@ zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* m
 zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                             const zx_handle_info_t* handle_infos, uint32_t num_handle_infos,
                             const char** error_msg_out);
-zx_status_t internal_fidl_decode_etc__v2__may_break(const fidl_type_t* type, void* bytes,
-                                                    uint32_t num_bytes,
-                                                    const zx_handle_info_t* handle_infos,
-                                                    uint32_t num_handle_infos,
-                                                    const char** error_msg_out);
 
 // Perform a fidl_decode_etc as input for HLCPP (leave unknown handles in flexible resource types
 // intact instead of closing them, add offsets to unknown envelopes).
@@ -69,16 +64,6 @@ zx_status_t internal__fidl_decode_etc_hlcpp__v2__may_break(const fidl_type_t* ty
 // This method is only intended for use by the deprecated FIDL C bindings.
 zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
                             const char** out_error_msg);
-
-// Validates an encoded message against the given |type|.
-//
-// The |bytes| are not modified.
-//
-// This is a version of the FIDL validator that validates against the v1 wire format.
-// IT MAY BREAK AT ANY TIME OR BE REMOVED WITHOUT NOTICE.
-zx_status_t internal__fidl_validate__v1__may_break(const fidl_type_t* type, const void* bytes,
-                                                   uint32_t num_bytes, uint32_t num_handles,
-                                                   const char** out_error_msg);
 
 // Validates an encoded message against the given |type|.
 //

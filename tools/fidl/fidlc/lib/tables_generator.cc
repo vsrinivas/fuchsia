@@ -246,8 +246,6 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
   Emit(&tables_file_, struct_type.elements.empty() ? "NULL" : fields_array_name);
   Emit(&tables_file_, ", .element_count=");
   Emit(&tables_file_, static_cast<uint32_t>(struct_type.elements.size()));
-  Emit(&tables_file_, ", .size_v1=");
-  Emit(&tables_file_, struct_type.size_v1);
   Emit(&tables_file_, ", .size_v2=");
   Emit(&tables_file_, struct_type.size_v2);
   Emit(&tables_file_, ", .name=\"");
@@ -355,12 +353,8 @@ void TablesGenerator::Generate(const coded::ArrayType& array_type) {
   // Array defs can be unused when they only appear in structs where the field is optimized out.
   Emit(&tables_file_, " __attribute__((unused)) = {.tag=kFidlTypeArray, .element=");
   Generate(array_type.element_type);
-  Emit(&tables_file_, ", .array_size_v1=");
-  Emit(&tables_file_, array_type.size_v1);
   Emit(&tables_file_, ", .array_size_v2=");
   Emit(&tables_file_, array_type.size_v2);
-  Emit(&tables_file_, ", .element_size_v1=");
-  Emit(&tables_file_, array_type.element_size_v1);
   Emit(&tables_file_, ", .element_size_v2=");
   Emit(&tables_file_, array_type.element_size_v2);
   Emit(&tables_file_, "};\n\n");
@@ -383,8 +377,6 @@ void TablesGenerator::Generate(const coded::VectorType& vector_type) {
   Generate(vector_type.element_type);
   Emit(&tables_file_, ", .max_count=");
   Emit(&tables_file_, vector_type.max_count);
-  Emit(&tables_file_, ", .element_size_v1=");
-  Emit(&tables_file_, vector_type.element_size_v1);
   Emit(&tables_file_, ", .element_size_v2=");
   Emit(&tables_file_, vector_type.element_size_v2);
   Emit(&tables_file_, ", .nullable=");
@@ -418,9 +410,6 @@ void TablesGenerator::Generate(const coded::StructField& field) {
   Emit(&tables_file_, ".is_resource=");
   Emit(&tables_file_, field.resourceness);
   Emit(&tables_file_, "},");
-  Emit(&tables_file_, ".offset_v1=");
-  Emit(&tables_file_, field.offset_v1);
-  Emit(&tables_file_, ", ");
   Emit(&tables_file_, ".offset_v2=");
   Emit(&tables_file_, field.offset_v2);
   Emit(&tables_file_, ", ");
@@ -430,9 +419,7 @@ void TablesGenerator::Generate(const coded::StructField& field) {
 }
 
 void TablesGenerator::Generate(const coded::StructPadding& padding) {
-  Emit(&tables_file_, "/*FidlStructPadding*/{.offset_v1=");
-  Emit(&tables_file_, padding.offset_v1);
-  Emit(&tables_file_, ", .offset_v2=");
+  Emit(&tables_file_, "/*FidlStructPadding*/{.offset_v2=");
   Emit(&tables_file_, padding.offset_v2);
   Emit(&tables_file_, ", .header=/*FidlStructElementHeader*/{");
   if (std::holds_alternative<uint64_t>(padding.mask)) {

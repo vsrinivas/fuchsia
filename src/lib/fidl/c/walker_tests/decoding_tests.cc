@@ -278,7 +278,6 @@ TEST(BufferTooSmall, decode_overflow_buffer_on_FidlAlign) {
                       .element_type = kFidlStructElementType_Field,
                       .is_resource = kFidlIsResource_NotResource,
                   },
-              .offset_v1 = 0,
               .offset_v2 = 0,
               .field_type = &element_field_type,
           },
@@ -287,7 +286,6 @@ TEST(BufferTooSmall, decode_overflow_buffer_on_FidlAlign) {
   const FidlCodedStruct type = {
       .tag = kFidlTypeStruct,
       .element_count = 1,
-      .size_v1 = 1,
       .size_v2 = 1,
       .elements = &element,
       .name = nullptr,
@@ -596,13 +594,8 @@ TEST(UnknownEnvelope, NumUnknownHandlesOverflows) {
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
 
       0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
-      0,   0,   0,   0,   0,   0,   0,   0,  // alloc absent
-
-      0,   0,   0,   0,   1,   0,   0,   0,    // envelope 2: num bytes / num handles
-      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
-
-      0,   0,   0,   0,   255, 255, 255, 255,  // envelope 3: num bytes / num handles
-      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+      0,   0,   0,   0,   1,   0,   0,   0,  // envelope 2: num bytes / num handles
+      0,   0,   0,   0,   255, 255, 1,   0,  // envelope 3: num bytes / num handles
   };
   zx_handle_t handles[1] = {};
 
@@ -611,7 +604,7 @@ TEST(UnknownEnvelope, NumUnknownHandlesOverflows) {
                             bytes, ArrayCount(bytes), handles, ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_STREQ(error, "number of unknown handles overflows");
+  EXPECT_STREQ(error, "number of unknown handles exceeds unknown handle array size");
 }
 
 TEST(UnknownEnvelope, NumIncomingHandlesOverflows) {
@@ -620,10 +613,7 @@ TEST(UnknownEnvelope, NumIncomingHandlesOverflows) {
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
 
       0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
-      0,   0,   0,   0,   0,   0,   0,   0,  // alloc absent
-
-      0,   0,   0,   0,   1,   0,   0,   0,    // envelope 2: num bytes / num handles
-      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+      0,   0,   0,   0,   1,   0,   0,   0,  // envelope 2: num bytes / num handles
   };
   zx_handle_t handles[1] = {};
 
@@ -643,10 +633,7 @@ TEST(UnknownEnvelope, NumUnknownHandlesExceedsUnknownArraySize) {
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
 
       0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
-      0,   0,   0,   0,   0,   0,   0,   0,  // alloc absent
-
-      0,   0,   0,   0,   65,  0,   0,   0,    // envelope 2: num bytes / num handles
-      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+      0,   0,   0,   0,   65,  0,   0,   0,  // envelope 2: num bytes / num handles
   };
 
   const char* error = nullptr;
@@ -665,10 +652,7 @@ TEST(UnknownEnvelope, DecodeUnknownHandle) {
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
 
       0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
-      0,   0,   0,   0,   0,   0,   0,   0,  // alloc present
-
-      0,   0,   0,   0,   1,   0,   0,   0,    // envelope 2: num bytes / num handles
-      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+      0,   0,   0,   0,   1,   0,   0,   0,  // envelope 2: num bytes / num handles
   };
 
   zx_handle_t handles[1] = {};
@@ -688,10 +672,7 @@ TEST(UnknownEnvelope, DecodeEtcUnknownHandle) {
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
 
       0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
-      0,   0,   0,   0,   0,   0,   0,   0,  // alloc present
-
-      0,   0,   0,   0,   1,   0,   0,   0,    // envelope 2: num bytes / num handles
-      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+      0,   0,   0,   0,   1,   0,   0,   0,  // envelope 2: num bytes / num handles
   };
 
   zx_handle_info_t handles[1] = {zx_handle_info_t{
@@ -716,7 +697,6 @@ TEST(UnknownEnvelope, DecodeEtcHLCPP) {
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
 
       0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: zero
-
       0,   0,   0,   0,   1,   0,   0,   0,  // envelope 2: num bytes / num handles / not inline
   };
 
@@ -750,9 +730,8 @@ TEST(UnknownEnvelope, V2DecodeUnknownInlineEnvelope) {
   };
 
   const char* error = nullptr;
-  auto status = internal_fidl_decode_etc__v2__may_break(
-      &fidl_test_coding::wire::fidl_test_coding_SimpleTableTable, bytes, ArrayCount(bytes), nullptr,
-      0, &error);
+  auto status = fidl_decode_etc(&fidl_test_coding::wire::fidl_test_coding_SimpleTableTable, bytes,
+                                ArrayCount(bytes), nullptr, 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
 
