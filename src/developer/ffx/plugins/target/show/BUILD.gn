@@ -9,6 +9,7 @@ ffx_plugin("ffx_target_show") {
   edition = "2018"
   with_unit_tests = true
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo-rustc",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
