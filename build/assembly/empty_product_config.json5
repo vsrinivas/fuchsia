@@ -1,0 +1,10 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This is an empty product assembly config file, for use with assemblies that
+// are not using their own product definition.
+{
+    platform: {},
+    product: {},
+}

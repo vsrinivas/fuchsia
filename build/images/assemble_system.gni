@@ -15,7 +15,6 @@ import("//build/images/fvm.gni")
 import("//build/images/shell_commands.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
-import("//build/product.gni")
 import("//build/python/python_action.gni")
 import("//build/security/verifier/verify_bootfs.gni")
 import("//build/security/verifier/verify_kernel_cmdline.gni")
@@ -81,6 +80,14 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #     [bool] Usual GN meanings.
 #
 # Product parameters:
+#
+#   product_assembly_config_file (optional)
+#     [file] A path to a product assembly config file.  If not specified, a
+#     placeholder file will be generated and used.
+#
+#   product_assembly_config_dep (optional)
+#     [label] A label for the above product assembly config, if it's the output
+#     of a build action.
 #
 #   base_packages (required)
 #     [list of labels] The packages to include in the base package set.
@@ -202,6 +209,19 @@ template("assemble_system") {
   assert(defined(invoker.base_packages), "Need to define base_packages")
   assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
 
+  if (defined(invoker.product_assembly_config_dep)) {
+    assert(
+        invoker.product_assembly_config_dep != "",
+        "'product_assembly_config_dep' cannot be an empty string. Don't provide a value if it is not being used.")
+    assert(defined(invoker.product_assembly_config_file),
+           "Need to define a 'product_assembly_config_file'.")
+  }
+  if (defined(invoker.product_assembly_config_file)) {
+    assert(
+        invoker.product_assembly_config_file != "",
+        "'product_assembly_config_file' cannot be an empty string. Don't provide a value if it is not being used.")
+  }
+
   fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
   fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir")
   fvm_tool_path += "/fvm"
@@ -226,7 +246,11 @@ template("assemble_system") {
     meta_packages_group = "${image_name}_meta_packages"
     all_packages_group = "${image_name}_packages"
     legacy_assembly_input_bundle = "${image_name}_legacy_input_bundle"
-    product_assembly_config = "${image_name}_product_assembly_config"
+    if (defined(invoker.product_assembly_config_dep)) {
+      product_assembly_config_deps = [ invoker.product_assembly_config_dep ]
+    } else {
+      product_assembly_config_deps = []
+    }
     image_assembly_config = "${image_name}_image_assembly_config"
     image_assembly_inputs = "${image_name}_image_assembly_inputs"
     compare_image_assembly_configs =
@@ -251,8 +275,11 @@ template("assemble_system") {
 
   # Intermediate files produced for Image Assembly.
   files = {
-    product_assembly_config =
-        "$target_out_dir/${image_name}_product_assembly_config.json"
+    if (defined(invoker.product_assembly_config_file)) {
+      product_assembly_config = invoker.product_assembly_config_file
+    } else {
+      product_assembly_config = "//build/assembly/empty_product_config.json5"
+    }
     image_assembly_config =
         "$target_out_dir/${image_name}_image_assembly_config.json"
     image_assembly_inputs =
@@ -583,15 +610,6 @@ template("assemble_system") {
     check_production_tag = invoker.check_production_tag
   }
 
-  generated_file(labels.product_assembly_config) {
-    outputs = [ files.product_assembly_config ]
-    output_conversion = "json"
-    contents = {
-      platform = platform_config
-      product = product_config
-    }
-  }
-
   generated_assembly_inputs(labels.assembly_inputs) {
     forward_variables_from(invoker,
                            [
@@ -607,10 +625,7 @@ template("assemble_system") {
       "${files.product_assembly_config}",
     ]
 
-    deps = [
-      ":${labels.images_config}",
-      ":${labels.product_assembly_config}",
-    ]
+    deps = [ ":${labels.images_config}" ] + labels.product_assembly_config_deps
   }
 
   # Create the legacy assembly input bundle for the above-generated image
@@ -657,10 +672,9 @@ template("assemble_system") {
     ]
 
     deps = [
-      ":${labels.legacy_assembly_input_bundle}",
-      ":${labels.product_assembly_config}",
-      labels.platform_aib,
-    ]
+             ":${labels.legacy_assembly_input_bundle}",
+             labels.platform_aib,
+           ] + labels.product_assembly_config_deps
 
     inputs = [
       files.emulator_aib_manifest,

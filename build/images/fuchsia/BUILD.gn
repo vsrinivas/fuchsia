@@ -35,6 +35,15 @@ fuchsia_base = {
   # Use the GN arg for including shell commands.
   include_shell_commands = include_shell_commands_package
 
+  # If the product definition is specifying a product assembly config file, then
+  # pass that to the assemble_system() call(s).
+  if (fuchsia_product_assembly_config_file != false) {
+    product_assembly_config_file = fuchsia_product_assembly_config_file
+  }
+  if (fuchsia_product_assembly_config_label != false) {
+    product_assembly_config_dep = fuchsia_product_assembly_config_label
+  }
+
   cmdline_deps = [ "//build/input:bootfs" ]
 
   base_packages = [

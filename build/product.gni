@@ -28,13 +28,14 @@ declare_args() {
   # TODO(fxbug.dev/80742) move this to a toolchain to allow multiple products to build together
   fuchsia_async_trace_level_logging = true
 
-  # Passed as the `platform` key in the product assembly config.
-  platform_config = {
-  }
+  # Used to provide assembly with a complete product assembly config.  This can
+  # be a static source file, the output of a build action, or a file created by
+  # GN using generated_file().
+  fuchsia_product_assembly_config_file = false
 
-  # Passed as the `product` key in the product assembly config.
-  product_config = {
-  }
+  # If the above file is created by a target in GN, then the label that creates
+  # it needs to be specified as well.
+  fuchsia_product_assembly_config_label = false
 
   # TODO(fxbug.dev/94051): move to board definitions.
   # Adds a prefix to the start of the virtual device name. Used to distinguish
