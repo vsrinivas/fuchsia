@@ -39,7 +39,7 @@ template("prebuilt_package") {
   pkg_version = 0
   manifest_target_name = target_name + ".manifest"
 
-  pkg_out_dir = target_out_dir + "/" + pkg_name
+  pkg_out_dir = target_out_dir + "/" + pkg_target_name
   blobs_json = "$pkg_out_dir/blobs.json"
   package_manifest_json = "$pkg_out_dir/package_manifest.json"
   blobs_manifest = "$pkg_out_dir/blobs.manifest"
