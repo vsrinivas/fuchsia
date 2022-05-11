@@ -126,6 +126,8 @@ class FrobinatorImpl : public fidl::WireServer<test::Frobinator> {
   virtual void Grob(GrobRequestView request, GrobCompleter::Sync& completer) override {
     completer.Reply(request->value);
   }
+
+  virtual void TwoWayEmptyArg(TwoWayEmptyArgRequestView, TwoWayEmptyArgCompleter::Sync&) override {}
 };
 
 TEST(MagicNumberTest, RequestWrite) {

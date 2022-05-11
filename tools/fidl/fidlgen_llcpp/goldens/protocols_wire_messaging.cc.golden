@@ -111,6 +111,40 @@ namespace test_protocols {
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols
+::fidl::WireUnownedResult<
+    ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>::
+    WireUnownedResult(::fidl::UnownedClientEnd<
+                          ::test_protocols::WithAndWithoutRequestResponse>
+                          client_end,
+                      ::fidl::internal::AnyBufferAllocator& allocator,
+                      ::fidl::internal::TransactionalRequest<
+                          ::test_protocols::WithAndWithoutRequestResponse::
+                              NoRequestNoResponse>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Status::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client_end.handle());
+  ::fidl::Status::operator=(outgoing);
+}
+namespace test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_protocols
 ::fidl::WireResult<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::
     WireResult(::fidl::UnownedClientEnd<
@@ -155,6 +189,52 @@ namespace test_protocols {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
+}
+namespace test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_protocols
+::fidl::WireUnownedResult<
+    ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::
+    WireUnownedResult(::fidl::UnownedClientEnd<
+                          ::test_protocols::WithAndWithoutRequestResponse>
+                          client_end,
+                      ::fidl::internal::AnyBufferAllocator& allocator,
+                      ::fidl::internal::TransactionalRequest<
+                          ::test_protocols::WithAndWithoutRequestResponse::
+                              NoRequestEmptyResponse>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_protocols::WithAndWithoutRequestResponse::
+          NoRequestEmptyResponse>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Status::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocols::WithAndWithoutRequestResponse::
+              NoRequestEmptyResponse>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocols::WithAndWithoutRequestResponse::
+              NoRequestEmptyResponse>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::internal::TransactionalResponse<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>(
+      client_end.handle(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -5206,6 +5286,38 @@ namespace test_protocols {
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
   SetStatus(outgoing);
+}
+namespace test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_protocols
+::fidl::WireUnownedResult<::test_protocols::DiscoverableProtocol::Method>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
+        ::fidl::internal::TransactionalRequest<
+            ::test_protocols::DiscoverableProtocol::Method>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_protocols::DiscoverableProtocol::Method>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Status::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocols::DiscoverableProtocol::Method>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client_end.handle());
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__

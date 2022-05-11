@@ -59,6 +59,7 @@ protocol Frobinator {
     -> Hrob(struct {
         value string;
     });
+    TwoWayEmptyArg() -> ();
 };
 
 protocol HandleProvider {

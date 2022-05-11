@@ -20,6 +20,11 @@ protocol TwoWayTest {
 };
 
 @transport("Driver")
+protocol TwoWayEmptyArgsTest {
+    TwoWayEmptyArgs() -> ();
+};
+
+@transport("Driver")
 protocol OneWayTest {
     OneWay(struct {
         // The choice of byte vectors is intentional:

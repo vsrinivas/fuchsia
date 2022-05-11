@@ -133,6 +133,35 @@ namespace test_versions {
 namespace test_versions {
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+}  // namespace test_versions
+::fidl::WireUnownedResult<::test_versions::Protocol::Foo>::WireUnownedResult(
+    ::fidl::UnownedClientEnd<::test_versions::Protocol> client_end,
+    ::fidl::internal::AnyBufferAllocator& allocator,
+    ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>*
+        request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_versions::Protocol::Foo>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Status::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client_end.handle());
+  ::fidl::Status::operator=(outgoing);
+}
+namespace test_versions {
+#endif  // __Fuchsia__
+
 }  // namespace test_versions
 #ifdef __Fuchsia__
 

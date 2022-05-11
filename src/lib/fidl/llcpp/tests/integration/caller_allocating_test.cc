@@ -64,6 +64,11 @@ class CallerAllocatingFixtureWithDefaultServer : public CallerAllocatingFixture 
       completer.Reply(request->value);
     }
 
+    void TwoWayEmptyArg(TwoWayEmptyArgRequestView request,
+                        TwoWayEmptyArgCompleter::Sync& completer) override {
+      completer.Reply();
+    }
+
     size_t frob_count() const override { return frob_count_; }
 
    private:
@@ -158,6 +163,16 @@ class GrobResponseContext : public fidl::WireResponseContext<test::Frobinator::G
   bool got_result = false;
 };
 
+class TwoWayEmptyArgResponseContext
+    : public fidl::WireResponseContext<test::Frobinator::TwoWayEmptyArg> {
+ public:
+  void OnResult(fidl::WireUnownedResult<test::Frobinator::TwoWayEmptyArg>& result) final {
+    ASSERT_OK(result.status());
+    got_result = true;
+  }
+  bool got_result = false;
+};
+
 TEST_F(WireClientTest, TwoWayCallerAllocateBufferSpan) {
   fidl::AsyncClientBuffer<test::Frobinator::Grob> buffer;
   fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
@@ -220,6 +235,19 @@ TEST_F(WireSharedClientTest, TwoWayCallerAllocateArena) {
   EXPECT_FALSE(fidl_testing::ArenaChecker::DidUse(arena));
   GrobResponseContext context;
   client.buffer(arena)->Grob("test").ThenExactlyOnce(&context);
+  loop()->RunUntilIdle();
+
+  EXPECT_TRUE(context.got_result);
+  EXPECT_TRUE(fidl_testing::ArenaChecker::DidUse(arena));
+}
+
+TEST_F(WireSharedClientTest, TwoWayEmptyArgCallerAllocateArena) {
+  fidl::Arena arena;
+  fidl::WireSharedClient client(std::move(client_end()), loop()->dispatcher());
+
+  EXPECT_FALSE(fidl_testing::ArenaChecker::DidUse(arena));
+  TwoWayEmptyArgResponseContext context;
+  client.buffer(arena)->TwoWayEmptyArg().ThenExactlyOnce(&context);
   loop()->RunUntilIdle();
 
   EXPECT_TRUE(context.got_result);
@@ -365,6 +393,11 @@ class CallerAllocatingFixtureWithCallerAllocatingServer : public CallerAllocatin
 
     void Grob(GrobRequestView request, GrobCompleter::Sync& completer) override {
       grob_handler(request, completer);
+    }
+
+    void TwoWayEmptyArg(TwoWayEmptyArgRequestView request,
+                        TwoWayEmptyArgCompleter::Sync& completer) override {
+      ZX_PANIC("Unused");
     }
 
     size_t frob_count() const override { return 0; }

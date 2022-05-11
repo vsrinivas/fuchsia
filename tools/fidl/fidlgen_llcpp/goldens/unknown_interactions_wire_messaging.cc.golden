@@ -71,6 +71,38 @@ namespace test_unknowninteractions {
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictOneWay>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::test_unknowninteractions::Example>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
+        ::fidl::internal::TransactionalRequest<
+            ::test_unknowninteractions::Example::StrictOneWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_unknowninteractions::Example::StrictOneWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Status::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_unknowninteractions::Example::StrictOneWay>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client_end.handle());
+  ::fidl::Status::operator=(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
 ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleOneWay>::
     WireResult(
         ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
@@ -85,6 +117,38 @@ namespace test_unknowninteractions {
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
   SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::Example::FlexibleOneWay>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::test_unknowninteractions::Example>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
+        ::fidl::internal::TransactionalRequest<
+            ::test_unknowninteractions::Example::FlexibleOneWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_unknowninteractions::Example::FlexibleOneWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Status::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_unknowninteractions::Example::FlexibleOneWay>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client_end.handle());
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -127,6 +191,47 @@ namespace test_unknowninteractions {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
+}
+namespace test_unknowninteractions {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_unknowninteractions
+::fidl::WireUnownedResult<::test_unknowninteractions::Example::StrictTwoWay>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::test_unknowninteractions::Example>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
+        ::fidl::internal::TransactionalRequest<
+            ::test_unknowninteractions::Example::StrictTwoWay>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_unknowninteractions::Example::StrictTwoWay>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Status::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::internal::TransactionalRequest<
+          ::test_unknowninteractions::Example::StrictTwoWay>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_unknowninteractions::Example::StrictTwoWay>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::internal::TransactionalResponse<
+      ::test_unknowninteractions::Example::StrictTwoWay>>(
+      client_end.handle(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_unknowninteractions {
 #endif  // __Fuchsia__

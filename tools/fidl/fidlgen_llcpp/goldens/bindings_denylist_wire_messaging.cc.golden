@@ -169,6 +169,53 @@ namespace test_bindingsdenylist {
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+}  // namespace test_bindingsdenylist
+::fidl::WireUnownedResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                              LibfuzzerNeedsNonemptyProtocol>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
+        ::fidl::internal::TransactionalRequest<
+            ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                LibfuzzerNeedsNonemptyProtocol>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocol>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Status::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::internal::TransactionalRequest<
+          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocol>>(client_end.handle(), response_bytes,
+                                           response_byte_capacity);
+  bytes_ = response_bytes;
+  ::fidl::Status::operator=(outgoing);
+}
+namespace test_bindingsdenylist {
+#endif  // __Fuchsia__
+
 }  // namespace test_bindingsdenylist
 #ifdef __Fuchsia__
 
@@ -576,6 +623,41 @@ namespace test_bindingsdenylist {
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+::fidl::WireUnownedResult<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<
+            ::test_bindingsdenylist::ImportsSameNameContext>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
+        ::fidl::internal::TransactionalRequest<
+            ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>*
+            request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Status::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client_end.handle());
+  ::fidl::Status::operator=(outgoing);
+}
+namespace test_bindingsdenylist {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_bindingsdenylist
 ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
                        AlwaysAppearsInImportingLibrary>::
     WireResult(::fidl::UnownedClientEnd<
@@ -594,6 +676,42 @@ namespace test_bindingsdenylist {
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
   SetStatus(outgoing);
+}
+namespace test_bindingsdenylist {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace test_bindingsdenylist
+::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSameNameContext::
+                              AlwaysAppearsInImportingLibrary>::
+    WireUnownedResult(::fidl::UnownedClientEnd<
+                          ::test_bindingsdenylist::ImportsSameNameContext>
+                          client_end,
+                      ::fidl::internal::AnyBufferAllocator& allocator,
+                      ::fidl::internal::TransactionalRequest<
+                          ::test_bindingsdenylist::ImportsSameNameContext::
+                              AlwaysAppearsInImportingLibrary>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::test_bindingsdenylist::ImportsSameNameContext::
+          AlwaysAppearsInImportingLibrary>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Status::operator=(allocation.error_value());
+    return;
+  }
+  uint8_t* buffer = allocation->data;
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_bindingsdenylist::ImportsSameNameContext::
+              AlwaysAppearsInImportingLibrary>>
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client_end.handle());
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__

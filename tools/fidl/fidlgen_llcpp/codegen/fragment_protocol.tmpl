@@ -377,14 +377,12 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
     {{- template "Method:Result:WireMessagingSource" . }}
     {{- end }}
     {{- end }}
-  {{- if or .RequestArgs .ResponseArgs }}
 {{ "" }}
     {{- if eq .Transport.Name "Driver" }}
     {{- template "driver/Method:UnownedResult:MessagingSource" . }}
     {{- else }}
     {{- template "Method:UnownedResult:WireMessagingSource" . }}
     {{- end }}
-  {{- end }}
 {{ "" }}
 {{- end }}
 
