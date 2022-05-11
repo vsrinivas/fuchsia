@@ -213,10 +213,10 @@ func (x Flags) String() string {
 }
 
 type OverrideTest struct {
-	_     struct{}    `fidl:"s" fidl_size_v1:"56" fidl_alignment_v1:"8" fidl_size_v2:"40" fidl_alignment_v2:"8"`
-	Op    Op          `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	Left  *Expression `fidl_offset_v1:"8" fidl_offset_v2:"8"`
-	Right *Expression `fidl_offset_v1:"32" fidl_offset_v2:"24"`
+	_     struct{}    `fidl:"s" fidl_size_v2:"40" fidl_alignment_v2:"8"`
+	Op    Op          `fidl_offset_v2:"0"`
+	Left  *Expression `fidl_offset_v2:"8"`
+	Right *Expression `fidl_offset_v2:"24"`
 }
 
 var _mOverrideTest = _bindings.CreateLazyMarshaler(OverrideTest{})
@@ -226,8 +226,8 @@ func (msg *OverrideTest) Marshaler() _bindings.Marshaler {
 }
 
 type SomeProtocolSomeMethodResponse struct {
-	_          struct{}   `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
-	BitsMember BitsMember `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_          struct{}   `fidl:"s" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	BitsMember BitsMember `fidl_offset_v2:"0"`
 }
 
 var _mSomeProtocolSomeMethodResponse = _bindings.CreateLazyMarshaler(SomeProtocolSomeMethodResponse{})
@@ -237,8 +237,8 @@ func (msg *SomeProtocolSomeMethodResponse) Marshaler() _bindings.Marshaler {
 }
 
 type TableData struct {
-	_    struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
-	Data uint8    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_    struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	Data uint8    `fidl_offset_v2:"0"`
 }
 
 var _mTableData = _bindings.CreateLazyMarshaler(TableData{})
@@ -248,9 +248,9 @@ func (msg *TableData) Marshaler() _bindings.Marshaler {
 }
 
 type someProtocolWithCtxSomeMethodRequest struct {
-	_           struct{}    `fidl:"s" fidl_size_v1:"40" fidl_alignment_v1:"8" fidl_size_v2:"32" fidl_alignment_v2:"8"`
-	UnionMember UnionMember `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	TableMember TableMember `fidl_offset_v1:"24" fidl_offset_v2:"16"`
+	_           struct{}    `fidl:"s" fidl_size_v2:"32" fidl_alignment_v2:"8"`
+	UnionMember UnionMember `fidl_offset_v2:"0"`
+	TableMember TableMember `fidl_offset_v2:"16"`
 }
 
 var _msomeProtocolWithCtxSomeMethodRequest = _bindings.CreateLazyMarshaler(someProtocolWithCtxSomeMethodRequest{})
@@ -260,8 +260,8 @@ func (msg *someProtocolWithCtxSomeMethodRequest) Marshaler() _bindings.Marshaler
 }
 
 type someProtocolWithCtxSomeMethodResponse struct {
-	_      struct{}                     `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result SomeProtocolSomeMethodResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                     `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result SomeProtocolSomeMethodResult `fidl_offset_v2:"0"`
 }
 
 var _msomeProtocolWithCtxSomeMethodResponse = _bindings.CreateLazyMarshaler(someProtocolWithCtxSomeMethodResponse{})
@@ -280,7 +280,7 @@ const (
 )
 
 type Expression struct {
-	I_expressionTag     `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_expressionTag     `fidl:"x" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData       interface{}
 	Value               uint64              `fidl_ordinal:"1"`
 	BinOp               OverrideTest        `fidl_ordinal:"2"`
@@ -374,7 +374,7 @@ const (
 )
 
 type SomeProtocolSomeMethodResult struct {
-	I_someProtocolSomeMethodResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_someProtocolSomeMethodResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                          SomeProtocolSomeMethodResponse `fidl_ordinal:"1"`
 	Err                               SomeProtocolSomeMethodError    `fidl_ordinal:"2"`
 }
@@ -436,7 +436,7 @@ const (
 )
 
 type UnionMember struct {
-	I_unionMemberTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unionMemberTag `fidl:"x" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData    interface{}
 	UnionData        uint8 `fidl_ordinal:"2"`
 }
@@ -487,7 +487,7 @@ func (_m *UnionMember) GetUnknownData() _bindings.UnknownData {
 }
 
 type FunctionApplication struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	_             struct{} `fidl:"t" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	Func          string `fidl_bounds:"100" fidl_ordinal:"1"`
 	FuncPresent   bool
@@ -584,7 +584,7 @@ func (u *FunctionApplication) GetUnknownData() map[uint64]_bindings.UnknownData 
 }
 
 type TableMember struct {
-	_                struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	_                struct{} `fidl:"t" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData    interface{}
 	TableData        []TableData `fidl_bounds:"10" fidl_ordinal:"2"`
 	TableDataPresent bool

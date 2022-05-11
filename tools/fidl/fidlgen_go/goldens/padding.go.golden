@@ -7,9 +7,9 @@ import (
 )
 
 type Padding1ByteEnd struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"2" fidl_size_v2:"4" fidl_alignment_v2:"2"`
-	A uint16   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint8    `fidl_offset_v1:"2" fidl_offset_v2:"2"`
+	_ struct{} `fidl:"s" fidl_size_v2:"4" fidl_alignment_v2:"2"`
+	A uint16   `fidl_offset_v2:"0"`
+	B uint8    `fidl_offset_v2:"2"`
 }
 
 var _mPadding1ByteEnd = _bindings.CreateLazyMarshaler(Padding1ByteEnd{})
@@ -19,9 +19,9 @@ func (msg *Padding1ByteEnd) Marshaler() _bindings.Marshaler {
 }
 
 type Padding1ByteMiddle struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"2" fidl_size_v2:"4" fidl_alignment_v2:"2"`
-	A uint8    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint16   `fidl_offset_v1:"2" fidl_offset_v2:"2"`
+	_ struct{} `fidl:"s" fidl_size_v2:"4" fidl_alignment_v2:"2"`
+	A uint8    `fidl_offset_v2:"0"`
+	B uint16   `fidl_offset_v2:"2"`
 }
 
 var _mPadding1ByteMiddle = _bindings.CreateLazyMarshaler(Padding1ByteMiddle{})
@@ -31,10 +31,10 @@ func (msg *Padding1ByteMiddle) Marshaler() _bindings.Marshaler {
 }
 
 type Padding2ByteAlignmentLength6 struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"6" fidl_alignment_v1:"2" fidl_size_v2:"6" fidl_alignment_v2:"2"`
-	A uint8    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint16   `fidl_offset_v1:"2" fidl_offset_v2:"2"`
-	C uint8    `fidl_offset_v1:"4" fidl_offset_v2:"4"`
+	_ struct{} `fidl:"s" fidl_size_v2:"6" fidl_alignment_v2:"2"`
+	A uint8    `fidl_offset_v2:"0"`
+	B uint16   `fidl_offset_v2:"2"`
+	C uint8    `fidl_offset_v2:"4"`
 }
 
 var _mPadding2ByteAlignmentLength6 = _bindings.CreateLazyMarshaler(Padding2ByteAlignmentLength6{})
@@ -44,9 +44,9 @@ func (msg *Padding2ByteAlignmentLength6) Marshaler() _bindings.Marshaler {
 }
 
 type Padding2ByteEnd struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"4" fidl_size_v2:"8" fidl_alignment_v2:"4"`
-	A uint32   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint16   `fidl_offset_v1:"4" fidl_offset_v2:"4"`
+	_ struct{} `fidl:"s" fidl_size_v2:"8" fidl_alignment_v2:"4"`
+	A uint32   `fidl_offset_v2:"0"`
+	B uint16   `fidl_offset_v2:"4"`
 }
 
 var _mPadding2ByteEnd = _bindings.CreateLazyMarshaler(Padding2ByteEnd{})
@@ -56,9 +56,9 @@ func (msg *Padding2ByteEnd) Marshaler() _bindings.Marshaler {
 }
 
 type Padding2ByteMiddle struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"4" fidl_size_v2:"8" fidl_alignment_v2:"4"`
-	A uint16   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint32   `fidl_offset_v1:"4" fidl_offset_v2:"4"`
+	_ struct{} `fidl:"s" fidl_size_v2:"8" fidl_alignment_v2:"4"`
+	A uint16   `fidl_offset_v2:"0"`
+	B uint32   `fidl_offset_v2:"4"`
 }
 
 var _mPadding2ByteMiddle = _bindings.CreateLazyMarshaler(Padding2ByteMiddle{})
@@ -68,9 +68,9 @@ func (msg *Padding2ByteMiddle) Marshaler() _bindings.Marshaler {
 }
 
 type Padding3ByteEnd struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"4" fidl_size_v2:"8" fidl_alignment_v2:"4"`
-	A uint32   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint8    `fidl_offset_v1:"4" fidl_offset_v2:"4"`
+	_ struct{} `fidl:"s" fidl_size_v2:"8" fidl_alignment_v2:"4"`
+	A uint32   `fidl_offset_v2:"0"`
+	B uint8    `fidl_offset_v2:"4"`
 }
 
 var _mPadding3ByteEnd = _bindings.CreateLazyMarshaler(Padding3ByteEnd{})
@@ -80,9 +80,9 @@ func (msg *Padding3ByteEnd) Marshaler() _bindings.Marshaler {
 }
 
 type Padding3ByteMiddle struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"4" fidl_size_v2:"8" fidl_alignment_v2:"4"`
-	A uint8    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint32   `fidl_offset_v1:"4" fidl_offset_v2:"4"`
+	_ struct{} `fidl:"s" fidl_size_v2:"8" fidl_alignment_v2:"4"`
+	A uint8    `fidl_offset_v2:"0"`
+	B uint32   `fidl_offset_v2:"4"`
 }
 
 var _mPadding3ByteMiddle = _bindings.CreateLazyMarshaler(Padding3ByteMiddle{})
@@ -92,11 +92,11 @@ func (msg *Padding3ByteMiddle) Marshaler() _bindings.Marshaler {
 }
 
 type Padding4ByteAlignmentLength12 struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"12" fidl_alignment_v1:"4" fidl_size_v2:"12" fidl_alignment_v2:"4"`
-	A uint32   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint8    `fidl_offset_v1:"4" fidl_offset_v2:"4"`
-	C uint16   `fidl_offset_v1:"6" fidl_offset_v2:"6"`
-	D uint16   `fidl_offset_v1:"8" fidl_offset_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v2:"12" fidl_alignment_v2:"4"`
+	A uint32   `fidl_offset_v2:"0"`
+	B uint8    `fidl_offset_v2:"4"`
+	C uint16   `fidl_offset_v2:"6"`
+	D uint16   `fidl_offset_v2:"8"`
 }
 
 var _mPadding4ByteAlignmentLength12 = _bindings.CreateLazyMarshaler(Padding4ByteAlignmentLength12{})
@@ -106,9 +106,9 @@ func (msg *Padding4ByteAlignmentLength12) Marshaler() _bindings.Marshaler {
 }
 
 type Padding4ByteEnd struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	A uint64   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint32   `fidl_offset_v1:"8" fidl_offset_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	A uint64   `fidl_offset_v2:"0"`
+	B uint32   `fidl_offset_v2:"8"`
 }
 
 var _mPadding4ByteEnd = _bindings.CreateLazyMarshaler(Padding4ByteEnd{})
@@ -118,9 +118,9 @@ func (msg *Padding4ByteEnd) Marshaler() _bindings.Marshaler {
 }
 
 type Padding4ByteMiddle struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	A uint32   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint64   `fidl_offset_v1:"8" fidl_offset_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	A uint32   `fidl_offset_v2:"0"`
+	B uint64   `fidl_offset_v2:"8"`
 }
 
 var _mPadding4ByteMiddle = _bindings.CreateLazyMarshaler(Padding4ByteMiddle{})
@@ -130,10 +130,10 @@ func (msg *Padding4ByteMiddle) Marshaler() _bindings.Marshaler {
 }
 
 type Padding5ByteEnd struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	A uint64   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint16   `fidl_offset_v1:"8" fidl_offset_v2:"8"`
-	C uint8    `fidl_offset_v1:"10" fidl_offset_v2:"10"`
+	_ struct{} `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	A uint64   `fidl_offset_v2:"0"`
+	B uint16   `fidl_offset_v2:"8"`
+	C uint8    `fidl_offset_v2:"10"`
 }
 
 var _mPadding5ByteEnd = _bindings.CreateLazyMarshaler(Padding5ByteEnd{})
@@ -143,10 +143,10 @@ func (msg *Padding5ByteEnd) Marshaler() _bindings.Marshaler {
 }
 
 type Padding5ByteMiddle struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	A uint16   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint8    `fidl_offset_v1:"2" fidl_offset_v2:"2"`
-	C uint64   `fidl_offset_v1:"8" fidl_offset_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	A uint16   `fidl_offset_v2:"0"`
+	B uint8    `fidl_offset_v2:"2"`
+	C uint64   `fidl_offset_v2:"8"`
 }
 
 var _mPadding5ByteMiddle = _bindings.CreateLazyMarshaler(Padding5ByteMiddle{})
@@ -156,9 +156,9 @@ func (msg *Padding5ByteMiddle) Marshaler() _bindings.Marshaler {
 }
 
 type Padding6ByteEnd struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	A uint64   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint16   `fidl_offset_v1:"8" fidl_offset_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	A uint64   `fidl_offset_v2:"0"`
+	B uint16   `fidl_offset_v2:"8"`
 }
 
 var _mPadding6ByteEnd = _bindings.CreateLazyMarshaler(Padding6ByteEnd{})
@@ -168,9 +168,9 @@ func (msg *Padding6ByteEnd) Marshaler() _bindings.Marshaler {
 }
 
 type Padding6ByteMiddle struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	A uint16   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint64   `fidl_offset_v1:"8" fidl_offset_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	A uint16   `fidl_offset_v2:"0"`
+	B uint64   `fidl_offset_v2:"8"`
 }
 
 var _mPadding6ByteMiddle = _bindings.CreateLazyMarshaler(Padding6ByteMiddle{})
@@ -180,9 +180,9 @@ func (msg *Padding6ByteMiddle) Marshaler() _bindings.Marshaler {
 }
 
 type Padding7ByteEnd struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	A uint64   `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint8    `fidl_offset_v1:"8" fidl_offset_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	A uint64   `fidl_offset_v2:"0"`
+	B uint8    `fidl_offset_v2:"8"`
 }
 
 var _mPadding7ByteEnd = _bindings.CreateLazyMarshaler(Padding7ByteEnd{})
@@ -192,9 +192,9 @@ func (msg *Padding7ByteEnd) Marshaler() _bindings.Marshaler {
 }
 
 type Padding7ByteMiddle struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	A uint8    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
-	B uint64   `fidl_offset_v1:"8" fidl_offset_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	A uint8    `fidl_offset_v2:"0"`
+	B uint64   `fidl_offset_v2:"8"`
 }
 
 var _mPadding7ByteMiddle = _bindings.CreateLazyMarshaler(Padding7ByteMiddle{})

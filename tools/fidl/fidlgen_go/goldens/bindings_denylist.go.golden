@@ -11,8 +11,8 @@ const (
 )
 
 type DenyEachBindingOnlyDenyCppResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
-	B int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_ struct{} `fidl:"s" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	B int32    `fidl_offset_v2:"0"`
 }
 
 var _mDenyEachBindingOnlyDenyCppResponse = _bindings.CreateLazyMarshaler(DenyEachBindingOnlyDenyCppResponse{})
@@ -22,8 +22,8 @@ func (msg *DenyEachBindingOnlyDenyCppResponse) Marshaler() _bindings.Marshaler {
 }
 
 type DenyEachBindingOnlyDenyDartResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
-	B int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_ struct{} `fidl:"s" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	B int32    `fidl_offset_v2:"0"`
 }
 
 var _mDenyEachBindingOnlyDenyDartResponse = _bindings.CreateLazyMarshaler(DenyEachBindingOnlyDenyDartResponse{})
@@ -33,8 +33,8 @@ func (msg *DenyEachBindingOnlyDenyDartResponse) Marshaler() _bindings.Marshaler 
 }
 
 type DenyEachBindingOnlyDenyLibfuzzerResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
-	B int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_ struct{} `fidl:"s" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	B int32    `fidl_offset_v2:"0"`
 }
 
 var _mDenyEachBindingOnlyDenyLibfuzzerResponse = _bindings.CreateLazyMarshaler(DenyEachBindingOnlyDenyLibfuzzerResponse{})
@@ -44,8 +44,8 @@ func (msg *DenyEachBindingOnlyDenyLibfuzzerResponse) Marshaler() _bindings.Marsh
 }
 
 type DenyEachBindingOnlyDenyRustResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
-	B int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_ struct{} `fidl:"s" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	B int32    `fidl_offset_v2:"0"`
 }
 
 var _mDenyEachBindingOnlyDenyRustResponse = _bindings.CreateLazyMarshaler(DenyEachBindingOnlyDenyRustResponse{})
@@ -55,8 +55,8 @@ func (msg *DenyEachBindingOnlyDenyRustResponse) Marshaler() _bindings.Marshaler 
 }
 
 type DenyEachBindingOnlyDenySyzkallerResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
-	B int32    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_ struct{} `fidl:"s" fidl_size_v2:"4" fidl_alignment_v2:"4"`
+	B int32    `fidl_offset_v2:"0"`
 }
 
 var _mDenyEachBindingOnlyDenySyzkallerResponse = _bindings.CreateLazyMarshaler(DenyEachBindingOnlyDenySyzkallerResponse{})
@@ -66,8 +66,8 @@ func (msg *DenyEachBindingOnlyDenySyzkallerResponse) Marshaler() _bindings.Marsh
 }
 
 type MemberOnlyAppearsInImportingLibrary struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
-	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	A bool     `fidl_offset_v2:"0"`
 }
 
 var _mMemberOnlyAppearsInImportingLibrary = _bindings.CreateLazyMarshaler(MemberOnlyAppearsInImportingLibrary{})
@@ -77,8 +77,8 @@ func (msg *MemberOnlyAppearsInImportingLibrary) Marshaler() _bindings.Marshaler 
 }
 
 type OnlyAppearsInImportingLibrary struct {
-	_                                   struct{}                            `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
-	MemberOnlyAppearsInImportingLibrary MemberOnlyAppearsInImportingLibrary `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_                                   struct{}                            `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	MemberOnlyAppearsInImportingLibrary MemberOnlyAppearsInImportingLibrary `fidl_offset_v2:"0"`
 }
 
 var _mOnlyAppearsInImportingLibrary = _bindings.CreateLazyMarshaler(OnlyAppearsInImportingLibrary{})
@@ -88,7 +88,7 @@ func (msg *OnlyAppearsInImportingLibrary) Marshaler() _bindings.Marshaler {
 }
 
 type OnlyGo struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 }
 
 var _mOnlyGo = _bindings.CreateLazyMarshaler(OnlyGo{})
@@ -98,8 +98,8 @@ func (msg *OnlyGo) Marshaler() _bindings.Marshaler {
 }
 
 type denyEachBindingWithCtxOnlyDenyCppRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
-	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	A bool     `fidl_offset_v2:"0"`
 }
 
 var _mdenyEachBindingWithCtxOnlyDenyCppRequest = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyCppRequest{})
@@ -109,8 +109,8 @@ func (msg *denyEachBindingWithCtxOnlyDenyCppRequest) Marshaler() _bindings.Marsh
 }
 
 type denyEachBindingWithCtxOnlyDenyCppResponse struct {
-	_      struct{}                         `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result DenyEachBindingOnlyDenyCppResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                         `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result DenyEachBindingOnlyDenyCppResult `fidl_offset_v2:"0"`
 }
 
 var _mdenyEachBindingWithCtxOnlyDenyCppResponse = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyCppResponse{})
@@ -120,8 +120,8 @@ func (msg *denyEachBindingWithCtxOnlyDenyCppResponse) Marshaler() _bindings.Mars
 }
 
 type denyEachBindingWithCtxOnlyDenyDartRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
-	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	A bool     `fidl_offset_v2:"0"`
 }
 
 var _mdenyEachBindingWithCtxOnlyDenyDartRequest = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyDartRequest{})
@@ -131,8 +131,8 @@ func (msg *denyEachBindingWithCtxOnlyDenyDartRequest) Marshaler() _bindings.Mars
 }
 
 type denyEachBindingWithCtxOnlyDenyDartResponse struct {
-	_      struct{}                          `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result DenyEachBindingOnlyDenyDartResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                          `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result DenyEachBindingOnlyDenyDartResult `fidl_offset_v2:"0"`
 }
 
 var _mdenyEachBindingWithCtxOnlyDenyDartResponse = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyDartResponse{})
@@ -142,8 +142,8 @@ func (msg *denyEachBindingWithCtxOnlyDenyDartResponse) Marshaler() _bindings.Mar
 }
 
 type denyEachBindingWithCtxOnlyDenyLibfuzzerRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
-	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	A bool     `fidl_offset_v2:"0"`
 }
 
 var _mdenyEachBindingWithCtxOnlyDenyLibfuzzerRequest = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyLibfuzzerRequest{})
@@ -153,8 +153,8 @@ func (msg *denyEachBindingWithCtxOnlyDenyLibfuzzerRequest) Marshaler() _bindings
 }
 
 type denyEachBindingWithCtxOnlyDenyLibfuzzerResponse struct {
-	_      struct{}                               `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result DenyEachBindingOnlyDenyLibfuzzerResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                               `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result DenyEachBindingOnlyDenyLibfuzzerResult `fidl_offset_v2:"0"`
 }
 
 var _mdenyEachBindingWithCtxOnlyDenyLibfuzzerResponse = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyLibfuzzerResponse{})
@@ -164,8 +164,8 @@ func (msg *denyEachBindingWithCtxOnlyDenyLibfuzzerResponse) Marshaler() _binding
 }
 
 type denyEachBindingWithCtxOnlyDenyRustRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
-	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	A bool     `fidl_offset_v2:"0"`
 }
 
 var _mdenyEachBindingWithCtxOnlyDenyRustRequest = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyRustRequest{})
@@ -175,8 +175,8 @@ func (msg *denyEachBindingWithCtxOnlyDenyRustRequest) Marshaler() _bindings.Mars
 }
 
 type denyEachBindingWithCtxOnlyDenyRustResponse struct {
-	_      struct{}                          `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result DenyEachBindingOnlyDenyRustResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                          `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result DenyEachBindingOnlyDenyRustResult `fidl_offset_v2:"0"`
 }
 
 var _mdenyEachBindingWithCtxOnlyDenyRustResponse = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenyRustResponse{})
@@ -186,8 +186,8 @@ func (msg *denyEachBindingWithCtxOnlyDenyRustResponse) Marshaler() _bindings.Mar
 }
 
 type denyEachBindingWithCtxOnlyDenySyzkallerRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
-	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`
+	A bool     `fidl_offset_v2:"0"`
 }
 
 var _mdenyEachBindingWithCtxOnlyDenySyzkallerRequest = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenySyzkallerRequest{})
@@ -197,8 +197,8 @@ func (msg *denyEachBindingWithCtxOnlyDenySyzkallerRequest) Marshaler() _bindings
 }
 
 type denyEachBindingWithCtxOnlyDenySyzkallerResponse struct {
-	_      struct{}                               `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result DenyEachBindingOnlyDenySyzkallerResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                               `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result DenyEachBindingOnlyDenySyzkallerResult `fidl_offset_v2:"0"`
 }
 
 var _mdenyEachBindingWithCtxOnlyDenySyzkallerResponse = _bindings.CreateLazyMarshaler(denyEachBindingWithCtxOnlyDenySyzkallerResponse{})
@@ -215,7 +215,7 @@ const (
 )
 
 type DenyEachBindingOnlyDenyCppResult struct {
-	I_denyEachBindingOnlyDenyCppResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_denyEachBindingOnlyDenyCppResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                              DenyEachBindingOnlyDenyCppResponse `fidl_ordinal:"1"`
 	Err                                   uint32                             `fidl_ordinal:"2"`
 }
@@ -277,7 +277,7 @@ const (
 )
 
 type DenyEachBindingOnlyDenyDartResult struct {
-	I_denyEachBindingOnlyDenyDartResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_denyEachBindingOnlyDenyDartResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                               DenyEachBindingOnlyDenyDartResponse `fidl_ordinal:"1"`
 	Err                                    uint32                              `fidl_ordinal:"2"`
 }
@@ -339,7 +339,7 @@ const (
 )
 
 type DenyEachBindingOnlyDenyLibfuzzerResult struct {
-	I_denyEachBindingOnlyDenyLibfuzzerResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_denyEachBindingOnlyDenyLibfuzzerResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                    DenyEachBindingOnlyDenyLibfuzzerResponse `fidl_ordinal:"1"`
 	Err                                         uint32                                   `fidl_ordinal:"2"`
 }
@@ -401,7 +401,7 @@ const (
 )
 
 type DenyEachBindingOnlyDenyRustResult struct {
-	I_denyEachBindingOnlyDenyRustResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_denyEachBindingOnlyDenyRustResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                               DenyEachBindingOnlyDenyRustResponse `fidl_ordinal:"1"`
 	Err                                    uint32                              `fidl_ordinal:"2"`
 }
@@ -463,7 +463,7 @@ const (
 )
 
 type DenyEachBindingOnlyDenySyzkallerResult struct {
-	I_denyEachBindingOnlyDenySyzkallerResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_denyEachBindingOnlyDenySyzkallerResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                    DenyEachBindingOnlyDenySyzkallerResponse `fidl_ordinal:"1"`
 	Err                                         uint32                                   `fidl_ordinal:"2"`
 }

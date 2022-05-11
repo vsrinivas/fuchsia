@@ -274,9 +274,6 @@ type Tag int32
 const (
 	_       Tag = iota
 	FidlTag     // "fidl" tag with value from StackOfBoundsTag
-	FidlSizeV1Tag
-	FidlOffsetV1Tag
-	FidlAlignmentV1Tag
 	FidlSizeV2Tag
 	FidlOffsetV2Tag
 	FidlAlignmentV2Tag
@@ -293,12 +290,6 @@ func (t Tag) String() string {
 	switch t {
 	case FidlTag:
 		return "fidl"
-	case FidlSizeV1Tag:
-		return "fidl_size_v1"
-	case FidlOffsetV1Tag:
-		return "fidl_offset_v1"
-	case FidlAlignmentV1Tag:
-		return "fidl_alignment_v1"
 	case FidlSizeV2Tag:
 		return "fidl_size_v2"
 	case FidlOffsetV2Tag:
@@ -996,7 +987,6 @@ func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 
 func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	tags := Tags{
-		FidlOffsetV1Tag: val.FieldShapeV1.Offset,
 		FidlOffsetV2Tag: val.FieldShapeV2.Offset,
 	}
 	ty, rbtag := c.compileType(val.Type)
@@ -1025,8 +1015,6 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 
 	tags := Tags{
 		FidlTag:            "s",
-		FidlSizeV1Tag:      val.TypeShapeV1.InlineSize,
-		FidlAlignmentV1Tag: val.TypeShapeV1.Alignment,
 		FidlSizeV2Tag:      val.TypeShapeV2.InlineSize,
 		FidlAlignmentV2Tag: val.TypeShapeV2.Alignment,
 	}
@@ -1085,8 +1073,6 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	}
 	tags := Tags{
 		FidlTag:            fidlTag,
-		FidlSizeV1Tag:      val.TypeShapeV1.InlineSize,
-		FidlAlignmentV1Tag: val.TypeShapeV1.Alignment,
 		FidlSizeV2Tag:      val.TypeShapeV2.InlineSize,
 		FidlAlignmentV2Tag: val.TypeShapeV2.Alignment,
 		FidlIsResourceTag:  val.IsResourceType(),
@@ -1138,8 +1124,6 @@ func (c *compiler) compileTable(val fidlgen.Table) Table {
 	}
 	tags := Tags{
 		FidlTag:            "t",
-		FidlSizeV1Tag:      val.TypeShapeV1.InlineSize,
-		FidlAlignmentV1Tag: val.TypeShapeV1.Alignment,
 		FidlSizeV2Tag:      val.TypeShapeV2.InlineSize,
 		FidlAlignmentV2Tag: val.TypeShapeV2.Alignment,
 		FidlIsResourceTag:  val.IsResourceType(),

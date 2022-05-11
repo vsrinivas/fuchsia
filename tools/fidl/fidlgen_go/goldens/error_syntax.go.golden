@@ -8,8 +8,8 @@ import (
 )
 
 type ExampleUseOfErrorSyntaxCallWhichMayFailResponse struct {
-	_     struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
-	Value int64    `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_     struct{} `fidl:"s" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	Value int64    `fidl_offset_v2:"0"`
 }
 
 var _mExampleUseOfErrorSyntaxCallWhichMayFailResponse = _bindings.CreateLazyMarshaler(ExampleUseOfErrorSyntaxCallWhichMayFailResponse{})
@@ -19,8 +19,8 @@ func (msg *ExampleUseOfErrorSyntaxCallWhichMayFailResponse) Marshaler() _binding
 }
 
 type exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	S string   `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:""`
+	_ struct{} `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	S string   `fidl_offset_v2:"0" fidl_bounds:""`
 }
 
 var _mexampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailRequest = _bindings.CreateLazyMarshaler(exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailRequest{})
@@ -30,8 +30,8 @@ func (msg *exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailRequest) Marsha
 }
 
 type exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailResponse struct {
-	_      struct{}                                                                  `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result testerrorsyntaxparent.ParentUsesErrorSyntaxComposedCallWhichMayFailResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                                                                  `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result testerrorsyntaxparent.ParentUsesErrorSyntaxComposedCallWhichMayFailResult `fidl_offset_v2:"0"`
 }
 
 var _mexampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailResponse = _bindings.CreateLazyMarshaler(exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailResponse{})
@@ -41,8 +41,8 @@ func (msg *exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailResponse) Marsh
 }
 
 type exampleUseOfErrorSyntaxWithCtxCallWhichMayFailRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	S string   `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_bounds:""`
+	_ struct{} `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	S string   `fidl_offset_v2:"0" fidl_bounds:""`
 }
 
 var _mexampleUseOfErrorSyntaxWithCtxCallWhichMayFailRequest = _bindings.CreateLazyMarshaler(exampleUseOfErrorSyntaxWithCtxCallWhichMayFailRequest{})
@@ -52,8 +52,8 @@ func (msg *exampleUseOfErrorSyntaxWithCtxCallWhichMayFailRequest) Marshaler() _b
 }
 
 type exampleUseOfErrorSyntaxWithCtxCallWhichMayFailResponse struct {
-	_      struct{}                                      `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result ExampleUseOfErrorSyntaxCallWhichMayFailResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                                      `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result ExampleUseOfErrorSyntaxCallWhichMayFailResult `fidl_offset_v2:"0"`
 }
 
 var _mexampleUseOfErrorSyntaxWithCtxCallWhichMayFailResponse = _bindings.CreateLazyMarshaler(exampleUseOfErrorSyntaxWithCtxCallWhichMayFailResponse{})
@@ -70,7 +70,7 @@ const (
 )
 
 type ExampleUseOfErrorSyntaxCallWhichMayFailResult struct {
-	I_exampleUseOfErrorSyntaxCallWhichMayFailResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_exampleUseOfErrorSyntaxCallWhichMayFailResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                           ExampleUseOfErrorSyntaxCallWhichMayFailResponse `fidl_ordinal:"1"`
 	Err                                                uint32                                          `fidl_ordinal:"2"`
 }

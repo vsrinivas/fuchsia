@@ -8,8 +8,8 @@ import (
 )
 
 type mainProtocolWithCtxTwoWayAnonComposedWithErrorResponse struct {
-	_      struct{}                                                                      `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedWithErrorResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                                                                      `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result testprotocollayoutsimported.ComposedProtocolTwoWayAnonComposedWithErrorResult `fidl_offset_v2:"0"`
 }
 
 var _mmainProtocolWithCtxTwoWayAnonComposedWithErrorResponse = _bindings.CreateLazyMarshaler(mainProtocolWithCtxTwoWayAnonComposedWithErrorResponse{})
@@ -19,8 +19,8 @@ func (msg *mainProtocolWithCtxTwoWayAnonComposedWithErrorResponse) Marshaler() _
 }
 
 type mainProtocolWithCtxOnAnonComposedWithErrorResponse struct {
-	_      struct{}                                                                  `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result testprotocollayoutsimported.ComposedProtocolOnAnonComposedWithErrorResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                                                                  `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result testprotocollayoutsimported.ComposedProtocolOnAnonComposedWithErrorResult `fidl_offset_v2:"0"`
 }
 
 var _mmainProtocolWithCtxOnAnonComposedWithErrorResponse = _bindings.CreateLazyMarshaler(mainProtocolWithCtxOnAnonComposedWithErrorResponse{})
@@ -30,8 +30,8 @@ func (msg *mainProtocolWithCtxOnAnonComposedWithErrorResponse) Marshaler() _bind
 }
 
 type mainProtocolWithCtxTwoWayNamedComposedWithErrorResponse struct {
-	_      struct{}                                                                       `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result testprotocollayoutsimported.ComposedProtocolTwoWayNamedComposedWithErrorResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                                                                       `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result testprotocollayoutsimported.ComposedProtocolTwoWayNamedComposedWithErrorResult `fidl_offset_v2:"0"`
 }
 
 var _mmainProtocolWithCtxTwoWayNamedComposedWithErrorResponse = _bindings.CreateLazyMarshaler(mainProtocolWithCtxTwoWayNamedComposedWithErrorResponse{})
@@ -41,8 +41,8 @@ func (msg *mainProtocolWithCtxTwoWayNamedComposedWithErrorResponse) Marshaler() 
 }
 
 type mainProtocolWithCtxOnNamedComposedWithErrorResponse struct {
-	_      struct{}                                                                   `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result testprotocollayoutsimported.ComposedProtocolOnNamedComposedWithErrorResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                                                                   `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result testprotocollayoutsimported.ComposedProtocolOnNamedComposedWithErrorResult `fidl_offset_v2:"0"`
 }
 
 var _mmainProtocolWithCtxOnNamedComposedWithErrorResponse = _bindings.CreateLazyMarshaler(mainProtocolWithCtxOnNamedComposedWithErrorResponse{})
@@ -52,8 +52,8 @@ func (msg *mainProtocolWithCtxOnNamedComposedWithErrorResponse) Marshaler() _bin
 }
 
 type mainProtocolWithCtxTwoWayImportWithErrorResponse struct {
-	_      struct{}                                `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result MainProtocolTwoWayImportWithErrorResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                                `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result MainProtocolTwoWayImportWithErrorResult `fidl_offset_v2:"0"`
 }
 
 var _mmainProtocolWithCtxTwoWayImportWithErrorResponse = _bindings.CreateLazyMarshaler(mainProtocolWithCtxTwoWayImportWithErrorResponse{})
@@ -63,8 +63,8 @@ func (msg *mainProtocolWithCtxTwoWayImportWithErrorResponse) Marshaler() _bindin
 }
 
 type mainProtocolWithCtxOnImportWithErrorResponse struct {
-	_      struct{}                            `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result MainProtocolOnImportWithErrorResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                            `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result MainProtocolOnImportWithErrorResult `fidl_offset_v2:"0"`
 }
 
 var _mmainProtocolWithCtxOnImportWithErrorResponse = _bindings.CreateLazyMarshaler(mainProtocolWithCtxOnImportWithErrorResponse{})
@@ -74,8 +74,8 @@ func (msg *mainProtocolWithCtxOnImportWithErrorResponse) Marshaler() _bindings.M
 }
 
 type mainProtocolWithCtxTwoWayLocalWithErrorResponse struct {
-	_      struct{}                               `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result MainProtocolTwoWayLocalWithErrorResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                               `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result MainProtocolTwoWayLocalWithErrorResult `fidl_offset_v2:"0"`
 }
 
 var _mmainProtocolWithCtxTwoWayLocalWithErrorResponse = _bindings.CreateLazyMarshaler(mainProtocolWithCtxTwoWayLocalWithErrorResponse{})
@@ -85,8 +85,8 @@ func (msg *mainProtocolWithCtxTwoWayLocalWithErrorResponse) Marshaler() _binding
 }
 
 type mainProtocolWithCtxOnLocalWithErrorResponse struct {
-	_      struct{}                           `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result MainProtocolOnLocalWithErrorResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                           `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result MainProtocolOnLocalWithErrorResult `fidl_offset_v2:"0"`
 }
 
 var _mmainProtocolWithCtxOnLocalWithErrorResponse = _bindings.CreateLazyMarshaler(mainProtocolWithCtxOnLocalWithErrorResponse{})
@@ -96,8 +96,8 @@ func (msg *mainProtocolWithCtxOnLocalWithErrorResponse) Marshaler() _bindings.Ma
 }
 
 type mainProtocolWithCtxTwoWayAnonWithErrorResponse struct {
-	_      struct{}                              `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result MainProtocolTwoWayAnonWithErrorResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                              `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result MainProtocolTwoWayAnonWithErrorResult `fidl_offset_v2:"0"`
 }
 
 var _mmainProtocolWithCtxTwoWayAnonWithErrorResponse = _bindings.CreateLazyMarshaler(mainProtocolWithCtxTwoWayAnonWithErrorResponse{})
@@ -107,8 +107,8 @@ func (msg *mainProtocolWithCtxTwoWayAnonWithErrorResponse) Marshaler() _bindings
 }
 
 type mainProtocolWithCtxOnAnonWithErrorResponse struct {
-	_      struct{}                          `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result MainProtocolOnAnonWithErrorResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                          `fidl:"s" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result MainProtocolOnAnonWithErrorResult `fidl_offset_v2:"0"`
 }
 
 var _mmainProtocolWithCtxOnAnonWithErrorResponse = _bindings.CreateLazyMarshaler(mainProtocolWithCtxOnAnonWithErrorResponse{})
@@ -125,7 +125,7 @@ const (
 )
 
 type LocalUnionPayload struct {
-	I_localUnionPayloadTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_localUnionPayloadTag `fidl:"x" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData          interface{}
 	B                      bool `fidl_ordinal:"1"`
 }
@@ -183,7 +183,7 @@ const (
 )
 
 type MainProtocolOnAnonWithErrorResult struct {
-	I_mainProtocolOnAnonWithErrorResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_mainProtocolOnAnonWithErrorResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                               MainProtocolOnAnonWithErrorResponse `fidl_ordinal:"1"`
 	Err                                    uint32                              `fidl_ordinal:"2"`
 }
@@ -245,7 +245,7 @@ const (
 )
 
 type MainProtocolOnImportWithErrorResult struct {
-	I_mainProtocolOnImportWithErrorResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_mainProtocolOnImportWithErrorResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                 testprotocollayoutsimported.ImportTablePayload `fidl_ordinal:"1"`
 	Err                                      uint32                                         `fidl_ordinal:"2"`
 }
@@ -307,7 +307,7 @@ const (
 )
 
 type MainProtocolOnLocalWithErrorResult struct {
-	I_mainProtocolOnLocalWithErrorResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_mainProtocolOnLocalWithErrorResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                LocalTablePayload `fidl_ordinal:"1"`
 	Err                                     uint32            `fidl_ordinal:"2"`
 }
@@ -369,7 +369,7 @@ const (
 )
 
 type MainProtocolTwoWayAnonWithErrorResponse struct {
-	I_mainProtocolTwoWayAnonWithErrorResponseTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_mainProtocolTwoWayAnonWithErrorResponseTag `fidl:"x" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData                                interface{}
 	B                                            bool `fidl_ordinal:"1"`
 }
@@ -427,7 +427,7 @@ const (
 )
 
 type MainProtocolTwoWayAnonWithErrorResult struct {
-	I_mainProtocolTwoWayAnonWithErrorResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_mainProtocolTwoWayAnonWithErrorResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                   MainProtocolTwoWayAnonWithErrorResponse `fidl_ordinal:"1"`
 	Err                                        uint32                                  `fidl_ordinal:"2"`
 }
@@ -489,7 +489,7 @@ const (
 )
 
 type MainProtocolTwoWayImportWithErrorResult struct {
-	I_mainProtocolTwoWayImportWithErrorResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_mainProtocolTwoWayImportWithErrorResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                     testprotocollayoutsimported.ImportUnionPayload `fidl_ordinal:"1"`
 	Err                                          uint32                                         `fidl_ordinal:"2"`
 }
@@ -551,7 +551,7 @@ const (
 )
 
 type MainProtocolTwoWayLocalWithErrorResult struct {
-	I_mainProtocolTwoWayLocalWithErrorResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_mainProtocolTwoWayLocalWithErrorResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                    LocalUnionPayload `fidl_ordinal:"1"`
 	Err                                         uint32            `fidl_ordinal:"2"`
 }
@@ -613,7 +613,7 @@ const (
 )
 
 type MainProtocolTwoWayAnonRequest struct {
-	I_mainProtocolTwoWayAnonRequestTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_mainProtocolTwoWayAnonRequestTag `fidl:"x" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData                      interface{}
 	B                                  bool `fidl_ordinal:"1"`
 }
@@ -671,7 +671,7 @@ const (
 )
 
 type MainProtocolOnAnonResponse struct {
-	I_mainProtocolOnAnonRequestTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_mainProtocolOnAnonRequestTag `fidl:"x" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData                  interface{}
 	B                              bool `fidl_ordinal:"1"`
 }
@@ -722,7 +722,7 @@ func (_m *MainProtocolOnAnonResponse) GetUnknownData() _bindings.UnknownData {
 }
 
 type LocalTablePayload struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	_             struct{} `fidl:"t" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	A             uint16 `fidl_ordinal:"1"`
 	APresent      bool
@@ -767,7 +767,7 @@ func (u *LocalTablePayload) GetUnknownData() map[uint64]_bindings.UnknownData {
 }
 
 type MainProtocolOnAnonWithErrorResponse struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	_             struct{} `fidl:"t" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	A             uint16 `fidl_ordinal:"1"`
 	APresent      bool
@@ -812,7 +812,7 @@ func (u *MainProtocolOnAnonWithErrorResponse) GetUnknownData() map[uint64]_bindi
 }
 
 type MainProtocolOneWayAnonRequest struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	_             struct{} `fidl:"t" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	A             uint16 `fidl_ordinal:"1"`
 	APresent      bool
@@ -857,7 +857,7 @@ func (u *MainProtocolOneWayAnonRequest) GetUnknownData() map[uint64]_bindings.Un
 }
 
 type MainProtocolTwoWayAnonResponse struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	_             struct{} `fidl:"t" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	A             uint16 `fidl_ordinal:"1"`
 	APresent      bool
@@ -902,7 +902,7 @@ func (u *MainProtocolTwoWayAnonResponse) GetUnknownData() map[uint64]_bindings.U
 }
 
 type MainProtocolTwoWayAnonWithErrorRequest struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	_             struct{} `fidl:"t" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	A             uint16 `fidl_ordinal:"1"`
 	APresent      bool
