@@ -1141,6 +1141,7 @@ em_if_mtu_set(if_ctx_t ctx, uint32_t mtu)
 	case e1000_pch_lpt:
 	case e1000_pch_spt:
 	case e1000_pch_cnp:
+	case e1000_pch_tgp:
 	case e1000_82574:
 	case e1000_82583:
 	case e1000_80003es2lan:
@@ -2427,6 +2428,7 @@ em_reset(if_ctx_t ctx)
 	case e1000_pch_lpt:
 	case e1000_pch_spt:
 	case e1000_pch_cnp:
+	case e1000_pch_tgp:
 		pba = E1000_PBA_26K;
 		break;
 	case e1000_82575:
@@ -2536,6 +2538,7 @@ em_reset(if_ctx_t ctx)
 	case e1000_pch_lpt:
 	case e1000_pch_spt:
 	case e1000_pch_cnp:
+	case e1000_pch_tgp:
 		hw->fc.high_water = 0x5C20;
 		hw->fc.low_water = 0x5048;
 		hw->fc.pause_time = 0x0650;
