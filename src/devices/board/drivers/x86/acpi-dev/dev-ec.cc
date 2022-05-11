@@ -575,6 +575,15 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   }
   dev->gpe_setup = true;
 
+  status = AcpiInstallAddressSpaceHandler(dev->acpi_handle, ACPI_ADR_SPACE_EC,
+                                          ec_space_request_handler, ec_space_setup_handler, dev);
+  if (status != AE_OK) {
+    xprintf("acpi-ec: Failed to install ec space handler");
+    acpi_ec_release(dev);
+    return acpi_to_zx_status(status);
+  }
+  dev->ec_space_setup = true;
+
   /* TODO(teisenbe): This thread should ideally be at a high priority, since
      it takes the ACPI global lock which is shared with SMM. */
   ret = thrd_create_with_name(&dev->evt_thread, acpi_ec_thread, dev, "acpi-ec-evt");
@@ -584,15 +593,6 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     return ZX_ERR_INTERNAL;
   }
   dev->thread_setup = true;
-
-  status = AcpiInstallAddressSpaceHandler(dev->acpi_handle, ACPI_ADR_SPACE_EC,
-                                          ec_space_request_handler, ec_space_setup_handler, dev);
-  if (status != AE_OK) {
-    xprintf("acpi-ec: Failed to install ec space handler");
-    acpi_ec_release(dev);
-    return acpi_to_zx_status(status);
-  }
-  dev->ec_space_setup = true;
 
   {
     device_add_args_t args = {};
