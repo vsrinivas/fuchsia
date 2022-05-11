@@ -1114,7 +1114,7 @@ fn add_slaac_addr_sub<C: SlaacContext>(
 
     struct PreferredForAndRegenAt<Instant>(NonZeroNdpLifetime, Option<Instant>);
 
-    let (valid_until, preferred_and_regen, slaac_config, address) = match slaac_config {
+    let (valid_until, preferred_and_regen, slaac_config, mut addresses) = match slaac_config {
         SlaacInitConfig::Static => {
             let valid_until = match prefix_valid_for {
                 NonZeroNdpLifetime::Finite(d) => {
@@ -1127,10 +1127,12 @@ fn add_slaac_addr_sub<C: SlaacContext>(
                 prefix_preferred_for.map(|p| PreferredForAndRegenAt(p, None)),
                 SlaacConfig::Static { valid_until },
                 // Generate the global address as defined by RFC 4862 section 5.5.3.d.
-                generate_global_static_address(
+                //
+                // TODO(https://fxbug.dev/95946): Support regenerating address.
+                either::Either::Left(core::iter::once(generate_global_static_address(
                     &subnet,
                     &sync_ctx.get_interface_identifier(device_id)[..],
-                ),
+                ))),
             )
         }
         SlaacInitConfig::Temporary { dad_count } => {
@@ -1173,7 +1175,10 @@ fn add_slaac_addr_sub<C: SlaacContext>(
             )
             .get();
 
-            let address = {
+            let iid = sync_ctx.get_interface_identifier(device_id);
+            let secret_key = temporary_address_config.secret_key;
+            let mut seed = per_attempt_random_seed;
+            let addresses = either::Either::Right(core::iter::repeat_with(move || {
                 // RFC 8981 Section 3.3.3 specifies that
                 //
                 //   The resulting IID MUST be compared against the reserved
@@ -1182,26 +1187,16 @@ fn add_slaac_addr_sub<C: SlaacContext>(
                 //   prefix.  In the event that an unacceptable identifier has
                 //   been generated, the DAD_Counter should be incremented by 1,
                 //   and the algorithm should be restarted from the first step.
-                let mut seed = per_attempt_random_seed;
                 loop {
-                    let address = generate_global_temporary_address(
-                        &subnet,
-                        &sync_ctx.get_interface_identifier(device_id),
-                        seed,
-                        &temporary_address_config.secret_key,
-                    );
+                    let address =
+                        generate_global_temporary_address(&subnet, &iid, seed, &secret_key);
+                    seed = seed.wrapping_add(1);
 
                     if has_iana_allowed_iid(address.addr().get()) {
-                        match sync_ctx.get_ip_device_state(device_id).find_addr(&address.addr()) {
-                            Some(_) => {
-                                sync_ctx.increment_counter("generated_temporary_slaac_addr_exists")
-                            }
-                            None => break address,
-                        }
+                        break address;
                     }
-                    seed = seed.wrapping_add(1);
                 }
-            };
+            }));
 
             let valid_until = now.checked_add(valid_for.get()).unwrap();
 
@@ -1259,84 +1254,101 @@ fn add_slaac_addr_sub<C: SlaacContext>(
                     creation_time: now,
                     dad_counter: dad_count,
                 }),
-                address,
+                addresses,
             )
         }
     };
 
-    // TODO(https://fxbug.dev/91301): Should bindings be the one to actually
-    // assign the address to maintain a "single source of truth"?
-
     // Attempt to add the address to the device.
-    if let Err(err) = sync_ctx.add_slaac_addr_sub(device_id, address, slaac_config) {
-        error!("receive_ndp_packet: Failed configure new IPv6 address {:?} on device {:?} via SLAAC with error {:?}", address, device_id, err);
-    } else {
-        trace!("receive_ndp_packet: Successfully configured new IPv6 address {:?} on device {:?} via SLAAC", address, device_id);
-
-        // Set the valid lifetime for this address.
-        //
-        // Must not have reached this point if the address was already assigned
-        // to a device.
-        match valid_until {
-            Lifetime::Finite(valid_until) => {
-                assert_eq!(
-                    sync_ctx.schedule_timer_instant(
-                        valid_until,
-                        SlaacTimerId::new_invalidate_slaac_address(device_id, address.addr())
-                            .into(),
-                    ),
-                    None
-                );
-            }
-            Lifetime::Infinite => {}
-        }
-
-        let deprecate_timer_id =
-            SlaacTimerId::new_deprecate_slaac_address(device_id, address.addr());
-
-        // Set the preferred lifetime for this address.
-        //
-        // Must not have reached this point if the address was already assigned
-        // to a device.
-        match preferred_and_regen {
-            // Use `schedule_timer_instant` instead of `schedule_timer` to set the timeout
-            // relative to the previously recorded `now` value. This helps prevent skew in
-            // cases where this task gets preempted and isn't scheduled for some period of time
-            // between recording `now` and here.
-            Some(PreferredForAndRegenAt(preferred_for, regen_at)) => {
-                match preferred_for {
-                    NonZeroNdpLifetime::Finite(preferred_for) => {
-                        assert_eq!(
-                            sync_ctx.schedule_timer_instant(
-                                now.checked_add(preferred_for.get()).unwrap(),
-                                deprecate_timer_id.into()
-                            ),
-                            None
-                        );
-                    }
-                    NonZeroNdpLifetime::Infinite => {}
-                }
-
-                match regen_at {
-                    Some(regen_at) => assert_eq!(
-                        sync_ctx.schedule_timer_instant(
-                            regen_at,
-                            SlaacTimerId::new_regenerate_temporary_slaac_address(
-                                device_id, address
-                            )
-                            .into()
-                        ),
-                        None
-                    ),
-                    None => (),
-                }
-            }
+    let address = loop {
+        let address = match addresses.next() {
+            Some(address) => address,
+            // No more addresses to try - do nothing further.
             None => {
-                set_deprecated_slaac_addr(sync_ctx, device_id, &address.addr(), true);
-                assert_eq!(sync_ctx.cancel_timer(deprecate_timer_id.into()), None);
+                trace!(
+                    "exhausted possible SLAAC addresses without assigning on device {:?}",
+                    device_id
+                );
+                return;
             }
         };
+
+        // TODO(https://fxbug.dev/91301): Should bindings be the one to actually
+        // assign the address to maintain a "single source of truth"?
+        match sync_ctx.add_slaac_addr_sub(device_id, address, slaac_config) {
+            Err(ExistsError) => {
+                trace!("IPv6 SLAAC address {:?} already exists on device {:?}", address, device_id);
+
+                // Try the next address.
+                //
+                // TODO(https://fxbug.dev/100003): Limit number of attempts.
+                sync_ctx.increment_counter("generated_slaac_addr_exists");
+            }
+            Ok(()) => break address,
+        }
+    };
+
+    trace!("receive_ndp_packet: Successfully configured new IPv6 address {:?} on device {:?} via SLAAC", address, device_id);
+
+    // Set the valid lifetime for this address.
+    //
+    // Must not have reached this point if the address was already assigned
+    // to a device.
+    match valid_until {
+        Lifetime::Finite(valid_until) => {
+            assert_eq!(
+                sync_ctx.schedule_timer_instant(
+                    valid_until,
+                    SlaacTimerId::new_invalidate_slaac_address(device_id, address.addr()).into(),
+                ),
+                None
+            );
+        }
+        Lifetime::Infinite => {}
     }
+
+    let deprecate_timer_id = SlaacTimerId::new_deprecate_slaac_address(device_id, address.addr());
+
+    // Set the preferred lifetime for this address.
+    //
+    // Must not have reached this point if the address was already assigned
+    // to a device.
+    match preferred_and_regen {
+        // Use `schedule_timer_instant` instead of `schedule_timer` to set the timeout
+        // relative to the previously recorded `now` value. This helps prevent skew in
+        // cases where this task gets preempted and isn't scheduled for some period of time
+        // between recording `now` and here.
+        Some(PreferredForAndRegenAt(preferred_for, regen_at)) => {
+            match preferred_for {
+                NonZeroNdpLifetime::Finite(preferred_for) => {
+                    assert_eq!(
+                        sync_ctx.schedule_timer_instant(
+                            now.checked_add(preferred_for.get()).unwrap(),
+                            deprecate_timer_id.into()
+                        ),
+                        None
+                    );
+                }
+                NonZeroNdpLifetime::Infinite => {}
+            }
+
+            match regen_at {
+                Some(regen_at) => assert_eq!(
+                    sync_ctx.schedule_timer_instant(
+                        regen_at,
+                        SlaacTimerId::new_regenerate_temporary_slaac_address(device_id, address)
+                            .into()
+                    ),
+                    None
+                ),
+                None => (),
+            }
+        }
+        None => {
+            set_deprecated_slaac_addr(sync_ctx, device_id, &address.addr(), true);
+            assert_eq!(sync_ctx.cancel_timer(deprecate_timer_id.into()), None);
+        }
+    };
 }
 
 #[cfg(test)]

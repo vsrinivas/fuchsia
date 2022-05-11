@@ -4511,7 +4511,7 @@ mod tests {
         receive_prefix_update(&mut ctx, device, src_ip, subnet, 9000, 10000);
 
         // Verify that `conflicted_addr` was generated and rejected.
-        assert_eq!(get_counter_val(&mut ctx, "generated_temporary_slaac_addr_exists"), 1);
+        assert_eq!(get_counter_val(&mut ctx, "generated_slaac_addr_exists"), 1);
 
         // Should have gotten a new temporary IP.
         let temporary_slaac_addresses =
