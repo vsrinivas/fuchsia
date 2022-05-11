@@ -41,8 +41,7 @@ TEST(NaturalStruct, Decode) {
   auto wire_format = ::fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header);
 
   // Perform decoding.
-  fitx::result result =
-      ::fidl::internal::DecodeFrom<test_types::CopyableStruct>(std::move(message), wire_format);
+  fitx::result result = ::fidl::Decode<test_types::CopyableStruct>(std::move(message), wire_format);
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
   test_types::CopyableStruct& obj = result.value();
@@ -81,8 +80,7 @@ TEST(NaturalStructWithHandle, Decode) {
   auto wire_format = ::fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header);
 
   // Perform decoding.
-  fitx::result result =
-      ::fidl::internal::DecodeFrom<test_types::MoveOnlyStruct>(std::move(message), wire_format);
+  fitx::result result = ::fidl::Decode<test_types::MoveOnlyStruct>(std::move(message), wire_format);
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
   test_types::MoveOnlyStruct& obj = result.value();
@@ -99,8 +97,7 @@ TEST(NaturalStruct, Encode) {
   obj.x() = 42;
 
   // Perform encoding.
-  fidl::internal::EncodeResult result =
-      fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(obj);
+  fidl::OwnedEncodeResult result = fidl::Encode(obj);
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
 
@@ -144,8 +141,7 @@ TEST(NaturalStructWithHandle, Encode) {
   obj.h() = std::move(event);
 
   // Perform encoding.
-  fidl::internal::EncodeResult result =
-      fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(obj);
+  fidl::OwnedEncodeResult result = fidl::Encode(std::move(obj));
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
   // Handles are moved.

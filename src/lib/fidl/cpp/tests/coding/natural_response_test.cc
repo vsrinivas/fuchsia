@@ -65,8 +65,7 @@ TEST(NaturalResponsePayload, Decode) {
   auto metadata = fidl::WireFormatMetadata::FromTransactionalHeader(header);
 
   // Perform decoding.
-  fitx::result result =
-      fidl::internal::DecodeFrom<test_types::BazFooTopResponse>(std::move(message), metadata);
+  fitx::result result = fidl::Decode<test_types::BazFooTopResponse>(std::move(message), metadata);
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
   test_types::BazFooTopResponse& response = result.value();
@@ -81,8 +80,7 @@ TEST(NaturalResponsePayload, Encode) {
   response.res() = test_types::FooResponse{{.bar = 42}};
 
   // Perform encoding.
-  fidl::internal::EncodeResult result =
-      fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(response);
+  fidl::OwnedEncodeResult result = fidl::Encode(response);
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
 
@@ -127,8 +125,7 @@ TEST(NaturalResponseWithHandle, Encode) {
   response.result() = ::test_types::TestXUnion::WithH(std::move(event));
 
   // Perform encoding.
-  fidl::internal::EncodeResult result =
-      fidl::internal::EncodeIntoResult<fidl::internal::ChannelTransport>(response);
+  fidl::OwnedEncodeResult result = fidl::Encode(std::move(response));
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
   // Handles are moved.

@@ -108,8 +108,6 @@ class UnionMemberView final {
   }
 };
 
-// |EncodeResult| holds an encoded message along with the required storage.
-// Success/failure information is stored in |message|.
 class EncodeResult {
  public:
   explicit EncodeResult(::fidl::internal::NaturalBodyEncoder&& storage)
@@ -119,23 +117,110 @@ class EncodeResult {
 
   ::fidl::OutgoingMessage& message() { return message_; }
 
+  ::fidl::WireFormatMetadata wire_format_metadata() const {
+    return storage_.wire_format_metadata();
+  }
+
  private:
   ::fidl::internal::NaturalBodyEncoder storage_;
   ::fidl::OutgoingMessage message_;
 };
 
-// |DecodeFrom| decodes a non-transactional incoming message to a natural
-// domain object |FidlType|. Supported types are structs, tables, and unions.
+template <typename Transport, typename EncodeResult, typename FidlType>
+EncodeResult EncodeWithTransport(FidlType&& value) {
+  static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
+  ::fidl::internal::NaturalBodyEncoder encoder(&Transport::VTable,
+                                               fidl::internal::WireFormatVersion::kV2);
+  encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<FidlType, NaturalCodingConstraintEmpty>(
+      &encoder));
+  ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Encode(
+      &encoder, &value, 0, kRecursionDepthInitial);
+  return EncodeResult(std::move(encoder));
+}
+
+}  // namespace internal
+
+// |OwnedEncodeResult| holds an encoded message along with the required storage.
+// Success/failure information is stored in the |fidl::OutgoingMessage| obtained
+// from |message()|.
+class OwnedEncodeResult : public internal::EncodeResult {
+ public:
+  using internal::EncodeResult::EncodeResult;
+  using internal::EncodeResult::message;
+  using internal::EncodeResult::wire_format_metadata;
+};
+
+// Encodes an instance of |FidlType| for use over the Zircon channel transport.
+// Supported types are structs, tables, and unions.
 //
-// |message| is always consumed.
-// |metadata| informs the wire format of the encoded message.
+// Handles in the current instance are moved to the returned
+// |OwnedEncodeResult|, if any.
 //
-// TODO(fxbug.dev/82681): Make this API comply with the requirements in FIDL-at-rest.
+// Errors during encoding (e.g. constraint validation) are reflected in the
+// |message| of the returned |OwnedEncodeResult|.
+//
+// Example:
+//
+//     fuchsia_my_lib::SomeType some_value = {...};
+//     fidl::OwnedEncodeResult encoded = fidl::Encode(std::move(some_value));
+//
+//     if (!encoded.message().ok()) {
+//       // Handle errors...
+//     }
+//
+//     // Different ways to access the encoded payload:
+//     // 1. View each iovec (output is always in vectorized chunks).
+//     for (uint32_t i = 0; i < encoded.message().iovec_actual(); ++i) {
+//       encoded.message().iovecs()[i].buffer;
+//       encoded.message().iovecs()[i].capacity;
+//     }
+//
+//     // 2. Copy the bytes to contiguous storage.
+//     fidl::OutgoingMessage::CopiedBytes bytes = encoded.message().CopyBytes();
+//
 template <typename FidlType>
-::fitx::result<::fidl::Error, FidlType> DecodeFrom(::fidl::IncomingMessage&& message,
-                                                   ::fidl::WireFormatMetadata metadata) {
+OwnedEncodeResult Encode(FidlType value) {
+  return internal::EncodeWithTransport<fidl::internal::ChannelTransport, OwnedEncodeResult>(
+      std::move(value));
+}
+
+// |Decode| decodes a non-transactional incoming message to a natural domain
+// object |FidlType|. Supported types are structs, tables, and unions. Example:
+//
+//     // Create a message referencing an encoded payload.
+//     fidl::IncomingMessage message = fidl::IncomingMessage::Create(
+//         bytes, num_bytes, handles, handle_metadata, num_handles,
+//         fidl::IncomingMessage::kSkipMessageHeaderValidation);
+//
+//     // Decode the message.
+//     fitx::result decoded = fidl::Decode<fuchsia_my_lib::SomeType>(
+//         std::move(message), wire_format_metadata);
+//
+//     // Use the decoded value.
+//     if (!decoded.is_ok()) {
+//       // Handle errors...
+//     }
+//     fuchsia_my_lib::SomeType& value = decoded.value();
+//
+// |message| is always consumed. |metadata| informs the wire format of the
+// encoded message.
+template <typename FidlType>
+::fitx::result<::fidl::Error, FidlType> Decode(::fidl::IncomingMessage message,
+                                               ::fidl::WireFormatMetadata metadata) {
+  using internal::DefaultConstructPossiblyInvalidObjectTag;
+  using internal::kCodingErrorInvalidWireFormatMetadata;
+  using internal::kCodingErrorNotAllBytesConsumed;
+  using internal::kCodingErrorNotAllHandlesConsumed;
+  using internal::kRecursionDepthInitial;
+  using internal::NaturalCodingConstraintEmpty;
+
   static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
   ZX_ASSERT(!message.is_transactional());
+
+  if (!metadata.is_valid()) {
+    return ::fitx::error(
+        ::fidl::Error::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorInvalidWireFormatMetadata));
+  }
 
   uint32_t message_byte_actual = message.byte_actual();
   uint32_t message_handle_actual = message.handle_actual();
@@ -165,29 +250,6 @@ template <typename FidlType>
   return ::fitx::ok(std::move(value));
 }
 
-// Encodes an instance of |FidlType|. Supported types are structs, tables, and
-// unions.
-//
-// Handles in the current instance are moved to the returned |EncodeResult|,
-// if any.
-//
-// Errors during encoding (e.g. constraint validation) are reflected in the
-// |message| of the returned |EncodeResult|.
-//
-// TODO(fxbug.dev/82681): Make this API comply with the requirements in FIDL-at-rest.
-template <typename Transport, typename FidlType>
-::fidl::internal::EncodeResult EncodeIntoResult(FidlType& value) {
-  static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
-  ::fidl::internal::NaturalBodyEncoder encoder(&Transport::VTable,
-                                               fidl::internal::WireFormatVersion::kV2);
-  encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<FidlType, NaturalCodingConstraintEmpty>(
-      &encoder));
-  ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Encode(
-      &encoder, &value, 0, kRecursionDepthInitial);
-  return EncodeResult(std::move(encoder));
-}
-
-}  // namespace internal
 }  // namespace fidl
 
 #endif  // SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_TYPES_H_

@@ -42,5 +42,6 @@ const char* const kCodingErrorOutOfLineObjectExceedsMessageBounds =
 const char* const kCodingErrorTooManyHandlesConsumed =
     "more handles consumed than exist in message";
 const char* const kCodingErrorAbsentNonNullableHandle = "non-nullable handle is absent";
+const char* const kCodingErrorInvalidWireFormatMetadata = "invalid wire format metadata";
 
 }  // namespace fidl::internal

@@ -80,7 +80,7 @@ static auto DecodeTransactionalMessage(::fidl::IncomingMessage&& message)
 
   if constexpr (kHasPayload) {
     // Delegate into the decode logic of the payload.
-    ::fitx::result decode_result = DecodeFrom<Payload>(std::move(body_message), metadata);
+    ::fitx::result decode_result = Decode<Payload>(std::move(body_message), metadata);
     if (decode_result.is_error()) {
       return ::fitx::result<::fidl::Error, Payload>(decode_result.take_error());
     }

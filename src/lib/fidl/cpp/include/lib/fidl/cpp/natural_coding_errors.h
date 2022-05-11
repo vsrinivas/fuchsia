@@ -35,6 +35,7 @@ extern const char* const kCodingErrorAllocationSizeExceeds32Bits;
 extern const char* const kCodingErrorOutOfLineObjectExceedsMessageBounds;
 extern const char* const kCodingErrorTooManyHandlesConsumed;
 extern const char* const kCodingErrorAbsentNonNullableHandle;
+extern const char* const kCodingErrorInvalidWireFormatMetadata;
 
 }  // namespace fidl::internal
 

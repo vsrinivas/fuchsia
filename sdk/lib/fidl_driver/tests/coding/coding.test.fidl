@@ -1,0 +1,22 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.driver.coding;
+
+using zx;
+using fdf;
+
+@transport("Driver")
+protocol DriverChannelProtocol {};
+
+protocol ZirconChannelProtocol {};
+
+type MixedResources = resource table {
+    1: zircon_handle zx.handle:CHANNEL;
+    2: driver_handle fdf.handle:CHANNEL;
+    3: zircon_client_end client_end:ZirconChannelProtocol;
+    4: zircon_server_end server_end:ZirconChannelProtocol;
+    5: driver_client_end client_end:DriverChannelProtocol;
+    6: driver_server_end server_end:DriverChannelProtocol;
+};

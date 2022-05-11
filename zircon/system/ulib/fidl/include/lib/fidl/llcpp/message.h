@@ -580,10 +580,11 @@ class IncomingMessage : public ::fidl::Status {
   bool is_transactional_ = false;
 };
 
-// Reads a message from |transport| using the |bytes_storage| and |handles_storage|
-// buffers as needed.
+// Reads a transactional message from |transport| using the |bytes_storage| and
+// |handles_storage| buffers as needed.
 //
-// Error information is embedded in the returned |IncomingMessage| when applicable.
+// Error information is embedded in the returned |IncomingMessage| in case of
+// failures.
 template <typename TransportObject>
 IncomingMessage MessageRead(TransportObject&& transport, ::fidl::BufferSpan bytes_storage,
                             fidl_handle_t* handle_storage,

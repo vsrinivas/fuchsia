@@ -53,5 +53,6 @@ source_set("conformance_utils") {
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
   ]
 }

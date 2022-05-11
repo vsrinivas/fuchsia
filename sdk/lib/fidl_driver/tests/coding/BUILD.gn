@@ -1,0 +1,37 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+
+group("coding") {
+  testonly = true
+  deps = [ ":fidl_driver_cpp_natural_coding_tests" ]
+}
+
+fidl("test.driver.coding") {
+  sources = [ "coding.test.fidl" ]
+  public_deps = [
+    "//sdk/fidl/fdf",
+    "//zircon/vdso/zx",
+  ]
+  contains_drivers = true
+}
+
+test("fidl_driver_cpp_natural_coding_tests_bin") {
+  output_name = "fidl_driver_cpp_natural_coding_tests"
+  sources = [ "coding_test.cc" ]
+  deps = [
+    ":test.driver.coding_driver",
+    "//sdk/lib/driver_runtime:driver_runtime_internal",
+    "//sdk/lib/stdcompat",
+    "//src/devices/bin/driver_runtime:driver_runtime_impl",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("fidl_driver_cpp_natural_coding_tests") {
+  deps = [ ":fidl_driver_cpp_natural_coding_tests_bin" ]
+}

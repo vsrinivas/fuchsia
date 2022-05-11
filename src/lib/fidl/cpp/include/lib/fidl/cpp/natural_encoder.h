@@ -6,6 +6,7 @@
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_ENCODER_H_
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/cpp/wire_format_metadata.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message.h>
@@ -51,7 +52,11 @@ class NaturalEncoder {
 
   std::vector<uint8_t> TakeBytes() { return std::move(bytes_); }
 
-  internal::WireFormatVersion wire_format() { return wire_format_; }
+  internal::WireFormatVersion wire_format() const { return wire_format_; }
+
+  WireFormatMetadata wire_format_metadata() const {
+    return internal::WireFormatMetadataForVersion(wire_format_);
+  }
 
   void SetError(const char* error) {
     if (status_ != ZX_OK)
