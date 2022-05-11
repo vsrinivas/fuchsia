@@ -17,7 +17,7 @@ use {
     fuchsia_url::pkg_url::{Hash, PinnedPkgUrl, PkgUrl},
     fuchsia_zircon as zx,
     futures::prelude::*,
-    omaha_client::protocol::response::Response,
+    omaha_client::{cup_ecdsa::PublicKeys, protocol::response::Response},
     serde::Deserialize,
     std::{collections::BTreeMap, sync::Arc},
 };
@@ -61,7 +61,7 @@ impl<T: Resolver> EagerPackageManager<T> {
         let mut packages = config
             .packages
             .into_iter()
-            .map(|EagerPackageConfig { url, executable }| {
+            .map(|EagerPackageConfig { url, executable, public_keys: _ }| {
                 if url.package_hash().is_none() {
                     Ok((url, EagerPackage { executable, package_directory: None, cup: None }))
                 } else {
@@ -381,6 +381,7 @@ struct EagerPackageConfig {
     url: PkgUrl,
     #[serde(default)]
     executable: bool,
+    public_keys: PublicKeys,
 }
 
 impl EagerPackageConfigs {
@@ -452,7 +453,20 @@ mod tests {
             PackageCacheRequestStream,
         },
         fuchsia_async as fasync, fuchsia_zircon as zx,
+        omaha_client::cup_ecdsa::{PublicKey, PublicKeyAndId, PublicKeys},
+        p256::ecdsa::SigningKey,
+        signature::rand_core::OsRng,
     };
+
+    fn make_public_keys_for_test() -> PublicKeys {
+        let signing_key = SigningKey::random(&mut OsRng);
+        let public_key = PublicKey::from(&signing_key);
+        let public_key_id = 42;
+        PublicKeys {
+            latest: PublicKeyAndId { id: public_key_id, key: public_key },
+            historical: vec![],
+        }
+    }
 
     const TEST_URL: &str = "fuchsia-pkg://example.com/package";
     const TEST_HASH: &str = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
@@ -589,20 +603,58 @@ mod tests {
 
     #[test]
     fn parse_eager_package_configs_json() {
+        use std::convert::TryInto;
+        use std::str::FromStr;
+
+        let public_keys = PublicKeys {
+            latest: PublicKeyAndId {
+                id: 123.try_into().unwrap(),
+                key: PublicKey::from_str(
+                    r#"-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
+7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==
+-----END PUBLIC KEY-----"#,
+                )
+                .unwrap(),
+            },
+            historical: vec![],
+        };
+
         let json = br#"
         {
             "packages":
             [
                 {
                     "url": "fuchsia-pkg://example.com/package",
-                    "executable": true
+                    "executable": true,
+                    "public_keys": {
+                        "latest": {
+                            "id": 123,
+                            "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+                        },
+                        "historical": []
+                    }
                 },
                 {
                     "url": "fuchsia-pkg://example.com/package2",
-                    "executable": false
+                    "executable": false,
+                    "public_keys": {
+                        "latest": {
+                            "id": 123,
+                            "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+                        },
+                        "historical": []
+                    }
                 },
                 {
-                    "url": "fuchsia-pkg://example.com/package3"
+                    "url": "fuchsia-pkg://example.com/package3",
+                    "public_keys": {
+                        "latest": {
+                            "id": 123,
+                            "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+                        },
+                        "historical": []
+                    }
                 }
             ]
         }"#;
@@ -613,14 +665,17 @@ mod tests {
                     EagerPackageConfig {
                         url: PkgUrl::parse("fuchsia-pkg://example.com/package").unwrap(),
                         executable: true,
+                        public_keys: public_keys.clone(),
                     },
                     EagerPackageConfig {
                         url: PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap(),
                         executable: false,
+                        public_keys: public_keys.clone(),
                     },
                     EagerPackageConfig {
                         url: PkgUrl::parse("fuchsia-pkg://example.com/package3").unwrap(),
                         executable: false,
+                        public_keys,
                     },
                 ]
             }
@@ -653,6 +708,7 @@ mod tests {
             packages: vec![EagerPackageConfig {
                 url: PkgUrl::parse(TEST_PINNED_URL).unwrap(),
                 executable: true,
+                public_keys: make_public_keys_for_test(),
             }],
         };
         let package_resolver = get_test_package_resolver();
@@ -679,8 +735,16 @@ mod tests {
         let url2 = PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap();
         let config = EagerPackageConfigs {
             packages: vec![
-                EagerPackageConfig { url: url.clone(), executable: true },
-                EagerPackageConfig { url: url2.clone(), executable: false },
+                EagerPackageConfig {
+                    url: url.clone(),
+                    executable: true,
+                    public_keys: make_public_keys_for_test(),
+                },
+                EagerPackageConfig {
+                    url: url2.clone(),
+                    executable: false,
+                    public_keys: make_public_keys_for_test(),
+                },
             ],
         };
         let package_resolver = get_test_package_resolver();
@@ -732,7 +796,11 @@ mod tests {
     async fn test_cup_write() {
         let url = PkgUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
-            packages: vec![EagerPackageConfig { url: url.clone(), executable: true }],
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_public_keys_for_test(),
+            }],
         };
         let (package_resolver, _test_dir) = get_test_package_resolver_with_hash(TEST_HASH);
         let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
@@ -771,7 +839,11 @@ mod tests {
     async fn test_cup_write_persist_fail() {
         let url = PkgUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
-            packages: vec![EagerPackageConfig { url: url.clone(), executable: true }],
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_public_keys_for_test(),
+            }],
         };
         let (package_resolver, _test_dir) = get_test_package_resolver_with_hash(TEST_HASH);
         let (pkg_cache, _) = get_mock_pkg_cache();
@@ -793,7 +865,11 @@ mod tests {
     async fn test_cup_write_omaha_response_different_url() {
         let url = PkgUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
-            packages: vec![EagerPackageConfig { url: url.clone(), executable: true }],
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_public_keys_for_test(),
+            }],
         };
         let (package_resolver, _test_dir) = get_test_package_resolver_with_hash(TEST_HASH);
         let (pkg_cache, _) = get_mock_pkg_cache();
@@ -817,7 +893,11 @@ mod tests {
     async fn test_cup_write_unknown_url() {
         let url = PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap();
         let config = EagerPackageConfigs {
-            packages: vec![EagerPackageConfig { url: url.clone(), executable: true }],
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_public_keys_for_test(),
+            }],
         };
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
@@ -839,7 +919,11 @@ mod tests {
     async fn test_cup_get_info() {
         let url = PkgUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
-            packages: vec![EagerPackageConfig { url: url.clone(), executable: true }],
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_public_keys_for_test(),
+            }],
         };
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
@@ -859,7 +943,11 @@ mod tests {
     async fn test_cup_get_info_not_available() {
         let url = PkgUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
-            packages: vec![EagerPackageConfig { url: url.clone(), executable: true }],
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_public_keys_for_test(),
+            }],
         };
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
@@ -877,7 +965,11 @@ mod tests {
     async fn test_cup_get_info_unknown_url() {
         let url = PkgUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
-            packages: vec![EagerPackageConfig { url: url.clone(), executable: true }],
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_public_keys_for_test(),
+            }],
         };
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
@@ -899,7 +991,11 @@ mod tests {
     async fn test_cup_get_info_omaha_response_different_url() {
         let url = PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap();
         let config = EagerPackageConfigs {
-            packages: vec![EagerPackageConfig { url: url.clone(), executable: true }],
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_public_keys_for_test(),
+            }],
         };
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();

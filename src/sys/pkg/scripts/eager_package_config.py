@@ -9,6 +9,22 @@ import json
 import urllib.parse
 
 
+def make_public_keys(service_url, key_config):
+    latest = key_config[service_url]['latest']
+    historical = key_config[service_url]['historical']
+    return {
+        "latest": {
+            'key': latest['key'],
+            'id': int(latest['id']),
+        },
+        "historical":
+            [{
+                'key': s['key'],
+                'id': int(s['id']),
+            } for s in historical],
+    }
+
+
 def generate_omaha_client_config(configs, key_config):
     packages_by_service_url = collections.defaultdict(list)
     server_by_service_url = {}
@@ -52,25 +68,9 @@ def generate_omaha_client_config(configs, key_config):
         if service_url is None:
             continue
 
-        latest = key_config[service_url]['latest']
-        historical = key_config[service_url]['historical']
-
         server_by_service_url[service_url] = {
             'service_url': service_url,
-            'public_keys':
-                {
-                    "latest": {
-                        'key': latest['key'],
-                        'id': int(latest['id']),
-                    },
-                    "historical":
-                        [
-                            {
-                                'key': s['key'],
-                                'id': int(s['id']),
-                            } for s in historical
-                        ],
-                }
+            'public_keys': make_public_keys(service_url, key_config)
         }
 
     return {
@@ -88,7 +88,6 @@ def generate_omaha_client_config(configs, key_config):
 
 
 def generate_pkg_resolver_config(configs, key_config):
-    del key_config  # unused for now.
     packages = []
 
     for config in configs:
@@ -97,6 +96,10 @@ def generate_pkg_resolver_config(configs, key_config):
         package['url'] = config['url']
         if 'executable' in config:
             package['executable'] = config['executable']
+
+        service_url = config.get('service_url', None)
+        if service_url:
+            package['public_keys'] = make_public_keys(service_url, key_config)
 
         packages.append(package)
 

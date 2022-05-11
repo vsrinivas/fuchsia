@@ -16,6 +16,16 @@ use {
     std::sync::Arc,
 };
 
+fn make_public_keys_for_test() -> serde_json::Value {
+    serde_json::json!({
+        "latest": {
+            "id": 123,
+            "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+        },
+        "historical": []
+    })
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn test_empty_eager_config() {
     let package_name = "test-package";
@@ -34,7 +44,7 @@ async fn test_empty_eager_config() {
     );
 
     let eager_config = serde_json::json!({
-        "packages": []
+        "packages": [],
     });
 
     let env = TestEnvBuilder::new()
@@ -77,7 +87,10 @@ async fn test_eager_resolve_package() {
 
     let eager_config = serde_json::json!({
         "packages": [
-            { "url": url_no_hash }
+            {
+                "url": url_no_hash,
+                "public_keys": make_public_keys_for_test(),
+            }
         ]
     });
 
@@ -119,8 +132,11 @@ async fn test_eager_get_hash() {
 
     let eager_config = serde_json::json!({
         "packages": [
-            { "url": url_no_hash }
-        ]
+            {
+                "url": url_no_hash,
+                "public_keys": make_public_keys_for_test(),
+            }
+        ],
     });
 
     let system_image_package = SystemImageBuilder::new().build().await;
@@ -167,7 +183,12 @@ async fn test_cup_write() {
     let repo_config = served_repository.make_repo_config(pkg_url.repo().clone());
 
     let eager_config = serde_json::json!({
-        "packages": [{ "url": url_no_hash }]
+        "packages": [
+            {
+                "url": url_no_hash,
+                "public_keys": make_public_keys_for_test(),
+            }
+        ]
     });
 
     let env = TestEnvBuilder::new()
@@ -211,8 +232,11 @@ async fn test_cup_get_info_persisted() {
 
     let eager_config = serde_json::json!({
         "packages": [
-            { "url": url_no_hash }
-        ]
+            {
+                "url": url_no_hash ,
+                "public_keys": make_public_keys_for_test(),
+            }
+        ],
     });
 
     let system_image_package = SystemImageBuilder::new().build().await;

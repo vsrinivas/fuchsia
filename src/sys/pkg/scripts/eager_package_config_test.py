@@ -234,10 +234,44 @@ class TestEagerPackageConfig(unittest.TestCase):
                                 "fuchsia-pkg://example.com/package_service_1",
                             "executable":
                                 True,
+                            'public_keys':
+                                {
+                                    'latest': {
+                                        'id': 123,
+                                        'key': 'foo',
+                                    },
+                                    'historical':
+                                        [
+                                            {
+                                                'id': 246,
+                                                'key': 'bar',
+                                            }, {
+                                                'id': 369,
+                                                'key': 'baz',
+                                            }
+                                        ],
+                                }
                         },
                         {
                             "url":
                                 "fuchsia-pkg://example.com/package_service_2",
+                            'public_keys':
+                                {
+                                    'latest': {
+                                        'id': 123,
+                                        'key': 'foo',
+                                    },
+                                    'historical':
+                                        [
+                                            {
+                                                'id': 246,
+                                                'key': 'bar',
+                                            }, {
+                                                'id': 369,
+                                                'key': 'baz',
+                                            }
+                                        ],
+                                }
                         },
                         {
                             "url":
