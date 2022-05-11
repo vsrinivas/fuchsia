@@ -91,6 +91,9 @@ rustc_binary("font_provider") {
     "//third_party/rust_crates:unicase",
   ]
 
+  # TODO(fxbug.dev/99760): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   test_deps = [
     "//src/lib/intl/unicode_utils/char_collection",
     "//third_party/rust_crates:maplit",

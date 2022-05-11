@@ -94,6 +94,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//src/cobalt/bin/system-metrics/*",
     "//src/developer/shell/josh/*",
     "//src/devices/usb/drivers/xhci/*",
+    "//src/fonts/*",
     "//src/graphics/lib/compute/*",
     "//src/graphics/lib/compute/forma/*",
     "//src/graphics/lib/compute/surpass/*",
