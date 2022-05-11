@@ -631,16 +631,10 @@ impl XdgSurface {
             while let Some(result) = layout_info_stream.next().await {
                 match result {
                     Ok(layout_info) => {
-                        if let Some(logical_size) = layout_info
-                            .logical_size
-                            // TODO(https://fxbug.dev/91259): Remove this filter when
-                            // no longer needed.
-                            .filter(|size| size.width > 32 || size.height > 32)
-                            .map(|size| SizeF {
-                                width: size.width as f32,
-                                height: size.height as f32,
-                            })
-                        {
+                        if let Some(logical_size) = layout_info.logical_size.map(|size| SizeF {
+                            width: size.width as f32,
+                            height: size.height as f32,
+                        }) {
                             task_queue.post(move |client| {
                                 if let Some(view) = this.get(client)?.view.clone() {
                                     view.lock().handle_layout_changed(&logical_size);
