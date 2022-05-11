@@ -200,7 +200,11 @@ To pave Fuchsia on your NUC, do the following:
    Take note of the block device path (for example, the path might look like
    `/dev/sys/platform/pci/00:17.0/ahci/sata0/block`).
 
-1. On the NUC, clear and initialize the partition tables of the NUC:
+1. On the NUC, wipe and initialize the partition tables of the NUC:
+
+   ```posix-terminal
+   install-disk-image wipe-partition-tables --block-device <BLOCK_DEVICE_PATH>
+   ```
 
    ```posix-terminal
    install-disk-image init-partition-tables --block-device <BLOCK_DEVICE_PATH>
@@ -210,6 +214,7 @@ To pave Fuchsia on your NUC, do the following:
    for example:
 
    ```none {:.devsite-disable-click-to-copy}
+   $ install-disk-image wipe-partition-tables --block-device /dev/sys/platform/pci/00:17.0/ahci/sata0/block
    $ install-disk-image init-partition-tables --block-device /dev/sys/platform/pci/00:17.0/ahci/sata0/block
    ```
 
