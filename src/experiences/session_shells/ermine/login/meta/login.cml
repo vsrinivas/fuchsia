@@ -109,6 +109,7 @@
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.power.battery.BatteryManager",
+                "fuchsia.power.button.Monitor",
                 "fuchsia.process.Launcher",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Keyboard",

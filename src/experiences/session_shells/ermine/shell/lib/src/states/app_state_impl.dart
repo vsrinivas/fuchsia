@@ -79,6 +79,7 @@ class AppStateImpl with Disposable implements AppState {
       ..onInspect = _onInspect
       ..onIdle = _onIdle
       ..onAltReleased = _triggerSwitch
+      ..onPowerBtnPressed = _onPowerBtnPressed
       ..serve();
     userFeedbackService
       ..onSubmit = _onFeedbackSubmit
@@ -755,6 +756,25 @@ class AppStateImpl with Disposable implements AppState {
       description,
       '$proposeError\n\n${Strings.moreErrorInformation}\n$referenceLink'
     ];
+  }
+
+  void _onPowerBtnPressed() {
+    _displayDialog(AlertDialogInfo(
+      title: Strings.restartOrShutDown,
+      body: Strings.powerBtnPressedDesc,
+      width: 648,
+      actions: [Strings.cancel, Strings.restart, Strings.shutdown],
+      onAction: (action) {
+        if (action == Strings.restart) {
+          startupService.restartDevice();
+          dispose();
+        }
+        if (action == Strings.shutdown) {
+          startupService.shutdownDevice();
+          dispose();
+        }
+      },
+    ));
   }
 
   bool _isPrelistedApp(String url) =>

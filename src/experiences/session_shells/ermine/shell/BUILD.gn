@@ -108,6 +108,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.power.battery",
+    "//sdk/fidl/fuchsia.power.button",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ssh",
     "//sdk/fidl/fuchsia.ui.activity",

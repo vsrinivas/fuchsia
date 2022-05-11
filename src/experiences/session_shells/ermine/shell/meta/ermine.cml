@@ -42,6 +42,7 @@
                 "fuchsia.memory.Monitor",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.power.battery.BatteryManager",
+                "fuchsia.power.button.Monitor",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Privacy",
                 "fuchsia.ssh.AuthorizedKeys",

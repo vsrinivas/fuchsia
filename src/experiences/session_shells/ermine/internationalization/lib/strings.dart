@@ -1379,6 +1379,20 @@ class Strings {
         ],
       );
 
+  static String get restartOrShutDown => Intl.message(
+        'Do you want to restart or shut down the device?',
+        name: 'do you want to restart or shut down',
+        desc: 'The title of the dialog for power button pressed',
+      );
+
+  static String get powerBtnPressedDesc => Intl.message(
+        'These actions will close all running apps and you could '
+        'lose unsaved work. The device will shut down automatically '
+        'if you press and hold the power button for 8 seconds.',
+        name: 'restart / shutdown warning',
+        desc: 'The description of the dialog for power button pressed.',
+      );
+
   /// Lookup message given it's name.
   static String? lookup(String name) {
     final _messages = <String, String>{

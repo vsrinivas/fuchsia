@@ -11,9 +11,10 @@ import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_buildinfo/fidl_async.dart' as buildinfo;
 import 'package:fidl_fuchsia_hardware_power_statecontrol/fidl_async.dart';
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
+import 'package:fidl_fuchsia_power_button/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_activity/fidl_async.dart' as activity;
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/widgets.dart' hide Action;
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_logger/logger.dart';
@@ -67,6 +68,9 @@ class StartupService extends activity.Listener {
   /// Callback when the Alt key was released. Used to dismiss app switching ui.
   late final VoidCallback onAltReleased;
 
+  /// Callback when the keyboard power button was pressed.
+  late final VoidCallback onPowerBtnPressed;
+
   final _inspect = Inspect();
   final _intl = PropertyProviderProxy();
   final _hardwareAdmin = AdminProxy();
@@ -74,6 +78,8 @@ class StartupService extends activity.Listener {
   final _activity = activity.ProviderProxy();
   final _activityBinding = activity.ListenerBinding();
   final _activityTracker = activity.TrackerProxy();
+  final _powerBtnMonitor = MonitorProxy();
+
   String _buildVersion = '--';
   late final List<Map<String, String>> appLaunchEntries;
 
@@ -85,6 +91,7 @@ class StartupService extends activity.Listener {
     Incoming.fromSvcPath().connectToService(_provider);
     Incoming.fromSvcPath().connectToService(_activity);
     Incoming.fromSvcPath().connectToService(_activityTracker);
+    Incoming.fromSvcPath().connectToService(_powerBtnMonitor);
 
     if (allowScreensaver) {
       _activity.watchState(_activityBinding.wrap(this));
@@ -155,6 +162,22 @@ class StartupService extends activity.Listener {
     _provider.getBuildInfo().then((buildInfo) {
       _buildVersion = buildInfo.version ?? '--';
     });
+
+    // Monitor the power button and display a dialog when it is pressed.
+    _initPowerBtnAction();
+    _powerBtnMonitor.onButtonEvent.listen((event) {
+      if (event == PowerButtonEvent.press) {
+        log.info('The keyboard power button is pressed.');
+        onPowerBtnPressed();
+      }
+    });
+  }
+
+  void _initPowerBtnAction() async {
+    await _powerBtnMonitor.setAction(Action.ignore);
+    final action = await _powerBtnMonitor.getAction();
+    log.info(
+        'Set the power button action to ${action == Action(0) ? 'IGNORE' : 'SHUTDOWN'}');
   }
 
   void dispose() {
