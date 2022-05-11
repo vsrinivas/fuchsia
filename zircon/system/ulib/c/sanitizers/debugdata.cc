@@ -138,8 +138,3 @@ zx_handle_t __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
 
   return vmo_token_client;
 }
-
-__EXPORT
-zx_status_t __sanitizer_get_configuration(const char* name, zx_handle_t* out_vmo) {
-  return ZX_ERR_NOT_SUPPORTED;
-}

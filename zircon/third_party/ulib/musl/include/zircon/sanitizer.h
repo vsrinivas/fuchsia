@@ -89,10 +89,6 @@ void __sanitizer_log_write(const char* buffer, size_t len);
 // there is no way to communicate data readiness before process exit.
 zx_handle_t __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo);
 
-// This function is obsolete and always fails.  It will be removed.
-// TODO(fxbug.dev/96351): Remove when API/ABI compat is no longer needed.
-zx_status_t __sanitizer_get_configuration(const char* config_name, zx_handle_t* out_vmo);
-
 // Changes protection of the code in the range of len bytes starting
 // from addr. The writable argument specifies whether the code should
 // be made writable or not. This function is only valid on ranges within
