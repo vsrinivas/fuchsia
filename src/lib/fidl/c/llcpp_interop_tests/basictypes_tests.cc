@@ -251,8 +251,8 @@ TEST(BasicTypesTest, SyncCallStruct) {
   // perform call
   auto result = test->ConsumeSimpleStruct(std::move(simple_struct));
   ASSERT_OK(result.status());
-  ASSERT_OK(result.Unwrap()->status);
-  ASSERT_EQ(result.Unwrap()->field, 123);
+  ASSERT_OK(result.Unwrap_NEW()->status);
+  ASSERT_EQ(result.Unwrap_NEW()->field, 123);
 
   TearDownAsyncCServerHelper(loop);
 }
@@ -298,8 +298,8 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
   auto result = test.buffer(fidl::BufferSpan(buf, sizeof(buf)))
                     ->ConsumeSimpleStruct(std::move(simple_struct));
   ASSERT_OK(result.status());
-  ASSERT_OK(result.Unwrap()->status);
-  ASSERT_EQ(result.Unwrap()->field, 123);
+  ASSERT_OK(result.Unwrap_NEW()->status);
+  ASSERT_EQ(result.Unwrap_NEW()->field, 123);
 
   TearDownAsyncCServerHelper(loop);
 }

@@ -426,7 +426,7 @@ void SimpleCountNumDirectories() {
       }
     }
     ASSERT_OK(result.status());
-    ASSERT_EQ(expected_num_dir, result.Unwrap()->num_dir);
+    ASSERT_EQ(expected_num_dir, result.Unwrap_NEW()->num_dir);
   }
   ASSERT_EQ(server.CountNumDirectoriesNumCalls(), kNumIterations);
 }
@@ -461,7 +461,7 @@ void CallerAllocateCountNumDirectories() {
       }
     }
     ASSERT_OK(result.status());
-    ASSERT_EQ(expected_num_dir, result.Unwrap()->num_dir);
+    ASSERT_EQ(expected_num_dir, result.Unwrap_NEW()->num_dir);
   }
   ASSERT_EQ(server.CountNumDirectoriesNumCalls(), kNumIterations);
 }
@@ -481,7 +481,7 @@ void CallerAllocateReadDir() {
     fidl::SyncClientBuffer<gen::DirEntTestInterface::ReadDir> buffer;
     auto result = client.buffer(buffer.view())->ReadDir();
     ASSERT_OK(result.status());
-    const auto& dirents = result.Unwrap()->dirents;
+    const auto& dirents = result.Unwrap_NEW()->dirents;
     ASSERT_EQ(dirents.count(), golden_dirents().count());
     for (uint64_t i = 0; i < dirents.count(); i++) {
       auto& actual = dirents[i];

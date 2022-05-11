@@ -971,6 +971,22 @@ class [[nodiscard]] ::fidl::WireResult<
         bytes_.data() + sizeof(fidl_message_header_t));
   }
 
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_unknowninteractions::Example::FlexibleTwoWay>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_unknowninteractions::Example::FlexibleTwoWay>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+
   ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
   value() {
     return *Unwrap();
@@ -979,6 +995,16 @@ class [[nodiscard]] ::fidl::WireResult<
       ::test_unknowninteractions::Example::FlexibleTwoWay>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
@@ -1053,6 +1079,22 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
                  ->body);
   }
 
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_unknowninteractions::Example::FlexibleTwoWay>*>(bytes_)
+                 ->body);
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_unknowninteractions::Example::FlexibleTwoWay>*>(bytes_)
+                 ->body);
+  }
+
   ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
   value() {
     return *Unwrap();
@@ -1061,6 +1103,16 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::test_unknowninteractions::Example::FlexibleTwoWay>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*

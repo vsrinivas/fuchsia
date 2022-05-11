@@ -328,11 +328,33 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>
                  ->body);
   }
 
+  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_drivertwoway::TwoWay::Add>*>(bytes_)
+                 ->body);
+  }
+  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* Unwrap_NEW()
+      const {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_drivertwoway::TwoWay::Add>*>(bytes_)
+                 ->body);
+  }
+
   ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value() {
     return *Unwrap();
   }
   const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value_NEW()
+      const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* operator->() {

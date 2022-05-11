@@ -33,6 +33,14 @@ extern "C" const fidl_type_t
       ::test_anonymous::SomeProtocol::SomeMethod>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<
+      ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 
 ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>::WireResult(
@@ -52,6 +60,14 @@ extern "C" const fidl_type_t
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<
+      ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 namespace test_anonymous {
 #endif  // __Fuchsia__
@@ -91,6 +107,14 @@ namespace test_anonymous {
       ::test_anonymous::SomeProtocol::SomeMethod>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
+  auto* raw_response = reinterpret_cast<
+      ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*>(
+      bytes_ + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
   ::fidl::Status::operator=(outgoing);
 }
 namespace test_anonymous {

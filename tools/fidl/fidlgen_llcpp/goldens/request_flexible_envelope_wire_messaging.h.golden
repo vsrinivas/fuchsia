@@ -650,6 +650,25 @@ class [[nodiscard]] ::fidl::WireResult<
   }
 
   ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                 RequestStrictResponseFlexible>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                       RequestStrictResponseFlexible>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+
+  ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   value() {
     return *Unwrap();
@@ -658,6 +677,17 @@ class [[nodiscard]] ::fidl::WireResult<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<
@@ -741,6 +771,25 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
   ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_requestflexibleenvelope::Protocol::
+                     RequestStrictResponseFlexible>*>(bytes_)
+                 ->body);
+  }
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_requestflexibleenvelope::Protocol::
+                     RequestStrictResponseFlexible>*>(bytes_)
+                 ->body);
+  }
+
+  ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   value() {
     return *Unwrap();
@@ -749,6 +798,17 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<
@@ -818,6 +878,25 @@ class [[nodiscard]] ::fidl::WireResult<
   }
 
   ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                 RequestFlexibleResponseStrict>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                       RequestFlexibleResponseStrict>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+
+  ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   value() {
     return *Unwrap();
@@ -826,6 +905,17 @@ class [[nodiscard]] ::fidl::WireResult<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<
@@ -909,6 +999,25 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
   ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_requestflexibleenvelope::Protocol::
+                     RequestFlexibleResponseStrict>*>(bytes_)
+                 ->body);
+  }
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_requestflexibleenvelope::Protocol::
+                     RequestFlexibleResponseStrict>*>(bytes_)
+                 ->body);
+  }
+
+  ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   value() {
     return *Unwrap();
@@ -917,6 +1026,17 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<

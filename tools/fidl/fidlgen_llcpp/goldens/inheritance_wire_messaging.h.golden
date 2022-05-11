@@ -310,11 +310,33 @@ class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Super::Foo> final
         bytes_.data() + sizeof(fidl_message_header_t));
   }
 
+  ::fidl::WireResponse<::test_inheritance::Super::Foo>* Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireResponse<::test_inheritance::Super::Foo>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+  const ::fidl::WireResponse<::test_inheritance::Super::Foo>* Unwrap_NEW()
+      const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::test_inheritance::Super::Foo>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+
   ::fidl::WireResponse<::test_inheritance::Super::Foo>& value() {
     return *Unwrap();
   }
   const ::fidl::WireResponse<::test_inheritance::Super::Foo>& value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_inheritance::Super::Foo>& value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<::test_inheritance::Super::Foo>& value_NEW()
+      const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_inheritance::Super::Foo>* operator->() {
@@ -381,11 +403,33 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Super::Foo>
                  ->body);
   }
 
+  ::fidl::WireResponse<::test_inheritance::Super::Foo>* Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_inheritance::Super::Foo>*>(bytes_)
+                 ->body);
+  }
+  const ::fidl::WireResponse<::test_inheritance::Super::Foo>* Unwrap_NEW()
+      const {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_inheritance::Super::Foo>*>(bytes_)
+                 ->body);
+  }
+
   ::fidl::WireResponse<::test_inheritance::Super::Foo>& value() {
     return *Unwrap();
   }
   const ::fidl::WireResponse<::test_inheritance::Super::Foo>& value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_inheritance::Super::Foo>& value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<::test_inheritance::Super::Foo>& value_NEW()
+      const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_inheritance::Super::Foo>* operator->() {
@@ -854,11 +898,31 @@ class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Sub::Foo> final
         bytes_.data() + sizeof(fidl_message_header_t));
   }
 
+  ::fidl::WireResponse<::test_inheritance::Sub::Foo>* Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireResponse<::test_inheritance::Sub::Foo>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>* Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::test_inheritance::Sub::Foo>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+
   ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value() {
     return *Unwrap();
   }
   const ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_inheritance::Sub::Foo>* operator->() {
@@ -923,11 +987,31 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo>
                  ->body);
   }
 
+  ::fidl::WireResponse<::test_inheritance::Sub::Foo>* Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_inheritance::Sub::Foo>*>(bytes_)
+                 ->body);
+  }
+  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>* Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_inheritance::Sub::Foo>*>(bytes_)
+                 ->body);
+  }
+
   ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value() {
     return *Unwrap();
   }
   const ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_inheritance::Sub::Foo>* operator->() {

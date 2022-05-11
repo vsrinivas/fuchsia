@@ -193,7 +193,7 @@ TEST(MagicNumberTest, ResponseWrite) {
                     .buffer(fidl_buffer.view())
                     ->Grob(fidl::StringView::FromExternal(s));
   ASSERT_OK(result.status());
-  uint8_t* body_bytes = reinterpret_cast<uint8_t*>(result.Unwrap());
+  uint8_t* body_bytes = reinterpret_cast<uint8_t*>(result.Unwrap_NEW());
   auto resp = reinterpret_cast<fidl::internal::TransactionalResponse<test::Frobinator::Grob>*>(
       body_bytes - sizeof(fidl_message_header_t));
   ASSERT_EQ(resp->header.magic_number, kFidlWireFormatMagicNumberInitial);
@@ -330,14 +330,14 @@ TEST_F(HandleTest, HandleClosedAfterHandleStructMove) {
   auto result = client->GetHandle();
 
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->value.h.is_valid());
+  ASSERT_TRUE(result.value_NEW().value.h.is_valid());
 
   // Dupe the event so we can get the handle count after move.
   zx::event dupe;
-  ASSERT_EQ(result->value.h.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
+  ASSERT_EQ(result.value_NEW().value.h.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
 
   // A move of a struct holding a handle will move the handle from the result, resulting in a close
-  { auto release = std::move(result->value); }  // ~HandleStruct
+  { auto release = std::move(result.value_NEW().value); }  // ~HandleStruct
 
   // Only remaining handle should be the dupe.
   ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);
@@ -352,15 +352,15 @@ TEST_F(HandleTest, HandleCloseForTableAndUnionPayload) {
       client->SwapHandle(test::wire::HandleTable::Builder(allocator).h(std::move(h)).Build());
 
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->is_h());
-  ASSERT_TRUE(result->h().is_valid());
+  ASSERT_TRUE(result.value_NEW().is_h());
+  ASSERT_TRUE(result.value_NEW().h().is_valid());
 
   // Dupe the event so we can get the handle count after move.
   zx::event dupe;
-  ASSERT_EQ(result->h().duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
+  ASSERT_EQ(result.value_NEW().h().duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
 
   // A move of a union holding a handle will move the handle from the result, resulting in a close
-  { auto release = std::move(result->h()); }  // ~HandleUnion
+  { auto release = std::move(result.value_NEW().h()); }  // ~HandleUnion
 
   // Only remaining handle should be the dupe.
   ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);
@@ -376,11 +376,11 @@ TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterVectorMove) {
     auto result = client->GetHandleVector(kNumHandles);
 
     ASSERT_OK(result.status());
-    ASSERT_EQ(result->value.count(), kNumHandles);
+    ASSERT_EQ(result.value_NEW().value.count(), kNumHandles);
 
     for (uint32_t i = 0; i < kNumHandles; i++) {
-      ASSERT_TRUE(result->value[i].h.is_valid());
-      ASSERT_EQ(result->value[i].h.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupes[i]), ZX_OK);
+      ASSERT_TRUE(result.value_NEW().value[i].h.is_valid());
+      ASSERT_EQ(result.value_NEW().value[i].h.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupes[i]), ZX_OK);
     }
 
     // std::move of VectorView only moves pointers, not handles.
@@ -402,17 +402,17 @@ TEST_F(HandleTest, HandleUnion) {
   auto result = client->GetHandleUnion();
 
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->value.u.h().is_valid());
+  ASSERT_TRUE(result.value_NEW().value.u.h().is_valid());
 
   // Dupe the event so we can get the handle count after move.
   zx::event dupe;
-  ASSERT_EQ(result->value.u.h().duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
+  ASSERT_EQ(result.value_NEW().value.u.h().duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
 
   // Should have two dupes before releasing the original handle.
   ASSERT_EQ(GetHandleCount(dupe.borrow()), 2u);
 
   // A move of a struct holding a handle will move the handle from the result, resulting in a close
-  { auto release = std::move(result->value); }  // ~HandleUnionStruct
+  { auto release = std::move(result.value_NEW().value); }  // ~HandleUnionStruct
 
   // Only remaining handle should be the dupe.
   ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);

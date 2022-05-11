@@ -440,6 +440,14 @@ namespace test_protocollayouts {
       ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 
 ::fidl::WireResult<
@@ -462,6 +470,14 @@ namespace test_protocollayouts {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 namespace test_protocollayouts {
 #endif  // __Fuchsia__
@@ -504,6 +520,14 @@ namespace test_protocollayouts {
       ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>*>(
+      bytes_ + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
   ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocollayouts {
@@ -670,6 +694,14 @@ namespace test_protocollayouts {
       ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 
 ::fidl::WireResult<
@@ -692,6 +724,14 @@ namespace test_protocollayouts {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 namespace test_protocollayouts {
 #endif  // __Fuchsia__
@@ -734,6 +774,14 @@ namespace test_protocollayouts {
       ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>*>(
+      bytes_ + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
   ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocollayouts {
@@ -894,6 +942,14 @@ namespace test_protocollayouts {
       ::test_protocollayouts::MainProtocol::TwoWayImportWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 
 ::fidl::WireResult<
@@ -916,6 +972,14 @@ namespace test_protocollayouts {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 namespace test_protocollayouts {
 #endif  // __Fuchsia__
@@ -958,6 +1022,14 @@ namespace test_protocollayouts {
       ::test_protocollayouts::MainProtocol::TwoWayImportWithError>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayImportWithError>*>(
+      bytes_ + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
   ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocollayouts {
@@ -1117,6 +1189,14 @@ namespace test_protocollayouts {
       ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>::
@@ -1138,6 +1218,14 @@ namespace test_protocollayouts {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 namespace test_protocollayouts {
 #endif  // __Fuchsia__
@@ -1180,6 +1268,14 @@ namespace test_protocollayouts {
       ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>*>(
+      bytes_ + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
   ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocollayouts {
@@ -1339,6 +1435,14 @@ namespace test_protocollayouts {
       ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>::
@@ -1359,6 +1463,14 @@ namespace test_protocollayouts {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>*>(
+      bytes_.data() + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
 }
 namespace test_protocollayouts {
 #endif  // __Fuchsia__
@@ -1401,6 +1513,14 @@ namespace test_protocollayouts {
       ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
+  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>*>(
+      bytes_ + sizeof(fidl_message_header_t));
+  if (raw_response->result.is_err()) {
+    result_ = fitx::error(raw_response->result.err());
+  } else if (raw_response->result.is_response()) {
+    result_ = fitx::ok(&(raw_response->result.response()));
+  }
   ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocollayouts {

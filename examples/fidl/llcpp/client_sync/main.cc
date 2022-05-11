@@ -29,7 +29,8 @@ int main(int argc, const char** argv) {
     // Make an EchoString request, then print out the response.
     auto result = client->EchoString("hello");
     ZX_ASSERT(result.ok());
-    std::string reply_string(result->response.data(), result->response.size());
+    std::string reply_string(result.Unwrap_NEW()->response.data(),
+                             result.Unwrap_NEW()->response.size());
     std::cout << "Got response: " << reply_string << std::endl;
   }
 

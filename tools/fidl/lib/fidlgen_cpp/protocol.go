@@ -634,6 +634,20 @@ func (m Method) NaturalResultBase() string {
 	}
 }
 
+func (m Method) WireResultBase() string {
+	if m.Result != nil {
+		if len(m.Result.ValueParameters) > 0 {
+			return fmt.Sprintf("::fitx::result<%s, %s*>", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
+		} else {
+			return fmt.Sprintf("::fitx::result<%s>", m.Result.ErrorDecl)
+		}
+	}
+	if len(m.ResponseArgs) > 0 {
+		return m.WireResponse.String()
+	}
+	panic("Cannot call WireResultBase on an empty response payload")
+}
+
 func (m Method) RequestMessageBase() string {
 	if m.HasRequestPayload {
 		return m.RequestPayload.String()

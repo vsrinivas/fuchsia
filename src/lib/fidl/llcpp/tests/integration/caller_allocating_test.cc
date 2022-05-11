@@ -94,8 +94,8 @@ TEST_F(WireCallTest, CallerAllocateBufferSpan) {
   fidl::SyncClientBuffer<test::Frobinator::Grob> buffer;
   fidl::WireUnownedResult result = fidl::WireCall(client_end()).buffer(buffer.view())->Grob("test");
   ASSERT_OK(result.status());
-  EXPECT_EQ(result->value.get(), "test");
-  EXPECT_TRUE(IsPointerInBufferSpan(result.Unwrap(), buffer.view()));
+  EXPECT_EQ(result.value_NEW().value.get(), "test");
+  EXPECT_TRUE(IsPointerInBufferSpan(result.Unwrap_NEW(), buffer.view()));
 }
 
 TEST_F(WireCallTest, CallerAllocateBufferSpanLeftValueVeneerObject) {
@@ -103,16 +103,16 @@ TEST_F(WireCallTest, CallerAllocateBufferSpanLeftValueVeneerObject) {
   auto buffered = fidl::WireCall(client_end()).buffer(buffer.view());
   fidl::WireUnownedResult result = buffered->Grob("test");
   ASSERT_OK(result.status());
-  EXPECT_EQ(result->value.get(), "test");
-  EXPECT_TRUE(IsPointerInBufferSpan(result.Unwrap(), buffer.view()));
+  EXPECT_EQ(result.value_NEW().value.get(), "test");
+  EXPECT_TRUE(IsPointerInBufferSpan(result.Unwrap_NEW(), buffer.view()));
 }
 
 TEST_F(WireCallTest, CallerAllocateArena) {
   fidl::Arena arena;
   fidl::WireUnownedResult result = fidl::WireCall(client_end()).buffer(arena)->Grob("test");
   ASSERT_OK(result.status());
-  EXPECT_EQ(result->value.get(), "test");
-  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(result.Unwrap(), arena));
+  EXPECT_EQ(result.value_NEW().value.get(), "test");
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(result.Unwrap_NEW(), arena));
 }
 
 TEST_F(WireCallTest, CallerAllocateArenaLeftValueVeneerObject) {
@@ -128,12 +128,12 @@ TEST_F(WireCallTest, CallerAllocateArenaLeftValueVeneerObject) {
   ASSERT_OK(result_foo.status());
   ASSERT_OK(result_bar.status());
   ASSERT_OK(result_baz.status());
-  EXPECT_EQ(result_foo->value.get(), "foo");
-  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(result_foo.Unwrap(), *arena));
-  EXPECT_EQ(result_bar->value.get(), "bar");
-  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(result_bar.Unwrap(), *arena));
-  EXPECT_EQ(result_baz->value.get(), "baz");
-  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(result_baz.Unwrap(), *arena));
+  EXPECT_EQ(result_foo.value_NEW().value.get(), "foo");
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(result_foo.Unwrap_NEW(), *arena));
+  EXPECT_EQ(result_bar.value_NEW().value.get(), "bar");
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(result_bar.Unwrap_NEW(), *arena));
+  EXPECT_EQ(result_baz.value_NEW().value.get(), "baz");
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(result_baz.Unwrap_NEW(), *arena));
 }
 
 TEST_F(WireCallTest, CallerAllocateInsufficientBufferSize) {
@@ -152,7 +152,7 @@ class GrobResponseContext : public fidl::WireResponseContext<test::Frobinator::G
  public:
   void OnResult(fidl::WireUnownedResult<test::Frobinator::Grob>& result) final {
     ASSERT_OK(result.status());
-    EXPECT_EQ(result->value.get(), "test");
+    EXPECT_EQ(result.value_NEW().value.get(), "test");
     got_result = true;
   }
   bool got_result = false;
@@ -395,7 +395,7 @@ TEST_F(WireCompleterTest, CallerAllocateBufferSpan) {
       [&](fidl::WireUnownedResult<test::Frobinator::Grob>& result) {
         called = true;
         ASSERT_OK(result.status());
-        EXPECT_EQ("test", result->value.get());
+        EXPECT_EQ("test", result.value_NEW().value.get());
       });
   EXPECT_OK(loop()->RunUntilIdle());
   EXPECT_TRUE(called);
@@ -413,7 +413,7 @@ TEST_F(WireCompleterTest, CallerAllocateArena) {
       [&](fidl::WireUnownedResult<test::Frobinator::Grob>& result) {
         called = true;
         ASSERT_OK(result.status());
-        EXPECT_EQ("test", result->value.get());
+        EXPECT_EQ("test", result.value_NEW().value.get());
       });
   EXPECT_OK(loop()->RunUntilIdle());
   EXPECT_TRUE(called);

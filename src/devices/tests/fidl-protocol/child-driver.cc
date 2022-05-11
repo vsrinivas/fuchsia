@@ -58,10 +58,10 @@ class Device : public DeviceParent {
       zxlogf(ERROR, "Failed to call EchoString");
       return result.status();
     }
-    if (result->response.get() != kInput) {
+    if (result.value_NEW().response.get() != kInput) {
       zxlogf(ERROR, "Unexpected response: Actual: \"%.*s\", Expected: \"%.*s\"",
-             static_cast<int>(result->response.size()), result->response.data(),
-             static_cast<int>(kInput.size()), kInput.data());
+             static_cast<int>(result.value_NEW().response.size()),
+             result.value_NEW().response.data(), static_cast<int>(kInput.size()), kInput.data());
       return ZX_ERR_INTERNAL;
     }
 

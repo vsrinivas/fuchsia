@@ -582,6 +582,21 @@ class [[nodiscard]] ::fidl::WireResult<
         bytes_.data() + sizeof(fidl_message_header_t));
   }
 
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_emptystruct::EmptyProtocol::SendAndReceive>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_emptystruct::EmptyProtocol::SendAndReceive>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+
   ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   value() {
     return *Unwrap();
@@ -589,6 +604,15 @@ class [[nodiscard]] ::fidl::WireResult<
   const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
@@ -660,6 +684,21 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
                  ->body);
   }
 
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_emptystruct::EmptyProtocol::SendAndReceive>*>(bytes_)
+                 ->body);
+  }
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_emptystruct::EmptyProtocol::SendAndReceive>*>(bytes_)
+                 ->body);
+  }
+
   ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   value() {
     return *Unwrap();
@@ -667,6 +706,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*

@@ -2753,6 +2753,19 @@ class [[nodiscard]] ::fidl::WireResult<
         bytes_.data() + sizeof(fidl_message_header_t));
   }
 
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>*
+  Unwrap_NEW() {
+    return &result_.value();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>*
+  Unwrap_NEW() const {
+    return &result_.value();
+  }
+
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
   value() {
     return *Unwrap();
@@ -2761,6 +2774,19 @@ class [[nodiscard]] ::fidl::WireResult<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
@@ -2785,6 +2811,10 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  std::optional<::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>>
+      result_ = std::nullopt;
 };
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
@@ -2800,7 +2830,16 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
+  }
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   explicit WireUnownedResult(
@@ -2810,6 +2849,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+      auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(
+          bytes_ + sizeof(fidl_message_header_t));
+      if (raw_response->result.is_err()) {
+        result_ = fitx::error(raw_response->result.err());
+      } else if (raw_response->result.is_response()) {
+        result_ = fitx::ok(&(raw_response->result.response()));
+      }
     } else {
       bytes_ = nullptr;
     }
@@ -2838,6 +2885,19 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
             ->body);
   }
 
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>*
+  Unwrap_NEW() {
+    return &result_.value();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>*
+  Unwrap_NEW() const {
+    return &result_.value();
+  }
+
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
   value() {
     return *Unwrap();
@@ -2846,6 +2906,19 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
@@ -2870,6 +2943,10 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
 
  private:
   uint8_t* bytes_;
+  std::optional<::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>>
+      result_ = std::nullopt;
 };
 template <>
 class [[nodiscard]] ::fidl::WireResult<
@@ -2907,6 +2984,19 @@ class [[nodiscard]] ::fidl::WireResult<
         bytes_.data() + sizeof(fidl_message_header_t));
   }
 
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>*
+  Unwrap_NEW() {
+    return &result_.value();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>*
+  Unwrap_NEW() const {
+    return &result_.value();
+  }
+
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
   value() {
     return *Unwrap();
@@ -2915,6 +3005,19 @@ class [[nodiscard]] ::fidl::WireResult<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
@@ -2939,6 +3042,10 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  std::optional<::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>>
+      result_ = std::nullopt;
 };
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
@@ -2954,7 +3061,16 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
+  }
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   explicit WireUnownedResult(
@@ -2964,6 +3080,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+      auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(
+          bytes_ + sizeof(fidl_message_header_t));
+      if (raw_response->result.is_err()) {
+        result_ = fitx::error(raw_response->result.err());
+      } else if (raw_response->result.is_response()) {
+        result_ = fitx::ok(&(raw_response->result.response()));
+      }
     } else {
       bytes_ = nullptr;
     }
@@ -2990,6 +3114,19 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
                  ->body);
   }
 
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>*
+  Unwrap_NEW() {
+    return &result_.value();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>*
+  Unwrap_NEW() const {
+    return &result_.value();
+  }
+
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
   value() {
     return *Unwrap();
@@ -2998,6 +3135,19 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
@@ -3022,6 +3172,10 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
 
  private:
   uint8_t* bytes_;
+  std::optional<::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>>
+      result_ = std::nullopt;
 };
 template <>
 class [[nodiscard]] ::fidl::WireResult<
@@ -3061,6 +3215,19 @@ class [[nodiscard]] ::fidl::WireResult<
         bytes_.data() + sizeof(fidl_message_header_t));
   }
 
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>*
+  Unwrap_NEW() {
+    return &result_.value();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>*
+  Unwrap_NEW() const {
+    return &result_.value();
+  }
+
   ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
   value() {
@@ -3070,6 +3237,19 @@ class [[nodiscard]] ::fidl::WireResult<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<
@@ -3096,6 +3276,10 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  std::optional<::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>>
+      result_ = std::nullopt;
 };
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
@@ -3113,7 +3297,16 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
           response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
+  }
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   explicit WireUnownedResult(
@@ -3124,6 +3317,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+      auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
+          bytes_ + sizeof(fidl_message_header_t));
+      if (raw_response->result.is_err()) {
+        result_ = fitx::error(raw_response->result.err());
+      } else if (raw_response->result.is_response()) {
+        result_ = fitx::ok(&(raw_response->result.response()));
+      }
     } else {
       bytes_ = nullptr;
     }
@@ -3153,6 +3354,19 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
                  ->body);
   }
 
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>*
+  Unwrap_NEW() {
+    return &result_.value();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>*
+  Unwrap_NEW() const {
+    return &result_.value();
+  }
+
   ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
   value() {
@@ -3162,6 +3376,19 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<
@@ -3188,6 +3415,10 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
 
  private:
   uint8_t* bytes_;
+  std::optional<::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>>
+      result_ = std::nullopt;
 };
 template <>
 class [[nodiscard]] ::fidl::WireResult<
@@ -3225,6 +3456,19 @@ class [[nodiscard]] ::fidl::WireResult<
         bytes_.data() + sizeof(fidl_message_header_t));
   }
 
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>*
+  Unwrap_NEW() {
+    return &result_.value();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>*
+  Unwrap_NEW() const {
+    return &result_.value();
+  }
+
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
   value() {
     return *Unwrap();
@@ -3233,6 +3477,19 @@ class [[nodiscard]] ::fidl::WireResult<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
@@ -3257,6 +3514,10 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  std::optional<::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>>
+      result_ = std::nullopt;
 };
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
@@ -3272,7 +3533,16 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
+  }
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   explicit WireUnownedResult(
@@ -3282,6 +3552,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+      auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(
+          bytes_ + sizeof(fidl_message_header_t));
+      if (raw_response->result.is_err()) {
+        result_ = fitx::error(raw_response->result.err());
+      } else if (raw_response->result.is_response()) {
+        result_ = fitx::ok(&(raw_response->result.response()));
+      }
     } else {
       bytes_ = nullptr;
     }
@@ -3310,6 +3588,19 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
             ->body);
   }
 
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>*
+  Unwrap_NEW() {
+    return &result_.value();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>*
+  Unwrap_NEW() const {
+    return &result_.value();
+  }
+
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
   value() {
     return *Unwrap();
@@ -3318,6 +3609,19 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
@@ -3342,6 +3646,10 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
 
  private:
   uint8_t* bytes_;
+  std::optional<::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>>
+      result_ = std::nullopt;
 };
 template <>
 class [[nodiscard]] ::fidl::WireResult<
@@ -3381,6 +3689,19 @@ class [[nodiscard]] ::fidl::WireResult<
         bytes_.data() + sizeof(fidl_message_header_t));
   }
 
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>*
+  Unwrap_NEW() {
+    return &result_.value();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>*
+  Unwrap_NEW() const {
+    return &result_.value();
+  }
+
   ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
   value() {
@@ -3390,6 +3711,19 @@ class [[nodiscard]] ::fidl::WireResult<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<
@@ -3416,6 +3750,10 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  std::optional<::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>>
+      result_ = std::nullopt;
 };
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
@@ -3433,7 +3771,16 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
           response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
+      : bytes_(reinterpret_cast<uint8_t*>(response)) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
+  }
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   explicit WireUnownedResult(
@@ -3444,6 +3791,14 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
+      auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
+          bytes_ + sizeof(fidl_message_header_t));
+      if (raw_response->result.is_err()) {
+        result_ = fitx::error(raw_response->result.err());
+      } else if (raw_response->result.is_response()) {
+        result_ = fitx::ok(&(raw_response->result.response()));
+      }
     } else {
       bytes_ = nullptr;
     }
@@ -3473,6 +3828,19 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
                  ->body);
   }
 
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>*
+  Unwrap_NEW() {
+    return &result_.value();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>*
+  Unwrap_NEW() const {
+    return &result_.value();
+  }
+
   ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
   value() {
@@ -3482,6 +3850,19 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<
@@ -3508,6 +3889,10 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
 
  private:
   uint8_t* bytes_;
+  std::optional<::fitx::result<
+      uint32_t,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>>
+      result_ = std::nullopt;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<

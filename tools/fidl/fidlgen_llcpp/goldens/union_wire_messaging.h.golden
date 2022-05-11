@@ -593,6 +593,25 @@ class [[nodiscard]] ::fidl::WireResult<
   }
 
   ::fidl::WireResponse<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+  const ::fidl::WireResponse<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+
+  ::fidl::WireResponse<
       ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>&
   value() {
     return *Unwrap();
@@ -601,6 +620,17 @@ class [[nodiscard]] ::fidl::WireResult<
       ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<
@@ -684,6 +714,25 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
   ::fidl::WireResponse<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_union::TestProtocol::
+                     StrictXUnionHenceResponseMayBeStackAllocated>*>(bytes_)
+                 ->body);
+  }
+  const ::fidl::WireResponse<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_union::TestProtocol::
+                     StrictXUnionHenceResponseMayBeStackAllocated>*>(bytes_)
+                 ->body);
+  }
+
+  ::fidl::WireResponse<
       ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>&
   value() {
     return *Unwrap();
@@ -692,6 +741,17 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<
@@ -760,6 +820,26 @@ class [[nodiscard]] ::fidl::WireResult<
   }
 
   ::fidl::WireResponse<::test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<::fidl::WireResponse<
+        ::test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+  const ::fidl::WireResponse<
+      ::test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<const ::fidl::WireResponse<
+        ::test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+  }
+
+  ::fidl::WireResponse<::test_union::TestProtocol::
                            FlexibleXUnionHenceResponseMustBeHeapAllocated>&
   value() {
     return *Unwrap();
@@ -769,6 +849,18 @@ class [[nodiscard]] ::fidl::WireResult<
           FlexibleXUnionHenceResponseMustBeHeapAllocated>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<
+      ::test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_union::TestProtocol::
@@ -855,6 +947,26 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
   ::fidl::WireResponse<::test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  Unwrap_NEW() {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_union::TestProtocol::
+                     FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(bytes_)
+                 ->body);
+  }
+  const ::fidl::WireResponse<
+      ::test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+  Unwrap_NEW() const {
+    ZX_DEBUG_ASSERT(ok());
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_union::TestProtocol::
+                     FlexibleXUnionHenceResponseMustBeHeapAllocated>*>(bytes_)
+                 ->body);
+  }
+
+  ::fidl::WireResponse<::test_union::TestProtocol::
                            FlexibleXUnionHenceResponseMustBeHeapAllocated>&
   value() {
     return *Unwrap();
@@ -864,6 +976,18 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
           FlexibleXUnionHenceResponseMustBeHeapAllocated>&
   value() const {
     return *Unwrap();
+  }
+
+  ::fidl::WireResponse<::test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  value_NEW() {
+    return *Unwrap_NEW();
+  }
+  const ::fidl::WireResponse<
+      ::test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+  value_NEW() const {
+    return *Unwrap_NEW();
   }
 
   ::fidl::WireResponse<::test_union::TestProtocol::

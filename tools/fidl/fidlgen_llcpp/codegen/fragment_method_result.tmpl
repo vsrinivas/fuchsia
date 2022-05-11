@@ -41,8 +41,28 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
      return reinterpret_cast<const {{ .WireResponse }}*>(bytes_.data() + sizeof(fidl_message_header_t));
    }
 
+   {{ .WireResultBase }}* Unwrap_NEW() {
+     {{- if .Result }}
+       return &result_.value();
+     {{- else }}
+       ZX_DEBUG_ASSERT(ok());
+       return reinterpret_cast<{{ .WireResponse }}*>(bytes_.data() + sizeof(fidl_message_header_t));
+     {{- end }}
+   }
+   const {{ .WireResultBase }}* Unwrap_NEW() const {
+     {{- if .Result }}
+       return &result_.value();
+     {{- else }}
+       ZX_DEBUG_ASSERT(ok());
+       return reinterpret_cast<const {{ .WireResponse }}*>(bytes_.data() + sizeof(fidl_message_header_t));
+     {{- end }}
+   }
+
    {{ .WireResponse }}& value() { return *Unwrap(); }
    const {{ .WireResponse }}& value() const { return *Unwrap(); }
+
+   {{ .WireResultBase }}& value_NEW() { return *Unwrap_NEW(); }
+   const {{ .WireResultBase }}& value_NEW() const { return *Unwrap_NEW(); }
 
    {{ .WireResponse }}* operator->() { return &value(); }
    const {{ .WireResponse }}* operator->() const { return &value(); }
@@ -55,6 +75,9 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
   private:
    {{- if .HasResponse }}
    {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
+   {{- end }}
+   {{- if .Result }}
+   std::optional<{{ .WireResultBase }}> result_ = std::nullopt;
    {{- end }}
 };
 {{- end }}
@@ -82,6 +105,19 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
   outgoing.Write(client.handle());
   {{- end }}
   SetStatus(outgoing);
+  {{- if .Result }}
+    auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(
+        {{- if .Result.ValueParameters -}}
+          &(raw_response->result.response())
+        {{- end -}}
+      );
+    }
+  {{- end }}
 }
   {{- if .HasResponse }}
 
@@ -95,6 +131,19 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
   outgoing.Call<{{ .WireTransactionalResponse }}>(
     client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()), fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
+  {{- if .Result }}
+    auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(
+        {{- if .Result.ValueParameters -}}
+          &(raw_response->result.response())
+        {{- end -}}
+      );
+    }
+  {{- end }}
 }
   {{- end }}
 {{- EndifFuchsia -}}
