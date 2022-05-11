@@ -235,6 +235,9 @@ assemble_system("fuchsia_assembly") {
     route_sources_config = fuchsia_route_sources_config
   }
 
+  create_legacy_aib_archive = true
+  create_legacy_aib_archive = true
+
   # Calculate the paths of the generated images.
   files = {
     outdir = target_out_dir + "/" + image_name

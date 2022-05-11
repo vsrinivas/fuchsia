@@ -24,6 +24,10 @@ if (is_fuchsia) {
   assembly_input_bundle("emulator_support") {
     qemu_kernel = qemu_kernel_file
     deps = [ qemu_kernel_target ]
+
+    # Create package and archive for use OOT.
+    create_aib_package = true
+    create_aib_archive = true
   }
 
   group("assembly") {

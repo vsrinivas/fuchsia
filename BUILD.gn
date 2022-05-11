@@ -1124,7 +1124,10 @@ build_api_module("cipd_assembly_artifacts") {
 build_api_module("assembly_input_archives") {
   testonly = true
   data_keys = [ "assembly_input_archives" ]
-  deps = [ "//build/assembly" ]
+  deps = [
+    "//build/assembly",
+    "//build/images:default-images",
+  ]
 }
 
 # size_report.json contains a list (size 0 or 1) of gerrit size reports

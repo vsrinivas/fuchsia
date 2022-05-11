@@ -56,19 +56,12 @@ template("legacy_assembly_input_bundle") {
   }
   bundle_name = "legacy"
 
-  create_package_archive =
-      defined(invoker.create_package_archive) && invoker.create_package_archive
-  create_package = create_package_archive ||
-                   (defined(invoker.create_package) && invoker.create_package)
-
   include_config_data = true
   if (defined(invoker.include_config_data)) {
     include_config_data = invoker.include_config_data
   }
 
   labels = {
-    legacy_input_bundle = target_name
-
     # Extract the assembly label's dir and name components:
     image_assembly_name = get_label_info(image_assembly_label, "name")
     image_assembly_dir = get_label_info(image_assembly_label, "dir")
@@ -79,13 +72,13 @@ template("legacy_assembly_input_bundle") {
         "${image_assembly_dir}:${image_assembly_name}_image_assembly_config"
     assemble_system_config_data = "${image_assembly_dir}:${image_assembly_name}_config-data_config_package_entries"
 
+    # The AIB itself
+    assembly_input_bundle = "$target_name.bundle"
+
     # The assembly bundle package and archive labels
     assembly_input_bundle_package = "${target_name}.pkg"
     assembly_input_bundle_archive = "${target_name}.tgz"
   }
-
-  # Commonly used filename for the AssemblyInputConfiguration to be written to.
-  assembly_config_filename = "assembly_config.json"
 
   files = {
     # Locate the output files from the above labels, in their out dir:
@@ -99,24 +92,39 @@ template("legacy_assembly_input_bundle") {
 
     # Outputs
 
-    _basename = "${bundles_dir}/${bundle_name}"
-
     # The directory where all the bundle contents are written to
-    assembly_input_bundle_dir = _basename
-    assembly_input_bundle_config = "${_basename}/${assembly_config_filename}"
-    assembly_input_bundle_depfile = "${_basename}.d"
-    assembly_input_bundle_manifest = "${_basename}.fini_manifest"
-    assembly_input_bundle_package_metafar = "${_basename}.pkg/meta.far"
-    assembly_input_bundle_package_manifest =
-        "${_basename}.pkg/package_manifest.json"
-    assembly_input_bundle_archive = "${_basename}.tgz"
-    assembly_input_bundle_archive_manifest = "${_basename}.tgz.fini_manifest"
+    assembly_input_bundle_dir = "${bundles_dir}/${bundle_name}"
+
+    # The "official" outputs file that we create in that directory
+    assembly_input_bundle_config =
+        "${assembly_input_bundle_dir}/assembly_config.json"
+
+    # The files that we create as book-keeping between our tasks.
+    assembly_input_bundle_depfile = "${assembly_input_bundle_dir}.d"
+
+    # The manifest of all files in the AIB, used to create pkgs and archives.
+    assembly_input_bundle_manifest =
+        "${assembly_input_bundle_dir}.fini_manifest"
+
+    # The AIB package's meta.far (optionally used)
+    assembly_input_bundle_package_metafar =
+        "${assembly_input_bundle_dir}.pkg/meta.far"
+
+    # The AIB archive and the manifest used to create it (optionally used)
+    assembly_input_bundle_archive = "${assembly_input_bundle_dir}.tgz"
+    assembly_input_bundle_archive_manifest =
+        "${assembly_input_bundle_dir}.tgz.fini_manifest"
   }
+
+  create_package_archive =
+      defined(invoker.create_package_archive) && invoker.create_package_archive
+  create_package = create_package_archive ||
+                   (defined(invoker.create_package) && invoker.create_package)
 
   # Run the script that creates the out-of-tree-usable Assembly Input Bundle from
   # an Image Assembly product configuration and the config_data package entries
   # that go with it.
-  python_action(target_name) {
+  python_action(labels.assembly_input_bundle) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -140,10 +148,7 @@ template("legacy_assembly_input_bundle") {
       "${files.assembly_input_bundle_dir}/kernel",
     ]
 
-    outputs = [
-      files.assembly_input_bundle_config,
-      files.assembly_input_bundle_manifest,
-    ]
+    outputs = [ files.assembly_input_bundle_config ]
     depfile = files.assembly_input_bundle_depfile
 
     args = [
@@ -151,14 +156,21 @@ template("legacy_assembly_input_bundle") {
       rebase_path(files.image_assembly_config, root_build_dir),
       "--outdir",
       rebase_path(files.assembly_input_bundle_dir, root_build_dir),
-      "--export-manifest",
-      rebase_path(files.assembly_input_bundle_manifest, root_build_dir),
       "--depfile",
       rebase_path(files.assembly_input_bundle_depfile, root_build_dir),
     ]
 
-    inputs = [ files.image_assembly_config ]
+    # If packaging or archiving the AIB, write out the fini manifest needed to
+    # do so.
+    if (create_package || create_package_archive) {
+      args += [
+        "--export-manifest",
+        rebase_path(files.assembly_input_bundle_manifest, root_build_dir),
+      ]
+      outputs += [ files.assembly_input_bundle_manifest ]
+    }
 
+    inputs = [ files.image_assembly_config ]
     deps = [ labels.assemble_system_image_assembly_config ]
 
     if (include_config_data) {
@@ -181,22 +193,42 @@ template("legacy_assembly_input_bundle") {
 
   if (create_package) {
     assembly_input_bundle_package(labels.assembly_input_bundle_package) {
-      testonly = true
+      forward_variables_from(invoker, [ "testonly" ])
+      package_name = bundle_name
+      package_outdir = "${bundles_dir}/${bundle_name}.pkg"
       manifest = files.assembly_input_bundle_manifest
-      package_name = target_name
-      deps = [ ":${labels.legacy_input_bundle}" ]
+      deps = [ ":${labels.assembly_input_bundle}" ]
     }
   }
 
   if (create_package_archive) {
     assembly_input_bundle_archive(labels.assembly_input_bundle_archive) {
-      testonly = true
+      forward_variables_from(invoker, [ "testonly" ])
+      archive_name = bundle_name
+      archive_outdir = bundles_dir
       manifest = files.assembly_input_bundle_manifest
-      meta_far = files.assembly_input_bundle_package_metafar
-      deps = [
-        ":${labels.assembly_input_bundle_package}",
-        ":${labels.legacy_input_bundle}",
-      ]
+      deps = [ ":${labels.assembly_input_bundle}" ]
+
+      # If the package was created, include it in the archive.
+      if (create_package) {
+        meta_far = files.assembly_input_bundle_package_metafar
+        deps += [ ":${labels.assembly_input_bundle_package}" ]
+      }
+    }
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    public_deps = [ ":${labels.assembly_input_bundle}" ]
+    if (create_package) {
+      public_deps += [ ":${labels.assembly_input_bundle_package}" ]
+    }
+    if (create_package_archive) {
+      public_deps += [ ":${labels.assembly_input_bundle_archive}" ]
     }
   }
 }
