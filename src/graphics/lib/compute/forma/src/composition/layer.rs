@@ -8,8 +8,6 @@ use crate::small_bit_set::SmallBitSet;
 
 use super::{interner::Interned, state::LayerSharedState};
 
-const IDENTITY: &[f32; 6] = &[1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
-
 #[derive(Debug)]
 pub struct Layer {
     pub(crate) inner: surpass::Layer,
@@ -103,11 +101,7 @@ impl Layer {
 
     #[inline]
     pub fn transform(&self) -> GeomPresTransform {
-        self.inner
-            .affine_transform
-            .map(GeomPresTransform::from_affine)
-            .flatten()
-            .unwrap_or_default()
+        self.inner.affine_transform.unwrap_or_default()
     }
 
     #[inline]
@@ -115,8 +109,7 @@ impl Layer {
         // We want to perform a cheap check for the common case without hampering this function too
         // much.
         #[allow(clippy::float_cmp)]
-        let affine_transform =
-            if transform.as_slice() == IDENTITY { None } else { Some(*transform.as_slice()) };
+        let affine_transform = if transform.is_identity() { None } else { Some(transform) };
 
         if self.inner.affine_transform != affine_transform {
             self.is_unchanged.clear();

@@ -4,7 +4,7 @@
 
 use std::hash;
 
-use crate::CanonBits;
+use crate::{CanonBits, Point};
 
 /// 2D transformation that preserves parallel lines.
 ///
@@ -24,6 +24,19 @@ pub struct AffineTransform {
     pub vy: f32,
     pub tx: f32,
     pub ty: f32,
+}
+
+impl AffineTransform {
+    pub(crate) fn transform(&self, point: Point) -> Point {
+        Point {
+            x: self.ux.mul_add(point.x, self.vx.mul_add(point.y, self.tx)),
+            y: self.uy.mul_add(point.x, self.vy.mul_add(point.y, self.ty)),
+        }
+    }
+
+    pub(crate) fn is_identity(&self) -> bool {
+        *self == Self::default()
+    }
 }
 
 impl Eq for AffineTransform {}
@@ -53,5 +66,18 @@ impl hash::Hash for AffineTransform {
 impl Default for AffineTransform {
     fn default() -> Self {
         Self { ux: 1.0, vx: 0.0, tx: 0.0, uy: 0.0, vy: 1.0, ty: 0.0 }
+    }
+}
+
+impl From<[f32; 6]> for AffineTransform {
+    fn from(transform: [f32; 6]) -> Self {
+        Self {
+            ux: transform[0],
+            uy: transform[2],
+            vx: transform[1],
+            vy: transform[3],
+            tx: transform[4],
+            ty: transform[5],
+        }
     }
 }

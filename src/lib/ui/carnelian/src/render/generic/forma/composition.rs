@@ -83,7 +83,7 @@ impl FormaComposition {
             self.cached_display_transform = Some(new_transform);
 
             for (_, layer) in self.composition.layers_mut() {
-                let transform = *layer.transform().as_slice();
+                let transform = layer.transform().as_slice();
                 let transform = Transform2D {
                     m11: transform[0],
                     m21: transform[1],

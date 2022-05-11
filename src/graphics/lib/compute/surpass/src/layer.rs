@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::order::Order;
+use crate::{order::Order, GeomPresTransform};
 
 #[derive(Clone, Debug)]
 pub struct Layer {
     pub is_enabled: bool,
-    pub affine_transform: Option<[f32; 6]>,
+    pub affine_transform: Option<GeomPresTransform>,
     pub order: Option<Order>,
 }
 

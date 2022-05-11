@@ -6,7 +6,7 @@ use std::{cell::Cell, num::NonZeroU64};
 
 use rayon::prelude::*;
 
-use crate::{extend::ExtendTuple10, Layer, Path, PIXEL_WIDTH};
+use crate::{extend::ExtendTuple10, AffineTransform, Layer, Path, PIXEL_WIDTH};
 
 const MIN_LEN: usize = 1_024;
 
@@ -173,7 +173,7 @@ impl LinesBuilder {
     }
 
     #[inline]
-    pub fn set_default_transform(&mut self, affine_transform: &[f32; 6]) {
+    pub fn set_default_transform(&mut self, affine_transform: &AffineTransform) {
         self.lines.transform = Some(*affine_transform);
     }
 
@@ -213,14 +213,18 @@ impl LinesBuilder {
                 None => return Default::default(),
             };
 
-            fn transform_point(point: (f32, f32), transform: &[f32; 6]) -> (f32, f32) {
+            fn transform_point(point: (f32, f32), transform: &AffineTransform) -> (f32, f32) {
                 (
-                    transform[0].mul_add(point.0, transform[1].mul_add(point.1, transform[4])),
-                    transform[2].mul_add(point.0, transform[3].mul_add(point.1, transform[5])),
+                    transform.ux.mul_add(point.0, transform.vx.mul_add(point.1, transform.tx)),
+                    transform.uy.mul_add(point.0, transform.vy.mul_add(point.1, transform.ty)),
                 )
             }
 
-            let transform = layer.affine_transform.as_ref().or(transform.as_ref());
+            let transform = layer
+                .affine_transform
+                .as_ref()
+                .map(|transform| &transform.0)
+                .or(transform.as_ref());
             let (p0x, p0y, p1x, p1y) = if let Some(transform) = transform {
                 let (p0x, p0y) = transform_point((p0x, p0y), transform);
                 let (p1x, p1y) = transform_point((p1x, p1y), transform);
@@ -296,7 +300,7 @@ impl LinesBuilder {
 pub struct Lines {
     pub x: Vec<f32>,
     pub y: Vec<f32>,
-    transform: Option<[f32; 6]>,
+    transform: Option<AffineTransform>,
     pub ids: Vec<Option<GeomId>>,
     pub orders: Vec<u32>,
     pub x0: Vec<f32>,

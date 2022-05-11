@@ -4,7 +4,7 @@
 
 use std::{convert::TryFrom, error::Error, fmt};
 
-use crate::{path::MAX_ERROR, Point, MAX_HEIGHT, MAX_WIDTH};
+use crate::{path::MAX_ERROR, AffineTransform, Point, MAX_HEIGHT, MAX_WIDTH};
 
 const MAX_SCALING_FACTOR_X: f32 = 1.0 + MAX_ERROR as f32 / MAX_WIDTH as f32;
 const MAX_SCALING_FACTOR_Y: f32 = 1.0 + MAX_ERROR as f32 / MAX_HEIGHT as f32;
@@ -33,10 +33,15 @@ impl fmt::Display for GeomPresTransformError {
 
 impl Error for GeomPresTransformError {}
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct GeomPresTransform([f32; 6]);
+#[derive(Default, Clone, Copy, Debug, PartialEq)]
+pub struct GeomPresTransform(pub(crate) AffineTransform);
 
 impl GeomPresTransform {
+    /// ```text
+    /// [ x' ]   [ t.0 t.1 t.4 ] [ x ]
+    /// [ y' ] = [ t.2 t.3 t.5 ] [ y ]
+    /// [ 1  ]   [   0   0   1 ] [ 1 ]
+    /// ```
     #[inline]
     pub fn new(mut transform: [f32; 9]) -> Option<Self> {
         (transform[6].abs() <= f32::EPSILON && transform[7].abs() <= f32::EPSILON)
@@ -48,59 +53,50 @@ impl GeomPresTransform {
                     }
                 }
 
-                Self::from_affine([
-                    transform[0],
-                    transform[1],
-                    transform[3],
-                    transform[4],
-                    transform[2],
-                    transform[5],
-                ])
+                Self::try_from(AffineTransform {
+                    ux: transform[0],
+                    vx: transform[1],
+                    uy: transform[3],
+                    vy: transform[4],
+                    tx: transform[2],
+                    ty: transform[5],
+                })
+                .ok()
             })
             .flatten()
     }
 
-    #[inline]
-    pub fn from_affine(transform: [f32; 6]) -> Option<Self> {
-        let scales_up_x =
-            transform[0] * transform[0] + transform[2] * transform[2] > MAX_SCALING_FACTOR_X;
-        let scales_up_y =
-            transform[1] * transform[1] + transform[3] * transform[3] > MAX_SCALING_FACTOR_Y;
-
-        (!scales_up_x && !scales_up_y).then(|| Self(transform))
-    }
-
-    #[inline]
-    pub fn as_slice(&self) -> &[f32; 6] {
-        &self.0
+    pub fn is_identity(&self) -> bool {
+        self.0.is_identity()
     }
 
     pub(crate) fn transform(&self, point: Point) -> Point {
-        Point {
-            x: self.0[0].mul_add(point.x, self.0[1].mul_add(point.y, self.0[4])),
-            y: self.0[2].mul_add(point.x, self.0[3].mul_add(point.y, self.0[5])),
-        }
+        self.0.transform(point)
+    }
+
+    #[inline]
+    pub fn as_slice(&self) -> [f32; 6] {
+        [self.0.ux, self.0.vx, self.0.uy, self.0.vy, self.0.tx, self.0.ty]
     }
 }
 
 impl TryFrom<[f32; 6]> for GeomPresTransform {
     type Error = GeomPresTransformError;
-
     fn try_from(transform: [f32; 6]) -> Result<Self, Self::Error> {
-        let scales_up_x =
-            transform[0] * transform[0] + transform[2] * transform[2] > MAX_SCALING_FACTOR_X;
-        let scales_up_y =
-            transform[1] * transform[1] + transform[3] * transform[3] > MAX_SCALING_FACTOR_Y;
-
-        (!scales_up_x && !scales_up_y)
-            .then(|| Self(transform))
-            .ok_or(GeomPresTransformError::ExceededScalingFactor { x: scales_up_x, y: scales_up_y })
+        GeomPresTransform::try_from(AffineTransform::from(transform))
     }
 }
 
-impl Default for GeomPresTransform {
-    fn default() -> Self {
-        Self([1.0, 0.0, 0.0, 1.0, 0.0, 0.0])
+impl TryFrom<AffineTransform> for GeomPresTransform {
+    type Error = GeomPresTransformError;
+
+    fn try_from(t: AffineTransform) -> Result<Self, Self::Error> {
+        let scales_up_x = t.ux * t.ux + t.uy * t.uy > MAX_SCALING_FACTOR_X;
+        let scales_up_y = t.vx * t.vx + t.vy * t.vy > MAX_SCALING_FACTOR_Y;
+
+        (!scales_up_x && !scales_up_y)
+            .then(|| Self(t))
+            .ok_or(GeomPresTransformError::ExceededScalingFactor { x: scales_up_x, y: scales_up_y })
     }
 }
 
@@ -113,6 +109,13 @@ mod tests {
         let transform = GeomPresTransform::default();
 
         assert_eq!(transform.transform(Point::new(2.0, 3.0)), Point::new(2.0, 3.0));
+    }
+
+    #[test]
+    fn as_slice() {
+        let slice = [0.1, 0.5, 0.4, 0.3, 0.7, 0.9];
+
+        assert_eq!(slice, GeomPresTransform::try_from(slice).unwrap().as_slice());
     }
 
     #[test]
@@ -157,6 +160,6 @@ mod tests {
     fn correct_scaling_factor() {
         let transform = [1.0, MAX_SCALING_FACTOR_Y.sqrt(), 0.0, 0.0, 0.5, 0.0];
 
-        assert_eq!(GeomPresTransform::try_from(transform), Ok(GeomPresTransform(transform)));
+        assert_eq!(transform, GeomPresTransform::try_from(transform).unwrap().as_slice());
     }
 }
