@@ -139,7 +139,6 @@ template("rustc_test_internal") {
       }
 
       deps += [ "//build/rust:rust_test_metadata" ]
-      deps += [ "//sdk/lib/syslog/cpp:backend_fuchsia_lib_rust" ]
       metadata = {
         cmx_patches_walk = [ "//build/rust:rust_test_metadata" ]
 

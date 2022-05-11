@@ -246,9 +246,6 @@ template("rustc_binary") {
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
-    if (current_os == "fuchsia") {
-      deps += [ "//sdk/lib/syslog/cpp:backend_fuchsia_lib_rust" ]
-    }
 
     # TODO(https://fxbug.dev/43781) remove "non_rust_deps" as a concept
     if (defined(invoker.non_rust_deps)) {
