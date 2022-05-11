@@ -224,14 +224,15 @@ be very practical for day-to-day development.
 
 ### runtime.json
 
-If the Fuchsia build fails due to a missing `runtime.json` file, you can copy
-them over from the prebuilt toolchain.
+If the Fuchsia build fails due to a missing `runtime.json` file, you must generate a new `runtime.json` file by running the following command:
 
-```
-cp ${FUCHSIA_SRCDIR}/prebuilt/third_party/clang/linux-x64/lib/runtime.json ${INSTALL_DIR}/lib/
+```bash
+python3 ${FUCHSIA_SRCDIR}/scripts/clang/generate_runtimes.py  \
+  --clang-prefix ${INSTALL_DIR} --sdk-dir ${IDK_DIR}          \
+  --build-id-dir ${INSTALL_DIR}/lib/.build-id > ${INSTALL_DIR}/lib/runtime.json
 ```
 
-This file contains relative paths used by the Fuchsia build to know where
+The generated file contains relative paths used by the Fuchsia build to know where
 various libraries from the toolchain are located.
 
 ### Putting it All Together
@@ -239,7 +240,7 @@ various libraries from the toolchain are located.
 Copy-paste code for building a single-stage toolchain. This code can be run
 from inside your LLVM build directory and assumes a linux environment.
 
-```
+```bash
 cd ${LLVM_BUILD_DIR}  # The directory your toolchain will be installed in
 
 # Environment setup
@@ -272,8 +273,11 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
 ninja distribution -j1000
 DESTDIR=${INSTALL_DIR} ninja install-distribution-stripped -j1000
 
-# Get runtimes.json
-cp ${FUCHSIA_SRCDIR}/prebuilt/third_party/clang/linux-x64/lib/runtime.json ${INSTALL_DIR}/lib/
+# Generate runtime.json
+
+python3 ${FUCHSIA_SRCDIR}/scripts/clang/generate_runtimes.py    \
+  --clang-prefix ${INSTALL_DIR} --sdk-dir ${IDK_DIR}            \
+  --build-id-dir ${INSTALL_DIR}/lib/.build-id > ${INSTALL_DIR}/lib/runtime.json
 ```
 
 ### Building Fuchsia with a Custom Clang
