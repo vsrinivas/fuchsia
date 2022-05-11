@@ -17,6 +17,7 @@
 #include <lib/stdcompat/variant.h>
 #include <lib/syslog/cpp/macros.h>
 #include <threads.h>
+#include <zircon/compiler.h>
 #include <zircon/threads.h>
 
 #include <mutex>
@@ -42,6 +43,12 @@ constexpr bool kLogTimestampDelay = false;
 // that would potentially result in unbounded data queued in the incoming
 // channel with no valid circuit-breaker value for the incoming channel data.
 constexpr size_t kMaxInFlightStreams = 10;
+
+void AssertHeld(const std::unique_lock<std::mutex>& auto_lock, const std::mutex& lock)
+    __TA_ASSERT(lock) {
+  ZX_ASSERT(auto_lock.mutex() == &lock);
+  ZX_ASSERT(auto_lock.owns_lock());
+}
 
 class ScopedUnlock {
  public:
@@ -517,7 +524,7 @@ void CodecImpl::FlushEndOfStreamAndCloseStream(uint64_t stream_lifetime_ordinal)
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamFlushed);
   {  // scope lock
-    std::unique_lock<std::mutex> lock(lock_);
+    std::lock_guard<std::mutex> lock(lock_);
     if (!EnsureFutureStreamFlushSeenLocked(stream_lifetime_ordinal)) {
       return;
     }
@@ -531,6 +538,7 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
+    AssertHeld(lock, lock_);
     if (IsStoppingLocked()) {
       return;
     }
@@ -573,6 +581,7 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
     auto ensure_closed = fit::defer([this, &lock] {
       // Now that flush is done (or we noticed a stream failure), we close the current stream
       // because there is not any subsequent message for the current stream that's valid.
+      AssertHeld(lock, lock_);
       EnsureStreamClosed(lock);
     });
     while (!stream_->output_end_of_stream()) {
@@ -616,7 +625,7 @@ void CodecImpl::CloseCurrentStream(uint64_t stream_lifetime_ordinal, bool releas
                                    bool release_output_buffers) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   {  // scope lock
-    std::unique_lock<std::mutex> lock(lock_);
+    std::lock_guard<std::mutex> lock(lock_);
     if (!EnsureFutureStreamCloseSeenLocked(stream_lifetime_ordinal)) {
       return;
     }
@@ -633,6 +642,7 @@ void CodecImpl::CloseCurrentStream_StreamControl(uint64_t stream_lifetime_ordina
                                                  bool release_output_buffers) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   std::unique_lock<std::mutex> lock(lock_);
+  AssertHeld(lock, lock_);
   if (IsStoppingLocked()) {
     return;
   }
@@ -771,7 +781,7 @@ void CodecImpl::QueueInputFormatDetails(uint64_t stream_lifetime_ordinal,
                                         fuchsia::media::FormatDetails format_details) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   {  // scope lock
-    std::unique_lock<std::mutex> lock(lock_);
+    std::lock_guard<std::mutex> lock(lock_);
     if (!EnsureFutureStreamSeenLocked(stream_lifetime_ordinal)) {
       return;
     }
@@ -802,6 +812,7 @@ void CodecImpl::QueueInputFormatDetails_StreamControl(
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
 
   std::unique_lock<std::mutex> lock(lock_);
+  AssertHeld(lock, lock_);
   if (IsStoppingLocked()) {
     return;
   }
@@ -810,6 +821,7 @@ void CodecImpl::QueueInputFormatDetails_StreamControl(
   }
 
   if (!CheckWaitEnsureInputConfigured(lock)) {
+    stream_->AssertHeld(this);
     ZX_DEBUG_ASSERT(IsStoppingLocked() || !stream_ || stream_->future_discarded());
     return;
   }
@@ -830,6 +842,7 @@ void CodecImpl::QueueInputFormatDetails_StreamControl(
     FailLocked("QueueInputFormatDetails() after QueueInputEndOfStream() unexpected");
     return;
   }
+  stream_->AssertHeld(this);
   if (stream_->future_discarded()) {
     // No reason to handle since the stream is future-discarded.
     return;
@@ -854,7 +867,7 @@ void CodecImpl::QueueInputFormatDetails_StreamControl(
 void CodecImpl::QueueInputPacket(fuchsia::media::Packet packet) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   {  // scope lock
-    std::unique_lock<std::mutex> lock(lock_);
+    std::lock_guard<std::mutex> lock(lock_);
     if (IsStoppingLocked()) {
       return;
     }
@@ -891,6 +904,7 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
 
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
+    AssertHeld(lock, lock_);
     if (IsStoppingLocked()) {
       return;
     }
@@ -933,6 +947,7 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
     }
 
     if (!CheckWaitEnsureInputConfigured(lock)) {
+      stream_->AssertHeld(this);
       ZX_DEBUG_ASSERT(IsStoppingLocked() || (stream_ && stream_->future_discarded()));
       return;
     }
@@ -1017,6 +1032,7 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       return;
     }
 
+    stream_->AssertHeld(this);
     if (stream_->future_discarded()) {
       // Don't queue to core codec.  The stream_ may have never fully started,
       // or may have been future-discarded since.  Either way, skip queueing to
@@ -1105,7 +1121,7 @@ void CodecImpl::QueueInputEndOfStream(uint64_t stream_lifetime_ordinal) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamEndOfStreamInput);
   {  // scope lock
-    std::unique_lock<std::mutex> lock(lock_);
+    std::lock_guard<std::mutex> lock(lock_);
     if (!EnsureFutureStreamSeenLocked(stream_lifetime_ordinal)) {
       return;
     }
@@ -1119,6 +1135,7 @@ void CodecImpl::QueueInputEndOfStream_StreamControl(uint64_t stream_lifetime_ord
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
+    AssertHeld(lock, lock_);
     if (IsStoppingLocked()) {
       return;
     }
@@ -1127,6 +1144,7 @@ void CodecImpl::QueueInputEndOfStream_StreamControl(uint64_t stream_lifetime_ord
     }
 
     if (!CheckWaitEnsureInputConfigured(lock)) {
+      stream_->AssertHeld(this);
       ZX_DEBUG_ASSERT(IsStoppingLocked() || (stream_ && stream_->future_discarded()));
       return;
     }
@@ -1153,6 +1171,7 @@ void CodecImpl::QueueInputEndOfStream_StreamControl(uint64_t stream_lifetime_ord
     }
     stream_->SetInputEndOfStream();
 
+    stream_->AssertHeld(this);
     if (stream_->future_discarded()) {
       // Don't queue to core codec.  The stream_ may have never fully started,
       // or may have been future-discarded since. Either way, skip queueing to
@@ -1295,6 +1314,7 @@ void CodecImpl::UnbindLocked() {
     // fidl_thread().
     {  // scope lock
       std::unique_lock<std::mutex> lock(lock_);
+      AssertHeld(lock, lock_);
       // Stop core codec associated with this CodecImpl, partly to make sure it
       // stops running code that could make calls into this CodecImpl, and
       // partly to ensure the core codec isn't in the middle of anything when it
@@ -2170,15 +2190,12 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
     return false;
   }
 
-  {  // scope lock
-    // This lock hold interval is not for keeping stream_ alive.  That's not necessary because only
-    // StreamControl domain will remove items from stream_queue_.  This hold interval is to protect
-    // stream_queue_ against concurrent modification by output domain (FIDL thread) only.
-    std::lock_guard<std::mutex> lock(stream_queue_lock_);
-    ZX_DEBUG_ASSERT(stream_queue_.size() >= 1);
-    ZX_DEBUG_ASSERT(stream_lifetime_ordinal == stream_queue_.front()->stream_lifetime_ordinal());
-    stream_ = stream_queue_.front().get();
-  }  // ~lock
+  // The lock_ is held.  We don't need lock_ to keep stream_ alive.  That's not necessary because
+  // only StreamControl domain will remove items from stream_queue_.  This hold interval is to
+  // protect stream_queue_ against concurrent modification by output domain (FIDL thread) only.
+  ZX_DEBUG_ASSERT(stream_queue_.size() >= 1);
+  ZX_DEBUG_ASSERT(stream_lifetime_ordinal == stream_queue_.front()->stream_lifetime_ordinal());
+  stream_ = stream_queue_.front().get();
 
   // Update the stream_lifetime_ordinal_ to the new stream.  We need to do
   // this before we send new output config, since the output config will be
@@ -2276,6 +2293,7 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
 
     // Now we can wait for the client to catch up to the current output config
     // or for the client to tell the server to discard the current stream.
+    stream_->AssertHeld(this);
     while (!IsStoppingLocked() && !stream_->future_discarded() && !IsOutputConfiguredLocked()) {
       RunAnySysmemCompletionsOrWait(lock);
     }
@@ -2346,16 +2364,13 @@ void CodecImpl::EnsureCodecStreamClosedLockedInternal() {
     return;
   }
 
-  {  // scope lock
-    // Protect against concurrent modification by output domain (FIDL thread), and hold lock while
-    // deleting first item in stream_queue_ so that output domain can hold stream_queue_lock_ to
-    // ensure a stream obtained from stream_queue_ stays alive until output domain is done marking
-    // the stream as future_flushed() or similar.
-    std::lock_guard<std::mutex> lock(stream_queue_lock_);
-    ZX_DEBUG_ASSERT(stream_queue_.front()->stream_lifetime_ordinal() == stream_lifetime_ordinal_);
-    stream_ = nullptr;
-    stream_queue_.pop_front();
-  }  // ~lock
+  // The lock_ is held which protects against concurrent modification by output domain (FIDL
+  // thread), and is also held while deleting first item in stream_queue_ so that output domain can
+  // hold lock_ to ensure a stream obtained from stream_queue_ stays alive until output domain is
+  // done marking the stream as future_flushed() or similar.
+  ZX_DEBUG_ASSERT(stream_queue_.front()->stream_lifetime_ordinal() == stream_lifetime_ordinal_);
+  stream_ = nullptr;
+  stream_queue_.pop_front();
 
   stream_lifetime_ordinal_++;
   // Even values mean no current stream.
@@ -2465,15 +2480,10 @@ bool CodecImpl::EnsureFutureStreamSeenLocked(uint64_t stream_lifetime_ordinal) {
   }
   future_stream_lifetime_ordinal_ = stream_lifetime_ordinal;
 
-  size_t stream_queue_size;
-  {  // scope lock
-    // Protecting stream_queue_ against concurrent modification by StreamControl domain.
-    std::lock_guard<std::mutex> lock(stream_queue_lock_);
-    stream_queue_.push_back(std::make_unique<Stream>(stream_lifetime_ordinal));
-    stream_queue_size = stream_queue_.size();
-  }  // ~lock
-
-  if (stream_queue_size > kMaxInFlightStreams) {
+  // The lock_ is held, protecting stream_queue_ against concurrent modification by StreamControl
+  // domain.
+  stream_queue_.push_back(std::make_unique<Stream>(this, stream_lifetime_ordinal));
+  if (stream_queue_.size() > kMaxInFlightStreams) {
     LogEvent(
         media_metrics::StreamProcessorEvents2MetricDimensionEvent_MaxInFlightStreamsExceededError);
     FailLocked(
@@ -2510,26 +2520,25 @@ bool CodecImpl::EnsureFutureStreamCloseSeenLocked(uint64_t stream_lifetime_ordin
   }
   ZX_DEBUG_ASSERT(stream_lifetime_ordinal == future_stream_lifetime_ordinal_);
 
-  {  // scope lock
-    // Ensuring closing_stream stays alive until after call to SetFutureDiscarded().
-    std::lock_guard<std::mutex> lock(stream_queue_lock_);
-    if (stream_queue_.empty()) {
-      // Latest stream already failed and removed by StreamControl domain.
-      return true;
-    }
-    ZX_DEBUG_ASSERT(!stream_queue_.empty());
-    Stream* closing_stream = stream_queue_.back().get();
-    ZX_DEBUG_ASSERT(closing_stream->stream_lifetime_ordinal() == stream_lifetime_ordinal);
-    // It is permitted to see a FlushCurrentStream() before a CloseCurrentStream()
-    // and this can make sense if a client just wants to inform the server of all
-    // stream closes, or if the client wants to release_input_buffers or
-    // release_output_buffers after the flush is done.
-    //
-    // If we didn't previously flush, then this close is discarding.
-    if (!closing_stream->future_flush_end_of_stream()) {
-      closing_stream->SetFutureDiscarded();
-    }
-  }  // ~lock
+  // The lock_ is held, ensuring closing_stream stays alive until after call to
+  // SetFutureDiscarded().
+  if (stream_queue_.empty()) {
+    // Latest stream already failed and removed by StreamControl domain.
+    return true;
+  }
+  ZX_DEBUG_ASSERT(!stream_queue_.empty());
+  Stream* closing_stream = stream_queue_.back().get();
+  ZX_DEBUG_ASSERT(closing_stream->stream_lifetime_ordinal() == stream_lifetime_ordinal);
+  // It is permitted to see a FlushCurrentStream() before a CloseCurrentStream()
+  // and this can make sense if a client just wants to inform the server of all
+  // stream closes, or if the client wants to release_input_buffers or
+  // release_output_buffers after the flush is done.
+  //
+  // If we didn't previously flush, then this close is discarding.
+  closing_stream->AssertHeld(this);
+  if (!closing_stream->future_flush_end_of_stream()) {
+    closing_stream->SetFutureDiscarded();
+  }
 
   future_stream_lifetime_ordinal_++;
   ZX_DEBUG_ASSERT(future_stream_lifetime_ordinal_ % 2 == 0);
@@ -2549,37 +2558,30 @@ bool CodecImpl::EnsureFutureStreamFlushSeenLocked(uint64_t stream_lifetime_ordin
     return false;
   }
 
-  bool fail_outside_lock = [this]() -> bool {
-    // Ensuring flushing_stream stays alive until after call to SetFutureFlushEndOfStream().
-    std::lock_guard<std::mutex> lock(stream_queue_lock_);
-    if (stream_queue_.empty()) {
-      // Latest stream already failed and removed by StreamControl domain.
-      return false;
-    }
-    ZX_DEBUG_ASSERT(!stream_queue_.empty());
-    Stream* flushing_stream = stream_queue_.back().get();
-    // Thanks to the above future_stream_lifetime_ordinal_ check, we know the
-    // future stream is not discarded yet.
-    ZX_DEBUG_ASSERT(!flushing_stream->future_discarded());
-    if (flushing_stream->future_flush_end_of_stream()) {
-      // fail_outside_lock true
-      return true;
-    }
-
-    // We don't future-verify that we have a QueueInputEndOfStream(). We'll verify
-    // that later when StreamControl catches up to this stream.
-
-    // Remember the flush so we later know that a close doesn't imply discard.
-    flushing_stream->SetFutureFlushEndOfStream();
-
+  // The lock_ is held, ensuring flushing_stream stays alive until after call to
+  // SetFutureFlushEndOfStream().
+  if (stream_queue_.empty()) {
+    // Latest stream already failed and removed by StreamControl domain.
     return false;
-  }();
-
-  if (fail_outside_lock) {
+  }
+  ZX_DEBUG_ASSERT(!stream_queue_.empty());
+  Stream* flushing_stream = stream_queue_.back().get();
+  // Thanks to the above future_stream_lifetime_ordinal_ check, we know the
+  // future stream is not discarded yet.
+  flushing_stream->AssertHeld(this);
+  ZX_DEBUG_ASSERT(!flushing_stream->future_discarded());
+  flushing_stream->AssertHeld(this);
+  if (flushing_stream->future_flush_end_of_stream()) {
     LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
     FailLocked("FlushCurrentStream() used twice on same stream");
     return false;
   }
+
+  // We don't future-verify that we have a QueueInputEndOfStream(). We'll verify
+  // that later when StreamControl catches up to this stream.
+
+  // Remember the flush so we later know that a close doesn't imply discard.
+  flushing_stream->SetFutureFlushEndOfStream();
 
   // A FlushEndOfStreamAndCloseStream() is also a close, after the flush.  This
   // keeps future_stream_lifetime_ordinal_ consistent.
@@ -2724,6 +2726,7 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
   VLOGF("CodecImpl::MidStreamOutputConstraintsChange - stream: %lu", stream_lifetime_ordinal);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
+    AssertHeld(lock, lock_);
     VLOGF("lock aquired 1");
     if (stream_lifetime_ordinal < stream_lifetime_ordinal_) {
       // ignore; The omx_meh_output_buffer_constraints_version_ordinal_ took
@@ -2756,6 +2759,7 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
     // Now we can wait for the client to catch up to the current output config
     // or for the client to tell the server to discard the current stream.
     VLOGF("RunAnySysmemCompletionsOrWait()...");
+    stream_->AssertHeld(this);
     while (!IsStoppingLocked() && !stream_->future_discarded() && !IsOutputConfiguredLocked()) {
       RunAnySysmemCompletionsOrWait(lock);
     }
@@ -3201,6 +3205,7 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
   {  // scope lock
     LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamFailureAnyReason);
     std::unique_lock<std::mutex> lock(lock_);
+    AssertHeld(lock, lock_);
     if (IsStoppingLocked()) {
       // This CodecImpl is already stopping due to a previous FailLocked(),
       // which will result in the Codec channel getting closed soon.  So don't
@@ -3297,6 +3302,7 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
     // input data, and the core codec is expected to just hold onto those
     // packets until the client has moved on from this stream.
 
+    stream_->AssertHeld(this);
     if (stream_->future_discarded()) {
       // No reason to report a stream failure to the client for an obsolete stream.  The client has
       // already moved on from the current stream anyway.  This path won't be taken if the client
@@ -3345,7 +3351,7 @@ void CodecImpl::onCoreCodecResetStreamAfterCurrentFrame() {
     PostToStreamControl([this, stream_lifetime_ordinal] {
       ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
       {  // scope lock
-        std::unique_lock<std::mutex> lock(lock_);
+        std::lock_guard<std::mutex> lock(lock_);
 
         // Only StreamControl messes with stream_.
         if (!stream_) {
@@ -3356,6 +3362,7 @@ void CodecImpl::onCoreCodecResetStreamAfterCurrentFrame() {
           return;
         }
         ZX_DEBUG_ASSERT(stream_->stream_lifetime_ordinal() == stream_lifetime_ordinal);
+        stream_->AssertHeld(this);
         if (stream_->future_discarded()) {
           // Ignore since this stream will be gone soon anyway.
           return;
@@ -3618,34 +3625,32 @@ void CodecImpl::onCoreCodecLogEvent(
   LogEvent(event_code);
 }
 
-CodecImpl::Stream::Stream(uint64_t stream_lifetime_ordinal)
-    : stream_lifetime_ordinal_(stream_lifetime_ordinal) {
+CodecImpl::Stream::Stream(const CodecImpl* const parent, uint64_t stream_lifetime_ordinal)
+    : parent_(parent), stream_lifetime_ordinal_(stream_lifetime_ordinal) {
   // nothing else to do here
+}
+
+void CodecImpl::Stream::AssertHeld(const CodecImpl* const parent) {
+  ZX_ASSERT(parent == parent_);
+  // And of course the lock is the same lock also.
+  ZX_ASSERT(&parent->lock_ == &parent_->lock_);
 }
 
 uint64_t CodecImpl::Stream::stream_lifetime_ordinal() { return stream_lifetime_ordinal_; }
 
 void CodecImpl::Stream::SetFutureDiscarded() {
-  std::lock_guard<std::mutex> lock(future_lock_);
   ZX_DEBUG_ASSERT(!future_discarded_);
   future_discarded_ = true;
 }
 
-bool CodecImpl::Stream::future_discarded() {
-  std::lock_guard<std::mutex> lock(future_lock_);
-  return future_discarded_;
-}
+bool CodecImpl::Stream::future_discarded() { return future_discarded_; }
 
 void CodecImpl::Stream::SetFutureFlushEndOfStream() {
-  std::lock_guard<std::mutex> lock(future_lock_);
   ZX_DEBUG_ASSERT(!future_flush_end_of_stream_);
   future_flush_end_of_stream_ = true;
 }
 
-bool CodecImpl::Stream::future_flush_end_of_stream() {
-  std::lock_guard<std::mutex> lock(future_lock_);
-  return future_flush_end_of_stream_;
-}
+bool CodecImpl::Stream::future_flush_end_of_stream() { return future_flush_end_of_stream_; }
 
 CodecImpl::Stream::~Stream() {
   VLOGF("~Stream() stream_lifetime_ordinal: %lu", stream_lifetime_ordinal_);

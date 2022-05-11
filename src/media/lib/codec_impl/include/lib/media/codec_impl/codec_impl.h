@@ -17,7 +17,9 @@
 #include <lib/thread-safe-deleter/thread_safe_deleter.h>
 #include <zircon/compiler.h>
 
+#include <atomic>
 #include <list>
+#include <mutex>
 #include <queue>
 
 #include <fbl/macros.h>
@@ -236,12 +238,15 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   class Stream {
    public:
     // These mutations occur in Output ordering domain (shared_fidl_thread()):
-    explicit Stream(uint64_t stream_lifetime_ordinal);
+    explicit Stream(const CodecImpl* const parent, uint64_t stream_lifetime_ordinal);
+    void AssertHeld(const CodecImpl* const parent) __TA_REQUIRES(parent->lock_)
+        __TA_ASSERT(parent_->lock_);
+
     uint64_t stream_lifetime_ordinal();
-    void SetFutureDiscarded();
-    bool future_discarded();
-    void SetFutureFlushEndOfStream();
-    __WARN_UNUSED_RESULT bool future_flush_end_of_stream();
+    void SetFutureDiscarded() __TA_REQUIRES(parent_->lock_);
+    __WARN_UNUSED_RESULT bool future_discarded() __TA_REQUIRES(parent_->lock_);
+    void SetFutureFlushEndOfStream() __TA_REQUIRES(parent_->lock_);
+    __WARN_UNUSED_RESULT bool future_flush_end_of_stream() __TA_REQUIRES(parent_->lock_);
 
     // These mutations occur in StreamControl ordering domain:
     ~Stream();
@@ -280,13 +285,16 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
     __WARN_UNUSED_RESULT bool is_mid_stream_output_constraints_change_active();
 
    private:
+    // The parent_ field is only for __TA_GUARDED() usage below.
+    const CodecImpl* const parent_ = nullptr;
+
     const uint64_t stream_lifetime_ordinal_ = 0;
-    // The future_* member vars are set from output domain (FIDL thread) and
-    // read on StreamControl domain, so these need a lock (or atomic, but a lock
-    // is fine).
-    std::mutex future_lock_;
-    bool future_discarded_ __TA_GUARDED(future_lock_) = false;
-    bool future_flush_end_of_stream_ __TA_GUARDED(future_lock_) = false;
+
+    // These are accessed at arbitrary times from output thread (FIDL thread)
+    // and StreamControl thread, so we need to be holding lock_ to access.
+    bool future_discarded_ __TA_GUARDED(parent_->lock_) = false;
+    bool future_flush_end_of_stream_ __TA_GUARDED(parent_->lock_) = false;
+
     // Starts as nullptr for each new stream with implicit fallback to
     // initial_input_format_details_, but can be overridden on a per-stream
     // basis with QueueInputFormatDetails().
@@ -605,10 +613,10 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   // Return value of false means FailLocked() has already been called.
   __WARN_UNUSED_RESULT bool StartNewStream(std::unique_lock<std::mutex>& lock,
-                                           uint64_t stream_lifetime_ordinal);
-  void EnsureStreamClosed(std::unique_lock<std::mutex>& lock);
+                                           uint64_t stream_lifetime_ordinal) __TA_REQUIRES(lock_);
+  void EnsureStreamClosed(std::unique_lock<std::mutex>& lock) __TA_REQUIRES(lock_);
   void EnsureCoreCodecStreamStopped(std::unique_lock<std::mutex>& lock);
-  void EnsureCodecStreamClosedLockedInternal();
+  void EnsureCodecStreamClosedLockedInternal() __TA_REQUIRES(lock_);
 
   // Run all items in the sysmem_completion_queue_.  The item itself is run
   // outside the lock.  Returns true if any completions ran.
@@ -635,13 +643,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // ordinal that we add to the tail of the Stream queue.
   uint64_t future_stream_lifetime_ordinal_ = 0;
 
-  // The stream_queue_lock_ protects the stream_queue_ and output domain (FIDL
-  // thread) access to streams obtained via the stream_queue_ (to ensure the
-  // obtained stream doesn't disappear too soon due to actions by StreamControl
-  // domain).  In contrast to the output domain, the StreamControl domain does
-  // _not_ need to hold this lock to protect the stream_ lifetime because only
-  // StreamControl will remove items from stream_queue_.
-  std::mutex stream_queue_lock_;
   // The Output ordering domain (FIDL thread) adds items to the tail of this
   // queue, and the StreamControl ordering domain removes items from the head of
   // this queue.  This queue is how the StreamControl ordering domain knows
@@ -655,7 +656,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // In addition, this can allow the StreamControl ordering domain to skip past
   // stream-specific items for a stream that's already known to be discarded by
   // the client.
-  std::list<std::unique_ptr<Stream>> stream_queue_ __TA_GUARDED(stream_queue_lock_);
+  std::list<std::unique_ptr<Stream>> stream_queue_ __TA_GUARDED(lock_);
   // When no current stream, this is nullptr.  When there is a current stream,
   // this points to that stream, owned by stream_queue_.
   Stream* stream_ = nullptr;
@@ -777,7 +778,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   //
   // Returns true if it worked.  Returns false if FailLocked() has already been
   // called, in which case the caller probably wants to just return.
-  __WARN_UNUSED_RESULT bool EnsureFutureStreamSeenLocked(uint64_t stream_lifetime_ordinal);
+  __WARN_UNUSED_RESULT bool EnsureFutureStreamSeenLocked(uint64_t stream_lifetime_ordinal)
+      __TA_REQUIRES(lock_);
 
   // This is called on Output ordering domain (FIDL thread) any time a message
   // is received which would close a stream.
@@ -788,7 +790,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   //
   // Returns true if it worked.  Returns false if FailLocked() has already been
   // called, in which case the caller probably wants to just return.
-  __WARN_UNUSED_RESULT bool EnsureFutureStreamCloseSeenLocked(uint64_t stream_lifetime_ordinal);
+  __WARN_UNUSED_RESULT bool EnsureFutureStreamCloseSeenLocked(uint64_t stream_lifetime_ordinal)
+      __TA_REQUIRES(lock_);
 
   // This is called on Output ordering domain (FIDL thread) any time a flush is
   // seen.
@@ -799,7 +802,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   //
   // Returns true if it worked.  Returns false if FailLocked() has already been
   // called, in which case the caller probably wants to just return.
-  __WARN_UNUSED_RESULT bool EnsureFutureStreamFlushSeenLocked(uint64_t stream_lifetime_ordinal);
+  __WARN_UNUSED_RESULT bool EnsureFutureStreamFlushSeenLocked(uint64_t stream_lifetime_ordinal)
+      __TA_REQUIRES(lock_);
 
   void StartIgnoringClientOldOutputConfig(std::unique_lock<std::mutex>& lock);
 
