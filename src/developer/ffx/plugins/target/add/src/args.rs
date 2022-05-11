@@ -29,4 +29,9 @@ pub struct AddCommand {
     #[argh(positional)]
     /// IP of the target.
     pub addr: String,
+
+    #[argh(switch, short = 'w')]
+    /// determines whether to wait for the target after adding it. This will verify whether o not
+    /// an RCS connection can be established.
+    pub wait: bool,
 }

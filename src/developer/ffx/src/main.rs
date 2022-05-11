@@ -134,7 +134,7 @@ impl Injection {
         };
         match res {
             Ok(_) => Ok(remote_proxy),
-            Err(err) => Err(anyhow::Error::new(FfxError::TargetError {
+            Err(err) => Err(anyhow::Error::new(FfxError::TargetConnectionError {
                 err,
                 target,
                 is_default_target: is_default_target(),

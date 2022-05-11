@@ -307,7 +307,9 @@ impl TargetQuery {
                 false
             }
             Self::AddrPort((addr, port)) => {
-                t.ssh_port == Some(*port) && Self::Addr(*addr).match_info(t)
+                let no_port_and_zero = *port == 0 && t.ssh_port.is_none();
+                let ports_equal = t.ssh_port == Some(*port);
+                (no_port_and_zero || ports_equal) && Self::Addr(*addr).match_info(t)
             }
             Self::Addr(addr) => t.addresses.iter().any(|a| {
                 // If the query does not contain a scope, allow a match against
@@ -1062,6 +1064,20 @@ mod tests {
         let query = TargetQuery::from("foo");
         let target = Rc::new(Target::new_named("foo"));
         assert!(query.matches(&target));
+    }
+
+    #[test]
+    fn test_target_query_from_socketaddr_zero_port() {
+        let tq = TargetQuery::from("127.0.0.1:0");
+        let ti = TargetInfo {
+            addresses: vec![("127.0.0.1".parse::<IpAddr>().unwrap(), 0).into()],
+            ssh_port: None,
+            ..Default::default()
+        };
+        assert!(
+            matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && None == ti.ssh_port && port == 0)
+        );
+        assert!(tq.match_info(&ti));
     }
 
     #[test]

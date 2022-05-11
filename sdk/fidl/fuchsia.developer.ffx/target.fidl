@@ -147,13 +147,50 @@ type OpenTargetError = strict enum {
     TARGET_NOT_FOUND = 2;
 };
 
+type TargetConnectionError = strict enum {
+    /// Permission was denied (from the public SSH key to the target).
+    PERMISSION_DENIED = 1;
+    /// SSH refused connection to the target.
+    CONNECTION_REFUSED = 2;
+    /// Hostname could not be resolved.
+    UNKNOWN_NAME_OR_SERVICE = 3;
+    /// Timed out trying to communicate with the target.
+    TIMEOUT = 4;
+    /// SSH Key verification could not proceed (usually a known_hosts issue).
+    KEY_VERIFICATION_FAILURE = 5;
+    /// There was no route to the specified host through SSH.
+    NO_ROUTE_TO_HOST = 6;
+    /// SSH could not reach the specified address.
+    NETWORK_UNREACHABLE = 7;
+    /// The address given was invalid for the target (likely containing a
+    /// scope-ID that does not exist).
+    INVALID_ARGUMENT = 8;
+    /// An as-yet unseen error was encountered preventing connection to the
+    /// device (user will need to check the logs).
+    UNKNOWN_ERROR = 9;
+    /// There was an error communicating via FIDL to the device. This happens
+    /// after a connection has been established.
+    FIDL_COMMUNICATION_ERROR = 10;
+    /// An error was encountered while trying to knock a service in RCS. This
+    /// means that RCS was unable to connect to a service in order to verify a
+    /// FIDL channel can be established.
+    RCS_CONNECTION_ERROR = 11;
+    /// On attempting to 'knock' a service connection, the service dropped the
+    /// channel prematurely, closing the connection.
+    FAILED_TO_KNOCK_SERVICE = 12;
+};
+
 // TODO(https://fxbug.dev/94680): Migrate the method specifc error enums to use
 // this type instead.
 type TargetError = strict enum {
     /// The specified address does not exist within the target.
     ADDRESS_NOT_FOUND = 1;
-    /// SSH host pipe error encountered when trying to open an RCS connection.
-    SSH_HOST_PIPE = 2;
+};
+
+/// Configuration options for adding a manual target.
+type AddTargetConfig = table {
+    /// Attempts to verify connection.
+    1: verify_connection bool;
 };
 
 /// A protocol defining a collection of Fuchsia targets. This is used to inspect
@@ -185,9 +222,27 @@ protocol TargetCollection {
 
     /// Manually adds a target that cannot be discovered via mDNS. This target
     /// will be retained indefinitely, including across daemon restarts.
-    AddTarget(struct {
+    ///
+    /// If `verify_connection` is passed as true in the config, this will wait 
+    /// until it is possible to establish a remote control service connection 
+    /// to the target, or else will return an error detailing what went wrong 
+    /// communicating with the Fuchsia device.
+    ///
+    /// Note: the client will be responsible for timing out against this method,
+    /// as it will run for as long as the FIDL connection remains open. If the
+    /// channel is closed prematurely, then the manually added target will be
+    /// removed.
+    ///
+    /// If the channel to this call is dropped before the result is returned,
+    /// it is possible to leak a persistent manual target, so later on the
+    /// caller may need to invoke `RemoveTarget`.
+    ///
+    /// If `verify_connection` is passed as `false`, this function will return
+    /// immediately, ignoring possible connection issues with the target.
+    AddTarget(resource struct {
         ip TargetAddrInfo;
-    }) -> ();
+        config AddTargetConfig;
+    }) -> (struct {}) error TargetConnectionError;
 
     /// Manually adds a target that cannot be discovered via mDNS. This target
     /// will be retained in the target collection until it establishes an RCS
@@ -280,7 +335,7 @@ protocol Target {
     /// * See [TargetError] for failure states.
     OpenRemoteControl(resource struct {
         remote_control server_end:rc.RemoteControl;
-    }) -> (struct {}) error TargetError;
+    }) -> (struct {}) error TargetConnectionError;
 
     /// Opens a Fastboot controller for a given target.
     OpenFastboot(resource struct {

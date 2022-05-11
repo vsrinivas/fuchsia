@@ -6,7 +6,7 @@ use {
     crate::reboot,
     anyhow::{anyhow, Context as _, Result},
     diagnostics::{get_streaming_min_timestamp, run_diagnostics_streaming},
-    ffx_daemon_events::TargetEvent,
+    ffx_daemon_events::{HostPipeErr, TargetEvent},
     ffx_daemon_target::logger::streamer::GenericDiagnosticsStreamer,
     ffx_daemon_target::target::Target,
     ffx_stream_util::TryStreamUtilExt,
@@ -17,6 +17,7 @@ use {
         TimeoutExt,
     },
     protocols::Context,
+    std::cell::RefCell,
     std::future::Future,
     std::pin::Pin,
     std::rc::Rc,
@@ -110,31 +111,16 @@ impl TargetHandleInner {
             }
             bridge::TargetRequest::OpenRemoteControl { remote_control, responder } => {
                 self.target.run_host_pipe();
-                let rcs = loop {
-                    self.target
-                        .events
-                        .wait_for(None, |e| {
-                            e == TargetEvent::RcsActivated || e == TargetEvent::SshHostPipeErr
-                        })
-                        .await
-                        .context("waiting for RCS")?;
-                    if let Some(rcs) = self.target.rcs() {
-                        break Some(rcs);
-                    } else if !self.target.get_host_pipe_log_buffer().get_logs().await.is_empty() {
-                        break None;
-                    } else {
-                        log::trace!("RCS dropped after event fired. Waiting again.");
-                    }
-                };
+                let rcs = wait_for_rcs(&self.target).await?;
                 match rcs {
-                    Some(mut c) => {
+                    Ok(mut c) => {
                         // TODO(awdavies): Return this as a specific error to
                         // the client with map_err.
                         c.copy_to_channel(remote_control.into_channel())?;
                         responder.send(&mut Ok(())).map_err(Into::into)
                     }
-                    None => responder
-                        .send(&mut Err(bridge::TargetError::SshHostPipe))
+                    Err(e) => responder
+                        .send(&mut Err(e))
                         .context("sending error response")
                         .map_err(Into::into),
                 }
@@ -194,6 +180,55 @@ impl TargetHandleInner {
     }
 }
 
+pub(crate) async fn wait_for_rcs(
+    t: &Rc<Target>,
+) -> Result<Result<rcs::RcsConnection, bridge::TargetConnectionError>> {
+    Ok(loop {
+        // This setup here is due to the events not having a proper streaming implementation. The
+        // closure is intended to have a static lifetime, which forces this to happen to extract an
+        // event.
+        let seen_event = Rc::new(RefCell::new(None));
+        let se_clone = seen_event.clone();
+        t.events
+            .wait_for(None, move |e| match e {
+                TargetEvent::RcsActivated => true,
+                TargetEvent::SshHostPipeErr(host_pipe_err) => {
+                    *se_clone.borrow_mut() = Some(host_pipe_err);
+                    true
+                }
+                _ => false,
+            })
+            .await
+            .context("waiting for RCS")?;
+        if let Some(rcs) = t.rcs() {
+            break Ok(rcs);
+        } else if let Some(err) = seen_event.borrow_mut().take() {
+            break Err(host_pipe_err_to_fidl(err));
+        } else {
+            log::trace!("RCS dropped after event fired. Waiting again.");
+        }
+    })
+}
+
+fn host_pipe_err_to_fidl(h: HostPipeErr) -> bridge::TargetConnectionError {
+    match h {
+        HostPipeErr::Unknown(s) => {
+            log::warn!("Unknown host-pipe error received: '{}'", s);
+            bridge::TargetConnectionError::UnknownError
+        }
+        HostPipeErr::NetworkUnreachable => bridge::TargetConnectionError::NetworkUnreachable,
+        HostPipeErr::PermissionDenied => bridge::TargetConnectionError::PermissionDenied,
+        HostPipeErr::ConnectionRefused => bridge::TargetConnectionError::ConnectionRefused,
+        HostPipeErr::UnknownNameOrService => bridge::TargetConnectionError::UnknownNameOrService,
+        HostPipeErr::Timeout => bridge::TargetConnectionError::Timeout,
+        HostPipeErr::KeyVerificationFailure => {
+            bridge::TargetConnectionError::KeyVerificationFailure
+        }
+        HostPipeErr::NoRouteToHost => bridge::TargetConnectionError::NoRouteToHost,
+        HostPipeErr::InvalidArgument => bridge::TargetConnectionError::InvalidArgument,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -208,6 +243,46 @@ mod tests {
     use rcs::RcsConnection;
     use std::net::{IpAddr, SocketAddr};
     use std::str::FromStr;
+
+    #[test]
+    fn test_host_pipe_err_to_fidl_conversion() {
+        assert_eq!(
+            host_pipe_err_to_fidl(HostPipeErr::Unknown(String::from("foobar"))),
+            bridge::TargetConnectionError::UnknownError
+        );
+        assert_eq!(
+            host_pipe_err_to_fidl(HostPipeErr::InvalidArgument),
+            bridge::TargetConnectionError::InvalidArgument
+        );
+        assert_eq!(
+            host_pipe_err_to_fidl(HostPipeErr::NoRouteToHost),
+            bridge::TargetConnectionError::NoRouteToHost
+        );
+        assert_eq!(
+            host_pipe_err_to_fidl(HostPipeErr::KeyVerificationFailure),
+            bridge::TargetConnectionError::KeyVerificationFailure
+        );
+        assert_eq!(
+            host_pipe_err_to_fidl(HostPipeErr::Timeout),
+            bridge::TargetConnectionError::Timeout
+        );
+        assert_eq!(
+            host_pipe_err_to_fidl(HostPipeErr::UnknownNameOrService),
+            bridge::TargetConnectionError::UnknownNameOrService
+        );
+        assert_eq!(
+            host_pipe_err_to_fidl(HostPipeErr::ConnectionRefused),
+            bridge::TargetConnectionError::ConnectionRefused
+        );
+        assert_eq!(
+            host_pipe_err_to_fidl(HostPipeErr::PermissionDenied),
+            bridge::TargetConnectionError::PermissionDenied
+        );
+        assert_eq!(
+            host_pipe_err_to_fidl(HostPipeErr::NetworkUnreachable),
+            bridge::TargetConnectionError::NetworkUnreachable
+        );
+    }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_valid_target_state() {

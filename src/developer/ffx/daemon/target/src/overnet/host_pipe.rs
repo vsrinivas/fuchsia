@@ -9,7 +9,8 @@ use {
     anyhow::{anyhow, Context, Result},
     async_io::Async,
     async_lock::Mutex,
-    ffx_daemon_events::TargetEvent,
+    ffx_daemon_core::events,
+    ffx_daemon_events::{HostPipeErr, TargetEvent},
     fuchsia_async::{unblock, Task, Timer},
     futures::io::{copy_buf, AsyncBufRead, BufReader},
     futures_lite::io::AsyncBufReadExt,
@@ -90,6 +91,7 @@ impl HostPipeChild {
         addr: SocketAddr,
         id: u64,
         stderr_buf: Arc<LogBuffer>,
+        event_queue: events::Queue<TargetEvent>,
     ) -> Result<(Option<HostAddr>, HostPipeChild)> {
         // Before running remote_control_runner, we look up the environment
         // variable for $SSH_CONNECTION. This contains the IP address, including
@@ -164,7 +166,12 @@ impl HostPipeChild {
                 match result {
                     Ok(line) => {
                         log::info!("SSH stderr: {}", line);
-                        stderr_buf.push_line(line).await;
+                        stderr_buf.push_line(line.clone()).await;
+                        event_queue
+                            .push(TargetEvent::SshHostPipeErr(HostPipeErr::from(line)))
+                            .unwrap_or_else(|e| {
+                                log::warn!("queueing host pipe err event: {:?}", e)
+                            });
                     }
                     Err(e) => log::error!("SSH stderr read failure: {:?}", e),
                 }
@@ -301,7 +308,9 @@ impl HostPipeConnection {
 
     async fn new_with_cmd<F>(
         target: Weak<Target>,
-        cmd_func: impl FnOnce(SocketAddr, u64, Arc<LogBuffer>) -> F + Copy + 'static,
+        cmd_func: impl FnOnce(SocketAddr, u64, Arc<LogBuffer>, events::Queue<TargetEvent>) -> F
+            + Copy
+            + 'static,
         relaunch_command_delay: Duration,
     ) -> Result<()>
     where
@@ -318,9 +327,11 @@ impl HostPipeConnection {
                 anyhow!("target {:?} does not yet have an ssh address", target_nodename)
             })?;
             let (host_addr, mut cmd) =
-                cmd_func(ssh_address, target.id(), log_buf.clone()).await.with_context(|| {
-                    format!("creating host-pipe command to target {:?}", target_nodename)
-                })?;
+                cmd_func(ssh_address, target.id(), log_buf.clone(), target.events.clone())
+                    .await
+                    .with_context(|| {
+                        format!("creating host-pipe command to target {:?}", target_nodename)
+                    })?;
 
             *target.ssh_host_address.borrow_mut() = host_addr;
 
@@ -335,15 +346,9 @@ impl HostPipeConnection {
                     e.to_string()
                 )
             });
+            log::debug!("host-pipe command res: {:?}", res);
 
             target.ssh_host_address.borrow_mut().take();
-
-            let logs = log_buf.get_logs().await;
-            if !logs.is_empty() {
-                target.events.push(TargetEvent::SshHostPipeErr).unwrap_or_else(|err| {
-                    log::warn!("unable to enqueue RCS activation event: {:#}", err)
-                });
-            }
 
             match res {
                 Ok(_) => {
@@ -390,6 +395,7 @@ mod test {
         _addr: SocketAddr,
         _id: u64,
         _buf: Arc<LogBuffer>,
+        _events: events::Queue<TargetEvent>,
     ) -> Result<(Option<HostAddr>, HostPipeChild)> {
         Ok((
             Some(HostAddr("127.0.0.1".to_string())),
@@ -408,6 +414,7 @@ mod test {
         _addr: SocketAddr,
         _id: u64,
         _buf: Arc<LogBuffer>,
+        _events: events::Queue<TargetEvent>,
     ) -> Result<(Option<HostAddr>, HostPipeChild)> {
         Err(anyhow!(ERR_CTX))
     }
@@ -415,9 +422,10 @@ mod test {
     async fn start_child_ssh_failure(
         _addr: SocketAddr,
         _id: u64,
-        buf: Arc<LogBuffer>,
+        _buf: Arc<LogBuffer>,
+        events: events::Queue<TargetEvent>,
     ) -> Result<(Option<HostAddr>, HostPipeChild)> {
-        buf.push_line(String::from("1")).await;
+        events.push(TargetEvent::SshHostPipeErr(HostPipeErr::Unknown("foo".to_string()))).unwrap();
         Ok((
             Some(HostAddr("127.0.0.1".to_string())),
             HostPipeChild::fake_new(
@@ -469,6 +477,19 @@ mod test {
             Some("flooooooooberdoober"),
             [TargetAddr::new("192.168.1.1:22").unwrap()].into(),
         );
+        let events = target.events.clone();
+        let task = Task::local(async move {
+            events
+                .wait_for(None, |e| {
+                    assert_matches!(e, TargetEvent::SshHostPipeErr(_));
+                    true
+                })
+                .await
+                .unwrap();
+        });
+        // This is here to allow for the above task to get polled so that the `wait_for` can be
+        // placed on at the appropriate time (before the failure occurs in the function below).
+        futures_lite::future::yield_now().await;
         let res = HostPipeConnection::new_with_cmd(
             Rc::downgrade(&target),
             start_child_ssh_failure,
@@ -476,15 +497,8 @@ mod test {
         )
         .await;
         assert_matches!(res, Ok(_));
-
-        target
-            .events
-            .wait_for_async(None, |e| async move {
-                assert_eq!(e, TargetEvent::SshHostPipeErr);
-                true
-            })
-            .await
-            .unwrap();
+        // If things are not setup correctly this will hang forever.
+        task.await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

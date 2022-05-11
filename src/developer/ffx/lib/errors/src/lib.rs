@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_developer_ffx::{DaemonError, OpenTargetError, TargetError, TunnelError};
+use fidl_fuchsia_developer_ffx::{
+    DaemonError, OpenTargetError, TargetConnectionError, TunnelError,
+};
 
 /// The ffx main function expects a anyhow::Result from ffx plugins. If the Result is an Err it be
 /// downcast to FfxError, and if successful this error is presented as a user-readable error. All
@@ -48,11 +50,21 @@ pub enum FfxError {
     FastbootError { target: Option<String>, is_default_target: bool },
 
     #[error("{}", match .err {
-        TargetError::SshHostPipe => format!("Could not establish SSH connection to the target {}: {}.", target_string(.target, .is_default_target), logs.as_ref().unwrap_or(&"please check your SSH keys".to_string())),
-        TargetError::AddressNotFound => format!("Specified address does not exist"),
+        TargetConnectionError::PermissionDenied => format!("Could not establish SSH connection to the target {}: Permission denied.", target_string(.target, .is_default_target)),
+        TargetConnectionError::ConnectionRefused => format!("Could not establish SSH connection to the target {}: Connection refused.", target_string(.target, .is_default_target)),
+        TargetConnectionError::UnknownNameOrService => format!("Could not establish SSH connection to the target {}: Unknown name or service.", target_string(.target, .is_default_target)),
+        TargetConnectionError::Timeout => format!("Could not establish SSH connection to the target {}: Timed out awaiting connection.", target_string(.target, .is_default_target)),
+        TargetConnectionError::KeyVerificationFailure => format!("Could not establish SSH connection to the target {}: Key verification failed.", target_string(.target, .is_default_target)),
+        TargetConnectionError::NoRouteToHost => format!("Could not establish SSH connection to the target {}: No route to host.", target_string(.target, .is_default_target)),
+        TargetConnectionError::NetworkUnreachable => format!("Could not establish SSH connection to the target {}: Network unreachable.", target_string(.target, .is_default_target)),
+        TargetConnectionError::InvalidArgument => format!("Could not establish SSH connection to the target {}: Invalid argument. Please check the address of the target you are attempting to add.", target_string(.target, .is_default_target)),
+        TargetConnectionError::UnknownError => format!("Could not establish SSH connection to the target {}. {}. Report the error to the FFX team at https://fxbug.dev/new/ffx+User+Bug", target_string(.target, .is_default_target), .logs.as_ref().map(|s| s.as_str()).unwrap_or("As-yet unknown error. Please refer to the logs at `ffx config get -p log.dir` and look for 'Unknown host-pipe error received'")),
+        TargetConnectionError::FidlCommunicationError => format!("Connection was established to {}, but FIDL communication to the Remote Control Service failed. It may help to try running the command again. If this problem persists, please open a bug at https://fxbug.dev/new/ffx+Users+Bug", target_string(.target, .is_default_target)),
+        TargetConnectionError::RcsConnectionError => format!("Connection was established to {}, but the Remote Control Service failed initiating a test connection. It may help to try running the command again. If this problem persists, please open a bug at https://fxbug.dev/new/ffx+Users+Bug", target_string(.target, .is_default_target)),
+        TargetConnectionError::FailedToKnockService => format!("Connection was established to {}, but the Remote Control Service test connection was dropped prematurely. It may help to try running the command again. If this problem persists, please open a bug at https://fxbug.dev/new/ffx+Users+Bug", target_string(.target, .is_default_target)),
     })]
-    TargetError {
-        err: TargetError,
+    TargetConnectionError {
+        err: TargetConnectionError,
         target: Option<String>,
         is_default_target: bool,
         logs: Option<String>,

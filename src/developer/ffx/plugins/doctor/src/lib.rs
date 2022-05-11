@@ -1147,8 +1147,8 @@ mod test {
         fidl::Channel,
         fidl_fuchsia_developer_ffx::{
             DaemonProxy, DaemonRequest, OpenTargetError, RemoteControlState,
-            TargetCollectionRequest, TargetCollectionRequestStream, TargetError, TargetInfo,
-            TargetRequest, TargetState, TargetType,
+            TargetCollectionRequest, TargetCollectionRequestStream, TargetConnectionError,
+            TargetInfo, TargetRequest, TargetState, TargetType,
         },
         fidl_fuchsia_developer_remotecontrol::{
             IdentifyHostResponse, RemoteControlMarker, RemoteControlRequest,
@@ -1753,7 +1753,7 @@ mod test {
                                         }
                                         if target == SSH_ERR_NODENAME {
                                             responder
-                                                .send(&mut Err(TargetError::SshHostPipe))
+                                                .send(&mut Err(TargetConnectionError::UnknownError))
                                                 .unwrap();
                                         } else {
                                             responder.send(&mut Ok(())).unwrap();

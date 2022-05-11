@@ -4,7 +4,7 @@
 
 use {
     anyhow::Result,
-    errors::ffx_error,
+    errors::{ffx_error, FfxError},
     ffx_core::ffx_plugin,
     ffx_target_add_args::AddCommand,
     fidl_fuchsia_developer_ffx::{self as bridge, TargetCollectionProxy},
@@ -44,9 +44,24 @@ pub async fn add(target_collection_proxy: TargetCollectionProxy, cmd: AddCommand
         bridge::TargetAddrInfo::Ip(bridge::TargetIp { ip, scope_id })
     };
 
-    target_collection_proxy.add_target(&mut addr).await?;
-
-    Ok(())
+    target_collection_proxy
+        .add_target(
+            &mut addr,
+            bridge::AddTargetConfig {
+                verify_connection: Some(cmd.wait),
+                ..bridge::AddTargetConfig::EMPTY
+            },
+        )
+        .await?
+        .map_err(|e| {
+            FfxError::TargetConnectionError {
+                err: e,
+                target: Some(format!("{}", cmd.addr)),
+                is_default_target: false,
+                logs: None,
+            }
+            .into()
+        })
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -60,9 +75,9 @@ mod test {
         test: T,
     ) -> TargetCollectionProxy {
         setup_fake_target_collection_proxy(move |req| match req {
-            bridge::TargetCollectionRequest::AddTarget { ip, responder } => {
+            bridge::TargetCollectionRequest::AddTarget { ip, config: _, responder, .. } => {
                 test(ip);
-                responder.send().unwrap();
+                responder.send(&mut Ok(())).unwrap();
             }
             _ => assert!(false),
         })
@@ -85,7 +100,7 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "123.210.123.210".to_owned() }).await.unwrap();
+        add(server, AddCommand { addr: "123.210.123.210".to_owned(), wait: false }).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -106,7 +121,9 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "123.210.123.210:2310".to_owned() }).await.unwrap();
+        add(server, AddCommand { addr: "123.210.123.210:2310".to_owned(), wait: false })
+            .await
+            .unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -122,7 +139,7 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "f000::1".to_owned() }).await.unwrap();
+        add(server, AddCommand { addr: "f000::1".to_owned(), wait: false }).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -139,7 +156,7 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "[f000::1]:65".to_owned() }).await.unwrap();
+        add(server, AddCommand { addr: "[f000::1]:65".to_owned(), wait: false }).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -155,7 +172,7 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "f000::1%1".to_owned() }).await.unwrap();
+        add(server, AddCommand { addr: "f000::1%1".to_owned(), wait: false }).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -172,6 +189,6 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "[f000::1%1]:640".to_owned() }).await.unwrap();
+        add(server, AddCommand { addr: "[f000::1%1]:640".to_owned(), wait: false }).await.unwrap();
     }
 }

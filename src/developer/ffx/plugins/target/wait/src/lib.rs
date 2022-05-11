@@ -11,8 +11,6 @@ use {
     fidl_fuchsia_developer_ffx::{DaemonError, TargetCollectionProxy, TargetMarker, TargetQuery},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fuchsia_async::futures::future::Either,
-    fuchsia_async::futures::StreamExt,
-    selectors::VerboseError,
     std::time::Duration,
     timeout::timeout,
 };
@@ -48,8 +46,7 @@ pub async fn wait_for_device(
     }
 }
 
-const RCS_TIMEOUT: u64 = 3;
-const KNOCK_TIMEOUT: u64 = 1;
+const RCS_TIMEOUT: Duration = Duration::from_secs(3);
 
 async fn knock_target(
     ffx: &ffx_lib_args::Ffx,
@@ -57,44 +54,31 @@ async fn knock_target(
 ) -> Result<()> {
     let default_target = ffx.target().await?;
     let (target_proxy, target_remote) = create_proxy::<TargetMarker>()?;
-    let (rcs, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+    let (rcs_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
     // If you are reading this plugin for example code, this is an example of what you
     // should generally not be doing to connect to a daemon protocol. This is maintained
     // by the FFX team directly.
     target_collection_proxy
         .open_target(
-            TargetQuery { string_matcher: default_target, ..TargetQuery::EMPTY },
+            TargetQuery { string_matcher: default_target.clone(), ..TargetQuery::EMPTY },
             target_remote,
         )
         .await
         .context("opening target")?
         .map_err(|e| anyhow!("open target err: {:?}", e))?;
-    timeout(Duration::from_secs(RCS_TIMEOUT), target_proxy.open_remote_control(remote_server_end))
+    timeout(RCS_TIMEOUT, target_proxy.open_remote_control(remote_server_end))
         .await?
         .context("opening remote_control")?
         .map_err(|e| anyhow!("open remote control err: {:?}", e))?;
-    let (knock_client, knock_remote) = fidl::handle::Channel::create()?;
-    let knock_client = fuchsia_async::Channel::from_channel(knock_client)?;
-    let knock_client = fidl::client::Client::new(knock_client, "knock_client");
-    rcs.connect(
-        selectors::parse_selector::<VerboseError>(
-            "core/remote-control:out:fuchsia.developer.remotecontrol.RemoteControl",
-        )
-        .unwrap(),
-        knock_remote,
-    )
-    .await
-    .context("rcs connect fidl conn")?
-    .map_err(|e| anyhow!("rcs connect result: {:?}", e))?;
-    let mut event_receiver = knock_client.take_event_receiver();
-    let res = timeout(Duration::from_secs(KNOCK_TIMEOUT), event_receiver.next()).await;
-    match res {
-        Err(_) => Ok(()), // timeout is fine here, it means the connection wasn't lost.
-        Ok(r) => r
-            .ok_or(anyhow!("unable to knock RCS from itself"))?
-            .map(drop)
-            .context("rcs connection failure"),
-    }
+    rcs::knock_rcs(&rcs_proxy).await.map_err(|e| {
+        FfxError::TargetConnectionError {
+            err: e,
+            target: default_target.clone(),
+            is_default_target: default_target.is_some(),
+            logs: None,
+        }
+        .into()
+    })
 }
 
 #[cfg(test)]

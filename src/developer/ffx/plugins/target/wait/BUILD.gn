@@ -12,8 +12,8 @@ ffx_plugin("ffx_wait") {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx/lib/netext:lib",
+    "//src/developer/ffx/lib/rcs:lib",
     "//src/developer/ffx/lib/timeout:lib",
-    "//src/lib/diagnostics/selectors",
     "//third_party/rust_crates:futures-lite",
   ]
 

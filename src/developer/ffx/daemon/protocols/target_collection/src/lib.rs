@@ -16,6 +16,7 @@ use {
     ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fuchsia_async::futures::TryStreamExt,
     protocols::prelude::*,
     std::net::SocketAddr,
@@ -50,39 +51,58 @@ impl Default for TargetCollectionProtocol {
     }
 }
 
-impl TargetCollectionProtocol {
-    async fn add_manual_target(
-        &self,
-        tc: &TargetCollection,
-        addr: SocketAddr,
-        lifetime: Option<Duration>,
-    ) {
-        // Expiry is the SystemTime (represented as seconds after the UNIX_EPOCH) at which a manual
-        // target is allowed to expire and enter the Disconnected state. If no lifetime is given,
-        // the target is allowed to persist indefinitely. This is persisted in FFX config.
-        // Timeout is the number of seconds until the expiry is met; it is used in-memory only.
-        let (timeout, expiry, last_seen) = if lifetime.is_none() {
-            (None, None, None)
-        } else {
-            let timeout = SystemTime::now() + lifetime.unwrap();
-            let expiry = timeout.duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO).as_secs();
-            (Some(timeout), Some(expiry), Some(Instant::now()))
-        };
+async fn add_manual_target(
+    manual_targets: Rc<dyn manual_targets::ManualTargets>,
+    tc: &TargetCollection,
+    addr: SocketAddr,
+    lifetime: Option<Duration>,
+) -> Rc<Target> {
+    // Expiry is the SystemTime (represented as seconds after the UNIX_EPOCH) at which a manual
+    // target is allowed to expire and enter the Disconnected state. If no lifetime is given,
+    // the target is allowed to persist indefinitely. This is persisted in FFX config.
+    // Timeout is the number of seconds until the expiry is met; it is used in-memory only.
+    let (timeout, expiry, last_seen) = if lifetime.is_none() {
+        (None, None, None)
+    } else {
+        let timeout = SystemTime::now() + lifetime.unwrap();
+        let expiry = timeout.duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO).as_secs();
+        (Some(timeout), Some(expiry), Some(Instant::now()))
+    };
 
-        let tae = TargetAddrEntry::new(addr.into(), Utc::now(), TargetAddrType::Manual(timeout));
-        let _ = self.manual_targets.add(format!("{}", addr), expiry).await.map_err(|e| {
-            log::error!("Unable to persist manual target: {:?}", e);
-        });
-        let target = Target::new_with_addr_entries(Option::<String>::None, Some(tae).into_iter());
-        if addr.port() != 0 {
-            target.set_ssh_port(Some(addr.port()));
-        }
-
-        target.update_connection_state(|_| TargetConnectionState::Manual(last_seen));
-        let target = tc.merge_insert(target);
-        target.run_host_pipe();
+    let tae = TargetAddrEntry::new(addr.into(), Utc::now(), TargetAddrType::Manual(timeout));
+    let _ = manual_targets.add(format!("{}", addr), expiry).await.map_err(|e| {
+        log::error!("Unable to persist manual target: {:?}", e);
+    });
+    let target = Target::new_with_addr_entries(Option::<String>::None, Some(tae).into_iter());
+    if addr.port() != 0 {
+        target.set_ssh_port(Some(addr.port()));
     }
 
+    target.update_connection_state(|_| TargetConnectionState::Manual(last_seen));
+    let target = tc.merge_insert(target);
+    target.run_host_pipe();
+    target
+}
+
+async fn remove_manual_target(
+    manual_targets: Rc<dyn manual_targets::ManualTargets>,
+    tc: &TargetCollection,
+    target_id: String,
+) -> bool {
+    if let Some(target) = tc.get(target_id.clone()) {
+        let ssh_port = target.ssh_port();
+        for addr in target.manual_addrs() {
+            let mut sockaddr = SocketAddr::from(addr);
+            ssh_port.map(|p| sockaddr.set_port(p));
+            let _ = manual_targets.remove(format!("{}", sockaddr)).await.map_err(|e| {
+                log::error!("Unable to persist target removal: {}", e);
+            });
+        }
+    }
+    tc.remove_target(target_id)
+}
+
+impl TargetCollectionProtocol {
     async fn load_manual_targets(&self, tc: &TargetCollection) {
         // The FFX config value for a manual target contains a target ID (typically the IP:PORT
         // combo) and a timeout (which is None, if the target is indefinitely persistent).
@@ -106,11 +126,11 @@ impl TargetCollectionProtocol {
                     } else {
                         lifetime_from_epoch - elapsed
                     };
-                    self.add_manual_target(tc, sa, Some(remaining)).await;
+                    add_manual_target(self.manual_targets.clone(), tc, sa, Some(remaining)).await;
                 }
             } else {
                 // Manual targets without a lifetime are always reloaded.
-                self.add_manual_target(tc, sa, None).await;
+                add_manual_target(self.manual_targets.clone(), tc, sa, None).await;
             }
         }
     }
@@ -178,15 +198,76 @@ impl FidlProtocol for TargetCollectionProtocol {
                 self.tasks.spawn(TargetHandle::new(target, cx.clone(), target_handle)?);
                 responder.send(&mut Ok(())).map_err(Into::into)
             }
-            bridge::TargetCollectionRequest::AddTarget { ip, responder } => {
-                // TODO(awdavies): The related tests for this are still implemented in
-                // daemon/src/daemon.rs and should be migrated here once:
-                // a.) The previous AddTargets function is deprecated, and
-                // b.) All references to manual_targets are moved here instead
-                //     of in the daemon.
+            bridge::TargetCollectionRequest::AddTarget { ip, config, responder } => {
                 let addr = target_addr_info_to_socketaddr(ip);
-                self.add_manual_target(&target_collection, addr, None).await;
-                responder.send().map_err(Into::into)
+                match config.verify_connection {
+                    Some(true) => {}
+                    _ => {
+                        let _ = add_manual_target(
+                            self.manual_targets.clone(),
+                            &target_collection,
+                            addr,
+                            None,
+                        )
+                        .await;
+                        return responder.send(&mut Ok(())).map_err(Into::into);
+                    }
+                };
+                // The drop guard is here for the impatient user: if the user closes their channel
+                // prematurely (before this operation either succeeds or fails), then they will
+                // risk adding a manual target that can never be connected to, and then have to
+                // manually remove the target themselves.
+                struct DropGuard(
+                    Option<(
+                        Rc<dyn manual_targets::ManualTargets>,
+                        Rc<TargetCollection>,
+                        SocketAddr,
+                    )>,
+                );
+                impl Drop for DropGuard {
+                    fn drop(&mut self) {
+                        match self.0.take() {
+                            Some((mt, tc, addr)) => fuchsia_async::Task::local(async move {
+                                remove_manual_target(mt, &tc, addr.to_string()).await
+                            })
+                            .detach(),
+                            None => {}
+                        }
+                    }
+                }
+                let mut drop_guard = DropGuard(Some((
+                    self.manual_targets.clone(),
+                    target_collection.clone(),
+                    addr.clone(),
+                )));
+                let target =
+                    add_manual_target(self.manual_targets.clone(), &target_collection, addr, None)
+                        .await;
+                let rcs = target_handle::wait_for_rcs(&target).await?;
+                match rcs {
+                    Ok(mut rcs) => {
+                        let (rcs_proxy, server) =
+                            fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
+                        rcs.copy_to_channel(server.into_channel())?;
+                        match rcs::knock_rcs(&rcs_proxy).await {
+                            Ok(_) => {
+                                let _ = drop_guard.0.take();
+                            }
+                            Err(e) => return responder.send(&mut Err(e)).map_err(Into::into),
+                        }
+                    }
+                    Err(e) => {
+                        let _ = remove_manual_target(
+                            self.manual_targets.clone(),
+                            &target_collection,
+                            addr.to_string(),
+                        )
+                        .await;
+                        let _ = drop_guard.0.take();
+                        return responder.send(&mut Err(e)).map_err(Into::into);
+                    }
+                }
+                responder.send(&mut Ok(())).map_err(Into::into)
             }
             bridge::TargetCollectionRequest::AddEphemeralTarget {
                 ip,
@@ -194,7 +275,8 @@ impl FidlProtocol for TargetCollectionProtocol {
                 responder,
             } => {
                 let addr = target_addr_info_to_socketaddr(ip);
-                self.add_manual_target(
+                add_manual_target(
+                    self.manual_targets.clone(),
                     &target_collection,
                     addr,
                     Some(Duration::from_secs(connect_timeout_seconds)),
@@ -203,19 +285,12 @@ impl FidlProtocol for TargetCollectionProtocol {
                 responder.send().map_err(Into::into)
             }
             bridge::TargetCollectionRequest::RemoveTarget { target_id, responder } => {
-                if let Some(target) = target_collection.get(target_id.clone()) {
-                    let ssh_port = target.ssh_port();
-                    for addr in target.manual_addrs() {
-                        let mut sockaddr = SocketAddr::from(addr);
-                        ssh_port.map(|p| sockaddr.set_port(p));
-                        let _ = self.manual_targets.remove(format!("{}", sockaddr)).await.map_err(
-                            |e| {
-                                log::error!("Unable to persist target removal: {}", e);
-                            },
-                        );
-                    }
-                }
-                let result = target_collection.remove_target(target_id.clone());
+                let result = remove_manual_target(
+                    self.manual_targets.clone(),
+                    &target_collection,
+                    target_id,
+                )
+                .await;
                 responder.send(result).map_err(Into::into)
             }
         }
@@ -609,7 +684,11 @@ mod tests {
             .build();
         let target_addr = TargetAddr::new("[::1]:0").unwrap();
         let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
-        proxy.add_target(&mut target_addr.into()).await.unwrap();
+        proxy
+            .add_target(&mut target_addr.into(), bridge::AddTargetConfig::EMPTY)
+            .await
+            .unwrap()
+            .unwrap();
         let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
         let target = target_collection.get(target_addr.to_string()).unwrap();
         assert_eq!(target.addrs().len(), 1);
@@ -641,7 +720,11 @@ mod tests {
             .build();
         let target_addr = TargetAddr::new("[::1]:8022").unwrap();
         let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
-        proxy.add_target(&mut target_addr.into()).await.unwrap();
+        proxy
+            .add_target(&mut target_addr.into(), bridge::AddTargetConfig::EMPTY)
+            .await
+            .unwrap()
+            .unwrap();
         let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
         let target = target_collection.get(target_addr.to_string()).unwrap();
         assert_eq!(target.addrs().len(), 1);
@@ -674,14 +757,18 @@ mod tests {
             .build();
         let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
         proxy
-            .add_target(&mut bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
-                ip: IpAddress::Ipv6(Ipv6Address {
-                    addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            .add_target(
+                &mut bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+                    ip: IpAddress::Ipv6(Ipv6Address {
+                        addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    }),
+                    port: 8022,
+                    scope_id: 1,
                 }),
-                port: 8022,
-                scope_id: 1,
-            }))
+                bridge::AddTargetConfig::EMPTY,
+            )
             .await
+            .unwrap()
             .unwrap();
         let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
         assert_eq!(1, target_collection.targets().len());

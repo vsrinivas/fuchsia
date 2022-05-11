@@ -18,6 +18,7 @@ rustc_library("ffx_daemon_protocol_target_collection") {
     "//src/developer/ffx/daemon/target:lib",
     "//src/developer/ffx/lib/diagnostics:lib",
     "//src/developer/ffx/lib/protocols:lib",
+    "//src/developer/ffx/lib/rcs:lib",
     "//src/developer/ffx/lib/stream_util:lib",
     "//src/developer/ffx/lib/tasks:lib",
     "//src/lib/async-utils",
@@ -28,6 +29,7 @@ rustc_library("ffx_daemon_protocol_target_collection") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:futures-lite",
     "//third_party/rust_crates:log",
   ]
 
@@ -38,7 +40,6 @@ rustc_library("ffx_daemon_protocol_target_collection") {
     "//src/connectivity/overnet/lib/hoist",
     "//src/connectivity/overnet/lib/stream_link",
     "//src/developer/ffx/lib/addr:lib",
-    "//src/developer/ffx/lib/rcs:lib",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:async-channel",
     "//third_party/rust_crates:serde_json",
