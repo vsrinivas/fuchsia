@@ -429,11 +429,8 @@ impl FlatlandViewStrategy {
             while let Some(result) = layout_info_stream.next().await {
                 match result {
                     Ok(layout_info) => {
-                        if let Some(fidl_fuchsia_math::SizeU { width, height }) = layout_info
-                            .logical_size
-                            // TODO(https://fxbug.dev/91259): Remove this filter when no longer
-                            // needed.
-                            .filter(|size| size.width != 32 || size.height != 32)
+                        if let Some(fidl_fuchsia_math::SizeU { width, height }) =
+                            layout_info.logical_size
                         {
                             sender
                                 .unbounded_send(MessageInternal::SizeChanged(
