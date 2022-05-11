@@ -362,10 +362,6 @@ class WebEngineTest : public VirtualKeyboardBase {
     return {
         std::make_pair(kWebVirtualKeyboardClient, kWebVirtualKeyboardUrl),
         std::make_pair(kFontsProvider, kFontsProviderUrl),
-        std::make_pair(kTextManager, kTextManagerUrl),
-        std::make_pair(kIntl, kIntlUrl),
-        std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
-        std::make_pair(kNetstack, kNetstackUrl),
         std::make_pair(kWebContextProvider, kWebContextProviderUrl),
         std::make_pair(kSemanticsManager, kSemanticsManagerUrl),
     };
@@ -374,6 +370,10 @@ class WebEngineTest : public VirtualKeyboardBase {
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {
         std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
+        std::make_pair(kTextManager, kTextManagerUrl),
+        std::make_pair(kIntl, kIntlUrl),
+        std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
+        std::make_pair(kNetstack, kNetstackUrl),
     };
   }
 
@@ -476,20 +476,16 @@ class WebEngineTest : public VirtualKeyboardBase {
   static constexpr auto kFontsProviderUrl = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
 
   static constexpr auto kTextManager = "text_manager";
-  static constexpr auto kTextManagerUrl =
-      "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx";
+  static constexpr auto kTextManagerUrl = "#meta/text_manager.cm";
 
   static constexpr auto kIntl = "intl";
-  static constexpr auto kIntlUrl =
-      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
+  static constexpr auto kIntlUrl = "#meta/intl_property_manager.cm";
 
   static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
-  static constexpr auto kMemoryPressureProviderUrl =
-      "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx";
+  static constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";
 
   static constexpr auto kNetstack = "netstack";
-  static constexpr auto kNetstackUrl =
-      "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/netstack.cmx";
+  static constexpr auto kNetstackUrl = "#meta/netstack.cm";
 
   static constexpr auto kWebContextProvider = "web_context_provider";
   static constexpr auto kWebContextProviderUrl =
@@ -500,8 +496,7 @@ class WebEngineTest : public VirtualKeyboardBase {
       "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx";
 
   static constexpr auto kBuildInfoProvider = "build_info_provider";
-  static constexpr auto kBuildInfoProviderUrl =
-      "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/fake_build_info.cm";
+  static constexpr auto kBuildInfoProviderUrl = "#meta/fake_build_info.cm";
 
   // The typical latency on devices we've tested is ~60 msec. The retry interval is chosen to be
   // a) Long enough that it's unlikely that we send a new tap while a previous tap is still being
