@@ -54,7 +54,7 @@ func TestFemuWithDisk(t *testing.T) {
 	// This doesn't have to be in a "real" disk format, it just has to be there so we can validate that it's detected.
 	device.Hw.Drives = append(device.Hw.Drives, &fvdpb.Drive{
 		Id:         "disk00",
-		Image:      filepath.Join(exDir, "../bringup.zbi"),
+		Image:      filepath.Join(exDir, "../fuchsia.zbi"),
 		IsFilename: true,
 		Device:     &fvdpb.Device{Model: "virtio-blk-pci"},
 	})

@@ -24,8 +24,8 @@ if (is_linux) {
     deps = [ "//tools/emulator/emulatortest" ]
   }
 
-  host_test_data("bringup_zbi") {
-    sources = [ "$root_build_dir/bringup.zbi" ]
+  host_test_data("main_zbi") {
+    sources = [ "$root_build_dir/fuchsia.zbi" ]
   }
 
   go_test("femu_test") {
@@ -35,6 +35,6 @@ if (is_linux) {
       "//tools/virtual_device",
       "//tools/virtual_device:proto",
     ]
-    non_go_deps = [ ":bringup_zbi" ]
+    non_go_deps = [ ":main_zbi" ]
   }
 }
