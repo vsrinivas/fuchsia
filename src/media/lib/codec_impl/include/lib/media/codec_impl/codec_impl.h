@@ -281,8 +281,12 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
    private:
     const uint64_t stream_lifetime_ordinal_ = 0;
-    bool future_discarded_ = false;
-    bool future_flush_end_of_stream_ = false;
+    // The future_* member vars are set from output domain (FIDL thread) and
+    // read on StreamControl domain, so these need a lock (or atomic, but a lock
+    // is fine).
+    std::mutex future_lock_;
+    bool future_discarded_ __TA_GUARDED(future_lock_) = false;
+    bool future_flush_end_of_stream_ __TA_GUARDED(future_lock_) = false;
     // Starts as nullptr for each new stream with implicit fallback to
     // initial_input_format_details_, but can be overridden on a per-stream
     // basis with QueueInputFormatDetails().
@@ -631,6 +635,13 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // ordinal that we add to the tail of the Stream queue.
   uint64_t future_stream_lifetime_ordinal_ = 0;
 
+  // The stream_queue_lock_ protects the stream_queue_ and output domain (FIDL
+  // thread) access to streams obtained via the stream_queue_ (to ensure the
+  // obtained stream doesn't disappear too soon due to actions by StreamControl
+  // domain).  In contrast to the output domain, the StreamControl domain does
+  // _not_ need to hold this lock to protect the stream_ lifetime because only
+  // StreamControl will remove items from stream_queue_.
+  std::mutex stream_queue_lock_;
   // The Output ordering domain (FIDL thread) adds items to the tail of this
   // queue, and the StreamControl ordering domain removes items from the head of
   // this queue.  This queue is how the StreamControl ordering domain knows
@@ -644,7 +655,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // In addition, this can allow the StreamControl ordering domain to skip past
   // stream-specific items for a stream that's already known to be discarded by
   // the client.
-  std::list<std::unique_ptr<Stream>> stream_queue_;
+  std::list<std::unique_ptr<Stream>> stream_queue_ __TA_GUARDED(stream_queue_lock_);
   // When no current stream, this is nullptr.  When there is a current stream,
   // this points to that stream, owned by stream_queue_.
   Stream* stream_ = nullptr;
