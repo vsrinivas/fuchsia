@@ -834,6 +834,30 @@ async fn doctor_summary<W: Write>(
                 .add_node(&format!("Daemon version: {}", daemon_version), LedgerMode::Verbose)?;
             ledger.set_outcome(node, LedgerOutcome::Success)?;
 
+            let path = std::env::current_exe().map(|x| x.to_string_lossy().to_string()).ok();
+            let have_path = path.is_some();
+            if let (Some(path), Some(exec_path)) = (path, v.exec_path.clone()) {
+                if path != exec_path {
+                    let node = ledger.add_node(
+                        &format!("Daemon ran from {} but this command is {}. Run `ffx doctor --restart-daemon`", exec_path, path),
+                        LedgerMode::Automatic,
+                    )?;
+                    ledger.set_outcome(node, LedgerOutcome::SoftWarning)?;
+                }
+
+                let node = ledger.add_node(&format!("path: {}", exec_path), LedgerMode::Verbose)?;
+                ledger.set_outcome(node, LedgerOutcome::Success)?;
+            } else if !have_path {
+                let node = ledger.add_node(
+                    "Could not get current command path to compare with daemon",
+                    LedgerMode::Automatic,
+                )?;
+                ledger.set_outcome(node, LedgerOutcome::SoftWarning)?;
+            } else {
+                let node = ledger.add_node("Daemon is too old to report its executable path. Run `ffx doctor --restart-daemon`", LedgerMode::Automatic)?;
+                ledger.set_outcome(node, LedgerOutcome::SoftWarning)?;
+            }
+
             let node = ledger.add_node(
                 &format!("abi-revision: {}", get_abi_revision(v.clone())),
                 LedgerMode::Verbose,
@@ -1815,6 +1839,7 @@ mod test {
             build_version: Some(DAEMON_VERSION.to_string()),
             abi_revision: Some(FAKE_ABI_REVISION),
             api_level: Some(FAKE_API_LEVEL),
+            exec_path: Some(ffx_path()),
             ..VersionInfo::EMPTY
         }
     }
@@ -1947,6 +1972,7 @@ mod test {
                    \n    [✓] Daemon found: [1]\
                    \n    [✓] Connecting to daemon\
                    \n    [✓] Daemon version: {}\
+                   \n    [✓] path: {}\
                    \n    [✓] abi-revision: {}\
                    \n    [✓] api-level: {}\
                    \n    [✓] Default target: (none)\
@@ -1957,6 +1983,7 @@ mod test {
                 FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ffx_path(),
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL
             )
@@ -2008,6 +2035,7 @@ mod test {
                    \n    [✓] Daemon found: [1]\
                    \n    [✓] Connecting to daemon\
                    \n    [✓] Daemon version: {}\
+                   \n    [✓] path: {}\
                    \n    [✓] abi-revision: {}\
                    \n    [✓] api-level: {}\
                    \n    [✓] Default target: (none)\
@@ -2018,6 +2046,7 @@ mod test {
                 FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ffx_path(),
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL
             )
@@ -2069,6 +2098,7 @@ mod test {
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] path: {}\
             \n    [✓] abi-revision: {}\
             \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
@@ -2079,6 +2109,7 @@ mod test {
                 FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ffx_path(),
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL
             )
@@ -2239,6 +2270,7 @@ mod test {
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] path: {}\
             \n    [✓] abi-revision: {}\
             \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
@@ -2255,6 +2287,7 @@ mod test {
                 FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ffx_path(),
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL,
                 SSH_ERR_NODENAME,
@@ -2278,6 +2311,7 @@ mod test {
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] path: {}\
             \n    [✓] abi-revision: {}\
             \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
@@ -2298,6 +2332,7 @@ mod test {
                 FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ffx_path(),
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL,
                 NODENAME,
@@ -2375,6 +2410,7 @@ mod test {
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] path: {}\
             \n    [✓] abi-revision: {}\
             \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
@@ -2391,6 +2427,7 @@ mod test {
                 FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ffx_path(),
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL,
                 NODENAME,
@@ -2447,6 +2484,7 @@ mod test {
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] path: {}\
             \n    [✓] abi-revision: {}\
             \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
@@ -2457,6 +2495,7 @@ mod test {
                 FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ffx_path(),
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL
             )
@@ -2621,6 +2660,7 @@ mod test {
                 \n    [✓] Daemon found: [1]\
                 \n    [✓] Connecting to daemon\
                 \n    [✓] Daemon version: {}\
+                \n    [✓] path: {}\
                 \n    [✓] abi-revision: {}\
                 \n    [✓] api-level: {}\
                 \n    [✓] Default target: (none)\n\n\
@@ -2631,6 +2671,7 @@ mod test {
                     FAKE_API_LEVEL,
                     ffx_path(),
                     DAEMON_VERSION,
+                    ffx_path(),
                     ABI_REVISION_STR,
                     FAKE_API_LEVEL,
                 ))),
@@ -2692,6 +2733,7 @@ mod test {
                 \n    [✓] Daemon found: [1]\
                 \n    [✓] Connecting to daemon\
                 \n    [✓] Daemon version: {}\
+                \n    [✓] path: {}\
                 \n    [✓] abi-revision: {}\
                 \n    [✓] api-level: {}\
                 \n    [✓] Default target: (none)\n\n\
@@ -2702,6 +2744,7 @@ mod test {
                     FAKE_API_LEVEL,
                     ffx_path(),
                     DAEMON_VERSION,
+                    ffx_path(),
                     ABI_REVISION_STR,
                     FAKE_API_LEVEL
                 ))),
@@ -2781,6 +2824,7 @@ mod test {
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] path: {}\
             \n    [✓] abi-revision: {}\
             \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
@@ -2801,6 +2845,7 @@ mod test {
                 FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ffx_path(),
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL,
                 UNRESPONSIVE_NODENAME,
@@ -2875,6 +2920,7 @@ mod test {
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] path: {}\
             \n    [✓] abi-revision: {}\
             \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
@@ -2888,6 +2934,7 @@ mod test {
                 FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ffx_path(),
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL,
                 SERIAL_NUMBER,
@@ -2940,6 +2987,7 @@ mod test {
                    \n    [✓] Daemon found: [1]\
                    \n    [✓] Connecting to daemon\
                    \n    [✓] Daemon version: {}\
+                   \n    [✓] path: {}\
                    \n    [✓] abi-revision: {}\
                    \n    [✓] api-level: {}\
                    \n    [!] Daemon and frontend are at different API levels. Run `ffx doctor --restart-daemon`\
@@ -2951,6 +2999,7 @@ mod test {
                 ANOTHER_FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ffx_path(),
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL
             )
