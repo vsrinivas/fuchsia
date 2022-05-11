@@ -486,11 +486,10 @@ impl<B: DataBuffer> WritebackCache<B> {
 
     /// Returns all data which can be flushed.  |allocate_buffer| is a callback which is used to
     /// allocate Buffer objects.  Each pending data region will be copied into a Buffer and returned
-    /// to the caller in block-aligned ranges.  If there's already an ongoing flush, the caller
-    /// receives an Event that resolves when the other flush is complete.  This is not thread-safe
-    /// with respect to cache mutations; the caller must ensure that no changes can be made to the
-    /// cache for the duration of this call.  The content size returned will only ever increase the
-    /// size of the object.  Truncation must be dealt with by calling take_flushable_metadata.
+    /// to the caller in block-aligned ranges.  This is not thread-safe with respect to cache
+    /// mutations; the caller must ensure that no changes can be made to the cache for the duration
+    /// of this call.  The content size returned will only ever increase the size of the object.
+    /// Truncation must be dealt with by calling take_flushable_metadata.
     pub fn take_flushable<'a, F>(
         &'a self,
         block_size: u64,
@@ -535,7 +534,13 @@ impl<B: DataBuffer> WritebackCache<B> {
         let mut slice = buffer.as_mut_slice();
         for r in &ranges {
             let (head, tail) = slice.split_at_mut((r.end - r.start) as usize);
-            self.data.raw_read(r.start, head);
+            if r.end > size {
+                let (head, tail) = head.split_at_mut((size - r.start) as usize);
+                self.data.raw_read(r.start, head);
+                tail.fill(0);
+            } else {
+                self.data.raw_read(r.start, head);
+            }
             slice = tail;
         }
 
