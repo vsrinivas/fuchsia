@@ -25,8 +25,6 @@ toc:
     path: /docs/development/build/concepts/build_system/bundles.md
   - title: "Variants"
     path: /docs/development/build/concepts/build_system/variants.md
-  - title: "GN in Zircon"
-    path: /docs/development/build/concepts/build_system/zircon_gn.md
   - title: "GN Template Best Practices"
     path: /docs/development/build/concepts/build_system/best_practices.md
 - title: "Build system internals"
