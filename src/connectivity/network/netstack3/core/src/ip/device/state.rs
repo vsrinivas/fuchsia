@@ -8,8 +8,8 @@ use alloc::vec::Vec;
 use core::{fmt::Debug, num::NonZeroU8, time::Duration};
 
 use net_types::{
-    ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6Scope},
-    ScopeableAddress as _, SpecifiedAddr, UnicastAddr, Witness,
+    ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    SpecifiedAddr, UnicastAddr, Witness,
 };
 use nonzero_ext::nonzero;
 
@@ -320,22 +320,6 @@ impl<I: Instant> AsRef<IpDeviceConfiguration> for Ipv6DeviceState<I> {
     }
 }
 
-impl<I: Instant> IpDeviceState<I, Ipv6> {
-    /// Iterates over the global IPv6 address entries.
-    pub(crate) fn iter_global_ipv6_addrs(
-        &self,
-    ) -> impl Iterator<Item = &Ipv6AddressEntry<I>> + Clone {
-        self.addrs.iter().filter(|entry| entry.is_global())
-    }
-
-    /// Iterates mutably over the global IPv6 address entries.
-    pub(crate) fn iter_global_ipv6_addrs_mut(
-        &mut self,
-    ) -> impl Iterator<Item = &mut Ipv6AddressEntry<I>> {
-        self.addrs.iter_mut().filter(|entry| entry.is_global())
-    }
-}
-
 /// IPv4 and IPv6 state combined.
 pub(crate) struct DualStackIpDeviceState<I: Instant> {
     /// IPv4 state.
@@ -442,16 +426,6 @@ impl<Instant> AddrConfig<Instant> {
         Self::Slaac(SlaacConfig::Static { valid_until: Lifetime::Infinite });
 }
 
-/// The type of address configuration.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum AddrConfigType {
-    /// Configured by stateless address autoconfiguration.
-    Slaac,
-
-    /// Manually configured.
-    Manual,
-}
-
 /// Data associated with an IPv6 address on an interface.
 // TODO(https://fxbug.dev/91753): Should this be generalized for loopback?
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -473,17 +447,6 @@ impl<Instant> Ipv6AddressEntry<Instant> {
 
     pub(crate) fn addr_sub(&self) -> &AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> {
         &self.addr_sub
-    }
-
-    pub(crate) fn config_type(&self) -> AddrConfigType {
-        match self.config {
-            AddrConfig::Slaac(_) => AddrConfigType::Slaac,
-            AddrConfig::Manual => AddrConfigType::Manual,
-        }
-    }
-
-    pub(crate) fn is_global(&self) -> bool {
-        self.addr_sub().addr().scope() == Ipv6Scope::Global
     }
 }
 

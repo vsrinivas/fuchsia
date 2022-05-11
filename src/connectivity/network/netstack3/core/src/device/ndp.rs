@@ -1415,9 +1415,7 @@ mod tests {
                 router_solicitation::{MAX_RTR_SOLICITATION_DELAY, RTR_SOLICITATION_INTERVAL},
                 set_ipv6_routing_enabled,
                 slaac::{SlaacConfiguration, SlaacTimerId},
-                state::{
-                    AddrConfig, AddrConfigType, Ipv6AddressEntry, Lifetime, TemporarySlaacConfig,
-                },
+                state::{AddrConfig, Ipv6AddressEntry, Lifetime, TemporarySlaacConfig},
                 Ipv6DeviceTimerId,
             },
             receive_ipv6_packet, DummyDeviceId, SendIpPacketMeta,
@@ -3209,15 +3207,15 @@ mod tests {
         prefix_length: u8,
         on_link_flag: bool,
         autonomous_address_configuration_flag: bool,
-        valid_lifetime: u32,
-        preferred_lifetime: u32,
+        valid_lifetime_secs: u32,
+        preferred_lifetime_secs: u32,
     ) -> Buf<Vec<u8>> {
         let p = PrefixInformation::new(
             prefix_length,
             on_link_flag,
             autonomous_address_configuration_flag,
-            valid_lifetime,
-            preferred_lifetime,
+            valid_lifetime_secs,
+            preferred_lifetime_secs,
             prefix,
         );
         let options = &[NdpOptionBuilder::PrefixInformation(p)];
@@ -3238,6 +3236,24 @@ mod tests {
             .serialize_vec_outer()
             .unwrap()
             .unwrap_b()
+    }
+
+    fn iter_global_ipv6_addrs<D: LinkDevice, C: NdpContext<D>>(
+        sync_ctx: &C,
+        device_id: C::DeviceId,
+    ) -> impl Iterator<Item = &Ipv6AddressEntry<C::Instant>> {
+        sync_ctx.get_ip_device_state(device_id).iter_addrs().filter(|entry| {
+            match entry.addr_sub.addr().scope() {
+                Ipv6Scope::Global => true,
+                Ipv6Scope::InterfaceLocal
+                | Ipv6Scope::LinkLocal
+                | Ipv6Scope::AdminLocal
+                | Ipv6Scope::SiteLocal
+                | Ipv6Scope::OrganizationLocal
+                | Ipv6Scope::Reserved(_)
+                | Ipv6Scope::Unassigned(_) => false,
+            }
+        })
     }
 
     #[test]
@@ -3282,10 +3298,7 @@ mod tests {
         );
         receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
 
-        assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.try_into().unwrap())
-                .iter_global_ipv6_addrs(),
-        );
+        assert_empty(iter_global_ipv6_addrs(&ctx, device.try_into().unwrap()));
 
         // No timers.
         assert_eq!(ctx.trigger_next_timer(crate::handle_timer), None);
@@ -3337,9 +3350,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
         let device_id = device.try_into().unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&Ipv6AddressEntry {
                 addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
                 state: AddressState::Assigned,
@@ -3368,9 +3379,7 @@ mod tests {
         let now = ctx.now();
         let valid_until = now + Duration::from_secs(valid_lifetime.into());
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&Ipv6AddressEntry {
                 addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
                 state: AddressState::Assigned,
@@ -3407,9 +3416,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
         let device_id = device.try_into().unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&Ipv6AddressEntry {
                 addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
                 state: AddressState::Assigned,
@@ -3457,10 +3464,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
         let device_id = device.try_into().unwrap();
         // No new address should be formed.
-        assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs(),
-        );
+        assert_empty(iter_global_ipv6_addrs(&ctx, device_id));
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -3482,12 +3486,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
 
         // Should have gotten a new IP.
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .count(),
-            1
-        );
+        assert_eq!(iter_global_ipv6_addrs(&ctx, device_id).count(), 1);
         let now = ctx.now();
         let valid_until = now + Duration::from_secs(valid_lifetime.into());
         let expected_address_entry = Ipv6AddressEntry {
@@ -3499,9 +3498,7 @@ mod tests {
             deprecated: false,
         };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -3523,9 +3520,7 @@ mod tests {
         let expected_address_entry =
             Ipv6AddressEntry { state: AddressState::Assigned, ..expected_address_entry };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -3553,9 +3548,7 @@ mod tests {
             ..expected_address_entry
         };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -3582,9 +3575,7 @@ mod tests {
             vec!(SlaacTimerId::new_deprecate_slaac_address(device, expected_addr).into())
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&Ipv6AddressEntry { deprecated: true, ..expected_address_entry }]
         );
 
@@ -3599,10 +3590,7 @@ mod tests {
             ),
             vec!(SlaacTimerId::new_invalidate_slaac_address(device, expected_addr).into())
         );
-        assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs(),
-        );
+        assert_empty(iter_global_ipv6_addrs(&ctx, device_id));
 
         // No more timers.
         assert_eq!(ctx.trigger_next_timer(crate::handle_timer), None);
@@ -3668,9 +3656,7 @@ mod tests {
             deprecated: true,
         };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -3687,9 +3673,7 @@ mod tests {
             Some(dad_timer_id(device_id, expected_addr))
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&Ipv6AddressEntry { state: AddressState::Assigned, ..expected_address_entry }]
         );
     }
@@ -3749,9 +3733,7 @@ mod tests {
             deprecated: false,
         };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -3777,9 +3759,7 @@ mod tests {
         let expected_address_entry =
             Ipv6AddressEntry { state: AddressState::Assigned, ..expected_address_entry };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -3808,9 +3788,7 @@ mod tests {
             ..expected_address_entry
         };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -3845,9 +3823,7 @@ mod tests {
             ..expected_address_entry
         };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -3886,9 +3862,7 @@ mod tests {
             ..expected_address_entry
         };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -3903,9 +3877,7 @@ mod tests {
         ]);
         assert_eq!(ctx.trigger_timers_for(Duration::from_secs(1), crate::handle_timer), vec!());
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -3925,9 +3897,7 @@ mod tests {
         let expected_address_entry =
             Ipv6AddressEntry { deprecated: true, ..expected_address_entry };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -3943,10 +3913,7 @@ mod tests {
             ),
             vec!(SlaacTimerId::new_invalidate_slaac_address(device, expected_addr).into())
         );
-        assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs(),
-        );
+        assert_empty(iter_global_ipv6_addrs(&ctx, device_id));
 
         // No more timers.
         assert_eq!(ctx.trigger_next_timer(crate::handle_timer), None);
@@ -4058,13 +4025,9 @@ mod tests {
         prefix1.send_prefix_update(&mut ctx, device, src_ip);
 
         let (prefix_1_static, prefix_1_temporary) = {
-            let slaac_configs = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
-                &ctx,
-                device.try_into().unwrap(),
-            )
-            .iter_global_ipv6_addrs()
-            .filter_map(slaac_address)
-            .filter(|(a, _)| prefix1.prefix.contains(a));
+            let slaac_configs = iter_global_ipv6_addrs(&ctx, device.try_into().unwrap())
+                .filter_map(slaac_address)
+                .filter(|(a, _)| prefix1.prefix.contains(a));
 
             let (static_address, temporary_address) = single_static_and_temporary(slaac_configs);
 
@@ -4092,13 +4055,9 @@ mod tests {
 
         {
             // Check prefix 1 addresses again.
-            let slaac_configs = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
-                &ctx,
-                device.try_into().unwrap(),
-            )
-            .iter_global_ipv6_addrs()
-            .filter_map(slaac_address)
-            .filter(|(a, _)| prefix1.prefix.contains(a));
+            let slaac_configs = iter_global_ipv6_addrs(&ctx, device.try_into().unwrap())
+                .filter_map(slaac_address)
+                .filter(|(a, _)| prefix1.prefix.contains(a));
             let (static_address, temporary_address) = single_static_and_temporary(slaac_configs);
 
             let now = ctx.now();
@@ -4116,13 +4075,9 @@ mod tests {
         }
         {
             // Check prefix 2 addresses.
-            let slaac_configs = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
-                &ctx,
-                device.try_into().unwrap(),
-            )
-            .iter_global_ipv6_addrs()
-            .filter_map(slaac_address)
-            .filter(|(a, _)| prefix2.prefix.contains(a));
+            let slaac_configs = iter_global_ipv6_addrs(&ctx, device.try_into().unwrap())
+                .filter_map(slaac_address)
+                .filter(|(a, _)| prefix2.prefix.contains(a));
             let (static_address, temporary_address) = single_static_and_temporary(slaac_configs);
 
             let now = ctx.now();
@@ -4182,20 +4137,18 @@ mod tests {
         );
 
         // Should have gotten a new temporary IP.
-        let temporary_slaac_addresses =
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.try_into().unwrap())
-                .iter_global_ipv6_addrs()
-                .filter_map(|entry| match entry.config {
-                    AddrConfig::Slaac(SlaacConfig::Static { .. }) => None,
-                    AddrConfig::Slaac(SlaacConfig::Temporary(TemporarySlaacConfig {
-                        creation_time: _,
-                        desync_factor: _,
-                        valid_until,
-                        dad_counter: _,
-                    })) => Some((entry.addr_sub(), entry.state, valid_until)),
-                    AddrConfig::Manual => None,
-                })
-                .collect::<Vec<_>>();
+        let temporary_slaac_addresses = iter_global_ipv6_addrs(&ctx, device.try_into().unwrap())
+            .filter_map(|entry| match entry.config {
+                AddrConfig::Slaac(SlaacConfig::Static { .. }) => None,
+                AddrConfig::Slaac(SlaacConfig::Temporary(TemporarySlaacConfig {
+                    creation_time: _,
+                    desync_factor: _,
+                    valid_until,
+                    dad_counter: _,
+                })) => Some((entry.addr_sub(), entry.state, valid_until)),
+                AddrConfig::Manual => None,
+            })
+            .collect::<Vec<_>>();
         assert_eq!(temporary_slaac_addresses.len(), 1);
         let (addr_sub, state, valid_until) = temporary_slaac_addresses.into_iter().next().unwrap();
         assert_eq!(addr_sub.subnet(), subnet);
@@ -4247,18 +4200,16 @@ mod tests {
         // Manually give the device the expected address/subnet
         add_ip_addr_subnet(&mut ctx, device, expected_addr_sub.to_witness()).unwrap();
         let device_id = device.try_into().unwrap();
+        let expected_address_entry = Ipv6AddressEntry {
+            addr_sub: expected_addr_sub,
+            state: AddressState::Assigned,
+            config: AddrConfig::Manual,
+            deprecated: false,
+        };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .count(),
-            1
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
+            [&expected_address_entry]
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Manual);
         assert_empty(ctx.ctx.timer_ctx().timers());
 
         // Receive a new RA with new prefix (autonomous).
@@ -4279,18 +4230,9 @@ mod tests {
 
         // Address state and configuration type should not have changed.
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .count(),
-            1
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
+            [&expected_address_entry]
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(*entry.addr_sub(), expected_addr_sub);
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Manual);
 
         // No new timers were added.
         assert_empty(ctx.ctx.timer_ctx().timers());
@@ -4320,19 +4262,16 @@ mod tests {
         // prefix.
         add_ip_addr_subnet(&mut ctx, device, manual_addr_sub.to_witness()).unwrap();
         let device_id = device.try_into().unwrap();
+        let expected_address_entry = Ipv6AddressEntry {
+            addr_sub: manual_addr_sub,
+            state: AddressState::Assigned,
+            config: AddrConfig::Manual,
+            deprecated: false,
+        };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .count(),
-            1
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
+            [&expected_address_entry]
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(*entry.addr_sub(), manual_addr_sub);
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Manual);
         assert_empty(ctx.ctx.timer_ctx().timers());
 
         // Receive a new RA with new prefix (autonomous).
@@ -4350,21 +4289,11 @@ mod tests {
             9000,
         );
         receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .count(),
-            1
-        );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
         // Address state and configuration type should not have changed.
-        assert_eq!(*entry.addr_sub(), manual_addr_sub);
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Manual);
-
+        assert_eq!(
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
+            [&expected_address_entry]
+        );
         // No new timers were added.
         assert_empty(ctx.ctx.timer_ctx().timers());
     }
@@ -4393,24 +4322,23 @@ mod tests {
         // Manually give the device the expected address with the same prefix.
         add_ip_addr_subnet(&mut ctx, device, manual_addr_sub.to_witness()).unwrap();
         let device_id = device.try_into().unwrap();
+        let expected_manual_address_entry = Ipv6AddressEntry {
+            addr_sub: manual_addr_sub,
+            state: AddressState::Assigned,
+            config: AddrConfig::Manual,
+            deprecated: false,
+        };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .count(),
-            1
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
+            [&expected_manual_address_entry]
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Manual);
         assert_empty(ctx.ctx.timer_ctx().timers());
 
         // Receive a new RA with new prefix (autonomous).
         //
-        // Should not get a new IP.
+        // Should get a new IP.
 
+        const VALID_LIFETIME_SECS: u32 = 10000;
         let icmpv6_packet_buf = slaac_packet_buf(
             src_ip,
             Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
@@ -4418,32 +4346,25 @@ mod tests {
             prefix_length,
             false,
             true,
-            10000,
-            9000,
+            VALID_LIFETIME_SECS,
+            9000, /* preferred_lifetime_secs */
         );
         receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
+        let now = ctx.now();
+        let expected_slaac_address_entry = Ipv6AddressEntry {
+            addr_sub: slaac_addr_sub,
+            state: AddressState::Assigned,
+            config: AddrConfig::Slaac(SlaacConfig::Static {
+                valid_until: Lifetime::Finite(
+                    now + Duration::from_secs(VALID_LIFETIME_SECS.into()),
+                ),
+            }),
+            deprecated: false,
+        };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .count(),
-            2
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
+            [&expected_manual_address_entry, &expected_slaac_address_entry]
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .nth(0)
-            .unwrap();
-        // Address state and configuration type should not have changed.
-        assert_eq!(*entry.addr_sub(), manual_addr_sub);
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Manual);
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        // Address state and configuration type should not have changed.
-        assert_eq!(*entry.addr_sub(), slaac_addr_sub);
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Address invalidation timers were added.
         ctx.ctx.timer_ctx().assert_timers_installed([
@@ -4494,8 +4415,7 @@ mod tests {
 
         // Sanity check: `conflicted_addr` is already assigned on the device.
         assert_matches!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
+            iter_global_ipv6_addrs(&ctx, device_id)
                 .find(|entry| entry.addr_sub() == &conflicted_addr),
             Some(_)
         );
@@ -4541,10 +4461,7 @@ mod tests {
         let prefix_length = 64;
 
         let device_id = device.try_into().unwrap();
-        assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs(),
-        );
+        assert_empty(iter_global_ipv6_addrs(&ctx, device_id));
 
         // Receive a new RA with new prefix (autonomous), but preferred lifetime
         // is greater than valid.
@@ -4562,10 +4479,7 @@ mod tests {
             10000,
         );
         receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
-        assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs(),
-        );
+        assert_empty(iter_global_ipv6_addrs(&ctx, device_id));
 
         // Address invalidation timers were added.
         assert_empty(ctx.ctx.timer_ctx().timers());
@@ -4588,10 +4502,7 @@ mod tests {
 
         // Have no addresses yet.
         let device_id = device.try_into().unwrap();
-        assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs(),
-        );
+        assert_empty(iter_global_ipv6_addrs(&ctx, device_id));
 
         // Enable DAD for future IPs.
         crate::device::set_ipv6_configuration(&mut ctx, device, {
@@ -4626,9 +4537,7 @@ mod tests {
             deprecated: false,
         };
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
 
@@ -4647,9 +4556,7 @@ mod tests {
             SlaacTimerId::new_deprecate_slaac_address(device, expected_addr).into()
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&Ipv6AddressEntry { deprecated: true, ..expected_address_entry }]
         );
     }
@@ -4683,9 +4590,7 @@ mod tests {
         device: DeviceId,
         filter: F,
     ) -> impl Iterator<Item = &Ipv6AddressEntry<DummyInstant>> {
-        NdpContext::<EthernetLinkDevice>::get_ip_device_state(ctx, device.try_into().unwrap())
-            .iter_global_ipv6_addrs()
-            .filter(filter)
+        iter_global_ipv6_addrs(ctx, device.try_into().unwrap()).filter(filter)
     }
 
     fn get_matching_slaac_address_entry<F: FnMut(&&Ipv6AddressEntry<DummyInstant>) -> bool>(
@@ -4704,10 +4609,8 @@ mod tests {
         device: DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
     ) -> Option<&Ipv6AddressEntry<DummyInstant>> {
-        let mut matching_addrs =
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(ctx, device.try_into().unwrap())
-                .iter_global_ipv6_addrs()
-                .filter(|entry| *entry.addr_sub() == addr_sub);
+        let mut matching_addrs = iter_global_ipv6_addrs(ctx, device.try_into().unwrap())
+            .filter(|entry| *entry.addr_sub() == addr_sub);
         let entry = matching_addrs.next();
         assert_eq!(matching_addrs.next(), None);
         entry
@@ -4721,7 +4624,7 @@ mod tests {
         preferred_until: DummyInstant,
     ) {
         assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
+        assert_matches!(entry.config, AddrConfig::Slaac(_));
         let entry_valid_until = match entry.config {
             AddrConfig::Slaac(SlaacConfig::Static { valid_until }) => valid_until,
             AddrConfig::Slaac(SlaacConfig::Temporary(TemporarySlaacConfig {
@@ -4789,10 +4692,7 @@ mod tests {
         let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Have no addresses yet.
-        assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.try_into().unwrap())
-                .iter_global_ipv6_addrs(),
-        );
+        assert_empty(iter_global_ipv6_addrs(&ctx, device.try_into().unwrap()));
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -5696,9 +5596,7 @@ mod tests {
         };
         let device_id = device.try_into().unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs()
-                .collect::<Vec<_>>(),
+            iter_global_ipv6_addrs(&ctx, device_id).collect::<Vec<_>>(),
             [&expected_address_entry]
         );
         // Make sure deprecate and invalidation timers are set.
@@ -5712,10 +5610,7 @@ mod tests {
 
         // Deleting the address should cancel its SLAAC timers.
         del_ip_addr(&mut ctx, device, &expected_addr.into_specified()).unwrap();
-        assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs(),
-        );
+        assert_empty(iter_global_ipv6_addrs(&ctx, device_id));
         ctx.ctx.timer_ctx().assert_no_timers_installed();
     }
 
@@ -5729,15 +5624,13 @@ mod tests {
 
         // Deleting the address should cancel its SLAAC timers.
         del_ip_addr(&mut ctx, device, &expected_addr.into_specified()).unwrap();
-        assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.try_into().unwrap())
-                .iter_global_ipv6_addrs()
-                .filter(|e| match e.config {
-                    AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
-                    AddrConfig::Slaac(SlaacConfig::Static { valid_until: _ }) => false,
-                    AddrConfig::Manual => false,
-                }),
-        );
+        assert_empty(iter_global_ipv6_addrs(&ctx, device.try_into().unwrap()).filter(|e| {
+            match e.config {
+                AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
+                AddrConfig::Slaac(SlaacConfig::Static { valid_until: _ }) => false,
+                AddrConfig::Manual => false,
+            }
+        }));
         ctx.ctx.timer_ctx().assert_no_timers_installed();
     }
 }

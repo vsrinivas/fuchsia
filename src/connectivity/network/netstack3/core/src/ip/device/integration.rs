@@ -4,6 +4,7 @@
 
 //! The integrations for protocols built on top of an IP device.
 
+use alloc::boxed::Box;
 use core::{num::NonZeroU8, time::Duration};
 
 use net_types::{
@@ -33,7 +34,9 @@ use crate::{
             route_discovery::{Ipv6RouteDiscoveryState, Ipv6RouteDiscoveryStateContext},
             router_solicitation::{Ipv6DeviceRsContext, Ipv6LayerRsContext},
             send_ip_frame,
-            slaac::{SlaacConfiguration, SlaacStateContext},
+            slaac::{
+                SlaacAddressEntry, SlaacAddressEntryMut, SlaacConfiguration, SlaacStateContext,
+            },
             state::{
                 AddrConfig, AddressState, IpDeviceConfiguration, IpDeviceState,
                 Ipv4DeviceConfiguration, Ipv6AddressEntry, Ipv6DeviceConfiguration, SlaacConfig,
@@ -93,18 +96,32 @@ impl<C: device::Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler> SlaacStateCon
         C::get_eui64_iid(self, device_id).unwrap_or_else(Default::default)
     }
 
-    fn get_ip_device_state(
+    fn iter_slaac_addrs(
         &self,
         device_id: Self::DeviceId,
-    ) -> &IpDeviceState<Self::Instant, Ipv6> {
-        &C::get_ip_device_state(self, device_id).ip_state
+    ) -> Box<dyn Iterator<Item = SlaacAddressEntry<Self::Instant>> + '_> {
+        Box::new(C::get_ip_device_state(self, device_id).ip_state.iter_addrs().cloned().filter_map(
+            |Ipv6AddressEntry { addr_sub, state: _, config, deprecated }| match config {
+                AddrConfig::Slaac(config) => {
+                    Some(SlaacAddressEntry { addr_sub, config, deprecated })
+                }
+                AddrConfig::Manual => None,
+            },
+        ))
     }
 
-    fn get_ip_device_state_mut(
+    fn iter_slaac_addrs_mut(
         &mut self,
         device_id: Self::DeviceId,
-    ) -> &mut IpDeviceState<Self::Instant, Ipv6> {
-        &mut C::get_ip_device_state_mut(self, device_id).ip_state
+    ) -> Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, Self::Instant>> + '_> {
+        Box::new(C::get_ip_device_state_mut(self, device_id).ip_state.iter_addrs_mut().filter_map(
+            |Ipv6AddressEntry { addr_sub, state: _, config, deprecated }| match config {
+                AddrConfig::Slaac(config) => {
+                    Some(SlaacAddressEntryMut { addr_sub: *addr_sub, config, deprecated })
+                }
+                AddrConfig::Manual => None,
+            },
+        ))
     }
 
     fn add_slaac_addr_sub(
