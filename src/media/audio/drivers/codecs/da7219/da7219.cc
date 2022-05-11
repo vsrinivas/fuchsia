@@ -94,6 +94,16 @@ zx_status_t Da7219::Reset() {
     return status;
 
   // Routing, configure headphones and leave disabled for AAD (Advanced Accessory Detect).
+  status =
+      DacLCtrl::Get().set_dac_l_en(true).set_dac_l_mute_en(false).set_dac_l_ramp_en(false).Write(
+          i2c_);
+  if (status != ZX_OK)
+    return status;
+  status =
+      DacRCtrl::Get().set_dac_r_en(true).set_dac_r_mute_en(false).set_dac_r_ramp_en(false).Write(
+          i2c_);
+  if (status != ZX_OK)
+    return status;
   status = MixoutLSelect::Get().set_mixout_l_mix_select(true).Write(i2c_);
   if (status != ZX_OK)
     return status;

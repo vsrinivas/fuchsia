@@ -96,6 +96,20 @@ struct MixoutRSelect : public I2cRegister<MixoutRSelect, 0x4c> {
   DEF_BIT(0, mixout_r_mix_select);
 };
 
+// DAC_L_CTRL.
+struct DacLCtrl : public I2cRegister<DacLCtrl, 0x69> {
+  DEF_BIT(7, dac_l_en);
+  DEF_BIT(6, dac_l_mute_en);
+  DEF_BIT(5, dac_l_ramp_en);
+};
+
+// DAC_R_CTRL.
+struct DacRCtrl : public I2cRegister<DacRCtrl, 0x6a> {
+  DEF_BIT(7, dac_r_en);
+  DEF_BIT(6, dac_r_mute_en);
+  DEF_BIT(5, dac_r_ramp_en);
+};
+
 // HP_L_CTRL.
 struct HpLCtrl : public I2cRegister<HpLCtrl, 0x6b> {
   DEF_BIT(7, hp_l_amp_en);

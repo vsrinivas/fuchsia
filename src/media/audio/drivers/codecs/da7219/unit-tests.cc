@@ -72,6 +72,8 @@ TEST_F(Da7219Test, Reset) {
   mock_i2c_.ExpectWriteStop({0xfd, 0x01}, ZX_OK);               // Enable.
   mock_i2c_.ExpectWriteStop({0x20, 0x8c}, ZX_OK);               // PLL.
   mock_i2c_.ExpectWriteStop({0x47, 0xa0}, ZX_OK);               // Charge Pump enablement.
+  mock_i2c_.ExpectWriteStop({0x69, 0x80}, ZX_OK);               // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6a, 0x80}, ZX_OK);               // HP Routing.
   mock_i2c_.ExpectWriteStop({0x4b, 0x01}, ZX_OK);               // HP Routing.
   mock_i2c_.ExpectWriteStop({0x4c, 0x01}, ZX_OK);               // HP Routing.
   mock_i2c_.ExpectWriteStop({0x6e, 0x80}, ZX_OK);               // HP Routing.
