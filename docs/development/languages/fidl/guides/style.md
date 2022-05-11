@@ -403,7 +403,7 @@ name may be left off: `ProtocolName.Method`.
 Similarly, when referring to a method in the same protocol as the comment,
 the library name and protocol name may be left off: `Method`.
 
-#### Library Overview
+#### Library Overview {#library-overview}
 
 You can provide a library overview as a documentation comment on the
 `library` statement. The 'library' statement starts FIDL files. For example:

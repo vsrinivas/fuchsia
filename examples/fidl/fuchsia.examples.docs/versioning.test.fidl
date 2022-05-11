@@ -1,0 +1,67 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START library]
+// Equivalent to `@available(platform="fuchsia", added=1)`.
+@available(added=1)
+library fuchsia.examples.docs;
+// [END library]
+
+// [START arguments]
+@available(added=1, deprecated=2, removed=3)
+const ANSWER uint64 = 42;
+// [END arguments]
+
+// [START inheritance]
+@available(added=2, deprecated=3)
+protocol Versioned {
+    // Equivalent to `@available(added=2, deprecated=3, removed=4)`.
+    @available(removed=4)
+    Removed(table {
+        // Equivalent to `@available(added=3, deprecated=3, removed=4)`.
+        @available(added=3)
+        1: message string;
+    });
+};
+// [END inheritance]
+
+// [START deprecation]
+protocol Example {
+    // (Description of the method.)
+    //
+    // # Deprecation
+    //
+    // (Detailed explanation of why the method is deprecated, the timeline for
+    // removing it, and what should be used instead.)
+    @available(deprecated=5, removed=HEAD, note="use Replacement")
+    Deprecated();
+
+    @available(added=5)
+    Replacement();
+};
+// [END deprecation]
+
+// [START references]
+const VALUE uint32 = 5;
+const REFERENCES_VALUE uint32 = VALUE;
+
+type Type = struct {};
+type ReferencesType = table {
+    1: t Type;
+};
+
+alias ReferencesTypeAndValue = vector<Type>:VALUE;
+// [END references]
+
+// [START swapping]
+@available(removed=HEAD)
+type Color = strict enum {
+    RED = 1;
+};
+
+@available(added=HEAD)
+type Color = flexible enum { // Note: flexible instead of strict
+    RED = 1;
+};
+// [END swapping]

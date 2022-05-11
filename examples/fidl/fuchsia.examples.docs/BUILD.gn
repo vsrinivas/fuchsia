@@ -23,6 +23,16 @@ fidl("fuchsia.examples.docs") {
   ]
 }
 
+fidl("versioning") {
+  name = "fuchsia.examples.docs"
+  sources = [ "versioning.test.fidl" ]
+}
+
+fidl("versioning_decomposed") {
+  name = "fuchsia.examples.docs"
+  sources = [ "versioning_decomposed.test.fidl" ]
+}
+
 fidl("builtin") {
   sources = [ "language_reference_builtin.test.fidl" ]
 }

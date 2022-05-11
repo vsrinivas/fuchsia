@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+@available(added=1)
+library fuchsia.examples.docs;
+
+// This is a manually decomposed equivalent of the protocol `Versioned` in
+// versioning.test.fidl.
+
+// [START decomposed]
+@available(added=2, removed=3)
+protocol Versioned {
+    Removed(table {});
+};
+
+@available(added=3, deprecated=3, removed=4)
+protocol Versioned {
+    Removed(table {
+        1: message string;
+    });
+};
+
+@available(added=4, deprecated=4)
+protocol Versioned {};
+// [END decomposed]

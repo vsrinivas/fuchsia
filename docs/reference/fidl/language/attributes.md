@@ -2,6 +2,7 @@
 
 The following FIDL attributes are supported:
 
+* [`@available`](#available)
 * [`@deprecated`](#deprecated)
 * [`@discoverable`](#discoverable)
 * [`@doc`](#doc)
@@ -42,6 +43,26 @@ Illustrates both aspects:
 
 * there are two attributes, `@discoverable` and `@transport`, and
 * the `@transport` attribute takes a value from the list enumerated below.
+
+## `@available` {#available}
+
+**USAGE**: `@available(platform="`_string_`", added=`_version_`,
+deprecated=`_version_`, removed=`_version`, note="`_string_`")`
+
+**MEANING**:
+All arguments are optional, but at least one must be provided.
+
+* `platform`: Only allowed when the attribute is on the `library` declaration.
+  Must be a valid [platform identifier][versioning-formalism]. If omitted,
+  defaults to the first component of the library name.
+* `added`, `deprecated`, `removed`: Must be a valid [version
+  identifier][versioning-formalism], i.e. an integer from 1 to 2^63-1 or the
+  special constant `HEAD`. Must respect `added <= deprecated < removed`.
+* `note`: Only allowed if `deprecated` is provided. Should contain a brief
+  explanation indicating what to use instead, suitable to be included in
+  compiler error messages.
+
+See [FIDL versioning](versioning.md) for more details.
 
 ## `@deprecated` {#deprecated}
 
@@ -250,6 +271,6 @@ no longer necessary.
 
 <!-- xrefs -->
 [channel]: /docs/reference/kernel_objects/channel.md
-[RFC-0058]: /docs/contribute/governance/rfcs/0058_deprecated_attribute.md
 [RFC-0020]: /docs/contribute/governance/rfcs/0020_interface_ordinal_hashing.md
 [RFC-0021]: /docs/contribute/governance/rfcs/0021_soft_transitions_methods_add_remove.md
+[RFC-0058]: /docs/contribute/governance/rfcs/0058_deprecated_attribute.md

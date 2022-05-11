@@ -63,6 +63,8 @@ group("test") {
     "//examples/fidl/dart:all",
     "//examples/fidl/fuchsia.examples.docs",
     "//examples/fidl/fuchsia.examples.docs:builtin",
+    "//examples/fidl/fuchsia.examples.docs:versioning",
+    "//examples/fidl/fuchsia.examples.docs:versioning_decomposed",
     "//examples/fidl/go:all",
     "//examples/fidl/hlcpp:all",
     "//examples/fidl/llcpp:all",

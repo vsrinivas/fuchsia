@@ -1,4 +1,3 @@
-
 # FIDL internal library zx
 
 The `zx` library is is defined in [//zircon/vdso](/zircon/vdso), and can be
