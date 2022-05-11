@@ -11,6 +11,8 @@ import("//build/test.gni")
 driver_bind_rules("goldfish_sensor-bind") {
   rules = "goldfish_sensor.bind"
   tests = "bind_tests.json"
+  header_output = "goldfish_sensor-bind.h"
+
   deps = [
     "//src/devices/bind/fuchsia.goldfish",
     "//src/devices/bind/fuchsia.google.platform",

@@ -12,6 +12,7 @@
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/ddk/binding_driver.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -36,7 +37,6 @@
 
 #include "binding.h"
 #include "lib/fidl/llcpp/object_view.h"
-#include "src/devices/i2c/drivers/intel-i2c/intel_i2c_bind.h"
 
 namespace intel_i2c {
 

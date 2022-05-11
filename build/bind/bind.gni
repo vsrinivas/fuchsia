@@ -430,7 +430,7 @@ template("bindc") {
 #
 #   header_output (optional)
 #     |string|: Name of the bind header file.
-#     Defaults to bind_name + ".h"
+#     Defaults to no header
 #
 #   bind_output (optional)
 #     |string|: Name of the bind binary file
@@ -456,28 +456,27 @@ template("driver_bind_rules") {
   assert(defined(invoker.rules) || (defined(invoker.disable_autobind) &&
                                         invoker.disable_autobind == true),
          "Need a bind rules source")
-  header_output = "$target_name.h"
-  if (defined(invoker.header_output)) {
-    header_output = invoker.header_output
-  }
 
   bind_output = "$target_name.bindbc"
   if (defined(invoker.bind_output)) {
     bind_output = invoker.bind_output
   }
 
-  header_file_target = "${target_name}_header"
-  bindc(header_file_target) {
-    forward_variables_from(invoker,
-                           [
-                             "rules",
-                             "deps",
-                             "testonly",
-                             "disable_autobind",
-                             "disable_new_bytecode",
-                             "visibility",
-                           ])
-    header_output = "$header_output"
+  if (defined(invoker.header_output)) {
+    header_output = invoker.header_output
+    header_file_target = "${target_name}_header"
+    bindc(header_file_target) {
+      forward_variables_from(invoker,
+                             [
+                               "rules",
+                               "deps",
+                               "testonly",
+                               "disable_autobind",
+                               "disable_new_bytecode",
+                               "visibility",
+                             ])
+      header_output = "$header_output"
+    }
   }
 
   bytecode_file_target = "${target_name}_bytecode"
@@ -501,10 +500,10 @@ template("driver_bind_rules") {
                              "testonly",
                              "visibility",
                            ])
-    public_deps = [
-      ":${bytecode_file_target}",
-      ":${header_file_target}",
-    ]
+    public_deps = [ ":${bytecode_file_target}" ]
+    if (defined(invoker.header_output)) {
+      public_deps += [ ":${header_file_target}" ]
+    }
   }
 
   if (defined(invoker.tests)) {

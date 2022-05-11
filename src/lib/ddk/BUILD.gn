@@ -22,6 +22,7 @@ sdk_static_library("ddk") {
   category = "experimental"
   sdk_name = "ddk"
   public = [
+    "include/lib/ddk/binding_driver.h",
     "include/lib/ddk/binding_priv.h",
     "include/lib/ddk/debug.h",
     "include/lib/ddk/device.h",
