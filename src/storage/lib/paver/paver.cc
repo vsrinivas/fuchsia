@@ -588,9 +588,8 @@ zx::status<> DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
   return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec);
 }
 
-std::variant<zx_status_t, bool> DataSinkImpl::WriteFirmware(Configuration configuration,
-                                                            fidl::StringView type,
-                                                            fuchsia_mem::wire::Buffer payload) {
+std::optional<PartitionSpec> DataSinkImpl::GetFirmwarePartitionSpec(Configuration configuration,
+                                                                    fidl::StringView type) {
   // Currently all our supported firmware lives in Partition::kBootloaderA/B/R.
   Partition part_type;
   switch (configuration) {
@@ -616,8 +615,15 @@ std::variant<zx_status_t, bool> DataSinkImpl::WriteFirmware(Configuration config
     supported = partitioner_->SupportsPartition(spec);
   }
 
-  if (supported) {
-    return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec).status_value();
+  return supported ? std::optional{spec} : std::nullopt;
+}
+
+std::variant<zx_status_t, bool> DataSinkImpl::WriteFirmware(Configuration configuration,
+                                                            fidl::StringView type,
+                                                            fuchsia_mem::wire::Buffer payload) {
+  std::optional<PartitionSpec> spec = GetFirmwarePartitionSpec(configuration, type);
+  if (spec) {
+    return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, *spec).status_value();
   }
 
   // unsupported_type = true.
@@ -626,7 +632,14 @@ std::variant<zx_status_t, bool> DataSinkImpl::WriteFirmware(Configuration config
 
 zx::status<fuchsia_mem::wire::Buffer> DataSinkImpl::ReadFirmware(Configuration configuration,
                                                                  fidl::StringView type) {
-  // TODO(http://b/226666264): To implement.
+  std::optional<PartitionSpec> spec = GetFirmwarePartitionSpec(configuration, type);
+  if (spec) {
+    auto status = PartitionRead(*partitioner_, *spec);
+    if (status.is_error()) {
+      return status.take_error();
+    }
+    return zx::ok(std::move(status.value()));
+  }
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 

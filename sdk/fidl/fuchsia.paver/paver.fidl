@@ -197,7 +197,7 @@ protocol DataSink {
         configuration Configuration;
         type string:MAX_FIRMWARE_TYPE_LENGTH;
     }) -> (resource struct {
-        asset fuchsia.mem.Buffer;
+        firmware fuchsia.mem.Buffer;
     }) error zx.status;
 
     /// Writes FVM with data from streamed via `payload`. This potentially affects all

@@ -65,6 +65,8 @@ static_assert(kBl2ImageSize % kPageSize == 0);
 constexpr size_t kBl2ImagePages = kBl2ImageSize / kPageSize;
 
 constexpr uint32_t kBootloaderFirstBlock = 4;
+constexpr uint32_t kBootloaderBlocks = 4;
+constexpr uint32_t kBootloaderLastBlock = kBootloaderFirstBlock + kBootloaderBlocks - 1;
 constexpr uint32_t kBl2FirstBlock = 39;
 
 constexpr fuchsia_hardware_nand_RamNandInfo
@@ -102,7 +104,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
                                 .type_guid = GUID_BOOTLOADER_VALUE,
                                 .unique_guid = {},
                                 .first_block = kBootloaderFirstBlock,
-                                .last_block = 7,
+                                .last_block = kBootloaderLastBlock,
                                 .copy_count = 0,
                                 .copy_byte_offset = 0,
                                 .name = {'b', 'o', 'o', 't', 'l', 'o', 'a', 'd', 'e', 'r'},
@@ -112,7 +114,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
                             {
                                 .type_guid = GUID_ZIRCON_A_VALUE,
                                 .unique_guid = {},
-                                .first_block = 8,
+                                .first_block = kBootloaderLastBlock + 1,
                                 .last_block = 9,
                                 .copy_count = 0,
                                 .copy_byte_offset = 0,
@@ -1361,6 +1363,52 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
     ValidateWritten(8, 2);
     ValidateUnwritten(10, 4);
   }
+}
+
+TEST_F(PaverServiceSkipBlockTest, ReadFirmwareConfigA) {
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
+
+  WriteData(kBootloaderFirstBlock * kPagesPerBlock, kBootloaderBlocks * kPagesPerBlock, 0x4a);
+
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
+  auto result = data_sink_->ReadFirmware(fuchsia_paver::wire::Configuration::kA,
+                                         fidl::StringView::FromExternal(kFirmwareTypeBootloader));
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ValidateWritten(result->result.response().firmware, kBootloaderBlocks * kPagesPerBlock);
+}
+
+TEST_F(PaverServiceSkipBlockTest, ReadFirmwareUnsupportedConfigBFallBackToA) {
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
+
+  WriteData(kBootloaderFirstBlock * kPagesPerBlock, kBootloaderBlocks * kPagesPerBlock, 0x4a);
+
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
+  auto result = data_sink_->ReadFirmware(fuchsia_paver::wire::Configuration::kB,
+                                         fidl::StringView::FromExternal(kFirmwareTypeBootloader));
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ValidateWritten(result->result.response().firmware, kBootloaderBlocks * kPagesPerBlock);
+}
+
+TEST_F(PaverServiceSkipBlockTest, ReadFirmwareUnsupportedConfigR) {
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
+
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
+  auto result = data_sink_->ReadFirmware(fuchsia_paver::wire::Configuration::kRecovery,
+                                         fidl::StringView::FromExternal(kFirmwareTypeBootloader));
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_err());
+}
+
+TEST_F(PaverServiceSkipBlockTest, ReadFirmwareUnsupportedType) {
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
+
+  ASSERT_NO_FATAL_FAILURE(FindDataSink());
+  auto result = data_sink_->ReadFirmware(fuchsia_paver::wire::Configuration::kA,
+                                         fidl::StringView::FromExternal(kFirmwareTypeUnsupported));
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_err());
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareConfigASupported) {

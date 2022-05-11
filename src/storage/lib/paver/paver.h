@@ -100,6 +100,10 @@ class DataSinkImpl {
   fbl::unique_fd devfs_root_;
 
   std::unique_ptr<DevicePartitioner> partitioner_;
+
+  // A helper to get firmware partition spec.
+  std::optional<PartitionSpec> GetFirmwarePartitionSpec(
+      fuchsia_paver::wire::Configuration configuration, fidl::StringView type);
 };
 
 class DataSink : public fidl::WireServer<fuchsia_paver::DataSink> {
