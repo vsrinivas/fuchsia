@@ -497,8 +497,10 @@ pub fn sys_waitid(
     // wait_on_pid returns None if the task was not waited on. In that case, we don't write out a
     // siginfo. This seems weird but is the correct behavior according to the waitid(2) man page.
     if let Some(waitable_process) = wait_on_pid(current_task, task_selector, &waiting_options)? {
-        let siginfo = waitable_process.as_signal_info();
-        current_task.mm.write_memory(user_info, &siginfo.as_siginfo_bytes())?;
+        if !user_info.is_null() {
+            let siginfo = waitable_process.as_signal_info();
+            current_task.mm.write_memory(user_info, &siginfo.as_siginfo_bytes())?;
+        }
     }
 
     Ok(())
