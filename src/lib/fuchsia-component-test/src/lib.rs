@@ -657,7 +657,7 @@ impl RealmBuilder {
             }
             None => {
                 realm_builder_factory_proxy
-                    .create_with_result(
+                    .create(
                         ClientEnd::from(pkg_dir_proxy.into_channel().unwrap().into_zx_channel()),
                         realm_server_end,
                         builder_server_end,

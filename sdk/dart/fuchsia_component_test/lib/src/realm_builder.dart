@@ -1235,7 +1235,7 @@ class RealmBuilder {
     final realm = ftest.RealmProxy();
     final builder = ftest.BuilderProxy();
     if (relativeUrl == null) {
-      await realmBuilderFactory.createWithResult(
+      await realmBuilderFactory.create(
         pkgDirHandle,
         realm.ctrl.request(),
         builder.ctrl.request(),
