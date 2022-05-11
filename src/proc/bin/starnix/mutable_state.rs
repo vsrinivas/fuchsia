@@ -71,6 +71,7 @@
 //!     pub fn with_lifecycle<'a>(&self, _n: &'a u32) {}
 //!     pub fn with_type<T>(&self, _n: &T) {}
 //!     pub fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T) {}
+//!     pub fn with_lifecycle_on_self<'a, T>(&'a self, _n: &'a T) {}
 //! });
 //! ```
 //!
@@ -110,6 +111,7 @@
 //!     fn with_lifecycle<'a>(&self, _n: &'a u32);
 //!     fn with_type<T>(&self, _n: &T);
 //!     fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T);
+//!     pub fn with_lifecycle_on_self<'a, T>(&'a self, _n: &'a T) {}
 //! }
 //! impl<'guard_lifetime> FooReadGuard<'guard_lifetime> for FooReadGuardImpl<'guard_lifetime> {
 //!     /// Some rustdoc.
@@ -128,6 +130,7 @@
 //!     fn with_lifecycle<'a>(&self, _n: &'a u32) {}
 //!     fn with_type<T>(&self, _n: &T) {}
 //!     fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T) {}
+//!     pub fn with_lifecycle_on_self<'a, T>(&'a self, _n: &'a T) {}
 //! }
 //! impl<'guard_lifetime> FooReadGuardImpl<'guard_lifetime> {
 //!     fn x_and_y(&self) -> i32 {
@@ -208,7 +211,7 @@ macro_rules! state_implementation {
             filter_methods!(RoPrivateMethod, $($tt)*);
             filter_methods!(RwMethod, $($tt)*);
         }
-                 }
+        }
     };
 }
 
@@ -279,27 +282,49 @@ macro_rules! filter_methods {
     // No more token.
     ($_:ident, ) => {};
     // Match non mutable, public methods and output their signature.
+    (RoPublicMethodSignature, $(#[$meta:meta])* pub fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
+        $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_lifetime $self_ $(, $name : $type)* ) $(-> $ret)*;
+        filter_methods!(RoPublicMethodSignature, $($tail)*);
+    };
     (RoPublicMethodSignature, $(#[$meta:meta])* pub fn $fn:ident $(<$($template:tt),*>)? ( & $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
         $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_ $(, $name : $type)* ) $(-> $ret)*;
         filter_methods!(RoPublicMethodSignature, $($tail)*);
     };
     // Match non mutable, public methods and output it.
+    (RoPublicMethod, $(#[$meta:meta])* pub fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime  $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
+        $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_lifetime $self_ $(, $name : $type)* ) $(-> $ret)* $body
+        filter_methods!(RoPublicMethod, $($tail)*);
+    };
     (RoPublicMethod, $(#[$meta:meta])* pub fn $fn:ident $(<$($template:tt),*>)? ( & $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
         $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_ $(, $name : $type)* ) $(-> $ret)* $body
         filter_methods!(RoPublicMethod, $($tail)*);
     };
     // Match non mutable, private methods and output it.
+    (RoPrivateMethod, $(#[$meta:meta])* fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime  $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
+        $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_lifetime $self_ $(, $name : $type)* ) $(-> $ret)* $body
+        filter_methods!(RoPrivateMethod, $($tail)*);
+    };
     (RoPrivateMethod, $(#[$meta:meta])* fn $fn:ident $(<$($template:tt),*>)? ( & $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
         $(#[$meta])* fn $fn $(<$($template),*>)?( & $self_ $(, $name : $type)* ) $(-> $ret)* $body
         filter_methods!(RoPrivateMethod, $($tail)*);
     };
     // Match mutable methods and output it.
-    (RwMethod, $(#[$meta:meta])* $vis:vis fn $fn:ident $(<$($template:tt),*>)? ( & mut $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
-        $(#[$meta])* $vis fn $fn $(<$($template),*>)?( &mut $self_ $(, $name : $type)* ) $(-> $ret)* $body
+    (RwMethod, $(#[$meta:meta])* $vis:vis fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime  mut $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
+        $(#[$meta])* $vis fn $fn $(<$($template),*>)?( & $self_lifetime mut $self_ $(, $name : $type)* ) $(-> $ret)* $body
         filter_methods!(RwMethod, $($tail)*);
     };
-    // Next 2 pattern, match every type of method. They are used to remove the tokens associated
+    (RwMethod, $(#[$meta:meta])* $vis:vis fn $fn:ident $(<$($template:tt),*>)? ( & mut $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
+        $(#[$meta])* $vis fn $fn $(<$($template),*>)?( & mut $self_ $(, $name : $type)* ) $(-> $ret)* $body
+        filter_methods!(RwMethod, $($tail)*);
+    };
+    // Next 4 patterns match every type of method. They are used to remove the tokens associated
     // with a method that has not been match by the previous patterns.
+    ($qualifier:ident, $(#[$meta:meta])* $(pub)? fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime  $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
+        filter_methods!($qualifier, $($tail)*);
+    };
+    ($qualifier:ident, $(#[$meta:meta])* $(pub)? fn $fn:ident $(<$($template:tt),*>)? ( & $self_lifetime:lifetime mut $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
+        filter_methods!($qualifier, $($tail)*);
+    };
     ($qualifier:ident, $(#[$meta:meta])* $(pub)? fn $fn:ident $(<$($template:tt),*>)? ( & $self_:tt $(, $name:ident : $type:ty)* $(,)? ) $(-> $ret:ty)* $body:block $($tail:tt)*) => {
         filter_methods!($qualifier, $($tail)*);
     };
@@ -357,6 +382,7 @@ mod test {
         pub fn with_lifecycle<'a>(&self, _n: &'a u32) {}
         pub fn with_type<T>(&self, _n: &T) {}
         pub fn with_lifecycle_and_type<'a, T>(&self, _n: &'a T) {}
+        pub fn with_lifecycle_on_self<'a, T>(&'a self, _n: &'a T) {}
     });
 
     fn take_foo_state<'a>(foo_state: &impl FooReadGuard<'a>) -> i32 {
