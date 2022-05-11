@@ -41,31 +41,25 @@
 #include <fbl/unique_fd.h>
 
 #include "internal.h"
+#include "lib/stdcompat/string_view.h"
 
 namespace fio = fuchsia_io;
 namespace fprocess = fuchsia_process;
 
-#define FDIO_RESOLVE_PREFIX "#!resolve "
-#define FDIO_RESOLVE_PREFIX_LEN 10
+constexpr std::string_view kResolvePrefix = "#!resolve ";
 
 // It is possible to setup an infinite loop of interpreters. We want to avoid this being a common
 // abuse vector, but also stay out of the way of any complex user setups.
-#define FDIO_SPAWN_MAX_INTERPRETER_DEPTH 255
+constexpr size_t kMaxInterpreterDepth = 255;
 
 // Maximum allowed length of a #! shebang directive.
 // This applies to both types of #! directives - both the '#!resolve' special case and the general
 // '#!' case with an arbitrary interpreter - but we use the fuchsia.process/Resolver limit rather
 // than define a separate arbitrary limit.
-#define FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN \
-  (fprocess::wire::kMaxResolveNameSize + FDIO_RESOLVE_PREFIX_LEN)
-static_assert(FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN < ZX_MIN_PAGE_SIZE,
+constexpr size_t kMaxInterpreterLineLen =
+    kResolvePrefix.size() + fprocess::wire::kMaxResolveNameSize;
+static_assert(kMaxInterpreterLineLen < ZX_MIN_PAGE_SIZE,
               "max #! interpreter line length must be less than smallest page size");
-
-#define FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE ((size_t)0u)
-#define FDIO_SPAWN_LAUNCH_HANDLE_JOB ((size_t)1u)
-#define FDIO_SPAWN_LAUNCH_HANDLE_COUNT ((size_t)2u)
-
-#define FDIO_SPAWN_LAUNCH_REPLY_HANDLE_COUNT ((size_t)1u)
 
 // The fdio_spawn_action_t is replicated in various ffi interfaces, including
 // the rust and golang standard libraries.
@@ -247,7 +241,7 @@ zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
     // VMO sizes are page aligned and MAX_INTERPRETER_LINE_LEN < ZX_MIN_PAGE_SIZE (asserted above),
     // so there's no use in checking VMO size explicitly here. Either the read fails because the VMO
     // is zero-sized, and we handle it, or sizeof(line) < vmo_size.
-    char line[FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN];
+    char line[kMaxInterpreterLineLen];
     memset(line, 0, sizeof(line));
     zx_status_t status = executable->read(line, 0, sizeof(line));
     if (status != ZX_OK) {
@@ -262,7 +256,7 @@ zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
     }
 
     // Interpreter resolution is not allowed to carry on forever.
-    if (depth == FDIO_SPAWN_MAX_INTERPRETER_DEPTH) {
+    if (depth == kMaxInterpreterDepth) {
       report_error(err_msg, "hit recursion limit resolving interpreters");
       return ZX_ERR_IO_INVALID;
     }
@@ -283,7 +277,7 @@ zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
     }
     size_t line_len = line_end - line;
 
-    if (memcmp(FDIO_RESOLVE_PREFIX, line, FDIO_RESOLVE_PREFIX_LEN) == 0) {
+    if (cpp20::starts_with(std::string_view(line, line_len), kResolvePrefix)) {
       // This is a "#!resolve" directive; use fuchsia.process.Resolve to resolve the name into a new
       // executable and appropriate loader.
       handled_resolve = true;
@@ -292,8 +286,8 @@ zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
         return ZX_ERR_NOT_SUPPORTED;
       }
 
-      char* name = &line[FDIO_RESOLVE_PREFIX_LEN];
-      size_t name_len = line_len - FDIO_RESOLVE_PREFIX_LEN;
+      char* name = &line[kResolvePrefix.size()];
+      size_t name_len = line_len - kResolvePrefix.size();
       status = resolve_name(name, name_len, executable, ldsvc, err_msg);
       if (status != ZX_OK) {
         return status;
@@ -367,7 +361,7 @@ class SpawnActions {
   class ConsumingIterator {
    public:
     ConsumingIterator(const fdio_spawn_action_t* actions, size_t action_count)
-        : actions_(actions), action_count_(action_count), used_(0) {}
+        : actions_(actions), action_count_(action_count) {}
 
     ~ConsumingIterator() {
       // |actions_| will be nullptr if the user did not supply any actions.
@@ -396,7 +390,7 @@ class SpawnActions {
    private:
     const fdio_spawn_action_t* actions_;
     size_t action_count_;
-    size_t used_;
+    size_t used_ = 0;
   };
 
   // Converts the object into a consuming iterator. This transfers the resources
@@ -438,7 +432,7 @@ class SpawnActions {
 template <typename T>
 class Inserter {
  public:
-  Inserter(T* data, size_t capacity) : data_(data), used_(0), capacity_(capacity) {}
+  Inserter(T* data, size_t capacity) : data_(data), capacity_(capacity) {}
 
   T* AddNext() {
     ZX_DEBUG_ASSERT(used_ < capacity_);
@@ -453,7 +447,7 @@ class Inserter {
 
  private:
   T* data_;
-  size_t used_;
+  size_t used_ = 0;
   size_t capacity_;
 };
 
@@ -684,16 +678,13 @@ zx_status_t fdio_spawn_etc(zx_handle_t job, uint32_t flags, const char* path,
 namespace {
 
 bool should_clone_namespace(std::string_view path, const std::vector<std::string_view>& prefixes) {
-  for (const auto& prefix : prefixes) {
+  return std::any_of(prefixes.begin(), prefixes.end(), [path](const std::string_view& prefix) {
     // Only share path if there is a directory prefix in |prefixes| that matches the path.
     // Also take care to not match partial directory names. Ex, /foo should not match
     // /foobar.
-    if (path.compare(0, prefix.size(), prefix) == 0 &&
-        (path.size() == prefix.size() || path[prefix.size()] == '/')) {
-      return true;
-    }
-  }
-  return false;
+    return (cpp20::starts_with(path, prefix) &&
+            (path.size() == prefix.size() || path[prefix.size()] == '/'));
+  });
 }
 
 void filter_flat_namespace(fdio_flat_namespace_t* flat,
@@ -776,7 +767,8 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
         if (len == 0 || action.dir.prefix[0] != '/' ||
             (len > 1 && action.dir.prefix[len - 1] == '/')) {
           return ZX_ERR_INVALID_ARGS;
-        } else if (len == 1 && action.dir.prefix[0] == '/') {
+        }
+        if (len == 1 && action.dir.prefix[0] == '/') {
           flags |= FDIO_SPAWN_CLONE_NAMESPACE;
         } else {
           shared_dirs.push_back(action.dir.prefix);

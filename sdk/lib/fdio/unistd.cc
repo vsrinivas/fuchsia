@@ -1665,7 +1665,7 @@ mode_t umask(mode_t mask) {
 }
 
 // TODO: getrlimit(RLIMIT_NOFILE, ...)
-#define MAX_POLL_NFDS 1024
+constexpr size_t kMaxPollNfds = 1024;
 
 __EXPORT
 int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
@@ -1673,7 +1673,7 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
   if (sigmask) {
     return ERRNO(ENOSYS);
   }
-  if (n > MAX_POLL_NFDS || n < 0) {
+  if (n > kMaxPollNfds || n < 0) {
     return ERRNO(EINVAL);
   }
 

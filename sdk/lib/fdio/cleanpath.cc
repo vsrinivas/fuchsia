@@ -6,18 +6,9 @@
 
 #include <limits.h>
 #include <string.h>
+#include <zircon/compiler.h>
 
 namespace fdio_internal {
-
-#define IS_SEPARATOR(c) ((c) == '/' || (c) == 0)
-
-// Checks that if we increment this index forward, we'll
-// still have enough space for a null terminator within
-// PATH_MAX bytes.
-#define CHECK_CAN_INCREMENT(i)         \
-  if (unlikely((i) + 1 >= PATH_MAX)) { \
-    return false;                      \
-  }
 
 // Cleans an input path, transforming it to out, according to the
 // rules defined by "Lexical File Names in Plan 9 or Getting Dot-Dot Right",
@@ -44,18 +35,27 @@ bool CleanPath(const char* in, PathBuffer* out, bool* is_dir) {
   }
   size_t dotdot = out->length();  // The output index at which '..' cannot be cleaned further.
 
+  auto is_separator = [](char c) { return c == 0 || c == '/'; };
+  auto can_increment = [](size_t i) { return unlikely(i < PATH_MAX - 1); };
+
   while (in[in_index] != 0) {
     *is_dir = true;
     if (in[in_index] == '/') {
       // 1. Reduce multiple slashes to a single slash
-      CHECK_CAN_INCREMENT(in_index);
+      if (!can_increment(in_index)) {
+        return false;
+      }
       in_index++;
-    } else if (in[in_index] == '.' && IS_SEPARATOR(in[in_index + 1])) {
+    } else if (in[in_index] == '.' && is_separator(in[in_index + 1])) {
       // 2. Eliminate . path name elements (the current directory)
-      CHECK_CAN_INCREMENT(in_index);
+      if (!can_increment(in_index)) {
+        return false;
+      }
       in_index++;
-    } else if (in[in_index] == '.' && in[in_index + 1] == '.' && IS_SEPARATOR(in[in_index + 2])) {
-      CHECK_CAN_INCREMENT(in_index + 1);
+    } else if (in[in_index] == '.' && in[in_index + 1] == '.' && is_separator(in[in_index + 2])) {
+      if (!can_increment(in_index + 1)) {
+        return false;
+      }
       in_index += 2;
       if (out->length() > dotdot) {
         // 3. Eliminate .. path elements (the parent directory) and the element that
@@ -84,8 +84,10 @@ bool CleanPath(const char* in, PathBuffer* out, bool* is_dir) {
         out->Append('/');
       }
 
-      while (!IS_SEPARATOR(in[in_index])) {
-        CHECK_CAN_INCREMENT(in_index);
+      while (!is_separator(in[in_index])) {
+        if (!can_increment(in_index)) {
+          return false;
+        }
         out->Append(in[in_index++]);
       }
     }
