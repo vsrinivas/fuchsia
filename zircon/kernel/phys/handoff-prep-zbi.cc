@@ -34,14 +34,14 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
   // kernel no longer examines the ZBI itself.
   handoff_->zbi = reinterpret_cast<uintptr_t>(zbi.data());
 
-  // Allocate a page to fill up with the ZBI items to save for mexec.
+  // Allocate some pages to fill up with the ZBI items to save for mexec.
   // TODO(fxbug.dev/84107): Currently this is in scratch space and gets
   // copied into the handoff allocator when its final size is known.
   // Later, it will allocated with its own type and be handed off to
-  // the kernel as a whole page that can be turned into a VMO.
+  // the kernel as a whole range of pages that can be turned into a VMO.
   fbl::AllocChecker ac;
   Allocation mexec_buffer =
-      Allocation::New(ac, memalloc::Type::kPhysScratch, ZX_PAGE_SIZE, ZX_PAGE_SIZE);
+      Allocation::New(ac, memalloc::Type::kPhysScratch, 16 * ZX_PAGE_SIZE, ZX_PAGE_SIZE);
   ZX_ASSERT_MSG(ac.check(), "cannot allocate mexec data page!");
   mexec_data_ = mexec_buffer.release();
   auto result = zbitl::Image(mexec_data_).clear();
