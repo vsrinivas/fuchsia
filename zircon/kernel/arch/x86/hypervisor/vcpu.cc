@@ -974,7 +974,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
   }
 }
 
-void Vcpu::RestoreGuestExtendedRegisters(Thread* thread, uint64_t guest_cr4) {
+void Vcpu::RestoreGuestExtendedRegisters(Thread* thread) {
   DEBUG_ASSERT(arch_ints_disabled());
   if (!x86_xsave_supported()) {
     // Save host and restore guest x87/SSE state with fxrstor/fxsave.
@@ -993,7 +993,7 @@ void Vcpu::RestoreGuestExtendedRegisters(Thread* thread, uint64_t guest_cr4) {
   x86_xsetbv(0, vmx_state_.guest_state.xcr0);
 }
 
-void Vcpu::SaveGuestExtendedRegisters(Thread* thread, uint64_t guest_cr4) {
+void Vcpu::SaveGuestExtendedRegisters(Thread* thread) {
   DEBUG_ASSERT(arch_ints_disabled());
   if (!x86_xsave_supported()) {
     // Save host and restore guest x87/SSE state with fxrstor/fxsave.
@@ -1068,7 +1068,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
       return status;
     }
 
-    RestoreGuestExtendedRegisters(current_thread, vmcs.Read(VmcsFieldXX::GUEST_CR4));
+    RestoreGuestExtendedRegisters(current_thread);
 
     // Updates guest system time if the guest subscribed to updates.
     pv_clock_update_system_time(&pv_clock_state_, &guest_->AddressSpace());
@@ -1088,7 +1088,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     status = vmx_enter(&vmx_state_);
     GUEST_STATS_INC(vm_exits);
 
-    SaveGuestExtendedRegisters(current_thread, vmcs.Read(VmcsFieldXX::GUEST_CR4));
+    SaveGuestExtendedRegisters(current_thread);
 
     if (!gBootOptions->x86_disable_spec_mitigations) {
       // Spectre V2: Ensure that code executed in the VM guest cannot influence either

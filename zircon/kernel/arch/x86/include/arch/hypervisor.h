@@ -134,8 +134,8 @@ class Vcpu {
   Vcpu(Guest* guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
 
   void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
-  void SaveGuestExtendedRegisters(Thread* thread, uint64_t cr4);
-  void RestoreGuestExtendedRegisters(Thread* thread, uint64_t cr4);
+  void SaveGuestExtendedRegisters(Thread* thread);
+  void RestoreGuestExtendedRegisters(Thread* thread);
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_HYPERVISOR_H_
