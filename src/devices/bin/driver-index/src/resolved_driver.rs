@@ -31,6 +31,7 @@ pub struct ResolvedDriver {
     pub component_url: url::Url,
     pub v1_driver_path: Option<String>,
     pub bind_rules: DecodedRules,
+    pub bind_bytecode: Vec<u8>,
     pub colocate: bool,
     pub fallback: bool,
     pub package_type: DriverPackageType,
@@ -160,8 +161,8 @@ impl ResolvedDriver {
 
     pub fn create_driver_info(&self) -> fdd::DriverInfo {
         let bind_rules = match &self.bind_rules {
-            DecodedRules::Normal(rules) => {
-                Some(fdd::BindRulesBytecode::BytecodeV2(rules.instructions.clone()))
+            DecodedRules::Normal(_) => {
+                Some(fdd::BindRulesBytecode::BytecodeV2(self.bind_bytecode.clone()))
             }
             // TODO(fxbug.dev/85651): Support composite bytecode in DriverInfo.
             DecodedRules::Composite(_) => None,
@@ -244,7 +245,7 @@ pub async fn load_driver(
     let bind = io_util::read_file_bytes(&bind)
         .await
         .with_context(|| format!("{}: Failed to read bind", component_url.as_str()))?;
-    let bind = DecodedRules::new(bind)
+    let bind_rules = DecodedRules::new(bind.clone())
         .with_context(|| format!("{}: Failed to parse bind", component_url.as_str()))?;
 
     let v1_driver_path = get_rules_string_value(&component, "compat");
@@ -262,7 +263,8 @@ pub async fn load_driver(
     Ok(Some(ResolvedDriver {
         component_url: component_url,
         v1_driver_path: v1_driver_path,
-        bind_rules: bind,
+        bind_rules: bind_rules,
+        bind_bytecode: bind,
         colocate: colocate,
         fallback,
         package_type,
