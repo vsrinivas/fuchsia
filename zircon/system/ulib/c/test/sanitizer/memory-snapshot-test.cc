@@ -163,12 +163,12 @@ void TlsCallback(void* mem, size_t len, void* arg) {
   auto result = static_cast<SnapshotResult*>(arg);
   result->tls.push_back({mem, len});
 
-  // TODO(fxbug.dev/99246): Currently, the TLS callback receives two kinds of
-  // buffers: (1) An actual TLS segment and (2) libc internals (start_arg, tsd,
-  // etc.). The tests here just check for values found in (2) which will always
-  // be 8-byte aligned. Since we don't expect any of these values to be in (1),
-  // we can ignore checking potentially unaligned regions from there. But we
-  // should come back and add tests that ensure known TLS segments are found.
+  // Currently, the TLS callback receives two kinds of buffers: (1) an actual TLS
+  // segment which may or may not be 8-byte aligned and (2) libc internals (start_arg,
+  // tsd, etc.) which will always be 8-byte aligned. The checks bellow are for
+  // asserting we found known words in (2). We check that known TLS segments are
+  // found by storing them for checking later after the snapshot. If a buffer we
+  // receive is not aligned, we know it is from TLS.
   if (reinterpret_cast<uintptr_t>(mem) % alignof(uintptr_t) != 0)
     return;
 
