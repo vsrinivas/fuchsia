@@ -57,7 +57,7 @@ func TestQEMUCommand(t *testing.T) {
 			"-smp",
 			"1",
 			"-m",
-			"1048576",
+			"1",
 			"-machine",
 			"q35",
 			"-fw_cfg",

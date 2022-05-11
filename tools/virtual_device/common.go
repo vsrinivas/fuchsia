@@ -25,7 +25,7 @@ var (
 	//
 	// See //tools/virtual_device/proto/virtual_device.proto for a full description of the
 	// format.
-	ramRe = regexp.MustCompile(`^([0-9]+)([bBkKmMgG])$`)
+	ramRe = regexp.MustCompile(`^([0-9]+)([mMgG])$`)
 
 	// macRe matches a MAC address.
 	macRe = regexp.MustCompile(`^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$`)
@@ -131,7 +131,7 @@ func parseRAMBytes(ram string) (int, error) {
 		return -1, err
 	}
 	unit := strings.ToLower(matches[2])
-	power := map[string]float64{"b": 0, "k": 1, "m": 2, "g": 3}[unit]
+	power := map[string]float64{"m": 0, "g": 1}[unit]
 	bytes := int(size * int64(math.Pow(1024, power)))
 	return bytes, nil
 }

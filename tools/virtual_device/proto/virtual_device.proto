@@ -97,8 +97,6 @@ message HardwareProfile {
   //
   // The number must be a positive 64-bit integer in base 10.
   // The unit must be any of:
-  // - b|B for bytes
-  // - k|K for kilobytes
   // - m|M for megabytes
   // - g|G for gigabytes.
   string ram = 3;

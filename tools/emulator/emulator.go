@@ -148,7 +148,7 @@ func DefaultVirtualDevice(arch string) *fvdpb.VirtualDevice {
 		Hw: &fvdpb.HardwareProfile{
 			Arch:      arch,
 			Mac:       "52:54:00:63:5e:7a",
-			Ram:       "8K",
+			Ram:       "8G",
 			CpuCount:  8,
 			EnableKvm: arch == "x64",
 		},
