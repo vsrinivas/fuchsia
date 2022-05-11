@@ -18,11 +18,8 @@ class _Results {
   List<double> vmoMemory;
   List<double> mmuMemory;
   List<double> ipcMemory;
-  List<double> cpuBandwidth;
-  List<double> gpuBandwidth;
-  List<double> vdecBandwidth;
-  List<double> vpuBandwidth;
-  List<double> otherBandwidth;
+
+  Map<String, List<double>> bandwidthChannels;
   List<double> totalBandwidth;
   List<double> bandwidthUsage;
 }
@@ -85,6 +82,7 @@ _Results _memoryMetrics(Model model, bool excludeBandwidth) {
       ..mmuMemory = mmuMemoryValues.toList()
       ..ipcMemory = ipcMemoryValues.toList();
   }
+
   final bandwidthUsageEvents = filterEventsTyped<CounterEvent>(
       memoryMonitorEvents,
       name: 'bandwidth_usage');
@@ -95,29 +93,19 @@ _Results _memoryMetrics(Model model, bool excludeBandwidth) {
         'duration (${duration.toMilliseconds()} milliseconds) is too short.');
     return null;
   }
-  final cpuBandwidthValues =
-      getArgValuesFromEvents<num>(bandwidthUsageEvents, 'cpu')
-          .map((v) => v.toDouble());
-  final gpuBandwidthValues =
-      getArgValuesFromEvents<num>(bandwidthUsageEvents, 'gpu')
-          .map((v) => v.toDouble());
-  final vdecBandwidthValues =
-      getArgValuesFromEvents<num>(bandwidthUsageEvents, 'vdec')
-          .map((v) => v.toDouble());
-  final vpuBandwidthValues =
-      getArgValuesFromEvents<num>(bandwidthUsageEvents, 'vpu')
-          .map((v) => v.toDouble());
-  final otherBandwidthValues =
-      getArgValuesFromEvents<num>(bandwidthUsageEvents, 'other')
-          .map((v) => v.toDouble());
-  final totalBandwidthValues = bandwidthUsageEvents.map((e) {
-    final num v = e.args['cpu'] +
-        e.args['gpu'] +
-        e.args['vdec'] +
-        e.args['vpu'] +
-        e.args['other'];
-    return v.toDouble();
-  });
+
+  final bandwidthChannels = <String, List<double>>{};
+  for (final event in bandwidthUsageEvents) {
+    for (final entry in event.args.entries) {
+      bandwidthChannels[entry.key] ??= <double>[];
+      bandwidthChannels[entry.key].add(entry.value.toDouble());
+    }
+  }
+
+  final totalBandwidthValues = bandwidthUsageEvents
+      .map((e) => e.args.values.fold(0.0, (a, b) => a + b).toDouble())
+      .cast<double>();
+
   final bandwidthFreeEvents = filterEventsTyped<CounterEvent>(
       memoryMonitorEvents,
       name: 'bandwidth_free');
@@ -135,11 +123,7 @@ _Results _memoryMetrics(Model model, bool excludeBandwidth) {
     ..vmoMemory = vmoMemoryValues.toList()
     ..mmuMemory = mmuMemoryValues.toList()
     ..ipcMemory = ipcMemoryValues.toList()
-    ..cpuBandwidth = cpuBandwidthValues.toList()
-    ..gpuBandwidth = gpuBandwidthValues.toList()
-    ..vdecBandwidth = vdecBandwidthValues.toList()
-    ..vpuBandwidth = vpuBandwidthValues.toList()
-    ..otherBandwidth = otherBandwidthValues.toList()
+    ..bandwidthChannels = bandwidthChannels
     ..totalBandwidth = totalBandwidthValues.toList()
     ..bandwidthUsage = bandwidthUsagePercentValues.toList();
 }
@@ -163,27 +147,31 @@ List<TestCaseResults> memoryMetricsProcessor(
   if (!excludeBandwidth) {
     _log
       ..info(
-          'Average CPU Memory Bandwidth Usage in bytes: ${computeMean(results.cpuBandwidth)}')
-      ..info(
-          'Average GPU Memory Bandwidth Usage in bytes: ${computeMean(results.gpuBandwidth)}')
-      ..info(
-          'Average VDEC Memory Bandwidth Usage in bytes: ${computeMean(results.vdecBandwidth)}')
-      ..info(
-          'Average VPU Memory Bandwidth Usage in bytes: ${computeMean(results.vpuBandwidth)}')
-      ..info(
-          'Average Other Memory Bandwidth Usage in bytes: ${computeMean(results.otherBandwidth)}')
-      ..info(
           'Average Total Memory Bandwidth Usage in bytes: ${computeMean(results.totalBandwidth)}')
       ..info(
-          'Average Memory Bandwidth Usage in percent: ${computeMean(results.bandwidthUsage)}')
-      ..info(
-          'Total bandwidth: ${(computeMean(results.totalBandwidth) / 1024).round()} KB/s, '
-          'usage: ${computeMean(results.bandwidthUsage).toStringAsFixed(2)}%, '
-          'cpu: ${(computeMean(results.cpuBandwidth) / 1024).round()} KB/s, '
-          'gpu: ${(computeMean(results.gpuBandwidth) / 1024).round()} KB/s, '
-          'vdec: ${(computeMean(results.vdecBandwidth) / 1024).round()} KB/s, '
-          'vpu: ${(computeMean(results.vpuBandwidth) / 1024).round()} KB/s, '
-          'other: ${(computeMean(results.otherBandwidth) / 1024).round()} KB/s');
+          'Average Memory Bandwidth Usage in percent: ${computeMean(results.bandwidthUsage)}');
+    for (final entry in results.bandwidthChannels.entries) {
+      _log.info(
+          'Average ${entry.key} bandwidth usage in bytes: ${computeMean(entry.value)}');
+    }
+    _log.info([
+      'Total bandwidth: ${(computeMean(results.totalBandwidth) / 1024).round()} KB/s',
+      'usage: ${computeMean(results.bandwidthUsage).toStringAsFixed(2)}%',
+      for (final entry in results.bandwidthChannels.entries)
+        '${entry.key}: ${(computeMean(entry.value) / 1024).round()} KB/s',
+    ].join(', '));
+  }
+
+  // Map bandwidth usage event field names to their metric name.  "Other" is
+  // capitalized and all other names are mapped to full upper case
+  // (e.g. "cpu" -> "CPU").  This logic is especially important for preserving
+  // existing metric names from before we accepted arbitrary bandwidth usage
+  // event fields.
+  String _toMetricName(String traceName) {
+    if (traceName == 'other') {
+      return 'Other';
+    }
+    return traceName.toUpperCase();
   }
 
   return [
@@ -194,20 +182,11 @@ List<TestCaseResults> memoryMetricsProcessor(
         'MMU Overhead Memory', Unit.bytes, results.mmuMemory.toList()),
     TestCaseResults('IPC Memory', Unit.bytes, results.ipcMemory.toList()),
     if (!excludeBandwidth)
-      TestCaseResults('CPU Memory Bandwidth Usage', Unit.bytes,
-          results.cpuBandwidth.toList()),
-    if (!excludeBandwidth)
-      TestCaseResults('GPU Memory Bandwidth Usage', Unit.bytes,
-          results.gpuBandwidth.toList()),
-    if (!excludeBandwidth)
-      TestCaseResults('VDEC Memory Bandwidth Usage', Unit.bytes,
-          results.vdecBandwidth.toList()),
-    if (!excludeBandwidth)
-      TestCaseResults('VPU Memory Bandwidth Usage', Unit.bytes,
-          results.vpuBandwidth.toList()),
-    if (!excludeBandwidth)
-      TestCaseResults('Other Memory Bandwidth Usage', Unit.bytes,
-          results.otherBandwidth.toList()),
+      for (final entry
+          in results.bandwidthChannels.entries.toList()
+            ..sort((a, b) => a.key.compareTo(b.key)))
+        TestCaseResults('${_toMetricName(entry.key)} Memory Bandwidth Usage',
+            Unit.bytes, entry.value.toList()),
     if (!excludeBandwidth)
       TestCaseResults('Total Memory Bandwidth Usage', Unit.bytes,
           results.totalBandwidth.toList()),
@@ -235,17 +214,13 @@ Memory
       ..write('mmu_overhead_memory:\n')
       ..write(describeValues(results.mmuMemory, indent: 2))
       ..write('ipc_memory:\n')
-      ..write(describeValues(results.ipcMemory, indent: 2))
-      ..write('cpu_memory_bandwidth_usage:\n')
-      ..write(describeValues(results.cpuBandwidth, indent: 2))
-      ..write('gpu_memory_bandwidth_usage:\n')
-      ..write(describeValues(results.gpuBandwidth, indent: 2))
-      ..write('vdec_memory_bandwidth_usage:\n')
-      ..write(describeValues(results.vdecBandwidth, indent: 2))
-      ..write('vpu_memory_bandwidth_usage:\n')
-      ..write(describeValues(results.vpuBandwidth, indent: 2))
-      ..write('other_memory_bandwidth_usage:\n')
-      ..write(describeValues(results.otherBandwidth, indent: 2))
+      ..write(describeValues(results.ipcMemory, indent: 2));
+    for (final entry in results.bandwidthChannels.entries) {
+      buffer
+        ..write('${entry.key}_memory_bandwidth_usage:\n')
+        ..write(describeValues(entry.value, indent: 2));
+    }
+    buffer
       ..write('total_memory_bandwidth_usage:\n')
       ..write(describeValues(results.totalBandwidth, indent: 2))
       ..write('memory_bandwidth_usage:\n')

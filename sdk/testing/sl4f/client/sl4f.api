@@ -3393,6 +3393,34 @@
       "FunctionDeclarationImpl": {
         "memoryMetricsProcessor": {
           "SimpleFormalParameterImpl": {
+            "a": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "a",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "null"
+            },
+            "b": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "b",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "null"
+            },
             "extraArgs": {
               "isConst": false,
               "isFinal": false,
@@ -3420,6 +3448,20 @@
               "name": "model",
               "type": "SimpleFormalParameterImpl",
               "varType": "Model"
+            },
+            "traceName": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "traceName",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "String"
             }
           },
           "isGetter": false,
