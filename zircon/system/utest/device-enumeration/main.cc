@@ -310,10 +310,6 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
 
-      // TODO(fxbug.dev/33871): Nelson can have one of two possible touch screens
-      // so we can't just test that one of them is bound. That is why the
-      // following test is disabled.
-      // "sys/platform/03:03:5/gt92xx HidDevice/hid-device-000",
       "backlight/ti-lp8556",
       "sys/platform/05:00:10/aml-canvas",
       "tee/optee",
@@ -388,6 +384,16 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+
+  static const char* kTouchscreenDevicePaths[] = {
+      // One of these touch devices could be on P0/P1 boards.
+      "gtx8x-touch/gt92xx HidDevice/hid-device/InputReport",
+      "ft3x27-touch/focaltouch HidDevice/hid-device/InputReport",
+      // This is the only possible touch device for P2 and beyond.
+      "gt6853-touch/gt6853",
+  };
+  ASSERT_NO_FATAL_FAILURE(
+      WaitForOne(cpp20::span(kTouchscreenDevicePaths, std::size(kTouchscreenDevicePaths))));
 }
 
 TEST_F(DeviceEnumerationTest, SherlockTest) {
