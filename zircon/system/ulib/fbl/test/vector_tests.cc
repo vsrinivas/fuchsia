@@ -592,6 +592,74 @@ void Iterator(size_t size) {
 }
 
 template <typename ItemTraits>
+void Resize(size_t size) {
+  using ItemType = typename ItemTraits::ItemType;
+
+  Generator<ItemTraits> gen;
+
+  CountedAllocatorTraits::allocation_count = 0;
+  ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
+  ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
+  {
+    fbl::AllocChecker ac;
+    fbl::Vector<ItemType, CountedAllocatorTraits> vector;
+    ASSERT_EQ(CountedAllocatorTraits::allocation_count, 0);
+    vector.resize(size, &ac);
+    ASSERT_TRUE(ac.check());
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(size));
+    ASSERT_EQ(CountedAllocatorTraits::allocation_count, 1);
+    ASSERT_EQ(vector.size(), size);
+
+    for (size_t i = 0; i < size; i++) {
+      ASSERT_EQ(vector[i], ItemType());
+    }
+
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(size));
+
+    for (size_t i = 0; i < size; i++) {
+      const ItemType item = gen.NextItem();
+      vector[i] = item;
+      ASSERT_TRUE(ItemTraits::CheckLiveCount(size));
+    }
+
+    {
+      const ItemType item = gen.NextItem();
+      vector.resize(size + 10, item, &ac);
+    }
+    ASSERT_TRUE(ac.check());
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 10));
+    ASSERT_EQ(vector.size(), size + 10);
+
+    vector.resize(size + 1, &ac);
+    ASSERT_TRUE(ac.check());
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 1));
+    ASSERT_EQ(vector.size(), size + 1);
+
+    {
+      const ItemType item = gen.NextItem();
+      vector.resize(size + 40, item, &ac);
+    }
+    ASSERT_TRUE(ac.check());
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 40));
+    ASSERT_EQ(vector.size(), size + 40);
+
+    vector.resize(size + 2, &ac);
+    ASSERT_TRUE(ac.check());
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 2));
+    ASSERT_EQ(vector.size(), size + 2);
+
+    gen.Reset();
+    for (size_t i = 0; i < size + 2; i++) {
+      ASSERT_EQ(ItemTraits::GetValue(vector[i]), gen.NextValue());
+    }
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 2));
+  }
+
+  ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
+  ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
+}
+
+template <typename ItemTraits>
 void InsertDelete(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
@@ -820,6 +888,7 @@ RUN_FOR_ALL(Move)
 RUN_FOR_ALL(Swap)
 RUN_FOR_ALL(Iterator)
 RUN_FOR_ALL(InsertDelete)
+RUN_TRAIT_TEST(Resize, ValueTypeTraits)
 RUN_FOR_ALL(NoAllocCheck)
 
 TEST(VectorTest, InitializerListValueType) {

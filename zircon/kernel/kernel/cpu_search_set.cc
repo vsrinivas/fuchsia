@@ -23,19 +23,6 @@ CpuSearchSet::ClusterSet CpuSearchSet::cluster_set_;
 
 namespace {
 
-// Resizes the given vector with default values.
-// TODO(eieio): Implement fbl::Vector::resize().
-template <typename T>
-void Resize(fbl::Vector<T>* vector, size_t size) {
-  fbl::AllocChecker checker;
-  vector->reserve(size, &checker);
-  ASSERT(checker.check());
-  for (size_t i = 0; i < size; i++) {
-    vector->push_back({}, &checker);
-    ASSERT(checker.check());
-  }
-}
-
 // Utility type compute CPU clusters using a disjoint set structure.
 class ClusterMap {
  public:
@@ -51,8 +38,10 @@ class ClusterMap {
   // Creates a ClusterMap with the given number of CPUs, with each CPU initially
   // in its own cluster.
   static ClusterMap Create(size_t element_count) {
+    fbl::AllocChecker checker;
     fbl::Vector<cpu_num_t> elements;
-    Resize(&elements, element_count);
+    elements.resize(element_count, &checker);
+    ASSERT(checker.check());
 
     for (cpu_num_t i = 0; i < element_count; i++) {
       elements[i] = i;
@@ -140,11 +129,13 @@ CpuSearchSet::ClusterSet CpuSearchSet::DoAutoCluster(size_t cpu_count, const Cpu
   // cluster.
   fbl::AllocChecker checker;
   fbl::Vector<Cluster> clusters;
-  Resize(&clusters, cluster_map.ClusterCount());
+  clusters.resize(cluster_map.ClusterCount(), &checker);
+  ASSERT(checker.check());
 
   // Alllocate a vector of MapEntry structures with an entry for each CPU.
   fbl::Vector<MapEntry> cpu_to_cluster_map;
-  Resize(&cpu_to_cluster_map, cpu_count);
+  cpu_to_cluster_map.resize(cpu_count, &checker);
+  ASSERT(checker.check());
 
   // Fill in the Cluster structures and CPU-to-cluster map.
   size_t cluster_index = 0;
@@ -153,7 +144,8 @@ CpuSearchSet::ClusterSet CpuSearchSet::DoAutoCluster(size_t cpu_count, const Cpu
     if (member_count != 0) {
       Cluster& cluster = clusters[cluster_index];
       cluster.id = cluster_index;
-      Resize(&cluster.members, member_count);
+      cluster.members.resize(member_count, &checker);
+      ASSERT(checker.check());
 
       size_t member_index = 0;
       for (cpu_num_t j = 0; j < cpu_count; j++) {

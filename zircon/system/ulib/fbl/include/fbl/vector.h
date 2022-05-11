@@ -189,6 +189,16 @@ class __OWNER(T) Vector {
   void insert(size_t index, const T& value) { insert_internal(index, value); }
 #endif  // _KERNEL
 
+  void resize(size_t size, AllocChecker* ac) { resize_internal(size, ac); }
+
+  void resize(size_t size, const T& value, AllocChecker* ac) { resize_internal(size, value, ac); }
+
+#ifndef _KERNEL
+  void resize(size_t size) { resize_internal(size); }
+
+  void resize(size_t size, const T& value) { resize_internal(size, value); }
+#endif  // _KERNEL
+
   // Remove an element from the |index| position in the vector, shifting
   // all subsequent elements one position to fill in the gap.
   // Returns the removed element.
@@ -421,11 +431,80 @@ class __OWNER(T) Vector {
     return t;
   }
 
-  void reset(T* t, size_t size, size_t capacity) {
-    ZX_DEBUG_ASSERT(size <= capacity);
-    while (size_ > 0) {
+  void resize_internal(size_t size, AllocChecker* ac) {
+    if (size_ > size) {
+      destruct_at_end(size_ - size);
+      consider_shrinking();
+      ac->arm(0U, true);
+    } else if (size_ < size) {
+      reserve(size, ac);
+      if (!ac->check()) {
+        return;
+      }
+      construct_at_end(size - size_);
+    }
+  }
+
+  void resize_internal(size_t size, const T& value, AllocChecker* ac) {
+    if (size_ > size) {
+      destruct_at_end(size_ - size);
+      consider_shrinking();
+      ac->arm(0U, true);
+    } else if (size_ < size) {
+      reserve(size, ac);
+      if (!ac->check()) {
+        return;
+      }
+      construct_at_end(size - size_, value);
+    }
+  }
+
+#ifndef _KERNEL
+  void resize_internal(size_t size) {
+    if (size_ > size) {
+      destruct_at_end(size_ - size);
+      consider_shrinking();
+    } else if (size_ < size) {
+      reserve(size);
+      construct_at_end(size - size_);
+    }
+  }
+
+  void resize_internal(size_t size, const T& value) {
+    if (size_ > size) {
+      destruct_at_end(size_ - size);
+      consider_shrinking();
+    } else if (size_ < size) {
+      reserve(size);
+      construct_at_end(size - size_, value);
+    }
+  }
+#endif
+
+  void construct_at_end(size_t count) {
+    ZX_DEBUG_ASSERT(size_ + count <= capacity_);
+    while (count--) {
+      new (&ptr_[size_++]) T();
+    }
+  }
+
+  void construct_at_end(size_t count, const T& value) {
+    ZX_DEBUG_ASSERT(size_ + count <= capacity_);
+    while (count--) {
+      new (&ptr_[size_++]) T(value);
+    }
+  }
+
+  void destruct_at_end(size_t count) {
+    ZX_DEBUG_ASSERT(count <= size_);
+    while (count--) {
       ptr_[--size_].~T();
     }
+  }
+
+  void reset(T* t, size_t size, size_t capacity) {
+    ZX_DEBUG_ASSERT(size <= capacity);
+    destruct_at_end(size_);
     T* ptr = ptr_;
     ptr_ = t;
     size_ = size;
