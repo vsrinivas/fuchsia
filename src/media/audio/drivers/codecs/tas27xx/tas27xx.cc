@@ -302,7 +302,7 @@ zx_status_t Tas27xx::Reinitialize() {
     return status;
   }
 
-  // Set initial configuraton of rate
+  // Set initial configuration of rate
   status = SetRate(kSupportedRates[0]);
   if (status != ZX_OK) {
     return status;

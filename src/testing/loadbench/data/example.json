@@ -2,7 +2,7 @@
   // Optional name to report in the output.
   "name": "Example benchmark spec.",
 
-  // Optional global configuraton.
+  // Optional global configuration.
   "config": {
     // Optional priority to set the main executive thread to avoid starvation.
     "priority": 25
