@@ -18,12 +18,12 @@
 namespace {
 
 fuchsia_hardware_network::wire::StatusFlags ToStatusFlags(uint32_t ethernet_status) {
-  if (ethernet_status ==
-      static_cast<uint32_t>(fuchsia_hardware_ethernet::wire::DeviceStatus::kOnline)) {
-    return fuchsia_hardware_network::wire::StatusFlags::kOnline;
-  } else {
-    return fuchsia_hardware_network::wire::StatusFlags();
+  fuchsia_hardware_network::wire::StatusFlags flags;
+  if (fuchsia_hardware_ethernet::wire::DeviceStatus(ethernet_status) &
+      fuchsia_hardware_ethernet::wire::DeviceStatus::kOnline) {
+    flags |= fuchsia_hardware_network::wire::StatusFlags::kOnline;
   }
+  return flags;
 }
 
 }  // namespace
@@ -177,14 +177,16 @@ void NetdeviceMigration::EthernetIfcRecv(const uint8_t* data_buffer, size_t data
   switch (status) {
     case ZX_OK:
       break;
-    case ZX_ERR_NO_RESOURCES:
-      ++no_rx_space_;
-      if (no_rx_space_.load() >= kNoRxBuffersReportingRate) {
-        zxlogf(ERROR, "received ethernet frames without any queued rx buffers; %zu frames dropped",
-               no_rx_space_.load());
-        no_rx_space_.store(0);
+    case ZX_ERR_NO_RESOURCES: {
+      constexpr size_t N = 64;
+      // Assert power of 2 to avoid incorrect behavior on overflow.
+      static_assert(N != 0 && (N & (N - 1)) == 0);
+      // Use pre-increment to avoid logging on the first dropped packet.
+      const size_t v = ++no_rx_space_;
+      if (v % N == 0) {
+        zxlogf(ERROR, "received ethernet frames without queued rx buffers; %zu frames dropped", v);
       }
-      break;
+    } break;
     case ZX_ERR_BUFFER_TOO_SMALL:
       zxlogf(ERROR, "received ethernet frames larger than rx buffer length of %lu",
              space.region.length);

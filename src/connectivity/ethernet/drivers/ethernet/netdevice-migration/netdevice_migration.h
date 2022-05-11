@@ -12,6 +12,7 @@
 #include <zircon/system/public/zircon/compiler.h>
 
 #include <queue>
+#include <utility>
 
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
@@ -44,7 +45,7 @@ class NetdeviceMigration
       MODE_MULTICAST_FILTER | MODE_MULTICAST_PROMISCUOUS | MODE_PROMISCUOUS;
   static constexpr uint32_t kMulticastFilterMax = MAX_MAC_FILTER;
   static zx::status<std::unique_ptr<NetdeviceMigration>> Create(zx_device_t* dev);
-  virtual ~NetdeviceMigration() {}
+  virtual ~NetdeviceMigration() = default;
 
   // Initializes the driver and binds it to the parent device `dev`. The DDK calls Bind through
   // the zx_driver_ops_t published for this driver; consequently, a client of this driver will not
@@ -128,12 +129,11 @@ class NetdeviceMigration
         }),
         netbuf_size_(netbuf_size),
         netbuf_pool_(std::move(netbuf_pool)),
-        vmo_store_(opts) {}
+        vmo_store_(std::move(opts)) {}
   void SetMacParam(uint32_t param, int32_t value, const uint8_t* data_buffer,
                    size_t data_size) const;
 
-  static constexpr size_t kNoRxBuffersReportingRate = 50;
-  std::atomic<size_t> no_rx_space_{0};
+  std::atomic<size_t> no_rx_space_ = 0;
 
   ddk::NetworkDeviceIfcProtocolClient netdevice_;
 
