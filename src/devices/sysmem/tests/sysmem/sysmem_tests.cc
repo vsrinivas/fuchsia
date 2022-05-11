@@ -4,7 +4,9 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/markers.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/wire_types.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/hw/arch_ops.h>
@@ -18,11 +20,14 @@
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
+#include <lib/zx/object.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 #include <zircon/limits.h>
 #include <zircon/pixelformat.h>
+#include <zircon/rights.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -36,8 +41,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
-
-#include "lib/zx/object.h"
 
 // To dump a corpus file for sysmem_fuzz.cc test, enable SYSMEM_FUZZ_CORPUS. Files can be found
 // under /data/cache/r/sys/fuchsia.com:sysmem-test:0#meta:sysmem.cmx/ on the device.
@@ -179,11 +182,14 @@ zx_status_t verify_connectivity(fidl::WireSyncClient<fuchsia_sysmem::Allocator>&
 }
 
 static void SetDefaultCollectionName(
-    fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>& collection) {
+    fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>& collection, fbl::String suffix = "") {
   constexpr uint32_t kPriority = 1000000;
-  const char* kName = "sysmem-test";
+  fbl::String name = "sysmem-test";
+  if (!suffix.empty()) {
+    name = fbl::String::Concat({name, "-", suffix});
+  }
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)collection->SetName(kPriority, fidl::StringView::FromExternal(kName));
+  (void)collection->SetName(kPriority, fidl::StringView::FromExternal(name.c_str()));
 }
 
 zx::status<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>>
@@ -231,6 +237,48 @@ make_single_participant_collection() {
   SetDefaultCollectionName(collection);
 
   return zx::ok(std::move(collection));
+}
+
+std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> create_clients(
+    uint32_t client_count) {
+  std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> result;
+
+  auto allocator = connect_to_sysmem_service();
+
+  auto token_endpoints_0 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  ZX_ASSERT(token_endpoints_0.is_ok());
+  auto [token_client_0, token_server_0] = std::move(*token_endpoints_0);
+  ZX_ASSERT(allocator->AllocateSharedCollection(std::move(token_server_0)).ok());
+  auto next_token = fidl::BindSyncClient(std::move(token_client_0));
+
+  for (uint32_t i = 0; i < client_count; ++i) {
+    auto cur_token = std::move(next_token);
+    if (i < client_count - 1) {
+      auto token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+      ZX_ASSERT(token_endpoints.is_ok());
+      auto [token_client_endpoint, token_server_endpoint] = std::move(*token_endpoints);
+      ZX_ASSERT(cur_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_endpoint)).ok());
+      next_token = fidl::BindSyncClient(std::move(token_client_endpoint));
+    }
+    auto collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+    ZX_ASSERT(collection_endpoints.is_ok());
+    auto [collection_client_endpoint, collection_server_endpoint] =
+        std::move(*collection_endpoints);
+    ZX_ASSERT(
+        allocator
+            ->BindSharedCollection(cur_token.TakeClientEnd(), std::move(collection_server_endpoint))
+            .ok());
+    auto collection_client = fidl::BindSyncClient(std::move(collection_client_endpoint));
+    SetDefaultCollectionName(collection_client, fbl::StringPrintf("%u", i));
+    if (i < client_count - 1) {
+      // Ensure next_token is usable.
+      auto sync_result = collection_client->Sync();
+      ZX_ASSERT(sync_result.ok());
+    }
+    result.emplace_back(std::move(collection_client));
+  }
+
+  return result;
 }
 
 const std::string& GetBoardName() {
@@ -428,7 +476,8 @@ void SecureVmoReadTester::AttemptReadFromSecure(bool expect_read_success) {
     if (value != 0) {
       is_read_from_secure_a_thing_ = true;
     }
-    if (!expect_read_success) {
+    constexpr bool kDumpPageContents = false;
+    if (!expect_read_success && kDumpPageContents) {
       if (i % 64 == 0) {
         fprintf(stderr, "%08x: ", i);
       }
@@ -444,7 +493,7 @@ void SecureVmoReadTester::AttemptReadFromSecure(bool expect_read_success) {
     // success in the sense that we weren't able to read anything in secure memory.  Cause the thead
     // to "die" here on purpose so the test can pass.  This is not the typical case, but can happen
     // at least on sherlock.  Typically we fault during the write, flush, read of byte 0 above.
-    ZX_PANIC("didn't fault, but also didn't read non-zero, so pretend to fault");
+    ZX_PANIC("didn't fault, but also didn't read non-zero, so pretend to fault\n");
   }
 }
 
@@ -2061,6 +2110,94 @@ TEST(Sysmem, MultipleParticipantsColorspaceRanking) {
 
   check_allocation_results(collection_1->WaitForBuffersAllocated());
   check_allocation_results(collection_2->WaitForBuffersAllocated());
+}
+
+// Regression-avoidance test for fxbug.dev/60895:
+//  * One client with two NV12 ImageFormatConstraints, one with rec601, one with rec709
+//  * One client with NV12 ImageFormatConstraints with rec709.
+//  * Scrambled ordering of which constraints get processed first, but deterministically check each
+//    client going first in the first couple iterations.
+TEST(Sysmem, MultipleParticipants_TwoImageFormatConstraintsSamePixelFormat_CompatibleColorspaces) {
+  // Multiple iterations to try to repro fxbug.dev/60895, in case it comes back.  This should be
+  // at least 2 to check both orderings with two clients.
+  const uint32_t kNumIterations = 10;
+  for (uint32_t iteration = 0; iteration < kNumIterations; ++iteration) {
+    if ((iteration + 1) % 100 == 0) {
+      printf("iteration count: %u\n", iteration + 1);
+    }
+    const uint32_t kNumClients = 2;
+    std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> clients =
+        create_clients(kNumClients);
+
+    auto build_constraints =
+        [](bool include_rec601) -> fuchsia_sysmem::wire::BufferCollectionConstraints {
+      fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+      constraints.usage.cpu =
+          fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
+      constraints.min_buffer_count_for_camping = 1;
+      constraints.has_buffer_memory_constraints = true;
+      constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
+          .min_size_bytes = zx_system_get_page_size(),
+          .max_size_bytes = 0,  // logically not set
+          .cpu_domain_supported = true,
+      };
+      constraints.image_format_constraints_count = 1 + (include_rec601 ? 1 : 0);
+      uint32_t image_constraints_index = 0;
+      if (include_rec601) {
+        fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints =
+            constraints.image_format_constraints[image_constraints_index];
+        image_constraints.pixel_format.type = fuchsia_sysmem::wire::PixelFormatType::kNv12;
+        image_constraints.color_spaces_count = 1;
+        image_constraints.color_space[0] = fuchsia_sysmem::wire::ColorSpace{
+            .type = fuchsia_sysmem::wire::ColorSpaceType::kRec601Ntsc,
+        };
+        ++image_constraints_index;
+      }
+      fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints =
+          constraints.image_format_constraints[image_constraints_index];
+      image_constraints.pixel_format.type = fuchsia_sysmem::wire::PixelFormatType::kNv12;
+      image_constraints.color_spaces_count = 1;
+      image_constraints.color_space[0] = fuchsia_sysmem::wire::ColorSpace{
+          .type = fuchsia_sysmem::wire::ColorSpaceType::kRec709,
+      };
+      return constraints;
+    };
+
+    static constexpr std::optional<uint64_t> kForcedSeed{};
+    std::random_device random_device;
+    std::uint_fast64_t seed{kForcedSeed ? *kForcedSeed : random_device()};
+    std::mt19937_64 prng{seed};
+    std::uniform_int_distribution<uint32_t> uint32_distribution(
+        0, std::numeric_limits<uint32_t>::max());
+
+    std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> clients_with_constraints;
+    for (uint32_t i = 0; i < kNumClients; ++i) {
+      // The first kNumClients iterations will deterministically check doing the corresponding
+      // client first.
+      uint32_t which_client =
+          (iteration < clients.size()) ? iteration : (uint32_distribution(prng) % clients.size());
+      auto result =
+          clients[which_client]->SetConstraints(true, build_constraints(which_client % 2 == 0));
+      ZX_ASSERT(result.ok());
+      clients_with_constraints.emplace_back(std::move(clients[which_client]));
+      clients.erase(clients.begin() + which_client);
+      // Try to force constraints reception ordering at server without slowing down too much.
+      zx::nanosleep(zx::deadline_after(zx::msec(20)));
+    }
+
+    // Both collections should yield the same results
+    auto check_allocation_results =
+        [](const ::fidl::WireResult<::fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>
+               allocation_result) {
+          // Two image_format_constraints from one client are not allowed, so this should fail
+          // regardless of ordering.
+          ASSERT_NOT_OK(allocation_result);
+        };
+
+    for (uint32_t i = 0; i < kNumClients; ++i) {
+      check_allocation_results(clients_with_constraints[0]->WaitForBuffersAllocated());
+    }
+  }
 }
 
 TEST(Sysmem, DuplicateSync) {
