@@ -107,7 +107,6 @@ impl OrdinalTransformChannel {
             server_end_ordinal,
         }
     }
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95059)
     fn transform_impl(
         in_end: &mut Channel,
         in_ordinal: u64,
@@ -126,7 +125,7 @@ impl OrdinalTransformChannel {
 
         let existing_ordinal = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
         assert_eq!(in_ordinal, existing_ordinal);
-        (&mut bytes[8..16]).write(&out_ordinal.to_le_bytes()).unwrap();
+        (&mut bytes[8..16]).write_all(&out_ordinal.to_le_bytes()).unwrap();
 
         out_end.write(&bytes, &mut handles).unwrap();
     }
