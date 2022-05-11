@@ -117,10 +117,9 @@ def main():
     )
     parser.add_argument(
         "--key-config-file",
-        type=argparse.FileType(
-            'r',
-            help="JSON key config file, with map from service URL to public keys"
-        ))
+        type=argparse.FileType('r'),
+        help="JSON key config file, with map from service URL to public keys",
+    )
     parser.add_argument(
         "eager_package_config_files",
         nargs='+',
