@@ -1,13 +1,13 @@
 {
-  "include": [
-    "syslog/client.shard.cmx"
-  ],
-  "program": {
-    "binary": "bin/namespace-validator"
-  },
-  "sandbox": {
-    "services": [
-      "fuchsia.sys.Launcher"
-    ]
-  }
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/namespace-validator"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
 }

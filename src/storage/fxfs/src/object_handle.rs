@@ -6,9 +6,7 @@ use {
     crate::object_store::Timestamp,
     anyhow::{bail, Error},
     async_trait::async_trait,
-    storage_device::{
-        buffer::{Buffer, BufferRef, MutableBufferRef},
-    },
+    storage_device::buffer::{Buffer, BufferRef, MutableBufferRef},
 };
 
 mod bootstrap;

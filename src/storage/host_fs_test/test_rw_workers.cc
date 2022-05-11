@@ -199,8 +199,8 @@ int WorkerWriter(Worker* w, bool* fsck_needed) {
   return r;
 }
 
-void RwWorkersTest::NewWorker(const char* where, const char* fn, WorkerFn work,
-                              uint32_t size, uint32_t flags) {
+void RwWorkersTest::NewWorker(const char* where, const char* fn, WorkerFn work, uint32_t size,
+                              uint32_t flags) {
   auto w = std::make_unique<Worker>();
 
   snprintf(w->name, sizeof(w->name), "%s%s", where, fn);

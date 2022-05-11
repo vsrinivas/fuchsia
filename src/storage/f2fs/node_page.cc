@@ -24,26 +24,18 @@ void NodePage::FillNodeFooterBlkaddr(block_t blkaddr) {
   GetRawNode().footer.next_blkaddr = blkaddr;
 }
 
-nid_t NodePage::InoOfNode() {
-  return LeToCpu(GetRawNode().footer.ino);
-}
+nid_t NodePage::InoOfNode() { return LeToCpu(GetRawNode().footer.ino); }
 
-nid_t NodePage::NidOfNode() {
-  return LeToCpu(GetRawNode().footer.nid);
-}
+nid_t NodePage::NidOfNode() { return LeToCpu(GetRawNode().footer.nid); }
 
 uint32_t NodePage::OfsOfNode() {
   uint32_t flag = LeToCpu(GetRawNode().footer.flag);
   return flag >> static_cast<int>(BitShift::kOffsetBitShift);
 }
 
-uint64_t NodePage::CpverOfNode() {
-  return LeToCpu(GetRawNode().footer.cp_ver);
-}
+uint64_t NodePage::CpverOfNode() { return LeToCpu(GetRawNode().footer.cp_ver); }
 
-block_t NodePage::NextBlkaddrOfNode() {
-  return LeToCpu(GetRawNode().footer.next_blkaddr);
-}
+block_t NodePage::NextBlkaddrOfNode() { return LeToCpu(GetRawNode().footer.next_blkaddr); }
 
 // f2fs assigns the following node offsets described as (num).
 // N = kNidsPerBlock

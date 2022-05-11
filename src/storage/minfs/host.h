@@ -141,9 +141,7 @@ class DirWrapper {
     return out->dir_ == NULL ? -1 : 0;
   }
   int Close() { return hostdir_ ? closedir(dir_) : emu_closedir(dir_); }
-  struct dirent* ReadDir() {
-    return hostdir_ ? readdir(dir_) : emu_readdir(dir_);
-  }
+  struct dirent* ReadDir() { return hostdir_ ? readdir(dir_) : emu_readdir(dir_); }
 
  private:
   bool hostdir_;
