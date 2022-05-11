@@ -201,6 +201,7 @@ pub mod for_tests {
         fuchsia_url::pkg_url::RepoUrl,
         fuchsia_zircon as zx,
         mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
+        pkgfs,
         std::collections::HashMap,
     };
 
@@ -352,7 +353,7 @@ pub mod for_tests {
             fasync::Task::spawn(fs.collect()).detach();
 
             let mut updater = Updater::launch_with_components(
-                resolver.cache.blobfs.root_dir_handle().expect("getting blobfs root handle"),
+                resolver.cache.pkgfs.blobfs.root_dir_handle().expect("getting blobfs root handle"),
                 ClientEnd::from(client),
                 Arc::clone(&resolver.cache.cache),
                 Arc::clone(&resolver.resolver),
@@ -389,13 +390,14 @@ pub mod for_tests {
             for package in self.packages.iter() {
                 // we deliberately avoid the package resolver here,
                 // as we want to make sure that the system-updater retrieved all the correct blobs.
-                let dir = fidl_fuchsia_pkg_ext::cache::Client::from_proxy(
-                    self.resolver.cache.cache.package_cache_proxy()?,
+                let client = pkgfs::packages::Client::open_from_pkgfs_root(
+                    &self.resolver.cache.pkgfs.root_proxy()?,
                 )
-                .open((*package.meta_far_merkle_root()).into())
-                .await
-                .context("opening package")?;
-
+                .context("opening pkgfs")?;
+                let dir = client
+                    .open_package(package.name().as_ref(), None)
+                    .await
+                    .context("opening package")?;
                 package
                     .verify_contents(&dir.into_proxy())
                     .await

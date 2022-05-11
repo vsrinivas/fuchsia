@@ -4,7 +4,6 @@
 
 use {
     crate::TestEnv,
-    assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io as fio,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
@@ -67,10 +66,10 @@ async fn verify_package_executability(
         .await;
     }
 
-    async fn verify_flags(dir: &fio::DirectoryProxy, expected_flags: fio::OpenFlags) {
-        let (status, flags) = dir.get_flags().await.unwrap();
-        let () = Status::ok(status).unwrap();
-        assert_eq!(flags, expected_flags);
+    async fn verify_flags(dir: &fio::DirectoryProxy, _expected_flags: fio::OpenFlags) {
+        let (status, _flags) = dir.get_flags().await.unwrap();
+        // TODO(fxbug.dev/88871) Assert the expected flags once `get_flags` is supported.
+        assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
     }
 
     // Verify Get flags
@@ -80,7 +79,9 @@ async fn verify_package_executability(
     // Verify Open flags
     let open_res = env.open_package(&pkg.meta_far_merkle_root().to_string()).await;
     let () = match is_retained {
-        IsRetained::True => assert_matches!(open_res, Err(status) if status == Status::NOT_FOUND),
+        // TODO(fxbug.dev/88871) After the pkgfs migration, retained packages should
+        // fail to open with NOT_FOUND.
+        IsRetained::True => verify_flags(&open_res.unwrap(), expected_flags).await,
         IsRetained::False => verify_flags(&open_res.unwrap(), expected_flags).await,
     };
 

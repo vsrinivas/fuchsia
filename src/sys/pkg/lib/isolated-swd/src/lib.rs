@@ -4,5 +4,6 @@
 
 pub mod cache;
 pub mod omaha;
+pub mod pkgfs;
 pub mod resolver;
 pub mod updater;

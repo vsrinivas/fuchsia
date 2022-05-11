@@ -711,6 +711,7 @@ zx_status_t BlockDevice::MountFilesystem() {
         FX_PLOGS(ERROR, status) << "Failed to mount blobfs partition";
         return status;
       }
+      mounter_->TryMountPkgfs();
       return ZX_OK;
     }
     case fs_management::kDiskFormatFxfs:

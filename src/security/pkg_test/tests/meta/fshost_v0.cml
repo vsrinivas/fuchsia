@@ -7,6 +7,8 @@
         args: [
             "--fvm-block-file-path",
             "/pkg/data/assemblies/hello_world_v0/fvm.blk",
+            "--system-image-path",
+            "/pkg/data/assemblies/hello_world_v0/base.far",
         ],
     },
 }

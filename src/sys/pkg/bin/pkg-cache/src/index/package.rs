@@ -91,17 +91,12 @@ impl PackageIndex {
 
     /// Notifies the appropriate indices that the package with the given hash has completed
     /// installation.
-    /// Returns the package's name if the package was activated in the dynamic index.
-    pub fn complete_install(
-        &mut self,
-        package_hash: Hash,
-    ) -> Result<Option<PackageName>, CompleteInstallError> {
+    pub fn complete_install(&mut self, package_hash: Hash) -> Result<(), CompleteInstallError> {
         let is_retained = self.retained.contains_package(&package_hash);
 
         match self.dynamic.complete_install(package_hash) {
-            Err(_) if is_retained => Ok(None),
-            Err(e) => Err(e),
-            Ok(name) => Ok(Some(name)),
+            Err(_) if is_retained => Ok(()),
+            res => res,
         }
     }
 
@@ -155,7 +150,7 @@ pub async fn load_cache_packages(
 /// Notifies the appropriate inner indices that the given meta far blob is now available in blobfs.
 /// Do not use this for regular blob (unless it's also a meta far).
 pub async fn fulfill_meta_far_blob(
-    index: &async_lock::RwLock<PackageIndex>,
+    index: &Arc<async_lock::RwLock<PackageIndex>>,
     blobfs: &blobfs::Client,
     meta_hash: Hash,
 ) -> Result<HashSet<Hash>, FulfillMetaFarError> {
@@ -223,7 +218,7 @@ mod tests {
         }));
 
         index.fulfill_meta_far(hash(0), path("pending"), hashset! {hash(1)}).unwrap();
-        assert_eq!(index.complete_install(hash(0)).unwrap(), Some("pending".parse().unwrap()));
+        index.complete_install(hash(0)).unwrap();
 
         assert_eq!(
             index.retained.packages(),
@@ -265,8 +260,8 @@ mod tests {
             hash(1) => None,
         }));
 
-        assert_eq!(index.complete_install(hash(0)).unwrap(), Some("withmetafar1".parse().unwrap()));
-        assert_eq!(index.complete_install(hash(1)).unwrap(), Some("withmetafar2".parse().unwrap()));
+        index.complete_install(hash(0)).unwrap();
+        index.complete_install(hash(1)).unwrap();
 
         assert_eq!(
             index.retained.packages(),
@@ -307,7 +302,7 @@ mod tests {
 
         index.start_install(hash(0));
         index.fulfill_meta_far(hash(0), path("retaiendonly"), hashset! {hash(123)}).unwrap();
-        assert_eq!(index.complete_install(hash(0)).unwrap(), None);
+        index.complete_install(hash(0)).unwrap();
 
         assert_eq!(
             index.retained.packages(),
@@ -331,7 +326,7 @@ mod tests {
         // install a package not tracked by the retained index
         index.start_install(hash(2));
         index.fulfill_meta_far(hash(2), path("dynamic-only"), hashset! {hash(10)}).unwrap();
-        assert_eq!(index.complete_install(hash(2)).unwrap(), Some("dynamic-only".parse().unwrap()));
+        index.complete_install(hash(2)).unwrap();
 
         assert_eq!(
             index.retained.packages(),
@@ -428,8 +423,8 @@ mod tests {
         index.fulfill_meta_far(hash(0), path("pkg1"), hashset! {hash(10)}).unwrap();
         index.fulfill_meta_far(hash(1), path("pkg2"), hashset! {hash(11), hash(61)}).unwrap();
 
-        assert_eq!(index.complete_install(hash(0)).unwrap(), Some("pkg1".parse().unwrap()));
-        assert_eq!(index.complete_install(hash(1)).unwrap(), Some("pkg2".parse().unwrap()));
+        index.complete_install(hash(0)).unwrap();
+        index.complete_install(hash(1)).unwrap();
 
         assert_eq!(
             index.all_blobs(),

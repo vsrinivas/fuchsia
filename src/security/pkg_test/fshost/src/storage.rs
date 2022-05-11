@@ -92,9 +92,7 @@ impl BlobfsInstance {
         if let Some(blobfs_dir) = &self.blobfs_dir {
             return open_directory_in_namespace(
                 blobfs_dir,
-                fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::RIGHT_WRITABLE
-                    | fio::OpenFlags::RIGHT_EXECUTABLE,
+                fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_READABLE,
             )
             .unwrap();
         }

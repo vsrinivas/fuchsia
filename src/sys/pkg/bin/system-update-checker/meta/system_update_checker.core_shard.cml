@@ -40,7 +40,7 @@
         },
         {
             protocol: "fuchsia.space.Manager",
-            from: "parent",
+            from: "#pkg-cache",
             to: "#system-update-checker",
         },
         {

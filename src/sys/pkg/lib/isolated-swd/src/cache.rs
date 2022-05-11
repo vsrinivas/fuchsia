@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::pkgfs::Pkgfs,
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io as fio,
@@ -23,25 +24,27 @@ const CACHE_URL: &str =
 
 /// Represents the sandboxed package cache.
 pub struct Cache {
-    pkg_cache: App,
+    _pkg_cache: App,
     pkg_cache_directory: Arc<zx::Channel>,
     _env: NestedEnvironment,
 }
 
 impl Cache {
-    /// Launch the package cache using the given blobfs.
-    pub fn launch(blobfs: ClientEnd<fio::DirectoryMarker>) -> Result<Self, Error> {
-        Self::launch_with_components(blobfs, CACHE_URL)
+    /// Launch the package cache using the given pkgfs and blobfs.
+    pub fn launch(pkgfs: &Pkgfs, blobfs: ClientEnd<fio::DirectoryMarker>) -> Result<Self, Error> {
+        Self::launch_with_components(pkgfs, blobfs, CACHE_URL)
     }
 
     /// Launch the package cache. This is the same as `launch`, but the URL for the cache's
     /// manifest must be provided.
     fn launch_with_components(
+        pkgfs: &Pkgfs,
         blobfs: ClientEnd<fio::DirectoryMarker>,
         cache_url: &str,
     ) -> Result<Self, Error> {
         let mut pkg_cache = AppBuilder::new(cache_url)
             .arg("--ignore-system-image")
+            .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_handle()?.into_handle())
             .add_handle_to_namespace("/blob".to_owned(), blobfs.into_handle());
 
         let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
@@ -68,17 +71,11 @@ impl Cache {
         let directory = pkg_cache.directory_request().context("getting directory request")?.clone();
         let pkg_cache = pkg_cache.spawn(env.launcher()).context("launching package cache")?;
 
-        Ok(Cache { pkg_cache, pkg_cache_directory: directory, _env: env })
+        Ok(Cache { _pkg_cache: pkg_cache, pkg_cache_directory: directory, _env: env })
     }
 
     pub fn directory_request(&self) -> Arc<fuchsia_zircon::Channel> {
         self.pkg_cache_directory.clone()
-    }
-
-    pub fn package_cache_proxy(&self) -> Result<fidl_fuchsia_pkg::PackageCacheProxy, Error> {
-        self.pkg_cache
-            .connect_to_protocol::<fidl_fuchsia_pkg::PackageCacheMarker>()
-            .context("connecting to PackageCache service")
     }
 
     /// Serve a `CommitStatusProvider` that always says the system is committed.
@@ -102,11 +99,11 @@ impl Cache {
 }
 
 pub mod for_tests {
-    use super::*;
+    use {super::*, crate::pkgfs::for_tests::PkgfsForTest};
 
     /// This wraps the `Cache` to reduce test boilerplate.
     pub struct CacheForTest {
-        pub blobfs: blobfs_ramdisk::BlobfsRamdisk,
+        pub pkgfs: PkgfsForTest,
         pub cache: Arc<Cache>,
     }
 
@@ -119,16 +116,14 @@ pub mod for_tests {
             )
         }
 
-        /// Create a new `Cache` and backing blobfs.
+        /// Create a new `Cache` and backing `pkgfs`.
         pub fn new_with_component(url: &str) -> Result<Self, Error> {
-            let blobfs = blobfs_ramdisk::BlobfsRamdisk::start().context("starting blobfs")?;
-            let cache = Cache::launch_with_components(
-                blobfs.root_dir_handle().context("blobfs handle")?,
-                url,
-            )
-            .context("launching cache")?;
+            let pkgfs = PkgfsForTest::new().context("Launching pkgfs")?;
+            let blobfs = pkgfs.blobfs.root_dir_handle().context("blobfs handle")?;
+            let cache = Cache::launch_with_components(&pkgfs.pkgfs, blobfs, url)
+                .context("launching cache")?;
 
-            Ok(CacheForTest { blobfs, cache: Arc::new(cache) })
+            Ok(CacheForTest { pkgfs, cache: Arc::new(cache) })
         }
     }
 }
@@ -141,7 +136,11 @@ pub mod tests {
     pub async fn test_cache_handles_sync() {
         let cache = CacheForTest::new().expect("launching cache");
 
-        let proxy = cache.cache.package_cache_proxy().unwrap();
+        let proxy = cache
+            .cache
+            ._pkg_cache
+            .connect_to_protocol::<fidl_fuchsia_pkg::PackageCacheMarker>()
+            .expect("connecting to pkg cache service");
 
         assert_eq!(proxy.sync().await.unwrap(), Ok(()));
     }
@@ -152,7 +151,7 @@ pub mod tests {
 
         let proxy = cache
             .cache
-            .pkg_cache
+            ._pkg_cache
             .connect_to_protocol::<fidl_fuchsia_space::ManagerMarker>()
             .expect("connecting to space manager service");
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod fshost;
+mod pkgfs;
 mod storage;
 
 use {
@@ -18,6 +19,9 @@ pub struct Args {
     /// absolute path to fvm block file used to bootstrap blobfs.
     #[argh(option)]
     fvm_block_file_path: String,
+    /// absolute path to system image package file for bootstrapping pkgfs.
+    #[argh(option)]
+    system_image_path: String,
 }
 
 #[fuchsia_async::run_singlethreaded]
@@ -30,5 +34,8 @@ async fn main() {
 
     fx_log_info!("Initalizing fshost with {:#?}", args);
 
-    fshost::FSHost::new(&args.fvm_block_file_path, BLOBFS_MOUNTPOINT).await.serve().await
+    fshost::FSHost::new(&args.fvm_block_file_path, BLOBFS_MOUNTPOINT, &args.system_image_path)
+        .await
+        .serve()
+        .await
 }

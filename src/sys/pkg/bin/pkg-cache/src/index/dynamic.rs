@@ -173,12 +173,8 @@ impl DynamicIndex {
     }
 
     /// Notifies dynamic index that the given package has completed installation.
-    /// Returns the package's name.
-    pub fn complete_install(
-        &mut self,
-        package_hash: Hash,
-    ) -> Result<PackageName, CompleteInstallError> {
-        let name = match self.packages.get_mut(&package_hash) {
+    pub fn complete_install(&mut self, package_hash: Hash) -> Result<(), CompleteInstallError> {
+        match self.packages.get_mut(&package_hash) {
             Some(PackageWithInspect {
                 package: package @ Package::WithMetaFar { .. },
                 package_node,
@@ -198,12 +194,10 @@ impl DynamicIndex {
                         node: child_node,
                     };
 
-                    let name = path.name().clone();
                     if let Some(previous_package) = self.active_packages.insert(path, package_hash)
                     {
                         self.packages.remove(&previous_package);
                     }
-                    name
                 } else {
                     unreachable!()
                 }
@@ -213,8 +207,8 @@ impl DynamicIndex {
                     package.map(|pwi| pwi.package.to_owned()),
                 ));
             }
-        };
-        Ok(name)
+        }
+        Ok(())
     }
 
     /// Notifies dynamic index that the given package installation has been canceled.
@@ -514,8 +508,7 @@ mod tests {
             Package::WithMetaFar { path: path.clone(), required_blobs: required_blobs.clone() },
         );
 
-        let name = dynamic_index.complete_install(hash).unwrap();
-        assert_eq!(name, *path.name());
+        dynamic_index.complete_install(hash).unwrap();
         assert_eq!(
             dynamic_index.packages(),
             hashmap! {

@@ -213,7 +213,7 @@ mod tests {
             .expect("Creating resolver");
 
         install_update_with_http(
-            resolver.cache.blobfs.root_dir_handle().expect("getting blobfs root handle"),
+            resolver.cache.pkgfs.blobfs.root_dir_handle().expect("getting blobfs root handle"),
             ClientEnd::from(client),
             Arc::clone(&resolver.cache.cache),
             Arc::clone(&resolver.resolver),

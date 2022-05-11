@@ -69,10 +69,7 @@ rustc_binary("bin") {
 }
 
 component_manifest_resources("root-manifest") {
-  sources = [
-    "meta/base-resolver.cml",
-    "meta/pkg-cache-resolver.cml",
-  ]
+  sources = [ "meta/base-resolver.cml" ]
 }
 
 fuchsia_component("base-resolver-component") {

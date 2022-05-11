@@ -1514,10 +1514,9 @@ async fn test_pkgfs_get_flags() {
     let this_pkg_dir =
         io_util::open_directory_in_namespace("/pkg", io_util::OpenFlags::RIGHT_READABLE)
             .expect("opening /pkg");
-
     let (status, flags) = this_pkg_dir.get_flags().await.expect("getting directory flags");
-    assert_eq!(status, Status::OK.into_raw());
-    assert_eq!(flags, io_util::OpenFlags::RIGHT_READABLE);
+    assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
+    assert_eq!(flags, fio::OpenFlags::empty());
 
     // Try get_flags on a file within our package directory.
     // thinfs maps GetFlags to GetFlags, so this should not close the channel.
@@ -1554,7 +1553,7 @@ async fn test_pkgfs_set_flags() {
             .expect("opening /pkg/meta as file");
     let status =
         meta_far_file_proxy.set_flags(fio::OpenFlags::APPEND).await.expect("setting file flags");
-    assert_eq!(status, Status::OK.into_raw());
+    assert_eq!(status, Status::NOT_SUPPORTED.into_raw());
 
     // We should still be able to read our own package directory and read our own merkle root,
     // which means pkgfs hasn't crashed.

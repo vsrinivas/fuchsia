@@ -37,6 +37,7 @@ rustc_library("isolated-swd") {
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/omaha-client",
+    "//src/sys/pkg/lib/pkgfs",
     "//src/sys/pkg/lib/version",
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/mock-paver",
@@ -66,6 +67,7 @@ rustc_library("isolated-swd") {
     "src/omaha/install_plan.rs",
     "src/omaha/installer.rs",
     "src/omaha/timer.rs",
+    "src/pkgfs.rs",
     "src/resolver.rs",
     "src/updater.rs",
   ]
@@ -91,6 +93,7 @@ fuchsia_test_package("isolated-swd-tests") {
     "//src/connectivity/network/dns:component-legacy",
     "//src/connectivity/network/netstack:component-legacy",
     "//src/storage/bin/blobfs",
+    "//src/sys/pkg/bin/pkgfs:pkgsvr_bin",
     "//src/sys/pkg/bin/pm:pm_bin",
     "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
     "//src/sys/pkg/tests/pkg-resolver:empty-repo",

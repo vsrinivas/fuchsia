@@ -217,6 +217,18 @@
             {
                 source_moniker: "/bootstrap/fshost",
                 source: "component",
+                source_name: "bin",
+                capability: "directory",
+                target_monikers: [
+                    "/bootstrap",
+                    "/bootstrap/console-launcher",
+                    "/bootstrap/fshost",
+                    "/core/sshd-host",
+                ],
+            },
+            {
+                source_moniker: "/bootstrap/fshost",
+                source: "component",
                 source_name: "blob",
                 capability: "directory",
                 target_monikers: [
@@ -226,6 +238,22 @@
                     "/core",
                     "/core/appmgr",
                     "/core/pkg-cache",
+                ],
+            },
+            {
+                source_moniker: "/bootstrap/fshost",
+                source: "component",
+                source_name: "pkgfs",
+                capability: "directory",
+                target_monikers: [
+                    "/bootstrap",
+                    "/bootstrap/console-launcher",
+                    "/bootstrap/driver_manager",
+                    "/bootstrap/fshost",
+                    "/core",
+                    "/core/appmgr",
+                    "/core/pkg-cache",
+                    "/core/sshd-host",
                 ],
             },
             {
@@ -250,6 +278,23 @@
             {
                 source_moniker: "/bootstrap/fshost",
                 source: "component",
+                source_name: "system",
+                capability: "directory",
+                target_monikers: [
+                    "/bootstrap",
+                    "/bootstrap/console-launcher",
+                    "/bootstrap/driver_manager",
+                    "/bootstrap/fshost",
+                    "/core",
+                    "/core/appmgr",
+                    "/core/sshd-host",
+                    "/core/system-updater",
+                    "/core/system-update-checker",
+                ],
+            },
+            {
+                source_moniker: "/bootstrap/fshost",
+                source: "component",
                 source_name: "tmp",
                 capability: "directory",
                 target_monikers: [
@@ -263,6 +308,24 @@
 
                     // TODO(https://fxbug.dev/98755): Remove once https://fxbug.dev/86575 is fixed.
                     "/core/sl4f",
+                ],
+            },
+            {
+                source_moniker: "/bootstrap/fshost",
+                source: "component",
+                source_name: "build-info",
+                capability: "directory",
+                target_monikers: [
+                    "/bootstrap/fshost",
+                    "/core/build-info",
+                    "/core/feedback",
+                    "/core/omaha-client-service",
+                    "/core/sshd-host",
+                    "/core/system-updater",
+
+                    // TODO(fxbug.dev/91934): Once we can define test realms out of tree
+                    // we should remove this.
+                    "/core/test_manager/chromium-tests:**",
                 ],
             },
             {
@@ -284,8 +347,6 @@
                 target_monikers: [
                     "/bootstrap/fshost",
                     "/bootstrap/fshost/blobfs",
-                    "/bootstrap/pkg-cache",
-                    "/bootstrap/pkg_cache_resolver",
                 ],
             },
             {
@@ -320,7 +381,7 @@
             {
                 // We restrict access to PackageCache because it gives direct access to package
                 // handles which provide executability which bypass VX security policy.
-                source_moniker: "/bootstrap/pkg-cache",
+                source_moniker: "/core/pkg-cache",
                 source: "component",
                 source_name: "fuchsia.pkg.PackageCache",
                 capability: "protocol",
@@ -334,97 +395,12 @@
                 // We restrict access to RetainedPackages because it gives callers the ability
                 // to override certain package garbage collection behavior intended to only be
                 // used by the system updater.
-                source_moniker: "/bootstrap/pkg-cache",
+                source_moniker: "/core/pkg-cache",
                 source: "component",
                 source_name: "fuchsia.pkg.RetainedPackages",
                 capability: "protocol",
                 target_monikers: [
                     "/core/system-updater",
-                ],
-            },
-            {
-                // We restrict access to PackageCache because it gives direct access to executable
-                // binaries.
-                source_moniker: "/bootstrap/pkg-cache",
-                source: "component",
-                source_name: "bin",
-                capability: "directory",
-                target_monikers: [
-                    "/bootstrap/console-launcher",
-                    "/core/sshd-host",
-                ],
-            },
-            {
-                source_moniker: "/bootstrap/pkg-cache",
-                source: "component",
-                source_name: "build-info",
-                capability: "directory",
-                target_monikers: [
-                    "/core/build-info",
-                    "/core/feedback",
-                    "/core/omaha-client-service",
-                    "/core/sshd-host",
-                    "/core/system-updater",
-
-                    // TODO(fxbug.dev/91934): Once we can define test realms out of tree
-                    // we should remove this.
-                    "/core/test_manager/chromium-tests:**",
-                ],
-            },
-            {
-                // We restrict access to pkgfs because it gives direct access to executable package
-                // handles.
-                source_moniker: "/bootstrap/pkg-cache",
-                source: "component",
-                source_name: "pkgfs",
-                capability: "directory",
-                target_monikers: [
-                    "/bootstrap/console-launcher",
-                    "/bootstrap/driver_manager",
-                    "/core",
-                    "/core/appmgr",
-                    "/core/sshd-host",
-                ],
-            },
-            {
-                // We restrict access to pkgfs-packages because it gives direct access to
-                // executable package handles.
-                source_moniker: "/bootstrap/pkg-cache",
-                source: "component",
-                source_name: "pkgfs-packages",
-                capability: "directory",
-                target_monikers: [
-                    "/bootstrap/base_resolver",
-                    "/bootstrap/driver_index",
-                ],
-            },
-            {
-                // We restrict access to pkgfs-versions because it gives direct access to
-                // executable package handles.
-                source_moniker: "/bootstrap/pkg-cache",
-                source: "component",
-                source_name: "pkgfs-versions",
-                capability: "directory",
-                target_monikers: [
-                    // TODO(fxbug.dev/99692) migrate clients of "pkgfs" to just the subdirectories
-                ],
-            },
-            {
-                // We restrict access to system because it gives direct access to executable
-                // binaries.
-                source_moniker: "/bootstrap/pkg-cache",
-                source: "component",
-                source_name: "system",
-                capability: "directory",
-                target_monikers: [
-                    "/bootstrap",
-                    "/bootstrap/console-launcher",
-                    "/bootstrap/driver_manager",
-                    "/core",
-                    "/core/appmgr",
-                    "/core/sshd-host",
-                    "/core/system-updater",
-                    "/core/system-update-checker",
                 ],
             },
             {

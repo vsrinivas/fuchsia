@@ -13,6 +13,7 @@
 
         // Note: Manifests including this shard must provide args:
         //   --fvm-block-file-path
+        //   --system-image-path
     },
     children: [
         {
@@ -22,12 +23,17 @@
     ],
     capabilities: [
         {
-            directory: "blob-exec",
+            directory: "blob",
+            rights: [ "rw*" ],
+            path: "/blob",
+        },
+        {
+            directory: "pkgfs",
             rights: [
                 "execute",
                 "rw*",
             ],
-            path: "/blob",
+            path: "/pkgfs",
         },
     ],
     use: [
@@ -49,7 +55,10 @@
     ],
     expose: [
         {
-            directory: "blob-exec",
+            directory: [
+                "blob",
+                "pkgfs",
+            ],
             from: "self",
         },
         {

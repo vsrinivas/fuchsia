@@ -456,9 +456,7 @@ where
                         Capability::directory("pkgfs").path("/pkgfs").rights(fio::RW_STAR_DIR),
                     )
                     .capability(
-                        Capability::directory("blob-exec")
-                            .path("/blob")
-                            .rights(fio::RW_STAR_DIR | fio::Operations::EXECUTE),
+                        Capability::directory("blob").path("/blob").rights(fio::RW_STAR_DIR),
                     )
                     .from(&service_reflector)
                     .to(&pkg_cache),
