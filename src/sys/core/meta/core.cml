@@ -257,6 +257,11 @@
             dependency: "weak_for_migration",
         },
         {
+            protocol: [ "fuchsia.scheduler.ProfileProvider" ],
+            from: "parent",
+            to: [ "#network" ],
+        },
+        {
             protocol: [ "fuchsia.net.http.Loader" ],
             from: "#network",
             to: [
