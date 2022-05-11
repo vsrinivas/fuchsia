@@ -91,7 +91,11 @@ class ProcessLimboHandler : public fuchsia::exception::ProcessLimbo {
   // fuchsia.exception.ProcessLimbo implementation.
   void SetActive(bool active, SetActiveCallback) override;
 
+  void GetActive(GetActiveCallback) override;
+
   void WatchActive(WatchActiveCallback) override;
+
+  void ListProcessesWaitingOnException(ListProcessesWaitingOnExceptionCallback) override;
 
   void WatchProcessesWaitingOnException(WatchProcessesWaitingOnExceptionCallback) override;
 

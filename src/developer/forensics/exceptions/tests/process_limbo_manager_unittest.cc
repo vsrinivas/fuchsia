@@ -25,6 +25,7 @@ using fuchsia::exception::ExceptionType;
 using fuchsia::exception::ProcessException;
 using fuchsia::exception::ProcessExceptionMetadata;
 using fuchsia::exception::ProcessLimbo_AppendFilters_Result;
+using fuchsia::exception::ProcessLimbo_ListProcessesWaitingOnException_Result;
 using fuchsia::exception::ProcessLimbo_ReleaseProcess_Result;
 using fuchsia::exception::ProcessLimbo_RemoveFilters_Result;
 using fuchsia::exception::ProcessLimbo_RetrieveException_Result;
@@ -182,6 +183,23 @@ TEST(ProcessLimboManagerTest, ProcessLimboHandler) {
     ValidateException(excps[0], result.response().exception_list[0]);
     ValidateException(excps[1], result.response().exception_list[1]);
     ValidateException(excps[2], result.response().exception_list[2]);
+  }
+
+  {
+    // ListProcessesWaitingOnException should succeed.
+    bool called = false;
+    ProcessLimbo_ListProcessesWaitingOnException_Result result;
+    handler->ListProcessesWaitingOnException([&called, &result](auto res) {
+      called = true;
+      result = std::move(res);
+    });
+
+    ASSERT_TRUE(called);
+    ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    ASSERT_EQ(result.response().exception_list.size(), 3u);
+    ASSERT_EQ(excps[0].process_name, result.response().exception_list[0].process_name());
+    ASSERT_EQ(excps[1].process_name, result.response().exception_list[1].process_name());
+    ASSERT_EQ(excps[2].process_name, result.response().exception_list[2].process_name());
   }
 
   {
@@ -392,6 +410,12 @@ TEST(ProcessLimboManagerTest, WatchActiveCalls) {
   });
 
   ASSERT_FALSE(called);
+
+  // GetActive should always return.
+  is_active_result = std::nullopt;
+  handler->GetActive([&is_active_result](bool active) { is_active_result = active; });
+  ASSERT_TRUE(is_active_result.has_value());
+  ASSERT_TRUE(is_active_result.value());
 
   // Not making the state should no issue the call.
   ASSERT_FALSE(limbo_manager.SetActive(true));

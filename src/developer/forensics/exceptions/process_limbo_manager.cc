@@ -13,8 +13,9 @@ namespace exceptions {
 
 namespace {
 
-using fuchsia::exception::MAX_EXCEPTIONS_PER_CALL;
+using fuchsia::exception::MAX_EXCEPTIONS;
 using fuchsia::exception::ProcessException;
+using fuchsia::exception::ProcessExceptionInfo;
 using fuchsia::exception::ProcessExceptionMetadata;
 
 // Removes all stale weak pointers from the handler list.
@@ -110,8 +111,7 @@ void ProcessLimboManager::AppendFiltersForTesting(const std::vector<std::string>
 std::vector<ProcessExceptionMetadata> ProcessLimboManager::ListProcessesInLimbo() {
   std::vector<ProcessExceptionMetadata> exceptions;
 
-  size_t max_size =
-      limbo_.size() <= MAX_EXCEPTIONS_PER_CALL ? limbo_.size() : MAX_EXCEPTIONS_PER_CALL;
+  size_t max_size = limbo_.size() <= MAX_EXCEPTIONS ? limbo_.size() : MAX_EXCEPTIONS;
   exceptions.reserve(max_size);
 
   // The new rights of the handles we're going to duplicate.
@@ -138,7 +138,7 @@ std::vector<ProcessExceptionMetadata> ProcessLimboManager::ListProcessesInLimbo(
 
     exceptions.push_back(std::move(metadata));
 
-    if (exceptions.size() >= MAX_EXCEPTIONS_PER_CALL)
+    if (exceptions.size() >= MAX_EXCEPTIONS)
       break;
   }
 
@@ -213,6 +213,10 @@ void ProcessLimboHandler::LimboChanged(std::vector<ProcessExceptionMetadata> lim
   watch_limbo_dirty_bit_ = false;
 }
 
+void ProcessLimboHandler::GetActive(WatchActiveCallback cb) {
+  cb(limbo_manager_ ? limbo_manager_->active() : false);
+}
+
 void ProcessLimboHandler::WatchActive(WatchActiveCallback cb) {
   if (watch_active_dirty_bit_) {
     watch_active_dirty_bit_ = false;
@@ -224,6 +228,44 @@ void ProcessLimboHandler::WatchActive(WatchActiveCallback cb) {
 
   // We store the latest callback for when the active state changes.
   is_active_callback_ = std::move(cb);
+}
+
+void ProcessLimboHandler::ListProcessesWaitingOnException(
+    ListProcessesWaitingOnExceptionCallback cb) {
+  if (!limbo_manager_) {
+    cb(fpromise::error(ZX_ERR_BAD_STATE));
+    return;
+  }
+  if (!limbo_manager_->active()) {
+    cb(fpromise::error(ZX_ERR_UNAVAILABLE));
+    return;
+  }
+  std::vector<ProcessExceptionInfo> exceptions;
+  for (const auto& [process_koid, limbo_exception] : limbo_manager_->limbo()) {
+    ProcessExceptionInfo info;
+    info.set_info(limbo_exception.info());
+
+    char name[ZX_MAX_NAME_LEN];
+    if (auto res = limbo_exception.process().get_property(ZX_PROP_NAME, name, sizeof(name));
+        res != ZX_OK) {
+      FX_PLOGS(ERROR, res) << "Could not get process name.";
+      continue;
+    }
+    info.set_process_name(name);
+
+    if (auto res = limbo_exception.thread().get_property(ZX_PROP_NAME, name, sizeof(name));
+        res != ZX_OK) {
+      FX_PLOGS(ERROR, res) << "Could not get thread name.";
+      continue;
+    }
+    info.set_thread_name(name);
+
+    exceptions.push_back(std::move(info));
+
+    if (exceptions.size() >= MAX_EXCEPTIONS)
+      break;
+  }
+  cb(fpromise::ok(std::move(exceptions)));
 }
 
 void ProcessLimboHandler::WatchProcessesWaitingOnException(

@@ -43,7 +43,14 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
     cb();
   }
 
+  void GetActive(GetActiveCallback cb) override { cb(active_); }
+
   void WatchActive(WatchActiveCallback callback) override { callback(active_); }
+
+  void ListProcessesWaitingOnException(
+      ProcessLimbo::ListProcessesWaitingOnExceptionCallback) override {
+    FX_NOTREACHED() << "Not needed for tests.";
+  }
 
   void WatchProcessesWaitingOnException(
       ProcessLimbo::WatchProcessesWaitingOnExceptionCallback callback) override {
