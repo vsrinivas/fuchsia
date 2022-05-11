@@ -7,15 +7,18 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/fidl/coding.h>  // for fidl_validate_string() to validate paths as UTF8.
 #include <lib/fit/function.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <functional>
 #include <list>
 #include <memory>
+#include <string_view>
 
 #include "src/lib/files/directory.h"
 
@@ -196,6 +199,70 @@ std::string GetBaseName(const std::string& path) {
   if (separator == std::string::npos)
     return path;
   return path.substr(separator + 1);
+}
+
+bool IsValidName(std::string_view name) {
+  // * It cannot be longer than [`MAX_NAME_LENGTH`] (255 bytes).
+  if (name.length() > 255) {
+    return false;
+  }
+  // * It cannot be empty.
+  if (name.empty()) {
+    return false;
+  }
+  // * It cannot be ".." (dot-dot).
+  // * It cannot be "." (single dot).
+  if (name == ".." || name == ".") {
+    return false;
+  }
+  if (fidl_validate_string(name.data(), name.length()) != ZX_OK) {
+    return false;
+  }
+  // * It cannot contain "/".
+  // * It cannot contain embedded NUL.
+  if (std::any_of(name.cbegin(), name.cend(), [](char c) { return c == '/' || c == '\0'; })) {
+    return false;
+  }
+  return true;
+}
+
+bool IsValidCanonicalPath(std::string_view path) {
+  // * It cannot be empty.
+  if (path.empty()) {
+    return false;
+  }
+
+  // * It cannot be longer than `MAX_PATH_LENGTH` (4095 bytes).
+  if (path.length() > 4095) {
+    return false;
+  }
+
+  // * It cannot have a leading "/".
+  if (path.front() == '/') {
+    return false;
+  }
+
+  // * It cannot have a trailing "/".
+  if (path.back() == '/') {
+    return false;
+  }
+
+  if (fidl_validate_string(path.data(), path.length()) != ZX_OK) {
+    return false;
+  }
+
+  // * Each component must be a valid `Name`. See IsValidName().
+  while (true) {
+    const auto next_slash = path.find('/');
+    if (next_slash == std::string_view::npos) {
+      return IsValidName(path);
+    }
+    std::string_view next_segment(path.substr(0, next_slash));
+    if (!IsValidName(next_segment)) {
+      return false;
+    }
+    path.remove_prefix(next_slash + 1);
+  }
 }
 
 bool DeletePath(const std::string& path, bool recursive) {

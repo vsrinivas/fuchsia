@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_FILES_PATH_H_
-#define LIB_FXL_FILES_PATH_H_
+#ifndef SRC_LIB_FILES_PATH_H_
+#define SRC_LIB_FILES_PATH_H_
 
 #include <string>
 
@@ -23,6 +23,27 @@ std::string GetDirectoryName(const std::string& path);
 // Returns the basename component of the given path by stripping everything up
 // to and including the last slash.
 std::string GetBaseName(const std::string& path);
+
+// Returns true if |path| is a valid Fuchsia path name per the fuchsia.io/Name
+// rules:
+//
+// * It cannot be longer than [`MAX_NAME_LENGTH`] (255 bytes).
+// * It cannot be empty.
+// * It cannot be ".." (dot-dot).
+// * It cannot be "." (single dot).
+// * It cannot contain "/".
+// * It cannot contain embedded NUL.
+bool IsValidName(std::string_view name);
+
+// Returns true if |path| is a valid Fuchsia path in canonical form per the
+// fuchsia.io/Path rules:
+//
+// * It cannot be empty.
+// * It cannot be longer than `MAX_PATH_LENGTH` (4095 bytes).
+// * It cannot have a leading "/".
+// * It cannot have a trailing "/".
+// * Each component must be a valid `Name`. See IsValidCanonicalName().
+bool IsValidCanonicalPath(std::string_view path);
 
 // Delete the file or directory at the given path. If recursive is true, and
 // path is a directory, also delete the directory's content.
@@ -54,4 +75,4 @@ std::string JoinPath(const std::string& path1, const std::string& path2);
 
 }  // namespace files
 
-#endif  // LIB_FXL_FILES_PATH_H_
+#endif  // SRC_LIB_FILES_PATH_H_

@@ -169,6 +169,73 @@ TEST(Path, GetBaseName) {
   EXPECT_EQ("", GetBaseName("a/"));
 }
 
+TEST(Path, IsValidName) {
+  EXPECT_TRUE(IsValidName("a"));
+
+  // * It cannot be longer than [`MAX_NAME_LENGTH`] (255 bytes).
+  std::string long_name(255, 'a');
+  EXPECT_TRUE(IsValidName(long_name));
+  long_name.append("a");
+  EXPECT_FALSE(IsValidName(long_name));
+
+  // * It cannot be empty.
+  EXPECT_FALSE(IsValidName(""));
+
+  // * It cannot be ".." (dot-dot).
+  EXPECT_FALSE(IsValidName(".."));
+
+  // * It cannot be "." (single dot).
+  EXPECT_FALSE(IsValidName("."));
+
+  // * It cannot contain "/".
+  EXPECT_FALSE(IsValidName("/"));
+  EXPECT_FALSE(IsValidName("a/"));
+  EXPECT_FALSE(IsValidName("/a"));
+
+  // * It cannot contain embedded NUL.
+  EXPECT_FALSE(IsValidName(std::string_view("\0", 1)));
+  EXPECT_FALSE(IsValidName(std::string_view("a\0", 2)));
+  EXPECT_FALSE(IsValidName(std::string_view("\0a", 2)));
+
+  // Must be valid UTF8
+  constexpr std::string_view invalid_utf8_encoding("\xff");
+  EXPECT_FALSE(IsValidName(invalid_utf8_encoding));
+}
+
+TEST(Path, IsValidCanonicalPath) {
+  EXPECT_TRUE(IsValidCanonicalPath("a"));
+
+  // * It cannot be empty.
+  EXPECT_FALSE(IsValidCanonicalPath(""));
+
+  // * It cannot be longer than `MAX_PATH_LENGTH` (4095 bytes).
+  std::string long_path;
+  for (size_t i = 0; i < 2047; ++i) {
+    long_path += "a/";
+  }
+  long_path += "a";
+  EXPECT_EQ(4095u, long_path.length());
+  EXPECT_TRUE(IsValidCanonicalPath(long_path));
+  long_path.append("a");
+  EXPECT_FALSE(IsValidCanonicalPath(long_path));
+
+  // * It cannot have a leading "/".
+  EXPECT_FALSE(IsValidCanonicalPath("/"));
+  EXPECT_FALSE(IsValidCanonicalPath("/a"));
+  EXPECT_FALSE(IsValidCanonicalPath("/a/b/c"));
+
+  // * It cannot have a trailing "/".
+  EXPECT_FALSE(IsValidCanonicalPath("a/"));
+  EXPECT_FALSE(IsValidCanonicalPath("a/b/c/"));
+
+  // * Each component must be a valid `Name`. See IsValidName().
+  EXPECT_FALSE(IsValidCanonicalPath("./a"));
+  EXPECT_FALSE(IsValidCanonicalPath("../a"));
+  EXPECT_FALSE(IsValidCanonicalPath("\xff"));
+  EXPECT_FALSE(IsValidCanonicalPath("a/\xff/b"));
+  EXPECT_FALSE(IsValidCanonicalPath(std::string_view("a/\0/b", 5)));
+}
+
 TEST(Path, DeletePath) {
   ScopedTempDir dir;
 
