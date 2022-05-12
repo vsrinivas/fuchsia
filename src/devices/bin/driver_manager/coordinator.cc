@@ -1023,35 +1023,27 @@ void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
     }
   }
 
-  // Check the driver index for drivers.
-  auto driver_index_drivers = driver_loader_.GetAllDriverIndexDrivers();
-  for (auto driver : driver_index_drivers) {
-    if (request->driver_filter.empty()) {
-      driver_list.push_back(driver);
-    } else {
-      for (const auto& d : request->driver_filter) {
-        std::string_view driver_path(d.data(), d.size());
-        if (driver_path.compare(driver->libname) == 0) {
-          driver_list.push_back(driver);
-        }
-      }
-    }
-  }
-
-  // If we have driver filters check that we found one driver per filter.
-  if (!request->driver_filter.empty()) {
-    if (driver_list.size() != request->driver_filter.count()) {
-      request->iterator.Close(ZX_ERR_NOT_FOUND);
-      return;
-    }
-  }
-
   auto arena = std::make_unique<fidl::Arena<512>>();
   auto result = GetDriverInfo(*arena, driver_list);
   if (result.is_error()) {
     request->iterator.Close(result.status_value());
     return;
   }
+
+  auto index_result = driver_loader_.GetDriverInfo(*arena, request->driver_filter);
+  if (!index_result.is_error()) {
+    result->reserve(result->size() + index_result->size());
+    result->insert(result->end(), index_result->begin(), index_result->end());
+  } else {
+    LOGF(ERROR, "Failed to call index: %s\n", zx_status_get_string(index_result.status_value()));
+  }
+
+  // If we have driver filters check that we found one driver per filter.
+  if (!request->driver_filter.empty() && (result->size() != request->driver_filter.count())) {
+    request->iterator.Close(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
   auto iterator = std::make_unique<DriverInfoIterator>(std::move(arena), std::move(*result));
   fidl::BindServer(dispatcher(), std::move(request->iterator), std::move(iterator));
 }

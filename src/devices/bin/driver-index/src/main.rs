@@ -282,8 +282,7 @@ impl Indexer {
         let mut driver_info = Vec::new();
 
         for driver in &self.boot_repo {
-            if driver_filter.len() == 0
-                || driver_filter.iter().any(|f| f == driver.component_url.as_str())
+            if driver_filter.len() == 0 || driver_filter.iter().any(|f| f == &driver.get_libname())
             {
                 driver_info.push(driver.create_driver_info());
             }

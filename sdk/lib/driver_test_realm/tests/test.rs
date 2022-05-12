@@ -64,8 +64,8 @@ async fn test_empty_args() -> Result<()> {
     let info = get_driver_info(&driver_dev, &mut std::iter::empty()).await?;
     assert!(info
         .iter()
-        .any(|d| d.url == Some("fuchsia-boot:///#driver/test-parent-sys.so".to_string())));
-    assert!(info.iter().any(|d| d.url == Some("fuchsia-boot:///#driver/test.so".to_string())));
+        .any(|d| d.url == Some("fuchsia-boot:///#meta/test-parent-sys.cm".to_string())));
+    assert!(info.iter().any(|d| d.url == Some("fuchsia-boot:///#meta/test.cm".to_string())));
 
     Ok(())
 }
@@ -93,8 +93,8 @@ async fn test_pkg_dir() -> Result<()> {
     let info = get_driver_info(&driver_dev, &mut std::iter::empty()).await?;
     assert!(info
         .iter()
-        .any(|d| d.url == Some("fuchsia-boot:///#driver/test-parent-sys.so".to_string())));
-    assert!(info.iter().any(|d| d.url == Some("fuchsia-boot:///#driver/test.so".to_string())));
+        .any(|d| d.url == Some("fuchsia-boot:///#meta/test-parent-sys.cm".to_string())));
+    assert!(info.iter().any(|d| d.url == Some("fuchsia-boot:///#meta/test.cm".to_string())));
 
     let dev = instance.driver_test_realm_connect_to_dev()?;
     device_watcher::recursive_wait_and_open_node(&dev, "sys/test/test").await?;

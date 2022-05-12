@@ -14,6 +14,11 @@ use {
     fuchsia_zircon_status as zx_status,
 };
 
+const SAMPLE_DRIVER_URL: &str = "fuchsia-boot:///#meta/sample-driver.cm";
+const SAMPLE_DRIVER_LIBNAME: &str = "fuchsia-boot:///#driver/sample-driver.so";
+const PARENT_DRIVER_URL: &str = "fuchsia-boot:///#meta/test-parent-sys.cm";
+const PARENT_DRIVER_LIBNAME: &str = "fuchsia-boot:///#driver/test-parent-sys.so";
+
 fn get_no_protocol_dfv2_property_list() -> Option<[fdf::NodeProperty; 2]> {
     Some([
         fdf::NodeProperty {
@@ -129,7 +134,7 @@ async fn get_driver_info(
 async fn set_up_test_driver_realm(
     use_dfv2: bool,
 ) -> Result<(RealmInstance, fdd::DriverDevelopmentProxy)> {
-    const ROOT_DRIVER_DFV2_URL: &str = "fuchsia-boot:///#meta/test-parent-sys.cm";
+    const ROOT_DRIVER_DFV2_URL: &str = PARENT_DRIVER_URL;
 
     let builder = RealmBuilder::new().await?;
     builder.driver_test_realm_setup().await?;
@@ -169,53 +174,32 @@ async fn test_get_driver_info_no_filter_dfv1() -> Result<()> {
     let driver_infos = get_driver_info(&driver_dev, &[]).await?;
 
     assert_eq!(driver_infos.len(), 2);
-    assert_contains_driver_url(&driver_infos, "fuchsia-boot:///#driver/sample-driver.so");
-    assert_contains_driver_url(&driver_infos, "fuchsia-boot:///#driver/test-parent-sys.so");
+    assert_contains_driver_url(&driver_infos, SAMPLE_DRIVER_URL);
+    assert_contains_driver_url(&driver_infos, PARENT_DRIVER_URL);
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_driver_info_with_filter_dfv1() -> Result<()> {
-    const DRIVER_FILTER: [&str; 1] = ["fuchsia-boot:///#driver/sample-driver.so"];
+    const DRIVER_FILTER: [&str; 1] = [SAMPLE_DRIVER_LIBNAME];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
 
     assert_eq!(driver_infos.len(), 1);
-    assert_contains_driver_url(&driver_infos, "fuchsia-boot:///#driver/sample-driver.so");
+    assert_contains_driver_url(&driver_infos, SAMPLE_DRIVER_URL);
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_driver_info_with_mixed_filter_dfv1() -> Result<()> {
-    const DRIVER_FILTER: [&str; 2] = ["fuchsia-boot:///#driver/sample-driver.so", "foo"];
+    const DRIVER_FILTER: [&str; 2] = [SAMPLE_DRIVER_URL, "foo"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let iterator = send_get_driver_info_request(&driver_dev, &DRIVER_FILTER)?;
     let res = iterator.get_next().await.expect_err("A driver should not be returned");
 
     assert_not_found_error(res);
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_get_driver_info_with_duplicate_filter_dfv1() -> Result<()> {
-    const DRIVER_FILTER: [&str; 2] =
-        ["fuchsia-boot:///#driver/sample-driver.so", "fuchsia-boot:///#driver/sample-driver.so"];
-
-    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
-    let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
-
-    assert_eq!(driver_infos.len(), 2);
-    assert_eq!(
-        driver_infos
-            .into_iter()
-            .filter(|driver_info| driver_info.url.as_ref().expect("Missing driver URL")
-                == "fuchsia-boot:///#driver/sample-driver.so")
-            .count(),
-        2
-    );
-
     Ok(())
 }
 
@@ -251,45 +235,44 @@ async fn test_get_driver_info_no_filter_dfv2() -> Result<()> {
 
     assert_eq!(driver_infos.len(), 2);
     assert_contains_driver_url(&driver_infos, "fuchsia-boot:///#meta/sample-driver.cm");
-    assert_contains_driver_url(&driver_infos, "fuchsia-boot:///#meta/test-parent-sys.cm");
+    assert_contains_driver_url(&driver_infos, PARENT_DRIVER_URL);
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_driver_info_with_filter_dfv2() -> Result<()> {
-    const DRIVER_FILTER: [&str; 1] = ["fuchsia-boot:///#meta/sample-driver.cm"];
+    const DRIVER_FILTER: [&str; 1] = [SAMPLE_DRIVER_LIBNAME];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
 
     assert_eq!(driver_infos.len(), 1);
-    assert_contains_driver_url(&driver_infos, "fuchsia-boot:///#meta/sample-driver.cm");
+    assert_contains_driver_url(&driver_infos, SAMPLE_DRIVER_URL);
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_driver_info_with_duplicate_filter_dfv2() -> Result<()> {
-    const DRIVER_FILTER: [&str; 2] =
-        ["fuchsia-boot:///#meta/sample-driver.cm", "fuchsia-boot:///#meta/sample-driver.cm"];
+    const DRIVER_FILTER: [&str; 2] = [SAMPLE_DRIVER_LIBNAME, SAMPLE_DRIVER_LIBNAME];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
 
     assert_eq!(driver_infos.len(), 1);
-    assert_contains_driver_url(&driver_infos, "fuchsia-boot:///#meta/sample-driver.cm");
+    assert_contains_driver_url(&driver_infos, SAMPLE_DRIVER_URL);
 
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_driver_info_with_mixed_filter_dfv2() -> Result<()> {
-    const DRIVER_FILTER: [&str; 2] = ["fuchsia-boot:///#meta/sample-driver.cm", "foo"];
+    const DRIVER_FILTER: [&str; 2] = [SAMPLE_DRIVER_LIBNAME, "foo"];
 
     let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let driver_infos = get_driver_info(&driver_dev, &DRIVER_FILTER).await?;
 
     assert_eq!(driver_infos.len(), 1);
-    assert_contains_driver_url(&driver_infos, "fuchsia-boot:///#meta/sample-driver.cm");
+    assert_contains_driver_url(&driver_infos, SAMPLE_DRIVER_URL);
 
     Ok(())
 }
@@ -339,7 +322,7 @@ async fn test_get_device_info_no_filter_dfv1() -> Result<()> {
             .bound_driver_libname
             .as_ref()
             .expect("DFv1 driver missing bound driver libname"),
-        "fuchsia-boot:///#driver/test-parent-sys.so"
+        PARENT_DRIVER_LIBNAME
     );
     assert_eq!(root_sys_test.num_children, 1);
     assert_eq!(root_sys_test.child_nodes.len(), 1);
@@ -357,7 +340,7 @@ async fn test_get_device_info_no_filter_dfv1() -> Result<()> {
             .bound_driver_libname
             .as_ref()
             .expect("DFv1 driver missing bound driver libname"),
-        "fuchsia-boot:///#driver/sample-driver.so"
+        SAMPLE_DRIVER_LIBNAME
     );
     assert_eq!(sample_driver.num_children, 0);
     assert!(sample_driver.child_nodes.is_empty());
@@ -387,7 +370,7 @@ async fn test_get_device_info_with_filter_dfv1() -> Result<()> {
             .bound_driver_libname
             .as_ref()
             .expect("DFv1 driver missing bound driver libname"),
-        "fuchsia-boot:///#driver/test-parent-sys.so"
+        PARENT_DRIVER_LIBNAME
     );
     assert_eq!(sys_test.num_children, 1);
     assert!(sys_test.child_nodes.is_empty());
@@ -417,7 +400,7 @@ async fn test_get_device_info_with_duplicate_filter_dfv1() -> Result<()> {
             .bound_driver_libname
             .as_ref()
             .expect("DFv1 driver missing bound driver libname"),
-        "fuchsia-boot:///#driver/sample-driver.so"
+        SAMPLE_DRIVER_LIBNAME
     );
     assert!(sample_driver.child_nodes.is_empty());
 
@@ -434,7 +417,7 @@ async fn test_get_device_info_with_duplicate_filter_dfv1() -> Result<()> {
             .bound_driver_libname
             .as_ref()
             .expect("DFv1 driver missing bound driver libname"),
-        "fuchsia-boot:///#driver/sample-driver.so"
+        SAMPLE_DRIVER_LIBNAME
     );
     assert_eq!(sample_driver.num_children, 0);
     assert!(sample_driver.child_nodes.is_empty());
@@ -479,7 +462,7 @@ async fn test_get_device_info_no_filter_dfv2() -> Result<()> {
     assert!(root.info.bound_driver_libname.is_none(), "DFv2 node specified bound driver libname");
     assert_eq!(
         root.info.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
-        "fuchsia-boot:///#meta/test-parent-sys.cm"
+        PARENT_DRIVER_URL
     );
     assert!(root.info.property_list.is_none());
     assert!(root.info.node_property_list.is_none());
@@ -502,7 +485,7 @@ async fn test_get_device_info_no_filter_dfv2() -> Result<()> {
     assert!(test.info.bound_driver_libname.is_none(), "DFv2 node specified bound driver libname");
     assert_eq!(
         test.info.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
-        "fuchsia-boot:///#meta/sample-driver.cm"
+        SAMPLE_DRIVER_URL
     );
     assert_eq!(
         test.info.node_property_list.as_ref().map(|x| x.as_slice()),
@@ -532,7 +515,7 @@ async fn test_get_device_info_with_filter_dfv2() -> Result<()> {
     );
     assert_eq!(
         root_sys_test.info.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
-        "fuchsia-boot:///#meta/sample-driver.cm"
+        SAMPLE_DRIVER_URL
     );
     assert_eq!(
         root_sys_test.info.node_property_list.as_ref().map(|x| x.as_slice()),
@@ -563,7 +546,7 @@ async fn test_get_device_info_with_duplicate_filter_dfv2() -> Result<()> {
     );
     assert_eq!(
         root_sys_test.info.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
-        "fuchsia-boot:///#meta/sample-driver.cm"
+        SAMPLE_DRIVER_URL
     );
     assert_eq!(
         root_sys_test.info.node_property_list.as_ref().map(|x| x.as_slice()),

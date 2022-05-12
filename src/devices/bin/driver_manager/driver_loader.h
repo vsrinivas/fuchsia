@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_LOADER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_LOADER_H_
 
+#include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <threads.h>
 
@@ -64,6 +65,9 @@ class DriverLoader {
   const Driver* LibnameToDriver(std::string_view libname) const;
 
   const Driver* LoadDriverUrl(const std::string& driver_url, bool use_universe_resolver = false);
+
+  zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverInfo(
+      fidl::AnyArena& allocator, fidl::VectorView<fidl::StringView> filter);
 
   // This API is used for debugging, for GetDriverInfo and DumpDrivers.
   std::vector<const Driver*> GetAllDriverIndexDrivers();

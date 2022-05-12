@@ -44,6 +44,12 @@ impl std::fmt::Display for ResolvedDriver {
 }
 
 impl ResolvedDriver {
+    pub fn get_libname(&self) -> String {
+        let mut libname = self.component_url.clone();
+        libname.set_fragment(self.v1_driver_path.as_deref());
+        libname.into_string()
+    }
+
     pub async fn resolve(
         component_url: url::Url,
         resolver: &fidl_fuchsia_pkg::PackageResolverProxy,
@@ -167,11 +173,9 @@ impl ResolvedDriver {
             // TODO(fxbug.dev/85651): Support composite bytecode in DriverInfo.
             DecodedRules::Composite(_) => None,
         };
-        let mut libname = self.component_url.clone();
-        libname.set_fragment(self.v1_driver_path.as_deref());
         fdd::DriverInfo {
             url: Some(self.component_url.clone().to_string()),
-            libname: Some(libname.to_string()),
+            libname: Some(self.get_libname()),
             bind_rules: bind_rules,
             package_type: fdf::DriverPackageType::from_primitive(self.package_type as u8),
             ..fdd::DriverInfo::EMPTY

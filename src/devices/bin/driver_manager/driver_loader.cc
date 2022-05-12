@@ -24,6 +24,44 @@
 
 namespace {
 
+// Go through each field in the DriverInfo and copy it with a given allocator.
+fuchsia_driver_development::wire::DriverInfo CopyDriverInfo(
+    fidl::AnyArena& allocator, fuchsia_driver_development::wire::DriverInfo& driver) {
+  auto allocated = fuchsia_driver_development::wire::DriverInfo::Builder(allocator);
+  if (driver.has_libname()) {
+    allocated.libname(allocator, driver.libname().get());
+  }
+  if (driver.has_name()) {
+    allocated.name(allocator, driver.name().get());
+  }
+  if (driver.has_url()) {
+    allocated.url(allocator, driver.url().get());
+  }
+  if (driver.has_bind_rules()) {
+    if (driver.bind_rules().is_bytecode_v1()) {
+      auto vector = fidl::VectorView<fuchsia_device_manager::wire::BindInstruction>(
+          allocator, driver.bind_rules().bytecode_v1().count());
+      for (size_t i = 0; i < vector.count(); i++) {
+        vector[i] = driver.bind_rules().bytecode_v1()[i];
+      }
+      allocated.bind_rules(
+          fuchsia_driver_development::wire::BindRulesBytecode::WithBytecodeV1(allocator, vector));
+    }
+    if (driver.bind_rules().is_bytecode_v2()) {
+      auto vector = fidl::VectorView<uint8_t>(allocator, driver.bind_rules().bytecode_v2().count());
+      for (size_t i = 0; i < driver.bind_rules().bytecode_v2().count(); i++) {
+        vector[i] = driver.bind_rules().bytecode_v2()[i];
+      }
+      allocated.bind_rules(fuchsia_driver_development::wire::BindRulesBytecode::WithBytecodeV2(
+          allocator, std::move(vector)));
+    }
+  }
+  if (driver.has_package_type()) {
+    allocated.package_type(driver.package_type());
+  }
+  return allocated.Build();
+}
+
 zx::status<fdf::wire::MatchedDriverInfo> GetFidlMatchedDriverInfo(fdf::wire::MatchedDriver driver) {
   if (driver.is_device_group()) {
     return zx::error(ZX_ERR_NOT_FOUND);
@@ -446,6 +484,54 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
                          matched_fallback_drivers.end());
 
   return matched_drivers;
+}
+
+zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> DriverLoader::GetDriverInfo(
+    fidl::AnyArena& allocator, fidl::VectorView<fidl::StringView> filter) {
+  std::vector<fuchsia_driver_development::wire::DriverInfo> info;
+
+  auto driver_index_client = service::Connect<fuchsia_driver_development::DriverIndex>();
+  if (driver_index_client.is_error()) {
+    LOGF(WARNING, "Failed to connect to fuchsia_driver_development::DriverIndex\n");
+    return driver_index_client.take_error();
+  }
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_driver_development::DriverInfoIterator>();
+  if (endpoints.is_error()) {
+    LOGF(ERROR, "fidl::CreateEndpoints failed: %s\n", endpoints.status_string());
+    return endpoints.take_error();
+  }
+
+  auto driver_index = fidl::BindSyncClient(std::move(*driver_index_client));
+  auto info_result = driver_index->GetDriverInfo(filter, std::move(endpoints->server));
+
+  // There are still some environments where we can't connect to DriverIndex.
+  if (info_result.status() != ZX_OK) {
+    LOGF(INFO, "DriverIndex:GetDriverInfo failed: %d\n", info_result.status());
+    return zx::error(info_result.status());
+  }
+
+  auto iterator = fidl::BindSyncClient(std::move(endpoints->client));
+  for (;;) {
+    auto next_result = iterator->GetNext();
+    if (!next_result.ok()) {
+      // This is likely a pipelined error from the GetDriverInfo call above. We unfortunately
+      // cannot read the epitaph without using an async call.
+      LOGF(ERROR, "DriverInfoIterator.GetNext failed: %s\n",
+           next_result.FormatDescription().c_str());
+      break;
+    }
+    if (next_result->drivers.count() == 0) {
+      // When we receive 0 responses, we are done iterating.
+      break;
+    }
+    // Go through each driver info and create a copy.
+    for (auto& driver : next_result->drivers) {
+      info.push_back(CopyDriverInfo(allocator, driver));
+    }
+  }
+
+  return zx::ok(std::move(info));
 }
 
 std::vector<const Driver*> DriverLoader::GetAllDriverIndexDrivers() {
