@@ -70,6 +70,7 @@ zx_status_t TestRoot::Bind(const char* name, cpp20::span<const zx_device_prop_t>
   std::array<const char*, 1> offers = {"fuchsia.composite.test.Device"};
 
   is_bound.Set(true);
+
   return DdkAdd(ddk::DeviceAddArgs(name)
                     .set_props(props)
                     .set_inspect_vmo(inspect_.DuplicateVmo())
@@ -78,7 +79,12 @@ zx_status_t TestRoot::Bind(const char* name, cpp20::span<const zx_device_prop_t>
                     .set_outgoing_dir(endpoints->client.TakeChannel()));
 }
 
-void TestRoot::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
+void TestRoot::DdkInit(ddk::InitTxn txn) {
+  uint32_t data = server_.number() + 3;
+  DdkAddMetadata(server_.number(), &data, sizeof(data));
+
+  txn.Reply(ZX_OK);
+}
 
 void TestRoot::DdkRelease() { delete this; }
 

@@ -23,6 +23,8 @@ class NumberServer : public fidl::WireServer<fuchsia_composite_test::Device> {
     completer.Reply(number_);
   }
 
+  uint32_t number() { return number_; }
+
  private:
   uint32_t number_;
 };
