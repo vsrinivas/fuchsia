@@ -7,10 +7,11 @@ import("//build/test.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":zxio-standalone-package",
-    ":zxio-unittest-package",
-  ]
+  deps = [ ":zxio-standalone-package" ]
+  if (!is_coverage) {
+    # TODO(https://fxbug.dev/100212): Re-enable this test once it is fixed on coverage bot.
+    deps += [ ":zxio-unittest-package" ]
+  }
 }
 
 test("zxio") {
