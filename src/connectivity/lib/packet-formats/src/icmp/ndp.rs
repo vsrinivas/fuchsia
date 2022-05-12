@@ -43,7 +43,9 @@ pub enum NonZeroNdpLifetime {
 }
 
 impl NonZeroNdpLifetime {
-    fn from_u32_with_infinite(lifetime: u32) -> Option<NonZeroNdpLifetime> {
+    /// Returns a `Some(NonZeroNdpLifetime)` if the passed lifetime is non-zero;
+    /// otherwise `None`.
+    pub fn from_u32_with_infinite(lifetime: u32) -> Option<NonZeroNdpLifetime> {
         // Per RFC 4861 section 4.6.2,
         //
         //   Valid Lifetime

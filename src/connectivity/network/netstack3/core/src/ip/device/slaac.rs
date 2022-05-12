@@ -1309,10 +1309,159 @@ fn add_slaac_addr_sub<C: SlaacContext>(
 
 #[cfg(test)]
 mod tests {
+    use assert_matches::assert_matches;
+    use fakealloc::collections::hash_map::{Entry, HashMap};
     use net_declare::net::ip_v6;
     use test_case::test_case;
 
     use super::*;
+    use crate::{
+        context::testutil::{DummyCtx, DummyInstant, DummyTimerCtxExt as _},
+        ip::DummyDeviceId,
+        testutil::assert_empty,
+    };
+
+    struct MockSlaacContext {
+        config: SlaacConfiguration,
+        dad_transmits: Option<NonZeroU8>,
+        retrans_timer: Duration,
+        iid: [u8; 8],
+        slaac_addrs: HashMap<UnicastAddr<Ipv6Addr>, SlaacAddressEntry<DummyInstant>>,
+        non_slaac_addr: Option<UnicastAddr<Ipv6Addr>>,
+    }
+
+    type MockCtx = DummyCtx<MockSlaacContext, SlaacTimerId<DummyDeviceId>, (), (), DummyDeviceId>;
+
+    impl SlaacStateContext for MockCtx {
+        fn get_config(&self, DummyDeviceId: Self::DeviceId) -> SlaacConfiguration {
+            let MockSlaacContext {
+                config,
+                dad_transmits: _,
+                retrans_timer: _,
+                iid: _,
+                slaac_addrs: _,
+                non_slaac_addr: _,
+            } = self.get_ref();
+            *config
+        }
+
+        fn dad_transmits(&self, DummyDeviceId: Self::DeviceId) -> Option<NonZeroU8> {
+            let MockSlaacContext {
+                config: _,
+                dad_transmits,
+                retrans_timer: _,
+                iid: _,
+                slaac_addrs: _,
+                non_slaac_addr: _,
+            } = self.get_ref();
+            *dad_transmits
+        }
+
+        fn retrans_timer(&self, DummyDeviceId: Self::DeviceId) -> Duration {
+            let MockSlaacContext {
+                config: _,
+                dad_transmits: _,
+                retrans_timer,
+                iid: _,
+                slaac_addrs: _,
+                non_slaac_addr: _,
+            } = self.get_ref();
+            *retrans_timer
+        }
+
+        fn get_interface_identifier(&self, DummyDeviceId: Self::DeviceId) -> [u8; 8] {
+            let MockSlaacContext {
+                config: _,
+                dad_transmits: _,
+                retrans_timer: _,
+                iid,
+                slaac_addrs: _,
+                non_slaac_addr: _,
+            } = self.get_ref();
+            *iid
+        }
+
+        fn iter_slaac_addrs(
+            &self,
+            DummyDeviceId: Self::DeviceId,
+        ) -> Box<dyn Iterator<Item = SlaacAddressEntry<Self::Instant>> + '_> {
+            let MockSlaacContext {
+                config: _,
+                dad_transmits: _,
+                retrans_timer: _,
+                iid: _,
+                slaac_addrs,
+                non_slaac_addr: _,
+            } = self.get_ref();
+            Box::new(slaac_addrs.values().cloned())
+        }
+
+        fn iter_slaac_addrs_mut(
+            &mut self,
+            DummyDeviceId: Self::DeviceId,
+        ) -> Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, Self::Instant>> + '_> {
+            let MockSlaacContext {
+                config: _,
+                dad_transmits: _,
+                retrans_timer: _,
+                iid: _,
+                slaac_addrs,
+                non_slaac_addr: _,
+            } = self.get_mut();
+            Box::new(slaac_addrs.values_mut().map(
+                |SlaacAddressEntry { addr_sub, config, deprecated }| SlaacAddressEntryMut {
+                    addr_sub: *addr_sub,
+                    config,
+                    deprecated,
+                },
+            ))
+        }
+
+        fn add_slaac_addr_sub(
+            &mut self,
+            DummyDeviceId: Self::DeviceId,
+            addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
+            config: SlaacConfig<Self::Instant>,
+        ) -> Result<(), ExistsError> {
+            let MockSlaacContext {
+                config: _,
+                dad_transmits: _,
+                retrans_timer: _,
+                iid: _,
+                slaac_addrs,
+                non_slaac_addr,
+            } = self.get_mut();
+
+            if non_slaac_addr.map_or(false, |a| a == addr_sub.addr()) {
+                return Err(ExistsError);
+            }
+
+            match slaac_addrs.entry(addr_sub.addr()) {
+                Entry::Occupied(_) => Err(ExistsError),
+                Entry::Vacant(e) => {
+                    let _inserted_val: &mut SlaacAddressEntry<_> =
+                        e.insert(SlaacAddressEntry { addr_sub, config, deprecated: false });
+                    Ok(())
+                }
+            }
+        }
+
+        fn remove_slaac_addr(
+            &mut self,
+            DummyDeviceId: Self::DeviceId,
+            addr: &UnicastAddr<Ipv6Addr>,
+        ) {
+            let MockSlaacContext {
+                config: _,
+                dad_transmits: _,
+                retrans_timer: _,
+                iid: _,
+                slaac_addrs,
+                non_slaac_addr: _,
+            } = self.get_mut();
+            let _removed_val: Option<SlaacAddressEntry<_>> = slaac_addrs.remove(addr);
+        }
+    }
 
     #[test_case(ip_v6!("1:2:3:4::"), false; "subnet-router anycast")]
     #[test_case(ip_v6!("::1"), true; "allowed 1")]
@@ -1324,5 +1473,378 @@ mod tests {
     #[test_case(ip_v6!("c:c:c:c:fe00::"), true; "allowed 3")]
     fn test_has_iana_allowed_iid(addr: Ipv6Addr, expect_allowed: bool) {
         assert_eq!(has_iana_allowed_iid(addr), expect_allowed);
+    }
+
+    const IID: [u8; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
+    const DEFAULT_RETRANS_TIMER: Duration = Duration::from_secs(1);
+    const SUBNET: Subnet<Ipv6Addr> =
+        unsafe { Subnet::new_unchecked(Ipv6Addr::new([0x200a, 0, 0, 0, 0, 0, 0, 0]), 64) };
+
+    #[test_case(0, 0; "zero lifetimes")]
+    #[test_case(2, 1; "preferred larger than valid")]
+    fn dont_generate_address(preferred_lifetime_secs: u32, valid_lifetime_secs: u32) {
+        let mut ctx = MockCtx::with_state(MockSlaacContext {
+            config: SlaacConfiguration::default(),
+            dad_transmits: None,
+            retrans_timer: DEFAULT_RETRANS_TIMER,
+            iid: IID,
+            slaac_addrs: Default::default(),
+            non_slaac_addr: None,
+        });
+
+        SlaacHandler::apply_slaac_update(
+            &mut ctx,
+            DummyDeviceId,
+            SUBNET,
+            NonZeroNdpLifetime::from_u32_with_infinite(preferred_lifetime_secs),
+            NonZeroNdpLifetime::from_u32_with_infinite(valid_lifetime_secs),
+        );
+        assert_empty(ctx.iter_slaac_addrs(DummyDeviceId));
+        ctx.timer_ctx().assert_no_timers_installed();
+    }
+
+    fn calculate_addr_sub(
+        subnet: Subnet<Ipv6Addr>,
+        iid: [u8; 8],
+    ) -> AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> {
+        let mut bytes = subnet.network().ipv6_bytes();
+        bytes[8..].copy_from_slice(&iid);
+        AddrSubnet::new(Ipv6Addr::from_bytes(bytes), subnet.prefix()).unwrap()
+    }
+
+    #[test_case(0; "deprecated")]
+    #[test_case(1; "preferred")]
+    fn generate_stable_address(preferred_lifetime_secs: u32) {
+        let mut ctx = MockCtx::with_state(MockSlaacContext {
+            config: SlaacConfiguration::default(),
+            dad_transmits: None,
+            retrans_timer: DEFAULT_RETRANS_TIMER,
+            iid: IID,
+            slaac_addrs: Default::default(),
+            non_slaac_addr: None,
+        });
+
+        let valid_lifetime_secs = preferred_lifetime_secs + 1;
+        let addr_sub = calculate_addr_sub(SUBNET, IID);
+
+        // Generate a new SLAAC address.
+        SlaacHandler::apply_slaac_update(
+            &mut ctx,
+            DummyDeviceId,
+            SUBNET,
+            NonZeroNdpLifetime::from_u32_with_infinite(preferred_lifetime_secs),
+            NonZeroNdpLifetime::from_u32_with_infinite(valid_lifetime_secs),
+        );
+        let address_created_deprecated = preferred_lifetime_secs == 0;
+        let now = ctx.now();
+        let valid_until = now + Duration::from_secs(valid_lifetime_secs.into());
+        let entry = SlaacAddressEntry {
+            addr_sub,
+            config: SlaacConfig::Static { valid_until: Lifetime::Finite(valid_until) },
+            deprecated: address_created_deprecated,
+        };
+        assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [entry],);
+        let deprecate_timer_id =
+            SlaacTimerId::new_deprecate_slaac_address(DummyDeviceId, addr_sub.addr());
+        let invalidate_timer_id =
+            SlaacTimerId::new_invalidate_slaac_address(DummyDeviceId, addr_sub.addr());
+        if address_created_deprecated {
+            ctx.timer_ctx().assert_timers_installed([(invalidate_timer_id, valid_until)]);
+        } else {
+            ctx.timer_ctx().assert_timers_installed([
+                (deprecate_timer_id, now + Duration::from_secs(preferred_lifetime_secs.into())),
+                (invalidate_timer_id, valid_until),
+            ]);
+
+            // Trigger the deprecation timer.
+            assert_eq!(
+                ctx.trigger_next_timer(TimerHandler::handle_timer),
+                Some(deprecate_timer_id)
+            );
+            let entry = SlaacAddressEntry { deprecated: true, ..entry };
+            assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [entry],);
+            ctx.timer_ctx().assert_timers_installed([(invalidate_timer_id, valid_until)]);
+        }
+
+        // Trigger the invalidation timer.
+        assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(invalidate_timer_id));
+        assert_empty(ctx.iter_slaac_addrs(DummyDeviceId));
+        ctx.timer_ctx().assert_no_timers_installed();
+    }
+
+    #[test]
+    fn stable_address_conflict() {
+        let addr_sub = calculate_addr_sub(SUBNET, IID);
+
+        let mut ctx = MockCtx::with_state(MockSlaacContext {
+            config: SlaacConfiguration::default(),
+            dad_transmits: None,
+            retrans_timer: DEFAULT_RETRANS_TIMER,
+            iid: IID,
+            slaac_addrs: Default::default(),
+            // Consider the address we will generate as already assigned without
+            // SLAAC.
+            non_slaac_addr: Some(addr_sub.addr()),
+        });
+
+        const LIFETIME_SECS: u32 = 1;
+
+        // Generate a new SLAAC address.
+        SlaacHandler::apply_slaac_update(
+            &mut ctx,
+            DummyDeviceId,
+            SUBNET,
+            NonZeroNdpLifetime::from_u32_with_infinite(LIFETIME_SECS),
+            NonZeroNdpLifetime::from_u32_with_infinite(LIFETIME_SECS),
+        );
+        assert_empty(ctx.iter_slaac_addrs(DummyDeviceId));
+        ctx.timer_ctx().assert_no_timers_installed();
+    }
+
+    #[test_case(DelIpv6AddrReason::ManualAction; "manual action")]
+    #[test_case(DelIpv6AddrReason::DadFailed; "dad failed")]
+    fn remove_stable_address(reason: DelIpv6AddrReason) {
+        let addr_sub = calculate_addr_sub(SUBNET, IID);
+
+        let mut ctx = MockCtx::with_state(MockSlaacContext {
+            config: SlaacConfiguration::default(),
+            dad_transmits: None,
+            retrans_timer: DEFAULT_RETRANS_TIMER,
+            iid: IID,
+            slaac_addrs: Default::default(),
+            non_slaac_addr: None,
+        });
+
+        const LIFETIME_SECS: u32 = 1;
+
+        // Generate a new SLAAC address.
+        SlaacHandler::apply_slaac_update(
+            &mut ctx,
+            DummyDeviceId,
+            SUBNET,
+            NonZeroNdpLifetime::from_u32_with_infinite(LIFETIME_SECS),
+            NonZeroNdpLifetime::from_u32_with_infinite(LIFETIME_SECS),
+        );
+        let now = ctx.now();
+        let valid_until = now + Duration::from_secs(LIFETIME_SECS.into());
+        let entry = SlaacAddressEntry {
+            addr_sub,
+            config: SlaacConfig::Static { valid_until: Lifetime::Finite(valid_until) },
+            deprecated: false,
+        };
+        assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [entry],);
+        let deprecate_timer_id =
+            SlaacTimerId::new_deprecate_slaac_address(DummyDeviceId, addr_sub.addr());
+        let invalidate_timer_id =
+            SlaacTimerId::new_invalidate_slaac_address(DummyDeviceId, addr_sub.addr());
+        ctx.timer_ctx().assert_timers_installed([
+            (deprecate_timer_id, now + Duration::from_secs(LIFETIME_SECS.into())),
+            (invalidate_timer_id, valid_until),
+        ]);
+
+        // Remove the address and let SLAAC know the address was removed
+        let config = assert_matches!(
+            ctx.get_mut().slaac_addrs.remove(&addr_sub.addr()),
+            Some(SlaacAddressEntry { addr_sub: got_addr_sub, config, deprecated }) => {
+                assert_eq!(addr_sub, got_addr_sub);
+                assert!(!deprecated);
+                config
+            }
+        );
+        SlaacHandler::on_address_removed(&mut ctx, DummyDeviceId, addr_sub, config, reason);
+        ctx.timer_ctx().assert_no_timers_installed();
+    }
+
+    struct RefreshStableAddressTimersTest {
+        orig_pl_secs: u32,
+        orig_vl_secs: u32,
+        new_pl_secs: u32,
+        new_vl_secs: u32,
+        effective_new_vl_secs: u32,
+    }
+
+    const ONE_HOUR_AS_SECS: u32 = 60 * 60;
+    const TWO_HOURS_AS_SECS: u32 = ONE_HOUR_AS_SECS * 2;
+    const THREE_HOURS_AS_SECS: u32 = ONE_HOUR_AS_SECS * 3;
+    const INFINITE_LIFETIME: u32 = u32::MAX;
+    const MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE_AS_SECS: u32 =
+        MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE.as_secs() as u32;
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: 1,
+        orig_vl_secs: 1,
+        new_pl_secs: 1,
+        new_vl_secs: 1,
+        effective_new_vl_secs: 1,
+    }; "do nothing")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: 1,
+        orig_vl_secs: 1,
+        new_pl_secs: 2,
+        new_vl_secs: 2,
+        effective_new_vl_secs: 2,
+    }; "increase lifetimes")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: 1,
+        orig_vl_secs: 1,
+        new_pl_secs: 0,
+        new_vl_secs: 1,
+        effective_new_vl_secs: 1,
+    }; "deprecate address only")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: 0,
+        orig_vl_secs: 1,
+        new_pl_secs: 1,
+        new_vl_secs: 1,
+        effective_new_vl_secs: 1,
+    }; "undeprecate address")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: 1,
+        orig_vl_secs: 1,
+        new_pl_secs: 0,
+        new_vl_secs: 0,
+        effective_new_vl_secs: 1,
+    }; "deprecate address only with new valid lifetime of zero")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: ONE_HOUR_AS_SECS,
+        orig_vl_secs: ONE_HOUR_AS_SECS,
+        new_pl_secs: ONE_HOUR_AS_SECS - 1,
+        new_vl_secs: ONE_HOUR_AS_SECS - 1,
+        effective_new_vl_secs: ONE_HOUR_AS_SECS,
+    }; "decrease preferred lifetime and ignore new valid lifetime if less than 2 hours and remaining lifetime")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: THREE_HOURS_AS_SECS,
+        orig_vl_secs: THREE_HOURS_AS_SECS,
+        new_pl_secs: MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE_AS_SECS - 1,
+        new_vl_secs: MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE_AS_SECS - 1,
+        effective_new_vl_secs: MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE_AS_SECS,
+    }; "deprecate address only and bring valid lifetime down to 2 hours at max")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: ONE_HOUR_AS_SECS - 1,
+        orig_vl_secs: ONE_HOUR_AS_SECS - 1,
+        new_pl_secs: ONE_HOUR_AS_SECS - 1,
+        new_vl_secs: ONE_HOUR_AS_SECS,
+        effective_new_vl_secs: ONE_HOUR_AS_SECS,
+    }; "increase valid lifetime if more than remaining valid lifetime")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: INFINITE_LIFETIME,
+        orig_vl_secs: INFINITE_LIFETIME,
+        new_pl_secs: INFINITE_LIFETIME,
+        new_vl_secs: INFINITE_LIFETIME,
+        effective_new_vl_secs: INFINITE_LIFETIME,
+    }; "infinite lifetimes")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: ONE_HOUR_AS_SECS,
+        orig_vl_secs: TWO_HOURS_AS_SECS,
+        new_pl_secs: TWO_HOURS_AS_SECS,
+        new_vl_secs: INFINITE_LIFETIME,
+        effective_new_vl_secs: INFINITE_LIFETIME,
+    }; "update valid lifetime from finite to infinite")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: ONE_HOUR_AS_SECS,
+        orig_vl_secs: TWO_HOURS_AS_SECS,
+        new_pl_secs: INFINITE_LIFETIME,
+        new_vl_secs: INFINITE_LIFETIME,
+        effective_new_vl_secs: INFINITE_LIFETIME,
+    }; "update both lifetimes from finite to infinite")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: TWO_HOURS_AS_SECS,
+        orig_vl_secs: INFINITE_LIFETIME,
+        new_pl_secs: ONE_HOUR_AS_SECS,
+        new_vl_secs: MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE_AS_SECS - 1,
+        effective_new_vl_secs: MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE_AS_SECS,
+    }; "update valid lifetime from infinite to finite")]
+    #[test_case(RefreshStableAddressTimersTest {
+        orig_pl_secs: INFINITE_LIFETIME,
+        orig_vl_secs: INFINITE_LIFETIME,
+        new_pl_secs: ONE_HOUR_AS_SECS,
+        new_vl_secs: MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE_AS_SECS - 1,
+        effective_new_vl_secs: MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE_AS_SECS,
+    }; "update both lifetimes from infinite to finite")]
+    fn stable_address_timers(
+        RefreshStableAddressTimersTest {
+            orig_pl_secs,
+            orig_vl_secs,
+            new_pl_secs,
+            new_vl_secs,
+            effective_new_vl_secs,
+        }: RefreshStableAddressTimersTest,
+    ) {
+        let mut ctx = MockCtx::with_state(MockSlaacContext {
+            config: SlaacConfiguration::default(),
+            dad_transmits: None,
+            retrans_timer: DEFAULT_RETRANS_TIMER,
+            iid: IID,
+            slaac_addrs: Default::default(),
+            non_slaac_addr: None,
+        });
+
+        let addr_sub = calculate_addr_sub(SUBNET, IID);
+        let deprecate_timer_id =
+            SlaacTimerId::new_deprecate_slaac_address(DummyDeviceId, addr_sub.addr());
+        let invalidate_timer_id =
+            SlaacTimerId::new_invalidate_slaac_address(DummyDeviceId, addr_sub.addr());
+
+        // Generate a new SLAAC address.
+        let ndp_pl = NonZeroNdpLifetime::from_u32_with_infinite(orig_pl_secs);
+        let ndp_vl = NonZeroNdpLifetime::from_u32_with_infinite(orig_vl_secs);
+        SlaacHandler::apply_slaac_update(&mut ctx, DummyDeviceId, SUBNET, ndp_pl, ndp_vl);
+        let address_created_deprecated = ndp_pl.is_none();
+        let now = ctx.now();
+        let mut expected_timers = Vec::new();
+        let valid_until = match ndp_vl.expect("this test expects to create an address") {
+            NonZeroNdpLifetime::Finite(d) => {
+                let valid_until = now + d.get();
+                expected_timers.push((invalidate_timer_id, valid_until));
+                Lifetime::Finite(valid_until)
+            }
+            NonZeroNdpLifetime::Infinite => Lifetime::Infinite,
+        };
+        match ndp_pl {
+            None | Some(NonZeroNdpLifetime::Infinite) => {}
+            Some(NonZeroNdpLifetime::Finite(d)) => {
+                expected_timers.push((deprecate_timer_id, now + d.get()))
+            }
+        }
+        let entry = SlaacAddressEntry {
+            addr_sub,
+            config: SlaacConfig::Static { valid_until },
+            deprecated: address_created_deprecated,
+        };
+        assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [entry],);
+        ctx.timer_ctx().assert_timers_installed(expected_timers);
+
+        // Refresh timers.
+        let ndp_pl = NonZeroNdpLifetime::from_u32_with_infinite(new_pl_secs);
+        SlaacHandler::apply_slaac_update(
+            &mut ctx,
+            DummyDeviceId,
+            SUBNET,
+            ndp_pl,
+            NonZeroNdpLifetime::from_u32_with_infinite(new_vl_secs),
+        );
+        let mut expected_timers = Vec::new();
+        let valid_until = match NonZeroNdpLifetime::from_u32_with_infinite(effective_new_vl_secs)
+            .expect("this test expects to keep the address")
+        {
+            NonZeroNdpLifetime::Finite(d) => {
+                let valid_until = now + d.get();
+                expected_timers.push((invalidate_timer_id, valid_until));
+                Lifetime::Finite(valid_until)
+            }
+            NonZeroNdpLifetime::Infinite => Lifetime::Infinite,
+        };
+        match ndp_pl {
+            None | Some(NonZeroNdpLifetime::Infinite) => {}
+            Some(NonZeroNdpLifetime::Finite(d)) => {
+                expected_timers.push((deprecate_timer_id, now + d.get()))
+            }
+        }
+        let entry = SlaacAddressEntry {
+            config: SlaacConfig::Static { valid_until },
+            deprecated: ndp_pl.is_none(),
+            ..entry
+        };
+        assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [entry],);
+        ctx.timer_ctx().assert_timers_installed(expected_timers);
     }
 }
