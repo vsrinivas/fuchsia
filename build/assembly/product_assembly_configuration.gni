@@ -1,0 +1,206 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Create a product assembly config file from the lists of packages and config
+# passed into the template.
+#
+# This template specifically converts lists of labels for fuchsia_package() and
+# prebuilt_package() into the lists of output paths needed.  This keeps the
+# contract about where those two templates place the package manifest internal
+# to fuchsia.git.
+#
+# As outputs, this creates:
+#
+#  outputs = [
+#       "${target_out_dir}/${target_name}/product_assembly_config.json"
+#  ]
+#
+#
+# Arguments:
+#
+#   Product-specified Package Sets:
+#    These are optional lists of targets that produce Fuchsia Packages.  These
+#    are NOT walked for metadata, but must be the exact desired package-creating
+#    targets.
+#
+#   base_packages [optional]
+#     [list, GN targets] A list of GN targets that are the specific targets for
+#     the product-provided packages to place into the base set.
+#
+#   cache_packages [optional]
+#     [list, GN targets] A list of GN targets that are the specific targets for
+#     the product-provided packages to place into the cache set.
+#
+#   platform [optional]
+#   [scope] This is the platform configuration scope
+#
+#   product [optional]
+#   [scope] This is the product configuration scope
+#
+# GN Usual:
+#   testonly
+#   visibility
+template("product_assembly_configuration") {
+  labels = {
+    # So it can be reused.
+    target_name = target_name
+
+    assembly_config = "${target_name}_product_assembly_config.json"
+    base_package_set = "${target_name}_base_packages"
+    cache_package_set = "${target_name}_cache_packages"
+
+    # Base packages specified by the invoker, used to create the list of
+    # manifests and as the deps for the package set targets.
+    base_package_labels = []
+    if (defined(invoker.base_packages)) {
+      base_package_labels += invoker.base_packages
+    }
+
+    # Cache packages specified by the invoker, used to create the list of
+    # manifests and as the deps for the package set targets.
+    cache_package_labels = []
+    if (defined(invoker.cache_packages)) {
+      cache_package_labels += invoker.cache_packages
+    }
+  }
+
+  files = {
+    outdir = "$target_out_dir/$target_name"
+    assembly_config_file = "$outdir/product_assembly_config.json"
+
+    # Compute the paths for the package manifests (as files).  This is
+    # closely coupled with how fuchsia_package() and prebuilt_package() both
+    # create a package manifest from their label.
+
+    base_package_manifests = []
+    foreach(package_target, labels.base_package_labels) {
+      _package_out_dir = get_label_info(package_target, "target_out_dir")
+      _package_name = get_label_info(package_target, "name")
+      base_package_manifests +=
+          [ "${_package_out_dir}/${_package_name}/package_manifest.json" ]
+    }
+
+    cache_package_manifests = []
+    foreach(package_target, labels.cache_package_labels) {
+      _package_out_dir = get_label_info(package_target, "target_out_dir")
+      _package_name = get_label_info(package_target, "name")
+      cache_package_manifests +=
+          [ "${_package_out_dir}/${_package_name}/package_manifest.json" ]
+    }
+  }
+
+  _assembly_config = {
+    # Create the platform configuration section from the caller's argument
+    platform = {
+      if (defined(invoker.platform)) {
+        forward_variables_from(invoker.platform, "*")
+      }
+    }
+
+    # Create the product configuration section from the caller's arguments.
+    product = {
+      if (defined(invoker.product)) {
+        forward_variables_from(invoker.product, "*")
+      }
+
+      # Create the packages.base and package.cache sets if they weren't passed
+      # in from the invoker.
+      if (!defined(packages)) {
+        packages = {
+        }
+      }
+      if (!defined(packages.base)) {
+        packages.base = []
+      }
+      if (!defined(packages.cache)) {
+        packages.cache = []
+      }
+
+      packages.base += rebase_path(files.base_package_manifests, root_build_dir)
+      packages.cache +=
+          rebase_path(files.cache_package_manifests, root_build_dir)
+    }
+  }
+
+  # Generate the Product Assembly configuration file itself.
+  #
+  # This does _not_ have deps on any of the passed in targets, which is why it
+  # restricts it's visibility to the target that does dep on them.
+  #
+  generated_file(labels.assembly_config) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":${labels.target_name}" ]
+
+    outputs = [ files.assembly_config_file ]
+    output_conversion = "json"
+    contents = _assembly_config
+  }
+
+  # An internal helper template that acts like a group, but also validates that
+  # its dependencies produces a set of files (the `inputs`).
+  #
+  # This is used to catch, at GN-time, that the deps don't correspond to a set
+  # of input files (the deps can be larger than the set of files, but not the
+  # other way around).
+  #
+  # This template is used here to validate that the computed package manifest
+  # paths actually all exist as outputs of the targets that were used to produce
+  # those paths.
+  template("_check_manifests_for_assembly") {
+    action(target_name) {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      forward_variables_from(invoker, [ "testonly" ])
+      assert(defined(inputs), "Must provide inputs to manifests")
+      assert(defined(deps) || defined(public_deps),
+             "Must provide deps for packages")
+      visibility = [ ":${labels.target_name}" ]
+      script = "//build/assembly/scripts/check_package_manifests.sh"
+      outputs = [ "$target_out_dir/$target_name.check" ]
+      args = [ rebase_path(outputs[0], root_build_dir) ]
+    }
+  }
+
+  # Create a target for the base packages, so they appear in the dep graph
+  # as distinct from the cache packages, and validate that they produce all of
+  # the manifests whose paths were computed from the labels.
+  _check_manifests_for_assembly(labels.base_package_set) {
+    inputs = files.base_package_manifests
+    deps = labels.base_package_labels
+  }
+
+  # Create a target for the cache packages, so they appear in the dep graph
+  # as distinct from the cache packages, and validate that they produce all of
+  # the manifests whose paths were computed from the labels.
+  _check_manifests_for_assembly(labels.cache_package_set) {
+    inputs = files.cache_package_manifests
+    deps = labels.cache_package_labels
+  }
+
+  group(labels.target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (!defined(public_deps)) {
+      public_deps = []
+    }
+    public_deps += [ ":${labels.assembly_config}" ]
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [
+      ":${labels.base_package_set}",
+      ":${labels.cache_package_set}",
+    ]
+  }
+}
