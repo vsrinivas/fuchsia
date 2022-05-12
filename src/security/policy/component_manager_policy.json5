@@ -16,6 +16,13 @@
                 "/core/session-manager/session:session/flutter_jit_runner",
                 "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/chrome",
 
+                // FOR _ENG BUILDS ONLY: We allow elements in the Workstation
+                // session to access ambient accessibility to develop
+                // runnerless Flutter apps using JIT compilation (which enables hot
+                // reload). This should never be exposed to release builds, which
+                // should use AOT compilation instead.
+                "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/element_manager/elements:**",
+
                 // We allow tests to access ambient executability in the same
                 // way that we're permissive with use of the components v1
                 // deprecated-ambient-replace-as-executable feature and
