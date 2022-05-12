@@ -263,7 +263,7 @@ size_t crashlog_to_string(ktl::span<char> target, zircon_crash_reason_t reason) 
             " cf=%" PRId64 " \n",
             HandleTableArena::get_alloc_failed_count(), pmm_get_alloc_failed_count(),
             PmmChecker::get_validation_failed_count(), lockup_get_critical_section_oops_count(),
-            ChannelDispatcher::get_channel_full_count(), lockup_get_no_heartbeat_oops_count());
+            lockup_get_no_heartbeat_oops_count(), ChannelDispatcher::get_channel_full_count());
   }
 
   if (static_cast<bool>(regions & RenderRegion::PanicBuffer)) {
