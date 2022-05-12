@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:ermine/src/services/automator_service.dart';
 import 'package:ermine/src/services/focus_service.dart';
 import 'package:ermine/src/services/launch_service.dart';
 import 'package:ermine/src/services/pointer_events_service.dart';
@@ -87,6 +88,7 @@ abstract class AppState {
   factory AppState.fromEnv() {
     // ignore: unnecessary_cast
     return AppStateImpl(
+      automatorService: AutomatorService(),
       launchService: LaunchService(),
       startupService: StartupService(),
       presenterService: PresenterService(),

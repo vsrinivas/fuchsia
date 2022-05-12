@@ -46,6 +46,9 @@ class AuthService {
   final _accountIds = <int>[];
   final _ready = false.asObservable();
 
+  /// Set to true if successfully authenticated, false otherwise or post logout.
+  bool authenticated = false;
+
   AuthService() {
     Incoming.fromSvcPath().connectToService(_accountManager);
   }
@@ -161,6 +164,8 @@ class AuthService {
     log.info('Account creation succeeded.');
 
     await _publishAccountDirectory(_account!);
+
+    authenticated = true;
   }
 
   /// Logs in to the first account with [password] and sets up the account data
@@ -182,6 +187,8 @@ class AuthService {
     log.info('Login to first account on device succeeded.');
 
     await _publishAccountDirectory(_account!);
+
+    authenticated = true;
   }
 
   /// Logs out of an account by locking it and deleting the associated tmp
@@ -191,6 +198,8 @@ class AuthService {
 
     log.info('Locking account.');
     await _account!.lock();
+
+    authenticated = false;
 
     // We expect the tmp subdirectory should exist by logout, but if it
     // doesn't then we can just continue without attempting deletion.

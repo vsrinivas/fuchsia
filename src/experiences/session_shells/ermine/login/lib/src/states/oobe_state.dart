@@ -8,6 +8,7 @@ import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:login/src/services/auth_service.dart';
 import 'package:login/src/services/channel_service.dart';
+import 'package:login/src/services/automator_service.dart';
 import 'package:login/src/services/device_service.dart';
 import 'package:login/src/services/privacy_consent_service.dart';
 import 'package:login/src/services/shell_service.dart';
@@ -70,6 +71,7 @@ abstract class OobeState {
     return OobeStateImpl(
       authService: AuthService(),
       deviceService: DeviceService(),
+      automatorService: AutomatorService(),
       shellService: ShellService(),
       channelService: ChannelService(),
       sshKeysService: SshKeysService(),
