@@ -1,0 +1,85 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+group("fake") {
+  testonly = true
+  deps = [
+    ":pkg",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":test-pkg" ]
+}
+
+core_shard("core-shard") {
+  shard_file = "meta/fake_fonts.core_shard.cml"
+}
+
+fuchsia_package("pkg") {
+  package_name = "fake-fonts"
+  deps = [ ":fake-fonts-cm" ]
+}
+
+fuchsia_component("fake-fonts-cm") {
+  manifest = "meta/fake_fonts.cml"
+  component_name = "fake_fonts"
+  deps = [ ":bin" ]
+}
+
+rustc_binary("bin") {
+  name = "fake_fonts_bin"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+rustc_test("test-bin") {
+  name = "fake_fonts_test_bin"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:futures",
+  ]
+
+  source_root = "src/test.rs"
+  sources = [ "src/test.rs" ]
+}
+
+fuchsia_component("fake-fonts-test-cm") {
+  testonly = true
+  component_name = "fake_fonts_test"
+  manifest = "meta/fake_fonts_test.cml"
+  deps = [ ":test-bin" ]
+}
+
+fuchsia_test_package("test-pkg") {
+  test_components = [ ":fake-fonts-test-cm" ]
+  deps = [ ":fake-fonts-cm" ]
+}

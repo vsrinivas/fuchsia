@@ -27,6 +27,7 @@ group("tests") {
   public_deps = [
     ":font_provider_unit_tests",
     "char_set:tests",
+    "fake:tests",
     "font_info:tests",
     "manifest:tests",
     "offset_string:tests",

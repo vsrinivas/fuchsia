@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "fake_fonts",
+            url: "fuchsia-pkg://fuchsia.com/fake-fonts#meta/fake_fonts.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#fake_fonts" ],
+        },
+    ],
+}
