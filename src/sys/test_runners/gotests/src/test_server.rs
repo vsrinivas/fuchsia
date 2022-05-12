@@ -4,7 +4,6 @@
 
 use {
     async_trait::async_trait,
-    fdio::fdio_sys,
     fidl_fuchsia_process as fproc,
     fidl_fuchsia_test::{
         self as ftest, Invocation, Result_ as TestResult, RunListenerProxy, Status,
@@ -36,7 +35,6 @@ use {
         launch,
         logs::{LogError, LogStreamReader, LoggerStream, SocketLogWriter},
     },
-    zx::HandleBased,
 };
 
 /// Implements `fuchsia.test.Suite` and runs provided test.
@@ -415,27 +413,16 @@ where
     let (client, log) =
         zx::Socket::create(zx::SocketOpts::STREAM).map_err(launch::LaunchError::CreateSocket)?;
     let mut handle_infos = vec![];
-    unsafe {
-        const STDIN: u16 = 0;
-        let mut stdin_fd: i32 = -1;
 
-        let mut stdin_file_handle = zx::sys::ZX_HANDLE_INVALID;
-        let status = fdio::fdio_sys::fdio_fd_create(log.into_raw(), &mut stdin_fd);
-        if let Err(s) = zx::Status::ok(status) {
-            return Err(launch::LaunchError::Fdio(FdioError::Create(s)).into());
-        }
-        let status = fdio_sys::fdio_fd_transfer(
-            stdin_fd,
-            &mut stdin_file_handle as *mut zx::sys::zx_handle_t,
-        );
-        if let Err(s) = zx::Status::ok(status) {
-            return Err(launch::LaunchError::Fdio(FdioError::Clone(s)).into());
-        }
-        handle_infos.push(fproc::HandleInfo {
-            handle: zx::Handle::from_raw(stdin_file_handle),
-            id: HandleInfo::new(HandleType::FileDescriptor, STDIN).as_raw(),
-        });
-    }
+    const STDIN: u16 = 0;
+    let stdin_file =
+        fdio::create_fd(log.into()).map_err(|s| launch::LaunchError::Fdio(FdioError::Create(s)))?;
+    let stdin_file_handle = fdio::transfer_fd(stdin_file)
+        .map_err(|s| launch::LaunchError::Fdio(FdioError::Clone(s)))?;
+    handle_infos.push(fproc::HandleInfo {
+        handle: stdin_file_handle,
+        id: HandleInfo::new(HandleType::FileDescriptor, STDIN).as_raw(),
+    });
 
     let (client_end, loader) =
         fidl::endpoints::create_endpoints().map_err(launch::LaunchError::Fidl)?;
