@@ -50,10 +50,12 @@ macro_rules! trace_blob {
     ($category:expr, $name:expr, $bytes:expr $(, $key:expr => $val:expr)*) => {};
 }
 
+/// Calling this function more than once is idempotent.
 #[cfg(feature = "fidl_trace")]
 fn create_trace_provider() {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 }
 
+/// Calling this function more than once is idempotent.
 #[cfg(not(feature = "fidl_trace"))]
 fn create_trace_provider() {}
