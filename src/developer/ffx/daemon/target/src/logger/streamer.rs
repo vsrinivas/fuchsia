@@ -1078,12 +1078,8 @@ mod test {
     }
 
     async fn verify_log(reader: &mut SessionStream, expected: LogEntry) -> Result<()> {
-        assert_eq!(
-            timeout(Duration::from_millis(READ_TIMEOUT_MILLIS), reader.iter())
-                .await??
-                .context("missing log entry")??,
-            expected
-        );
+        let item = reader.iter().await?.expect("missing log entry")?;
+        assert_eq!(item, expected);
         Ok(())
     }
 
