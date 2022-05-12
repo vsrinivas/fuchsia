@@ -14,7 +14,7 @@ import (
 var (
 	trfTestPreamblePattern = regexp.MustCompile(`^Running test 'fuchsia-pkg:\/\/.*$`)
 	// ex: "[PASSED]	InlineDirTest.InlineDirPino"
-	trfTestCasePattern = regexp.MustCompile(`^\[(PASSED|FAILED|INCONCLUSIVE|TIMED_OUT|ERROR|SKIPPED)\]\t(.*)$`)
+	trfTestCasePattern = regexp.MustCompile(`\[(PASSED|FAILED|INCONCLUSIVE|TIMED_OUT|ERROR|SKIPPED)\]\t(.*)$`)
 	// ex: "[stderr - NodeManagerTest.TruncateExceptionCase]"
 	// Note that we don't try to parse for end of stderr, because the trf stdout always prints the real stderr msg
 	// after the matched trfTestCaseStderr pattern one line at a time.
@@ -41,6 +41,9 @@ func parseTrfTest(lines [][]byte) []runtests.TestCaseResult {
 
 	currentTestName := ""
 	foundStderr := false
+	linesToCapture := 3 // Total number of lines in stderr to capture as failure_reason
+	linesCaptured := 0
+
 	for _, line := range lines {
 		line := string(line)
 		// Stop parsing if running legacy_test, see: fxbug.dev/91055
@@ -50,22 +53,32 @@ func parseTrfTest(lines [][]byte) []runtests.TestCaseResult {
 		if m := trfTestCasePattern.FindStringSubmatch(line); m != nil {
 			tc := createTRFTestCase(m[2], m[1])
 			testCases[tc.DisplayName] = tc
+			currentTestName = ""
 			continue
 		}
 		// We make the assumption that the stderr message always follows a match to trfTestCaseStderr.
-		// And we only capture the first stderr line after a match to trfTestCaseStderr is found.
+		// And we only capture the first [linesToCapture] line after a match to trfTestCaseStderr is found.
 		if m := trfTestCaseStderr.FindStringSubmatch(line); m != nil {
 			currentTestName = m[1]
 			if _, ok := errorMessages[currentTestName]; !ok {
 				errorMessages[currentTestName] = &strings.Builder{}
 				foundStderr = true
+				linesCaptured = 0
 			}
 			continue
 		}
-		if foundStderr {
-			errorMessages[currentTestName].WriteString(line)
-			foundStderr = false
-			currentTestName = ""
+		if foundStderr && currentTestName != "" {
+			if linesCaptured < linesToCapture {
+				if linesCaptured == 0 {
+					errorMessages[currentTestName].WriteString(line)
+				} else {
+					errorMessages[currentTestName].WriteString("\n" + line)
+				}
+				linesCaptured++
+			} else {
+				foundStderr = false
+				currentTestName = ""
+			}
 			continue
 		}
 	}
