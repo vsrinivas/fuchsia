@@ -112,6 +112,7 @@ impl MetricsService {
                 label,
                 custom_dimensions,
                 self.uuid_as_str(),
+                self.state.invoker.as_ref(),
             );
             match batch_collector {
                 None => {
@@ -159,6 +160,7 @@ impl MetricsService {
                 fatal,
                 BTreeMap::new(),
                 self.uuid_as_str(),
+                self.state.invoker.as_ref(),
             );
             match batch_collector {
                 None => {
@@ -205,6 +207,7 @@ impl MetricsService {
                 label,
                 custom_dimensions,
                 self.uuid_as_str(),
+                self.state.invoker.as_ref(),
             );
             match batch_collector {
                 None => {
@@ -295,6 +298,7 @@ mod tests {
                 build_version,
                 ga_product_code,
                 disabled,
+                None,
             ),
             client: new_https_client(),
         }

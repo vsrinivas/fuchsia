@@ -43,6 +43,8 @@ const GA_CUSTOM_DIMENSION_1_KEY: &str = "cd1";
 const GA_EXCEPTION_DESCRIPTION_KEY: &str = "exd";
 const GA_EXCEPTION_FATAL_KEY: &str = "exf";
 
+const GA_DATA_SOURCE_KEY: &str = "ds";
+
 /// Produces http encoded parameter string to send to the analytics
 /// service.
 pub fn make_body_with_hash(
@@ -54,6 +56,7 @@ pub fn make_body_with_hash(
     label: Option<&str>,
     custom_dimensions: BTreeMap<&str, String>,
     uuid: String,
+    invoker: Option<&String>,
 ) -> String {
     let uname = os_and_release_desc();
 
@@ -70,6 +73,9 @@ pub fn make_body_with_hash(
             None => GA_APP_VERSION_DEFAULT,
         },
     );
+    if let Some(s) = invoker {
+        params.insert(GA_DATA_SOURCE_KEY, &s);
+    }
     params.insert(
         GA_EVENT_CATEGORY_KEY,
         match category {
@@ -86,7 +92,6 @@ pub fn make_body_with_hash(
     params.insert(GA_CUSTOM_DIMENSION_1_KEY, &uname);
 
     let body = to_kv_post_body(&params);
-    //println!("body = {}", &body);
     body
 }
 
@@ -100,6 +105,7 @@ pub fn make_timing_body_with_hash(
     label: Option<&str>,
     custom_dimensions: BTreeMap<&str, String>,
     uuid: String,
+    invoker: Option<&String>,
 ) -> String {
     let uname = os_and_release_desc();
 
@@ -116,6 +122,9 @@ pub fn make_timing_body_with_hash(
             None => GA_APP_VERSION_DEFAULT,
         },
     );
+    if let Some(s) = invoker {
+        params.insert(GA_DATA_SOURCE_KEY, &s);
+    }
     params.insert(
         GA_TIMING_CATEGORY_KEY,
         match category {
@@ -133,7 +142,6 @@ pub fn make_timing_body_with_hash(
     params.insert(GA_CUSTOM_DIMENSION_1_KEY, &uname);
 
     let body = to_kv_post_body(&params);
-    //println!("body = {}", &body);
     body
 }
 
@@ -178,6 +186,7 @@ pub fn make_crash_body_with_hash(
     fatal: Option<&bool>,
     custom_dimensions: BTreeMap<&str, String>,
     uuid: String,
+    invoker: Option<&String>,
 ) -> String {
     let uname = os_and_release_desc();
 
@@ -194,6 +203,9 @@ pub fn make_crash_body_with_hash(
             None => GA_APP_VERSION_DEFAULT,
         },
     );
+    if let Some(s) = invoker {
+        params.insert(GA_DATA_SOURCE_KEY, &s);
+    }
 
     params.insert(GA_EXCEPTION_DESCRIPTION_KEY, &description);
 
@@ -211,7 +223,6 @@ pub fn make_crash_body_with_hash(
     params.insert(GA_CUSTOM_DIMENSION_1_KEY, &uname);
 
     let body = to_kv_post_body(&params);
-    //println!("body = {}", &body);
     body
 }
 
@@ -243,7 +254,8 @@ mod test {
                 Some(args),
                 Some(args),
                 BTreeMap::new(),
-                String::from("test")
+                String::from("test"),
+                None
             )
         );
     }
@@ -271,7 +283,8 @@ mod test {
                 Some(args),
                 Some(labels),
                 BTreeMap::new(),
-                String::from("test")
+                String::from("test"),
+                None
             )
         );
     }
@@ -302,7 +315,49 @@ mod test {
                 Some(args),
                 Some(labels),
                 custom_dimensions,
-                String::from("test")
+                String::from("test"),
+                None
+            )
+        );
+    }
+
+    #[test]
+    fn make_post_body_with_invoker() {
+        let args = "config analytics enable";
+        let args_encoded = "config+analytics+enable";
+        let labels = "labels";
+        let app_name = "ffx";
+        let app_version = "1";
+        let invoker = "vscode".to_string();
+        let uname = os_and_release_desc().replace(" ", "+");
+        let cd3_val = "foo".to_string();
+        let cid = "test";
+        let expected = format!(
+            "an={}&av={}&cd1={}&cd3={}&cid={}&ds={}&ea={}&ec=general&el={}&t=event&tid={}&v=1",
+            &app_name,
+            &app_version,
+            &uname,
+            &cd3_val,
+            &cid,
+            &invoker,
+            &args_encoded,
+            &labels,
+            GA_PROPERTY_ID
+        );
+        let mut custom_dimensions = BTreeMap::new();
+        custom_dimensions.insert("cd3", cd3_val);
+        assert_eq!(
+            expected,
+            make_body_with_hash(
+                app_name,
+                Some(app_version),
+                GA_PROPERTY_ID,
+                None,
+                Some(args),
+                Some(labels),
+                custom_dimensions,
+                String::from("test"),
+                Some(&invoker),
             )
         );
     }
@@ -328,7 +383,8 @@ mod test {
                 "Exception foo",
                 Some(&fatal),
                 BTreeMap::new(),
-                String::from("test")
+                String::from("test"),
+                None
             )
         );
     }

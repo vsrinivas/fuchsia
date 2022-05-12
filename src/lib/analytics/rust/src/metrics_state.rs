@@ -23,6 +23,7 @@ pub struct MetricsState {
     pub(crate) status: MetricsStatus,
     pub(crate) uuid: Option<Uuid>,
     metrics_dir: PathBuf,
+    pub(crate) invoker: Option<String>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -41,8 +42,9 @@ impl MetricsState {
         build_version: String,
         ga_product_code: String,
         disabled: bool,
+        invoker: Option<String>,
     ) -> Self {
-        MetricsState::new(metrics_dir, app_name, build_version, ga_product_code, disabled)
+        MetricsState::new(metrics_dir, app_name, build_version, ga_product_code, disabled, invoker)
     }
 
     pub(crate) fn new(
@@ -51,6 +53,7 @@ impl MetricsState {
         build_version: String,
         ga_product_code: String,
         disabled: bool,
+        invoker: Option<String>,
     ) -> MetricsState {
         let mut metrics = MetricsState::default();
         if disabled {
@@ -61,6 +64,7 @@ impl MetricsState {
         metrics.build_version = build_version;
         metrics.metrics_dir = PathBuf::from(metrics_dir);
         metrics.ga_product_code = ga_product_code;
+        metrics.invoker = invoker;
 
         match read_opt_in_status(Path::new(&metrics_dir)) {
             Ok(true) => metrics.status = MetricsStatus::OptedIn,
@@ -162,6 +166,7 @@ impl Default for MetricsState {
             status: MetricsStatus::NewUser,
             uuid: None,
             metrics_dir: PathBuf::from("/tmp"),
+            invoker: None,
         }
     }
 }
@@ -252,6 +257,7 @@ mod tests {
             status: MetricsStatus::NewUser,
             uuid: Some(Uuid::new_v4()),
             metrics_dir: PathBuf::from("/tmp"),
+            invoker: None,
         };
     }
 
@@ -264,6 +270,7 @@ mod tests {
             String::from(BUILD_VERSION),
             UNKNOWN_PROPERTY_ID.to_string(),
             false,
+            None,
         );
         assert_eq!(m.status, MetricsStatus::NewUser);
         let result = read_uuid_file(&dir);
@@ -292,6 +299,7 @@ mod tests {
             String::from(BUILD_VERSION),
             UNKNOWN_PROPERTY_ID.to_string(),
             false,
+            None,
         );
 
         assert_ne!(Some(&m), None);
@@ -318,6 +326,7 @@ mod tests {
             String::from(BUILD_VERSION),
             UNKNOWN_PROPERTY_ID.to_string(),
             false,
+            None,
         );
 
         assert_ne!(Some(&m), None);
@@ -340,6 +349,7 @@ mod tests {
             String::from(BUILD_VERSION),
             UNKNOWN_PROPERTY_ID.to_string(),
             false,
+            None,
         );
 
         assert_ne!(Some(&m), None);
@@ -359,6 +369,7 @@ mod tests {
             String::from(BUILD_VERSION),
             UNKNOWN_PROPERTY_ID.to_string(),
             true,
+            None,
         );
 
         assert_eq!(m.status, MetricsStatus::Disabled);
@@ -379,6 +390,7 @@ mod tests {
             String::from(BUILD_VERSION),
             UNKNOWN_PROPERTY_ID.to_string(),
             false,
+            None,
         );
 
         assert_ne!(Some(&m), None);

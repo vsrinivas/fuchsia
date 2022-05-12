@@ -440,9 +440,9 @@ async fn run() -> Result<()> {
     };
 
     let analytics_disabled = ffx_config::get("ffx.analytics.disabled").await.unwrap_or(false);
-
+    let ffx_invoker = ffx_config::get("fuchsia.analytics.ffx_invoker").await.unwrap_or(None);
     let injection = Injection::default();
-    init_metrics_svc(injection.build_info().await?).await; // one time call to initialize app analytics
+    init_metrics_svc(injection.build_info().await?, ffx_invoker).await; // one time call to initialize app analytics
     if analytics_disabled {
         opt_out_for_this_invocation().await?
     }

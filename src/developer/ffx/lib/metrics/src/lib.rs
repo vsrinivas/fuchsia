@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use analytics::{add_custom_event, init, make_batch, metrics_event_batch::MetricsEventBatch};
+use analytics::{
+    add_custom_event, init_with_invoker, make_batch, metrics_event_batch::MetricsEventBatch,
+};
 use anyhow::Result;
 use fidl_fuchsia_developer_ffx::VersionInfo;
 use fuchsia_async::TimeoutExt;
@@ -16,9 +18,10 @@ pub const FUCHSIA_DISCOVERY_LEGACY_ENV_VAR_NAME: &str = "FUCSHIA_DISABLED_legacy
 
 pub const ANALYTICS_LEGACY_DISCOVERY_CUSTOM_DIMENSION_KEY: &str = "cd4";
 
-pub async fn init_metrics_svc(build_info: VersionInfo) {
+pub async fn init_metrics_svc(build_info: VersionInfo, invoker: Option<String>) {
     let build_version = build_info.build_version;
-    init(String::from("ffx"), build_version, GA_PROPERTY_ID.to_string()).await;
+    init_with_invoker(String::from("ffx"), build_version, GA_PROPERTY_ID.to_string(), invoker)
+        .await;
 }
 
 fn legacy_discovery_env() -> String {

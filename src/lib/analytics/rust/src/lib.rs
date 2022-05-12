@@ -23,14 +23,25 @@ const INIT_ERROR: &str = "Please call analytics::init prior to any other analyti
 
 /// This function initializes the metrics service so that an app
 /// can make posts to the analytics service and read the current opt in status of the user
-pub async fn init(app_name: String, build_version: Option<String>, ga_product_code: String) {
+pub async fn init_with_invoker(
+    app_name: String,
+    build_version: Option<String>,
+    ga_product_code: String,
+    invoker: Option<String>,
+) {
     METRICS_SERVICE.lock().await.inner_init(MetricsState::from_config(
         &PathBuf::from(&analytics_folder()),
         app_name,
         build_version.unwrap_or(UNKNOWN_VERSION.into()),
         ga_product_code,
         is_analytics_disabled_by_env(),
+        invoker,
     ));
+}
+
+/// This function initializes the metrics service with a default of NONE for the invoker
+pub async fn init(app_name: String, build_version: Option<String>, ga_product_code: String) {
+    init_with_invoker(app_name, build_version, ga_product_code, None).await;
 }
 
 /// Returns a legal notice of metrics data collection if user
