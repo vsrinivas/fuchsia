@@ -1,6 +1,6 @@
 {
     include: [ "//src/proc/tests/chromiumos/starmium_test.shard.cml" ],
     program: {
-        binary: "data/tests/syscalls_test_bin",
+        binary: "data/tests/syscalls_test",
     },
 }
