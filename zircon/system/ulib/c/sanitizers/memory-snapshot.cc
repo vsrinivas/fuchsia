@@ -382,7 +382,7 @@ class MemorySnapshot {
       }
     }
     if (tls) {
-      ReportJoinValues(tls);
+      ReportInvalidTcbs(tls);
     }
   }
 
@@ -464,11 +464,10 @@ class MemorySnapshot {
     }
 
     // Report the handful of particular pointers stashed in the TCB itself.
-    // For a thread just starting or in the middle of exiting, the start_arg
-    // and result values might not appear anywhere else and those might hold
-    // pointers.  The others are literal cached malloc allocations.
+    // These are literal cached malloc allocations. Members like `start_arg` or `result` might be
+    // set up before the thread register is set up, so they can hold values that no ReportTls call
+    // will reach.
     void* ptrs[] = {
-        tcb->start_arg,
         tcb->locale,
         tcb->dlerror_buf,
         tcb->tls_dtors,
@@ -483,16 +482,24 @@ class MemorySnapshot {
     }
   }
 
-  // For dead threads awaiting pthread_join, report the return values.  Rather
-  // than a costly check for whether the TCB was found with a live thread,
+  // Report internal thread objects whose threads are either not fully setup or have finished.
+  // Rather than a costly check for whether the TCB was found with a live thread,
   // just report all threads' join values here and not in ReportTls (above).
-  void ReportJoinValues(sanitizer_memory_snapshot_callback_t* callback) {
+  void ReportInvalidTcbs(sanitizer_memory_snapshot_callback_t* callback) {
     // Don't hold the lock during callbacks.  It should be safe to pretend
     // it's locked assuming the callback doesn't create or join threads.
     // ScopedThreadList's destructor releases the lock after the copy.
     LockedThreadList all_threads = ScopedThreadList();
     for (auto tcb : all_threads) {
-      callback(&tcb->result, sizeof(tcb->result), callback_arg_);
+      void* ptrs[] = {
+          // For dead threads awaiting pthread_join, report the return values.
+          tcb->result,
+
+          // For threads that have been suspended before they even start, report the argument passed
+          // to them.
+          tcb->start_arg,
+      };
+      callback(ptrs, sizeof(ptrs), callback_arg_);
     }
   }
 

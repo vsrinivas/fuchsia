@@ -5,11 +5,14 @@
 #include <dlfcn.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/process.h>
+#include <lib/zx/suspend_token.h>
+#include <lib/zx/task.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <pthread.h>
 #include <threads.h>
 #include <zircon/sanitizer.h>
+#include <zircon/threads.h>
 
 #include <array>
 #include <thread>
@@ -43,6 +46,16 @@ constexpr bool kHaveSpecialRegister = true;
 // handle arbitrary fixed registers on x86, though GCC can.
 constexpr bool kHaveSpecialRegister = false;
 extern uintptr_t gSpecialRegister;  // Only used in discarded if constexpr else.
+#endif
+
+// For some tests, it would be easier to take advantage of the sanitizer hooks. Unfortunately,
+// defining hooks here will take precedence over the definitions in sanitizer runtimes. For those
+// tests, we can just check if the hooks are available to use.
+#if __has_feature(address_sanitizer) || __has_feature(hwaddress_sanitizer) || \
+    __has_feature(leak_sanitizer)
+#define USES_SANITIZER_HOOKS 1
+#else
+#define USES_SANITIZER_HOOKS 0
 #endif
 
 namespace {
@@ -517,4 +530,144 @@ TEST(SanitizerUtilsTest, MemorySnapshotFull) {
   }
 }
 
+// NOTE: We can't use sanitizers for this specific test because we want to be able to suspend the
+// thread after its creation, but before it starts. The easiest way we can do that is through
+// sanitizer hooks. Unfortunately, defining a hook here will supersede corresponding hooks in the
+// actual sanitizer and can cause other tests to fail. We can guarantee this hook will be free if no
+// sanitizers are enabled. We could implement chained hooks using dlsym(RTLD_NEXT,"...") but that
+// could be fragile and it doesn't seem crucial to test these cases especially under sanitizer
+// builds.
+#if !USES_SANITIZER_HOOKS
+
+class SuspendedThreadTest : public ::zxtest::Test {
+ public:
+  // We only want to run the before_thread_create hook if this is the thread we see.
+  // This way, we don't mix in what we want to happen for the
+  // MemorySnapshotStartArgOnSuspendedThread with other tests.
+  static thread_local zx::suspend_token* gSuspendToken;
+
+ protected:
+  void SetUp() override {
+    // The sanitizer hooks will only work with this test since it will be the only test where
+    // `gSuspendToken` has a non-zero value.
+    gSuspendToken = &suspend_;
+    ASSERT_NE(gSuspendToken, nullptr);
+  }
+
+  void TearDown() override {
+    // Resume the thread which will clear up any allocated data.
+    EXPECT_EQ(gSuspendToken, &suspend_);
+    gSuspendToken->reset();
+    gSuspendToken = nullptr;
+
+    int result;
+    EXPECT_EQ(thrd_join(thread_, &result), thrd_success);
+    EXPECT_EQ(result, 0);
+  }
+
+  thrd_t thread_;
+
+ private:
+  zx::suspend_token suspend_;
+};
+
+thread_local zx::suspend_token* SuspendedThreadTest::gSuspendToken = nullptr;
+
+// This tests the snapshot covers arguments passed to the pthread machinery.
+// In particular, if we suspend a thread that hasn't started yet, it's possible
+// its thread register hasn't been setup yet, so memory_snapshot can't access
+// internal pthread data structures through it. This ensures that the thread
+// argument is covered even before the thread register has been set up yet.
+TEST_F(SuspendedThreadTest, MemorySnapshotStartArgOnSuspendedThread) {
+  // Create a new pthread, but ensure that the thread is suspended before it starts. That is, we
+  // want the pthread machinery for the thread to be setup, but we do not want to execute any code
+  // in the new thread. We can do this via the before_thread_create hook which runs after the thread
+  // is created, but before the thread actually starts.
+  constexpr int kTransferData = 42;
+  std::unique_ptr<int> transfer_ptr(new int(kTransferData));
+  auto thread_entry = [](void* arg) -> int {
+    std::unique_ptr<int> transfer_ptr(reinterpret_cast<int*>(arg));
+    assert(*transfer_ptr == kTransferData && "Failed to get the expected data");
+    return 0;
+  };
+  ASSERT_EQ(thrd_create(&thread_, thread_entry, transfer_ptr.get()), thrd_success);
+
+  // At this point, the pthread structure should be setup. At any point in between now and when we
+  // take the memory snapshot, the thread may start, but will be immediately suspended via the
+  // sanitizer hook. The memory snapshot machinery should ensure it's suspended before it does its
+  // scan.
+  int* data_ptr = transfer_ptr.release();
+
+  struct CallbackResult {
+    const void* data_ptr;
+    bool found_data;
+  };
+  CallbackResult result = {
+      .data_ptr = data_ptr,
+      .found_data = false,
+  };
+
+  // The callback will update the result if we find the pointer we're looking for. Note that
+  // technically, the pointer also exists in this thread's stack, but we just want to ensure it's
+  // accessible in the other thread's TCB.
+  auto tls_callback = [](void* mem, size_t len, void* arg) -> void {
+    auto result = static_cast<CallbackResult*>(arg);
+
+    // We already found the pointer we're looking for.
+    if (result->found_data)
+      return;
+
+    for (const void* ptr : cpp20::span{reinterpret_cast<void* const*>(mem), len / sizeof(void*)}) {
+      if (ptr == result->data_ptr) {
+        result->found_data = true;
+        return;
+      }
+    }
+  };
+
+  __sanitizer_memory_snapshot(/*globals=*/nullptr,
+                              /*stacks=*/nullptr,
+                              /*regs=*/nullptr,
+                              /*tls=*/tls_callback, /*done=*/nullptr, static_cast<void*>(&result));
+
+  EXPECT_TRUE(result.found_data);
+}
+
+#endif  // !USES_SANITIZER_HOOKS
+
 }  // namespace
+
+#if !USES_SANITIZER_HOOKS
+
+// Attempt to suspend the newly created thread. Propagate the suspend token so we can close it later
+// to startup the thread.
+void* __sanitizer_before_thread_create_hook(thrd_t thread, bool /*detached*/, const char* /*name*/,
+                                            void* /*stack_base*/, size_t /*stack_size*/) {
+  // Do not allow this to run for anything other than the MemorySnapshotStartArgOnSuspendedThread
+  // test. This token pointer is only set as non-zero for this test.
+  if (!SuspendedThreadTest::gSuspendToken)
+    return nullptr;
+
+  // Use a plain handle here rather than initializing a zx::task so we don't close the initialized
+  // task on its destructor.
+  zx_handle_t task = thrd_get_zx_handle(thread);
+  assert(zx_task_suspend_token(task, SuspendedThreadTest::gSuspendToken->reset_and_get_address()) ==
+             ZX_OK &&
+         "Failed to suspend new thread.");
+  return SuspendedThreadTest::gSuspendToken;
+}
+
+void __sanitizer_thread_create_hook(void* hook, thrd_t th, int error) {
+  // Either `hook` and `gSuspendHook` are both nullptr because we are not running the
+  // MemorySnapshotStartArgOnSuspendedThread test, or they are both the same non-zero value since we
+  // are running the MemorySnapshotStartArgOnSuspendedThread test.
+  assert(hook == SuspendedThreadTest::gSuspendToken && "Thread was not suspended correctly");
+  assert(error == thrd_success && "Thread was not created correctly");
+}
+
+// Override this definition because the default one will check that `hook` is `null`, which it won't
+// be for MemorySnapshotStartArgOnSuspendedThread.
+void __sanitizer_thread_start_hook(void* hook, thrd_t self) {}
+void __sanitizer_thread_exit_hook(void* hook, thrd_t self) {}
+
+#endif  // !USES_SANITIZER_HOOKS
