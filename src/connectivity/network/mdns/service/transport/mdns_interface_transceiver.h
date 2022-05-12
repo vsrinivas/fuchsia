@@ -32,10 +32,9 @@ class MdnsInterfaceTransceiver {
       fit::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
 
   // Creates the variant of |MdnsInterfaceTransceiver| appropriate for the
-  // address family specified in |address|. |name| is the name of the interface,
-  // and |index| is its index.
+  // address family specified in |address|.
   static std::unique_ptr<MdnsInterfaceTransceiver> Create(inet::IpAddress address,
-                                                          const std::string& name, uint32_t index,
+                                                          const std::string& name, uint32_t id,
                                                           Media media);
 
   virtual ~MdnsInterfaceTransceiver();
@@ -44,7 +43,7 @@ class MdnsInterfaceTransceiver {
 
   const std::string& name() const { return name_; }
 
-  uint32_t index() const { return index_; }
+  uint32_t id() const { return id_; }
 
   Media media() const { return media_; }
 
@@ -82,7 +81,7 @@ class MdnsInterfaceTransceiver {
   // the maximum size for 'jumbo' packets.
   static constexpr size_t kMaxPacketSize = 9000;
 
-  MdnsInterfaceTransceiver(inet::IpAddress address, const std::string& name, uint32_t index,
+  MdnsInterfaceTransceiver(inet::IpAddress address, const std::string& name, uint32_t id,
                            Media media);
 
   const fbl::unique_fd& socket_fd() const { return socket_fd_; }
@@ -125,7 +124,7 @@ class MdnsInterfaceTransceiver {
   inet::IpAddress address_;
   inet::IpAddress alternate_address_;
   std::string name_;
-  uint32_t index_;
+  uint32_t id_;
   Media media_;
   fbl::unique_fd socket_fd_;
   fsl::FDWaiter fd_waiter_;

@@ -146,6 +146,12 @@ class IpAddress {
 
   bool operator!=(const IpAddress& other) const { return !(*this == other); }
 
+  explicit operator fuchsia::net::Ipv4Address() const;
+
+  explicit operator fuchsia::net::Ipv6Address() const;
+
+  explicit operator fuchsia::net::IpAddress() const;
+
  private:
   sa_family_t family_;
   union {

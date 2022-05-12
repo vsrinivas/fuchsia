@@ -22,7 +22,8 @@ namespace mdns {
 class InstanceRequestor : public MdnsAgent {
  public:
   // Creates an |InstanceRequestor|.
-  InstanceRequestor(MdnsAgent::Owner* owner, const std::string& service_name);
+  InstanceRequestor(MdnsAgent::Owner* owner, const std::string& service_name, Media media,
+                    IpVersions ip_versions);
 
   ~InstanceRequestor() override;
 
@@ -42,20 +43,22 @@ class InstanceRequestor : public MdnsAgent {
   void EndOfMessage() override;
 
  private:
+  // Describes a service instance.
   struct InstanceInfo {
     std::string instance_name_;
     std::string target_;
     inet::IpPort port_;
-    std::vector<std::string> text_;
+    std::vector<std::vector<uint8_t>> text_;
     uint16_t srv_priority_ = 0;
     uint16_t srv_weight_ = 0;
     bool new_ = true;
     bool dirty_ = true;
   };
 
+  // Describes a target. We use |inet::SocketAddress| because it has scope_id. The port numbers
+  // aren't used. |InstanceInfo| provides the service instance's port number.
   struct TargetInfo {
-    inet::IpAddress v4_address_;
-    inet::IpAddress v6_address_;
+    std::unordered_set<inet::SocketAddress> addresses_;
     bool keep_ = false;
     bool dirty_ = false;
   };
@@ -75,15 +78,19 @@ class InstanceRequestor : public MdnsAgent {
                           InstanceInfo* instance_info);
 
   void ReceiveAResource(const DnsResource& resource, MdnsResourceSection section,
-                        TargetInfo* target_info);
+                        TargetInfo* target_info, uint32_t scope_id);
 
   void ReceiveAaaaResource(const DnsResource& resource, MdnsResourceSection section,
-                           TargetInfo* target_info);
+                           TargetInfo* target_info, uint32_t scope_id);
 
   void RemoveInstance(const std::string& instance_full_name);
 
+  std::vector<inet::SocketAddress> Addresses(const TargetInfo& target_info, inet::IpPort port);
+
   std::string service_name_;
   std::string service_full_name_;
+  Media media_;
+  IpVersions ip_versions_;
   std::unordered_set<Mdns::Subscriber*> subscribers_;
   std::unordered_map<std::string, InstanceInfo> instance_infos_by_full_name_;
   std::unordered_map<std::string, TargetInfo> target_infos_by_full_name_;

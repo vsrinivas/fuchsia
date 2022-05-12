@@ -88,7 +88,7 @@ ServiceInstancePublisherServiceImpl::ResponderPublisher::ResponderPublisher(
   responder_.set_error_handler([this](zx_status_t status) mutable { Quit(); });
 
   responder_.events().SetSubtypes = [this](std::vector<std::string> subtypes) {
-    for (auto& subtype : subtypes) {
+    for (const auto& subtype : subtypes) {
       if (!MdnsNames::IsValidSubtypeName(subtype)) {
         FX_LOGS(ERROR) << "Invalid subtype " << subtype
                        << " passed in SetSubtypes event, closing connection.";
@@ -171,14 +171,16 @@ void ServiceInstancePublisherServiceImpl::ResponderPublisher::GetPublicationNow(
   FX_DCHECK(responder_);
   responder_->OnPublication(
       fidl::To<fuchsia::net::mdns::ServiceInstancePublicationCause>(publication_cause),
-      std::move(subtype), MdnsFidlUtil::Convert(source_addresses),
+      subtype.empty() ? fidl::StringPtr() : fidl::StringPtr(std::move(subtype)),
+      fidl::To<std::vector<fuchsia::net::IpAddress>>(source_addresses),
       [this, callback = std::move(callback)](
           fuchsia::net::mdns::ServiceInstancePublicationResponder_OnPublication_Result result) {
         if (result.is_err()) {
           return;
         }
 
-        auto converted = MdnsFidlUtil::Convert(result.response().publication);
+        auto converted =
+            fidl::To<std::unique_ptr<Mdns::Publication>>(result.response().publication);
         if (!converted) {
           Quit();
           return;

@@ -54,17 +54,26 @@ void MdnsDeprecatedServiceImpl::ResolveHostName(std::string host, int64_t timeou
     return;
   }
 
-  mdns_.ResolveHostName(
-      host, zx::clock::get_monotonic() + zx::nsec(timeout_ns),
-      [callback = std::move(callback)](const std::string& host, const inet::IpAddress& v4_address,
-                                       const inet::IpAddress& v6_address) {
-        callback(v4_address ? std::make_unique<fuchsia::net::Ipv4Address>(
-                                  MdnsFidlUtil::CreateIpv4Address(v4_address))
-                            : nullptr,
-                 v6_address ? std::make_unique<fuchsia::net::Ipv6Address>(
-                                  MdnsFidlUtil::CreateIpv6Address(v6_address))
-                            : nullptr);
-      });
+  mdns_.ResolveHostName(host, zx::nsec(timeout_ns), Media::kBoth, IpVersions::kBoth,
+                        [callback = std::move(callback)](const std::string& host,
+                                                         std::vector<HostAddress> addresses) {
+                          inet::IpAddress v4_address;
+                          inet::IpAddress v6_address;
+                          for (const auto& address : addresses) {
+                            if (address.address().is_v4() && !v4_address) {
+                              v4_address = address.address();
+                            } else if (address.address().is_v6() && !v6_address) {
+                              v6_address = address.address();
+                            }
+                          }
+
+                          callback(v4_address ? std::make_unique<fuchsia::net::Ipv4Address>(
+                                                    MdnsFidlUtil::CreateIpv4Address(v4_address))
+                                              : nullptr,
+                                   v6_address ? std::make_unique<fuchsia::net::Ipv6Address>(
+                                                    MdnsFidlUtil::CreateIpv6Address(v6_address))
+                                              : nullptr);
+                        });
 }
 
 void MdnsDeprecatedServiceImpl::SubscribeToService(
@@ -79,7 +88,7 @@ void MdnsDeprecatedServiceImpl::SubscribeToService(
   auto subscriber = std::make_unique<Subscriber>(std::move(subscriber_handle),
                                                  [this, id]() { subscribers_by_id_.erase(id); });
 
-  mdns_.SubscribeToService(service, subscriber.get());
+  mdns_.SubscribeToService(service, Media::kBoth, IpVersions::kBoth, subscriber.get());
 
   subscribers_by_id_.emplace(id, std::move(subscriber));
 }
@@ -162,23 +171,25 @@ MdnsDeprecatedServiceImpl::Subscriber::~Subscriber() {
 }
 
 void MdnsDeprecatedServiceImpl::Subscriber::InstanceDiscovered(
-    const std::string& service, const std::string& instance, const inet::SocketAddress& v4_address,
-    const inet::SocketAddress& v6_address, const std::vector<std::string>& text,
-    uint16_t srv_priority, uint16_t srv_weight, const std::string& target) {
+    const std::string& service, const std::string& instance,
+    const std::vector<inet::SocketAddress>& addresses,
+    const std::vector<std::vector<uint8_t>>& text, uint16_t srv_priority, uint16_t srv_weight,
+    const std::string& target) {
   Entry entry{.type = EntryType::kInstanceDiscovered};
-  MdnsFidlUtil::FillServiceInstance(&entry.service_instance, service, instance, v4_address,
-                                    v6_address, text, srv_priority, srv_weight, target);
+  MdnsFidlUtil::FillServiceInstance(&entry.service_instance, service, instance, addresses, text,
+                                    srv_priority, srv_weight, target);
   entries_.push(std::move(entry));
   MaybeSendNextEntry();
 }
 
 void MdnsDeprecatedServiceImpl::Subscriber::InstanceChanged(
-    const std::string& service, const std::string& instance, const inet::SocketAddress& v4_address,
-    const inet::SocketAddress& v6_address, const std::vector<std::string>& text,
-    uint16_t srv_priority, uint16_t srv_weight, const std::string& target) {
+    const std::string& service, const std::string& instance,
+    const std::vector<inet::SocketAddress>& addresses,
+    const std::vector<std::vector<uint8_t>>& text, uint16_t srv_priority, uint16_t srv_weight,
+    const std::string& target) {
   Entry entry{.type = EntryType::kInstanceChanged};
-  MdnsFidlUtil::FillServiceInstance(&entry.service_instance, service, instance, v4_address,
-                                    v6_address, text, srv_priority, srv_weight, target);
+  MdnsFidlUtil::FillServiceInstance(&entry.service_instance, service, instance, addresses, text,
+                                    srv_priority, srv_weight, target);
 
   entries_.push(std::move(entry));
   MaybeSendNextEntry();
@@ -221,7 +232,8 @@ void MdnsDeprecatedServiceImpl::Subscriber::MaybeSendNextEntry() {
                               std::move(on_reply));
       break;
     case EntryType::kQuery:
-      client_->OnQuery(MdnsFidlUtil::Convert(entry.type_queried), std::move(on_reply));
+      client_->OnQuery(fidl::To<fuchsia::net::mdns::ResourceType>(entry.type_queried),
+                       std::move(on_reply));
       break;
   }
 
@@ -252,7 +264,7 @@ MdnsDeprecatedServiceImpl::ResponderPublisher::ResponderPublisher(
   });
 
   responder_.events().SetSubtypes = [this](std::vector<std::string> subtypes) {
-    for (auto& subtype : subtypes) {
+    for (const auto& subtype : subtypes) {
       if (!MdnsNames::IsValidSubtypeName(subtype)) {
         FX_LOGS(ERROR) << "Invalid subtype " << subtype
                        << " passed in SetSubtypes event, closing connection.";
@@ -323,10 +335,10 @@ void MdnsDeprecatedServiceImpl::ResponderPublisher::GetPublicationNow(
   FX_DCHECK(responder_);
   responder_->OnPublication(
       fidl::To<fuchsia::net::mdns::PublicationCause>(publication_cause), subtype,
-      MdnsFidlUtil::Convert(source_addresses),
+      fidl::To<std::vector<fuchsia::net::IpAddress>>(source_addresses),
       [this, callback = std::move(callback)](fuchsia::net::mdns::PublicationPtr publication_ptr) {
         if (publication_ptr) {
-          for (auto& text : publication_ptr->text) {
+          for (const auto& text : publication_ptr->text) {
             if (!MdnsNames::IsValidTextString(text)) {
               FX_LOGS(ERROR) << "Invalid text string returned by "
                                 "Responder.GetPublication, closing connection.";
@@ -346,7 +358,7 @@ void MdnsDeprecatedServiceImpl::ResponderPublisher::GetPublicationNow(
           }
         }
 
-        callback(MdnsFidlUtil::Convert(publication_ptr));
+        callback(fidl::To<std::unique_ptr<Mdns::Publication>>(publication_ptr));
         OnGetPublicationComplete();
       });
 }

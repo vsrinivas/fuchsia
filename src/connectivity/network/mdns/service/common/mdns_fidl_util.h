@@ -30,23 +30,12 @@ class MdnsFidlUtil {
 
   static inet::IpAddress IpAddressFrom(const fuchsia::net::InterfaceAddress& addr);
 
-  static std::unique_ptr<Mdns::Publication> Convert(
-      const fuchsia::net::mdns::PublicationPtr& publication_ptr);
-
-  static std::unique_ptr<Mdns::Publication> Convert(
-      const fuchsia::net::mdns::ServiceInstancePublication& publication);
-
-  static std::vector<fuchsia::net::IpAddress> Convert(
-      const std::vector<inet::SocketAddress>& addresses);
-
-  static fuchsia::net::mdns::ResourceType Convert(DnsType type);
-
   static void FillServiceInstance(fuchsia::net::mdns::ServiceInstance* service_instance,
                                   const std::string& service, const std::string& instance,
-                                  const inet::SocketAddress& v4_address,
-                                  const inet::SocketAddress& v6_address,
-                                  const std::vector<std::string>& text, uint16_t srv_priority,
-                                  uint16_t srv_weight, const std::string& target);
+                                  const std::vector<inet::SocketAddress>& addresses,
+                                  const std::vector<std::vector<uint8_t>>& text,
+                                  uint16_t srv_priority, uint16_t srv_weight,
+                                  const std::string& target);
 };
 
 }  // namespace mdns

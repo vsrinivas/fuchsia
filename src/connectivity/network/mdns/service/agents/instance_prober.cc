@@ -24,7 +24,7 @@ const std::string& InstanceProber::ResourceName() { return instance_full_name_; 
 void InstanceProber::SendProposedResources(MdnsResourceSection section) {
   auto srv_resource = std::make_shared<DnsResource>(instance_full_name_, DnsType::kSrv);
   srv_resource->srv_.port_ = port_;
-  srv_resource->srv_.target_ = host_full_name_;
+  srv_resource->srv_.target_ = DnsName(host_full_name_);
   SendResource(srv_resource, section, ReplyAddress::Multicast(media(), ip_versions()));
 }
 

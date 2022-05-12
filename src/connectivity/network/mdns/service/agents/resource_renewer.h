@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "src/connectivity/network/mdns/service/agents/mdns_agent.h"
+#include "src/connectivity/network/mdns/service/common/types.h"
 #include "src/lib/inet/ip_port.h"
 
 namespace mdns {
@@ -47,7 +48,7 @@ class ResourceRenewer : public MdnsAgent {
   ~ResourceRenewer() override;
 
   // Attempts to renew |resource| before its TTL expires.
-  void Renew(const DnsResource& resource);
+  void Renew(const DnsResource& resource, Media media, IpVersions ip_versions);
 
   // MdnsAgent overrides.
   void ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
@@ -65,10 +66,13 @@ class ResourceRenewer : public MdnsAgent {
     static constexpr uint32_t kQueryIntervalPerThousand = 50;
     static constexpr uint32_t kQueriesToAttempt = 4;
 
-    Entry(const std::string& name, DnsType type) : name_(name), type_(type) {}
+    Entry(std::string name, DnsType type, Media media, IpVersions ip_versions)
+        : name_(std::move(name)), type_(type), media_(media), ip_versions_(ip_versions) {}
 
     std::string name_;
     DnsType type_;
+    Media media_;
+    IpVersions ip_versions_;
 
     zx::time time_;
     zx::duration interval_;

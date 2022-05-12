@@ -12,11 +12,14 @@
     capabilities: [
         {
             protocol: [
+                "fuchsia.net.mdns.HostNameResolver",
+                "fuchsia.net.mdns.HostNameSubscriber",
                 "fuchsia.net.mdns.ProxyHostPublisher",
                 "fuchsia.net.mdns.Publisher",
                 "fuchsia.net.mdns.Resolver",
                 "fuchsia.net.mdns.ServiceInstancePublisher",
                 "fuchsia.net.mdns.ServiceInstanceResolver",
+                "fuchsia.net.mdns.ServiceSubscriber2",
                 "fuchsia.net.mdns.Subscriber",
             ],
         },
@@ -38,11 +41,14 @@
     expose: [
         {
             protocol: [
+                "fuchsia.net.mdns.HostNameResolver",
+                "fuchsia.net.mdns.HostNameSubscriber",
                 "fuchsia.net.mdns.ProxyHostPublisher",
                 "fuchsia.net.mdns.Publisher",
                 "fuchsia.net.mdns.Resolver",
                 "fuchsia.net.mdns.ServiceInstancePublisher",
                 "fuchsia.net.mdns.ServiceInstanceResolver",
+                "fuchsia.net.mdns.ServiceSubscriber2",
                 "fuchsia.net.mdns.Subscriber",
             ],
             from: "self",

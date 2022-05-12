@@ -97,6 +97,7 @@ void MdnsImpl::ResolveServiceInstance(const std::string& service, const std::str
   EnsureServiceInstanceResolver();
   service_instance_resolver_->ResolveServiceInstance(
       service, instance, zx::sec(timeout_seconds).get(),
+      fuchsia::net::mdns::ServiceInstanceResolutionOptions(),
       [this](fuchsia::net::mdns::ServiceInstance instance) {
         std::cout << "resolved: "
                   << "\n";

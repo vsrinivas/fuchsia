@@ -8,19 +8,38 @@
 #include <lib/zx/clock.h>
 
 namespace mdns {
+namespace {
+
+Media Union(Media a, Media b) {
+  if (a == b) {
+    return a;
+  }
+
+  return Media::kBoth;
+}
+
+IpVersions Union(IpVersions a, IpVersions b) {
+  if (a == b) {
+    return a;
+  }
+
+  return IpVersions::kBoth;
+}
+
+}  // namespace
 
 ResourceRenewer::ResourceRenewer(MdnsAgent::Owner* owner) : MdnsAgent(owner) {}
 
 ResourceRenewer::~ResourceRenewer() { FX_DCHECK(entries_.size() == schedule_.size()); }
 
-void ResourceRenewer::Renew(const DnsResource& resource) {
+void ResourceRenewer::Renew(const DnsResource& resource, Media media, IpVersions ip_versions) {
   FX_DCHECK(resource.time_to_live_ != 0);
 
-  auto key = std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
-  auto iter = entries_.find(key);
+  auto entry =
+      std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_, media, ip_versions);
+  auto iter = entries_.find(entry);
 
   if (iter == entries_.end()) {
-    auto entry = std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
     entry->SetFirstQuery(now(), resource.time_to_live_);
 
     Schedule(entry.get());
@@ -33,6 +52,8 @@ void ResourceRenewer::Renew(const DnsResource& resource) {
   } else {
     (*iter)->SetFirstQuery(now(), resource.time_to_live_);
     (*iter)->delete_ = false;
+    (*iter)->media_ = Union((*iter)->media_, media);
+    (*iter)->ip_versions_ = Union((*iter)->ip_versions_, ip_versions);
   }
 }
 
@@ -40,15 +61,19 @@ void ResourceRenewer::ReceiveResource(const DnsResource& resource, MdnsResourceS
                                       ReplyAddress sender_address) {
   FX_DCHECK(section != MdnsResourceSection::kExpired);
 
-  auto key = std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
+  // |key| is just used as a key, so media and ip_versions are irrelevant.
+  auto key = std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_, Media::kBoth,
+                                     IpVersions::kBoth);
   auto iter = entries_.find(key);
   if (iter != entries_.end()) {
-    (*iter)->delete_ = true;
+    if (sender_address.Matches((*iter)->media_) && sender_address.Matches((*iter)->ip_versions_)) {
+      (*iter)->delete_ = true;
+    }
   }
 }
 
 void ResourceRenewer::Quit() {
-  // This never gets called.
+  // This is never called.
   FX_DCHECK(false);
 }
 
@@ -70,12 +95,12 @@ void ResourceRenewer::SendRenewals() {
           std::make_shared<DnsResource>(entry->name_, entry->type_);
       resource->time_to_live_ = 0;
       SendResource(resource, MdnsResourceSection::kExpired,
-                   ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+                   ReplyAddress::Multicast(entry->media_, entry->ip_versions_));
       EraseEntry(entry);
     } else {
       // Need to query.
       SendQuestion(std::make_shared<DnsQuestion>(entry->name_, entry->type_),
-                   ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+                   ReplyAddress::Multicast(entry->media_, entry->ip_versions_));
       entry->SetNextQueryOrExpiration();
       Schedule(entry);
     }

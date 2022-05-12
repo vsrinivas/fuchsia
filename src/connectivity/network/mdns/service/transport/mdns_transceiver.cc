@@ -43,7 +43,7 @@ void MdnsTransceiver::Start(fuchsia::net::interfaces::WatcherPtr watcher,
 void MdnsTransceiver::Stop() {
   interface_watcher_ = nullptr;
 
-  for (auto& [address, interface] : interface_transceivers_by_address_) {
+  for (const auto& [address, interface] : interface_transceivers_by_address_) {
     if (interface) {
       interface->Stop();
     }
@@ -59,7 +59,7 @@ MdnsInterfaceTransceiver* MdnsTransceiver::GetInterfaceTransceiver(const inet::I
 
 void MdnsTransceiver::SendMessage(DnsMessage message, const ReplyAddress& reply_address) {
   if (reply_address.is_multicast_placeholder()) {
-    for (auto& [address, interface] : interface_transceivers_by_address_) {
+    for (const auto& [address, interface] : interface_transceivers_by_address_) {
       FX_DCHECK(interface);
       if ((reply_address.media() == Media::kBoth || reply_address.media() == interface->media()) &&
           (reply_address.ip_versions() == IpVersions::kBoth ||
@@ -78,7 +78,7 @@ void MdnsTransceiver::SendMessage(DnsMessage message, const ReplyAddress& reply_
 }
 
 void MdnsTransceiver::LogTraffic() {
-  for (auto& [address, interface] : interface_transceivers_by_address_) {
+  for (const auto& [address, interface] : interface_transceivers_by_address_) {
     FX_DCHECK(interface);
     interface->LogTraffic();
   }
@@ -254,7 +254,7 @@ void MdnsTransceiver::OnInterfacesEvent(fuchsia::net::interfaces::Event event) {
         FX_LOGS(WARNING)
             << "Removed event for unknown interface from fuchsia.net.interfaces/Watcher";
       } else {
-        for (auto& address : nh.mapped().addresses()) {
+        for (const auto& address : nh.mapped().addresses()) {
           link_change |= StopInterfaceTransceiver(MdnsFidlUtil::IpAddressFrom(address.value()));
         }
       }
@@ -288,7 +288,7 @@ bool MdnsTransceiver::EnsureInterfaceTransceiver(const inet::IpAddress& address,
     auto& existing = iter->second;
     FX_DCHECK(existing->address() == address);
 
-    if (existing->name() == name && existing->index() == id) {
+    if (existing->name() == name && existing->id() == id) {
       // An interface transceiver already exists for this address, so we're done.
       if (alternate_address.is_valid()) {
         existing->SetAlternateAddress(alternate_address);
