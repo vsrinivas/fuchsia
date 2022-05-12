@@ -91,11 +91,6 @@ fuchsia_component("stash_v2") {
   manifest = "meta/stash.cml"
 }
 
-fuchsia_component("stash2_cmp") {
-  component_name = "stash2"
-  deps = [ ":bin" ]
-  manifest = "meta/stash2.cmx"
-}
 fuchsia_component("stash2_v2") {
   component_name = "stash2"
   deps = [ ":bin" ]
@@ -105,7 +100,6 @@ fuchsia_component("stash2_v2") {
 fuchsia_package("pkg") {
   package_name = "stash"
   deps = [
-    ":stash2_cmp",
     ":stash2_v2",
     ":stash_cmp",
     ":stash_secure",
