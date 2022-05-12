@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::sync::{Arc, Weak};
 
@@ -207,7 +207,7 @@ impl ThreadGroup {
 
     state_accessor!(ThreadGroup, mutable_state);
 
-    pub fn exit(self: &Arc<ThreadGroup>, exit_status: ExitStatus) {
+    pub fn exit(self: &Arc<Self>, exit_status: ExitStatus) {
         let mut state = self.write();
         if state.terminating {
             // The thread group is already terminating and all threads in the thread group have
@@ -223,7 +223,7 @@ impl ThreadGroup {
         }
     }
 
-    pub fn add(self: &Arc<ThreadGroup>, task: &Arc<Task>) -> Result<(), Errno> {
+    pub fn add(self: &Arc<Self>, task: &Arc<Task>) -> Result<(), Errno> {
         let mut state = self.write();
         if state.terminating {
             return error!(EINVAL);
@@ -232,7 +232,7 @@ impl ThreadGroup {
         Ok(())
     }
 
-    pub fn remove(self: &Arc<ThreadGroup>, task: &Arc<Task>) {
+    pub fn remove(self: &Arc<Self>, task: &Arc<Task>) {
         let mut pids = self.kernel.pids.write();
         let mut state = self.write();
         if state.remove_internal(task, &mut pids) {
@@ -243,91 +243,95 @@ impl ThreadGroup {
             // children will be computed here, the lock will be dropped and the children will be
             // passed to the reaper that will capture the state in the correct order.
             let children = state.children().collect::<Vec<_>>();
+            let parent = state.parent.clone();
             std::mem::drop(state);
             let children_state = children.iter().map(|c| c.write()).collect::<Vec<_>>();
             self.write().remove(children_state, &mut pids);
+            parent.map(|parent| parent.check_orphans());
         }
     }
 
-    pub fn setsid(self: &Arc<ThreadGroup>) -> Result<(), Errno> {
-        let mut pids = self.kernel.pids.write();
-        if !pids.get_process_group(self.leader).is_none() {
-            return error!(EPERM);
-        }
-        let process_group = ProcessGroup::new(self.leader, None);
-        pids.add_process_group(&process_group);
-        self.write().set_process_group(process_group, &mut pids);
-
-        Ok(())
-    }
-
-    pub fn setpgid(self: &Arc<ThreadGroup>, target: &Task, pgid: pid_t) -> Result<(), Errno> {
-        let mut pids = self.kernel.pids.write();
-
-        // The target process must be either the current process of a child of the current process
-        let mut target_thread_group = target.thread_group.write();
-        let is_target_current_process_child =
-            target_thread_group.parent.as_ref().map(|tg| tg.leader) == Some(self.leader);
-        if target_thread_group.leader() != self.leader && !is_target_current_process_child {
-            return error!(ESRCH);
-        }
-
-        // If the target process is a child of the current task, it must not have executed one of the exec
-        // function.
-        if is_target_current_process_child && target_thread_group.did_exec {
-            return error!(EACCES);
-        }
-
-        let new_process_group;
+    pub fn setsid(self: &Arc<Self>) -> Result<(), Errno> {
         {
-            let current_process_group = if is_target_current_process_child {
-                Arc::clone(&self.read().process_group)
-            } else {
-                Arc::clone(&target_thread_group.process_group)
-            };
-            let target_process_group = &target_thread_group.process_group;
-
-            // The target process must not be a session leader and must be in the same session as the current process.
-            if target_thread_group.leader() == target_process_group.session.leader
-                || current_process_group.session != target_process_group.session
-            {
+            let mut pids = self.kernel.pids.write();
+            if !pids.get_process_group(self.leader).is_none() {
                 return error!(EPERM);
             }
-
-            let target_pgid = if pgid == 0 { target_thread_group.leader() } else { pgid };
-            if target_pgid < 0 {
-                return error!(EINVAL);
-            }
-
-            if target_pgid == target_process_group.leader {
-                return Ok(());
-            }
-
-            // If pgid is not equal to the target process id, the associated process group must exist
-            // and be in the same session as the target process.
-            if target_pgid != target_thread_group.leader() {
-                new_process_group = pids.get_process_group(target_pgid).ok_or(EPERM)?;
-                if new_process_group.session != target_process_group.session {
-                    return error!(EPERM);
-                }
-            } else {
-                // Create a new process group
-                new_process_group =
-                    ProcessGroup::new(target_pgid, Some(target_process_group.session.clone()));
-                pids.add_process_group(&new_process_group);
-            }
+            let process_group = ProcessGroup::new(self.leader, None);
+            pids.add_process_group(&process_group);
+            self.write().set_process_group(process_group, &mut pids);
         }
-
-        target_thread_group.set_process_group(new_process_group, &mut pids);
+        self.check_orphans();
 
         Ok(())
     }
 
-    pub fn set_itimer(
-        self: &Arc<ThreadGroup>,
-        which: u32,
-        value: itimerval,
-    ) -> Result<itimerval, Errno> {
+    pub fn setpgid(self: &Arc<Self>, target: &Task, pgid: pid_t) -> Result<(), Errno> {
+        {
+            let mut pids = self.kernel.pids.write();
+
+            // The target process must be either the current process of a child of the current process
+            let mut target_thread_group = target.thread_group.write();
+            let is_target_current_process_child =
+                target_thread_group.parent.as_ref().map(|tg| tg.leader) == Some(self.leader);
+            if target_thread_group.leader() != self.leader && !is_target_current_process_child {
+                return error!(ESRCH);
+            }
+
+            // If the target process is a child of the current task, it must not have executed one of the exec
+            // function.
+            if is_target_current_process_child && target_thread_group.did_exec {
+                return error!(EACCES);
+            }
+
+            let new_process_group;
+            {
+                let current_process_group = if is_target_current_process_child {
+                    Arc::clone(&self.read().process_group)
+                } else {
+                    Arc::clone(&target_thread_group.process_group)
+                };
+                let target_process_group = &target_thread_group.process_group;
+
+                // The target process must not be a session leader and must be in the same session as the current process.
+                if target_thread_group.leader() == target_process_group.session.leader
+                    || current_process_group.session != target_process_group.session
+                {
+                    return error!(EPERM);
+                }
+
+                let target_pgid = if pgid == 0 { target_thread_group.leader() } else { pgid };
+                if target_pgid < 0 {
+                    return error!(EINVAL);
+                }
+
+                if target_pgid == target_process_group.leader {
+                    return Ok(());
+                }
+
+                // If pgid is not equal to the target process id, the associated process group must exist
+                // and be in the same session as the target process.
+                if target_pgid != target_thread_group.leader() {
+                    new_process_group = pids.get_process_group(target_pgid).ok_or(EPERM)?;
+                    if new_process_group.session != target_process_group.session {
+                        return error!(EPERM);
+                    }
+                } else {
+                    // Create a new process group
+                    new_process_group =
+                        ProcessGroup::new(target_pgid, Some(target_process_group.session.clone()));
+                    pids.add_process_group(&new_process_group);
+                }
+            }
+
+            target_thread_group.set_process_group(new_process_group, &mut pids);
+        }
+        target.thread_group.check_orphans();
+
+        Ok(())
+    }
+
+    pub fn set_itimer(self: &Arc<Self>, which: u32, value: itimerval) -> Result<itimerval, Errno> {
         let mut state = self.write();
         let timer = state.itimers.get_mut(which as usize).ok_or(errno!(EINVAL))?;
         let old_value = *timer;
@@ -336,7 +340,7 @@ impl ThreadGroup {
     }
 
     /// Set the stop status of the process.
-    pub fn set_stopped(self: &Arc<ThreadGroup>, stopped: bool, siginfo: SignalInfo) {
+    pub fn set_stopped(self: &Arc<Self>, stopped: bool, siginfo: SignalInfo) {
         let mut state = self.write();
         if stopped != state.stopped {
             // TODO(qsr): When task can be stopped inside user code, task will need to be
@@ -356,7 +360,7 @@ impl ThreadGroup {
     ///
     ///Will remove the waitable status from the child depending on `options`.
     pub fn get_waitable_child(
-        self: &Arc<ThreadGroup>,
+        self: &Arc<Self>,
         selector: ProcessSelector,
         options: &WaitingOptions,
     ) -> Result<WaitableChild, Errno> {
@@ -383,7 +387,7 @@ impl ThreadGroup {
     }
 
     pub fn get_foreground_process_group(
-        self: &Arc<ThreadGroup>,
+        self: &Arc<Self>,
         terminal: &Arc<Terminal>,
         is_main: bool,
     ) -> Result<pid_t, Errno> {
@@ -398,7 +402,7 @@ impl ThreadGroup {
     }
 
     pub fn set_foreground_process_group(
-        self: &Arc<ThreadGroup>,
+        self: &Arc<Self>,
         current_task: &CurrentTask,
         terminal: &Arc<Terminal>,
         is_main: bool,
@@ -443,7 +447,7 @@ impl ThreadGroup {
     }
 
     pub fn set_controlling_terminal(
-        self: &Arc<ThreadGroup>,
+        self: &Arc<Self>,
         current_task: &CurrentTask,
         terminal: &Arc<Terminal>,
         is_main: bool,
@@ -498,7 +502,7 @@ impl ThreadGroup {
     }
 
     pub fn release_controlling_terminal(
-        self: &Arc<ThreadGroup>,
+        self: &Arc<Self>,
         _current_task: &CurrentTask,
         terminal: &Arc<Terminal>,
         is_main: bool,
@@ -531,6 +535,18 @@ impl ThreadGroup {
 
         Ok(())
     }
+
+    fn check_orphans(self: &Arc<Self>) {
+        let mut thread_groups = self.read().children().collect::<Vec<_>>();
+        thread_groups.push(Arc::clone(self));
+        let process_groups = thread_groups
+            .iter()
+            .map(|tg| Arc::clone(&tg.read().process_group))
+            .collect::<HashSet<_>>();
+        for pg in process_groups {
+            pg.check_orphaned();
+        }
+    }
 }
 
 state_implementation!(ThreadGroup, ThreadGroupMutableState, {
@@ -557,7 +573,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         }
     }
 
-    pub fn set_process_group(&mut self, process_group: Arc<ProcessGroup>, pids: &mut PidTable) {
+    fn set_process_group(&mut self, process_group: Arc<ProcessGroup>, pids: &mut PidTable) {
         if self.process_group == process_group {
             return;
         }
@@ -566,7 +582,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         self.process_group.insert(self);
     }
 
-    pub fn leave_process_group(&self, pids: &mut PidTable) {
+    fn leave_process_group(&mut self, pids: &mut PidTable) {
         if self.process_group.remove(self) {
             self.process_group.session.write().remove(self.process_group.leader);
             pids.remove_process_group(self.process_group.leader);
@@ -701,7 +717,10 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
     }
 
     pub fn remove(&mut self, children: Vec<ThreadGroupWriteGuard<'_>>, pids: &mut PidTable) {
-        // Before unregistering this object from other places, register the zombie.
+        // Unregister this object.
+        pids.remove_thread_group(self.leader());
+        self.leave_process_group(pids);
+
         if let Some(parent) = self.parent.clone() {
             let mut parent_writer = parent.write();
             // Reparent the children.
@@ -711,20 +730,13 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
 
             parent_writer.children.remove(&self.leader());
             parent_writer.zombie_children.push(zombie);
-        }
-        pids.remove_thread_group(self.leader());
 
-        // Unregister this object.
-        self.leave_process_group(pids);
-
-        // Send signals
-        if let Some(parent) = self.parent.as_ref() {
+            // Send signals
             // TODO: Should this be zombie_leader.exit_signal?
-            let parent_state = parent.read();
-            if let Some(signal_target) = parent_state.get_signal_target(&SIGCHLD.into()) {
+            if let Some(signal_target) = parent_writer.get_signal_target(&SIGCHLD.into()) {
                 send_signal(&signal_target, SignalInfo::default(SIGCHLD));
             }
-            parent_state.interrupt(InterruptionType::ChildChange);
+            parent_writer.interrupt(InterruptionType::ChildChange);
         }
 
         // TODO: Set the error_code on the Zircon process object. Currently missing a way

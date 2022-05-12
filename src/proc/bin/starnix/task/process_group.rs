@@ -19,6 +19,9 @@ pub struct ProcessGroupMutableState {
     /// It is still expected that these weak references are always valid, as thread groups must unregister
     /// themselves before they are deleted.
     thread_groups: BTreeMap<pid_t, Weak<ThreadGroup>>,
+
+    /// Whether this process group is orphaned and already notified its members.
+    orphaned: bool,
 }
 
 #[derive(Debug)]
@@ -39,13 +42,24 @@ impl PartialEq for ProcessGroup {
     }
 }
 
+impl Eq for ProcessGroup {}
+
+impl std::hash::Hash for ProcessGroup {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.leader.hash(state);
+    }
+}
+
 impl ProcessGroup {
     pub fn new(leader: pid_t, session: Option<Arc<Session>>) -> Arc<ProcessGroup> {
         let session = session.unwrap_or_else(|| Session::new(leader));
         let process_group = Arc::new(ProcessGroup {
             session: session.clone(),
             leader,
-            mutable_state: RwLock::new(ProcessGroupMutableState { thread_groups: BTreeMap::new() }),
+            mutable_state: RwLock::new(ProcessGroupMutableState {
+                thread_groups: BTreeMap::new(),
+                orphaned: false,
+            }),
         });
         session.write().insert(&process_group);
         process_group
@@ -64,6 +78,46 @@ impl ProcessGroup {
 
     pub fn send_signals(self: &Arc<Self>, signals: &[Signal]) {
         let thread_groups = self.read().thread_groups().collect::<Vec<_>>();
+        Self::send_signals_to_thread_groups(signals, thread_groups);
+    }
+
+    /// Check whether the process group became orphaned. If this is the case, send signals to its
+    /// members if at least one is stopped.
+    pub fn check_orphaned(self: &Arc<Self>) {
+        let thread_groups = {
+            let state = self.read();
+            if state.orphaned {
+                return;
+            }
+            state.thread_groups().collect::<Vec<_>>()
+        };
+        for tg in thread_groups {
+            match &tg.read().parent {
+                None => return,
+                Some(parent) => {
+                    let parent_state = parent.read();
+                    if &parent_state.process_group != self
+                        && parent_state.process_group.session == self.session
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+        let thread_groups = {
+            let mut state = self.write();
+            if state.orphaned {
+                return;
+            }
+            state.orphaned = true;
+            state.thread_groups().collect::<Vec<_>>()
+        };
+        if thread_groups.iter().any(|tg| tg.read().stopped) {
+            Self::send_signals_to_thread_groups(&[SIGHUP, SIGCONT], thread_groups);
+        }
+    }
+
+    fn send_signals_to_thread_groups(signals: &[Signal], thread_groups: Vec<Arc<ThreadGroup>>) {
         for signal in signals.iter() {
             let unchecked_signal: UncheckedSignal = (*signal).into();
             let tasks = thread_groups
