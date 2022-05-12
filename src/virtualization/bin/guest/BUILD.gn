@@ -1,50 +1,68 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
 
 group("guest") {
   deps = [
-    ":vsh",
+    ":guest_package",
 
-    # TODO(fxbug.dev/89427): Remove this once we complete the rename of guest-rs to guest.
-    "//src/virtualization/bin/guest-rs",
+    # TODO(fxbug.dev/89427): Remove this once vsh is migrated to rust.
+    "//src/virtualization/bin/vsh",
   ]
 }
 
-executable("bin") {
-  output_name = "vsh"
+group("tests") {
+  testonly = true
+  deps = [ ":guest_tests" ]
+}
+
+rustc_binary("bin") {
+  output_name = "guest"
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-url",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:log",
+  ]
+
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:pretty_assertions",
+  ]
+
+  with_unit_tests = true
 
   sources = [
-    "main.cc",
-    "services.cc",
-    "services.h",
-    "vshc.cc",
-    "vshc.h",
+    "src/arguments.rs",
+    "src/balloon.rs",
+    "src/launch.rs",
+    "src/list.rs",
+    "src/main.rs",
+    "src/serial.rs",
+    "src/services.rs",
+    "src/socat.rs",
   ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/lib/fit",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fsl",
-    "//src/virtualization/lib/vsh:util",
-    "//src/virtualization/third_party/vm_tools:vsh_cc_proto",
-    "//third_party/protobuf:protobuf_lite",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-
-  public_deps = [ "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-fuchsia_shell_package("vsh") {
+fuchsia_unittest_package("guest_tests") {
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_shell_package("guest_package") {
+  package_name = "guest"
   deps = [ ":bin" ]
 }

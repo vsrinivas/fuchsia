@@ -14,7 +14,7 @@
 
 #include "lib/sys/cpp/component_context.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/virtualization/bin/guest/vshc.h"
+#include "src/virtualization/bin/vsh/vshc.h"
 
 static void usage() {
   std::cerr << "Usage: vsh           [<env_id> [<cid> [<port>]]] [-c [<arg>...]]\n";

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_GUEST_SERVICES_H_
-#define SRC_VIRTUALIZATION_BIN_GUEST_SERVICES_H_
+#ifndef SRC_VIRTUALIZATION_BIN_VSH_SERVICES_H_
+#define SRC_VIRTUALIZATION_BIN_VSH_SERVICES_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/zx/status.h>
@@ -14,4 +14,4 @@
 zx::status<fuchsia::virtualization::ManagerSyncPtr> ConnectToManager(
     sys::ComponentContext* context);
 
-#endif  // SRC_VIRTUALIZATION_BIN_GUEST_SERVICES_H_
+#endif  // SRC_VIRTUALIZATION_BIN_VSH_SERVICES_H_

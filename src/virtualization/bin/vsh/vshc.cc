@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/guest/vshc.h"
+#include "src/virtualization/bin/vsh/vshc.h"
 
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.pty/cpp/wire.h>
@@ -22,7 +22,7 @@
 #include "src/lib/fsl/socket/socket_drainer.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/virtualization/bin/guest/services.h"
+#include "src/virtualization/bin/vsh/services.h"
 #include "src/virtualization/lib/vsh/util.h"
 #include "src/virtualization/third_party/vm_tools/vsh.pb.h"
 

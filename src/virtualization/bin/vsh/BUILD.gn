@@ -1,0 +1,41 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "vsh"
+
+  sources = [
+    "main.cc",
+    "services.cc",
+    "services.h",
+    "vshc.cc",
+    "vshc.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/fit",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
+    "//src/virtualization/lib/vsh:util",
+    "//src/virtualization/third_party/vm_tools:vsh_cc_proto",
+    "//third_party/protobuf:protobuf_lite",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp" ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_shell_package("vsh") {
+  deps = [ ":bin" ]
+}

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_GUEST_VSHC_H_
-#define SRC_VIRTUALIZATION_BIN_GUEST_VSHC_H_
+#ifndef SRC_VIRTUALIZATION_BIN_VSH_VSHC_H_
+#define SRC_VIRTUALIZATION_BIN_VSH_VSHC_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -22,4 +22,4 @@ zx_status_t handle_vsh(std::optional<uint32_t> env_id, std::optional<uint32_t> c
                        std::optional<uint32_t> port, std::vector<std::string> args,
                        async::Loop* loop, sys::ComponentContext* context);
 
-#endif  // SRC_VIRTUALIZATION_BIN_GUEST_VSHC_H_
+#endif  // SRC_VIRTUALIZATION_BIN_VSH_VSHC_H_
