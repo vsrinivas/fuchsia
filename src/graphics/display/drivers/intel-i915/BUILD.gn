@@ -25,6 +25,7 @@ source_set("common_srcs") {
   sources = [
     "display-device.cc",
     "dp-display.cc",
+    "dpll.cc",
     "gtt.cc",
     "hdmi-display.cc",
     "igd.cc",

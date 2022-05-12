@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/graphics/display/drivers/intel-i915/dpll.h"
 #include "src/graphics/display/drivers/intel-i915/fake-dpcd-channel.h"
 #include "src/graphics/display/drivers/intel-i915/intel-i915.h"
 
@@ -16,6 +17,59 @@ namespace {
 // Value used to allocate space for the fake i915 register MMIO space.
 // TODO(fxbug.dev/83998): Remove this once DpDisplay no longer depends on i915::Controller.
 constexpr uint32_t kMmioSize = 0xd0000;
+
+class TestDpll : public i915::DisplayPll {
+ public:
+  explicit TestDpll(registers::Dpll dpll) : DisplayPll(dpll) {}
+  ~TestDpll() override = default;
+
+  bool Enable(const i915::DpllState& state) final {
+    enabled_ = true;
+    return enabled_;
+  }
+  bool Disable() final {
+    enabled_ = false;
+    return enabled_;
+  }
+
+ private:
+  bool enabled_ = false;
+};
+
+class TestDpllManager : public i915::DisplayPllManager {
+ public:
+  explicit TestDpllManager() {
+    plls_.resize(kDplls.size());
+    for (const auto dpll : kDplls) {
+      plls_[dpll] = std::make_unique<TestDpll>(dpll);
+      ref_count_[plls_[dpll].get()] = 0;
+    }
+  }
+
+  std::optional<i915::DpllState> LoadState(registers::Ddi ddi) final {
+    i915::DpllState state = i915::DpDpllState{
+        .dp_rate = registers::DpllControl1::LinkRate::k2700Mhz,
+    };
+    return std::make_optional(state);
+  }
+
+ private:
+  constexpr static auto kDplls = {registers::Dpll::DPLL_0, registers::Dpll::DPLL_1,
+                                  registers::Dpll::DPLL_2};
+
+  bool MapImpl(registers::Ddi ddi, registers::Dpll dpll) final { return true; }
+  bool UnmapImpl(registers::Ddi ddi) final { return true; }
+
+  i915::DisplayPll* FindBestDpll(registers::Ddi ddi, bool is_edp,
+                                 const i915::DpllState& state) final {
+    for (const auto dpll : kDplls) {
+      if (ref_count_[plls_[dpll].get()] == 0) {
+        return plls_[dpll].get();
+      }
+    }
+    return nullptr;
+  }
+};
 
 class DpDisplayTest : public ::testing::Test {
  protected:
@@ -32,6 +86,7 @@ class DpDisplayTest : public ::testing::Test {
 
   void SetUp() override {
     controller_.SetMmioForTesting(mmio_buffer_.View(0));
+    controller_.SetDpllManagerForTesting(std::make_unique<TestDpllManager>());
     fake_dpcd_.SetDefaults();
   }
 
@@ -145,8 +200,7 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInitWithDpllState) {
   auto display = MakeDisplay(registers::DDI_A);
   ASSERT_NE(nullptr, display);
 
-  i915::dpll_state_t dpll_state = {
-      .is_hdmi = false,
+  i915::DpllState dpll_state = i915::DpDpllState{
       .dp_rate = registers::DpllControl1::LinkRate::k2160Mhz,
   };
   display->InitWithDpllState(&dpll_state);

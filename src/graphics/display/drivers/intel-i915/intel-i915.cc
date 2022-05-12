@@ -34,6 +34,7 @@
 #include <fbl/vector.h>
 
 #include "src/graphics/display/drivers/intel-i915/dp-display.h"
+#include "src/graphics/display/drivers/intel-i915/dpll.h"
 #include "src/graphics/display/drivers/intel-i915/hdmi-display.h"
 #include "src/graphics/display/drivers/intel-i915/intel-i915-bind.h"
 #include "src/graphics/display/drivers/intel-i915/macros.h"
@@ -173,20 +174,6 @@ zx::status<FramebufferInfo> GetFramebufferInfo() {
 }  // namespace
 
 namespace i915 {
-
-bool Controller::CompareDpllStates(const dpll_state_t& a, const dpll_state_t& b) {
-  if (a.is_hdmi != b.is_hdmi) {
-    return false;
-  }
-
-  if (a.is_hdmi) {
-    return a.hdmi.dco_int == b.hdmi.dco_int && a.hdmi.dco_frac == b.hdmi.dco_frac &&
-           a.hdmi.q == b.hdmi.q && a.hdmi.q_mode == b.hdmi.q_mode && a.hdmi.k == b.hdmi.k &&
-           a.hdmi.p == b.hdmi.p && a.hdmi.cf == b.hdmi.cf;
-  }
-
-  return a.dp_rate == b.dp_rate;
-}
 
 void Controller::EnableBacklight(bool enable) {
   if (flags_ & FLAGS_BACKLIGHT) {
@@ -519,22 +506,9 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
   pwc2.ddi_io_power_request(ddi).set(0);
   pwc2.WriteTo(mmio_space());
 
-  // Remove the PLL mapping and disable the PLL (we don't share PLLs)
-  auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(mmio_space());
-  if (!dpll_ctrl2.ddi_clock_off(ddi).get()) {
-    dpll_ctrl2.ddi_clock_off(ddi).set(1);
-    dpll_ctrl2.WriteTo(mmio_space());
-
-    registers::Dpll dpll = static_cast<registers::Dpll>(dpll_ctrl2.ddi_clock_select(ddi).get());
-    // Don't underflow if we're resetting at initialization
-    dplls_[dpll].use_count =
-        static_cast<uint8_t>(dplls_[dpll].use_count > 0 ? dplls_[dpll].use_count - 1 : 0);
-    // We don't want to disable DPLL0, since that drives cdclk.
-    if (dplls_[dpll].use_count == 0 && dpll != registers::DPLL_0) {
-      auto dpll_enable = registers::DpllEnable::Get(dpll).ReadFrom(mmio_space());
-      dpll_enable.set_enable_dpll(0);
-      dpll_enable.WriteTo(mmio_space());
-    }
+  if (!dpll_manager_->Unmap(ddi)) {
+    zxlogf(ERROR, "Failed to unmap DPLL for DDI %d", ddi);
+    return false;
   }
 
   return true;
@@ -545,42 +519,6 @@ uint64_t Controller::SetupGttImage(const image_t* image, uint32_t rotation) {
   ZX_DEBUG_ASSERT(region);
   region->SetRotation(rotation, *image);
   return region->base();
-}
-
-registers::Dpll Controller::SelectDpll(bool is_edp, const dpll_state_t& state) {
-  registers::Dpll res = registers::DPLL_INVALID;
-  if (is_edp) {
-    ZX_ASSERT(!state.is_hdmi);
-    if (dplls_[0].use_count == 0 || dplls_[0].state.dp_rate == state.dp_rate) {
-      res = registers::DPLL_0;
-    }
-  } else {
-    for (unsigned i = registers::kDpllCount - 1; i > 0; i--) {
-      if (dplls_[i].use_count == 0) {
-        res = static_cast<registers::Dpll>(i);
-      } else if (CompareDpllStates(dplls_[i].state, state)) {
-        res = static_cast<registers::Dpll>(i);
-        break;
-      }
-    }
-  }
-
-  if (res != registers::DPLL_INVALID) {
-    dplls_[res].state = state;
-    dplls_[res].use_count++;
-    zxlogf(DEBUG, "Selected DPLL %d", res);
-  } else {
-    zxlogf(WARNING, "Failed to allocate DPLL");
-  }
-
-  return res;
-}
-
-const dpll_state_t* Controller::GetDpllState(registers::Dpll dpll) {
-  if (dplls_[dpll].use_count) {
-    return &dplls_[dpll].state;
-  }
-  return nullptr;
 }
 
 std::unique_ptr<DisplayDevice> Controller::QueryDisplay(registers::Ddi ddi) {
@@ -640,38 +578,13 @@ bool Controller::LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) {
     return false;
   }
 
-  auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(mmio_space());
-  if (dpll_ctrl2.ddi_clock_off(ddi).get()) {
+  auto dpll_state = dpll_manager()->LoadState(ddi);
+  if (!dpll_state.has_value()) {
+    zxlogf(DEBUG, "Cannot load DPLL state for DDI %d", ddi);
     return false;
   }
 
-  auto dpll = static_cast<registers::Dpll>(dpll_ctrl2.ddi_clock_select(ddi).get());
-  auto dpll_enable = registers::DpllEnable::Get(dpll).ReadFrom(mmio_space());
-  if (!dpll_enable.enable_dpll()) {
-    return false;
-  }
-
-  auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
-  dplls_[dpll].use_count++;
-  dplls_[dpll].state.is_hdmi = dpll_ctrl1.dpll_hdmi_mode(dpll).get();
-  if (dplls_[dpll].state.is_hdmi) {
-    auto dpll_cfg1 = registers::DpllConfig1::Get(dpll).ReadFrom(mmio_space());
-    auto dpll_cfg2 = registers::DpllConfig2::Get(dpll).ReadFrom(mmio_space());
-
-    dplls_[dpll].state.hdmi = {
-        .dco_int = static_cast<uint16_t>(dpll_cfg1.dco_integer()),
-        .dco_frac = static_cast<uint16_t>(dpll_cfg1.dco_fraction()),
-        .q = static_cast<uint8_t>(dpll_cfg2.qdiv_ratio()),
-        .q_mode = static_cast<uint8_t>(dpll_cfg2.qdiv_mode()),
-        .k = static_cast<uint8_t>(dpll_cfg2.kdiv_ratio()),
-        .p = static_cast<uint8_t>(dpll_cfg2.pdiv_ratio()),
-        .cf = static_cast<uint8_t>(dpll_cfg2.central_freq()),
-    };
-  } else {
-    dplls_[dpll].state.dp_rate = dpll_ctrl1.GetLinkRate(dpll);
-  }
-
-  device->InitWithDpllState(&dplls_[dpll].state);
+  device->InitWithDpllState(&*dpll_state);
   device->AttachPipe(&pipes_[pipe]);
   device->LoadActiveMode();
 
@@ -691,10 +604,6 @@ void Controller::InitDisplays() {
 
   if (display_devices_.size() == 0) {
     zxlogf(INFO, "intel-i915: No displays detected.");
-  }
-
-  for (unsigned i = 0; i < registers::kDpllCount; i++) {
-    dplls_[i].use_count = 0;
   }
 
   // Make a note of what needs to be reset, so we can finish querying the hardware state
@@ -2302,6 +2211,8 @@ zx_status_t Controller::Init() {
       pipes_.push_back(Pipe(mmio_space(), pipe, power()->GetPipePowerWellRef(pipe)));
     }
   }
+
+  dpll_manager_ = std::make_unique<SklDpllManager>(mmio_space());
 
   status = DdkAdd(ddk::DeviceAddArgs("intel_i915")
                       .set_inspect_vmo(inspector_.DuplicateVmo())

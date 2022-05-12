@@ -13,6 +13,7 @@
 #include <ddktl/device.h>
 #include <region-alloc/region-alloc.h>
 
+#include "src/graphics/display/drivers/intel-i915/dpll.h"
 #include "src/graphics/display/drivers/intel-i915/gtt.h"
 #include "src/graphics/display/drivers/intel-i915/pipe.h"
 #include "src/graphics/display/drivers/intel-i915/power.h"
@@ -62,7 +63,7 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   // Initialize the display based on existing hardware state. This method should be used instead of
   // Init() when a display PLL has already been powered up and configured (e.g. by the bootlader)
   // when the driver discovers the display. DDI initialization will not be performed in this case.
-  virtual void InitWithDpllState(struct dpll_state* dpll_state) {}
+  virtual void InitWithDpllState(const DpllState* dpll_state) {}
   // Initializes the display backlight for an already initialized display.
   void InitBacklight();
   // Resumes the ddi after suspend.
@@ -121,7 +122,7 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   // Configures the hardware to display content at the given resolution.
   virtual bool DdiModeset(const display_mode_t& mode, registers::Pipe pipe,
                           registers::Trans trans) = 0;
-  virtual bool ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) = 0;
+  virtual bool ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) = 0;
   // Load the clock rate from hardware if it's necessary when changing the transcoder.
   virtual uint32_t LoadClockRateForTranscoder(registers::Trans transcoder) = 0;
 

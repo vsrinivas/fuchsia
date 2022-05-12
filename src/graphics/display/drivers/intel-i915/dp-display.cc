@@ -12,9 +12,11 @@
 
 #include <algorithm>
 #include <iterator>
+#include <variant>
 
 #include <fbl/string_printf.h>
 
+#include "src/graphics/display/drivers/intel-i915/dpll.h"
 #include "src/graphics/display/drivers/intel-i915/intel-i915.h"
 #include "src/graphics/display/drivers/intel-i915/macros.h"
 #include "src/graphics/display/drivers/intel-i915/pci-ids.h"
@@ -1204,41 +1206,15 @@ bool DpDisplay::InitDdi() {
     return false;
   }
 
-  dpll_state_t state = {
-      .is_hdmi = false,
+  DpllState state = DpDpllState{
       .dp_rate = dpll_link_rate.value(),
   };
-  registers::Dpll dpll = controller()->SelectDpll(is_edp, state);
-  if (dpll == registers::DPLL_INVALID) {
+
+  DisplayPll* dpll = controller()->dpll_manager()->Map(ddi(), is_edp, state);
+  if (dpll == nullptr) {
+    zxlogf(ERROR, "Cannot find an available DPLL for DP display on DDI %d", ddi());
     return false;
   }
-
-  auto dpll_enable = registers::DpllEnable::Get(dpll).ReadFrom(mmio_space());
-  if (!dpll_enable.enable_dpll()) {
-    // Configure this DPLL to produce a suitable clock signal.
-    auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
-    dpll_ctrl1.dpll_hdmi_mode(dpll).set(0);
-    dpll_ctrl1.dpll_ssc_enable(dpll).set(0);
-    dpll_ctrl1.SetLinkRate(dpll, dpll_link_rate.value());
-    dpll_ctrl1.dpll_override(dpll).set(1);
-    dpll_ctrl1.WriteTo(mmio_space());
-    dpll_ctrl1.ReadFrom(mmio_space());  // Posting read
-
-    // Enable this DPLL and wait for it to lock
-    dpll_enable.set_enable_dpll(1);
-    dpll_enable.WriteTo(mmio_space());
-    if (!WAIT_ON_MS(registers::DpllStatus::Get().ReadFrom(mmio_space()).dpll_lock(dpll).get(), 5)) {
-      zxlogf(ERROR, "DPLL failed to lock");
-      return false;
-    }
-  }
-
-  // Configure this DDI to use the given DPLL as its clock source.
-  auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(mmio_space());
-  dpll_ctrl2.ddi_clock_select(ddi()).set(dpll);
-  dpll_ctrl2.ddi_select_override(ddi()).set(1);
-  dpll_ctrl2.ddi_clock_off(ddi()).set(0);
-  dpll_ctrl2.WriteTo(mmio_space());
 
   // Enable power for this DDI.
   auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
@@ -1262,40 +1238,42 @@ bool DpDisplay::InitDdi() {
   return true;
 }
 
-void DpDisplay::InitWithDpllState(struct dpll_state* dpll_state) {
+void DpDisplay::InitWithDpllState(const DpllState* dpll_state) {
   if (dpll_state == nullptr) {
     return;
   }
 
-  ZX_DEBUG_ASSERT(!dpll_state->is_hdmi);
-  if (dpll_state->is_hdmi) {
-    zxlogf(ERROR, "HDMI dpll_state is given to DpDisplay!");
+  ZX_DEBUG_ASSERT(std::holds_alternative<DpDpllState>(*dpll_state));
+  if (!std::holds_alternative<DpDpllState>(*dpll_state)) {
+    zxlogf(ERROR, "Non DP dpll_state is given to DpDisplay!");
     return;
   }
 
+  auto dp_state = std::get_if<DpDpllState>(dpll_state);
   // Some display (e.g. eDP) may have already been configured by the bootloader with a
   // link clock. Assign the link rate based on the already enabled DPLL.
   if (dp_link_rate_mhz_ == 0) {
-    fpromise::result<uint32_t> link_rate = DpllLinkRateToLinkClock(dpll_state->dp_rate);
+    fpromise::result<uint32_t> link_rate = DpllLinkRateToLinkClock(dp_state->dp_rate);
     if (link_rate.is_ok()) {
       zxlogf(INFO, "Selected pre-configured DisplayPort link rate: %u Mbps/lane",
              link_rate.value());
       SetLinkRate(link_rate.value());
     } else {
-      zxlogf(ERROR, "Invalid DPLL link rate value: %u", static_cast<uint8_t>(dpll_state->dp_rate));
+      zxlogf(ERROR, "Invalid DPLL link rate value: %u", static_cast<uint8_t>(dp_state->dp_rate));
     }
   }
 }
 
-bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) {
+bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) {
   auto dpll_link_rate = LinkClockToDpllLinkRate(dp_link_rate_mhz_);
   if (dpll_link_rate.is_error()) {
     zxlogf(ERROR, "Unsupported DP link clock: %u", dp_link_rate_mhz_);
     return false;
   }
 
-  config->is_hdmi = false;
-  config->dp_rate = dpll_link_rate.value();
+  *config = DpDpllState{
+      .dp_rate = dpll_link_rate.value(),
+  };
   return true;
 }
 

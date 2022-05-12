@@ -183,7 +183,7 @@ class DpDisplay : public DisplayDevice {
 
   // DisplayDevice overrides:
   bool Query() final;
-  void InitWithDpllState(struct dpll_state* dpll_state) final;
+  void InitWithDpllState(const DpllState* dpll_state) final;
 
   uint8_t lane_count() const { return dp_lane_count_; }
   uint32_t link_rate_mhz() const { return dp_link_rate_mhz_; }
@@ -196,7 +196,7 @@ class DpDisplay : public DisplayDevice {
                           registers::Trans trans) final;
   bool PipeConfigEpilogue(const display_mode_t& mode, registers::Pipe pipe,
                           registers::Trans trans) final;
-  bool ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) final;
+  bool ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) final;
   uint32_t LoadClockRateForTranscoder(registers::Trans transcoder) final;
 
   bool CheckPixelRate(uint64_t pixel_rate) final;

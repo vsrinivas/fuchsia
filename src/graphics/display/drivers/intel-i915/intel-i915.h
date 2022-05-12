@@ -22,6 +22,7 @@
 
 #include "src/graphics/display/drivers/intel-i915/display-device.h"
 #include "src/graphics/display/drivers/intel-i915/dp-display.h"
+#include "src/graphics/display/drivers/intel-i915/dpll.h"
 #include "src/graphics/display/drivers/intel-i915/gtt.h"
 #include "src/graphics/display/drivers/intel-i915/hdmi-display.h"
 #include "src/graphics/display/drivers/intel-i915/igd.h"
@@ -41,23 +42,6 @@ typedef struct buffer_allocation {
   uint16_t end;
 } buffer_allocation_t;
 
-// TODO(armansito): Turn this into a C++-style data structure and document internals.
-typedef struct dpll_state {
-  bool is_hdmi;
-  union {
-    registers::DpllControl1::LinkRate dp_rate;
-    struct {
-      uint16_t dco_int;
-      uint16_t dco_frac;
-      uint8_t q;
-      uint8_t q_mode;
-      uint8_t k;
-      uint8_t p;
-      uint8_t cf;
-    } hdmi;
-  };
-} dpll_state_t;
-
 class Controller;
 using DeviceType = ddk::Device<Controller, ddk::Initializable, ddk::Unbindable, ddk::Suspendable,
                                ddk::Resumable, ddk::GetProtocolable, ddk::ChildPreReleaseable>;
@@ -75,8 +59,6 @@ class Controller : public DeviceType,
   //
   // Long-running initialization is performed in the DdkInit hook.
   static zx_status_t Create(zx_device_t* parent);
-
-  static bool CompareDpllStates(const dpll_state_t& a, const dpll_state_t& b);
 
   // DDK ops
   void DdkInit(ddk::InitTxn txn);
@@ -149,6 +131,7 @@ class Controller : public DeviceType,
   uint16_t device_id() const { return device_id_; }
   const IgdOpRegion& igd_opregion() const { return igd_opregion_; }
   Power* power() { return &power_; }
+  DisplayPllManager* dpll_manager() { return dpll_manager_.get(); }
 
   // Non-const getter to allow unit tests to modify the IGD.
   // TODO(fxbug.dev/83998): Consider making a fake IGD object injectable as allowing mutable access
@@ -164,9 +147,9 @@ class Controller : public DeviceType,
   bool ResetTrans(registers::Trans trans);
   bool ResetDdi(registers::Ddi ddi);
 
-  registers::Dpll SelectDpll(bool is_edp, const dpll_state_t& state);
-  const dpll_state_t* GetDpllState(registers::Dpll dpll);
-
+  void SetDpllManagerForTesting(std::unique_ptr<DisplayPllManager> dpll_manager) {
+    dpll_manager_ = std::move(dpll_manager);
+  }
   void SetMmioForTesting(fdf::MmioBuffer mmio_space) { mmio_space_ = std::move(mmio_space); }
 
   void ResetMmioSpaceForTesting() { mmio_space_.reset(); }
@@ -272,10 +255,8 @@ class Controller : public DeviceType,
 
   Power power_;
   PowerWellRef cd_clk_power_well_;
-  struct {
-    uint8_t use_count = 0;
-    dpll_state_t state;
-  } dplls_[registers::kDpllCount] = {};
+
+  std::unique_ptr<DisplayPllManager> dpll_manager_;
 
   GMBusI2c gmbus_i2cs_[registers::kDdiCount] = {
       GMBusI2c(registers::DDI_A), GMBusI2c(registers::DDI_B), GMBusI2c(registers::DDI_C),

@@ -174,30 +174,13 @@ bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
   // Check to see if the hardware was already configured properly. The is primarily to
   // prevent unnecessary modesetting at startup. The extra work this adds to regular
   // modesetting is negligible.
-  auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(mmio_space());
-  const dpll_state_t* current_state = nullptr;
-  if (!dpll_ctrl2.ddi_clock_off(ddi()).get()) {
-    current_state = controller_->GetDpllState(
-        static_cast<registers::Dpll>(dpll_ctrl2.ddi_clock_select(ddi()).get()));
-  }
-
-  if (current_state == nullptr) {
-    zxlogf(DEBUG, "Modeset necessary for clock");
-    return true;
-  }
-
-  dpll_state_t new_state;
+  DpllState new_state;
   if (!ComputeDpllState(mode->pixel_clock_10khz, &new_state)) {
     // ComputeDpllState should be validated in the display's CheckDisplayMode
     ZX_ASSERT(false);
   }
 
-  // Modesetting is necessary if the states are not equal
-  bool res = !Controller::CompareDpllStates(*current_state, new_state);
-  if (res) {
-    zxlogf(DEBUG, "Modeset necessary for clock state");
-  }
-  return res;
+  return controller()->dpll_manager()->PllNeedsReset(ddi(), new_state);
 }
 
 void DisplayDevice::ApplyConfiguration(const display_config_t* config,

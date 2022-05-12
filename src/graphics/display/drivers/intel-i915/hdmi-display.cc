@@ -9,6 +9,7 @@
 
 #include <iterator>
 
+#include "src/graphics/display/drivers/intel-i915/dpll.h"
 #include "src/graphics/display/drivers/intel-i915/intel-i915.h"
 #include "src/graphics/display/drivers/intel-i915/macros.h"
 #include "src/graphics/display/drivers/intel-i915/pci-ids.h"
@@ -525,11 +526,14 @@ bool HdmiDisplay::InitDdi() {
   return true;
 }
 
-bool HdmiDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) {
-  config->is_hdmi = true;
-  return calculate_params(pixel_clock_10khz * 10, &config->hdmi.dco_int, &config->hdmi.dco_frac,
-                          &config->hdmi.q, &config->hdmi.q_mode, &config->hdmi.k, &config->hdmi.p,
-                          &config->hdmi.cf);
+bool HdmiDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) {
+  HdmiDpllState hdmi = {};
+  bool result = calculate_params(pixel_clock_10khz * 10, &hdmi.dco_int, &hdmi.dco_frac, &hdmi.q,
+                                 &hdmi.q_mode, &hdmi.k, &hdmi.p, &hdmi.cf);
+  if (result) {
+    *config = hdmi;
+  }
+  return result;
 }
 
 bool HdmiDisplay::DdiModeset(const display_mode_t& mode, registers::Pipe pipe,
@@ -539,64 +543,17 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode, registers::Pipe pipe,
   controller()->ResetDdi(ddi());
 
   // Calculate and the HDMI DPLL parameters
-  dpll_state_t state;
-  state.is_hdmi = true;
-  if (!calculate_params(mode.pixel_clock_10khz * 10, &state.hdmi.dco_int, &state.hdmi.dco_frac,
-                        &state.hdmi.q, &state.hdmi.q_mode, &state.hdmi.k, &state.hdmi.p,
-                        &state.hdmi.cf)) {
+  HdmiDpllState hdmi;
+  if (!calculate_params(mode.pixel_clock_10khz * 10, &hdmi.dco_int, &hdmi.dco_frac, &hdmi.q,
+                        &hdmi.q_mode, &hdmi.k, &hdmi.p, &hdmi.cf)) {
     zxlogf(ERROR, "hdmi: failed to calculate clock params");
     return false;
   }
 
-  registers::Dpll dpll = controller()->SelectDpll(false, state);
-  if (dpll == registers::DPLL_INVALID) {
+  DisplayPll* dpll = controller()->dpll_manager()->Map(ddi(), /* is_edp */ false, hdmi);
+  if (dpll == nullptr) {
     return false;
   }
-
-  auto dpll_enable = registers::DpllEnable::Get(dpll).ReadFrom(mmio_space());
-  if (!dpll_enable.enable_dpll()) {
-    // Set the DPLL control settings
-    auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
-    dpll_ctrl1.dpll_hdmi_mode(dpll).set(1);
-    dpll_ctrl1.dpll_override(dpll).set(1);
-    dpll_ctrl1.dpll_ssc_enable(dpll).set(0);
-    dpll_ctrl1.WriteTo(mmio_space());
-    dpll_ctrl1.ReadFrom(mmio_space());
-
-    // Set the DCO frequency
-    auto dpll_cfg1 = registers::DpllConfig1::Get(dpll).FromValue(0);
-    dpll_cfg1.set_frequency_enable(1);
-    dpll_cfg1.set_dco_integer(state.hdmi.dco_int);
-    dpll_cfg1.set_dco_fraction(state.hdmi.dco_frac);
-    dpll_cfg1.WriteTo(mmio_space());
-    dpll_cfg1.ReadFrom(mmio_space());
-
-    // Set the divisors and central frequency
-    auto dpll_cfg2 = registers::DpllConfig2::Get(dpll).FromValue(0);
-    dpll_cfg2.set_qdiv_ratio(state.hdmi.q);
-    dpll_cfg2.set_qdiv_mode(state.hdmi.q_mode);
-    dpll_cfg2.set_kdiv_ratio(state.hdmi.k);
-    dpll_cfg2.set_pdiv_ratio(state.hdmi.p);
-    dpll_cfg2.set_central_freq(state.hdmi.cf);
-    dpll_cfg2.WriteTo(mmio_space());
-    dpll_cfg2.ReadFrom(mmio_space());  // Posting read
-
-    // Enable and wait for the DPLL
-    dpll_enable.set_enable_dpll(1);
-    dpll_enable.WriteTo(mmio_space());
-    if (!WAIT_ON_MS(registers::DpllStatus ::Get().ReadFrom(mmio_space()).dpll_lock(dpll).get(),
-                    5)) {
-      zxlogf(ERROR, "hdmi: DPLL failed to lock");
-      return false;
-    }
-  }
-
-  // Direct the DPLL to the DDI
-  auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(mmio_space());
-  dpll_ctrl2.ddi_select_override(ddi()).set(1);
-  dpll_ctrl2.ddi_clock_off(ddi()).set(0);
-  dpll_ctrl2.ddi_clock_select(ddi()).set(dpll);
-  dpll_ctrl2.WriteTo(mmio_space());
 
   // Enable DDI IO power and wait for it
   auto pwc2 = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
@@ -701,7 +658,7 @@ bool HdmiDisplay::CheckPixelRate(uint64_t pixel_rate) {
     return false;
   }
 
-  dpll_state_t test_state;
+  DpllState test_state;
   return ComputeDpllState(static_cast<uint32_t>(pixel_rate / 10000 /* 10khz */), &test_state);
 }
 
