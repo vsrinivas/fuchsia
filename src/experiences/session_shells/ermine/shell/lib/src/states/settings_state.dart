@@ -16,6 +16,7 @@ import 'package:ermine/src/services/settings/wifi_service.dart';
 import 'package:ermine/src/states/settings_state_impl.dart';
 import 'package:ermine/src/widgets/quick_settings.dart';
 import 'package:ermine/src/widgets/settings/setting_details.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide Action;
 
 enum WiFiStrength { off, searching, weak, good, strong, error }
@@ -47,6 +48,8 @@ enum SettingsPage {
   brightness,
   about
 }
+
+typedef DisplayDialogCallback = void Function(DialogInfo);
 
 /// Defines the state of the [QuickSettings] overlay.
 abstract class SettingsState implements TaskService {
@@ -92,10 +95,12 @@ abstract class SettingsState implements TaskService {
   bool get dataSharingConsentEnabled;
 
   factory SettingsState.from(
-      {required Map<String, Set<String>> shortcutBindings}) {
+      {required Map<String, Set<String>> shortcutBindings,
+      required DisplayDialogCallback displayDialog}) {
     // ignore: unnecessary_cast
     return SettingsStateImpl(
       shortcutBindings: shortcutBindings,
+      displayDialog: displayDialog,
       timezoneService: TimezoneService(),
       dataSharingConsentService: DataSharingConsentService(),
       dateTimeService: DateTimeService(),

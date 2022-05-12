@@ -18,6 +18,7 @@ import 'package:ermine/src/services/settings/wifi_service.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide Action;
+import 'package:internationalization/strings.dart';
 import 'package:intl/intl.dart';
 import 'package:mobx/mobx.dart';
 
@@ -73,6 +74,9 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
 
   @override
   final Map<String, Set<String>> shortcutBindings;
+
+  @override
+  DisplayDialogCallback displayDialog;
 
   @override
   String get selectedTimezone => _selectedTimezone.value;
@@ -244,6 +248,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
 
   SettingsStateImpl({
     required this.shortcutBindings,
+    required this.displayDialog,
     required this.timezoneService,
     required this.dataSharingConsentService,
     required this.dateTimeService,
@@ -254,7 +259,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.channelService,
     required this.volumeService,
     required this.wifiService,
-  })  : _timezones = _loadTimezones(),
+  })   : _timezones = _loadTimezones(),
         _selectedTimezone = timezoneService.timezone.asObservable() {
     dataSharingConsentService.onChanged =
         (consent) => runInAction(() => dataSharingConsentEnabled = consent);
@@ -267,8 +272,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
           final addresses = interfaces
               .expand((interface) => interface.addresses)
               .toList(growable: false)
-            ..sort((addr1, addr2) =>
-                addr1.type == InternetAddressType.IPv4 ? -1 : 0);
+                ..sort((addr1, addr2) =>
+                    addr1.type == InternetAddressType.IPv4 ? -1 : 0);
 
           runInAction(() => networkAddresses
             ..clear()
@@ -286,6 +291,16 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       runInAction(() {
         powerIcon = batteryWatcherService.icon;
         powerLevel = batteryWatcherService.levelPercent;
+        if (powerLevel != null) {
+          final level = powerLevel!.toInt();
+          if (level == 2 && batteryWatcherService.isLevelDropping) {
+            displayDialog(AlertDialogInfo(
+              title: Strings.lowBattery,
+              body: Strings.percentRemaining(level.toString()),
+              actions: [Strings.close],
+            ));
+          }
+        }
       });
     };
     brightnessService.onChanged = () {

@@ -67,8 +67,9 @@ class AppStateImpl with Disposable implements AppState {
 
     // Register keyboard shortcuts and then initialize SettingsState with it.
     shortcutsService.register(_actions);
-    settingsState =
-        SettingsState.from(shortcutBindings: shortcutsService.keyboardBindings);
+    settingsState = SettingsState.from(
+        shortcutBindings: shortcutsService.keyboardBindings,
+        displayDialog: _displayDialog);
 
     pointerEventsService
       ..onPeekBegin = _onPeekBegin

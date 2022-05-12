@@ -1393,6 +1393,20 @@ class Strings {
         desc: 'The description of the dialog for power button pressed.',
       );
 
+  static String get lowBattery => Intl.message(
+        'Low battery',
+        name: 'low battery',
+        desc: 'The title of the low battery alert dialog.',
+      );
+
+  static String percentRemaining(String level) => Intl.message(
+        '$level% remaining',
+        name: 'remaining battery level',
+        desc: 'The body text of the low battery alert dialog.',
+        examples: const {'level': '2'},
+        args: [level],
+      );
+
   /// Lookup message given it's name.
   static String? lookup(String name) {
     final _messages = <String, String>{

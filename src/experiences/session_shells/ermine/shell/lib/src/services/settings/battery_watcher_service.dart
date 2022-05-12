@@ -24,9 +24,7 @@ class BatteryWatcherService extends BatteryInfoWatcher implements TaskService {
   }
 
   @override
-  Future<void> stop() async {
-    dispose();
-  }
+  Future<void> stop() async {}
 
   @override
   void dispose() {
@@ -35,6 +33,7 @@ class BatteryWatcherService extends BatteryInfoWatcher implements TaskService {
   }
 
   BatteryInfo? _info;
+  bool _isLevelDropping = false;
   bool get hasStatus => _info?.status != BatteryStatus.unknown;
   bool get hasBattery => _info?.status == BatteryStatus.ok;
   bool get isCharging => _info?.chargeStatus == ChargeStatus.charging;
@@ -45,6 +44,7 @@ class BatteryWatcherService extends BatteryInfoWatcher implements TaskService {
       _info?.levelStatus == LevelStatus.warning;
 
   double? get levelPercent => _info?.levelPercent;
+  bool get isLevelDropping => _isLevelDropping;
 
   IconData get icon => hasStatus
       ? hasBattery
@@ -60,6 +60,10 @@ class BatteryWatcherService extends BatteryInfoWatcher implements TaskService {
 
   @override
   Future<void> onChangeBatteryInfo(BatteryInfo info) async {
+    final newLevel = info.levelPercent?.toInt();
+    final oldLevel = _info?.levelPercent?.toInt();
+    _isLevelDropping =
+        newLevel != null && oldLevel != null && newLevel < oldLevel;
     _info = info;
     onChanged();
   }
