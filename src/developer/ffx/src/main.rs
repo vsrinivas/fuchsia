@@ -271,6 +271,7 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
             )
         })?
         .context("Getting hash from daemon")?;
+
     match daemon_version_info.exec_path {
         None => log::warn!("Daemon version info did not contain an executable path."),
         Some(daemon_path) => {
@@ -278,11 +279,16 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
 
             if let Some(path) = path {
                 if path != daemon_path {
-                    ffx_bail!(
-                        "Running daemon is from a different copy of ffx. Make sure you are \
-                               using the right copy of ffx for the tree you are in and run \
-                               `ffx doctor --restart-daemon` to continue. (daemon is from \
-                                {daemon_path}, this command is {path})"
+                    eprintln!(
+                        "Warning: Found a running daemon ({}) that is from a different copy of ffx.",
+                    daemon_path);
+                    log::warn!(
+                        "Found a running daemon that is from a different copy of ffx. \
+                            Continuing to connect...\
+                            \n\nDaemon path: {}\
+                            \nffx front-end path: {}",
+                        daemon_path,
+                        path
                     );
                 }
             } else {
@@ -296,7 +302,8 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
         return Ok(proxy);
     }
 
-    log::info!("Daemon is a different version.  Attempting to restart");
+    eprintln!("Daemon is a different version, attempting to restart");
+    log::info!("Daemon is a different version, attempting to restart");
 
     // Tell the daemon to quit, and wait for the link task to finish.
     // TODO(raggi): add a timeout on this, if the daemon quit fails for some
@@ -305,8 +312,8 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
 
     if !quit_result.is_ok() {
         ffx_bail!(
-            "FFX daemon upgrade failed unexpectedly. \n\
-            Try running `ffx doctor --restart-daemon` and then retrying your \
+            "ffx daemon upgrade failed unexpectedly. \n\
+            Try running `ffx doctor --restart-daemon` and then retry your \
             command.\n\nError was: {:?}",
             quit_result
         )
