@@ -8,7 +8,6 @@
 #include <memory>
 
 #ifdef __Fuchsia__
-#include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/storage/minfs/bcache.h"
 #endif
@@ -40,12 +39,6 @@ struct MountOptions {
 
   // If true, don't log messages except for errors.
   bool quiet = false;
-
-#ifdef __Fuchsia__
-  // A function that generates a Cobalt logger.  If not provided, a default logger is used so long
-  // as the MountAndServe function is used.
-  std::function<std::unique_ptr<cobalt::CobaltLogger>()> cobalt_factory;
-#endif
 };
 
 #ifdef __Fuchsia__

@@ -96,6 +96,24 @@
             "metric_id": 9004,
             "metric_type": "Occurrence",
             "selector": "bootstrap/fshost:root/minfs/fs.detail:recovered_space_events"
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 61,
+            "metric_type": "String",
+            "selector": "bootstrap/fshost/blobfs:root/blobfs/fs.info:oldest_version",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
+                3
+            ],
+            "metric_id": 61,
+            "metric_type": "String",
+            "selector": "bootstrap/fshost:root/minfs/fs.info:oldest_version",
+            "upload_once": true
         }
     ],
     "poll_rate_sec": 600,

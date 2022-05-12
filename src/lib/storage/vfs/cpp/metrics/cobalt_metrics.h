@@ -151,8 +151,6 @@ class Metrics {
   const CompressionFormatMetrics& compression_format_metrics() const;
   CompressionFormatMetrics* mutable_compression_format_metrics();
 
-  void RecordOldestVersionMounted(std::string_view version);
-
   FsCommonMetrics::FragmentationMetrics& FragmentationMetrics() {
     return fs_common_metrics_.fragmentation_metrics;
   }
@@ -178,7 +176,6 @@ class Metrics {
   };
 
   std::mutex mutex_;
-  Source source_;
   std::unique_ptr<cobalt_client::Collector> collector_ FXL_GUARDED_BY(mutex_);
 
   FsCommonMetrics fs_common_metrics_;

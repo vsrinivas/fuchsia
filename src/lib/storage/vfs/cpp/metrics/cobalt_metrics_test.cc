@@ -211,20 +211,5 @@ TEST(CobaltMetricsTest, IncrementCompressionFormatMetrics) {
   }
 }
 
-TEST(CobaltMetricsTest, RecordOldestVersionMountedReportsCorrectly) {
-  cobalt_client::InMemoryLogger* logger;
-  fs_metrics::Metrics metrics(MakeCollector(&logger), Source::kBlobfs, CompressionSource::kBlobfs);
-  metrics.RecordOldestVersionMounted("5/5");
-  EXPECT_TRUE(metrics.Flush());
-  cobalt_client::MetricOptions expected_options = {
-      .component = "5/5",
-      .metric_id = static_cast<uint32_t>(Event::kVersion),
-      .metric_dimensions = 1,
-      .event_codes = {static_cast<uint32_t>(Source::kBlobfs)}};
-  auto iter = logger->counters().find(expected_options);
-  ASSERT_NE(iter, logger->counters().end());
-  EXPECT_EQ(iter->second, 1);
-}
-
 }  // namespace
 }  // namespace fs_metrics

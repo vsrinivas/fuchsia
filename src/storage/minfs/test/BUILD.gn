@@ -38,7 +38,6 @@ test("minfs_unit") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
-    "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/block_client/cpp:fake_device",
@@ -51,7 +50,6 @@ test("minfs_unit") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/bitmap",
-    "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxc",

@@ -140,8 +140,7 @@ void CompressionFormatMetrics::IncrementCounter(fs_metrics::CompressionFormat fo
 
 Metrics::Metrics(std::unique_ptr<cobalt_client::Collector> collector, Source source,
                  CompressionSource compression_source)
-    : source_(source),
-      collector_(std::move(collector)),
+    : collector_(std::move(collector)),
       fs_common_metrics_(collector_.get(), source),
       compression_format_metrics_(collector_.get(), compression_source) {}
 
@@ -163,27 +162,6 @@ void Metrics::EnableMetrics(bool should_enable) {
 }
 
 bool Metrics::IsEnabled() const { return is_enabled_; }
-
-void Metrics::RecordOldestVersionMounted(std::string_view version) {
-  std::scoped_lock lock(mutex_);
-  // We hack the version into the component field (which is the only dimension that supports a
-  // string value), whilst we store the real storage sub-component in a dimension.  There is
-  // precedent for this kind of hack; SWD do something similar.
-  cobalt_client::MetricOptions options{
-      .component = std::string(version),
-      .metric_id = static_cast<uint32_t>(Event::kVersion),
-      .metric_dimensions = 1,
-      .event_codes = {static_cast<uint32_t>(source_)},
-  };
-  auto iter = temporary_counters_.find(options);
-  if (iter == temporary_counters_.end()) {
-    iter =
-        temporary_counters_
-            .insert(std::make_unique<cobalt_client::Counter>(std::move(options), collector_.get()))
-            .first;
-  }
-  (*iter)->Increment();
-}
 
 bool Metrics::Flush() {
   std::scoped_lock lock(mutex_);

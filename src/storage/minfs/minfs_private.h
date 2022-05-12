@@ -388,9 +388,6 @@ class Minfs :
 
   const MountOptions& mount_options() { return mount_options_; }
 
-  // Logs mount time metrics such as the format version and oldest revision.
-  void LogMountMetrics();
-
  private:
   using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;
 
@@ -459,7 +456,6 @@ class Minfs :
   zx::event fs_id_;
 
   async::TaskClosure journal_sync_task_;
-  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger_ = nullptr;
 
   MinfsInspectTree inspect_tree_;
   void InitializeInspectTree();

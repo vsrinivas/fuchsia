@@ -1336,19 +1336,6 @@ zx::status<std::unique_ptr<Minfs>> Mount(FuchsiaDispatcher* dispatcher,
 }
 
 #ifdef __Fuchsia__
-void Minfs::LogMountMetrics() {
-  if (!mount_options_.cobalt_factory) {
-    cobalt_logger_ = cobalt::NewCobaltLoggerFromProjectId(
-        dispatcher(), sys::ServiceDirectory::CreateFromNamespace(), fs_metrics::kCobaltProjectId);
-  } else {
-    cobalt_logger_ = mount_options_.cobalt_factory();
-  }
-  cobalt_logger_->LogEventCount(
-      static_cast<uint32_t>(fs_metrics::Event::kVersion),
-      static_cast<uint32_t>(fs_metrics::Source::kMinfs),
-      std::to_string(Info().major_version) + "/" + std::to_string(Info().oldest_minor_version), {},
-      1);
-}
 
 void Minfs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   // On a read-write filesystem, set the kMinfsFlagClean on a clean unmount.

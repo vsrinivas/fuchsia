@@ -72,11 +72,6 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
 
   fs->SetUnmountCallback(std::move(on_unmount));
 
-  // At time of writing the Cobalt client has certain requirements around which thread you interact
-  // with it on, so we interact with it by posting to the dispatcher.  See fxbug.dev/74396 for more
-  // details.
-  async::PostTask(dispatcher, [&fs = *fs] { fs.LogMountMetrics(); });
-
   // Specify to fall back to DeepCopy mode instead of Live mode (the default) on failures to send
   // a Frozen copy of the tree (e.g. if we could not create a child copy of the backing VMO).
   // This helps prevent any issues with querying the inspect tree while the filesystem is under

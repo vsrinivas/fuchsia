@@ -124,9 +124,6 @@ static_library("minfs") {
       # bcache.h includes fuchsia/hardware/block/c/fidl.h.
       "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
 
-      # minfs.h includes src/lib/cobalt/cpp/cobalt_logger.h
-      "//src/lib/cobalt/cpp:cobalt_logger",
-
       # fsck.h includes block-client/cpp/block-device.h
       "//src/lib/storage/block_client/cpp",
 
@@ -143,7 +140,6 @@ static_library("minfs") {
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
       "//sdk/lib/syslog/cpp",
-      "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
       "//src/storage/fvm",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/async:async-cpp",

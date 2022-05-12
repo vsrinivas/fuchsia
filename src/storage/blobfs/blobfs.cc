@@ -354,12 +354,6 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
   fs->UpdateFragmentationMetrics();
   fs->InitializeInspectTree();
 
-  // Here we deliberately use a '/' separator rather than '.' to avoid looking like a conventional
-  // version number, since they are not --- format version and revision can increment independently.
-  fs->GetMetrics()->cobalt_metrics().RecordOldestVersionMounted(
-      std::to_string(fs->Info().major_version) + "/" +
-      std::to_string(fs->Info().oldest_minor_version));
-
   return zx::ok(std::move(fs));
 }
 
