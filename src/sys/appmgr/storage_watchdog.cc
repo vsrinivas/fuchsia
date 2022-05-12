@@ -13,9 +13,9 @@
 #include <lib/trace/event.h>
 #include <sys/types.h>
 
-#include <regex>
 #include <string>
 
+#include <re2/re2.h>
 #include <src/lib/files/directory.h>
 #include <src/lib/files/path.h>
 
@@ -50,8 +50,8 @@ void DeleteDirentInFd(int dir_fd, struct dirent* ent) {
 // PurgeCacheIn will remove elements in cache directories inside dir_fd,
 // recurse on any nested realms in dir_fd, and close dir_fd when its done.
 void PurgeCacheIn(int dir_fd) {
-  static const std::regex* const kV1StorageDirRegex = new std::regex{"[^:#]*:[^:#]*:[^:#]*#[^#]*"};
-  static const std::regex* const kV2StorageDirRegex = new std::regex{"(data)|([0-9a-f]{64})"};
+  static const re2::RE2* const kV1StorageDirRegex = new re2::RE2("[^:#]*:[^:#]*:[^:#]*#[^#]*");
+  static const re2::RE2* const kV2StorageDirRegex = new re2::RE2("(data)|([0-9a-f]{64})");
 
   DIR* dir_stream = fdopendir(dir_fd);
   // For all children in the path we're looking at, if it's named "r", then
@@ -64,8 +64,8 @@ void PurgeCacheIn(int dir_fd) {
     if (std::string(ent->d_name) == ".") {
       // Don't treat `.` as a component directory to be deleted!
       continue;
-    } else if (std::regex_match(std::string(ent->d_name), *kV1StorageDirRegex) ||
-               std::regex_match(std::string(ent->d_name), *kV2StorageDirRegex)) {
+    } else if (re2::RE2::FullMatch(std::string(ent->d_name), *kV1StorageDirRegex) ||
+               re2::RE2::FullMatch(std::string(ent->d_name), *kV2StorageDirRegex)) {
       int component_dir = openat(dir_fd, ent->d_name, O_DIRECTORY);
       if (component_dir == -1) {
         continue;
