@@ -94,7 +94,7 @@ void DwarfDieDecoder::AddLineTableFile(llvm::dwarf::Attribute attribute,
         // file names are always relative to the build (compilation) dir.
         line_table->getFileNameByIndex(
             form.getAsUnsignedConstant().getValue(), "",
-            llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, output->getValue());
+            llvm::DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath, output->getValue());
         output->getValue() = NormalizePath(output->getValue());
       });
 }
@@ -168,7 +168,7 @@ void DwarfDieDecoder::AddFile(llvm::dwarf::Attribute attribute,
         // names are always relative to the build (compilation) dir.
         std::string file_name;
         if (line_table->getFileNameByIndex(
-                *file_index, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                *file_index, "", llvm::DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
                 file_name)) {
           *output = NormalizePath(file_name);
         }

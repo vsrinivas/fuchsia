@@ -41,7 +41,7 @@ std::optional<std::string> LineTableImpl::GetFileNameByIndex(uint64_t file_id) c
 
   std::string result;
   if (line_table_->getFileNameByIndex(
-          file_id, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, result)) {
+          file_id, "", llvm::DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath, result)) {
     return std::optional<std::string>(NormalizePath(result));
   }
   return std::nullopt;

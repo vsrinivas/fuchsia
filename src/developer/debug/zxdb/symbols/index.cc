@@ -679,7 +679,7 @@ void Index::IndexCompileUnitSourceFiles(llvm::DWARFContext* context, llvm::DWARF
     if (!added_file[file_id]) {
       added_file[file_id] = 1;
       if (line_table->getFileNameByIndex(
-              file_id, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+              file_id, "", llvm::DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
               file_name)) {
         // The files here can contain relative components like "/foo/bar/../baz". This is OK because
         // we want it to match other places in the symbol code that do a similar computation to get

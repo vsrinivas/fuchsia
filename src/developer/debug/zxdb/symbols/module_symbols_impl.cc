@@ -258,7 +258,7 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
   std::string compilation_dir;
   if (rows[first_row_index].Line) {
     line_table->getFileNameByIndex(rows[first_row_index].File, "",
-                                   llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                                   llvm::DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
                                    file_name);
     if (!build_dir_.empty()) {
       compilation_dir = build_dir_;
