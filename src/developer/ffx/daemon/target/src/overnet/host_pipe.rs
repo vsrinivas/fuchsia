@@ -8,7 +8,6 @@ use {
     crate::RETRY_DELAY,
     anyhow::{anyhow, Context, Result},
     async_io::Async,
-    async_lock::Mutex,
     ffx_daemon_core::events,
     ffx_daemon_events::{HostPipeErr, TargetEvent},
     fuchsia_async::{unblock, Task, Timer},
@@ -16,14 +15,15 @@ use {
     futures_lite::io::AsyncBufReadExt,
     futures_lite::stream::StreamExt,
     hoist::OvernetInstance,
+    std::cell::RefCell,
     std::collections::VecDeque,
     std::fmt,
     std::future::Future,
     std::io,
     std::net::SocketAddr,
     std::process::{Child, Stdio},
+    std::rc::Rc,
     std::rc::Weak,
-    std::sync::Arc,
     std::time::Duration,
 };
 
@@ -31,17 +31,17 @@ const BUFFER_SIZE: usize = 65536;
 
 #[derive(Debug)]
 pub struct LogBuffer {
-    buf: Mutex<VecDeque<String>>,
+    buf: RefCell<VecDeque<String>>,
     capacity: usize,
 }
 
 impl LogBuffer {
     pub fn new(capacity: usize) -> Self {
-        Self { buf: Mutex::new(VecDeque::with_capacity(capacity)), capacity }
+        Self { buf: RefCell::new(VecDeque::with_capacity(capacity)), capacity }
     }
 
-    pub async fn push_line(&self, line: String) {
-        let mut buf = self.buf.lock().await;
+    pub fn push_line(&self, line: String) {
+        let mut buf = self.buf.borrow_mut();
         if buf.len() == self.capacity {
             buf.pop_front();
         }
@@ -49,13 +49,13 @@ impl LogBuffer {
         buf.push_back(line)
     }
 
-    pub async fn get_logs(&self) -> Vec<String> {
-        let buf = self.buf.lock().await;
+    pub fn lines(&self) -> Vec<String> {
+        let buf = self.buf.borrow_mut();
         buf.range(..).cloned().collect()
     }
 
-    pub async fn clear(&self) {
-        let mut buf = self.buf.lock().await;
+    pub fn clear(&self) {
+        let mut buf = self.buf.borrow_mut();
         buf.truncate(0);
     }
 }
@@ -90,7 +90,7 @@ impl HostPipeChild {
     async fn new(
         addr: SocketAddr,
         id: u64,
-        stderr_buf: Arc<LogBuffer>,
+        stderr_buf: Rc<LogBuffer>,
         event_queue: events::Queue<TargetEvent>,
     ) -> Result<(Option<HostAddr>, HostPipeChild)> {
         // Before running remote_control_runner, we look up the environment
@@ -166,7 +166,7 @@ impl HostPipeChild {
                 match result {
                     Ok(line) => {
                         log::info!("SSH stderr: {}", line);
-                        stderr_buf.push_line(line.clone()).await;
+                        stderr_buf.push_line(line.clone());
                         event_queue
                             .push(TargetEvent::SshHostPipeErr(HostPipeErr::from(line)))
                             .unwrap_or_else(|e| {
@@ -308,7 +308,7 @@ impl HostPipeConnection {
 
     async fn new_with_cmd<F>(
         target: Weak<Target>,
-        cmd_func: impl FnOnce(SocketAddr, u64, Arc<LogBuffer>, events::Queue<TargetEvent>) -> F
+        cmd_func: impl FnOnce(SocketAddr, u64, Rc<LogBuffer>, events::Queue<TargetEvent>) -> F
             + Copy
             + 'static,
         relaunch_command_delay: Duration,
@@ -320,8 +320,8 @@ impl HostPipeConnection {
             let target = target.upgrade().ok_or(anyhow!("Target has gone"))?;
             let target_nodename = target.nodename();
             log::debug!("Spawning new host-pipe instance to target {:?}", target_nodename);
-            let log_buf = target.get_host_pipe_log_buffer();
-            log_buf.clear().await;
+            let log_buf = target.host_pipe_log_buffer();
+            log_buf.clear();
 
             let ssh_address = target.ssh_address().ok_or_else(|| {
                 anyhow!("target {:?} does not yet have an ssh address", target_nodename)
@@ -394,7 +394,7 @@ mod test {
     async fn start_child_normal_operation(
         _addr: SocketAddr,
         _id: u64,
-        _buf: Arc<LogBuffer>,
+        _buf: Rc<LogBuffer>,
         _events: events::Queue<TargetEvent>,
     ) -> Result<(Option<HostAddr>, HostPipeChild)> {
         Ok((
@@ -413,7 +413,7 @@ mod test {
     async fn start_child_internal_failure(
         _addr: SocketAddr,
         _id: u64,
-        _buf: Arc<LogBuffer>,
+        _buf: Rc<LogBuffer>,
         _events: events::Queue<TargetEvent>,
     ) -> Result<(Option<HostAddr>, HostPipeChild)> {
         Err(anyhow!(ERR_CTX))
@@ -422,7 +422,7 @@ mod test {
     async fn start_child_ssh_failure(
         _addr: SocketAddr,
         _id: u64,
-        _buf: Arc<LogBuffer>,
+        _buf: Rc<LogBuffer>,
         events: events::Queue<TargetEvent>,
     ) -> Result<(Option<HostAddr>, HostPipeChild)> {
         events.push(TargetEvent::SshHostPipeErr(HostPipeErr::Unknown("foo".to_string()))).unwrap();
@@ -553,32 +553,32 @@ mod test {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_log_buffer_empty() {
+    #[test]
+    fn test_log_buffer_empty() {
         let buf = LogBuffer::new(2);
-        assert!(buf.get_logs().await.is_empty());
+        assert!(buf.lines().is_empty());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_log_buffer() {
+    #[test]
+    fn test_log_buffer() {
         let buf = LogBuffer::new(2);
 
-        buf.push_line(String::from("1")).await;
-        buf.push_line(String::from("2")).await;
-        buf.push_line(String::from("3")).await;
+        buf.push_line(String::from("1"));
+        buf.push_line(String::from("2"));
+        buf.push_line(String::from("3"));
 
-        assert_eq!(buf.get_logs().await, vec![String::from("2"), String::from("3")]);
+        assert_eq!(buf.lines(), vec![String::from("2"), String::from("3")]);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_clear_log_buffer() {
+    #[test]
+    fn test_clear_log_buffer() {
         let buf = LogBuffer::new(2);
 
-        buf.push_line(String::from("1")).await;
-        buf.push_line(String::from("2")).await;
+        buf.push_line(String::from("1"));
+        buf.push_line(String::from("2"));
 
-        buf.clear().await;
+        buf.clear();
 
-        assert!(buf.get_logs().await.is_empty());
+        assert!(buf.lines().is_empty());
     }
 }

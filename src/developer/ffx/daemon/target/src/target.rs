@@ -149,7 +149,7 @@ pub struct Target {
     pub(crate) build_config: RefCell<Option<BuildConfig>>,
     boot_timestamp_nanos: RefCell<Option<u64>>,
     diagnostics_info: Arc<DiagnosticsStreamer<'static>>,
-    host_pipe_log_buffer: Arc<LogBuffer>,
+    host_pipe_log_buffer: Rc<LogBuffer>,
 
     // The event synthesizer is retained on the target as a strong
     // reference, as the queue only retains a weak reference.
@@ -182,7 +182,7 @@ impl Target {
             diagnostics_info: Arc::new(DiagnosticsStreamer::default()),
             events,
             host_pipe: Default::default(),
-            host_pipe_log_buffer: Arc::new(LogBuffer::new(5)),
+            host_pipe_log_buffer: Rc::new(LogBuffer::new(5)),
             logger: Default::default(),
             target_event_synthesizer,
             fastboot_interface: RefCell::new(None),
@@ -286,7 +286,7 @@ impl Target {
         target
     }
 
-    pub fn get_host_pipe_log_buffer(&self) -> Arc<LogBuffer> {
+    pub fn host_pipe_log_buffer(&self) -> Rc<LogBuffer> {
         self.host_pipe_log_buffer.clone()
     }
 

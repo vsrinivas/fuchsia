@@ -60,7 +60,7 @@ impl TargetHandleInner {
     async fn handle(&self, _cx: &Context, req: bridge::TargetRequest) -> Result<()> {
         match req {
             bridge::TargetRequest::GetSshLogs { responder } => {
-                let logs = self.target.get_host_pipe_log_buffer().get_logs().await;
+                let logs = self.target.host_pipe_log_buffer().lines();
                 responder.send(&logs.join("\n")).map_err(Into::into)
             }
             bridge::TargetRequest::GetSshAddress { responder } => {
