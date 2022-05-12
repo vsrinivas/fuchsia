@@ -425,14 +425,13 @@ class BanjoDevice : public BanjoDeviceType, public ddk::PciProtocol<pci::BanjoDe
 
   // Does the work necessary to create a ddk Composite device representing the
   // pci::Device.
-  static zx_status_t Create(zx_device_t* parent, pci::Device* device);
+  static zx::status<> Create(zx_device_t* parent, pci::Device* device);
 
   // DDK mix-in impls
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   void DdkRelease() { delete this; }
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   pci::Device* device() { return device_; }
-  zx_device_t* zxdev_ptr() { return zxdev_; }
 
  private:
   pci::Device* device_;
@@ -443,7 +442,7 @@ using FidlDeviceType = ddk::Device<pci::FidlDevice, ddk::Unbindable>;
 class FidlDevice : public FidlDeviceType, public fidl::WireServer<fuchsia_hardware_pci::Device> {
  public:
   void Bind(fidl::ServerEnd<fuchsia_hardware_pci::Device> request);
-  static zx_status_t Create(zx_device_t* parent, pci::Device* device);
+  static zx::status<> Create(zx_device_t* parent, pci::Device* device);
 
   // fidl::WireServer<fuchsia_hardware_pci::Pci> implementations.
   void GetDeviceInfo(GetDeviceInfoRequestView request,
@@ -477,7 +476,6 @@ class FidlDevice : public FidlDeviceType, public fidl::WireServer<fuchsia_hardwa
                                GetExtendedCapabilitiesCompleter::Sync& completer) override;
   void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override;
   pci::Device* device() { return device_; }
-  zx_device_t* zxdev_ptr() { return zxdev_; }
   svc::Outgoing& outgoing_dir() { return outgoing_dir_; }
 
   void DdkRelease() { delete this; }

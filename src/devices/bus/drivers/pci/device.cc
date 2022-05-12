@@ -218,14 +218,14 @@ zx_status_t Device::InitLocked() {
     return st;
   }
 
-  st = BanjoDevice::Create(parent_, this);
-  if (st != ZX_OK) {
-    return st;
+  auto result = BanjoDevice::Create(parent_, this);
+  if (result.is_error()) {
+    return result.status_value();
   }
 
-  st = FidlDevice::Create(parent_, this);
-  if (st != ZX_OK) {
-    return st;
+  result = FidlDevice::Create(parent_, this);
+  if (result.is_error()) {
+    return result.status_value();
   }
 
   disable.cancel();

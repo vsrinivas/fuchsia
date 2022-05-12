@@ -34,16 +34,16 @@ void FidlDevice::Bind(fidl::ServerEnd<fuchsia_hardware_pci::Device> request) {
       fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(request), this);
 }
 
-zx_status_t FidlDevice::Create(zx_device_t* parent, pci::Device* device) {
+zx::status<> FidlDevice::Create(zx_device_t* parent, pci::Device* device) {
   fbl::AllocChecker ac;
   std::unique_ptr<FidlDevice> fidl_dev(new (&ac) FidlDevice(parent, device));
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {
-    return endpoints.status_value();
+    return endpoints.take_error();
   }
 
   auto pci_bind_topo = static_cast<uint32_t>(
@@ -77,7 +77,7 @@ zx_device_prop_t pci_device_props[] = {
   zx_status_t status = fidl_dev->outgoing_dir().Serve(std::move(endpoints->server));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to service the outoing directory");
-    return status;
+    return zx::error(status);
   }
 
   // Create an isolated devhost to load the proxy pci driver containing the PciProxy
@@ -91,14 +91,14 @@ zx_device_prop_t pci_device_props[] = {
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to create pci fidl fragment %s: %s", device->config()->addr(),
            zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
 
   auto fidl_dev_unowned = fidl_dev.release();
   // TODO(fxbug.dev/93333): Remove this once DFv2 is stabilised.
-  bool is_dfv2 = device_is_dfv2(fidl_dev_unowned->zxdev_ptr());
+  bool is_dfv2 = device_is_dfv2(fidl_dev_unowned->zxdev());
   if (is_dfv2) {
-    return ZX_OK;
+    return zx::ok();
   }
 
   const zx_bind_inst_t pci_fragment_match[] = {
@@ -158,8 +158,10 @@ zx_device_prop_t pci_device_props[] = {
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] Failed to create pci fidl composite: %s", device->config()->addr(),
            zx_status_get_string(status));
+    return zx::error(status);
   }
-  return status;
+
+  return zx::ok();
 }
 
 void FidlDevice::GetDeviceInfo(GetDeviceInfoRequestView request,

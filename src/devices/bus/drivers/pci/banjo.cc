@@ -38,11 +38,11 @@
 
 namespace pci {
 
-zx_status_t BanjoDevice::Create(zx_device_t* parent, pci::Device* device) {
+zx::status<> BanjoDevice::Create(zx_device_t* parent, pci::Device* device) {
   fbl::AllocChecker ac;
   std::unique_ptr<BanjoDevice> banjo_dev(new (&ac) BanjoDevice(parent, std::move(device)));
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   auto pci_dev = banjo_dev->device();
 
@@ -70,14 +70,14 @@ zx_status_t BanjoDevice::Create(zx_device_t* parent, pci::Device* device) {
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] Failed to create pci banjo fragment: %s", pci_dev->config()->addr(),
            zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
 
   auto banjo_dev_unowned = banjo_dev.release();
   // TODO(fxbug.dev/93333): Remove this once DFv2 is stabilised.
-  bool is_dfv2 = device_is_dfv2(banjo_dev_unowned->zxdev_ptr());
+  bool is_dfv2 = device_is_dfv2(banjo_dev_unowned->zxdev());
   if (is_dfv2) {
-    return ZX_OK;
+    return zx::ok();
   }
 
   const zx_bind_inst_t pci_fragment_match[] = {
@@ -137,9 +137,10 @@ zx_status_t BanjoDevice::Create(zx_device_t* parent, pci::Device* device) {
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] Failed to create pci banjo composite: %s", pci_dev->config()->addr(),
            zx_status_get_string(status));
+    return zx::error(status);
   }
 
-  return status;
+  return zx::ok();
 }
 
 zx_status_t BanjoDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
@@ -221,7 +222,7 @@ zx_status_t BanjoDevice::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   // access.
   if (device_->capabilities().msix) {
     zx::status<size_t> result = device_->capabilities().msix->GetBarDataSize(bar);
-    if (!result.is_ok()) {
+    if (result.is_error()) {
       return LOG_STATUS(DEBUG, result.status_value(), "%u", bar_id);
     }
     bar_size = result.value();
@@ -249,7 +250,7 @@ zx_status_t BanjoDevice::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
     }
   }
 
-  if (!result.is_ok()) {
+  if (result.is_error()) {
     zxlogf(ERROR, "[%s] Failed to create %s for BAR %u (type = %s, range = [%#lx, %#lx)): %s",
            device_->config()->addr(), (bar.is_mmio) ? "VMO" : "resource", bar_id,
            (bar.is_mmio) ? "MMIO" : "IO", bar.address, bar.address + bar.size,
