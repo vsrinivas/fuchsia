@@ -571,6 +571,15 @@
         "strictness": "strict"
     },
     {
+        "declaration": "(fuchsia.bluetooth.sys/InputCapability input,fuchsia.bluetooth.sys/OutputCapability output,client_end:fuchsia.bluetooth.sys/PairingDelegate delegate)",
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Pairing.SetPairingDelegate"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.sys/Pairing"
+    },
+    {
         "declaration": " -> (fuchsia.bluetooth/PeerId id,fuchsia.bluetooth.sys/PairingKeypress keypress)",
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.sys/PairingDelegate.OnLocalKeypress"
