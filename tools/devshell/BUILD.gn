@@ -49,11 +49,7 @@ if (!is_host) {
 # collects metadata (into tests.json) from the default toolchain.
 group("tests") {
   testonly = true
-  deps = [
-    # TODO(https://fxbug.dev/99920): Re-enable these tests once they use the
-    # Fuchsia vendored python.
-    # ":fx_script_tests($host_toolchain)"
-  ]
+  deps = [ ":fx_script_tests($host_toolchain)" ]
 }
 
 # This is the list of test scripts that should be run to
