@@ -31,6 +31,7 @@ executable("crasher_exe") {
   deps = [
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:cpp-macros",
     "//src/zircon/lib/zircon",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

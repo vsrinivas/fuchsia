@@ -13,6 +13,7 @@
 // defined in cpp_specific.cpp.
 int cpp_out_of_mem(void);
 int llcpp_channel_overflow(void);
+int cpp_log_fatal(void);
 
 typedef struct {
   const char* name;
@@ -95,6 +96,8 @@ int undefined(volatile unsigned int* unused) {
 int oom(volatile unsigned int* unused) { return cpp_out_of_mem(); }
 
 int cpp_channel_overflow(volatile unsigned int* unused) { return llcpp_channel_overflow(); }
+
+int log_fatal(volatile unsigned int* unused) { return cpp_log_fatal(); }
 
 #include <unistd.h>
 
@@ -292,6 +295,7 @@ command_t commands[] = {
     {"write0_mt", blind_write_multithreaded,
      "write to address 0x0 in one thread, sleeping in 5 others"},
     {"abort", call_abort, "call abort()"},
+    {"log_fatal", log_fatal, "log a message with a fatal status"},
     {NULL, NULL, NULL},
 };
 

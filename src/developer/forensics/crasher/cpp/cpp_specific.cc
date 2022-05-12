@@ -5,10 +5,10 @@
 #include <fidl/fuchsia.feedback/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <new>
-
-#include "lib/fidl/llcpp/wire_messaging.h"
 
 // 512MB structure.
 struct BigStruct {
@@ -39,5 +39,10 @@ extern "C" int llcpp_channel_overflow() {
 
   loop.Run();
 
+  return 0;
+}
+
+extern "C" int cpp_log_fatal() {
+  FX_LOGS(FATAL) << "Logging fatal";
   return 0;
 }
