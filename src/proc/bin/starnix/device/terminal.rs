@@ -8,7 +8,8 @@ use std::sync::{Arc, Weak};
 
 use crate::fs::devpts::*;
 use crate::fs::*;
-use crate::lock::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use crate::lock::{Mutex, RwLock};
+use crate::mutable_state::*;
 use crate::task::*;
 use crate::types::*;
 
@@ -50,6 +51,18 @@ impl TTYState {
     }
 }
 
+#[derive(Debug)]
+pub struct TerminalMutableState {
+    /// |true| is the terminal is locked.
+    pub locked: bool,
+
+    /// The controlling sessions for the main side of the terminal.
+    main_controlling_session: Option<ControllingSession>,
+
+    /// The controlling sessions for the replica side of the terminal.
+    replica_controlling_session: Option<ControllingSession>,
+}
+
 /// State of a given terminal. This object handles both the main and the replica terminal.
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -61,12 +74,8 @@ pub struct Terminal {
     /// The identifier of the terminal.
     pub id: u32,
 
-    /// |true| is the terminal is locked.
-    pub locked: RwLock<bool>,
-
-    /// The controlling sessions for the main and replica side of the terminal.
-    main_controlling_session: RwLock<Option<ControllingSession>>,
-    replica_controlling_session: RwLock<Option<ControllingSession>>,
+    /// The mutable state of the Terminal.
+    mutable_state: RwLock<TerminalMutableState>,
 }
 
 impl Terminal {
@@ -74,40 +83,42 @@ impl Terminal {
         Self {
             state,
             id,
-            locked: RwLock::new(true),
-            main_controlling_session: RwLock::new(None),
-            replica_controlling_session: RwLock::new(None),
+            mutable_state: RwLock::new(TerminalMutableState {
+                locked: true,
+                main_controlling_session: None,
+                replica_controlling_session: None,
+            }),
         }
     }
 
+    state_accessor!(Terminal, mutable_state);
+}
+
+state_implementation!(Terminal, TerminalMutableState, {
     /// Returns the controlling session of the terminal. |is_main| is used to choose whether the
     /// caller needs the controlling session of the main part of the terminal or the replica.
-    pub fn get_controlling_session<'a>(
-        &'a self,
-        is_main: bool,
-    ) -> RwLockReadGuard<'a, Option<ControllingSession>> {
-        return if is_main {
-            self.main_controlling_session.read()
+    pub fn get_controlling_session(&self, is_main: bool) -> &Option<ControllingSession> {
+        if is_main {
+            &self.main_controlling_session
         } else {
-            self.replica_controlling_session.read()
-        };
+            &self.replica_controlling_session
+        }
     }
 
     /// Returns a mutable reference to the session of the terminal. |is_main| is used to choose
     /// whether the caller needs the controlling session of the main part of the terminal or the
     /// replica.
-
-    pub fn get_controlling_session_mut<'a>(
-        &'a self,
+    pub fn get_controlling_session_mut(
+        &mut self,
         is_main: bool,
-    ) -> RwLockWriteGuard<'a, Option<ControllingSession>> {
+    ) -> &mut Option<ControllingSession> {
         return if is_main {
-            self.main_controlling_session.write()
+            &mut self.main_controlling_session
         } else {
-            self.replica_controlling_session.write()
+            &mut self.replica_controlling_session
         };
     }
-}
+});
 
 impl Drop for Terminal {
     fn drop(&mut self) {

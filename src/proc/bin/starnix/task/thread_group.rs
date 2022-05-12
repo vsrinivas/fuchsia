@@ -393,7 +393,8 @@ impl ThreadGroup {
     ) -> Result<pid_t, Errno> {
         let state = self.read();
         let process_group = &state.process_group;
-        let controlling_session = terminal.get_controlling_session(is_main);
+        let terminal_state = terminal.read();
+        let controlling_session = terminal_state.get_controlling_session(is_main);
 
         // "When fd does not refer to the controlling terminal of the calling
         // process, -1 is returned" - tcgetpgrp(3)
@@ -415,7 +416,8 @@ impl ThreadGroup {
             let pids = self.kernel.pids.read();
             let state = self.read();
             process_group = Arc::clone(&state.process_group);
-            let mut controlling_session = terminal.get_controlling_session_mut(is_main);
+            let mut terminal_state = terminal.write();
+            let controlling_session = terminal_state.get_controlling_session_mut(is_main);
             let cs = Self::check_controlling_session(&process_group.session, &controlling_session)?;
 
             // pgid must be positive.
@@ -457,7 +459,8 @@ impl ThreadGroup {
         // Keep locks to ensure atomicity.
         let state = self.read();
         let process_group = &state.process_group;
-        let mut controlling_session = terminal.get_controlling_session_mut(is_main);
+        let mut terminal_state = terminal.write();
+        let controlling_session = terminal_state.get_controlling_session_mut(is_main);
         let mut session_writer = process_group.session.write();
 
         // "The calling process must be a session leader and not have a
@@ -512,7 +515,8 @@ impl ThreadGroup {
             // Keep locks to ensure atomicity.
             let state = self.read();
             process_group = Arc::clone(&state.process_group);
-            let mut controlling_session = terminal.get_controlling_session_mut(is_main);
+            let mut terminal_state = terminal.write();
+            let controlling_session = terminal_state.get_controlling_session_mut(is_main);
             let mut session_writer = process_group.session.write();
 
             // tty must be the controlling terminal.

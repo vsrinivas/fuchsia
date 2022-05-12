@@ -193,7 +193,7 @@ impl FileOps for DevPtmxFile {
             }
             TIOCGPTLCK => {
                 // Get the lock status.
-                let value = if *self.terminal.locked.read() { 1 } else { 0 };
+                let value = if self.terminal.read().locked { 1 } else { 0 };
                 current_task.mm.write_object(UserRef::<i32>::new(user_addr), &value)?;
                 Ok(SUCCESS)
             }
@@ -201,7 +201,7 @@ impl FileOps for DevPtmxFile {
                 // Lock/Unlock the terminal.
                 let mut value = 0;
                 current_task.mm.read_object(UserRef::<i32>::new(user_addr), &mut value)?;
-                *self.terminal.locked.write() = value != 0;
+                self.terminal.write().locked = value != 0;
                 Ok(SUCCESS)
             }
             _ => shared_ioctl(&self.terminal, true, _file, current_task, request, user_addr),
@@ -229,7 +229,7 @@ impl DeviceOps for DevPts {
     ) -> Result<Box<dyn FileOps>, Errno> {
         let pts_id = (id.major() - DEVPTS_FIRST_MAJOR) * 256 + id.minor();
         let terminal = self.state.terminals.read().get(&pts_id).ok_or(EIO)?.upgrade().ok_or(EIO)?;
-        if *terminal.locked.read() {
+        if terminal.read().locked {
             return error!(EIO);
         }
         if !flags.contains(OpenFlags::NOCTTY) {
@@ -758,7 +758,12 @@ mod tests {
                 .terminal,
         );
         assert_eq!(
-            terminal.get_controlling_session(false).as_ref().unwrap().foregound_process_group,
+            terminal
+                .read()
+                .get_controlling_session(false)
+                .as_ref()
+                .unwrap()
+                .foregound_process_group,
             task2_pgid
         );
     }
