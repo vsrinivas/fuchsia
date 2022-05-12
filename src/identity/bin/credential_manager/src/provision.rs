@@ -6,8 +6,9 @@ use {
     crate::{
         hash_tree::{
             HashTree, HashTreeError, HashTreeStorage, BITS_PER_LEVEL, CHILDREN_PER_NODE,
-            TREE_HEIGHT,
+            LABEL_LENGTH, TREE_HEIGHT,
         },
+        label_generator::Label,
         lookup_table::LookupTable,
         pinweaver::PinWeaverProtocol,
     },
@@ -44,7 +45,9 @@ pub async fn provision<HS: HashTreeStorage, PW: PinWeaverProtocol, LT: LookupTab
     pinweaver: &PW,
 ) -> Result<HashTree, CredentialError> {
     match hash_tree_storage.load() {
-        Ok(hash_tree) => synchronize_state(hash_tree, pinweaver).await,
+        Ok(hash_tree) => {
+            synchronize_state(hash_tree, hash_tree_storage, lookup_table, pinweaver).await
+        }
         Err(HashTreeError::DataStoreNotFound) => {
             info!("Could not read hash tree file, resetting");
             reset_state(hash_tree_storage, lookup_table, pinweaver).await
@@ -108,18 +111,92 @@ async fn get_sync_state<PW: PinWeaverProtocol>(
 /// Detects if there is a difference between the stored root hash in the |hash_tree|
 /// and the root_hash returned by |pinweaver|. If the root hashes do not match then
 /// a recovery flow is entered to attempt to resync the chip with the stored state.
-async fn synchronize_state<PW: PinWeaverProtocol>(
+async fn synchronize_state<HS: HashTreeStorage, LT: LookupTable, PW: PinWeaverProtocol>(
     hash_tree: HashTree,
+    hash_tree_storage: &HS,
+    lookup_table: &mut LT,
     pinweaver: &PW,
 ) -> Result<HashTree, CredentialError> {
     let sync_state = get_sync_state(hash_tree, pinweaver).await?;
     match sync_state {
         HashTreeSyncState::Current(current_tree) => Ok(current_tree),
-        HashTreeSyncState::OutOfSync(_out_of_sync_tree, _log_to_replay) => {
-            // TODO(benwright): Support the recovery scenario.
-            Err(CredentialError::UnsupportedOperation)
+        HashTreeSyncState::OutOfSync(out_of_sync_tree, log_to_replay) => {
+            let updated_hash_tree =
+                replay_state(out_of_sync_tree, lookup_table, pinweaver, log_to_replay).await?;
+            hash_tree_storage.store(&updated_hash_tree)?;
+            Ok(updated_hash_tree)
         }
         HashTreeSyncState::Unrecoverable => Err(CredentialError::CorruptedMetadata),
+    }
+}
+
+/// Replay state is responsible for moving the disk persisted |hash_tree| one operation
+/// forward in time from the information provided in the |log_to_replay|. A given CR50
+/// LogEntry can define one of four missed operations which the replay_state function
+/// is responsible for reproducing locally so that the tree is in sync.
+async fn replay_state<LT: LookupTable, PW: PinWeaverProtocol>(
+    mut hash_tree: HashTree,
+    lookup_table: &mut LT,
+    pinweaver: &PW,
+    log_to_replay: fcr50::LogEntry,
+) -> Result<HashTree, CredentialError> {
+    let message_type = log_to_replay.message_type.ok_or(CredentialError::InternalError)?;
+    let root_hash = log_to_replay.root_hash.ok_or(CredentialError::InternalError)?;
+    // TODO(benwright) Add inspect reporting.
+    match &message_type {
+        fcr50::MessageType::InsertLeaf => {
+            let label = Label::leaf_label(
+                log_to_replay.label.ok_or(CredentialError::InternalError)?,
+                LABEL_LENGTH,
+            );
+            info!("Replaying InsertLeaf with label: {:?}", label);
+            let leaf_hmac = log_to_replay
+                .entry_data
+                .ok_or(CredentialError::InternalError)?
+                .leaf_hmac
+                .ok_or(CredentialError::InternalError)?;
+            hash_tree.update_leaf_hash(&label, leaf_hmac)?;
+        }
+        fcr50::MessageType::RemoveLeaf => {
+            let label = Label::leaf_label(
+                log_to_replay.label.ok_or(CredentialError::InternalError)?,
+                LABEL_LENGTH,
+            );
+            info!("Replaying RemoveLeaf with label: {:?}", label);
+            hash_tree.delete_leaf(&label)?;
+        }
+        fcr50::MessageType::ResetTree => {
+            info!("Replaying ResetTree");
+            hash_tree.reset()?;
+        }
+        fcr50::MessageType::TryAuth => {
+            let label = Label::leaf_label(
+                log_to_replay.label.ok_or(CredentialError::InternalError)?,
+                LABEL_LENGTH,
+            );
+            info!("Replaying TryAuth with label: {:?}", label);
+            let h_aux = hash_tree.get_auxiliary_hashes_flattened(&label)?;
+            let metadata = lookup_table.read(&label).await?.bytes;
+            let response = pinweaver.log_replay(root_hash, h_aux, metadata).await?;
+            hash_tree.update_leaf_hash(
+                &label,
+                response.leaf_hash.ok_or(CredentialError::InternalError)?,
+            )?;
+            lookup_table
+                .write(&label, response.cred_metadata.ok_or(CredentialError::InternalError)?)
+                .await?;
+        }
+    };
+    let root_hash = log_to_replay.root_hash.ok_or(CredentialError::InternalError)?;
+    let local_root_hash = hash_tree.get_root_hash()?;
+    if *local_root_hash == root_hash {
+        Ok(hash_tree)
+    } else {
+        error!(
+            "Failed to resync hash tree local tree: {:?} does not match cr50: {:?}",
+            root_hash, local_root_hash
+        );
+        Err(CredentialError::CorruptedMetadata)
     }
 }
 
@@ -127,7 +204,7 @@ async fn synchronize_state<PW: PinWeaverProtocol>(
 mod test {
     use super::*;
     use crate::{
-        hash_tree::MockHashTreeStorage, lookup_table::MockLookupTable,
+        hash_tree::MockHashTreeStorage, lookup_table::MockLookupTable, lookup_table::ReadResult,
         pinweaver::MockPinWeaverProtocol,
     };
     use assert_matches::assert_matches;
@@ -203,6 +280,200 @@ mod test {
         storage.expect_load().times(1).returning(|| {
             Ok(HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree"))
         });
+        let result = provision(&storage, &mut lookup_table, &pinweaver).await;
+        assert_matches!(result, Err(CredentialError::CorruptedMetadata));
+    }
+
+    #[fuchsia::test]
+    async fn test_replay_reset_tree() {
+        let mut pinweaver = MockPinWeaverProtocol::new();
+        let mut lookup_table = MockLookupTable::new();
+        let mut storage = MockHashTreeStorage::new();
+        let hash_tree =
+            HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
+        let root_hash = hash_tree.get_root_hash().unwrap().clone();
+        pinweaver.expect_get_log().times(1).returning(move |&_| {
+            Ok(vec![
+                fcr50::LogEntry { root_hash: Some(root_hash.clone()), ..fcr50::LogEntry::EMPTY },
+                fcr50::LogEntry {
+                    root_hash: Some(root_hash.clone()),
+                    message_type: Some(fcr50::MessageType::ResetTree),
+                    ..fcr50::LogEntry::EMPTY
+                },
+            ])
+        });
+        storage.expect_load().times(1).return_once(move || Ok(hash_tree));
+        storage.expect_store().times(1).return_once(|_| Ok(()));
+        let result = provision(&storage, &mut lookup_table, &pinweaver).await;
+        assert_matches!(result, Ok(_));
+    }
+
+    #[fuchsia::test]
+    async fn test_replay_insert_leaf() {
+        let mut pinweaver = MockPinWeaverProtocol::new();
+        let mut lookup_table = MockLookupTable::new();
+        let mut storage = MockHashTreeStorage::new();
+        let hash_tree =
+            HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
+        let root_hash = hash_tree.get_root_hash().unwrap().clone();
+
+        // Replay the expected disk operations that were missed in this recovery flow.
+        let mut expected_hash_tree =
+            HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
+        let expected_label = Label::leaf_label(2, LABEL_LENGTH);
+        let expected_leaf_hmac = [1; 32];
+        expected_hash_tree
+            .update_leaf_hash(&expected_label, expected_leaf_hmac)
+            .expect("failed to insert leaf node");
+        let expected_root_hash = expected_hash_tree.get_root_hash().unwrap().clone();
+
+        pinweaver.expect_get_log().times(1).returning(move |&_| {
+            Ok(vec![
+                fcr50::LogEntry { root_hash: Some(root_hash), ..fcr50::LogEntry::EMPTY },
+                fcr50::LogEntry {
+                    root_hash: Some(expected_root_hash),
+                    message_type: Some(fcr50::MessageType::InsertLeaf),
+                    label: Some(expected_label.value()),
+                    entry_data: Some(fcr50::EntryData {
+                        leaf_hmac: Some(expected_leaf_hmac),
+                        ..fcr50::EntryData::EMPTY
+                    }),
+                    ..fcr50::LogEntry::EMPTY
+                },
+            ])
+        });
+        storage.expect_load().times(1).return_once(move || Ok(hash_tree));
+        storage.expect_store().times(1).return_once(|_| Ok(()));
+        let result = provision(&storage, &mut lookup_table, &pinweaver).await;
+        assert_matches!(result, Ok(_));
+    }
+
+    #[fuchsia::test]
+    async fn test_replay_remove_leaf() {
+        let mut pinweaver = MockPinWeaverProtocol::new();
+        let mut lookup_table = MockLookupTable::new();
+        let mut storage = MockHashTreeStorage::new();
+
+        let expected_label = Label::leaf_label(2, LABEL_LENGTH);
+        let expected_leaf_hmac = [1; 32];
+
+        // Our hash tree state should be synced with inserting thee new leaf hash.
+        let mut hash_tree =
+            HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
+        hash_tree
+            .update_leaf_hash(&expected_label, expected_leaf_hmac)
+            .expect("failed to insert leaf node");
+        let root_hash = hash_tree.get_root_hash().unwrap().clone();
+
+        // The expected hash tree state should have deleted the leaf.
+        let mut expected_hash_tree =
+            HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
+        expected_hash_tree
+            .update_leaf_hash(&expected_label, expected_leaf_hmac)
+            .expect("failed to insert leaf node");
+        expected_hash_tree.delete_leaf(&expected_label).expect("failed to delete leaf node");
+        let expected_root_hash = expected_hash_tree.get_root_hash().unwrap().clone();
+
+        pinweaver.expect_get_log().times(1).returning(move |&_| {
+            Ok(vec![
+                fcr50::LogEntry { root_hash: Some(root_hash), ..fcr50::LogEntry::EMPTY },
+                fcr50::LogEntry {
+                    root_hash: Some(expected_root_hash),
+                    message_type: Some(fcr50::MessageType::RemoveLeaf),
+                    label: Some(expected_label.value()),
+                    ..fcr50::LogEntry::EMPTY
+                },
+            ])
+        });
+        storage.expect_load().times(1).return_once(move || Ok(hash_tree));
+        storage.expect_store().times(1).return_once(|_| Ok(()));
+        let result = provision(&storage, &mut lookup_table, &pinweaver).await;
+        assert_matches!(result, Ok(_));
+    }
+
+    #[fuchsia::test]
+    async fn test_replay_try_auth() {
+        let mut pinweaver = MockPinWeaverProtocol::new();
+        let mut lookup_table = MockLookupTable::new();
+        let mut storage = MockHashTreeStorage::new();
+
+        let expected_label = Label::leaf_label(2, LABEL_LENGTH);
+        let expected_leaf_hmac = [1; 32];
+        let expected_leaf_hmac_after_auth = [2; 32];
+        let fake_metadata: Vec<u8> = vec![3; 128];
+        let fake_metadata_clone = fake_metadata.clone();
+
+        // Our hash tree state should contain one credential.
+        let mut hash_tree =
+            HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
+        hash_tree
+            .update_leaf_hash(&expected_label, expected_leaf_hmac)
+            .expect("failed to insert leaf node");
+        let root_hash = hash_tree.get_root_hash().unwrap().clone();
+
+        // Updating the expected hash tree twice simulates updating the credential after a TryAuth
+        // operation.
+        let mut expected_hash_tree =
+            HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
+        expected_hash_tree
+            .update_leaf_hash(&expected_label, expected_leaf_hmac)
+            .expect("failed to insert leaf node");
+        expected_hash_tree
+            .update_leaf_hash(&expected_label, expected_leaf_hmac_after_auth)
+            .expect("failed to insert leaf node");
+        let expected_root_hash = expected_hash_tree.get_root_hash().unwrap().clone();
+
+        lookup_table
+            .expect_read()
+            .times(1)
+            .return_once(|_| Ok(ReadResult { version: 1, bytes: fake_metadata }));
+        lookup_table.expect_write().times(1).return_once(|_, _| Ok(()));
+        pinweaver.expect_log_replay().times(1).return_once(move |root_hash, _, metadata| {
+            assert_eq!(root_hash, expected_root_hash);
+            assert_eq!(metadata, fake_metadata_clone);
+            Ok(fcr50::LogReplayResponse {
+                cred_metadata: Some(vec![1; 32]),
+                leaf_hash: Some(expected_leaf_hmac_after_auth.clone()),
+                ..fcr50::LogReplayResponse::EMPTY
+            })
+        });
+        pinweaver.expect_get_log().times(1).returning(move |&_| {
+            Ok(vec![
+                fcr50::LogEntry { root_hash: Some(root_hash), ..fcr50::LogEntry::EMPTY },
+                fcr50::LogEntry {
+                    root_hash: Some(expected_root_hash.clone()),
+                    message_type: Some(fcr50::MessageType::TryAuth),
+                    label: Some(expected_label.value()),
+                    ..fcr50::LogEntry::EMPTY
+                },
+            ])
+        });
+        storage.expect_load().times(1).return_once(move || Ok(hash_tree));
+        storage.expect_store().times(1).return_once(|_| Ok(()));
+        let result = provision(&storage, &mut lookup_table, &pinweaver).await;
+        assert_matches!(result, Ok(_));
+    }
+
+    // Tests that a failed replay does not write to disk.
+    #[fuchsia::test]
+    async fn test_replay_failed_does_not_write() {
+        let mut pinweaver = MockPinWeaverProtocol::new();
+        let mut lookup_table = MockLookupTable::new();
+        let mut storage = MockHashTreeStorage::new();
+        let hash_tree =
+            HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
+        let root_hash = hash_tree.get_root_hash().unwrap().clone();
+        pinweaver.expect_get_log().times(1).returning(move |&_| {
+            Ok(vec![
+                fcr50::LogEntry { root_hash: Some(root_hash.clone()), ..fcr50::LogEntry::EMPTY },
+                fcr50::LogEntry {
+                    root_hash: Some([1; 32]),
+                    message_type: Some(fcr50::MessageType::ResetTree),
+                    ..fcr50::LogEntry::EMPTY
+                },
+            ])
+        });
+        storage.expect_load().times(1).return_once(move || Ok(hash_tree));
         let result = provision(&storage, &mut lookup_table, &pinweaver).await;
         assert_matches!(result, Err(CredentialError::CorruptedMetadata));
     }
