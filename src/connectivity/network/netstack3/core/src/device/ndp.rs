@@ -1391,10 +1391,12 @@ mod tests {
         testutil::{parse_ethernet_frame, parse_icmp_packet_in_ip_packet_in_ethernet_frame},
         utils::NonZeroDuration,
     };
-    use rand::RngCore as _;
+    use rand::RngCore;
 
     use crate::{
-        algorithm::{generate_opaque_interface_identifier, OpaqueIidNonce},
+        algorithm::{
+            generate_opaque_interface_identifier, OpaqueIidNonce, STABLE_IID_SECRET_KEY_BYTES,
+        },
         context::{
             testutil::{
                 DummyCtx, DummyInstant, DummyInstantRange, DummyTimerCtxExt as _, StepResult,
@@ -1414,7 +1416,7 @@ mod tests {
                 is_ipv6_routing_enabled,
                 router_solicitation::{MAX_RTR_SOLICITATION_DELAY, RTR_SOLICITATION_INTERVAL},
                 set_ipv6_routing_enabled,
-                slaac::{SlaacConfiguration, SlaacTimerId},
+                slaac::{SlaacConfiguration, SlaacTimerId, TemporarySlaacAddressConfiguration},
                 state::{AddrConfig, Ipv6AddressEntry, Lifetime, TemporarySlaacConfig},
                 Ipv6DeviceTimerId,
             },
@@ -3976,6 +3978,26 @@ mod tests {
         }
     }
 
+    /// Enables temporary addressing with the provided parameters.
+    ///
+    /// `rng` is used to initialize the key that is used to generate new addresses.
+    fn enable_temporary_addresses<R: RngCore>(
+        config: &mut SlaacConfiguration,
+        rng: &mut R,
+        max_valid_lifetime: NonZeroDuration,
+        max_preferred_lifetime: NonZeroDuration,
+        max_generation_retries: u8,
+    ) {
+        let mut secret_key = [0; STABLE_IID_SECRET_KEY_BYTES];
+        rng.fill_bytes(&mut secret_key);
+        config.temporary_address_configuration = Some(TemporarySlaacAddressConfiguration {
+            temp_valid_lifetime: max_valid_lifetime,
+            temp_preferred_lifetime: max_preferred_lifetime,
+            temp_idgen_retries: max_generation_retries,
+            secret_key,
+        })
+    }
+
     fn initialize_with_temporary_addresses_enabled(
     ) -> (crate::testutil::DummyCtx, DeviceId, SlaacConfiguration) {
         set_logger_for_test();
@@ -3989,7 +4011,8 @@ mod tests {
         let max_valid_lifetime = Duration::from_secs(60 * 60);
         let max_preferred_lifetime = Duration::from_secs(30 * 60);
         let idgen_retries = 3;
-        ipv6_config.slaac_config.enable_temporary_addresses(
+        enable_temporary_addresses(
+            &mut ipv6_config.slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(max_valid_lifetime).unwrap(),
             NonZeroDuration::new(max_preferred_lifetime).unwrap(),
@@ -4102,7 +4125,7 @@ mod tests {
         let (mut ctx, device, slaac_config) = initialize_with_temporary_addresses_enabled();
 
         let max_valid_lifetime =
-            slaac_config.get_temporary_address_configuration().unwrap().temp_valid_lifetime.get();
+            slaac_config.temporary_address_configuration.unwrap().temp_valid_lifetime.get();
         let config = Ipv6::DUMMY_CONFIG;
 
         let src_mac = config.remote_mac;
@@ -4115,7 +4138,7 @@ mod tests {
             // Clone the RNG so we can see what the next value (which will be
             // used to generate the temporary address) will be.
             OpaqueIidNonce::Random(ctx.ctx.rng().clone().next_u64()),
-            &slaac_config.get_temporary_address_configuration().unwrap().secret_key,
+            &slaac_config.temporary_address_configuration.unwrap().secret_key,
         );
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&interface_identifier.to_be_bytes()[..8]);
@@ -4769,7 +4792,8 @@ mod tests {
 
         let idgen_retries = 3;
 
-        ipv6_config.slaac_config.enable_temporary_addresses(
+        enable_temporary_addresses(
+            &mut ipv6_config.slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(MAX_VALID_LIFETIME).unwrap(),
             NonZeroDuration::new(MAX_PREFERRED_LIFETIME).unwrap(),
@@ -4896,7 +4920,8 @@ mod tests {
 
         let idgen_retries = 3;
 
-        ipv6_config.slaac_config.enable_temporary_addresses(
+        enable_temporary_addresses(
+            &mut ipv6_config.slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(MAX_VALID_LIFETIME).unwrap(),
             NonZeroDuration::new(MAX_PREFERRED_LIFETIME).unwrap(),
@@ -4988,7 +5013,8 @@ mod tests {
         const MAX_PREFERRED_LIFETIME: Duration = Duration::from_secs(5000);
 
         let mut ipv6_config = crate::ip::device::get_ipv6_configuration(&ctx, device);
-        ipv6_config.slaac_config.enable_temporary_addresses(
+        enable_temporary_addresses(
+            &mut ipv6_config.slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(MAX_VALID_LIFETIME).unwrap(),
             NonZeroDuration::new(MAX_PREFERRED_LIFETIME).unwrap(),
@@ -5124,7 +5150,8 @@ mod tests {
         const MAX_VALID_LIFETIME: Duration = Duration::from_secs(15000);
         const MAX_PREFERRED_LIFETIME: Duration = Duration::from_secs(5000);
 
-        ipv6_config.slaac_config.enable_temporary_addresses(
+        enable_temporary_addresses(
+            &mut ipv6_config.slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(MAX_VALID_LIFETIME).unwrap(),
             NonZeroDuration::new(MAX_PREFERRED_LIFETIME).unwrap(),
@@ -5285,7 +5312,8 @@ mod tests {
         let max_preferred_lifetime = Duration::from_secs(5000);
 
         ipv6_config.dad_transmits = NonZeroU8::new(1);
-        ipv6_config.slaac_config.enable_temporary_addresses(
+        enable_temporary_addresses(
+            &mut ipv6_config.slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(MAX_VALID_LIFETIME).unwrap(),
             NonZeroDuration::new(max_preferred_lifetime).unwrap(),
@@ -5346,7 +5374,8 @@ mod tests {
             .unwrap();
 
         let max_preferred_lifetime = max_preferred_lifetime * 4 / 5;
-        ipv6_config.slaac_config.enable_temporary_addresses(
+        enable_temporary_addresses(
+            &mut ipv6_config.slaac_config,
             ctx.rng_mut(),
             NonZeroDuration::new(MAX_VALID_LIFETIME).unwrap(),
             NonZeroDuration::new(max_preferred_lifetime).unwrap(),
@@ -5404,7 +5433,7 @@ mod tests {
         let (mut ctx, device, config) = initialize_with_temporary_addresses_enabled();
         let now = ctx.now();
         let start = now;
-        let temporary_address_config = config.get_temporary_address_configuration().unwrap();
+        let temporary_address_config = config.temporary_address_configuration.unwrap();
 
         let max_valid_lifetime = temporary_address_config.temp_valid_lifetime;
         let max_valid_until = now.checked_add(max_valid_lifetime.get()).unwrap();
@@ -5507,7 +5536,8 @@ mod tests {
 
         let ipv6_config = {
             let mut config = crate::ip::device::get_ipv6_configuration(&ctx, device);
-            config.slaac_config.enable_temporary_addresses(
+            enable_temporary_addresses(
+                &mut config.slaac_config,
                 ctx.rng_mut(),
                 max_valid_lifetime,
                 max_preferred_lifetime,

@@ -312,56 +312,58 @@ impl<C: SlaacContext> SlaacHandler for C {
                     desync_factor,
                     dad_counter: _,
                 }) => {
-                    let (valid_for, preferred_for, entry_valid_until) = match self
-                        .get_config(device_id)
-                        .get_temporary_address_configuration()
-                    {
-                        // Since it's possible to change NDP configuration for a
-                        // device during runtime, we can end up here, with a
-                        // temporary address on an interface even though temporary
-                        // addressing is disabled. Setting its validity period to 0
-                        // will force it to be removed ASAP.
-                        None => (
-                            ValidLifetimeBound::FromMaxBound(Duration::ZERO),
-                            None,
-                            *entry_valid_until,
-                        ),
-                        Some(temporary_address_config) => {
-                            // RFC 8981 Section 3.4.2:
-                            //   When updating the preferred lifetime of an existing
-                            //   temporary address, it would be set to expire at
-                            //   whichever time is earlier: the time indicated by
-                            //   the received lifetime or (CREATION_TIME +
-                            //   TEMP_PREFERRED_LIFETIME - DESYNC_FACTOR). A similar
-                            //   approach can be used with the valid lifetime.
-                            let preferred_for = preferred_lifetime.and_then(|preferred_lifetime| {
-                                temporary_address_config
-                                    .temp_preferred_lifetime
-                                    .get()
-                                    .checked_sub(now.duration_since(*creation_time))
-                                    .and_then(|p| p.checked_sub(*desync_factor))
-                                    .and_then(NonZeroDuration::new)
-                                    .map(|d| preferred_lifetime.min_finite_duration(d))
-                            });
-                            // Per RFC 8981 Section 3.4.1, `desync_factor` is only
-                            // used for preferred lifetime:
-                            //   [...] with the overall constraint that no temporary
-                            //   addresses should ever remain "valid" or "preferred"
-                            //   for a time longer than (TEMP_VALID_LIFETIME) or
-                            //   (TEMP_PREFERRED_LIFETIME - DESYNC_FACTOR),
-                            //   respectively.
-                            let since_creation = now.duration_since(*creation_time);
-                            let configured_max_lifetime =
-                                temporary_address_config.temp_valid_lifetime.get();
-                            let max_valid_lifetime = if since_creation > configured_max_lifetime {
-                                Duration::ZERO
-                            } else {
-                                configured_max_lifetime - since_creation
-                            };
+                    let SlaacConfiguration { temporary_address_configuration } =
+                        self.get_config(device_id);
+                    let (valid_for, preferred_for, entry_valid_until) =
+                        match temporary_address_configuration {
+                            // Since it's possible to change NDP configuration for a
+                            // device during runtime, we can end up here, with a
+                            // temporary address on an interface even though temporary
+                            // addressing is disabled. Setting its validity period to 0
+                            // will force it to be removed ASAP.
+                            None => (
+                                ValidLifetimeBound::FromMaxBound(Duration::ZERO),
+                                None,
+                                *entry_valid_until,
+                            ),
+                            Some(temporary_address_config) => {
+                                // RFC 8981 Section 3.4.2:
+                                //   When updating the preferred lifetime of an existing
+                                //   temporary address, it would be set to expire at
+                                //   whichever time is earlier: the time indicated by
+                                //   the received lifetime or (CREATION_TIME +
+                                //   TEMP_PREFERRED_LIFETIME - DESYNC_FACTOR). A similar
+                                //   approach can be used with the valid lifetime.
+                                let preferred_for =
+                                    preferred_lifetime.and_then(|preferred_lifetime| {
+                                        temporary_address_config
+                                            .temp_preferred_lifetime
+                                            .get()
+                                            .checked_sub(now.duration_since(*creation_time))
+                                            .and_then(|p| p.checked_sub(*desync_factor))
+                                            .and_then(NonZeroDuration::new)
+                                            .map(|d| preferred_lifetime.min_finite_duration(d))
+                                    });
+                                // Per RFC 8981 Section 3.4.1, `desync_factor` is only
+                                // used for preferred lifetime:
+                                //   [...] with the overall constraint that no temporary
+                                //   addresses should ever remain "valid" or "preferred"
+                                //   for a time longer than (TEMP_VALID_LIFETIME) or
+                                //   (TEMP_PREFERRED_LIFETIME - DESYNC_FACTOR),
+                                //   respectively.
+                                let since_creation = now.duration_since(*creation_time);
+                                let configured_max_lifetime =
+                                    temporary_address_config.temp_valid_lifetime.get();
+                                let max_valid_lifetime = if since_creation > configured_max_lifetime
+                                {
+                                    Duration::ZERO
+                                } else {
+                                    configured_max_lifetime - since_creation
+                                };
 
-                            let valid_for =
-                                valid_lifetime.map_or(ValidLifetimeBound::FromPrefix(None), |d| {
-                                    match d {
+                                let valid_for = valid_lifetime.map_or(
+                                    ValidLifetimeBound::FromPrefix(None),
+                                    |d| match d {
                                         NonZeroNdpLifetime::Infinite => {
                                             ValidLifetimeBound::FromMaxBound(max_valid_lifetime)
                                         }
@@ -372,18 +374,19 @@ impl<C: SlaacContext> SlaacHandler for C {
                                                 ValidLifetimeBound::FromPrefix(valid_lifetime)
                                             }
                                         }
-                                    }
-                                });
+                                    },
+                                );
 
-                            (valid_for, preferred_for, *entry_valid_until)
-                        }
-                    };
+                                (valid_for, preferred_for, *entry_valid_until)
+                            }
+                        };
 
                     let preferred_for_and_regen_at = preferred_for.map(|preferred_for| {
                         let dad_transmits = self.dad_transmits(device_id);
-                        let config = self.get_config(device_id);
+                        let SlaacConfiguration { temporary_address_configuration } =
+                            self.get_config(device_id);
 
-                        let regen_at = config.get_temporary_address_configuration().and_then(
+                        let regen_at = temporary_address_configuration.and_then(
                             |TemporarySlaacAddressConfiguration {
                                  temp_idgen_retries,
                                  temp_preferred_lifetime: _,
@@ -391,7 +394,7 @@ impl<C: SlaacContext> SlaacHandler for C {
                                  secret_key: _,
                              }| {
                                 let regen_advance = regen_advance(
-                                    *temp_idgen_retries,
+                                    temp_idgen_retries,
                                     self.retrans_timer(device_id),
                                     dad_transmits.map_or(0, NonZeroU8::get),
                                 )
@@ -674,8 +677,8 @@ impl<C: SlaacContext> SlaacHandler for C {
             }
         }
 
-        let config = self.get_config(device_id);
-        let temporary_address_configuration = match &config.temporary_address_configuration {
+        let SlaacConfiguration { temporary_address_configuration } = self.get_config(device_id);
+        let temporary_address_configuration = match temporary_address_configuration {
             Some(configuration) => configuration,
             None => return,
         };
@@ -751,7 +754,7 @@ impl<C: SlaacContext> TimerHandler<SlaacTimerId<C::DeviceId>> for C {
 /// [RFC 8981 Section 3.4]: http://tools.ietf.org/html/rfc8981#section-3.4
 /// [Section 3.3.2]: http://tools.ietf.org/html/rfc8981#section-3.3.2
 /// [Section 3.8]: http://tools.ietf.org/html/rfc8981#section-3.8
-#[derive(Copy, PartialEq, Debug, Clone)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct TemporarySlaacAddressConfiguration {
     /// The maximum amount of time that a temporary address can be considered
     /// valid, from the time of its creation.
@@ -773,7 +776,7 @@ pub struct TemporarySlaacAddressConfiguration {
 }
 
 /// The configuration for SLAAC.
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub struct SlaacConfiguration {
     /// Configuration for temporary address assignment.
     ///
@@ -784,39 +787,6 @@ pub struct SlaacConfiguration {
     /// including those relating to how long temporary addresses should remain
     /// preferred and valid.
     pub temporary_address_configuration: Option<TemporarySlaacAddressConfiguration>,
-}
-
-impl SlaacConfiguration {
-    /// Enables temporary addressing with the provided parameters.
-    ///
-    /// `rng` is used to initialize the key that is used to generate new addresses.
-    pub fn enable_temporary_addresses<R: RngCore>(
-        &mut self,
-        rng: &mut R,
-        max_valid_lifetime: NonZeroDuration,
-        max_preferred_lifetime: NonZeroDuration,
-        max_generation_retries: u8,
-    ) {
-        let mut secret_key = [0; STABLE_IID_SECRET_KEY_BYTES];
-        rng.fill_bytes(&mut secret_key);
-        self.temporary_address_configuration = Some(TemporarySlaacAddressConfiguration {
-            temp_valid_lifetime: max_valid_lifetime,
-            temp_preferred_lifetime: max_preferred_lifetime,
-            temp_idgen_retries: max_generation_retries,
-            secret_key,
-        })
-    }
-
-    /// Disables temporary addressing.
-    pub fn disable_temporary_addresses(&mut self) {
-        self.temporary_address_configuration = None
-    }
-
-    pub(crate) fn get_temporary_address_configuration(
-        &self,
-    ) -> Option<&TemporarySlaacAddressConfiguration> {
-        self.temporary_address_configuration.as_ref()
-    }
 }
 
 #[derive(PartialEq, Eq)]
@@ -926,13 +896,13 @@ fn regenerate_temporary_slaac_addr<C: SlaacContext>(
             ),
         };
 
-    let config = sync_ctx.get_config(device_id);
+    let SlaacConfiguration { temporary_address_configuration } = sync_ctx.get_config(device_id);
     let TemporarySlaacAddressConfiguration {
         temp_valid_lifetime,
         temp_preferred_lifetime: _,
         temp_idgen_retries: _,
         secret_key: _,
-    } = match &config.temporary_address_configuration {
+    } = match temporary_address_configuration {
         Some(configuration) => configuration,
         None => return,
     };
@@ -951,7 +921,7 @@ fn regenerate_temporary_slaac_addr<C: SlaacContext>(
     // generated). That's okay, because `add_slaac_addr_sub` will apply the
     // current maximum valid lifetime when called below.
     let valid_for = NonZeroDuration::new(valid_until.duration_since(creation_time))
-        .unwrap_or(*temp_valid_lifetime);
+        .unwrap_or(temp_valid_lifetime);
 
     add_slaac_addr_sub(
         sync_ctx,
@@ -1123,8 +1093,9 @@ fn add_slaac_addr_sub<C: SlaacContext>(
         SlaacInitConfig::Temporary { dad_count } => {
             let per_attempt_random_seed = sync_ctx.rng_mut().next_u64();
             let dad_transmits = sync_ctx.dad_transmits(device_id);
-            let config = sync_ctx.get_config(device_id);
-            let temporary_address_config = match config.get_temporary_address_configuration() {
+            let SlaacConfiguration { temporary_address_configuration } =
+                sync_ctx.get_config(device_id);
+            let temporary_address_config = match temporary_address_configuration {
                 Some(temporary_address_config) => temporary_address_config,
                 None => {
                     trace!(
@@ -1339,7 +1310,6 @@ fn add_slaac_addr_sub<C: SlaacContext>(
 #[cfg(test)]
 mod tests {
     use net_declare::net::ip_v6;
-    use rand::rngs::mock::StepRng;
     use test_case::test_case;
 
     use super::*;
@@ -1354,35 +1324,5 @@ mod tests {
     #[test_case(ip_v6!("c:c:c:c:fe00::"), true; "allowed 3")]
     fn test_has_iana_allowed_iid(addr: Ipv6Addr, expect_allowed: bool) {
         assert_eq!(has_iana_allowed_iid(addr), expect_allowed);
-    }
-
-    #[test]
-    fn slaac_configuration() {
-        let mut c = SlaacConfiguration::default();
-        assert_eq!(c.get_temporary_address_configuration(), None);
-
-        let mut rng = StepRng::new(0xAAAAAAAAAAAAAAAA, 0);
-        let temp_valid_lifetime = NonZeroDuration::new(Duration::from_secs(20)).unwrap();
-        let temp_preferred_lifetime = NonZeroDuration::new(Duration::from_secs(10)).unwrap();
-        let temp_idgen_retries = 3;
-
-        c.enable_temporary_addresses(
-            &mut rng,
-            temp_valid_lifetime,
-            temp_preferred_lifetime,
-            temp_idgen_retries,
-        );
-        assert_eq!(
-            c.get_temporary_address_configuration(),
-            Some(&TemporarySlaacAddressConfiguration {
-                temp_valid_lifetime,
-                temp_preferred_lifetime,
-                temp_idgen_retries,
-                secret_key: [0xAA; 32],
-            })
-        );
-
-        c.disable_temporary_addresses();
-        assert_eq!(c.get_temporary_address_configuration(), None);
     }
 }
