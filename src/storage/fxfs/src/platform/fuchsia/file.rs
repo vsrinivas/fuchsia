@@ -19,7 +19,6 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
-    fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRUSR, V_IWUSR, V_TYPE_FILE},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
@@ -32,7 +31,7 @@ use {
         Arc, Mutex,
     },
     vfs::{
-        common::send_on_open_with_error,
+        common::{rights_to_posix_mode_bits, send_on_open_with_error},
         directory::entry::{DirectoryEntry, EntryInfo},
         execution_scope::ExecutionScope,
         file::{connection::io1::FileConnection, File},
@@ -471,7 +470,8 @@ impl File for FxFile {
     async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status> {
         let props = self.handle.get_properties().await.map_err(map_to_status)?;
         Ok(fio::NodeAttributes {
-            mode: V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH,
+            mode: fio::MODE_TYPE_FILE
+                | rights_to_posix_mode_bits(/*r*/ true, /*w*/ true, /*x*/ false),
             id: self.handle.object_id(),
             content_size: props.data_attribute_size,
             storage_size: props.allocated_size,
@@ -535,7 +535,6 @@ mod tests {
             platform::fuchsia::testing::{close_file_checked, open_file_checked, TestFixture},
         },
         anyhow::format_err,
-        fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRUSR, V_IWUSR, V_TYPE_FILE},
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_zircon::Status,
         futures::join,
@@ -545,6 +544,7 @@ mod tests {
             Arc,
         },
         storage_device::{fake_device::FakeDevice, DeviceHolder},
+        vfs::common::rights_to_posix_mode_bits,
     };
 
     #[fasync::run(10, test)]
@@ -571,7 +571,10 @@ mod tests {
         let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
         Status::ok(status).expect("get_attr failed");
         assert_ne!(attrs.id, INVALID_OBJECT_ID);
-        assert_eq!(attrs.mode, V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH);
+        assert_eq!(
+            attrs.mode,
+            fio::MODE_TYPE_FILE | rights_to_posix_mode_bits(/*r*/ true, /*w*/ true, /*x*/ false)
+        );
         assert_eq!(attrs.content_size, 0u64);
         assert_eq!(attrs.storage_size, 0u64);
         assert_eq!(attrs.link_count, 1u64);

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    fdio::fdio_sys::V_IRWXU,
     fidl::{
         endpoints::{create_proxy, ClientEnd, ProtocolMarker, Proxy},
         AsHandleRef,
@@ -13,6 +12,7 @@ use {
     fuchsia_zircon as zx,
     futures::StreamExt,
     io_conformance_util::{flags::build_flag_combinations, test_harness::TestHarness},
+    libc,
 };
 
 const TEST_FILE: &str = "testing.txt";
@@ -830,7 +830,7 @@ async fn open_flags_and_mode() {
     open_node::<fio::NodeMarker>(
         &root_dir,
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
-        V_IRWXU,
+        libc::S_IRWXU,
         "dir",
     )
     .await;

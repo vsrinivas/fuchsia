@@ -24,7 +24,6 @@ use {
     anyhow::{bail, Error},
     async_trait::async_trait,
     either::{Left, Right},
-    fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRWXU, V_IXGRP, V_IXOTH, V_TYPE_DIR},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
@@ -33,7 +32,7 @@ use {
         sync::{Arc, Mutex},
     },
     vfs::{
-        common::send_on_open_with_error,
+        common::{rights_to_posix_mode_bits, send_on_open_with_error},
         directory::{
             dirents_sink::{self, AppendResult, Sink},
             entry::{DirectoryEntry, EntryInfo},
@@ -595,7 +594,8 @@ impl Directory for FxDirectory {
     async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status> {
         let props = self.directory.get_properties().await.map_err(map_to_status)?;
         Ok(fio::NodeAttributes {
-            mode: V_TYPE_DIR | V_IRWXU | V_IRGRP | V_IXGRP | V_IROTH | V_IXOTH,
+            mode: fio::MODE_TYPE_DIRECTORY
+                | rights_to_posix_mode_bits(/*r*/ true, /*w*/ true, /*x*/ false),
             id: self.directory.object_id(),
             content_size: props.data_attribute_size,
             storage_size: props.allocated_size,
