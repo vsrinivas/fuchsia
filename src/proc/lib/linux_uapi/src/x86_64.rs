@@ -1446,6 +1446,167 @@ pub const STATX_ATTR_AUTOMOUNT: u32 = 4096;
 pub const STATX_ATTR_MOUNT_ROOT: u32 = 8192;
 pub const STATX_ATTR_VERITY: u32 = 1048576;
 pub const STATX_ATTR_DAX: u32 = 2097152;
+pub const NCCS: u32 = 19;
+pub const VINTR: u32 = 0;
+pub const VQUIT: u32 = 1;
+pub const VERASE: u32 = 2;
+pub const VKILL: u32 = 3;
+pub const VEOF: u32 = 4;
+pub const VTIME: u32 = 5;
+pub const VMIN: u32 = 6;
+pub const VSWTC: u32 = 7;
+pub const VSTART: u32 = 8;
+pub const VSTOP: u32 = 9;
+pub const VSUSP: u32 = 10;
+pub const VEOL: u32 = 11;
+pub const VREPRINT: u32 = 12;
+pub const VDISCARD: u32 = 13;
+pub const VWERASE: u32 = 14;
+pub const VLNEXT: u32 = 15;
+pub const VEOL2: u32 = 16;
+pub const IGNBRK: u32 = 1;
+pub const BRKINT: u32 = 2;
+pub const IGNPAR: u32 = 4;
+pub const PARMRK: u32 = 8;
+pub const INPCK: u32 = 16;
+pub const ISTRIP: u32 = 32;
+pub const INLCR: u32 = 64;
+pub const IGNCR: u32 = 128;
+pub const ICRNL: u32 = 256;
+pub const IUCLC: u32 = 512;
+pub const IXON: u32 = 1024;
+pub const IXANY: u32 = 2048;
+pub const IXOFF: u32 = 4096;
+pub const IMAXBEL: u32 = 8192;
+pub const IUTF8: u32 = 16384;
+pub const OPOST: u32 = 1;
+pub const OLCUC: u32 = 2;
+pub const ONLCR: u32 = 4;
+pub const OCRNL: u32 = 8;
+pub const ONOCR: u32 = 16;
+pub const ONLRET: u32 = 32;
+pub const OFILL: u32 = 64;
+pub const OFDEL: u32 = 128;
+pub const NLDLY: u32 = 256;
+pub const NL0: u32 = 0;
+pub const NL1: u32 = 256;
+pub const CRDLY: u32 = 1536;
+pub const CR0: u32 = 0;
+pub const CR1: u32 = 512;
+pub const CR2: u32 = 1024;
+pub const CR3: u32 = 1536;
+pub const TABDLY: u32 = 6144;
+pub const TAB0: u32 = 0;
+pub const TAB1: u32 = 2048;
+pub const TAB2: u32 = 4096;
+pub const TAB3: u32 = 6144;
+pub const XTABS: u32 = 6144;
+pub const BSDLY: u32 = 8192;
+pub const BS0: u32 = 0;
+pub const BS1: u32 = 8192;
+pub const VTDLY: u32 = 16384;
+pub const VT0: u32 = 0;
+pub const VT1: u32 = 16384;
+pub const FFDLY: u32 = 32768;
+pub const FF0: u32 = 0;
+pub const FF1: u32 = 32768;
+pub const CBAUD: u32 = 4111;
+pub const B0: u32 = 0;
+pub const B50: u32 = 1;
+pub const B75: u32 = 2;
+pub const B110: u32 = 3;
+pub const B134: u32 = 4;
+pub const B150: u32 = 5;
+pub const B200: u32 = 6;
+pub const B300: u32 = 7;
+pub const B600: u32 = 8;
+pub const B1200: u32 = 9;
+pub const B1800: u32 = 10;
+pub const B2400: u32 = 11;
+pub const B4800: u32 = 12;
+pub const B9600: u32 = 13;
+pub const B19200: u32 = 14;
+pub const B38400: u32 = 15;
+pub const EXTA: u32 = 14;
+pub const EXTB: u32 = 15;
+pub const CSIZE: u32 = 48;
+pub const CS5: u32 = 0;
+pub const CS6: u32 = 16;
+pub const CS7: u32 = 32;
+pub const CS8: u32 = 48;
+pub const CSTOPB: u32 = 64;
+pub const CREAD: u32 = 128;
+pub const PARENB: u32 = 256;
+pub const PARODD: u32 = 512;
+pub const HUPCL: u32 = 1024;
+pub const CLOCAL: u32 = 2048;
+pub const CBAUDEX: u32 = 4096;
+pub const BOTHER: u32 = 4096;
+pub const B57600: u32 = 4097;
+pub const B115200: u32 = 4098;
+pub const B230400: u32 = 4099;
+pub const B460800: u32 = 4100;
+pub const B500000: u32 = 4101;
+pub const B576000: u32 = 4102;
+pub const B921600: u32 = 4103;
+pub const B1000000: u32 = 4104;
+pub const B1152000: u32 = 4105;
+pub const B1500000: u32 = 4106;
+pub const B2000000: u32 = 4107;
+pub const B2500000: u32 = 4108;
+pub const B3000000: u32 = 4109;
+pub const B3500000: u32 = 4110;
+pub const B4000000: u32 = 4111;
+pub const CIBAUD: u32 = 269418496;
+pub const CMSPAR: u32 = 1073741824;
+pub const CRTSCTS: u32 = 2147483648;
+pub const IBSHIFT: u32 = 16;
+pub const ISIG: u32 = 1;
+pub const ICANON: u32 = 2;
+pub const XCASE: u32 = 4;
+pub const ECHO: u32 = 8;
+pub const ECHOE: u32 = 16;
+pub const ECHOK: u32 = 32;
+pub const ECHONL: u32 = 64;
+pub const NOFLSH: u32 = 128;
+pub const TOSTOP: u32 = 256;
+pub const ECHOCTL: u32 = 512;
+pub const ECHOPRT: u32 = 1024;
+pub const ECHOKE: u32 = 2048;
+pub const FLUSHO: u32 = 4096;
+pub const PENDIN: u32 = 16384;
+pub const IEXTEN: u32 = 32768;
+pub const EXTPROC: u32 = 65536;
+pub const TCOOFF: u32 = 0;
+pub const TCOON: u32 = 1;
+pub const TCIOFF: u32 = 2;
+pub const TCION: u32 = 3;
+pub const TCIFLUSH: u32 = 0;
+pub const TCOFLUSH: u32 = 1;
+pub const TCIOFLUSH: u32 = 2;
+pub const TCSANOW: u32 = 0;
+pub const TCSADRAIN: u32 = 1;
+pub const TCSAFLUSH: u32 = 2;
+pub const NCC: u32 = 8;
+pub const TIOCM_LE: u32 = 1;
+pub const TIOCM_DTR: u32 = 2;
+pub const TIOCM_RTS: u32 = 4;
+pub const TIOCM_ST: u32 = 8;
+pub const TIOCM_SR: u32 = 16;
+pub const TIOCM_CTS: u32 = 32;
+pub const TIOCM_CAR: u32 = 64;
+pub const TIOCM_RNG: u32 = 128;
+pub const TIOCM_DSR: u32 = 256;
+pub const TIOCM_CD: u32 = 64;
+pub const TIOCM_RI: u32 = 128;
+pub const TIOCM_OUT1: u32 = 8192;
+pub const TIOCM_OUT2: u32 = 16384;
+pub const TIOCM_LOOP: u32 = 32768;
+pub const NFF: u32 = 5;
+pub const RTSXOFF: u32 = 1;
+pub const CTSXON: u32 = 2;
+pub const DTRXOFF: u32 = 4;
+pub const DSRXON: u32 = 8;
 pub const TFD_TIMER_ABSTIME: u32 = 1;
 pub const TFD_TIMER_CANCEL_ON_SET: u32 = 2;
 pub const TFD_CLOEXEC: u32 = 524288;
@@ -3411,6 +3572,70 @@ pub struct statx {
     pub stx_mnt_id: __u64,
     pub __spare2: __u64,
     pub __spare3: [__u64; 12usize],
+}
+pub type cc_t = crate::x86_64_types::c_uchar;
+pub type speed_t = crate::x86_64_types::c_uint;
+pub type tcflag_t = crate::x86_64_types::c_uint;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct termios {
+    pub c_iflag: tcflag_t,
+    pub c_oflag: tcflag_t,
+    pub c_cflag: tcflag_t,
+    pub c_lflag: tcflag_t,
+    pub c_line: cc_t,
+    pub c_cc: [cc_t; 19usize],
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct termios2 {
+    pub c_iflag: tcflag_t,
+    pub c_oflag: tcflag_t,
+    pub c_cflag: tcflag_t,
+    pub c_lflag: tcflag_t,
+    pub c_line: cc_t,
+    pub c_cc: [cc_t; 19usize],
+    pub c_ispeed: speed_t,
+    pub c_ospeed: speed_t,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct ktermios {
+    pub c_iflag: tcflag_t,
+    pub c_oflag: tcflag_t,
+    pub c_cflag: tcflag_t,
+    pub c_lflag: tcflag_t,
+    pub c_line: cc_t,
+    pub c_cc: [cc_t; 19usize],
+    pub c_ispeed: speed_t,
+    pub c_ospeed: speed_t,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct winsize {
+    pub ws_row: crate::x86_64_types::c_ushort,
+    pub ws_col: crate::x86_64_types::c_ushort,
+    pub ws_xpixel: crate::x86_64_types::c_ushort,
+    pub ws_ypixel: crate::x86_64_types::c_ushort,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct termio {
+    pub c_iflag: crate::x86_64_types::c_ushort,
+    pub c_oflag: crate::x86_64_types::c_ushort,
+    pub c_cflag: crate::x86_64_types::c_ushort,
+    pub c_lflag: crate::x86_64_types::c_ushort,
+    pub c_line: crate::x86_64_types::c_uchar,
+    pub c_cc: [crate::x86_64_types::c_uchar; 8usize],
+    pub __bindgen_padding_0: u8,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct termiox {
+    pub x_hflag: __u16,
+    pub x_cflag: __u16,
+    pub x_rflag: [__u16; 5usize],
+    pub x_sflag: __u16,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

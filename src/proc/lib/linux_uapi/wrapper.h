@@ -36,6 +36,7 @@
 #include <linux/signalfd.h>
 #include <linux/socket.h>
 #include <linux/stat.h>
+#include <linux/termios.h>
 #include <linux/time.h>
 #include <linux/timerfd.h>
 #include <linux/uio.h>
