@@ -11,6 +11,7 @@
 #include <lib/trace-provider/provider.h>
 
 #include <filesystem>
+#include <system_error>
 
 #include "src/developer/memory/monitor/monitor.h"
 #include "src/lib/fxl/command_line.h"
@@ -21,7 +22,9 @@ const char kRamDeviceClassPath[] = "/dev/class/aml-ram";
 void SetRamDevice(monitor::Monitor* app) {
   // Look for optional RAM device that provides bandwidth measurement interface.
   fuchsia::hardware::ram::metrics::DevicePtr ram_device;
-  if (std::filesystem::exists(kRamDeviceClassPath)) {
+  std::error_code ec;
+  // Use the noexcept version of std::filesystem::exists.
+  if (std::filesystem::exists(kRamDeviceClassPath, ec)) {
     for (const auto& entry : std::filesystem::directory_iterator(kRamDeviceClassPath)) {
       int fd = open(entry.path().c_str(), O_RDWR);
       if (fd > -1) {
@@ -37,7 +40,7 @@ void SetRamDevice(monitor::Monitor* app) {
       }
     }
   }
-  FX_LOGS(INFO) << "CANNOT collect memory bandwidth measurements.";
+  FX_LOGS(INFO) << "CANNOT collect memory bandwidth measurements. error_code: " << ec;
 }
 const char kNotfiyCrashReporterPath[] = "/config/data/send_critical_pressure_crash_reports";
 bool SendCriticalMemoryPressureCrashReports() {
