@@ -540,6 +540,11 @@
         "name": "fuchsia.web/Frame.SetMediaSessionId"
     },
     {
+        "declaration": "(fuchsia.web/FrameMediaSettings settings)",
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetMediaSettings"
+    },
+    {
         "declaration": "(client_end:<fuchsia.web/NavigationEventListener,optional> listener)",
         "kind": "protocol/member",
         "name": "fuchsia.web/Frame.SetNavigationEventListener"
@@ -617,6 +622,20 @@
     {
         "kind": "protocol",
         "name": "fuchsia.web/FrameHost"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "table/member",
+        "name": "fuchsia.web/FrameMediaSettings.audio_capturer_session_id"
+    },
+    {
+        "declaration": "fuchsia.media/AudioRenderUsage",
+        "kind": "table/member",
+        "name": "fuchsia.web/FrameMediaSettings.renderer_usage"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/FrameMediaSettings"
     },
     {
         "kind": "struct",

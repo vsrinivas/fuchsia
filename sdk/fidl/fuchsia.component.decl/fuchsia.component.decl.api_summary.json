@@ -16,6 +16,27 @@
         "strictness": "strict"
     },
     {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/Availability.OPTIONAL",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/Availability.REQUIRED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/Availability.SAME_AS_TARGET",
+        "value": "3"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "enum",
+        "name": "fuchsia.component.decl/Availability",
+        "strictness": "strict"
+    },
+    {
         "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.component.decl/CONFIG_KEY_MAX_SIZE",
@@ -814,6 +835,11 @@
         "strictness": "flexible"
     },
     {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferDirectory.availability"
+    },
+    {
         "declaration": "fuchsia.component.decl/DependencyType",
         "kind": "table/member",
         "name": "fuchsia.component.decl/OfferDirectory.dependency_type"
@@ -853,6 +879,11 @@
         "name": "fuchsia.component.decl/OfferDirectory"
     },
     {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEvent.availability"
+    },
+    {
         "declaration": "fuchsia.data/Dictionary",
         "kind": "table/member",
         "name": "fuchsia.component.decl/OfferEvent.filter"
@@ -880,6 +911,11 @@
     {
         "kind": "table",
         "name": "fuchsia.component.decl/OfferEvent"
+    },
+    {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEventStream.availability"
     },
     {
         "declaration": "fuchsia.data/Dictionary",
@@ -914,6 +950,11 @@
     {
         "kind": "table",
         "name": "fuchsia.component.decl/OfferEventStream"
+    },
+    {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferProtocol.availability"
     },
     {
         "declaration": "fuchsia.component.decl/DependencyType",
@@ -993,6 +1034,11 @@
         "name": "fuchsia.component.decl/OfferRunner"
     },
     {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferService.availability"
+    },
+    {
         "declaration": "vector<fuchsia.component.decl/NameMapping>",
         "kind": "table/member",
         "name": "fuchsia.component.decl/OfferService.renamed_instances"
@@ -1025,6 +1071,11 @@
     {
         "kind": "table",
         "name": "fuchsia.component.decl/OfferService"
+    },
+    {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferStorage.availability"
     },
     {
         "declaration": "fuchsia.component.decl/Ref",
@@ -1132,6 +1183,11 @@
         "declaration": "fuchsia.component.decl/SelfRef",
         "kind": "union/member",
         "name": "fuchsia.component.decl/Ref.self"
+    },
+    {
+        "declaration": "fuchsia.component.decl/VoidRef",
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Ref.void_type"
     },
     {
         "kind": "union",
@@ -1324,6 +1380,11 @@
         "strictness": "flexible"
     },
     {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseDirectory.availability"
+    },
+    {
         "declaration": "fuchsia.component.decl/DependencyType",
         "kind": "table/member",
         "name": "fuchsia.component.decl/UseDirectory.dependency_type"
@@ -1358,6 +1419,11 @@
         "name": "fuchsia.component.decl/UseDirectory"
     },
     {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEvent.availability"
+    },
+    {
         "declaration": "fuchsia.component.decl/DependencyType",
         "kind": "table/member",
         "name": "fuchsia.component.decl/UseEvent.dependency_type"
@@ -1387,6 +1453,11 @@
         "name": "fuchsia.component.decl/UseEvent"
     },
     {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStream.availability"
+    },
+    {
         "declaration": "vector<fuchsia.component.decl/Ref>",
         "kind": "table/member",
         "name": "fuchsia.component.decl/UseEventStream.scope"
@@ -1411,6 +1482,11 @@
         "name": "fuchsia.component.decl/UseEventStream"
     },
     {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStreamDeprecated.availability"
+    },
+    {
         "declaration": "string:100",
         "kind": "table/member",
         "name": "fuchsia.component.decl/UseEventStreamDeprecated.name"
@@ -1423,6 +1499,11 @@
     {
         "kind": "table",
         "name": "fuchsia.component.decl/UseEventStreamDeprecated"
+    },
+    {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseProtocol.availability"
     },
     {
         "declaration": "fuchsia.component.decl/DependencyType",
@@ -1449,6 +1530,11 @@
         "name": "fuchsia.component.decl/UseProtocol"
     },
     {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseService.availability"
+    },
+    {
         "declaration": "fuchsia.component.decl/DependencyType",
         "kind": "table/member",
         "name": "fuchsia.component.decl/UseService.dependency_type"
@@ -1473,6 +1559,11 @@
         "name": "fuchsia.component.decl/UseService"
     },
     {
+        "declaration": "fuchsia.component.decl/Availability",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseStorage.availability"
+    },
+    {
         "declaration": "string:100",
         "kind": "table/member",
         "name": "fuchsia.component.decl/UseStorage.source_name"
@@ -1485,6 +1576,10 @@
     {
         "kind": "table",
         "name": "fuchsia.component.decl/UseStorage"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.decl/VoidRef"
     },
     {
         "kind": "library",

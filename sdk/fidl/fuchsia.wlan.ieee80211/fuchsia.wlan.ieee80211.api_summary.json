@@ -1078,6 +1078,12 @@
     {
         "declaration": "uint32",
         "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/WLAN_IE_MAX_LEN",
+        "value": "257"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "const",
         "name": "fuchsia.wlan.ieee80211/WLAN_MSDU_MAX_LEN",
         "value": "2304"
     },

@@ -43,6 +43,11 @@
         "name": "fuchsia.component.runner/ComponentRunner"
     },
     {
+        "declaration": "zx/handle:EVENTPAIR",
+        "kind": "table/member",
+        "name": "fuchsia.component.runner/ComponentStartInfo.break_on_start"
+    },
+    {
         "declaration": "fuchsia.mem/Data",
         "kind": "table/member",
         "name": "fuchsia.component.runner/ComponentStartInfo.encoded_config"
