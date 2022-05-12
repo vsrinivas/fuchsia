@@ -278,7 +278,7 @@ template("assemble_system") {
     if (defined(invoker.product_assembly_config_file)) {
       product_assembly_config = invoker.product_assembly_config_file
     } else {
-      product_assembly_config = "//build/assembly/empty_product_config.json5"
+      product_assembly_config = "//build/assembly/empty_product_config.json"
     }
     image_assembly_config =
         "$target_out_dir/${image_name}_image_assembly_config.json"
