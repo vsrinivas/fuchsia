@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.examples.diagnostics;
+
+@discoverable
+protocol ProfileStore {
+    Open(resource struct {
+        key string:KEY_LENGTH;
+        channel server_end:Profile;
+    });
+
+    OpenReader(resource struct {
+        key string:KEY_LENGTH;
+        channel server_end:ProfileReader;
+    });
+
+    Delete(struct {
+        key string:KEY_LENGTH;
+    }) -> (struct {
+        success bool;
+    });
+
+    CreateOrOpen(resource struct {
+        key string:KEY_LENGTH;
+        channel server_end:Profile;
+    });
+};

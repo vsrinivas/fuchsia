@@ -1,0 +1,33 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.examples.diagnostics;
+
+protocol Profile {
+    compose ProfileReader;
+    SetName(struct {
+        name string:NAME_LENGTH;
+    });
+
+    AddBalance(struct {
+        amount int64;
+    });
+
+    WithdrawBalance(struct {
+        amount int64;
+    }) -> (struct {
+        success bool;
+    });
+};
+
+// Read only protocol for the profile.
+protocol ProfileReader {
+    GetName() -> (struct {
+        name string:NAME_LENGTH;
+    });
+
+    GetBalance() -> (struct {
+        amount int64;
+    });
+};

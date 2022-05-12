@@ -1,0 +1,8 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.examples.diagnostics;
+
+const KEY_LENGTH uint64 = 256;
+const NAME_LENGTH uint64 = 256;
