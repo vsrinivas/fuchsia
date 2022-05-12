@@ -20,6 +20,49 @@
 #include <vm/page.h>
 #include <vm/vm.h>
 
+// At the high level the goal of the objects here is to
+// 1. Trigger external entities to do work based on VMO operations, such as asking a pager to supply
+//    a missing page of data.
+// 2. Have a way for external entities to let the VMO system know these requests have been
+//    fulfilled.
+// 3. Provide a way for the high level caller, who may not know what actions are being performed on
+//    what entities, to wait until their operation can be completed.
+//
+// The different objects can be summarized as:
+//  * PageRequest: Caller allocated object that the caller uses to perform the Wait.
+//  * PageRequestInterface: A reference to an object implementing this interface is held by the
+//    PageRequest and provides a way for the PageRequest to interact with the underlying PageSource.
+//  * PageSource: Performs request and overlap tracking, forwarding unique ranges of requests to the
+//    underlying PageProvider.
+//  * PageProvider: Asynchronously performs requests. Requests are completed by actions being
+//    performed on the VMO.
+//
+// A typical flow would be
+//  * User allocates PageRequest on the stack, and passes it in to some VMO operation
+//  * VMO code needs something to happen and calls a PageSource method, passing in PageRequest it
+//    had been given.
+//  * PageSource populates fields of the PageRequest and adds it to the list of requests it is
+//    tracking, and determines how this request overlaps with any others. Based on overlap, it may
+//    or may not notify the underlying PageProvider that some work needs to be done (the page
+//    provider will complete this asynchronously somehow).
+//  * VMO returns ZX_ERR_SHOULD_WAIT and then the top level calls PageRequest::Wait
+//  * PageRequest::Wait uses the PageRequestInterface to ask the underlying PageSource how to Wait
+//    for the operation to complete
+//  # As an optional path, if the PageRequest was not Waited on for some reason, the PageRequest
+//    will also use the PageRequestInterface to inform the PageSource that this request is no longer
+//    needed and can be canceled.
+// For the other side, while the Wait is happening some other thread will
+//  * Call a VMO operation, such as VmObject::SupplyPages
+//  * VMO will perform the operation, and then let the PageSource know by the corresponding
+//    interface method, such as OnPagesSupplied.
+//  * PageSource will update request tracking, and notify any PageRequests that were waiting and can
+//    be woken up.
+//
+// There is more complexity of implementation and API, largely to handle the fact that the
+// PageRequest serves as the allocation of all data needed for all parties. Therefore every layer
+// needs to be told when requests are coming and going to ensure they update any lists and do not
+// refer to out of scope stack variables.
+
 class PageRequest;
 class PageSource;
 
@@ -137,7 +180,34 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
   virtual bool SupportsPageRequestType(page_request_type type) const = 0;
 
   friend PageSource;
+};
+
+// Interface used by the page requests to communicate with the PageSource. Due to the nature of
+// intrusive containers the RefCounted needs to be here and not on the PageSource to allow the
+// PageRequest to hold a RefPtr just to this interface.
+class PageRequestInterface : public fbl::RefCounted<PageRequestInterface> {
+ public:
+  virtual ~PageRequestInterface() = default;
+
+ protected:
+  PageRequestInterface() = default;
+
+ private:
   friend PageRequest;
+  // Instruct the page source that this request has been cancelled.
+  virtual void CancelRequest(PageRequest* request) = 0;
+  // Ask the page source to wait on this request, typically by forwarding to the page provider.
+  // Note this gets called without a lock and so due to races the implementation needs to be
+  // tolerant of having already been detached/closed.
+  virtual zx_status_t WaitOnRequest(PageRequest* request) = 0;
+
+  // Called to complete a batched PageRequest if the last call to GetPage
+  // returned ZX_ERR_NEXT.
+  //
+  // Returns ZX_ERR_SHOULD_WAIT if the PageRequest will be fulfilled after
+  // being waited upon.
+  // Returns ZX_ERR_NOT_FOUND if the request will never be resolved.
+  virtual zx_status_t FinalizeRequest(PageRequest* request) = 0;
 };
 
 // A page source is responsible for fulfilling page requests from a VMO with backing pages.
@@ -168,7 +238,7 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
 // decommitted before the caller queries the vm object again.
 
 // Object which provides pages to a vm_object.
-class PageSource : public fbl::RefCounted<PageSource> {
+class PageSource final : public PageRequestInterface {
  public:
   PageSource() = delete;
   explicit PageSource(fbl::RefPtr<PageProvider>&& page_provider);
@@ -185,14 +255,6 @@ class PageSource : public fbl::RefCounted<PageSource> {
                       vm_page_t** const page_out, paddr_t* const pa_out);
 
   void FreePages(list_node* pages);
-
-  // Called to complete a batched PageRequest if the last call to GetPage
-  // returned ZX_ERR_NEXT.
-  //
-  // Returns ZX_ERR_SHOULD_WAIT if the PageRequest will be fulfilled after
-  // being waited upon.
-  // Returns ZX_ERR_NOT_FOUND if the request will never be resolved.
-  zx_status_t FinalizeRequest(PageRequest* request);
 
   // For asserting purposes only.  This gives the PageProvider a chance to check that a page is
   // consistent with any rules the PageProvider has re. which pages can go where in the VmCowPages.
@@ -294,7 +356,7 @@ class PageSource : public fbl::RefCounted<PageSource> {
 
   // PageProvider instance that will provide pages asynchronously (e.g. a userspace pager, see
   // PagerProxy for details).
-  fbl::RefPtr<PageProvider> page_provider_;
+  const fbl::RefPtr<PageProvider> page_provider_;
   // We cache the immutable page_provider_->properties() to avoid many virtual calls.
   const PageSourceProperties page_provider_properties_;
 
@@ -335,9 +397,11 @@ class PageSource : public fbl::RefCounted<PageSource> {
 
   // Removes |request| from any internal tracking. Called by a PageRequest if
   // it needs to abort itself.
-  void CancelRequest(PageRequest* request) TA_EXCL(page_source_mtx_);
+  void CancelRequest(PageRequest* request) override TA_EXCL(page_source_mtx_);
 
-  friend PageRequest;
+  zx_status_t WaitOnRequest(PageRequest* request) override;
+
+  zx_status_t FinalizeRequest(PageRequest* request) override;
 };
 
 // The PageRequest provides the ability to be in two difference linked list. One owned by the page
@@ -360,19 +424,22 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   // failed this page request. Returns ZX_ERR_INTERNAL_INTR_KILLED if the thread was killed.
   zx_status_t Wait();
 
+  // Forwards to the underlying PageRequestInterface::FinalizeRequest, see that for details.
+  zx_status_t FinalizeRequest();
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(PageRequest);
 
  private:
   // PageRequests may or may not be initialized, to support batching of requests. offset_ must be
   // checked and the object must be initialized if necessary (an uninitialized request has offset_
   // set to UINT64_MAX).
-  void Init(fbl::RefPtr<PageSource> src, uint64_t offset, page_request_type type,
+  void Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset, page_request_type type,
             VmoDebugInfo vmo_debug_info);
 
   const bool allow_batching_;
 
   // The page source this request is currently associated with.
-  fbl::RefPtr<PageSource> src_;
+  fbl::RefPtr<PageRequestInterface> src_;
   // Event signaled when the request is fulfilled.
   AutounsignalEvent event_;
   // PageRequests are active if offset_ is not UINT64_MAX. In an inactive request, the

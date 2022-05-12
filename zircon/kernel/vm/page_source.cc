@@ -227,7 +227,8 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
   // Check if request is initialized and initialize it if it isn't (it can be initialized
   // for batch requests).
   if (request->offset_ == UINT64_MAX) {
-    request->Init(fbl::RefPtr<PageSource>(this), offset, page_request_type::READ, vmo_debug_info);
+    request->Init(fbl::RefPtr<PageRequestInterface>(this), offset, page_request_type::READ,
+                  vmo_debug_info);
     LTRACEF_LEVEL(2, "%p offset %lx\n", this, offset);
   }
 
@@ -424,6 +425,14 @@ void PageSource::CancelRequest(PageRequest* request) {
   request->offset_ = UINT64_MAX;
 }
 
+zx_status_t PageSource::WaitOnRequest(PageRequest* request) {
+  canary_.Assert();
+
+  // If we have been detached the request will already have been completed in ::Detach and so the
+  // provider should instantly wake from the event.
+  return page_provider_->WaitOnEvent(&request->event_);
+}
+
 zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t offset, uint64_t len,
                                                VmoDebugInfo vmo_debug_info) {
   canary_.Assert();
@@ -445,7 +454,8 @@ zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t of
 
   // Request should not be previously initialized.
   DEBUG_ASSERT(request->offset_ == UINT64_MAX);
-  request->Init(fbl::RefPtr<PageSource>(this), offset, page_request_type::DIRTY, vmo_debug_info);
+  request->Init(fbl::RefPtr<PageRequestInterface>(this), offset, page_request_type::DIRTY,
+                vmo_debug_info);
 
   zx_status_t status;
   // Keep building up the current request as long as PopulateRequestLocked returns ZX_ERR_NEXT.
@@ -481,8 +491,8 @@ PageRequest::~PageRequest() {
   }
 }
 
-void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset, page_request_type type,
-                       VmoDebugInfo vmo_debug_info) {
+void PageRequest::Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset,
+                       page_request_type type, VmoDebugInfo vmo_debug_info) {
   DEBUG_ASSERT(offset_ == UINT64_MAX);
   vmo_debug_info_ = vmo_debug_info;
   len_ = 0;
@@ -497,12 +507,18 @@ void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset, page_reques
 zx_status_t PageRequest::Wait() {
   lockdep::AssertNoLocksHeld();
   VM_KTRACE_DURATION(1, "page_request_wait", offset_, len_);
-  zx_status_t status = src_->page_provider_->WaitOnEvent(&event_);
+  zx_status_t status = src_->WaitOnRequest(this);
   VM_KTRACE_FLOW_END(1, "page_request_signal", reinterpret_cast<uintptr_t>(this));
   if (status != ZX_OK && !PageSource::IsValidInternalFailureCode(status)) {
     src_->CancelRequest(this);
   }
   return status;
+}
+
+zx_status_t PageRequest::FinalizeRequest() {
+  DEBUG_ASSERT(src_);
+
+  return src_->FinalizeRequest(this);
 }
 
 PageRequest* LazyPageRequest::get() {

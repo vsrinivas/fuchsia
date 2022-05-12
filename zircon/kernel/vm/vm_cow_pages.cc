@@ -2582,7 +2582,7 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
 
   if (have_page_request) {
     // commited_len was set when have_page_request was set so can just return.
-    return root_source->FinalizeRequest(page_request->get());
+    return page_request->get()->FinalizeRequest();
   }
 
   // Processed the full range successfully
