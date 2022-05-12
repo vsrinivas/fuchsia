@@ -3,14 +3,32 @@
 // found in the LICENSE file.
 
 mod macros;
+mod prototype;
 pub mod testing;
 
-use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf};
-use test_list::TestTag;
+use {
+    serde::{Deserialize, Serialize},
+    std::{
+        borrow::Cow,
+        collections::HashMap,
+        fs::{DirBuilder, File},
+        io::Error,
+        path::{Path, PathBuf},
+    },
+    test_list::TestTag,
+};
 
 /// Filename of the top level summary json.
 pub const RUN_SUMMARY_NAME: &str = "run_summary.json";
+pub const RUN_NAME: &str = "run";
+
+enumerable_enum! {
+    /// Schema version.
+    #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
+    SchemaVersion {
+        UnstablePrototype,
+    }
+}
 
 enumerable_enum! {
     /// A serializable version of a test outcome.
@@ -25,103 +43,6 @@ enumerable_enum! {
         Error,
         Skipped,
     }
-}
-
-/// A serializable test run result.
-/// This contains overall results and artifacts scoped to a test run, and
-/// a list of filenames for finding serialized suite results.
-#[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
-#[serde(tag = "version")]
-pub enum TestRunResult {
-    #[serde(rename = "0")]
-    V0 {
-        /// A mapping from paths to artifacts to metadata associated with the artifact.
-        /// The paths are given relative to |artifact_dir|. Artifacts are always placed
-        /// in the top level directory of |artifact_dir|. Note that some artifacts are
-        /// themselves directories. In this case, the root directory of the artifact is
-        /// a direct child of |artifact_dir|.
-        artifacts: HashMap<PathBuf, ArtifactMetadataV0>,
-        /// Path to the directory containing artifacts for the suite. The path is given
-        /// relative to the root of the output directory. |artifact_dir| is always in the root
-        /// output directory; it will never be in a subdirectory.
-        artifact_dir: PathBuf,
-        outcome: Outcome,
-        suites: Vec<SuiteEntryV0>,
-        /// Approximate start time, as milliseconds since the epoch.
-        #[serde(skip_serializing_if = "Option::is_none")]
-        start_time: Option<u64>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        duration_milliseconds: Option<u64>,
-    },
-}
-
-/// A suite listing in the test run summary.
-#[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
-pub struct SuiteEntryV0 {
-    /// Location of the summary file for this suite.
-    pub summary: String,
-}
-
-/// A serializable suite run result.
-/// Contains overall results and artifacts scoped to a suite run, and
-/// results and artifacts scoped to any test run within it.
-#[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
-#[serde(tag = "version")]
-pub enum SuiteResult {
-    #[serde(rename = "0")]
-    V0 {
-        /// A mapping from paths to artifacts to metadata associated with the artifact.
-        /// The paths are given relative to |artifact_dir|. Artifacts are always placed
-        /// in the top level directory of |artifact_dir|. Note that some artifacts are
-        /// themselves directories. In this case, the root directory of the artifact is
-        /// a direct child of |artifact_dir|.
-        artifacts: HashMap<PathBuf, ArtifactMetadataV0>,
-        /// Path to the directory containing artifacts for the suite. The path is given
-        /// relative to the root of the output directory. |artifact_dir| is always in the root
-        /// output directory; it will never be in a subdirectory.
-        artifact_dir: PathBuf,
-        outcome: Outcome,
-        name: String,
-        cases: Vec<TestCaseResultV0>,
-        /// Approximate start time, as milliseconds since the epoch.
-        #[serde(skip_serializing_if = "Option::is_none")]
-        start_time: Option<u64>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        duration_milliseconds: Option<u64>,
-        #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
-        tags: Vec<TestTag>,
-    },
-}
-/// A serializable test case result.
-#[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
-pub struct TestCaseResultV0 {
-    /// A mapping from paths to artifacts to metadata associated with the artifact.
-    /// The paths are given relative to |artifact_dir|. Artifacts are always placed
-    /// in the top level directory of |artifact_dir|. Note that some artifacts are
-    /// themselves directories. In this case, the root directory of the artifact is
-    /// a direct child of |artifact_dir|.
-    pub artifacts: HashMap<PathBuf, ArtifactMetadataV0>,
-    /// Path to the directory containing artifacts for the suite. The path is given
-    /// relative to the root of the output directory. |artifact_dir| is always in the root
-    /// output directory; it will never be in a subdirectory.
-    pub artifact_dir: PathBuf,
-    pub outcome: Outcome,
-    pub name: String,
-    /// Approximate start time, as milliseconds since the epoch.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub start_time: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration_milliseconds: Option<u64>,
-}
-
-/// Metadata associated with an artifact.
-#[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone, Hash)]
-pub struct ArtifactMetadataV0 {
-    /// The type of the artifact.
-    pub artifact_type: ArtifactType,
-    /// Moniker of the component which produced the artifact, if applicable.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub component_moniker: Option<String>,
 }
 
 enumerable_enum! {
@@ -143,321 +64,497 @@ enumerable_enum! {
     }
 }
 
-impl From<ArtifactType> for ArtifactMetadataV0 {
+/// A subdirectory of an output directory that contains artifacts for a test run,
+/// test suite, or test case.
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct ArtifactSubDirectory {
+    version: SchemaVersion,
+    root: PathBuf,
+    artifacts: HashMap<PathBuf, ArtifactMetadata>,
+}
+
+/// Contains result information common to all results. It's useful to store
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct CommonResult {
+    pub name: String,
+    pub artifact_dir: ArtifactSubDirectory,
+    pub outcome: MaybeUnknown<Outcome>,
+    /// Approximate start time, as milliseconds since the epoch.
+    pub start_time: Option<u64>,
+    pub duration_milliseconds: Option<u64>,
+}
+
+/// A serializable test run result.
+/// This contains overall results and artifacts scoped to a test run, and
+/// a list of filenames for finding serialized suite results.
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct TestRunResult<'a> {
+    pub common: Cow<'a, CommonResult>,
+    pub suites: Vec<SuiteResult<'a>>,
+}
+
+/// A serializable suite run result.
+/// Contains overall results and artifacts scoped to a suite run, and
+/// results and artifacts scoped to any test run within it.
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct SuiteResult<'a> {
+    pub common: Cow<'a, CommonResult>,
+    pub summary_file_hint: Cow<'a, String>,
+    pub cases: Vec<TestCaseResult<'a>>,
+    pub tags: Cow<'a, Vec<TestTag>>,
+}
+
+/// A serializable test case result.
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct TestCaseResult<'a> {
+    pub common: Cow<'a, CommonResult>,
+}
+
+impl TestRunResult<'static> {
+    pub fn from_dir(root: &Path) -> Result<Self, Error> {
+        prototype::parse_from_directory(root)
+    }
+}
+
+/// Metadata associated with an artifact.
+#[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone, Hash)]
+pub struct ArtifactMetadata {
+    /// The type of the artifact.
+    pub artifact_type: MaybeUnknown<ArtifactType>,
+    /// Moniker of the component which produced the artifact, if applicable.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub component_moniker: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Hash, Clone)]
+#[serde(untagged)]
+pub enum MaybeUnknown<T> {
+    Known(T),
+    Unknown(String),
+}
+
+impl<T> From<T> for MaybeUnknown<T> {
+    fn from(other: T) -> Self {
+        Self::Known(other)
+    }
+}
+
+impl From<ArtifactType> for ArtifactMetadata {
     fn from(other: ArtifactType) -> Self {
-        Self { artifact_type: other, component_moniker: None }
+        Self { artifact_type: MaybeUnknown::Known(other), component_moniker: None }
+    }
+}
+
+/// A helper for accumulating results in an output directory.
+///
+/// |OutputDirectoryBuilder| handles details specific to the format of the test output
+/// format, such as the locations of summaries and artifacts, while allowing the caller to
+/// accumulate results separately. A typical usecase might look like this:
+/// ```rust
+/// let output_directory = OutputDirectoryBuilder::new("/path", SchemaVersion::UnstablePrototype)?;
+/// let mut run_result = TestRunResult {
+///     common: Cow::Owned(CommonResult{
+///         name: "run".to_string(),
+///         artifact_dir: output_directory.new_artifact_dir("run-artifacts")?,
+///         outcome: Outcome::Inconclusive.into(),
+///         start_time: None,
+///         duration_milliseconds: None,
+///     }),
+///     suites: vec![],
+/// };
+///
+/// // accumulate results in run_result over time... then save the summary.
+/// output_directory.save_summary(&run_result)?;
+/// ```
+pub struct OutputDirectoryBuilder {
+    version: SchemaVersion,
+    root: PathBuf,
+}
+
+impl OutputDirectoryBuilder {
+    /// Register a directory for use as an output directory using version |version|.
+    pub fn new(dir: impl Into<PathBuf>, version: SchemaVersion) -> Result<Self, Error> {
+        let root = dir.into();
+        ensure_directory_exists(&root)?;
+        Ok(Self { version, root })
+    }
+
+    /// Create a new artifact subdirectory.
+    ///
+    /// The new |ArtifactSubDirectory| should be referenced from either the test run, suite, or
+    /// case when a summary is saved in this OutputDirectoryBuilder with |save_summary|.
+    ///
+    /// |path_hint| exists to preserve some naming behavior in the experimental output, but this
+    /// behavior will not be preserved in stable versions. After the experimental version is
+    /// removed this should be removed.
+    pub fn new_artifact_dir(
+        &self,
+        path_hint: impl AsRef<Path>,
+    ) -> Result<ArtifactSubDirectory, Error> {
+        match self.version {
+            SchemaVersion::UnstablePrototype => {
+                // todo - check that relative path is only one segment long.
+                let subdir_root = self.root.join(path_hint);
+                Ok(ArtifactSubDirectory {
+                    version: self.version,
+                    root: subdir_root,
+                    artifacts: HashMap::new(),
+                })
+            }
+        }
+    }
+
+    /// Save a summary of the test results in the directory.
+    pub fn save_summary<'a, 'b>(&'a self, result: &'a TestRunResult<'b>) -> Result<(), Error> {
+        match self.version {
+            SchemaVersion::UnstablePrototype => {
+                prototype::save_summary(self.root.as_path(), result)
+            }
+        }
+    }
+
+    /// Get the path to the root directory.
+    pub fn path(&self) -> &Path {
+        self.root.as_path()
+    }
+}
+
+impl ArtifactSubDirectory {
+    /// Create a new file based artifact.
+    pub fn new_artifact(
+        &mut self,
+        metadata: impl Into<ArtifactMetadata>,
+        name: impl AsRef<Path>,
+    ) -> Result<File, Error> {
+        ensure_directory_exists(self.root.as_path())?;
+        match self.version {
+            SchemaVersion::UnstablePrototype => {
+                // todo validate path
+                self.artifacts.insert(name.as_ref().to_path_buf(), metadata.into());
+                File::create(self.root.join(name))
+            }
+        }
+    }
+
+    /// Create a new directory based artifact.
+    pub fn new_directory_artifact(
+        &mut self,
+        metadata: impl Into<ArtifactMetadata>,
+        name: impl AsRef<Path>,
+    ) -> Result<PathBuf, Error> {
+        match self.version {
+            SchemaVersion::UnstablePrototype => {
+                // todo validate path
+                let subdir = self.root.join(name.as_ref());
+                ensure_directory_exists(subdir.as_path())?;
+                self.artifacts.insert(name.as_ref().to_path_buf(), metadata.into());
+                Ok(subdir)
+            }
+        }
+    }
+
+    /// Get the absolute path of the artifact at |name|, if present.
+    pub fn path_to_artifact(&self, name: impl AsRef<Path>) -> Option<PathBuf> {
+        match self.version {
+            SchemaVersion::UnstablePrototype => match self.artifacts.contains_key(name.as_ref()) {
+                true => Some(self.root.join(name.as_ref())),
+                false => None,
+            },
+        }
+    }
+
+    /// Return a list of paths of artifacts in the directory, relative to the root of the artifact
+    /// directory.
+    pub fn contents(&self) -> Vec<PathBuf> {
+        self.artifacts.keys().cloned().collect()
+    }
+}
+
+fn ensure_directory_exists(dir: &Path) -> Result<(), Error> {
+    match dir.exists() {
+        true => Ok(()),
+        false => DirBuilder::new().recursive(true).create(&dir),
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use maplit::hashmap;
-    use serde_json::{from_str, json, to_string, Value};
-    use std::path::Path;
-    use valico::json_schema;
+    use std::{io::Write, path::Path};
+    use tempfile::tempdir;
+
+    fn validate_against_schema(version: SchemaVersion, root: &Path) {
+        match version {
+            SchemaVersion::UnstablePrototype => prototype::validate_against_schema(root),
+        }
+    }
+
+    /// Run a round trip test against all known schema versions.
+    fn round_trip_test_all_versions<F>(produce_run_fn: F)
+    where
+        F: Fn(&OutputDirectoryBuilder) -> TestRunResult<'static>,
+    {
+        for version in SchemaVersion::all_variants() {
+            let dir = tempdir().expect("Create dir");
+            let output_dir = OutputDirectoryBuilder::new(dir.path(), version).expect("create dir");
+
+            let run_result = produce_run_fn(&output_dir);
+            output_dir.save_summary(&run_result).expect("save summary");
+
+            validate_against_schema(version, dir.path());
+
+            let parsed = TestRunResult::from_dir(dir.path()).expect("parse output directory");
+            assert_eq!(run_result, parsed, "version: {:?}", version);
+        }
+    }
 
     #[test]
-    fn run_version_serialized() {
-        // This is a sanity check that verifies version is serialized.
-        let run_result = TestRunResult::V0 {
-            artifacts: HashMap::new(),
-            artifact_dir: Path::new("a").to_path_buf(),
-            outcome: Outcome::Inconclusive,
+    fn minimal() {
+        round_trip_test_all_versions(|dir_builder| TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir: dir_builder.new_artifact_dir("subdir").expect("new dir"),
+                outcome: Outcome::Passed.into(),
+                start_time: None,
+                duration_milliseconds: None,
+            }),
             suites: vec![],
-            duration_milliseconds: None,
-            start_time: None,
-        };
-
-        let serialized = to_string(&run_result).expect("serialize result");
-        let value = from_str::<Value>(&serialized).expect("deserialize result");
-
-        let expected = json!({
-            "version": "0",
-            "artifacts": {},
-            "artifact_dir": "a",
-            "outcome": "INCONCLUSIVE",
-            "suites": [],
         });
-
-        assert_eq!(value, expected);
+        let _ = Outcome::all_variants();
     }
 
     #[test]
-    fn run_version_mismatch() {
-        let wrong_version_json = json!({
-            "version": "10",
-            "artifacts": {},
-            "outcome": "INCONCLUSIVE",
-            "suites": [],
-        });
-
-        let serialized = to_string(&wrong_version_json).expect("serialize result");
-
-        assert!(from_str::<TestRunResult>(&serialized).unwrap_err().is_data());
-    }
-
-    #[test]
-    fn suite_version_serialized() {
-        let suite_result = SuiteResult::V0 {
-            artifacts: HashMap::new(),
-            artifact_dir: Path::new("a").to_path_buf(),
-            outcome: Outcome::Inconclusive,
-            cases: vec![],
-            name: "suite".to_string(),
-            duration_milliseconds: None,
-            start_time: None,
-            tags: vec![],
-        };
-
-        let serialized = to_string(&suite_result).expect("serialize result");
-        let value = from_str::<Value>(&serialized).expect("deserialize result");
-
-        let expected = json!({
-            "version": "0",
-            "artifacts": {},
-            "artifact_dir": "a",
-            "outcome": "INCONCLUSIVE",
-            "cases": [],
-            "name": "suite",
-        });
-
-        assert_eq!(value, expected);
-    }
-
-    #[test]
-    fn suite_version_mismatch() {
-        let wrong_version_json = json!({
-            "version": "10",
-            "artifacts": {},
-            "outcome": "INCONCLUSIVE",
-            "cases": [],
-            "name": "suite",
-        });
-
-        let serialized = to_string(&wrong_version_json).expect("serialize result");
-
-        assert!(from_str::<SuiteResult>(&serialized).unwrap_err().is_data());
-    }
-
-    #[test]
-    fn run_conforms_to_schema() {
-        let run_schema = serde_json::from_str(testing::RUN_SCHEMA).expect("parse json schema");
-        let mut scope = json_schema::Scope::new();
-        let compiled_schema =
-            scope.compile_and_return(run_schema, false).expect("compile json schema");
-
-        let mut cases = vec![
-            TestRunResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Skipped,
-                suites: vec![],
-                duration_milliseconds: None,
-                start_time: None,
-            },
-            TestRunResult::V0 {
-                artifacts: hashmap! {
-                    Path::new("b.txt").to_path_buf() => ArtifactType::Syslog.into(),
-                },
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Skipped,
-                suites: vec![SuiteEntryV0 { summary: "suite-summary.json".to_string() }],
-                duration_milliseconds: None,
-                start_time: None,
-            },
-            TestRunResult::V0 {
-                artifacts: hashmap! {
-                    Path::new("b.txt").to_path_buf() => ArtifactType::Stderr.into(),
-                    Path::new("d.txt").to_path_buf() => ArtifactMetadataV0 {
-                        artifact_type: ArtifactType::Syslog,
-                        component_moniker: Some("component".to_string())
-                    },
-                },
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Skipped,
-                suites: vec![
-                    SuiteEntryV0 { summary: "suite-summary-1.json".to_string() },
-                    SuiteEntryV0 { summary: "suite-summary-2.json".to_string() },
-                ],
-                duration_milliseconds: Some(65),
-                start_time: Some(01),
-            },
-        ];
-        for outcome in Outcome::all_variants() {
-            cases.push(TestRunResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome,
-                suites: vec![],
-                duration_milliseconds: None,
-                start_time: None,
-            });
-        }
+    fn artifact_types() {
         for artifact_type in ArtifactType::all_variants() {
-            cases.push(TestRunResult::V0 {
-                artifacts: hashmap! {
-                    Path::new("a").to_path_buf() => artifact_type.into(),
-                },
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Skipped,
-                suites: vec![],
-                duration_milliseconds: None,
-                start_time: None,
-            });
-        }
+            round_trip_test_all_versions(|dir_builder| {
+                let mut run_artifact_dir =
+                    dir_builder.new_artifact_dir("run-artifacts").expect("new dir");
+                let mut run_artifact =
+                    run_artifact_dir.new_artifact(artifact_type, "a.txt").expect("create artifact");
+                write!(run_artifact, "run contents").unwrap();
 
-        for case in cases.iter() {
-            let serialized = serde_json::to_value(case).expect("serialize test run");
-            let validate_result = compiled_schema.validate(&serialized);
-            if !validate_result.is_strictly_valid() {
-                panic!(
-                    "Run did not conform with schema: {:#?}, {:#?}, {:#?}",
-                    case, serialized, validate_result
-                );
-            }
+                let mut suite_artifact_dir =
+                    dir_builder.new_artifact_dir("suite-artifacts").expect("new dir");
+                let mut suite_artifact = suite_artifact_dir
+                    .new_artifact(artifact_type, "a.txt")
+                    .expect("create artifact");
+                write!(suite_artifact, "suite contents").unwrap();
+
+                let mut case_artifact_dir =
+                    dir_builder.new_artifact_dir("case-artifacts").expect("new dir");
+                let mut case_artifact = case_artifact_dir
+                    .new_artifact(artifact_type, "a.txt")
+                    .expect("create artifact");
+                write!(case_artifact, "case contents").unwrap();
+
+                TestRunResult {
+                    common: Cow::Owned(CommonResult {
+                        name: RUN_NAME.to_string(),
+                        artifact_dir: run_artifact_dir,
+                        outcome: Outcome::Passed.into(),
+                        start_time: None,
+                        duration_milliseconds: None,
+                    }),
+                    suites: vec![SuiteResult {
+                        common: Cow::Owned(CommonResult {
+                            name: "suite".to_string(),
+                            artifact_dir: suite_artifact_dir,
+                            outcome: Outcome::Passed.into(),
+                            start_time: None,
+                            duration_milliseconds: None,
+                        }),
+                        summary_file_hint: Cow::Owned("suite.json".to_string()),
+                        tags: Cow::Owned(vec![]),
+                        cases: vec![TestCaseResult {
+                            common: Cow::Owned(CommonResult {
+                                name: "case".to_string(),
+                                artifact_dir: case_artifact_dir,
+                                outcome: Outcome::Passed.into(),
+                                start_time: None,
+                                duration_milliseconds: None,
+                            }),
+                        }],
+                    }],
+                }
+            });
         }
     }
 
     #[test]
-    fn suite_conforms_to_schema() {
-        let suite_schema = serde_json::from_str(testing::SUITE_SCHEMA).expect("parse json schema");
-        let mut scope = json_schema::Scope::new();
-        let compiled_schema =
-            scope.compile_and_return(suite_schema, false).expect("compile json schema");
-
-        let mut cases = vec![
-            SuiteResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Passed,
-                name: "my test suite".to_string(),
-                cases: vec![],
-                duration_milliseconds: None,
-                start_time: None,
-                tags: vec![],
-            },
-            SuiteResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("b").to_path_buf(),
-                outcome: Outcome::Failed,
-                name: "another suite".to_string(),
-                cases: vec![TestCaseResultV0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("b-case").to_path_buf(),
-                    outcome: Outcome::Inconclusive,
-                    name: "test case".to_string(),
-                    duration_milliseconds: Some(12),
-                    start_time: Some(100),
-                }],
-                duration_milliseconds: Some(80),
-                start_time: Some(200),
-                tags: vec![],
-            },
-            SuiteResult::V0 {
-                artifacts: hashmap! {
-                    Path::new("a.txt").to_path_buf() => ArtifactType::Stderr.into(),
-                },
-                artifact_dir: Path::new("c").to_path_buf(),
-                outcome: Outcome::Failed,
-                name: "another suite".to_string(),
-                cases: vec![
-                    TestCaseResultV0 {
-                        artifacts: hashmap! {
-                            Path::new("b.txt").to_path_buf() => ArtifactType::Stdout.into(),
-                            Path::new("c.txt").to_path_buf() => ArtifactMetadataV0 {
-                                artifact_type: ArtifactType::Syslog,
-                                component_moniker: Some("component".to_string())
-                            },
+    fn artifact_types_moniker_specified() {
+        for artifact_type in ArtifactType::all_variants() {
+            round_trip_test_all_versions(|dir_builder| {
+                let mut run_artifact_dir =
+                    dir_builder.new_artifact_dir("run-artifacts").expect("new dir");
+                let mut run_artifact = run_artifact_dir
+                    .new_artifact(
+                        ArtifactMetadata {
+                            artifact_type: artifact_type.into(),
+                            component_moniker: Some("moniker".to_string()),
                         },
-                        artifact_dir: Path::new("case-0").to_path_buf(),
-                        outcome: Outcome::Timedout,
-                        name: "test case".to_string(),
-                        duration_milliseconds: None,
-                        start_time: Some(37),
-                    },
-                    TestCaseResultV0 {
-                        artifacts: hashmap![
-                            Path::new("d.txt").to_path_buf() => ArtifactType::Stdout.into(),
-                            Path::new("e.txt").to_path_buf() => ArtifactType::Stdout.into(),
-                        ],
-                        artifact_dir: Path::new("case-1").to_path_buf(),
-                        outcome: Outcome::Error,
-                        name: "test case 2".to_string(),
-                        duration_milliseconds: Some(37),
+                        "a.txt",
+                    )
+                    .expect("create artifact");
+                write!(run_artifact, "run contents").unwrap();
+
+                let mut suite_artifact_dir =
+                    dir_builder.new_artifact_dir("suite-artifacts").expect("new dir");
+                let mut suite_artifact = suite_artifact_dir
+                    .new_artifact(
+                        ArtifactMetadata {
+                            artifact_type: artifact_type.into(),
+                            component_moniker: Some("moniker".to_string()),
+                        },
+                        "a.txt",
+                    )
+                    .expect("create artifact");
+                write!(suite_artifact, "suite contents").unwrap();
+
+                let mut case_artifact_dir =
+                    dir_builder.new_artifact_dir("case-artifacts").expect("new dir");
+                let mut case_artifact = case_artifact_dir
+                    .new_artifact(
+                        ArtifactMetadata {
+                            artifact_type: artifact_type.into(),
+                            component_moniker: Some("moniker".to_string()),
+                        },
+                        "a.txt",
+                    )
+                    .expect("create artifact");
+                write!(case_artifact, "case contents").unwrap();
+
+                TestRunResult {
+                    common: Cow::Owned(CommonResult {
+                        name: RUN_NAME.to_string(),
+                        artifact_dir: run_artifact_dir,
+                        outcome: Outcome::Passed.into(),
                         start_time: None,
-                    },
-                ],
-                duration_milliseconds: Some(37),
-                start_time: None,
-                tags: vec![],
-            },
-            SuiteResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("d").to_path_buf(),
-                outcome: Outcome::Passed,
-                name: "suite with tags".to_string(),
-                cases: vec![],
-                duration_milliseconds: None,
-                start_time: None,
-                tags: vec![
+                        duration_milliseconds: None,
+                    }),
+                    suites: vec![SuiteResult {
+                        common: Cow::Owned(CommonResult {
+                            name: "suite".to_string(),
+                            artifact_dir: suite_artifact_dir,
+                            outcome: Outcome::Passed.into(),
+                            start_time: None,
+                            duration_milliseconds: None,
+                        }),
+                        summary_file_hint: Cow::Owned("suite.json".to_string()),
+                        tags: Cow::Owned(vec![]),
+                        cases: vec![TestCaseResult {
+                            common: Cow::Owned(CommonResult {
+                                name: "case".to_string(),
+                                artifact_dir: case_artifact_dir,
+                                outcome: Outcome::Passed.into(),
+                                start_time: None,
+                                duration_milliseconds: None,
+                            }),
+                        }],
+                    }],
+                }
+            });
+        }
+    }
+
+    #[test]
+    fn outcome_types() {
+        for outcome_type in Outcome::all_variants() {
+            round_trip_test_all_versions(|dir_builder| TestRunResult {
+                common: Cow::Owned(CommonResult {
+                    name: RUN_NAME.to_string(),
+                    artifact_dir: dir_builder.new_artifact_dir("run-artifacts").expect("new dir"),
+                    outcome: outcome_type.into(),
+                    start_time: None,
+                    duration_milliseconds: None,
+                }),
+                suites: vec![SuiteResult {
+                    common: Cow::Owned(CommonResult {
+                        name: "suite".to_string(),
+                        artifact_dir: dir_builder
+                            .new_artifact_dir("suite-artifacts")
+                            .expect("new dir"),
+                        outcome: outcome_type.into(),
+                        start_time: None,
+                        duration_milliseconds: None,
+                    }),
+                    summary_file_hint: Cow::Owned("suite.json".to_string()),
+                    tags: Cow::Owned(vec![]),
+                    cases: vec![TestCaseResult {
+                        common: Cow::Owned(CommonResult {
+                            name: "case".to_string(),
+                            artifact_dir: dir_builder
+                                .new_artifact_dir("case-artifacts")
+                                .expect("new dir"),
+                            outcome: outcome_type.into(),
+                            start_time: None,
+                            duration_milliseconds: None,
+                        }),
+                    }],
+                }],
+            });
+        }
+    }
+
+    #[test]
+    fn timing_specified() {
+        round_trip_test_all_versions(|dir_builder| TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir: dir_builder.new_artifact_dir("run-artifacts").expect("new dir"),
+                outcome: Outcome::Passed.into(),
+                start_time: Some(1),
+                duration_milliseconds: Some(2),
+            }),
+            suites: vec![SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: dir_builder.new_artifact_dir("suite-artifacts").expect("new dir"),
+                    outcome: Outcome::Passed.into(),
+                    start_time: Some(3),
+                    duration_milliseconds: Some(4),
+                }),
+                summary_file_hint: Cow::Owned("suite.json".to_string()),
+                tags: Cow::Owned(vec![]),
+                cases: vec![TestCaseResult {
+                    common: Cow::Owned(CommonResult {
+                        name: "case".to_string(),
+                        artifact_dir: dir_builder
+                            .new_artifact_dir("case-artifacts")
+                            .expect("new dir"),
+                        outcome: Outcome::Passed.into(),
+                        start_time: Some(5),
+                        duration_milliseconds: Some(6),
+                    }),
+                }],
+            }],
+        });
+    }
+
+    #[test]
+    fn tags_specified() {
+        round_trip_test_all_versions(|dir_builder| TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir: dir_builder.new_artifact_dir("run-artifacts").expect("new dir"),
+                outcome: Outcome::Passed.into(),
+                start_time: Some(1),
+                duration_milliseconds: Some(2),
+            }),
+            suites: vec![SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: dir_builder.new_artifact_dir("suite-artifacts").expect("new dir"),
+                    outcome: Outcome::Passed.into(),
+                    start_time: Some(3),
+                    duration_milliseconds: Some(4),
+                }),
+                summary_file_hint: Cow::Owned("suite.json".to_string()),
+                tags: Cow::Owned(vec![
                     TestTag { key: "hermetic".to_string(), value: "false".to_string() },
                     TestTag { key: "realm".to_string(), value: "system".to_string() },
-                ],
-            },
-        ];
-        for outcome in Outcome::all_variants() {
-            cases.push(SuiteResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                name: "a suite".to_string(),
-                outcome,
-                cases: vec![TestCaseResultV0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("case-0").to_path_buf(),
-                    outcome,
-                    name: "test case".to_string(),
-                    duration_milliseconds: None,
-                    start_time: Some(37),
-                }],
-                duration_milliseconds: None,
-                start_time: None,
-                tags: vec![],
-            });
-        }
-        for artifact_type in ArtifactType::all_variants() {
-            cases.push(SuiteResult::V0 {
-                artifacts: hashmap! {
-                    Path::new("a").to_path_buf() => artifact_type.into(),
-                },
-                artifact_dir: Path::new("a").to_path_buf(),
-                name: "a suite".to_string(),
-                outcome: Outcome::Error,
-                cases: vec![TestCaseResultV0 {
-                    artifacts: hashmap! {
-                        Path::new("a").to_path_buf() => artifact_type.into(),
-                    },
-                    artifact_dir: Path::new("case-0").to_path_buf(),
-                    outcome: Outcome::Error,
-                    name: "test case".to_string(),
-                    duration_milliseconds: None,
-                    start_time: Some(37),
-                }],
-                duration_milliseconds: None,
-                start_time: None,
-                tags: vec![],
-            });
-        }
-
-        for case in cases.iter() {
-            let serialized = serde_json::to_value(case).expect("serialize test run");
-            let validate_result = compiled_schema.validate(&serialized);
-            if !validate_result.is_strictly_valid() {
-                panic!(
-                    "Run did not conform with schema: {:#?}, {:#?}, {:#?}",
-                    case, serialized, validate_result
-                );
-            }
-        }
+                ]),
+                cases: vec![],
+            }],
+        });
     }
 }

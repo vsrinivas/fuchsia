@@ -8,6 +8,7 @@ use fidl_fuchsia_test_manager::{LaunchError, RunBuilderMarker};
 use regex::Regex;
 use run_test_suite_lib::{output, Outcome, RunTestSuiteError, TestParams};
 use std::convert::TryInto;
+use std::ops::Deref;
 use std::str::from_utf8;
 use std::sync::Arc;
 use test_list::TestTag;
@@ -184,27 +185,19 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-af
 
     assert_eq!(outcome, Outcome::Inconclusive);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
     directory::testing::assert_run_result(
         output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Inconclusive),
-    );
-
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &vec![
-            ExpectedSuite::new(
-                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm",
-                directory::Outcome::Inconclusive,
+        &ExpectedTestRun::new(directory::Outcome::Inconclusive)
+            .with_suite(
+                ExpectedSuite::new(
+                    "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm",
+                    directory::Outcome::Inconclusive,
+                )
+                .with_tag(TestTag::new("internal", "true"))
+                .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+                .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+                .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
             )
-            .with_tag(TestTag::new("internal", "true"))
-            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
-            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
-            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
-        ],
     );
 }
 
@@ -253,36 +246,34 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-exa
 
     assert_eq!(outcome, Outcome::Passed);
 
-    let expected_test_suites = vec![ExpectedSuite::new(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
-        directory::Outcome::Passed,
-    )
-    .with_tag(TestTag::new("internal", "true"))
-    .with_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), "")
-    .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed).with_artifact(
-        directory::ArtifactType::Stdout,
-        "stdout.txt".into(),
-        "log1 for Example.Test1\nlog2 for Example.Test1\nlog3 for Example.Test1\n",
-    ))
-    .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed).with_artifact(
-        directory::ArtifactType::Stdout,
-        "stdout.txt".into(),
-        "log1 for Example.Test2\nlog2 for Example.Test2\nlog3 for Example.Test2\n",
-    ))
-    .with_case(
-        ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed).with_artifact(
-            directory::ArtifactType::Stdout,
-            "stdout.txt".into(),
-            "log1 for Example.Test3\nlog2 for Example.Test3\nlog3 for Example.Test3\n",
-        ),
-    )];
-
-    let (_run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_suite_results(
+    directory::testing::assert_run_result(
         output_dir.path(),
-        &suite_results,
-        &expected_test_suites,
+        &ExpectedTestRun::new(directory::Outcome::Passed)
+            .with_suite(
+                ExpectedSuite::new(
+                    "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+                    directory::Outcome::Passed,
+                )
+                .with_tag(TestTag::new("internal", "true"))
+                .with_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), "")
+                .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed).with_artifact(
+                    directory::ArtifactType::Stdout,
+                    "stdout.txt".into(),
+                    "log1 for Example.Test1\nlog2 for Example.Test1\nlog3 for Example.Test1\n",
+                ))
+                .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed).with_artifact(
+                    directory::ArtifactType::Stdout,
+                    "stdout.txt".into(),
+                    "log1 for Example.Test2\nlog2 for Example.Test2\nlog3 for Example.Test2\n",
+                ))
+                .with_case(
+                    ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed).with_artifact(
+                        directory::ArtifactType::Stdout,
+                        "stdout.txt".into(),
+                        "log1 for Example.Test3\nlog2 for Example.Test3\nlog3 for Example.Test3\n",
+                    ),
+                )
+            )
     );
 }
 
@@ -334,51 +325,48 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr
     assert_output!(output.lock().as_ref(), expected_output);
 
     assert_eq!(outcome, Outcome::Passed);
-
-    let expected_test_suites = vec![ExpectedSuite::new(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
-        directory::Outcome::Passed,
-    )
-    .with_tag(TestTag::new("internal", "true"))
-    .with_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), "")
-    .with_case(
-        ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed)
-            .with_artifact(
-                directory::ArtifactType::Stdout,
-                "stdout.txt".into(),
-                "log1 for Example.Test1\nlog2 for Example.Test1\nlog3 for Example.Test1\n",
-            )
-            .with_artifact(
-                directory::ArtifactType::Stderr,
-                "stderr.txt".into(),
-                "stderr msg1 for Example.Test1\nstderr msg2 for Example.Test1\n",
-            ),
-    )
-    .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed).with_artifact(
-        directory::ArtifactType::Stdout,
-        "stdout.txt".into(),
-        "log1 for Example.Test2\nlog2 for Example.Test2\nlog3 for Example.Test2\n",
-    ))
-    .with_case(
-        ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)
-            .with_artifact(
-                directory::ArtifactType::Stdout,
-                "stdout.txt".into(),
-                "log1 for Example.Test3\nlog2 for Example.Test3\nlog3 for Example.Test3\n",
-            )
-            .with_artifact(
-                directory::ArtifactType::Stderr,
-                "stderr.txt".into(),
-                "stderr msg1 for Example.Test3\nstderr msg2 for Example.Test3\n",
-            ),
-    )];
-
-    let (_run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_suite_results(
+    directory::testing::assert_run_result(
         output_dir.path(),
-        &suite_results,
-        &expected_test_suites,
+        &ExpectedTestRun::new(directory::Outcome::Passed)
+            .with_suite(
+                ExpectedSuite::new(
+                    "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
+                    directory::Outcome::Passed,
+                )
+                .with_tag(TestTag::new("internal", "true"))
+                .with_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), "")
+                .with_case(
+                    ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed)
+                        .with_artifact(
+                            directory::ArtifactType::Stdout,
+                            "stdout.txt".into(),
+                            "log1 for Example.Test1\nlog2 for Example.Test1\nlog3 for Example.Test1\n",
+                        )
+                        .with_artifact(
+                            directory::ArtifactType::Stderr,
+                            "stderr.txt".into(),
+                            "stderr msg1 for Example.Test1\nstderr msg2 for Example.Test1\n",
+                        ),
+                )
+                .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed).with_artifact(
+                    directory::ArtifactType::Stdout,
+                    "stdout.txt".into(),
+                    "log1 for Example.Test2\nlog2 for Example.Test2\nlog3 for Example.Test2\n",
+                ))
+                .with_case(
+                    ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)
+                        .with_artifact(
+                            directory::ArtifactType::Stdout,
+                            "stdout.txt".into(),
+                            "log1 for Example.Test3\nlog2 for Example.Test3\nlog3 for Example.Test3\n",
+                        )
+                        .with_artifact(
+                            directory::ArtifactType::Stderr,
+                            "stderr.txt".into(),
+                            "stderr msg1 for Example.Test3\nstderr msg2 for Example.Test3\n",
+                        ),
+                )
+            )
     );
 }
 
@@ -404,7 +392,6 @@ async fn launch_and_test_passing_v2_test_multiple_times(
     .await;
     assert_eq!(outcome, Outcome::Passed);
 
-    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
     let expected_test_suite = ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
         directory::Outcome::Passed,
@@ -414,9 +401,8 @@ async fn launch_and_test_passing_v2_test_multiple_times(
     .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
     .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed));
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
+    let suite_results =
+        directory::TestRunResult::from_dir(output_dir.path()).expect("parse dir").suites;
 
     assert_eq!(suite_results.len(), 10);
     for suite_result in suite_results {
@@ -454,34 +440,29 @@ async fn launch_and_test_multiple_passing_tests(
     .await;
     assert_eq!(outcome, Outcome::Passed);
 
-    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
-    let expected_test_suites = vec![
-        ExpectedSuite::new(
-            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
-            directory::Outcome::Passed,
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed)
+        .with_suite(
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+                directory::Outcome::Passed,
+            )
+            .with_tag(TestTag::new("internal", "true"))
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)),
         )
-        .with_tag(TestTag::new("internal", "true"))
-        .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
-        .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
-        .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)),
-        ExpectedSuite::new(
-            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
-            directory::Outcome::Passed,
-        )
-        .with_tag(TestTag::new("internal", "true"))
-        .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
-        .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
-        .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
-    ];
+        .with_suite(
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
+                directory::Outcome::Passed,
+            )
+            .with_tag(TestTag::new("internal", "true"))
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
+        );
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &expected_test_suites,
-    );
+    directory::testing::assert_run_result(output_dir.path(), &expected_test_run);
 }
 
 #[fixture::fixture(run_with_reporter)]
@@ -513,24 +494,17 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-exa
 
     assert_eq!(outcome, Outcome::Passed);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
     directory::testing::assert_run_result(
         output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Passed),
-    );
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &vec![
-            ExpectedSuite::new(
-                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
-                directory::Outcome::Passed
+        &ExpectedTestRun::new(directory::Outcome::Passed)
+            .with_suite(
+                ExpectedSuite::new(
+                    "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+                    directory::Outcome::Passed
+                )
+                .with_tag(TestTag::new("internal", "true"))
+                .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
             )
-            .with_tag(TestTag::new("internal", "true"))
-            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
-        ],
     );
 }
 
@@ -567,26 +541,18 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-exa
     assert_output!(output.lock().as_slice(), expected_output);
 
     assert_eq!(outcome, Outcome::Passed);
-
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
     directory::testing::assert_run_result(
         output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Passed),
-    );
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &vec![
-            ExpectedSuite::new(
-                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
-                directory::Outcome::Passed
+        &ExpectedTestRun::new(directory::Outcome::Passed)
+            .with_suite(
+                ExpectedSuite::new(
+                    "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+                    directory::Outcome::Passed
+                )
+                .with_tag(TestTag::new("internal", "true"))
+                .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+                .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
             )
-            .with_tag(TestTag::new("internal", "true"))
-            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
-            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
-        ],
     );
 }
 
@@ -630,21 +596,16 @@ async fn launch_and_test_empty_test(
 
     assert_eq!(outcome, Outcome::Passed);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
     directory::testing::assert_run_result(
         output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Passed),
-    );
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &vec![ExpectedSuite::new(
-            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cm",
-            directory::Outcome::Passed,
-        )
-        .with_tag(TestTag::new("internal", "true"))],
+        &ExpectedTestRun::new(directory::Outcome::Passed)
+            .with_suite(
+                ExpectedSuite::new(
+                    "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cm",
+                    directory::Outcome::Passed,
+                )
+                .with_tag(TestTag::new("internal", "true"))
+            )
     );
 }
 
@@ -667,8 +628,6 @@ async fn launch_and_test_huge_test(
 
     assert_eq!(outcome, Outcome::Passed);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
     let mut expected_test_suite = ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cm",
         directory::Outcome::Passed,
@@ -683,13 +642,7 @@ async fn launch_and_test_huge_test(
 
     directory::testing::assert_run_result(
         output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Passed),
-    );
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &vec![expected_test_suite],
+        &ExpectedTestRun::new(directory::Outcome::Passed).with_suite(expected_test_suite),
     );
 }
 
@@ -728,26 +681,19 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-ex
 
     assert_eq!(outcome, Outcome::Passed);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
     directory::testing::assert_run_result(
         output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Passed),
-    );
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &vec![
-            ExpectedSuite::new(
-                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
-                directory::Outcome::Passed
+        &ExpectedTestRun::new(directory::Outcome::Passed)
+            .with_suite(
+                ExpectedSuite::new(
+                    "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
+                    directory::Outcome::Passed
+                )
+                .with_tag(TestTag::new("internal", "true"))
+                .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+                .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Skipped))
+                .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Skipped))
             )
-            .with_tag(TestTag::new("internal", "true"))
-            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
-            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Skipped))
-            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Skipped))
-        ],
     );
 }
 
@@ -790,26 +736,19 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-ex
 
     assert_eq!(outcome, Outcome::Failed);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
     directory::testing::assert_run_result(
         output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Failed),
-    );
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &vec![
-            ExpectedSuite::new(
-                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
-                directory::Outcome::Failed
+        &ExpectedTestRun::new(directory::Outcome::Failed)
+            .with_suite(
+                ExpectedSuite::new(
+                    "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
+                    directory::Outcome::Failed
+                )
+                .with_tag(TestTag::new("internal", "true"))
+                .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+                .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+                .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Failed))
             )
-            .with_tag(TestTag::new("internal", "true"))
-            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
-            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
-            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Failed))
-        ],
     );
 }
 
@@ -856,26 +795,19 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-exa
 
     assert_eq!(outcome, Outcome::Failed);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
     directory::testing::assert_run_result(
         output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Failed),
-    );
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &vec![
-            ExpectedSuite::new(
-                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
-                directory::Outcome::Failed
+        &ExpectedTestRun::new(directory::Outcome::Failed)
+            .with_suite(
+                ExpectedSuite::new(
+                    "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
+                    directory::Outcome::Failed
+                )
+                .with_tag(TestTag::new("internal", "true"))
+                .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+                .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Failed))
+                .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
             )
-            .with_tag(TestTag::new("internal", "true"))
-            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
-            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Failed))
-            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
-        ],
     );
 }
 
@@ -900,13 +832,8 @@ async fn launch_and_test_failing_v2_test_multiple_times(
 
     assert_eq!(outcome, Outcome::Failed);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_run_result(
-        output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Failed),
-    );
+    let suite_results =
+        directory::TestRunResult::from_dir(output_dir.path()).expect("parse dir").suites;
 
     let expected_suite = ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
@@ -941,26 +868,19 @@ async fn launch_and_test_incomplete_test(
 
     assert_eq!(outcome, Outcome::DidNotFinish);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
     directory::testing::assert_run_result(
         output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Inconclusive),
-    );
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &vec![
-            ExpectedSuite::new(
-                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm",
-                directory::Outcome::Inconclusive
+        &ExpectedTestRun::new(directory::Outcome::Inconclusive)
+            .with_suite(
+                ExpectedSuite::new(
+                    "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm",
+                    directory::Outcome::Inconclusive
+                )
+                .with_tag(TestTag::new("internal", "true"))
+                .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Error))
+                .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+                .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Error))
             )
-            .with_tag(TestTag::new("internal", "true"))
-            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Error))
-            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
-            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Error))
-        ],
     );
 }
 
@@ -983,17 +903,10 @@ async fn launch_and_test_invalid_test(
 
     assert_eq!(outcome, Outcome::DidNotFinish);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
     directory::testing::assert_run_result(
         output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Inconclusive),
-    );
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &vec![
+        &ExpectedTestRun::new(directory::Outcome::Inconclusive)
+        .with_suite(
             ExpectedSuite::new(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm",
                 directory::Outcome::Inconclusive
@@ -1002,7 +915,7 @@ async fn launch_and_test_invalid_test(
             .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Error))
             .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Error))
-        ],
+        )
     );
 }
 
@@ -1094,18 +1007,16 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_tes
 ";
     assert_output!(output.lock().as_ref(), expected_output);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_run_result(
-        output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Timedout),
+    let run_result = directory::TestRunResult::from_dir(output_dir.path()).expect("parse dir");
+    assert_eq!(
+        run_result.common.deref().outcome,
+        directory::MaybeUnknown::Known(directory::Outcome::Timedout)
     );
 
-    let (timed_out_suites, not_started_suites): (Vec<_>, Vec<_>) = suite_results
-        .into_iter()
-        .partition(|&directory::SuiteResult::V0 { ref outcome, .. }| {
-            *outcome == directory::Outcome::Timedout
+    let (timed_out_suites, not_started_suites): (Vec<_>, Vec<_>) =
+        run_result.suites.into_iter().partition(|suite_result| {
+            suite_result.common.deref().outcome
+                == directory::MaybeUnknown::Known(directory::Outcome::Timedout)
         });
 
     assert_eq!(timed_out_suites.len(), 1);
@@ -1174,18 +1085,16 @@ async fn test_continue_on_timeout(
     .await;
     assert_eq!(outcome, Outcome::Timedout);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_run_result(
-        output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Timedout),
+    let run_result = directory::TestRunResult::from_dir(output_dir.path()).expect("parse dir");
+    assert_eq!(
+        run_result.common.deref().outcome,
+        directory::MaybeUnknown::Known(directory::Outcome::Timedout)
     );
 
     let (timed_out_suites, passing_suites): (Vec<_>, Vec<_>) =
-        suite_results.into_iter().partition(|result| {
-            let directory::SuiteResult::V0 { ref outcome, .. } = result;
-            *outcome == directory::Outcome::Timedout
+        run_result.suites.into_iter().partition(|suite_result| {
+            suite_result.common.deref().outcome
+                == directory::MaybeUnknown::Known(directory::Outcome::Timedout)
         });
 
     assert_eq!(timed_out_suites.len(), 1);
@@ -1243,18 +1152,16 @@ async fn test_stop_after_n_failures(
     .await;
     assert_eq!(outcome, Outcome::Failed);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_run_result(
-        output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Failed),
+    let run_result = directory::TestRunResult::from_dir(output_dir.path()).expect("parse dir");
+    assert_eq!(
+        run_result.common.deref().outcome,
+        directory::MaybeUnknown::Known(directory::Outcome::Failed)
     );
 
-    let (failed_suites, not_started_suites): (Vec<_>, Vec<_>) = suite_results
-        .into_iter()
-        .partition(|&directory::SuiteResult::V0 { ref outcome, .. }| {
-            *outcome == directory::Outcome::Failed
+    let (failed_suites, not_started_suites): (Vec<_>, Vec<_>) =
+        run_result.suites.into_iter().partition(|suite_result| {
+            suite_result.common.deref().outcome
+                == directory::MaybeUnknown::Known(directory::Outcome::Failed)
         });
 
     assert_eq!(failed_suites.len(), 5);
@@ -1344,29 +1251,23 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm 
     assert_output!(output.lock().as_slice(), expected_output.as_str());
     assert_eq!(outcome, Outcome::Passed);
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
     directory::testing::assert_run_result(
         output_dir.path(),
-        &run_result,
-        &ExpectedTestRun::new(directory::Outcome::Passed),
-    );
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &vec![ExpectedSuite::new(
-            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
-            directory::Outcome::Passed,
-        )
-        .with_tag(TestTag::new("internal", "true"))
-        .with_matching_artifact(
-            directory::ArtifactType::Syslog,
-            "syslog.txt".into(),
-            move |contents| {
-                assert_output!(contents.as_bytes(), expected_logs);
-            },
-        )
-        .with_case(ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed))],
+        &ExpectedTestRun::new(directory::Outcome::Passed).with_suite(
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
+                directory::Outcome::Passed,
+            )
+            .with_tag(TestTag::new("internal", "true"))
+            .with_matching_artifact(
+                directory::ArtifactType::Syslog,
+                "syslog.txt".into(),
+                move |contents| {
+                    assert_output!(contents.as_bytes(), expected_logs);
+                },
+            )
+            .with_case(ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed)),
+        ),
     );
 }
 
@@ -1586,45 +1487,38 @@ async fn test_stdout_to_directory(
 
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed)
         .with_any_start_time()
-        .with_no_run_duration();
-    let expected_test_suites = vec![ExpectedSuite::new(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
-        directory::Outcome::Passed,
-    )
-    .with_tag(TestTag::new("internal", "true"))
-    .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |logs| {
-        assert_output!(
-            logs.as_bytes(),
-            "\n[TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m"
-        );
-    })
-    .with_case(
-        ExpectedTestCase::new("stdout_ansi_test", directory::Outcome::Passed)
-            .with_artifact(
-                directory::ArtifactType::Stdout,
-                "stdout.txt".into(),
-                "\u{1b}[31mred stdout\u{1b}[0m\n",
+        .with_no_run_duration()
+        .with_suite(
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
+                directory::Outcome::Passed,
             )
-            .with_no_run_duration()
-            .with_any_start_time(),
-    )
-    .with_case(
-        ExpectedTestCase::new("log_ansi_test", directory::Outcome::Passed)
-            .with_no_run_duration()
-            .with_any_start_time(),
-    )
-    .with_any_run_duration()
-    .with_any_start_time()];
-
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
-
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &expected_test_suites,
-    );
+            .with_tag(TestTag::new("internal", "true"))
+            .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |logs| {
+                assert_output!(
+                    logs.as_bytes(),
+                    "\n[TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m"
+                );
+            })
+            .with_case(
+                ExpectedTestCase::new("stdout_ansi_test", directory::Outcome::Passed)
+                    .with_artifact(
+                        directory::ArtifactType::Stdout,
+                        "stdout.txt".into(),
+                        "\u{1b}[31mred stdout\u{1b}[0m\n",
+                    )
+                    .with_no_run_duration()
+                    .with_any_start_time(),
+            )
+            .with_case(
+                ExpectedTestCase::new("log_ansi_test", directory::Outcome::Passed)
+                    .with_no_run_duration()
+                    .with_any_start_time(),
+            )
+            .with_any_run_duration()
+            .with_any_start_time()
+        );
+    directory::testing::assert_run_result(output_dir.path(), &expected_test_run);
 }
 
 #[fixture::fixture(run_with_reporter)]
@@ -1659,35 +1553,29 @@ async fn test_syslog_to_directory(
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message\n\
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message\n\
 ";
-    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Failed);
-    let expected_test_suites = vec![ExpectedSuite::new(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
-        directory::Outcome::Failed,
-    )
-    .with_tag(TestTag::new("internal", "true"))
-    .with_case(
-        ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed)
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Failed)
+        .with_suite(
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
+                directory::Outcome::Failed,
+            )
+            .with_tag(TestTag::new("internal", "true"))
+            .with_case(
+                ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed)
+                    .with_any_start_time()
+                    .with_no_run_duration(),
+            )
+            .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |actual| {
+                assert_output!(actual.as_bytes(), EXPECTED_SYSLOG);
+            })
+            .with_matching_artifact(directory::ArtifactType::RestrictedLog, "restricted_logs.txt".into(), |actual| {
+                assert!(actual.contains("ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message"))
+            })
             .with_any_start_time()
-            .with_no_run_duration(),
-    )
-    .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |actual| {
-        assert_output!(actual.as_bytes(), EXPECTED_SYSLOG);
-    })
-    .with_matching_artifact(directory::ArtifactType::RestrictedLog, "restricted_logs.txt".into(), |actual| {
-        assert!(actual.contains("ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message"))
-    })
-    .with_any_start_time()
-    .with_any_run_duration()];
+            .with_any_run_duration()
+        );
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
-
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &expected_test_suites,
-    );
+    directory::testing::assert_run_result(output_dir.path(), &expected_test_run);
 }
 
 #[fixture::fixture(run_with_reporter)]
@@ -1715,38 +1603,32 @@ async fn test_custom_artifacts_to_directory(
 
     assert_eq!(outcome, Outcome::Passed);
 
-    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
-    let expected_test_suites = vec![ExpectedSuite::new(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/custom_artifact_user.cm",
-        directory::Outcome::Passed,
-    )
-    .with_tag(TestTag::new("internal", "true"))
-    .with_case(
-        ExpectedTestCase::new("use_artifact", directory::Outcome::Passed)
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed)
+        .with_suite(
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/custom_artifact_user.cm",
+                directory::Outcome::Passed,
+            )
+            .with_tag(TestTag::new("internal", "true"))
+            .with_case(
+                ExpectedTestCase::new("use_artifact", directory::Outcome::Passed)
+                    .with_any_start_time()
+                    .with_no_run_duration(),
+            )
+            .with_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), "")
+            .with_directory_artifact(
+                directory::ArtifactMetadata {
+                    artifact_type: directory::ArtifactType::Custom.into(),
+                    component_moniker: Some(".".to_string()),
+                },
+                Option::<&str>::None,
+                ExpectedDirectory::new().with_file("artifact.txt", "Hello, world!"),
+            )
             .with_any_start_time()
-            .with_no_run_duration(),
-    )
-    .with_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), "")
-    .with_directory_artifact(
-        directory::ArtifactMetadataV0 {
-            artifact_type: directory::ArtifactType::Custom,
-            component_moniker: Some(".".to_string()),
-        },
-        Option::<&str>::None,
-        ExpectedDirectory::new().with_file("artifact.txt", "Hello, world!"),
-    )
-    .with_any_start_time()
-    .with_any_run_duration()];
+            .with_any_run_duration()
+        );
 
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
-
-    directory::testing::assert_suite_results(
-        output_dir.path(),
-        &suite_results,
-        &expected_test_suites,
-    );
+    directory::testing::assert_run_result(output_dir.path(), &expected_test_run);
 }
 
 #[fixture::fixture(run_with_reporter)]
@@ -1774,23 +1656,23 @@ async fn test_terminate_signal(
 
     assert_eq!(outcome, Outcome::Cancelled);
 
-    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Inconclusive);
-
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
+    let run_result = directory::TestRunResult::from_dir(output_dir.path()).expect("parse dir");
+    assert_eq!(
+        run_result.common.deref().outcome,
+        directory::MaybeUnknown::Known(directory::Outcome::Inconclusive)
+    );
 
     // Based on the exact timing, it's possible some test cases were reported, or the suite never
     // started, so manually assert only on the fields that shouldn't vary.
-    assert_eq!(suite_results.len(), 1);
-    let directory::SuiteResult::V0 { outcome: suite_outcome, name: suite_name, .. } =
-        suite_results.into_iter().next().unwrap();
+    assert_eq!(run_result.suites.len(), 1);
+    let directory::SuiteResult { common, .. } = run_result.suites.into_iter().next().unwrap();
     assert_matches!(
-        suite_outcome,
-        directory::Outcome::Inconclusive | directory::Outcome::NotStarted
+        common.deref().outcome,
+        directory::MaybeUnknown::Known(directory::Outcome::Inconclusive)
+            | directory::MaybeUnknown::Known(directory::Outcome::NotStarted)
     );
     assert_eq!(
-        suite_name,
+        common.deref().name,
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm"
     );
 
@@ -1824,19 +1706,19 @@ async fn test_terminate_signal_multiple_suites(
 
     assert_eq!(outcome, Outcome::Cancelled);
 
-    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Inconclusive);
-
-    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
-
-    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
+    let run_result = directory::TestRunResult::from_dir(output_dir.path()).expect("parse dir");
+    assert_eq!(
+        run_result.common.deref().outcome,
+        directory::MaybeUnknown::Known(directory::Outcome::Inconclusive)
+    );
 
     // There should be at most one test that started and is inconclusive. Remaining tests should
     // be NOT_STARTED. Note this assumes that test manager is running tests sequentially, this test
     // could start flaking when this changes.
-    let (inconclusive_suite_results, other_suite_results): (Vec<_>, Vec<_>) = suite_results
-        .into_iter()
-        .partition(|&directory::SuiteResult::V0 { ref outcome, .. }| {
-            *outcome == directory::Outcome::Inconclusive
+    let (inconclusive_suite_results, other_suite_results): (Vec<_>, Vec<_>) =
+        run_result.suites.into_iter().partition(|suite| {
+            suite.common.deref().outcome
+                == directory::MaybeUnknown::Known(directory::Outcome::Inconclusive)
         });
     assert!(inconclusive_suite_results.len() <= 1);
     assert!(other_suite_results.len() >= 9);

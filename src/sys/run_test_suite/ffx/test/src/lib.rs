@@ -28,7 +28,6 @@ use {
         consts::signal::{SIGINT, SIGTERM},
         iterator::Signals,
     },
-    std::fs::File,
     std::io::{stdout, Write},
     std::path::PathBuf,
 };
@@ -412,47 +411,43 @@ async fn result_list_command<W: Write>(mut writer: W) -> Result<()> {
 }
 
 fn display_output_directory<W: Write>(path: PathBuf, mut writer: W) -> Result<()> {
-    let summary_path = path.join(test_output_directory::RUN_SUMMARY_NAME);
-    let summary_file = File::open(summary_path)?;
+    let test_output_directory::TestRunResult { common: run_common, suites, .. } =
+        test_output_directory::TestRunResult::from_dir(&path)?;
+    let run_common = run_common.into_owned();
 
-    let test_output_directory::TestRunResult::V0 {
-        artifacts: run_artifacts,
-        outcome: run_outcome,
-        suites,
-        ..
-    } = serde_json::from_reader(summary_file)?;
-
-    writeln!(writer, "Run result: {:?}", run_outcome)?;
+    writeln!(writer, "Run result: {:?}", run_common.outcome)?;
+    let run_artifacts = run_common.artifact_dir.contents();
     if run_artifacts.len() > 0 {
         writeln!(
             writer,
             "Run artifacts: {}",
-            run_artifacts.keys().map(|path| path.to_string_lossy()).collect::<Vec<_>>().join(", ")
+            run_artifacts.iter().map(|path| path.to_string_lossy()).collect::<Vec<_>>().join(", ")
         )?;
     }
 
-    for suite in suites.iter() {
-        let suite_summary_path = path.join(&suite.summary);
-        let suite_summary_file = File::open(suite_summary_path)?;
-        let test_output_directory::SuiteResult::V0 { artifacts, outcome, name, cases, .. } =
-            serde_json::from_reader(suite_summary_file)?;
-        writeln!(writer, "Suite {} result: {:?}", name, outcome)?;
+    for suite in suites {
+        let test_output_directory::SuiteResult { common: suite_common, cases, .. } = suite;
+        let suite_common = suite_common.into_owned();
+        writeln!(writer, "Suite {} result: {:?}", suite_common.name, suite_common.outcome)?;
+        let artifacts = suite_common.artifact_dir.contents();
         if artifacts.len() > 0 {
             writeln!(
                 writer,
                 "\tArtifacts: {}",
-                artifacts.keys().map(|path| path.to_string_lossy()).collect::<Vec<_>>().join(", ")
+                artifacts.iter().map(|path| path.to_string_lossy()).collect::<Vec<_>>().join(", ")
             )?;
         }
-        for case in cases.iter() {
-            writeln!(writer, "\tCase '{}' result: {:?}", case.name, case.outcome)?;
-            if case.artifacts.len() > 0 {
+        for case in cases {
+            let case_common = case.common.into_owned();
+            writeln!(writer, "\tCase '{}' result: {:?}", case_common.name, case_common.outcome)?;
+            let artifacts = case_common.artifact_dir.contents();
+            if artifacts.len() > 0 {
                 writeln!(
                     writer,
                     "\tCase {} Artifacts: {}",
-                    case.name,
-                    case.artifacts
-                        .keys()
+                    case_common.name,
+                    artifacts
+                        .iter()
                         .map(|path| path.to_string_lossy())
                         .collect::<Vec<_>>()
                         .join(", ")

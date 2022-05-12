@@ -2,60 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    ArtifactMetadataV0, Outcome, SuiteEntryV0, SuiteResult, TestCaseResultV0, TestRunResult,
-    TestTag, RUN_SUMMARY_NAME,
+use crate::{ArtifactMetadata, MaybeUnknown, Outcome, SuiteResult, TestCaseResult, TestRunResult};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Deref,
+    path::{Path, PathBuf},
 };
-use std::collections::{HashMap, HashSet};
-use std::fs::File;
-use std::io::BufReader;
-use std::path::{Path, PathBuf};
-use valico::json_schema;
-
-pub(crate) const RUN_SCHEMA: &str = include_str!("../schema/run_summary.schema.json");
-pub(crate) const SUITE_SCHEMA: &str = include_str!("../schema/suite_summary.schema.json");
-
-/// Parse the json files in a directory. Returns the parsed test run document and a list of
-/// parsed suite results. This loads all the results in memory at once and shouldn't be used
-/// outside of testing.
-pub fn parse_json_in_output(path: &Path) -> (TestRunResult, Vec<SuiteResult>) {
-    let mut suite_scope = json_schema::Scope::new();
-    let suite_schema_json = serde_json::from_str(SUITE_SCHEMA).expect("parse json schema");
-    let suite_schema =
-        suite_scope.compile_and_return(suite_schema_json, false).expect("compile json schema");
-    let mut run_scope = json_schema::Scope::new();
-    let run_schema_json = serde_json::from_str(RUN_SCHEMA).expect("parse json schema");
-    let run_schema =
-        run_scope.compile_and_return(run_schema_json, false).expect("compile json schema");
-
-    let summary_file =
-        BufReader::new(File::open(path.join(RUN_SUMMARY_NAME)).expect("open summary file"));
-    let run_result_value: serde_json::Value =
-        serde_json::from_reader(summary_file).expect("deserialize run from file");
-    if !run_schema.validate(&run_result_value).is_strictly_valid() {
-        panic!("Run file does not conform with schema");
-    }
-    let run_result: TestRunResult =
-        serde_json::from_value(run_result_value).expect("deserialize run from value");
-    let suite_entries = match &run_result {
-        TestRunResult::V0 { suites, .. } => suites,
-    };
-    let suite_results = suite_entries
-        .iter()
-        .map(|SuiteEntryV0 { summary }| {
-            let suite_summary_file =
-                BufReader::new(File::open(path.join(summary)).expect("open suite summary file"));
-            let suite_result_value: serde_json::Value =
-                serde_json::from_reader(suite_summary_file).expect("parse suite summary file");
-            if !suite_schema.validate(&suite_result_value).is_strictly_valid() {
-                panic!("Suite file {} does not conform with schema", summary);
-            }
-            serde_json::from_value::<SuiteResult>(suite_result_value)
-                .expect("deserialize suite from value")
-        })
-        .collect::<Vec<_>>();
-    (run_result, suite_results)
-}
+use test_list::TestTag;
 
 enum MatchOption<T> {
     AnyOrNone,
@@ -98,7 +51,7 @@ enum EntityContext<'a> {
 #[derive(Clone, Copy)]
 struct ArtifactContext<'a, 'b> {
     entity: &'a EntityContext<'b>,
-    metadata: &'a ArtifactMetadataV0,
+    metadata: &'a ArtifactMetadata,
 }
 
 impl std::fmt::Display for EntityContext<'_> {
@@ -118,40 +71,41 @@ impl std::fmt::Display for ArtifactContext<'_, '_> {
 }
 
 /// A mapping from artifact metadata to assertions made on the artifact.
-type ArtifactMetadataToAssertionMap = HashMap<ArtifactMetadataV0, ExpectedArtifact>;
+type ArtifactMetadataToAssertionMap = HashMap<ArtifactMetadata, ExpectedArtifact>;
 
 /// Assert that the run results contained in `actual_run` and the directory specified by `root`
 /// contain the results and artifacts in `expected_run`.
-pub fn assert_run_result(root: &Path, actual_run: &TestRunResult, expected_run: &ExpectedTestRun) {
+pub fn assert_run_result(root: &Path, expected_run: &ExpectedTestRun) {
     let context = EntityContext::Run;
-    let &TestRunResult::V0 {
-        artifacts,
-        artifact_dir,
-        outcome,
-        suites: _,
-        start_time,
-        duration_milliseconds,
-    } = &actual_run;
+    let actual_run = TestRunResult::from_dir(root).expect("Parse output directory");
+    let TestRunResult { common, suites } = actual_run;
     assert_match_option!(
         expected_run.duration_milliseconds,
-        *duration_milliseconds,
+        common.deref().duration_milliseconds,
         format!("Run duration for {}", context)
     );
     assert_match_option!(
         expected_run.start_time,
-        *start_time,
+        common.deref().start_time,
         format!("Start time for {}", context)
     );
-    assert_eq!(outcome, &expected_run.outcome, "Outcome for {}", context);
-    assert_artifacts(root, &artifact_dir, &artifacts, &expected_run.artifacts, EntityContext::Run);
+    assert_eq!(common.deref().outcome, expected_run.outcome, "Outcome for {}", context);
+    assert_artifacts(
+        root,
+        &common.deref().artifact_dir.root,
+        &common.deref().artifact_dir.artifacts,
+        &expected_run.artifacts,
+        EntityContext::Run,
+    );
+    assert_suite_results(root, &suites, &expected_run.suites);
 }
 
 /// Assert that the suite results contained in `actual_suites` and the directory specified by `root`
 /// contain the suites, results, artifacts, and test cases in `expected_suite`.
 /// Note that this currently does not support duplicate suite names.
-pub fn assert_suite_results(
+fn assert_suite_results(
     root: &Path,
-    actual_suites: &Vec<SuiteResult>,
+    actual_suites: &Vec<SuiteResult<'_>>,
     expected_suites: &Vec<ExpectedSuite>,
 ) {
     assert_eq!(actual_suites.len(), expected_suites.len());
@@ -166,13 +120,12 @@ pub fn assert_suite_results(
         This is currently unsupported by assert_suite_results"
     );
     for suite in actual_suites.iter() {
-        let suite_name = match suite {
-            SuiteResult::V0 { name, .. } => name,
-        };
         assert_suite_result(
             root,
             suite,
-            expected_suites_map.get(suite_name).expect("No matching expected suite"),
+            expected_suites_map
+                .get(&suite.common.deref().name)
+                .expect("No matching expected suite"),
         );
     }
 }
@@ -181,34 +134,25 @@ pub fn assert_suite_results(
 /// contain the results, artifacts, and test cases in `expected_suite`.
 pub fn assert_suite_result(
     root: &Path,
-    actual_suite: &SuiteResult,
+    actual_suite: &SuiteResult<'_>,
     expected_suite: &ExpectedSuite,
 ) {
     let context = EntityContext::Suite(expected_suite);
-    let &SuiteResult::V0 {
-        artifacts,
-        artifact_dir,
-        outcome,
-        name,
-        cases,
-        duration_milliseconds,
-        start_time,
-        tags,
-    } = &actual_suite;
-    assert_eq!(outcome, &expected_suite.outcome, "Outcome for {}", context);
-    assert_eq!(name, &expected_suite.name, "Name for {}", context);
+    let &SuiteResult { common, cases, tags, summary_file_hint: _ } = &actual_suite;
+    assert_eq!(common.deref().outcome, expected_suite.outcome, "Outcome for {}", context);
+    assert_eq!(common.deref().name, expected_suite.name, "Name for {}", context);
     assert_match_option!(
         expected_suite.duration_milliseconds,
-        *duration_milliseconds,
+        common.deref().duration_milliseconds,
         format!("Duration for {}", context)
     );
     assert_match_option!(
         expected_suite.start_time,
-        *start_time,
+        common.deref().start_time,
         format!("Start time for {}", context)
     );
 
-    let mut tags: Vec<TestTag> = tags.clone();
+    let mut tags: Vec<TestTag> = tags.clone().into_owned();
     tags.sort();
 
     let mut expected_tags = expected_suite.tags.clone();
@@ -216,39 +160,55 @@ pub fn assert_suite_result(
 
     assert_eq!(tags, expected_tags);
 
-    assert_artifacts(root, &artifact_dir, &artifacts, &expected_suite.artifacts, context);
+    assert_artifacts(
+        root,
+        &common.deref().artifact_dir.root,
+        &common.deref().artifact_dir.artifacts,
+        &expected_suite.artifacts,
+        context,
+    );
 
     assert_eq!(cases.len(), expected_suite.cases.len());
     for case in cases.iter() {
-        let expected_case = expected_suite.cases.get(&case.name);
-        assert!(expected_case.is_some(), "Found unexpected case {} in {}", case.name, context);
+        let expected_case = expected_suite.cases.get(&case.common.deref().name);
+        assert!(
+            expected_case.is_some(),
+            "Found unexpected case {} in {}",
+            case.common.deref().name,
+            context
+        );
         assert_case_result(root, case, expected_case.unwrap(), expected_suite);
     }
 }
 
 fn assert_case_result(
     root: &Path,
-    actual_case: &TestCaseResultV0,
+    actual_case: &TestCaseResult<'_>,
     expected_case: &ExpectedTestCase,
     parent_suite: &ExpectedSuite,
 ) {
     let context = EntityContext::Case(parent_suite, expected_case);
-    assert_eq!(actual_case.name, expected_case.name, "Name for {}", context);
-    assert_eq!(actual_case.outcome, expected_case.outcome, "Outcome for {}", context);
+    assert_eq!(actual_case.common.deref().name, expected_case.name, "Name for {}", context);
+    assert_eq!(
+        actual_case.common.deref().outcome,
+        expected_case.outcome,
+        "Outcome for {}",
+        context
+    );
     assert_match_option!(
         expected_case.duration_milliseconds,
-        actual_case.duration_milliseconds,
+        actual_case.common.deref().duration_milliseconds,
         format!("Duration for {}", context)
     );
     assert_match_option!(
         expected_case.start_time,
-        actual_case.start_time,
+        actual_case.common.deref().start_time,
         format!("Start time for {}", context)
     );
     assert_artifacts(
         root,
-        &actual_case.artifact_dir,
-        &actual_case.artifacts,
+        &actual_case.common.deref().artifact_dir.root,
+        &actual_case.common.deref().artifact_dir.artifacts,
         &expected_case.artifacts,
         context,
     );
@@ -257,7 +217,7 @@ fn assert_case_result(
 fn assert_artifacts(
     root: &Path,
     artifact_dir: &Path,
-    actual_artifacts: &HashMap<PathBuf, ArtifactMetadataV0>,
+    actual_artifacts: &HashMap<PathBuf, ArtifactMetadata>,
     expected_artifacts: &ArtifactMetadataToAssertionMap,
     entity_context: EntityContext<'_>,
 ) {
@@ -271,7 +231,7 @@ fn assert_artifacts(
         return;
     }
 
-    let actual_artifacts_by_metadata: HashMap<ArtifactMetadataV0, PathBuf> =
+    let actual_artifacts_by_metadata: HashMap<ArtifactMetadata, PathBuf> =
         actual_artifacts.iter().map(|(key, value)| (value.clone(), key.clone())).collect();
     // For now, artifact metadata should be unique for each artifact.
     assert_eq!(
@@ -423,9 +383,10 @@ impl ExpectedDirectory {
 /// for making assertions in a test.
 pub struct ExpectedTestRun {
     artifacts: ArtifactMetadataToAssertionMap,
-    outcome: Outcome,
+    outcome: MaybeUnknown<Outcome>,
     start_time: MatchOption<u64>,
     duration_milliseconds: MatchOption<u64>,
+    suites: Vec<ExpectedSuite>,
 }
 
 /// A version of a suite run result that contains all output in memory. This should only be used
@@ -433,7 +394,7 @@ pub struct ExpectedTestRun {
 pub struct ExpectedSuite {
     artifacts: ArtifactMetadataToAssertionMap,
     name: String,
-    outcome: Outcome,
+    outcome: MaybeUnknown<Outcome>,
     cases: HashMap<String, ExpectedTestCase>,
     start_time: MatchOption<u64>,
     duration_milliseconds: MatchOption<u64>,
@@ -445,7 +406,7 @@ pub struct ExpectedSuite {
 pub struct ExpectedTestCase {
     artifacts: ArtifactMetadataToAssertionMap,
     name: String,
-    outcome: Outcome,
+    outcome: MaybeUnknown<Outcome>,
     start_time: MatchOption<u64>,
     duration_milliseconds: MatchOption<u64>,
 }
@@ -462,7 +423,7 @@ macro_rules! common_impl {
         where
             S: AsRef<str>,
             T: AsRef<str>,
-            U: Into<ArtifactMetadataV0>
+            U: Into<ArtifactMetadata>
         {
             let owned_expected = contents.as_ref().to_string();
             let metadata = metadata.into();
@@ -489,7 +450,7 @@ macro_rules! common_impl {
         where
             S: AsRef<str>,
             F: 'static + Fn(&str),
-            U: Into<ArtifactMetadataV0>
+            U: Into<ArtifactMetadata>
         {
             self.artifacts.insert(
                 metadata.into(),
@@ -510,7 +471,7 @@ macro_rules! common_impl {
         ) -> Self
         where
             S: AsRef<str>,
-            U: Into<ArtifactMetadataV0>
+            U: Into<ArtifactMetadata>
         {
             self.artifacts.insert(
                 metadata.into(),
@@ -565,10 +526,16 @@ impl ExpectedTestRun {
     pub fn new(outcome: Outcome) -> Self {
         Self {
             artifacts: ArtifactMetadataToAssertionMap::new(),
-            outcome,
+            outcome: outcome.into(),
             start_time: MatchOption::AnyOrNone,
             duration_milliseconds: MatchOption::AnyOrNone,
+            suites: vec![],
         }
+    }
+
+    pub fn with_suite(mut self, suite: ExpectedSuite) -> Self {
+        self.suites.push(suite);
+        self
     }
 
     common_impl! {}
@@ -580,7 +547,7 @@ impl ExpectedSuite {
         Self {
             artifacts: ArtifactMetadataToAssertionMap::new(),
             name: name.as_ref().to_string(),
-            outcome,
+            outcome: outcome.into(),
             cases: HashMap::new(),
             start_time: MatchOption::AnyOrNone,
             duration_milliseconds: MatchOption::AnyOrNone,
@@ -609,7 +576,7 @@ impl ExpectedTestCase {
         Self {
             artifacts: ArtifactMetadataToAssertionMap::new(),
             name: name.as_ref().to_string(),
-            outcome,
+            outcome: outcome.into(),
             start_time: MatchOption::AnyOrNone,
             duration_milliseconds: MatchOption::AnyOrNone,
         }
@@ -621,173 +588,231 @@ impl ExpectedTestCase {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ArtifactType;
-    use maplit::hashmap;
+    use crate::{ArtifactType, CommonResult, OutputDirectoryBuilder, SchemaVersion, RUN_NAME};
+    use std::borrow::Cow;
+    use std::io::Write;
 
-    fn make_tempdir<F: Fn(&Path)>(initialize_fn: F) -> tempfile::TempDir {
-        let dir = tempfile::TempDir::new().unwrap();
-        initialize_fn(dir.path());
-        dir
-    }
-
-    #[test]
-    fn assert_run_result_ok() {
-        let cases: Vec<(tempfile::TempDir, TestRunResult, ExpectedTestRun)> = vec![
-            (
-                make_tempdir(|_| ()),
-                TestRunResult::V0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    suites: vec![],
-                    start_time: Some(64),
-                    duration_milliseconds: Some(128),
-                },
-                ExpectedTestRun::new(Outcome::Passed).with_any_start_time().with_any_run_duration(),
-            ),
-            (
-                make_tempdir(|_| ()),
-                TestRunResult::V0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    suites: vec![],
-                    start_time: Some(64),
-                    duration_milliseconds: Some(128),
-                },
-                ExpectedTestRun::new(Outcome::Passed).with_start_time(64).with_run_duration(128),
-            ),
-            (
-                make_tempdir(|_| ()),
-                TestRunResult::V0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    suites: vec![],
-                    start_time: None,
-                    duration_milliseconds: None,
-                },
-                ExpectedTestRun::new(Outcome::Passed).with_no_start_time().with_no_run_duration(),
-            ),
-            (
-                make_tempdir(|path| {
-                    std::fs::create_dir(path.join("a")).unwrap();
-                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
-                }),
-                TestRunResult::V0 {
-                    artifacts: hashmap! {
-                        Path::new("b.txt").to_path_buf() => ArtifactType::Syslog.into()
-                    },
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    suites: vec![],
-                    start_time: None,
-                    duration_milliseconds: None,
-                },
-                ExpectedTestRun::new(Outcome::Passed).with_artifact(
-                    ArtifactType::Syslog,
-                    Option::<&str>::None,
-                    "hello",
-                ),
-            ),
-            (
-                make_tempdir(|path| {
-                    std::fs::create_dir(path.join("a")).unwrap();
-                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
-                }),
-                TestRunResult::V0 {
-                    artifacts: hashmap! {
-                        Path::new("b.txt").to_path_buf() => ArtifactType::Syslog.into()
-                    },
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    suites: vec![],
-                    start_time: None,
-                    duration_milliseconds: None,
-                },
-                ExpectedTestRun::new(Outcome::Passed).with_artifact(
-                    ArtifactType::Syslog,
-                    "b.txt".into(),
-                    "hello",
-                ),
-            ),
-        ];
-
-        for (actual_dir, actual_test_run, expected_test_run) in cases.into_iter() {
-            assert_run_result(actual_dir.path(), &actual_test_run, &expected_test_run);
+    fn test_with_directory<F: Fn(OutputDirectoryBuilder)>(_test_name: &str, test_fn: F) {
+        for version in SchemaVersion::all_variants() {
+            let dir = tempfile::TempDir::new().unwrap();
+            let directory_builder =
+                OutputDirectoryBuilder::new(dir.path(), version).expect("Create directory builder");
+            test_fn(directory_builder);
         }
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
-    #[should_panic(expected = "Outcome for TEST RUN")]
-    fn assert_run_outcome_mismatch() {
-        let dir = make_tempdir(|_| ());
+    fn assert_run_result_check_outcome_only(output_dir: OutputDirectoryBuilder) {
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                outcome: Outcome::Passed.into(),
+                start_time: Some(64),
+                duration_milliseconds: Some(128),
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
         assert_run_result(
-            dir.path(),
-            &TestRunResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Failed,
-                suites: vec![],
-                start_time: None,
-                duration_milliseconds: None,
-            },
-            &ExpectedTestRun::new(Outcome::Passed),
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed).with_any_start_time().with_any_run_duration(),
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_run_result_check_exact_timing(output_dir: OutputDirectoryBuilder) {
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                outcome: Outcome::Passed.into(),
+                start_time: Some(64),
+                duration_milliseconds: Some(128),
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed).with_start_time(64).with_run_duration(128),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_run_result_check_timing_unspecified(output_dir: OutputDirectoryBuilder) {
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                outcome: Outcome::Passed.into(),
+                start_time: None,
+                duration_milliseconds: None,
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed).with_no_start_time().with_no_run_duration(),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_run_result_single_artifact_unspecified_name(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact =
+            artifact_dir.new_artifact(ArtifactType::Syslog, "b.txt").expect("create artifact");
+        write!(artifact, "hello").expect("write to artifact");
+        drop(artifact);
+
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
+                start_time: None,
+                duration_milliseconds: None,
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                ArtifactType::Syslog,
+                Option::<&str>::None,
+                "hello",
+            ),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_run_result_single_artifact_specified_name(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact =
+            artifact_dir.new_artifact(ArtifactType::Syslog, "b.txt").expect("create artifact");
+        write!(artifact, "hello").expect("write to artifact");
+        drop(artifact);
+
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
+                start_time: None,
+                duration_milliseconds: None,
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                ArtifactType::Syslog,
+                "b.txt".into(),
+                "hello",
+            ),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    #[should_panic(expected = "Outcome for TEST RUN")]
+    fn assert_run_outcome_mismatch(output_dir: OutputDirectoryBuilder) {
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                outcome: Outcome::Failed.into(),
+                start_time: None,
+                duration_milliseconds: None,
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(output_dir.path(), &ExpectedTestRun::new(Outcome::Passed));
+    }
+
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic(expected = "Start time for TEST RUN")]
-    fn assert_run_start_time_mismatch() {
-        let dir = make_tempdir(|_| ());
-        assert_run_result(
-            dir.path(),
-            &TestRunResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Failed,
-                suites: vec![],
+    fn assert_run_start_time_mismatch(output_dir: OutputDirectoryBuilder) {
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                outcome: Outcome::Failed.into(),
                 start_time: Some(64),
                 duration_milliseconds: None,
-            },
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
             &ExpectedTestRun::new(Outcome::Passed).with_start_time(23),
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic(expected = "Run duration for TEST RUN")]
-    fn assert_run_duration_mismatch() {
-        let dir = make_tempdir(|_| ());
-        assert_run_result(
-            dir.path(),
-            &TestRunResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Failed,
-                suites: vec![],
+    fn assert_run_duration_mismatch(output_dir: OutputDirectoryBuilder) {
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                outcome: Outcome::Failed.into(),
                 start_time: None,
                 duration_milliseconds: None,
-            },
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
             &ExpectedTestRun::new(Outcome::Passed).with_run_duration(23),
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic]
-    fn assert_run_artifact_mismatch() {
-        let dir = make_tempdir(|_| ());
-        assert_run_result(
-            dir.path(),
-            &TestRunResult::V0 {
-                artifacts: hashmap! {
-                    Path::new("missing").to_path_buf() => ArtifactType::Syslog.into()
-                },
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Failed,
-                suites: vec![],
+    fn assert_run_artifact_mismatch(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact =
+            artifact_dir.new_artifact(ArtifactType::Syslog, "missing").expect("create artifact");
+        write!(artifact, "hello").expect("write to artifact");
+        drop(artifact);
+
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Failed.into(),
                 start_time: None,
                 duration_milliseconds: None,
-            },
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
             &ExpectedTestRun::new(Outcome::Failed).with_artifact(
                 ArtifactType::Stderr,
                 "stderr.txt".into(),
@@ -796,397 +821,621 @@ mod test {
         );
     }
 
+    fn passing_run_with_single_suite<'a>(
+        output_dir: &OutputDirectoryBuilder,
+        suite: SuiteResult<'a>,
+    ) -> TestRunResult<'a> {
+        TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                outcome: Outcome::Passed.into(),
+                start_time: Some(64),
+                duration_milliseconds: Some(128),
+            }),
+            suites: vec![suite],
+        }
+    }
+
+    #[fixture::fixture(test_with_directory)]
     #[test]
-    fn assert_suite_result_ok() {
-        let cases: Vec<(tempfile::TempDir, SuiteResult, ExpectedSuite)> = vec![
-            (
-                make_tempdir(|_| ()),
-                SuiteResult::V0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    name: "suite".into(),
-                    cases: vec![],
+    fn assert_run_result_with_suite(output_dir: OutputDirectoryBuilder) {
+        let actual = passing_run_with_single_suite(
+            &output_dir,
+            SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: output_dir
+                        .new_artifact_dir("artifacts-suite")
+                        .expect("new artifact dir"),
+                    outcome: Outcome::Passed.into(),
                     start_time: Some(64),
                     duration_milliseconds: Some(128),
-                    tags: vec![],
-                },
-                ExpectedSuite::new("suite", Outcome::Passed)
-                    .with_any_start_time()
-                    .with_any_run_duration(),
-            ),
-            (
-                make_tempdir(|_| ()),
-                SuiteResult::V0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    name: "suite".into(),
-                    cases: vec![],
-                    start_time: Some(64),
-                    duration_milliseconds: Some(128),
-                    tags: vec![],
-                },
-                ExpectedSuite::new("suite", Outcome::Passed)
-                    .with_start_time(64)
-                    .with_run_duration(128),
-            ),
-            (
-                make_tempdir(|_| ()),
-                SuiteResult::V0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    name: "suite".into(),
-                    cases: vec![],
-                    start_time: None,
-                    duration_milliseconds: None,
-                    tags: vec![],
-                },
-                ExpectedSuite::new("suite", Outcome::Passed)
-                    .with_no_start_time()
-                    .with_no_run_duration(),
-            ),
-            (
-                make_tempdir(|path| {
-                    std::fs::create_dir(path.join("a")).unwrap();
-                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
                 }),
-                SuiteResult::V0 {
-                    artifacts: hashmap! {
-                        Path::new("b.txt").to_path_buf() => ArtifactType::Syslog.into()
-                    },
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    name: "suite".into(),
-                    cases: vec![],
+                summary_file_hint: Cow::Owned("summary.json".into()),
+                cases: vec![],
+                tags: Cow::Owned(vec![]),
+            },
+        );
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed)
+                .with_any_start_time()
+                .with_any_run_duration()
+                .with_suite(
+                    ExpectedSuite::new("suite", Outcome::Passed)
+                        .with_any_start_time()
+                        .with_any_run_duration(),
+                ),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_run_result_with_suite_exact_times(output_dir: OutputDirectoryBuilder) {
+        let actual = passing_run_with_single_suite(
+            &output_dir,
+            SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: output_dir
+                        .new_artifact_dir("artifacts-suite")
+                        .expect("new artifact dir"),
+                    outcome: Outcome::Passed.into(),
+                    start_time: Some(64),
+                    duration_milliseconds: Some(128),
+                }),
+                summary_file_hint: Cow::Owned("summary.json".into()),
+                cases: vec![],
+                tags: Cow::Owned(vec![]),
+            },
+        );
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed)
+                .with_any_start_time()
+                .with_any_run_duration()
+                .with_suite(
+                    ExpectedSuite::new("suite", Outcome::Passed)
+                        .with_start_time(64)
+                        .with_run_duration(128),
+                ),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_run_result_with_suite_no_times(output_dir: OutputDirectoryBuilder) {
+        let actual = passing_run_with_single_suite(
+            &output_dir,
+            SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: output_dir
+                        .new_artifact_dir("artifacts-suite")
+                        .expect("new artifact dir"),
+                    outcome: Outcome::Passed.into(),
                     start_time: None,
                     duration_milliseconds: None,
-                    tags: vec![],
-                },
-                ExpectedSuite::new("suite", Outcome::Passed).with_artifact(
+                }),
+                summary_file_hint: Cow::Owned("summary.json".into()),
+                cases: vec![],
+                tags: Cow::Owned(vec![]),
+            },
+        );
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed)
+                .with_any_start_time()
+                .with_any_run_duration()
+                .with_suite(
+                    ExpectedSuite::new("suite", Outcome::Passed)
+                        .with_no_start_time()
+                        .with_no_run_duration(),
+                ),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_run_result_suite_with_artifact(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir =
+            output_dir.new_artifact_dir("artifacts-suite").expect("new artifact dir");
+        let mut artifact =
+            artifact_dir.new_artifact(ArtifactType::Syslog, "b.txt").expect("create artifact");
+        write!(artifact, "hello").expect("write to artifact");
+        drop(artifact);
+
+        let actual = passing_run_with_single_suite(
+            &output_dir,
+            SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir,
+                    outcome: Outcome::Passed.into(),
+                    start_time: None,
+                    duration_milliseconds: None,
+                }),
+                summary_file_hint: Cow::Owned("summary.json".into()),
+                cases: vec![],
+                tags: Cow::Owned(vec![]),
+            },
+        );
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed)
+                .with_any_start_time()
+                .with_any_run_duration()
+                .with_suite(ExpectedSuite::new("suite", Outcome::Passed).with_artifact(
                     ArtifactType::Syslog,
                     "b.txt".into(),
                     "hello",
-                ),
-            ),
-            (
-                make_tempdir(|_| ()),
-                SuiteResult::V0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Failed,
-                    name: "suite".into(),
-                    cases: vec![TestCaseResultV0 {
-                        artifacts: hashmap! {},
-                        artifact_dir: Path::new("a").to_path_buf(),
-                        outcome: Outcome::Passed,
-                        name: "case".into(),
+                )),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_run_result_suite_with_case(output_dir: OutputDirectoryBuilder) {
+        let actual = passing_run_with_single_suite(
+            &output_dir,
+            SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: output_dir
+                        .new_artifact_dir("artifacts-suite")
+                        .expect("new artifact dir"),
+                    outcome: Outcome::Passed.into(),
+                    start_time: None,
+                    duration_milliseconds: None,
+                }),
+                summary_file_hint: Cow::Owned("summary.json".into()),
+                cases: vec![TestCaseResult {
+                    common: Cow::Owned(CommonResult {
+                        name: "case".to_string(),
+                        artifact_dir: output_dir
+                            .new_artifact_dir("artifacts-case")
+                            .expect("new artifact dir"),
+                        outcome: Outcome::Passed.into(),
                         start_time: None,
                         duration_milliseconds: None,
-                    }],
-                    start_time: None,
-                    duration_milliseconds: None,
-                    tags: vec![],
-                },
-                ExpectedSuite::new("suite", Outcome::Failed).with_case(
-                    ExpectedTestCase::new("case", Outcome::Passed)
-                        .with_no_run_duration()
-                        .with_no_start_time(),
-                ),
-            ),
-            // Test tags.
-            (
-                make_tempdir(|_| ()),
-                SuiteResult::V0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    name: "suite".into(),
-                    cases: vec![],
-                    start_time: Some(64),
-                    duration_milliseconds: Some(128),
-                    tags: vec![
-                        TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
-                        TestTag { key: "cpu".to_string(), value: "arm64".to_string() },
-                    ],
-                },
-                ExpectedSuite::new("suite", Outcome::Passed)
-                    .with_any_start_time()
-                    .with_any_run_duration()
-                    .with_tag(TestTag { key: "cpu".to_string(), value: "arm64".to_string() })
-                    .with_tag(TestTag { key: "os".to_string(), value: "fuchsia".to_string() }),
-            ),
-        ];
+                    }),
+                }],
+                tags: Cow::Owned(vec![]),
+            },
+        );
 
-        for (actual_dir, actual_suite, expected_suite) in cases.into_iter() {
-            assert_suite_result(actual_dir.path(), &actual_suite, &expected_suite);
-        }
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed)
+                .with_any_start_time()
+                .with_any_run_duration()
+                .with_suite(
+                    ExpectedSuite::new("suite", Outcome::Passed).with_case(
+                        ExpectedTestCase::new("case", Outcome::Passed)
+                            .with_no_run_duration()
+                            .with_no_start_time(),
+                    ),
+                ),
+        );
     }
 
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_run_result_suite_with_tags(output_dir: OutputDirectoryBuilder) {
+        let actual = passing_run_with_single_suite(
+            &output_dir,
+            SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: output_dir
+                        .new_artifact_dir("artifacts-suite")
+                        .expect("new artifact dir"),
+                    outcome: Outcome::Passed.into(),
+                    start_time: None,
+                    duration_milliseconds: None,
+                }),
+                summary_file_hint: Cow::Owned("summary.json".into()),
+                cases: vec![],
+                tags: Cow::Owned(vec![
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                    TestTag { key: "cpu".to_string(), value: "arm64".to_string() },
+                ]),
+            },
+        );
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed)
+                .with_any_start_time()
+                .with_any_run_duration()
+                .with_suite(
+                    ExpectedSuite::new("suite", Outcome::Passed)
+                        .with_tag(TestTag { key: "cpu".to_string(), value: "arm64".to_string() })
+                        .with_tag(TestTag { key: "os".to_string(), value: "fuchsia".to_string() }),
+                ),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic(expected = "Outcome for SUITE suite")]
-    fn assert_suite_outcome_mismatch() {
-        let dir = make_tempdir(|_| ());
-        assert_suite_result(
-            dir.path(),
-            &SuiteResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Passed,
-                name: "suite".into(),
+    fn assert_suite_outcome_mismatch(output_dir: OutputDirectoryBuilder) {
+        let actual = passing_run_with_single_suite(
+            &output_dir,
+            SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: output_dir
+                        .new_artifact_dir("artifacts-suite")
+                        .expect("new artifact dir"),
+                    outcome: Outcome::Failed.into(),
+                    start_time: None,
+                    duration_milliseconds: None,
+                }),
+                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
-                start_time: Some(64),
-                duration_milliseconds: Some(128),
-                tags: vec![],
+                tags: Cow::Owned(vec![]),
             },
-            &ExpectedSuite::new("suite", Outcome::Failed),
+        );
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed)
+                .with_any_start_time()
+                .with_any_run_duration()
+                .with_suite(ExpectedSuite::new("suite", Outcome::Passed)),
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic(expected = "Start time for SUITE suite")]
-    fn assert_suite_start_time_mismatch() {
-        let dir = make_tempdir(|_| ());
-        assert_suite_result(
-            dir.path(),
-            &SuiteResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Passed,
-                name: "suite".into(),
+    fn assert_suite_start_time_mismatch(output_dir: OutputDirectoryBuilder) {
+        let actual = passing_run_with_single_suite(
+            &output_dir,
+            SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: output_dir
+                        .new_artifact_dir("artifacts-suite")
+                        .expect("new artifact dir"),
+                    outcome: Outcome::Passed.into(),
+                    start_time: None,
+                    duration_milliseconds: Some(128),
+                }),
+                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
-                start_time: None,
-                duration_milliseconds: Some(128),
-                tags: vec![],
+                tags: Cow::Owned(vec![]),
             },
-            &ExpectedSuite::new("suite", Outcome::Passed).with_any_start_time(),
+        );
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed)
+                .with_any_start_time()
+                .with_any_run_duration()
+                .with_suite(ExpectedSuite::new("suite", Outcome::Passed).with_any_start_time()),
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic(expected = "Duration for SUITE suite")]
-    fn assert_suite_duration_mismatch() {
-        let dir = make_tempdir(|_| ());
-        assert_suite_result(
-            dir.path(),
-            &SuiteResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Passed,
-                name: "suite".into(),
+    fn assert_suite_duration_mismatch(output_dir: OutputDirectoryBuilder) {
+        let actual = passing_run_with_single_suite(
+            &output_dir,
+            SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: output_dir
+                        .new_artifact_dir("artifacts-suite")
+                        .expect("new artifact dir"),
+                    outcome: Outcome::Passed.into(),
+                    start_time: None,
+                    duration_milliseconds: Some(128),
+                }),
+                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
-                start_time: None,
-                duration_milliseconds: Some(128),
-                tags: vec![],
+                tags: Cow::Owned(vec![]),
             },
-            &ExpectedSuite::new("suite", Outcome::Passed).with_run_duration(32),
+        );
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed)
+                .with_any_start_time()
+                .with_any_run_duration()
+                .with_suite(ExpectedSuite::new("suite", Outcome::Passed).with_run_duration(32)),
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic]
-    fn assert_suite_artifact_mismatch() {
-        let dir = make_tempdir(|_| ());
-        assert_suite_result(
-            dir.path(),
-            &SuiteResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Failed,
-                name: "suite".into(),
+    fn assert_suite_artifact_mismatch(output_dir: OutputDirectoryBuilder) {
+        let actual = passing_run_with_single_suite(
+            &output_dir,
+            SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: output_dir
+                        .new_artifact_dir("artifacts-suite")
+                        .expect("new artifact dir"),
+                    outcome: Outcome::Passed.into(),
+                    start_time: None,
+                    duration_milliseconds: Some(128),
+                }),
+                summary_file_hint: Cow::Owned("summary.json".into()),
                 cases: vec![],
-                start_time: None,
-                duration_milliseconds: None,
-                tags: vec![],
+                tags: Cow::Owned(vec![]),
             },
-            &ExpectedSuite::new("suite", Outcome::Passed).with_artifact(
-                ArtifactType::Stderr,
-                Option::<&str>::None,
-                "missing contents",
-            ),
+        );
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed)
+                .with_any_start_time()
+                .with_any_run_duration()
+                .with_suite(ExpectedSuite::new("suite", Outcome::Passed).with_artifact(
+                    ArtifactType::Stderr,
+                    Option::<&str>::None,
+                    "missing contents",
+                )),
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic(expected = "Found unexpected case")]
-    fn assert_suite_case_mismatch() {
-        let dir = make_tempdir(|_| ());
-        assert_suite_result(
-            dir.path(),
-            &SuiteResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Failed,
-                name: "suite".into(),
-                cases: vec![TestCaseResultV0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    name: "case".into(),
+    fn assert_suite_case_mismatch(output_dir: OutputDirectoryBuilder) {
+        let actual = passing_run_with_single_suite(
+            &output_dir,
+            SuiteResult {
+                common: Cow::Owned(CommonResult {
+                    name: "suite".to_string(),
+                    artifact_dir: output_dir
+                        .new_artifact_dir("artifacts-suite")
+                        .expect("new artifact dir"),
+                    outcome: Outcome::Failed.into(),
                     start_time: None,
                     duration_milliseconds: None,
+                }),
+                summary_file_hint: Cow::Owned("summary.json".into()),
+                cases: vec![TestCaseResult {
+                    common: Cow::Owned(CommonResult {
+                        name: "case".to_string(),
+                        artifact_dir: output_dir
+                            .new_artifact_dir("artifacts-case")
+                            .expect("new artifact dir"),
+                        outcome: Outcome::Passed.into(),
+                        start_time: None,
+                        duration_milliseconds: None,
+                    }),
                 }],
-                start_time: None,
-                duration_milliseconds: None,
-                tags: vec![],
+                tags: Cow::Owned(vec![]),
             },
-            &ExpectedSuite::new("suite", Outcome::Failed)
-                .with_case(ExpectedTestCase::new("wrong name", Outcome::Passed)),
+        );
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed).with_any_start_time().with_suite(
+                ExpectedSuite::new("suite", Outcome::Failed)
+                    .with_case(ExpectedTestCase::new("wrong name", Outcome::Passed)),
+            ),
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
-    fn assert_artifacts_ok() {
-        let cases: Vec<(tempfile::TempDir, TestRunResult, ExpectedTestRun)> = vec![
-            (
-                make_tempdir(|_| ()),
-                TestRunResult::V0 {
-                    artifacts: hashmap! {},
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    suites: vec![],
-                    start_time: None,
-                    duration_milliseconds: None,
-                },
-                ExpectedTestRun::new(Outcome::Passed),
-            ),
-            (
-                make_tempdir(|path| {
-                    std::fs::create_dir(path.join("a")).unwrap();
-                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
-                }),
-                TestRunResult::V0 {
-                    artifacts: hashmap! {
-                        "b.txt".into() => ArtifactType::Stderr.into(),
-                    },
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    suites: vec![],
-                    start_time: None,
-                    duration_milliseconds: None,
-                },
-                ExpectedTestRun::new(Outcome::Passed).with_artifact(
-                    ArtifactType::Stderr,
-                    Option::<&str>::None,
-                    "hello",
-                ),
-            ),
-            (
-                make_tempdir(|path| {
-                    std::fs::create_dir(path.join("a")).unwrap();
-                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
-                }),
-                TestRunResult::V0 {
-                    artifacts: hashmap! {
-                        "b.txt".into() => ArtifactType::Stderr.into(),
-                    },
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    suites: vec![],
-                    start_time: None,
-                    duration_milliseconds: None,
-                },
-                ExpectedTestRun::new(Outcome::Passed).with_artifact(
-                    ArtifactType::Stderr,
-                    Some("b.txt"),
-                    "hello",
-                ),
-            ),
-            (
-                make_tempdir(|path| {
-                    std::fs::create_dir(path.join("a")).unwrap();
-                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
-                }),
-                TestRunResult::V0 {
-                    artifacts: hashmap! {
-                        "b.txt".into() => ArtifactType::Stderr.into(),
-                    },
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    suites: vec![],
-                    start_time: None,
-                    duration_milliseconds: None,
-                },
-                ExpectedTestRun::new(Outcome::Passed).with_matching_artifact(
-                    ArtifactType::Stderr,
-                    Some("b.txt"),
-                    |content| assert_eq!(content, "hello"),
-                ),
-            ),
-            (
-                make_tempdir(|path| {
-                    std::fs::create_dir(path.join("a")).unwrap();
-                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
-                }),
-                TestRunResult::V0 {
-                    artifacts: hashmap! {
-                        "b.txt".into() => ArtifactMetadataV0 {
-                            artifact_type: ArtifactType::Syslog,
-                            component_moniker: Some("moniker".into())
-                        },
-                    },
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    suites: vec![],
-                    start_time: None,
-                    duration_milliseconds: None,
-                },
-                ExpectedTestRun::new(Outcome::Passed).with_artifact(
-                    ArtifactMetadataV0 {
-                        artifact_type: ArtifactType::Syslog,
-                        component_moniker: Some("moniker".into()),
-                    },
-                    Option::<&str>::None,
-                    "hello",
-                ),
-            ),
-            (
-                make_tempdir(|path| {
-                    std::fs::create_dir(path.join("a")).unwrap();
-                    std::fs::create_dir(path.join("a/b")).unwrap();
-                    std::fs::write(path.join("a/b/c.txt"), "hello c").unwrap();
-                    std::fs::write(path.join("a/b/d.txt"), "hello d").unwrap();
-                }),
-                TestRunResult::V0 {
-                    artifacts: hashmap! {
-                        "b".into() => ArtifactType::Custom.into(),
-                    },
-                    artifact_dir: Path::new("a").to_path_buf(),
-                    outcome: Outcome::Passed,
-                    suites: vec![],
-                    start_time: None,
-                    duration_milliseconds: None,
-                },
-                ExpectedTestRun::new(Outcome::Passed).with_directory_artifact(
-                    ArtifactType::Custom,
-                    Some("b"),
-                    ExpectedDirectory::new()
-                        .with_file("c.txt", "hello c")
-                        .with_matching_file("d.txt", |contents| assert_eq!(contents, "hello d")),
-                ),
-            ),
-        ];
-
-        for (actual_dir, actual_run, expected_run) in cases.into_iter() {
-            assert_run_result(actual_dir.path(), &actual_run, &expected_run);
-        }
-    }
-
-    #[test]
-    #[should_panic(expected = "Artifacts for TEST RUN")]
-    fn assert_artifacts_missing() {
-        let dir = make_tempdir(|_| ());
-        assert_run_result(
-            dir.path(),
-            &TestRunResult::V0 {
-                artifacts: hashmap! {},
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Passed,
-                suites: vec![],
+    fn assert_artifacts_empty(output_dir: OutputDirectoryBuilder) {
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir: output_dir.new_artifact_dir("artifacts").expect("new artifact dir"),
+                outcome: Outcome::Passed.into(),
                 start_time: None,
                 duration_milliseconds: None,
-            },
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(output_dir.path(), &ExpectedTestRun::new(Outcome::Passed));
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_artifacts_exact_content(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact =
+            artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("new artifact");
+        write!(artifact, "hello").expect("write to artifact");
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
+                start_time: None,
+                duration_milliseconds: None,
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                ArtifactType::Stderr,
+                Option::<&str>::None,
+                "hello",
+            ),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_artifacts_exact_content_exact_name(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact =
+            artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("new artifact");
+        write!(artifact, "hello").expect("write to artifact");
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
+                start_time: None,
+                duration_milliseconds: None,
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                ArtifactType::Stderr,
+                Some("b.txt"),
+                "hello",
+            ),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_artifacts_matching_content(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact =
+            artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("new artifact");
+        write!(artifact, "hello").expect("write to artifact");
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
+                start_time: None,
+                duration_milliseconds: None,
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed).with_matching_artifact(
+                ArtifactType::Stderr,
+                Some("b.txt"),
+                |content| assert_eq!(content, "hello"),
+            ),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_artifacts_moniker_specified(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut artifact = artifact_dir
+            .new_artifact(
+                ArtifactMetadata {
+                    artifact_type: ArtifactType::Syslog.into(),
+                    component_moniker: Some("moniker".into()),
+                },
+                "b.txt",
+            )
+            .expect("new artifact");
+        write!(artifact, "hello").expect("write to artifact");
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
+                start_time: None,
+                duration_milliseconds: None,
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                ArtifactMetadata {
+                    artifact_type: ArtifactType::Syslog.into(),
+                    component_moniker: Some("moniker".into()),
+                },
+                Some("b.txt"),
+                "hello",
+            ),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    fn assert_artifacts_directory_artifact(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let dir_artifact =
+            artifact_dir.new_directory_artifact(ArtifactType::Custom, "b").expect("new artifact");
+        std::fs::write(dir_artifact.join("c.txt"), "hello c").unwrap();
+        std::fs::write(dir_artifact.join("d.txt"), "hello d").unwrap();
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
+                start_time: None,
+                duration_milliseconds: None,
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
+            &ExpectedTestRun::new(Outcome::Passed).with_directory_artifact(
+                ArtifactType::Custom,
+                Some("b"),
+                ExpectedDirectory::new()
+                    .with_file("c.txt", "hello c")
+                    .with_matching_file("d.txt", |contents| assert_eq!(contents, "hello d")),
+            ),
+        );
+    }
+
+    #[fixture::fixture(test_with_directory)]
+    #[test]
+    #[should_panic(expected = "Artifacts for TEST RUN")]
+    fn assert_artifacts_missing(output_dir: OutputDirectoryBuilder) {
+        let artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
+                start_time: None,
+                duration_milliseconds: None,
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
             &ExpectedTestRun::new(Outcome::Passed).with_artifact(
                 ArtifactType::Syslog,
                 Some("missing"),
@@ -1195,27 +1444,33 @@ mod test {
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic(expected = "Artifacts for TEST RUN")]
-    fn assert_artifacts_extra_artifact() {
-        let dir = make_tempdir(|path| {
-            std::fs::create_dir(path.join("a")).unwrap();
-            std::fs::write(path.join("a/b.txt"), "hello").unwrap();
-            std::fs::write(path.join("a/c.txt"), "hello").unwrap();
-        });
-        assert_run_result(
-            dir.path(),
-            &TestRunResult::V0 {
-                artifacts: hashmap! {
-                    "b.txt".into() => ArtifactType::Stdout.into(),
-                    "c.txt".into() => ArtifactType::Stderr.into(),
-                },
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Passed,
-                suites: vec![],
+    fn assert_artifacts_extra_artifact(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut file_b =
+            artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("create artifact");
+        write!(file_b, "hello").unwrap();
+        let mut file_c =
+            artifact_dir.new_artifact(ArtifactType::Stdout, "c.txt").expect("create artifact");
+        write!(file_c, "hello").unwrap();
+        drop(file_b);
+        drop(file_c);
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
                 start_time: None,
                 duration_milliseconds: None,
-            },
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
             &ExpectedTestRun::new(Outcome::Passed).with_artifact(
                 ArtifactType::Stderr,
                 "c.txt".into(),
@@ -1224,25 +1479,29 @@ mod test {
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic]
-    fn assert_artifacts_content_not_equal() {
-        let dir = make_tempdir(|path| {
-            std::fs::create_dir(path.join("a")).unwrap();
-            std::fs::write(path.join("a/b.txt"), "wrong content").unwrap();
-        });
-        assert_run_result(
-            dir.path(),
-            &TestRunResult::V0 {
-                artifacts: hashmap! {
-                    "b.txt".into() => ArtifactType::Syslog.into()
-                },
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Passed,
-                suites: vec![],
+    fn assert_artifacts_content_not_equal(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut file_b =
+            artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("create artifact");
+        write!(file_b, "wrong content").unwrap();
+        drop(file_b);
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
                 start_time: None,
                 duration_milliseconds: None,
-            },
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
             &ExpectedTestRun::new(Outcome::Passed).with_artifact(
                 ArtifactType::Syslog,
                 Option::<&str>::None,
@@ -1251,25 +1510,29 @@ mod test {
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic]
-    fn assert_artifacts_content_does_not_match() {
-        let dir = make_tempdir(|path| {
-            std::fs::create_dir(path.join("a")).unwrap();
-            std::fs::write(path.join("a/b.txt"), "wrong content").unwrap();
-        });
-        assert_run_result(
-            dir.path(),
-            &TestRunResult::V0 {
-                artifacts: hashmap! {
-                    "b.txt".into() => ArtifactType::Syslog.into()
-                },
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Passed,
-                suites: vec![],
+    fn assert_artifacts_content_does_not_match(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut file_b =
+            artifact_dir.new_artifact(ArtifactType::Stderr, "b.txt").expect("create artifact");
+        write!(file_b, "wrong content").unwrap();
+        drop(file_b);
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
                 start_time: None,
                 duration_milliseconds: None,
-            },
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
             &ExpectedTestRun::new(Outcome::Passed).with_matching_artifact(
                 ArtifactType::Syslog,
                 Option::<&str>::None,
@@ -1278,26 +1541,28 @@ mod test {
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
     #[should_panic]
-    fn assert_artifacts_directory_mismatch() {
-        let dir = make_tempdir(|path| {
-            std::fs::create_dir(path.join("a")).unwrap();
-            std::fs::create_dir(path.join("a/b")).unwrap();
-            std::fs::write(path.join("a/b/c.txt"), "unexpected file").unwrap();
-        });
-        assert_run_result(
-            dir.path(),
-            &TestRunResult::V0 {
-                artifacts: hashmap! {
-                    "b".into() => ArtifactType::Custom.into()
-                },
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Passed,
-                suites: vec![],
+    fn assert_artifacts_directory_mismatch(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let dir_artifact =
+            artifact_dir.new_directory_artifact(ArtifactType::Custom, "b").expect("new artifact");
+        std::fs::write(dir_artifact.join("c.txt"), "unexpected file").unwrap();
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
                 start_time: None,
                 duration_milliseconds: None,
-            },
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(
+            output_dir.path(),
             &ExpectedTestRun::new(Outcome::Passed).with_directory_artifact(
                 ArtifactType::Custom,
                 Option::<&str>::None,
@@ -1306,26 +1571,26 @@ mod test {
         );
     }
 
+    #[fixture::fixture(test_with_directory)]
     #[test]
-    fn assert_artifacts_not_checked_if_unspecified() {
-        let dir = make_tempdir(|path| {
-            std::fs::create_dir(path.join("a")).unwrap();
-            std::fs::create_dir(path.join("a/b")).unwrap();
-            std::fs::write(path.join("a/b/c.txt"), "unexpected file").unwrap();
-        });
-        assert_run_result(
-            dir.path(),
-            &TestRunResult::V0 {
-                artifacts: hashmap! {
-                    "b".into() => ArtifactType::Custom.into()
-                },
-                artifact_dir: Path::new("a").to_path_buf(),
-                outcome: Outcome::Passed,
-                suites: vec![],
+    fn assert_artifacts_not_checked_if_unspecified(output_dir: OutputDirectoryBuilder) {
+        let mut artifact_dir = output_dir.new_artifact_dir("artifacts").expect("new artifact dir");
+        let mut file_c =
+            artifact_dir.new_artifact(ArtifactType::Stderr, "c.txt").expect("create artifact");
+        write!(file_c, "unexpected file").unwrap();
+        drop(file_c);
+        let actual = TestRunResult {
+            common: Cow::Owned(CommonResult {
+                name: RUN_NAME.to_string(),
+                artifact_dir,
+                outcome: Outcome::Passed.into(),
                 start_time: None,
                 duration_milliseconds: None,
-            },
-            &ExpectedTestRun::new(Outcome::Passed),
-        );
+            }),
+            suites: vec![],
+        };
+
+        output_dir.save_summary(&actual).expect("save summary");
+        assert_run_result(output_dir.path(), &ExpectedTestRun::new(Outcome::Passed));
     }
 }

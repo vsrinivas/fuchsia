@@ -9,9 +9,10 @@ use crate::output::{
 use anyhow::format_err;
 use async_trait::async_trait;
 use parking_lot::Mutex;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
-use std::io::{BufWriter, Error, ErrorKind, Write};
+use std::io::{BufWriter, Error, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use test_list::TestTag;
@@ -25,13 +26,12 @@ const RESTRICTED_LOG_FILE: &str = "restricted_logs.txt";
 const CUSTOM_ARTIFACT_DIRECTORY: &str = "custom";
 const DEBUG_ARTIFACT_DIRECTORY: &str = "debug";
 
-const TEST_SUMMARY_TMP_FILE: &str = ".test_summary_tmp.json";
 const SAVE_AFTER_SUITE_COUNT: u32 = 10;
 
 /// A reporter that saves results and artifacts to disk in the Fuchsia test output format.
 pub struct DirectoryReporter {
     /// Root directory in which to place results.
-    root: PathBuf,
+    output_directory: directory::OutputDirectoryBuilder,
     /// A mapping from ID to every test run, test suite, and test case. The test run entry
     /// is always contained in ID TEST_RUN_ID. Entries are added as new test cases and suites
     /// are found, and removed once they have been persisted.
@@ -45,18 +45,9 @@ pub struct DirectoryReporter {
 
 /// In-memory representation of either a test run, test suite, or test case.
 struct EntityEntry {
-    /// Name of the entity. Unused for a test run.
-    name: String,
+    common: directory::CommonResult,
     /// A list of the children of an entity referenced by their id. Unused for a test case.
     children: Vec<EntityId>,
-    /// Name of the artifact directory containing artifacts scoped to this entity.
-    artifact_dir: PathBuf,
-    /// A list of artifacts by filename.
-    artifacts: Vec<(String, directory::ArtifactMetadataV0)>,
-    /// Most recently known outcome for the entity.
-    outcome: directory::Outcome,
-    /// The approximate UTC start time as measured by the host.
-    approximate_host_start_time: Option<std::time::SystemTime>,
     /// Timer used to measure durations as the difference between monotonic timestamps on
     /// start and stop events.
     timer: MonotonicTimer,
@@ -71,54 +62,36 @@ enum MonotonicTimer {
         mono_start_time: ZxTime,
     },
     /// Entity has completed running.
-    Stopped {
-        /// Runtime of the entity, calculated using timestamps reported by the target.
-        mono_run_time: std::time::Duration,
-    },
-}
-
-impl EntityEntry {
-    /// Returns the start timestamp, if any, as milliseconds since the UNIX epoch.
-    fn start_time_millis(&self) -> Option<u64> {
-        self.approximate_host_start_time.map(|time| {
-            time.duration_since(std::time::SystemTime::UNIX_EPOCH)
-                .expect("host time after the epoch")
-                .as_millis() as u64
-        })
-    }
-
-    fn run_time_millis(&self) -> Option<u64> {
-        match self.timer {
-            MonotonicTimer::Unknown => None,
-            MonotonicTimer::Started { .. } => None,
-            MonotonicTimer::Stopped { mono_run_time, .. } => Some(mono_run_time.as_millis() as u64),
-        }
-    }
+    Stopped,
 }
 
 impl DirectoryReporter {
     /// Create a new `DirectoryReporter` that places results in the given `root` directory.
     pub fn new(root: PathBuf) -> Result<Self, Error> {
-        let artifact_dir = artifact_dir_name(&EntityId::TestRun);
-
-        ensure_directory_exists(root.as_path())?;
+        let output_directory = directory::OutputDirectoryBuilder::new(
+            root,
+            directory::SchemaVersion::UnstablePrototype,
+        )?;
 
         let mut entries = HashMap::new();
         entries.insert(
             EntityId::TestRun,
             EntityEntry {
-                name: "".to_string(),
-                artifact_dir,
-                artifacts: vec![],
+                common: directory::CommonResult {
+                    name: "".to_string(),
+                    artifact_dir: output_directory
+                        .new_artifact_dir(artifact_dir_hint(&EntityId::TestRun))?,
+                    outcome: directory::Outcome::NotStarted.into(),
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
                 children: vec![],
-                outcome: directory::Outcome::NotStarted,
                 timer: MonotonicTimer::Unknown,
-                approximate_host_start_time: None,
                 tags: None,
             },
         );
         let new_self = Self {
-            root,
+            output_directory,
             entries: Mutex::new(entries),
             name_counter: AtomicU32::new(0),
             suites_finished_counter: AtomicU32::new(1),
@@ -136,34 +109,37 @@ impl DirectoryReporter {
         let run_entry =
             entry_lock.get(&EntityId::TestRun).expect("Run entry should always be present");
 
-        for suite_id in run_entry.children.iter() {
-            let suite_entry = entry_lock.get(suite_id).expect("Suite entry not found");
-            let case_entries = suite_entry
-                .children
-                .iter()
-                .map(|case_id| {
-                    entry_lock.get(case_id).expect("Test case referenced by suite not found")
-                })
-                .collect();
-            let serializable_suite = construct_serializable_suite(suite_entry, case_entries);
-            let inner_suite_id = match suite_id {
+        let mut run_result =
+            directory::TestRunResult { common: Cow::Borrowed(&run_entry.common), suites: vec![] };
+
+        for suite_entity_id in run_entry.children.iter() {
+            let suite_id = match suite_entity_id {
                 EntityId::Suite(suite) => suite,
-                _ => panic!("Child of test run should be a suite."),
+                _ => panic!("Child of test run is not a suite"),
             };
-            let summary_path = self.root.join(suite_json_name(inner_suite_id.0));
-            persist_suite_summary(&summary_path, serializable_suite)?;
+            let suite_entry =
+                entry_lock.get(suite_entity_id).expect("Nonexistant suite referenced");
+            let mut suite_result = directory::SuiteResult {
+                common: Cow::Borrowed(&suite_entry.common),
+                summary_file_hint: Cow::Owned(suite_json_name(suite_id.0)),
+                cases: vec![],
+                tags: suite_entry.tags.as_ref().map(Cow::Borrowed).unwrap_or(Cow::Owned(vec![])),
+            };
+            for case_entity_id in suite_entry.children.iter() {
+                suite_result.cases.push(directory::TestCaseResult {
+                    common: Cow::Borrowed(
+                        &entry_lock
+                            .get(case_entity_id)
+                            .expect("Nonexistant case referenced")
+                            .common,
+                    ),
+                })
+            }
+
+            run_result.suites.push(suite_result);
         }
 
-        let serializable_run = construct_serializable_run(run_entry);
-        // Save to a temp file first then rename. This ensures we at least
-        // have the old version if writing the new version fails.
-        let tmp_path = self.root.join(TEST_SUMMARY_TMP_FILE);
-        let mut summary_file = BufWriter::new(File::create(&tmp_path)?);
-        serde_json::to_writer_pretty(&mut summary_file, &serializable_run)?;
-        summary_file.flush()?;
-        let final_path = self.root.join(directory::RUN_SUMMARY_NAME);
-        let res = std::fs::rename(tmp_path, final_path);
-        res
+        self.output_directory.save_summary(&run_result)
     }
 
     fn new_artifact_inner(
@@ -175,26 +151,17 @@ impl DirectoryReporter {
         let entry = lock
             .get_mut(entity)
             .expect("Attempting to create an artifact for an entity that does not exist");
-        let name = filename_for_type(&artifact_type);
-
-        let artifact_dir = self.root.join(&entry.artifact_dir);
-        ensure_directory_exists(&artifact_dir)?;
-
-        let artifact = BufWriter::new(File::create(artifact_dir.join(name))?);
-
-        entry.artifacts.push((
-            name.to_string(),
-            directory::ArtifactMetadataV0 { artifact_type, component_moniker: None },
-        ));
-        Ok(artifact)
+        let file = entry
+            .common
+            .artifact_dir
+            .new_artifact(artifact_type, filename_for_type(&artifact_type))?;
+        Ok(BufWriter::new(file))
     }
 }
 
 #[async_trait]
 impl Reporter for DirectoryReporter {
     async fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error> {
-        let artifact_dir = artifact_dir_name(entity);
-
         let mut entries = self.entries.lock();
         let parent_id = match entity {
             EntityId::TestRun => panic!("Cannot create new test run"),
@@ -208,13 +175,17 @@ impl Reporter for DirectoryReporter {
         entries.insert(
             *entity,
             EntityEntry {
-                name: name.to_string(),
-                artifact_dir,
-                artifacts: vec![],
+                common: directory::CommonResult {
+                    name: name.to_string(),
+                    artifact_dir: self
+                        .output_directory
+                        .new_artifact_dir(artifact_dir_hint(entity))?,
+                    outcome: directory::Outcome::NotStarted.into(),
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
                 children: vec![],
-                outcome: directory::Outcome::NotStarted,
                 timer: MonotonicTimer::Unknown,
-                approximate_host_start_time: None,
                 tags: None,
             },
         );
@@ -232,8 +203,13 @@ impl Reporter for DirectoryReporter {
         let mut entries = self.entries.lock();
         let entry =
             entries.get_mut(entity).expect("Outcome reported for an entity that does not exist");
-        entry.approximate_host_start_time = Some(std::time::SystemTime::now());
-        entry.outcome = directory::Outcome::Inconclusive;
+        entry.common.start_time = Some(
+            std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64,
+        );
+        entry.common.outcome = directory::Outcome::Inconclusive.into();
         match (&entry.timer, timestamp) {
             (MonotonicTimer::Unknown, Timestamp::Given(mono_start_time)) => {
                 entry.timer = MonotonicTimer::Started { mono_start_time };
@@ -252,16 +228,18 @@ impl Reporter for DirectoryReporter {
         let mut entries = self.entries.lock();
         let entry =
             entries.get_mut(entity).expect("Outcome reported for an entity that does not exist");
-        entry.outcome = into_serializable_outcome(*outcome);
+        entry.common.outcome = into_serializable_outcome(*outcome).into();
 
         if let (MonotonicTimer::Started { mono_start_time }, Timestamp::Given(mono_end_time)) =
             (&entry.timer, timestamp)
         {
-            entry.timer = MonotonicTimer::Stopped {
-                mono_run_time: mono_end_time
+            entry.common.duration_milliseconds = Some(
+                mono_end_time
                     .checked_sub(*mono_start_time)
-                    .expect("end time must be after start time"),
-            };
+                    .expect("end time must be after start time")
+                    .as_millis() as u64,
+            );
+            entry.timer = MonotonicTimer::Stopped;
         }
         Ok(())
     }
@@ -307,18 +285,15 @@ impl Reporter for DirectoryReporter {
             prefix_for_directory_type(artifact_type),
             self.name_counter.fetch_add(1, Ordering::Relaxed),
         );
-        let artifact_dir = self.root.join(&entry.artifact_dir).join(&name);
-        ensure_directory_exists(&artifact_dir)?;
-
-        entry.artifacts.push((
-            name,
-            directory::ArtifactMetadataV0 {
-                artifact_type: (*artifact_type).into(),
+        let subdir = entry.common.artifact_dir.new_directory_artifact(
+            directory::ArtifactMetadata {
+                artifact_type: directory::MaybeUnknown::Known((*artifact_type).into()),
                 component_moniker,
             },
-        ));
+            name,
+        )?;
 
-        Ok(Box::new(DirectoryDirectoryWriter { path: artifact_dir.into() }))
+        Ok(Box::new(DirectoryDirectoryWriter { path: subdir }))
     }
 }
 
@@ -349,7 +324,9 @@ impl DirectoryWrite for DirectoryDirectoryWriter {
             ));
         }
         if let Some(parent) = new_path.parent() {
-            ensure_directory_exists(parent)?;
+            if !parent.exists() {
+                DirBuilder::new().recursive(true).create(&parent)?;
+            }
         }
 
         let file = BufWriter::new(File::create(new_path)?);
@@ -357,20 +334,7 @@ impl DirectoryWrite for DirectoryDirectoryWriter {
     }
 }
 
-fn persist_suite_summary(path: &Path, suite_result: directory::SuiteResult) -> Result<(), Error> {
-    let mut summary = BufWriter::new(File::create(path)?);
-    serde_json::to_writer_pretty(&mut summary, &suite_result)?;
-    summary.flush()
-}
-
-fn ensure_directory_exists(dir: &Path) -> Result<(), Error> {
-    match dir.exists() {
-        true => Ok(()),
-        false => DirBuilder::new().recursive(true).create(&dir),
-    }
-}
-
-fn artifact_dir_name(entity_id: &EntityId) -> PathBuf {
+fn artifact_dir_hint(entity_id: &EntityId) -> PathBuf {
     match entity_id {
         EntityId::TestRun => "artifact-run".into(),
         EntityId::Suite(suite) => format!("artifact-{:?}", suite.0).into(),
@@ -402,79 +366,6 @@ fn filename_for_type(artifact_type: &directory::ArtifactType) -> &'static str {
         }
     }
 }
-
-/// Construct a serializable version of a test run.
-fn construct_serializable_run(run_entry: &EntityEntry) -> directory::TestRunResult {
-    let duration_milliseconds = run_entry.run_time_millis();
-    let start_time = run_entry.start_time_millis();
-
-    let suites = run_entry
-        .children
-        .iter()
-        .map(|suite_id| {
-            let raw_id = match suite_id {
-                EntityId::Suite(suite) => suite.0,
-                _ => panic!("Test run child should be a suite"),
-            };
-            directory::SuiteEntryV0 { summary: suite_json_name(raw_id) }
-        })
-        .collect();
-    directory::TestRunResult::V0 {
-        artifacts: run_entry
-            .artifacts
-            .iter()
-            .map(|(name, metadata)| (Path::new(&name).to_path_buf(), metadata.clone()))
-            .collect(),
-        artifact_dir: run_entry.artifact_dir.clone(),
-        outcome: run_entry.outcome,
-        suites,
-        duration_milliseconds,
-        start_time,
-    }
-}
-
-/// Construct a serializable version of a test suite.
-fn construct_serializable_suite(
-    suite_entry: &EntityEntry,
-    case_entries: Vec<&EntityEntry>,
-) -> directory::SuiteResult {
-    let cases = case_entries
-        .into_iter()
-        .map(|case_entry| {
-            let duration_milliseconds = case_entry.run_time_millis();
-            let start_time = case_entry.start_time_millis();
-            let EntityEntry { artifact_dir, artifacts, outcome, name, .. } = case_entry;
-            directory::TestCaseResultV0 {
-                artifacts: artifacts
-                    .into_iter()
-                    .map(|(name, metadata)| (name.into(), metadata.clone()))
-                    .collect(),
-                artifact_dir: artifact_dir.to_path_buf(),
-                outcome: *outcome,
-                duration_milliseconds,
-                start_time,
-                name: name.to_string(),
-            }
-        })
-        .collect::<Vec<_>>();
-    let duration_milliseconds = suite_entry.run_time_millis();
-    let start_time = suite_entry.start_time_millis();
-    let EntityEntry { artifact_dir, artifacts, outcome, name, tags, .. } = suite_entry;
-    directory::SuiteResult::V0 {
-        artifacts: artifacts
-            .into_iter()
-            .map(|(name, metadata)| (name.into(), metadata.clone()))
-            .collect(),
-        artifact_dir: artifact_dir.to_path_buf(),
-        outcome: *outcome,
-        cases,
-        duration_milliseconds,
-        start_time,
-        name: name.to_string(),
-        tags: tags.clone().unwrap_or_default(),
-    }
-}
-
 fn into_serializable_outcome(outcome: ReportedOutcome) -> directory::Outcome {
     match outcome {
         ReportedOutcome::Passed => directory::Outcome::Passed,
@@ -492,10 +383,11 @@ fn into_serializable_outcome(outcome: ReportedOutcome) -> directory::Outcome {
 mod test {
     use super::*;
     use crate::output::{CaseId, RunReporter, SuiteId};
+    use std::ops::Deref;
     use tempfile::tempdir;
     use test_output_directory::testing::{
-        assert_run_result, assert_suite_result, assert_suite_results, parse_json_in_output,
-        ExpectedDirectory, ExpectedSuite, ExpectedTestCase, ExpectedTestRun,
+        assert_run_result, assert_suite_result, ExpectedDirectory, ExpectedSuite, ExpectedTestCase,
+        ExpectedTestRun,
     };
 
     #[fuchsia::test]
@@ -544,30 +436,27 @@ mod test {
             .expect("set run outcome");
         run_reporter.finished().await.expect("record run");
 
-        // assert on directory
-        let (run_result, suite_results) = parse_json_in_output(dir.path());
         assert_run_result(
             dir.path(),
-            &run_result,
-            &ExpectedTestRun::new(directory::Outcome::Timedout),
-        );
-        assert_suite_results(
-            dir.path(),
-            &suite_results,
-            &vec![
-                ExpectedSuite::new("suite-0", directory::Outcome::Failed)
-                    .with_case(ExpectedTestCase::new("case-0-0", directory::Outcome::Passed))
-                    .with_case(ExpectedTestCase::new("case-0-1", directory::Outcome::Passed))
-                    .with_case(ExpectedTestCase::new("case-0-2", directory::Outcome::Passed)),
-                ExpectedSuite::new("suite-1", directory::Outcome::Failed)
-                    .with_case(ExpectedTestCase::new("case-1-0", directory::Outcome::Passed))
-                    .with_case(ExpectedTestCase::new("case-1-1", directory::Outcome::Passed))
-                    .with_case(ExpectedTestCase::new("case-1-2", directory::Outcome::Passed)),
-                ExpectedSuite::new("suite-2", directory::Outcome::Failed)
-                    .with_case(ExpectedTestCase::new("case-2-0", directory::Outcome::Passed))
-                    .with_case(ExpectedTestCase::new("case-2-1", directory::Outcome::Passed))
-                    .with_case(ExpectedTestCase::new("case-2-2", directory::Outcome::Passed)),
-            ],
+            &ExpectedTestRun::new(directory::Outcome::Timedout)
+                .with_suite(
+                    ExpectedSuite::new("suite-0", directory::Outcome::Failed)
+                        .with_case(ExpectedTestCase::new("case-0-0", directory::Outcome::Passed))
+                        .with_case(ExpectedTestCase::new("case-0-1", directory::Outcome::Passed))
+                        .with_case(ExpectedTestCase::new("case-0-2", directory::Outcome::Passed)),
+                )
+                .with_suite(
+                    ExpectedSuite::new("suite-1", directory::Outcome::Failed)
+                        .with_case(ExpectedTestCase::new("case-1-0", directory::Outcome::Passed))
+                        .with_case(ExpectedTestCase::new("case-1-1", directory::Outcome::Passed))
+                        .with_case(ExpectedTestCase::new("case-1-2", directory::Outcome::Passed)),
+                )
+                .with_suite(
+                    ExpectedSuite::new("suite-2", directory::Outcome::Failed)
+                        .with_case(ExpectedTestCase::new("case-2-0", directory::Outcome::Passed))
+                        .with_case(ExpectedTestCase::new("case-2-1", directory::Outcome::Passed))
+                        .with_case(ExpectedTestCase::new("case-2-2", directory::Outcome::Passed)),
+                ),
         );
     }
 
@@ -620,46 +509,46 @@ mod test {
         run_reporter.finished().await.expect("record run");
         drop(run_artifact); // want to flush contents
 
-        let (run_result, suite_results) = parse_json_in_output(dir.path());
         assert_run_result(
             dir.path(),
-            &run_result,
-            &ExpectedTestRun::new(directory::Outcome::Passed).with_artifact(
-                directory::ArtifactType::Stdout,
-                STDOUT_FILE.into(),
-                "stdout from run\n",
-            ),
-        );
-        assert_suite_results(
-            dir.path(),
-            &suite_results,
-            &vec![ExpectedSuite::new("suite-1", directory::Outcome::Passed)
-                .with_case(
-                    ExpectedTestCase::new("case-1-0", directory::Outcome::Passed).with_artifact(
-                        directory::ArtifactType::Stdout,
-                        STDOUT_FILE.into(),
-                        "stdout from case 0\n",
-                    ),
-                )
-                .with_case(
-                    ExpectedTestCase::new("case-1-1", directory::Outcome::Passed).with_artifact(
-                        directory::ArtifactType::Stdout,
-                        STDOUT_FILE.into(),
-                        "stdout from case 1\n",
-                    ),
-                )
-                .with_case(
-                    ExpectedTestCase::new("case-1-2", directory::Outcome::Passed).with_artifact(
-                        directory::ArtifactType::Stdout,
-                        STDOUT_FILE.into(),
-                        "stdout from case 2\n",
-                    ),
-                )
+            &ExpectedTestRun::new(directory::Outcome::Passed)
                 .with_artifact(
                     directory::ArtifactType::Stdout,
                     STDOUT_FILE.into(),
-                    "stdout from suite\n",
-                )],
+                    "stdout from run\n",
+                )
+                .with_suite(
+                    ExpectedSuite::new("suite-1", directory::Outcome::Passed)
+                        .with_case(
+                            ExpectedTestCase::new("case-1-0", directory::Outcome::Passed)
+                                .with_artifact(
+                                    directory::ArtifactType::Stdout,
+                                    STDOUT_FILE.into(),
+                                    "stdout from case 0\n",
+                                ),
+                        )
+                        .with_case(
+                            ExpectedTestCase::new("case-1-1", directory::Outcome::Passed)
+                                .with_artifact(
+                                    directory::ArtifactType::Stdout,
+                                    STDOUT_FILE.into(),
+                                    "stdout from case 1\n",
+                                ),
+                        )
+                        .with_case(
+                            ExpectedTestCase::new("case-1-2", directory::Outcome::Passed)
+                                .with_artifact(
+                                    directory::ArtifactType::Stdout,
+                                    STDOUT_FILE.into(),
+                                    "stdout from case 2\n",
+                                ),
+                        )
+                        .with_artifact(
+                            directory::ArtifactType::Stdout,
+                            STDOUT_FILE.into(),
+                            "stdout from suite\n",
+                        ),
+                ),
         );
     }
 
@@ -709,36 +598,33 @@ mod test {
             .expect("record run outcome");
         run_reporter.finished().await.expect("record run");
 
-        let (run_result, suite_results) = parse_json_in_output(dir.path());
         assert_run_result(
             dir.path(),
-            &run_result,
-            &ExpectedTestRun::new(directory::Outcome::Passed).with_directory_artifact(
-                directory::ArtifactType::Custom,
-                Option::<&str>::None,
-                ExpectedDirectory::new(),
-            ),
-        );
-        assert_suite_results(
-            dir.path(),
-            &suite_results,
-            &vec![ExpectedSuite::new("suite-1", directory::Outcome::Passed)
+            &ExpectedTestRun::new(directory::Outcome::Passed)
                 .with_directory_artifact(
-                    directory::ArtifactMetadataV0 {
-                        artifact_type: directory::ArtifactType::Custom,
-                        component_moniker: Some("suite-moniker".into()),
-                    },
+                    directory::ArtifactType::Custom,
                     Option::<&str>::None,
                     ExpectedDirectory::new(),
                 )
-                .with_case(
-                    ExpectedTestCase::new("case-1-1", directory::Outcome::Passed)
+                .with_suite(
+                    ExpectedSuite::new("suite-1", directory::Outcome::Passed)
                         .with_directory_artifact(
-                            directory::ArtifactType::Custom,
+                            directory::ArtifactMetadata {
+                                artifact_type: directory::ArtifactType::Custom.into(),
+                                component_moniker: Some("suite-moniker".into()),
+                            },
                             Option::<&str>::None,
                             ExpectedDirectory::new(),
+                        )
+                        .with_case(
+                            ExpectedTestCase::new("case-1-1", directory::Outcome::Passed)
+                                .with_directory_artifact(
+                                    directory::ArtifactType::Custom,
+                                    Option::<&str>::None,
+                                    ExpectedDirectory::new(),
+                                ),
                         ),
-                )],
+                ),
         );
     }
 
@@ -803,38 +689,35 @@ mod test {
             .expect("record run outcome");
         run_reporter.finished().await.expect("record run");
 
-        let (run_result, suite_results) = parse_json_in_output(dir.path());
         assert_run_result(
             dir.path(),
-            &run_result,
-            &ExpectedTestRun::new(directory::Outcome::Passed).with_directory_artifact(
-                directory::ArtifactType::Custom,
-                Option::<&str>::None,
-                ExpectedDirectory::new().with_file("run-artifact", "run artifact content\n"),
-            ),
-        );
-        assert_suite_results(
-            dir.path(),
-            &suite_results,
-            &vec![ExpectedSuite::new("suite-1", directory::Outcome::Passed)
+            &ExpectedTestRun::new(directory::Outcome::Passed)
                 .with_directory_artifact(
-                    directory::ArtifactMetadataV0 {
-                        artifact_type: directory::ArtifactType::Custom,
-                        component_moniker: Some("suite-moniker".into()),
-                    },
+                    directory::ArtifactType::Custom,
                     Option::<&str>::None,
-                    ExpectedDirectory::new()
-                        .with_file("suite-artifact", "suite artifact content\n"),
+                    ExpectedDirectory::new().with_file("run-artifact", "run artifact content\n"),
                 )
-                .with_case(
-                    ExpectedTestCase::new("case-1-1", directory::Outcome::Passed)
+                .with_suite(
+                    ExpectedSuite::new("suite-1", directory::Outcome::Passed)
                         .with_directory_artifact(
-                            directory::ArtifactType::Custom,
+                            directory::ArtifactMetadata {
+                                artifact_type: directory::ArtifactType::Custom.into(),
+                                component_moniker: Some("suite-moniker".into()),
+                            },
                             Option::<&str>::None,
                             ExpectedDirectory::new()
-                                .with_file("case-artifact", "case artifact content\n"),
+                                .with_file("suite-artifact", "suite artifact content\n"),
+                        )
+                        .with_case(
+                            ExpectedTestCase::new("case-1-1", directory::Outcome::Passed)
+                                .with_directory_artifact(
+                                    directory::ArtifactType::Custom,
+                                    Option::<&str>::None,
+                                    ExpectedDirectory::new()
+                                        .with_file("case-artifact", "case artifact content\n"),
+                                ),
                         ),
-                )],
+                ),
         );
     }
 
@@ -897,14 +780,13 @@ mod test {
             .expect("report run outcome");
         run_reporter.finished().await.expect("record run");
 
-        let (run_result, suite_results) = parse_json_in_output(dir.path());
-        assert_run_result(
-            dir.path(),
-            &run_result,
-            &ExpectedTestRun::new(directory::Outcome::Failed),
+        let saved_run_result = directory::TestRunResult::from_dir(dir.path()).expect("parse dir");
+        assert_eq!(
+            saved_run_result.common.deref().outcome,
+            directory::MaybeUnknown::Known(directory::Outcome::Failed)
         );
 
-        assert_eq!(suite_results.len(), 2);
+        assert_eq!(saved_run_result.suites.len(), 2);
         // names of the suites are identical, so we rely on the outcome to differentiate them.
         let expected_success_suite = ExpectedSuite::new("suite", directory::Outcome::Passed)
             .with_artifact(
@@ -914,8 +796,10 @@ mod test {
             );
         let expected_failed_suite = ExpectedSuite::new("suite", directory::Outcome::Failed);
 
-        if let directory::SuiteResult::V0 { outcome: directory::Outcome::Passed, .. } =
-            suite_results[0]
+        let suite_results = saved_run_result.suites;
+
+        if suite_results[0].common.deref().outcome
+            == directory::MaybeUnknown::Known(directory::Outcome::Passed)
         {
             assert_suite_result(dir.path(), &suite_results[0], &expected_success_suite);
             assert_suite_result(dir.path(), &suite_results[1], &expected_failed_suite);
@@ -935,13 +819,7 @@ mod test {
             DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
         );
 
-        let (initial_run_result, initial_suite_results) = parse_json_in_output(dir.path());
-        assert_run_result(
-            dir.path(),
-            &initial_run_result,
-            &ExpectedTestRun::new(directory::Outcome::NotStarted),
-        );
-        assert!(initial_suite_results.is_empty());
+        assert_run_result(dir.path(), &ExpectedTestRun::new(directory::Outcome::NotStarted));
 
         run_reporter.started(Timestamp::Unknown).await.expect("start test run");
 
@@ -962,18 +840,16 @@ mod test {
             suite_reporter.finished().await.expect("finish suite");
         }
 
-        let (intermediate_run_result, intermediate_suite_results) =
-            parse_json_in_output(dir.path());
-        assert_run_result(
-            dir.path(),
-            &intermediate_run_result,
-            &ExpectedTestRun::new(directory::Outcome::Inconclusive),
-        );
-        let mut expected_suites: Vec<_> = (0..SAVE_AFTER_SUITE_COUNT)
-            .map(|i| ExpectedSuite::new(&format!("suite-{:?}", i), directory::Outcome::Passed))
-            .collect();
-        expected_suites.push(ExpectedSuite::new("incomplete", directory::Outcome::NotStarted));
-        assert_suite_results(dir.path(), &intermediate_suite_results, &expected_suites);
+        let mut intermediate_run = ExpectedTestRun::new(directory::Outcome::Inconclusive)
+            .with_suite(ExpectedSuite::new("incomplete", directory::Outcome::NotStarted));
+        for i in 0..SAVE_AFTER_SUITE_COUNT {
+            intermediate_run = intermediate_run.with_suite(ExpectedSuite::new(
+                &format!("suite-{:?}", i),
+                directory::Outcome::Passed,
+            ));
+        }
+
+        assert_run_result(dir.path(), &intermediate_run);
 
         incomplete_suite_reporter.finished().await.expect("finish suite");
 
@@ -983,13 +859,16 @@ mod test {
             .expect("stop test run");
         run_reporter.finished().await.expect("finish test run");
 
-        let (final_run_result, final_suite_results) = parse_json_in_output(dir.path());
-        assert_run_result(
-            dir.path(),
-            &final_run_result,
-            &ExpectedTestRun::new(directory::Outcome::Passed),
-        );
-        assert_suite_results(dir.path(), &final_suite_results, &expected_suites);
+        let mut final_run = ExpectedTestRun::new(directory::Outcome::Passed)
+            .with_suite(ExpectedSuite::new("incomplete", directory::Outcome::NotStarted));
+        for i in 0..SAVE_AFTER_SUITE_COUNT {
+            final_run = final_run.with_suite(ExpectedSuite::new(
+                &format!("suite-{:?}", i),
+                directory::Outcome::Passed,
+            ));
+        }
+
+        assert_run_result(dir.path(), &final_run);
     }
 
     #[fuchsia::test]
@@ -1020,20 +899,14 @@ mod test {
 
         run_reporter.finished().await.expect("finish test run");
 
-        let (run_result, suite_results) = parse_json_in_output(dir.path());
         assert_run_result(
             dir.path(),
-            &run_result,
-            &ExpectedTestRun::new(directory::Outcome::Inconclusive),
-        );
-        assert_suite_results(
-            dir.path(),
-            &suite_results,
-            &vec![
-                ExpectedSuite::new("suite", directory::Outcome::Inconclusive)
-                    .with_case(ExpectedTestCase::new("case", directory::Outcome::Inconclusive)),
-                ExpectedSuite::new("no-start-suite", directory::Outcome::NotStarted),
-            ],
+            &ExpectedTestRun::new(directory::Outcome::Inconclusive)
+                .with_suite(
+                    ExpectedSuite::new("suite", directory::Outcome::Inconclusive)
+                        .with_case(ExpectedTestCase::new("case", directory::Outcome::Inconclusive)),
+                )
+                .with_suite(ExpectedSuite::new("no-start-suite", directory::Outcome::NotStarted)),
         );
     }
 }

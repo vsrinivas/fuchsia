@@ -239,8 +239,7 @@ mod test {
     use tempfile::tempdir;
     use test_output_directory as directory;
     use test_output_directory::testing::{
-        assert_run_result, assert_suite_results, parse_json_in_output, ExpectedSuite,
-        ExpectedTestCase, ExpectedTestRun,
+        assert_run_result, ExpectedSuite, ExpectedTestCase, ExpectedTestRun,
     };
 
     // these tests are intended to verify that events are routed correctly. The actual contents
@@ -280,42 +279,34 @@ mod test {
         run_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).await.expect("stop run");
         run_reporter.finished().await.expect("finish run");
 
-        let (run_result, suite_results) = parse_json_in_output(dir.path());
-        assert_run_result(
-            dir.path(),
-            &run_result,
-            &ExpectedTestRun::new(directory::Outcome::Passed),
-        );
+        let mut expected_test = ExpectedTestRun::new(directory::Outcome::Passed);
+        for suite_no in 0..3 {
+            let expected_report = format!(
+                "Running test 'test-suite-{:?}'\n\
+            [RUNNING]\ttest-case\n\
+            [stdout - test-case]\n\
+            Stdout for test case\n\
+            [PASSED]\ttest-case\n\
+            \n\
+            1 out of 1 tests passed...\n\
+            test-suite-{:?} completed with result: PASSED\n",
+                suite_no, suite_no
+            );
+            let suite = ExpectedSuite::new(
+                format!("test-suite-{:?}", suite_no),
+                directory::Outcome::Passed,
+            )
+            .with_artifact(directory::ArtifactType::Report, "report.txt".into(), &expected_report)
+            .with_case(
+                ExpectedTestCase::new("test-case", directory::Outcome::Passed).with_artifact(
+                    directory::ArtifactType::Stdout,
+                    "stdout.txt".into(),
+                    "Stdout for test case\n",
+                ),
+            );
+            expected_test = expected_test.with_suite(suite);
+        }
 
-        let expected_suites: Vec<_> = (0..3)
-            .map(|suite_no| {
-                let expected_report = format!(
-                    "Running test 'test-suite-{:?}'\n\
-                [RUNNING]\ttest-case\n\
-                [stdout - test-case]\n\
-                Stdout for test case\n\
-                [PASSED]\ttest-case\n\
-                \n\
-                1 out of 1 tests passed...\n\
-                test-suite-{:?} completed with result: PASSED\n",
-                    suite_no, suite_no
-                );
-                ExpectedSuite::new(format!("test-suite-{:?}", suite_no), directory::Outcome::Passed)
-                    .with_artifact(
-                        directory::ArtifactType::Report,
-                        "report.txt".into(),
-                        &expected_report,
-                    )
-                    .with_case(
-                        ExpectedTestCase::new("test-case", directory::Outcome::Passed)
-                            .with_artifact(
-                                directory::ArtifactType::Stdout,
-                                "stdout.txt".into(),
-                                "Stdout for test case\n",
-                            ),
-                    )
-            })
-            .collect();
-        assert_suite_results(dir.path(), &suite_results, &expected_suites);
+        assert_run_result(dir.path(), &expected_test);
     }
 }

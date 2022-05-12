@@ -13,6 +13,7 @@ rustc_library("directory") {
   sources = [
     "src/lib.rs",
     "src/macros.rs",
+    "src/prototype.rs",
     "src/testing.rs",
   ]
 
@@ -29,7 +30,10 @@ rustc_library("directory") {
   ]
 
   test_deps = [
+    "//src/lib/testing/fixture",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:once_cell",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:tempfile",
   ]
 }

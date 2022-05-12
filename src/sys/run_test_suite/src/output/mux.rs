@@ -151,8 +151,7 @@ mod test {
     use tempfile::tempdir;
     use test_output_directory as directory;
     use test_output_directory::testing::{
-        assert_run_result, assert_suite_results, parse_json_in_output, ExpectedDirectory,
-        ExpectedSuite, ExpectedTestRun,
+        assert_run_result, ExpectedDirectory, ExpectedSuite, ExpectedTestRun,
     };
 
     #[fuchsia::test]
@@ -205,26 +204,22 @@ mod test {
         run_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).await.expect("stop run");
         run_reporter.finished().await.expect("finish run");
 
-        let expected_run = ExpectedTestRun::new(directory::Outcome::Passed).with_artifact(
-            directory::ArtifactType::Stdout,
-            Option::<&str>::None,
-            "run artifact contents\n",
-        );
-
-        let expected_suites = vec![ExpectedSuite::new("suite", directory::Outcome::Passed)
-            .with_directory_artifact(
-                directory::ArtifactType::Custom,
+        let expected_run = ExpectedTestRun::new(directory::Outcome::Passed)
+            .with_artifact(
+                directory::ArtifactType::Stdout,
                 Option::<&str>::None,
-                ExpectedDirectory::new().with_file("test.txt", "suite artifact contents\n"),
-            )];
+                "run artifact contents\n",
+            )
+            .with_suite(
+                ExpectedSuite::new("suite", directory::Outcome::Passed).with_directory_artifact(
+                    directory::ArtifactType::Custom,
+                    Option::<&str>::None,
+                    ExpectedDirectory::new().with_file("test.txt", "suite artifact contents\n"),
+                ),
+            );
 
         // directories shuold contain identical contents.
-        let (run_result_1, suite_results_1) = parse_json_in_output(tempdir_1.path());
-        assert_run_result(tempdir_1.path(), &run_result_1, &expected_run);
-        assert_suite_results(tempdir_1.path(), &suite_results_1, &expected_suites);
-
-        let (run_result_2, suite_results_2) = parse_json_in_output(tempdir_2.path());
-        assert_run_result(tempdir_2.path(), &run_result_2, &expected_run);
-        assert_suite_results(tempdir_2.path(), &suite_results_2, &expected_suites);
+        assert_run_result(tempdir_1.path(), &expected_run);
+        assert_run_result(tempdir_2.path(), &expected_run);
     }
 }
