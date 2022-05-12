@@ -312,8 +312,10 @@ impl<C: SlaacContext> SlaacHandler for C {
                     desync_factor,
                     dad_counter: _,
                 }) => {
-                    let SlaacConfiguration { temporary_address_configuration } =
-                        self.get_config(device_id);
+                    let SlaacConfiguration {
+                        enable_stable_addresses: _,
+                        temporary_address_configuration,
+                    } = self.get_config(device_id);
                     let (valid_for, preferred_for, entry_valid_until) =
                         match temporary_address_configuration {
                             // Since it's possible to change NDP configuration for a
@@ -383,8 +385,10 @@ impl<C: SlaacContext> SlaacHandler for C {
 
                     let preferred_for_and_regen_at = preferred_for.map(|preferred_for| {
                         let dad_transmits = self.dad_transmits(device_id);
-                        let SlaacConfiguration { temporary_address_configuration } =
-                            self.get_config(device_id);
+                        let SlaacConfiguration {
+                            enable_stable_addresses: _,
+                            temporary_address_configuration,
+                        } = self.get_config(device_id);
 
                         let regen_at = temporary_address_configuration.and_then(
                             |TemporarySlaacAddressConfiguration {
@@ -677,7 +681,8 @@ impl<C: SlaacContext> SlaacHandler for C {
             }
         }
 
-        let SlaacConfiguration { temporary_address_configuration } = self.get_config(device_id);
+        let SlaacConfiguration { enable_stable_addresses: _, temporary_address_configuration } =
+            self.get_config(device_id);
         let temporary_address_configuration = match temporary_address_configuration {
             Some(configuration) => configuration,
             None => return,
@@ -778,6 +783,9 @@ pub struct TemporarySlaacAddressConfiguration {
 /// The configuration for SLAAC.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub struct SlaacConfiguration {
+    /// Configuration to enable stable address assignment.
+    pub enable_stable_addresses: bool,
+
     /// Configuration for temporary address assignment.
     ///
     /// If `None`, temporary addresses will not be assigned to interfaces, and
@@ -896,7 +904,8 @@ fn regenerate_temporary_slaac_addr<C: SlaacContext>(
             ),
         };
 
-    let SlaacConfiguration { temporary_address_configuration } = sync_ctx.get_config(device_id);
+    let SlaacConfiguration { enable_stable_addresses: _, temporary_address_configuration } =
+        sync_ctx.get_config(device_id);
     let TemporarySlaacAddressConfiguration {
         temp_valid_lifetime,
         temp_preferred_lifetime: _,
@@ -1069,8 +1078,16 @@ fn add_slaac_addr_sub<C: SlaacContext>(
 
     struct PreferredForAndRegenAt<Instant>(NonZeroNdpLifetime, Option<Instant>);
 
+    let SlaacConfiguration { enable_stable_addresses, temporary_address_configuration } =
+        sync_ctx.get_config(device_id);
+
     let (valid_until, preferred_and_regen, slaac_config, mut addresses) = match slaac_config {
         SlaacInitConfig::Static => {
+            if !enable_stable_addresses {
+                trace!("stable SLAAC addresses are disabled on device {:?}", device_id);
+                return;
+            }
+
             let valid_until = match prefix_valid_for {
                 NonZeroNdpLifetime::Finite(d) => {
                     Lifetime::Finite(now.checked_add(d.get()).unwrap())
@@ -1091,10 +1108,6 @@ fn add_slaac_addr_sub<C: SlaacContext>(
             )
         }
         SlaacInitConfig::Temporary { dad_count } => {
-            let per_attempt_random_seed = sync_ctx.rng_mut().next_u64();
-            let dad_transmits = sync_ctx.dad_transmits(device_id);
-            let SlaacConfiguration { temporary_address_configuration } =
-                sync_ctx.get_config(device_id);
             let temporary_address_config = match temporary_address_configuration {
                 Some(temporary_address_config) => temporary_address_config,
                 None => {
@@ -1105,6 +1118,9 @@ fn add_slaac_addr_sub<C: SlaacContext>(
                     return;
                 }
             };
+
+            let per_attempt_random_seed = sync_ctx.rng_mut().next_u64();
+            let dad_transmits = sync_ctx.dad_transmits(device_id);
 
             // Per RFC 8981 Section 3.4.4:
             //    When creating a temporary address, DESYNC_FACTOR MUST be computed
@@ -1480,11 +1496,16 @@ mod tests {
     const SUBNET: Subnet<Ipv6Addr> =
         unsafe { Subnet::new_unchecked(Ipv6Addr::new([0x200a, 0, 0, 0, 0, 0, 0, 0]), 64) };
 
-    #[test_case(0, 0; "zero lifetimes")]
-    #[test_case(2, 1; "preferred larger than valid")]
-    fn dont_generate_address(preferred_lifetime_secs: u32, valid_lifetime_secs: u32) {
+    #[test_case(0, 0, true; "zero lifetimes")]
+    #[test_case(2, 1, true; "preferred larger than valid")]
+    #[test_case(1, 2, false; "disabled")]
+    fn dont_generate_address(
+        preferred_lifetime_secs: u32,
+        valid_lifetime_secs: u32,
+        enable_stable_addresses: bool,
+    ) {
         let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration::default(),
+            config: SlaacConfiguration { enable_stable_addresses, ..Default::default() },
             dad_transmits: None,
             retrans_timer: DEFAULT_RETRANS_TIMER,
             iid: IID,
@@ -1516,7 +1537,7 @@ mod tests {
     #[test_case(1; "preferred")]
     fn generate_stable_address(preferred_lifetime_secs: u32) {
         let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration::default(),
+            config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
             dad_transmits: None,
             retrans_timer: DEFAULT_RETRANS_TIMER,
             iid: IID,
@@ -1577,7 +1598,7 @@ mod tests {
         let addr_sub = calculate_addr_sub(SUBNET, IID);
 
         let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration::default(),
+            config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
             dad_transmits: None,
             retrans_timer: DEFAULT_RETRANS_TIMER,
             iid: IID,
@@ -1607,7 +1628,7 @@ mod tests {
         let addr_sub = calculate_addr_sub(SUBNET, IID);
 
         let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration::default(),
+            config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
             dad_transmits: None,
             retrans_timer: DEFAULT_RETRANS_TIMER,
             iid: IID,
@@ -1770,7 +1791,7 @@ mod tests {
         }: RefreshStableAddressTimersTest,
     ) {
         let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration::default(),
+            config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
             dad_transmits: None,
             retrans_timer: DEFAULT_RETRANS_TIMER,
             iid: IID,

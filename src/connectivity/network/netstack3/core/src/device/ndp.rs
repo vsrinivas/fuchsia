@@ -3416,6 +3416,14 @@ mod tests {
     fn test_host_stateless_address_autoconfiguration_multiple_prefixes() {
         let (mut ctx, device, _): (_, _, SlaacConfiguration) =
             initialize_with_temporary_addresses_enabled();
+        {
+            let ctx = &mut ctx;
+            crate::device::set_ipv6_configuration(ctx, device, {
+                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device);
+                config.slaac_config.enable_stable_addresses = true;
+                config
+            });
+        }
 
         let prefix1 = TestSlaacPrefix {
             prefix: subnet_v6!("1:2:3:4::/64"),
@@ -3725,6 +3733,7 @@ mod tests {
         crate::device::set_ipv6_configuration(&mut ctx, device, {
             let mut config = crate::device::Ipv6DeviceConfiguration::default();
             config.ip_config.ip_enabled = true;
+            config.slaac_config.enable_stable_addresses = true;
             config
         });
 
@@ -3896,7 +3905,15 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
+        {
+            let ctx = &mut ctx;
+            crate::device::set_ipv6_configuration(ctx, device, {
+                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device);
+                config.ip_config.ip_enabled = true;
+                config.slaac_config.enable_stable_addresses = true;
+                config
+            });
+        }
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
@@ -4778,7 +4795,15 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
+        {
+            let ctx = &mut ctx;
+            crate::device::set_ipv6_configuration(ctx, device, {
+                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device);
+                config.ip_config.ip_enabled = true;
+                config.slaac_config.enable_stable_addresses = true;
+                config
+            });
+        }
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();

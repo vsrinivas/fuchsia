@@ -780,7 +780,10 @@ impl NetstackSeed {
                 Ipv6DeviceConfiguration {
                     dad_transmits: None,
                     max_router_solicitations: None,
-                    slaac_config: SlaacConfiguration { temporary_address_configuration: None },
+                    slaac_config: SlaacConfiguration {
+                        enable_stable_addresses: true,
+                        temporary_address_configuration: None,
+                    },
                     ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
                 },
             );
