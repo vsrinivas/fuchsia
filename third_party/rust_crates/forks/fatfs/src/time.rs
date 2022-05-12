@@ -24,6 +24,10 @@ impl Date {
         Date { year, month, day }
     }
 
+    pub(crate) fn epoch() -> Self {
+        Date { year: 1980, month: 1, day: 1 }
+    }
+
     pub(crate) fn encode(&self) -> u16 {
         ((self.year - 1980) << 9) | (self.month << 5) | self.day
     }
@@ -74,6 +78,10 @@ pub struct DateTime {
 impl DateTime {
     pub(crate) fn decode(dos_date: u16, dos_time: u16, dos_time_hi_res: u8) -> Self {
         DateTime { date: Date::decode(dos_date), time: Time::decode(dos_time, dos_time_hi_res) }
+    }
+
+    pub(crate) fn epoch() -> Self {
+        DateTime { date: Date::epoch(), time: Time::decode(0, 0) }
     }
 }
 
@@ -166,11 +174,11 @@ impl NullTimeProvider {
 
 impl TimeProvider for NullTimeProvider {
     fn get_current_date(&self) -> Date {
-        Date::decode(0)
+        Date::epoch()
     }
 
     fn get_current_date_time(&self) -> DateTime {
-        DateTime::decode(0, 0, 0)
+        DateTime::epoch()
     }
 }
 

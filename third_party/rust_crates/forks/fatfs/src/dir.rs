@@ -256,7 +256,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
     pub fn accessed(&self) -> Date {
         match self.stream.borrow().entry() {
             Some(ref e) => e.inner().accessed(),
-            None => Date::decode(0),
+            None => Date::epoch(),
         }
     }
 
@@ -264,7 +264,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
     pub fn created(&self) -> DateTime {
         match self.stream.borrow().entry() {
             Some(ref e) => e.inner().created(),
-            None => DateTime::decode(0, 0, 0),
+            None => DateTime::epoch(),
         }
     }
 
@@ -272,7 +272,7 @@ impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO,
     pub fn modified(&self) -> DateTime {
         match self.stream.borrow().entry() {
             Some(ref e) => e.inner().modified(),
-            None => DateTime::decode(0, 0, 0),
+            None => DateTime::epoch(),
         }
     }
 

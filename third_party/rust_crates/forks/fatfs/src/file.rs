@@ -133,7 +133,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
     pub fn accessed(&self) -> Date {
         match self.entry {
             Some(ref e) => e.inner().accessed(),
-            None => Date::decode(0),
+            None => Date::epoch(),
         }
     }
 
@@ -141,7 +141,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
     pub fn created(&self) -> DateTime {
         match self.entry {
             Some(ref e) => e.inner().created(),
-            None => DateTime::decode(0, 0, 0),
+            None => DateTime::epoch(),
         }
     }
 
@@ -149,7 +149,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
     pub fn modified(&self) -> DateTime {
         match self.entry {
             Some(ref e) => e.inner().modified(),
-            None => DateTime::decode(0, 0, 0),
+            None => DateTime::epoch(),
         }
     }
 

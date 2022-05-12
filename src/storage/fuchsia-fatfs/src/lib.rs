@@ -307,4 +307,19 @@ mod tests {
 
         structure.verify(proxy).await.expect("Verify succeeds");
     }
+
+    #[test]
+    fn test_unset_date() {
+        let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
+        // FAT doesn't give the root directory a created/modified/access time,
+        // so this is a good way to check that we return valid dates for a "zero" date.
+        let root = disk.root_dir();
+        let epoch = fatfs::DateTime {
+            date: fatfs::Date { year: 1980, month: 1, day: 1 },
+            time: fatfs::Time { hour: 0, min: 0, sec: 0, millis: 0 },
+        };
+        assert_eq!(root.created(), epoch);
+        assert_eq!(root.modified(), epoch);
+        assert_eq!(root.accessed(), epoch.date);
+    }
 }
