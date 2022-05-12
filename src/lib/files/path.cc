@@ -257,7 +257,7 @@ bool IsValidCanonicalPath(std::string_view path) {
     if (next_slash == std::string_view::npos) {
       return IsValidName(path);
     }
-    std::string_view next_segment(path.substr(0, next_slash));
+    std::string_view next_segment = path.substr(0, next_slash);
     if (!IsValidName(next_segment)) {
       return false;
     }

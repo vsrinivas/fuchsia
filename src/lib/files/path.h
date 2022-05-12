@@ -24,8 +24,7 @@ std::string GetDirectoryName(const std::string& path);
 // to and including the last slash.
 std::string GetBaseName(const std::string& path);
 
-// Returns true if |path| is a valid Fuchsia path name per the fuchsia.io/Name
-// rules:
+// Returns true if |path| is a valid Fuchsia name per the fuchsia.io/Name rules:
 //
 // * It cannot be longer than [`MAX_NAME_LENGTH`] (255 bytes).
 // * It cannot be empty.
@@ -39,10 +38,10 @@ bool IsValidName(std::string_view name);
 // fuchsia.io/Path rules:
 //
 // * It cannot be empty.
-// * It cannot be longer than `MAX_PATH_LENGTH` (4095 bytes).
+// * It cannot be longer than [`MAX_PATH_LENGTH`] (4095 bytes).
 // * It cannot have a leading "/".
 // * It cannot have a trailing "/".
-// * Each component must be a valid `Name`. See IsValidCanonicalName().
+// * Each component must be a valid name. See |IsValidName|.
 bool IsValidCanonicalPath(std::string_view path);
 
 // Delete the file or directory at the given path. If recursive is true, and
