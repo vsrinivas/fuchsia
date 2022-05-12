@@ -308,7 +308,9 @@ impl<'a> Replayer<'a> {
     /// codes, so a single distinct key chord will be always reported as a single distinct
     /// `KeyboardReport`.
     fn make_input_report(&self) -> KeyboardReport {
-        KeyboardReport { pressed_keys: self.pressed_keys.iter().map(|k| *k as u32).collect() }
+        KeyboardReport {
+            pressed_keys: self.pressed_keys.iter().map(|k| k.into_primitive()).collect(),
+        }
     }
 }
 
@@ -1046,11 +1048,14 @@ mod tests {
             assert_eq!(
                 project!(fake_event_listener.get_events().await, keyboard),
                 [
-                    Ok(Some(KeyboardReport { pressed_keys: vec![input::Key::A as u32] })),
+                    Ok(Some(KeyboardReport { pressed_keys: vec![input::Key::A.into_primitive()] })),
                     Ok(Some(KeyboardReport {
-                        pressed_keys: vec![input::Key::A as u32, input::Key::B as u32]
+                        pressed_keys: vec![
+                            input::Key::A.into_primitive(),
+                            input::Key::B.into_primitive()
+                        ]
                     })),
-                    Ok(Some(KeyboardReport { pressed_keys: vec![input::Key::A as u32] })),
+                    Ok(Some(KeyboardReport { pressed_keys: vec![input::Key::A.into_primitive()] })),
                     Ok(Some(KeyboardReport { pressed_keys: vec![] }))
                 ]
             );

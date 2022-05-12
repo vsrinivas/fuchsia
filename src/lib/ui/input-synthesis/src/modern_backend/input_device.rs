@@ -678,7 +678,9 @@ mod tests {
         async fn key_events_generates_expected_keyboard_response() -> Result<(), Error> {
             let (_input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
             input_device.key_press_raw(
-                KeyboardReport { pressed_keys: vec![Key::A as u32, Key::B as u32] },
+                KeyboardReport {
+                    pressed_keys: vec![Key::A.into_primitive(), Key::B.into_primitive()],
+                },
                 DEFAULT_REPORT_TIMESTAMP,
             )?;
 

@@ -355,7 +355,7 @@ impl InputDispatcher {
         state: wl_keyboard::KeyState,
     ) -> Result<(), Error> {
         // Map usb keycodes to Linux because some apps don't use the provided keymap/assume Linux keycodes
-        let linux_keycode = usb_to_linux_keycode(key as u32);
+        let linux_keycode = usb_to_linux_keycode(key.into_primitive());
         ftrace::duration!("wayland", "InputDispatcher::send_key_event", "linux_keycode" => linux_keycode as u32);
         let serial = self.event_queue.next_serial();
         self.keyboards.iter().try_for_each(|k| {
