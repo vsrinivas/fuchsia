@@ -40,7 +40,7 @@ _developer_packages = [
   "//src/ui/scenic",
 
   # Starnix
-  "//src/proc/bundles:examples",
+  "//src/proc/bundles:starnix",
 ]
 legacy_base_package_labels -= _developer_packages
 legacy_cache_package_labels += _developer_packages
@@ -51,7 +51,6 @@ legacy_universe_package_labels += [
   "//src/lib/ui/carnelian:examples",
   "//src/ui/examples/bouncing_ball",
   "//src/ui/examples/spinning_square_view",
-  "//src/proc/bundles:examples",
 ]
 
 # E2E Product Tests. Currently used for Chrome smoke test.

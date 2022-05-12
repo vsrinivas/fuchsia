@@ -93,7 +93,7 @@ legacy_base_package_labels += [
   "//src/ui/scenic",
 
   # Starnix
-  "//src/proc/bundles:examples",
+  "//src/proc/bundles:starnix",
 ]
 
 product_bootfs_labels += [

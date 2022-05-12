@@ -10,3 +10,9 @@ group("examples") {
     ]
   }
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [ "wayland:tests" ]
+}

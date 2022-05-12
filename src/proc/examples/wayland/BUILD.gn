@@ -4,6 +4,16 @@
 
 import("//build/components.gni")
 
+group("wayland") {
+  deps = [ ":starnix_wayland" ]
+}
+
+group("tests") {
+  testonly = true
+  # TODO(fxbug.dev/91954): Reenable after switching this test to flatland.
+  # deps = [ ":starnix_wayland_test" ]
+}
+
 resource("demo_bin") {
   sources = [
     "//prebuilt/starnix/tests/syscalls/linux-amd64/wayland_demo/wayland_demo",

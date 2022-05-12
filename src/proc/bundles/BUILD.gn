@@ -2,27 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("examples") {
+group("starnix") {
   testonly = true
 
   if (target_cpu == "x64") {
     deps = [
-      "//src/proc/bin/starnix",
-      "//src/proc/bin/starsh",
-      "//src/proc/examples/wayland:starnix_wayland",
+      "//src/proc/bin",
+      "//src/proc/examples",
       "//src/proc/tests/android:android_shell",
-    ]
-  }
-}
-
-group("tests") {
-  testonly = true
-
-  if (target_cpu == "x64") {
-    deps = [
-      # TODO(fxbug.dev/91954): Reenable after switching this test to flatland.
-      # "//src/proc/examples/wayland:starnix_wayland_test",
-      "//src/proc/tests/android:test_android_distro",
     ]
   }
 }

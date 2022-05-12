@@ -165,7 +165,7 @@ group("core_base_packages") {
     "//src/modular/bin/sessionmgr:dev_session_shell",
     "//src/modular/tests:module_with_fake_runner",
     "//src/power/testing/thermal-test-control:thermal-test-control",
-    "//src/proc/bin/starnix:pkg",
+    "//src/proc/bin/starnix",
     "//src/security/codelab/smart_door:smart-door",
     "//src/security/codelab/smart_door_memory:smart-door-memory",
     "//src/sys/appmgr/integration_tests/mock_runner:appmgr_mock_runner",

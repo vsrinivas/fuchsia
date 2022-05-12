@@ -4,6 +4,12 @@
 
 import("//build/components.gni")
 
+group("benchmarks") {
+  testonly = true
+
+  deps = [ ":starnix_benchmarks" ]
+}
+
 resource("bin") {
   sources = [ "//prebuilt/starnix/tests/syscalls/linux-amd64/benchmarks" ]
   outputs = [ "data/tests/benchmarks" ]

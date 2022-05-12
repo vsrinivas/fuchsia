@@ -13,11 +13,17 @@ declare_args() {
 }
 
 group("starnix") {
-  deps = [
-    ":pkg",
-    "//src/lib/ui/wayland/server",
-    "//src/proc/bin/galaxies",
-  ]
+  if (target_cpu == "x64") {
+    deps = [ ":starnix_package" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+
+  if (target_cpu == "x64") {
+    deps = [ ":starnix-tests" ]
+  }
 }
 
 if (target_cpu == "x64") {
@@ -270,16 +276,8 @@ fuchsia_component("starnix_manager") {
   manifest = "meta/starnix_manager.cml"
 }
 
-fuchsia_package("pkg") {
+fuchsia_package("starnix_package") {
   package_name = "starnix"
 
   deps = [ ":starnix_manager" ]
-}
-
-group("tests") {
-  testonly = true
-
-  if (target_cpu == "x64") {
-    deps = [ ":starnix-tests" ]
-  }
 }

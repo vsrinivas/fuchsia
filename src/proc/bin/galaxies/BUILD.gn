@@ -24,7 +24,7 @@ group("release") {
   }
 }
 
-group("test") {
+group("tests") {
   if (target_cpu == "x64") {
     deps = [
       "stardroid_test",
