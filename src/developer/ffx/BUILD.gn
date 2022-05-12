@@ -116,6 +116,11 @@ if (is_host) {
     deps = [
       ":ffx-e2e-test-data",
       ":ffx_bin",
+
+      # Required by the test_debug_limbo in `ffx self-test`.
+      # We cannot add it to the dependency of `ffx self-test` plugin because that will make
+      # the crasher into all production builds.
+      "//src/developer/forensics/crasher($target_toolchain)",
     ]
 
     # TODO(fxbug.dev/60683): split additional dimensions such as multi-device

@@ -7,6 +7,7 @@ use {
     anyhow::{ensure, Result},
     errors::ffx_bail,
     fuchsia_async::{unblock, TimeoutExt},
+    regex::Regex,
     std::fs::{create_dir_all, File},
     std::io::Write,
     std::io::{BufRead, BufReader},
@@ -113,5 +114,64 @@ pub mod include_target {
             }
             e
         })
+    }
+
+    pub(crate) async fn test_debug_limbo() -> Result<()> {
+        // This test depends on //src/developer/forensics/crasher which is listed in
+        // //src/developer/ffx:ffx-e2e-with-target.
+
+        let target = get_target_nodename().await?;
+        let isolate = Isolate::new("target-debug-limbo").await?;
+
+        // Ensure limbo is active and clean.
+        let output = isolate.ffx(&["--target", &target, "debug", "limbo", "disable"]).await?;
+        assert!(output.status.success(), "{:?}", output);
+        let output = isolate.ffx(&["--target", &target, "debug", "limbo", "enable"]).await?;
+        assert!(output.status.success(), "{:?}", output);
+
+        // Run crasher.
+        let output = isolate
+            .ffx(&[
+                "--target",
+                &target,
+                "component",
+                "run",
+                "--recreate",
+                "fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cm",
+            ])
+            .await?;
+        assert!(output.status.success(), "{:?}", output);
+
+        // "cpp_crasher.cm" should be in the limbo.
+        let output = isolate.ffx(&["--target", &target, "debug", "limbo", "list"]).await?;
+        assert!(output.status.success(), "{:?}", output);
+        let re = Regex::new(r"cpp_crasher\.cm \(pid: (\d+)\)").unwrap();
+        let pid = re
+            .captures(&output.stdout)
+            .expect("the output should contain cpp_crasher.cm")
+            .get(1)
+            .unwrap()
+            .as_str();
+
+        // Release the crasher.
+        let output = isolate.ffx(&["--target", &target, "debug", "limbo", "release", pid]).await?;
+        assert!(output.status.success(), "{:?}", output);
+
+        // The output should not contain cpp_crasher.cm.
+        let output = isolate.ffx(&["--target", &target, "debug", "limbo", "list"]).await?;
+        assert!(output.status.success(), "{:?}", output);
+        assert!(re.find(&output.stdout).is_none());
+
+        // Disable process limbo.
+        let output = isolate.ffx(&["--target", &target, "debug", "limbo", "disable"]).await?;
+        assert!(output.status.success(), "{:?}", output);
+
+        // Destroy cpp_crasher, otherwise the component will stay there even if it's dead.
+        let output = isolate
+            .ffx(&["--target", &target, "component", "destroy", "/core/ffx-laboratory:cpp_crasher"])
+            .await?;
+        assert!(output.status.success(), "{:?}", output);
+
+        Ok(())
     }
 }
