@@ -4,6 +4,7 @@
 
 use super::*;
 use crate::fs::fs_node_impl_symlink;
+use crate::fs::fs_node_impl_xattr_delegate;
 use crate::task::CurrentTask;
 use crate::types::*;
 
@@ -11,16 +12,18 @@ use crate::types::*;
 pub struct SymlinkNode {
     /// The target of the symlink (the path to use to find the actual node).
     target: FsString,
+    xattrs: MemoryXattrStorage,
 }
 
 impl SymlinkNode {
     pub fn new(target: &FsStr) -> Self {
-        SymlinkNode { target: target.to_owned() }
+        SymlinkNode { target: target.to_owned(), xattrs: MemoryXattrStorage::default() }
     }
 }
 
 impl FsNodeOps for SymlinkNode {
     fs_node_impl_symlink!();
+    fs_node_impl_xattr_delegate!(self, self.xattrs);
 
     fn readlink(
         &self,

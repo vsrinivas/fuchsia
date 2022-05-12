@@ -726,16 +726,21 @@ fn read_xattr_name<'a>(
 
 fn do_getxattr(
     current_task: &CurrentTask,
-    path_addr: UserCString,
+    node: &NamespaceNode,
     name_addr: UserCString,
     value_addr: UserAddress,
     size: usize,
-    flags: LookupFlags,
 ) -> Result<usize, Errno> {
+    if !node.entry.node.info().mode.contains(FileMode::IRUSR) {
+        return error!(EACCES);
+    }
+
     let mut name = vec![0u8; XATTR_NAME_MAX as usize + 1];
     let name = read_xattr_name(current_task, name_addr, &mut name)?;
-    let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, flags)?;
     let value = node.entry.node.get_xattr(name)?;
+    if size == 0 {
+        return Ok(value.len());
+    }
     if size < value.len() {
         return error!(ERANGE);
     }
@@ -749,14 +754,19 @@ pub fn sys_getxattr(
     value_addr: UserAddress,
     size: usize,
 ) -> Result<usize, Errno> {
-    do_getxattr(
-        current_task,
-        path_addr,
-        name_addr,
-        value_addr,
-        size,
-        LookupFlags { allow_empty_path: false, symlink_mode: SymlinkMode::Follow },
-    )
+    let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupFlags::default())?;
+    do_getxattr(current_task, &node, name_addr, value_addr, size)
+}
+
+pub fn sys_fgetxattr(
+    current_task: &CurrentTask,
+    fd: FdNumber,
+    name_addr: UserCString,
+    value_addr: UserAddress,
+    size: usize,
+) -> Result<usize, Errno> {
+    let file = current_task.files.get_unless_opath(fd)?;
+    do_getxattr(current_task, &file.name, name_addr, value_addr, size)
 }
 
 pub fn sys_lgetxattr(
@@ -766,7 +776,8 @@ pub fn sys_lgetxattr(
     value_addr: UserAddress,
     size: usize,
 ) -> Result<usize, Errno> {
-    do_getxattr(current_task, path_addr, name_addr, value_addr, size, LookupFlags::no_follow())
+    let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupFlags::no_follow())?;
+    do_getxattr(current_task, &node, name_addr, value_addr, size)
 }
 
 fn do_setxattr(
@@ -777,6 +788,17 @@ fn do_setxattr(
     size: usize,
     flags: u32,
 ) -> Result<(), Errno> {
+    if size > XATTR_NAME_MAX as usize {
+        return error!(E2BIG);
+    }
+    let mode = node.entry.node.info().mode;
+    if !mode.contains(FileMode::IWUSR) {
+        return error!(EACCES);
+    }
+    if mode.is_chr() || mode.is_fifo() {
+        return error!(EPERM);
+    }
+
     let op = match flags {
         0 => XattrOp::Set,
         XATTR_CREATE => XattrOp::Create,
@@ -798,7 +820,7 @@ pub fn sys_fsetxattr(
     size: usize,
     flags: u32,
 ) -> Result<(), Errno> {
-    let file = current_task.files.get(fd)?;
+    let file = current_task.files.get_unless_opath(fd)?;
     do_setxattr(current_task, &file.name, name_addr, value_addr, size, flags)
 }
 
@@ -811,6 +833,9 @@ pub fn sys_lsetxattr(
     flags: u32,
 ) -> Result<(), Errno> {
     let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupFlags::no_follow())?;
+    if node.entry.node.is_lnk() {
+        return error!(EPERM);
+    }
     do_setxattr(current_task, &node, name_addr, value_addr, size, flags)
 }
 
@@ -831,6 +856,13 @@ fn do_removexattr(
     node: &NamespaceNode,
     name_addr: UserCString,
 ) -> Result<(), Errno> {
+    let mode = node.entry.node.info().mode;
+    if !mode.contains(FileMode::IWUSR) {
+        return error!(EACCES);
+    }
+    if mode.is_chr() || mode.is_fifo() {
+        return error!(EPERM);
+    }
     let mut name = vec![0u8; XATTR_NAME_MAX as usize + 1];
     let name = read_xattr_name(current_task, name_addr, &mut name)?;
     node.entry.node.remove_xattr(name)
@@ -851,6 +883,9 @@ pub fn sys_lremovexattr(
     name_addr: UserCString,
 ) -> Result<(), Errno> {
     let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupFlags::no_follow())?;
+    if node.entry.node.is_lnk() {
+        return error!(EPERM);
+    }
     do_removexattr(current_task, &node, name_addr)
 }
 
@@ -859,7 +894,7 @@ pub fn sys_fremovexattr(
     fd: FdNumber,
     name_addr: UserCString,
 ) -> Result<(), Errno> {
-    let file = current_task.files.get(fd)?;
+    let file = current_task.files.get_unless_opath(fd)?;
     do_removexattr(current_task, &file.name, name_addr)
 }
 
@@ -871,11 +906,9 @@ fn do_listxattr(
 ) -> Result<usize, Errno> {
     let mut list = vec![];
     let xattrs = node.entry.node.list_xattrs()?;
-    for (i, name) in xattrs.iter().enumerate() {
-        if i != 0 {
-            list.extend_from_slice(b":")
-        }
+    for name in xattrs.iter() {
         list.extend_from_slice(&name);
+        list.push(b'\0');
     }
     if size == 0 {
         return Ok(list.len());
@@ -912,7 +945,7 @@ pub fn sys_flistxattr(
     list_addr: UserAddress,
     size: usize,
 ) -> Result<usize, Errno> {
-    let file = current_task.files.get(fd)?;
+    let file = current_task.files.get_unless_opath(fd)?;
     do_listxattr(current_task, &file.name, list_addr, size)
 }
 

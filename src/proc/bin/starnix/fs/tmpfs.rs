@@ -66,13 +66,13 @@ impl TmpFs {
     }
 }
 
-struct TmpfsDirectory {
+pub struct TmpfsDirectory {
     xattrs: MemoryXattrStorage,
     child_count: Mutex<u32>,
 }
 
 impl TmpfsDirectory {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { xattrs: MemoryXattrStorage::default(), child_count: Mutex::new(0) }
     }
 }
@@ -83,7 +83,6 @@ fn create_node(
     mode: FileMode,
 ) -> Result<FsNodeHandle, Errno> {
     let node = parent.fs().create_node(node, mode);
-    let _ = node.set_xattr(b"security.selinux", b"u:object_r:tmpfs:s0", XattrOp::Create);
     Ok(node)
 }
 impl FsNodeOps for TmpfsDirectory {
@@ -106,10 +105,10 @@ impl FsNodeOps for TmpfsDirectory {
     fn mknod(&self, node: &FsNode, _name: &FsStr, mode: FileMode) -> Result<FsNodeHandle, Errno> {
         let ops: Box<dyn FsNodeOps> = match mode.fmt() {
             FileMode::IFREG => Box::new(VmoFileNode::new()?),
-            FileMode::IFIFO => Box::new(SpecialNode),
-            FileMode::IFBLK => Box::new(SpecialNode),
-            FileMode::IFCHR => Box::new(SpecialNode),
-            FileMode::IFSOCK => Box::new(SpecialNode),
+            FileMode::IFIFO => Box::new(TmpfsSpecialNode::new()),
+            FileMode::IFBLK => Box::new(TmpfsSpecialNode::new()),
+            FileMode::IFCHR => Box::new(TmpfsSpecialNode::new()),
+            FileMode::IFSOCK => Box::new(TmpfsSpecialNode::new()),
             _ => return error!(EACCES),
         };
         *self.child_count.lock() += 1;
@@ -139,6 +138,24 @@ impl FsNodeOps for TmpfsDirectory {
         child.info_write().link_count -= 1;
         *self.child_count.lock() -= 1;
         Ok(())
+    }
+}
+
+struct TmpfsSpecialNode {
+    xattrs: MemoryXattrStorage,
+}
+
+impl TmpfsSpecialNode {
+    pub fn new() -> Self {
+        Self { xattrs: MemoryXattrStorage::default() }
+    }
+}
+
+impl FsNodeOps for TmpfsSpecialNode {
+    fs_node_impl_xattr_delegate!(self, self.xattrs);
+
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        unreachable!("Special nodes cannot be opened.");
     }
 }
 

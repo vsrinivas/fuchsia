@@ -2,6 +2,5 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/xattr_test",
-        args: [ "--gunit_filter=-*.XattrReadOnly:*.XattrWriteOnly:*.XattrOnDirectory:*.XattrOnSymlink:*.XattrOnInvalidFileTypes:*.SetXattrSizeTooLarge:*.GetXattrZeroSize:*.GetXattrNullValueAndZeroSize:*.ListXattr:*.ListXattrNoXattrs:*.ListXattrNullBuffer:*.ListXattrZeroSize:*.LXattrOnSymlink:*.LXattrOnNonsymlink:*.XattrWithFD:*.XattrWithOPath" ],
     },
 }

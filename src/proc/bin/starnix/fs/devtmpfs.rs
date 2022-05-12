@@ -30,6 +30,8 @@ fn init_devtmpfs() -> FileSystemHandle {
     mkchr(b"random", DeviceType::RANDOM);
     mkchr(b"urandom", DeviceType::URANDOM);
 
+    mkdir(b"shm");
+
     // tty related nodes
     mkdir(b"pts");
     mkchr(b"tty", DeviceType::TTY);

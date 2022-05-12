@@ -103,6 +103,14 @@ impl FdTable {
         table.get(&fd).map(|entry| entry.file.clone()).ok_or(errno!(EBADF))
     }
 
+    pub fn get_unless_opath(&self, fd: FdNumber) -> Result<FileHandle, Errno> {
+        let file = self.get(fd)?;
+        if file.flags().contains(OpenFlags::PATH) {
+            return Err(errno!(EBADF));
+        }
+        Ok(file)
+    }
+
     pub fn close(&self, fd: FdNumber) -> Result<(), Errno> {
         // Drop the file object only after releasing the writer lock in case
         // the close() function on the FileOps calls back into the FdTable.

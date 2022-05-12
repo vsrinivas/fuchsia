@@ -84,6 +84,7 @@ pub fn dispatch_syscall(
         fchown[3],
         fchownat[5],
         fcntl[3],
+        fgetxattr[4],
         flistxattr[3],
         flock[2],
         fremovexattr[2],
