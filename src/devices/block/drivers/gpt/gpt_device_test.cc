@@ -169,7 +169,7 @@ TEST_F(GptDeviceTest, DeviceTooSmall) {
   ASSERT_EQ(ZX_ERR_NO_SPACE, Bind(nullptr, fake_parent_.get()));
 }
 
-TEST_F(GptDeviceTest, DdkLifecycle) {
+TEST_F(GptDeviceTest, ValidatePartitionGuid) {
   Init();
   ASSERT_OK(Bind(nullptr, fake_parent_.get()));
   ASSERT_EQ(fake_parent_->child_count(), 2);
@@ -208,7 +208,7 @@ TEST_F(GptDeviceTest, DdkLifecycle) {
   }
 }
 
-TEST_F(GptDeviceTest, GuidMapMetadata) {
+TEST_F(GptDeviceTest, ValidatePartitionGuidWithMap) {
   Init();
 
   const guid_map_t guid_map[] = {
@@ -253,6 +253,17 @@ TEST_F(GptDeviceTest, GuidMapMetadata) {
     uint8_t expected_guid[GPT_GUID_LEN] = GUID_UNIQUE_PART1;
     EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
   }
+}
+
+TEST_F(GptDeviceTest, CorruptMetadataMap) {
+  Init();
+  const guid_map_t guid_map[] = {
+      {"Linux filesystem", GUID_METADATA},
+  };
+  // Set the length of the metadata to be one byte smaller than is expected, which should then fail
+  // loading the driver (rather than continuing with a corrupt GUID map).
+  fake_parent_->SetMetadata(DEVICE_METADATA_GUID_MAP, &guid_map, sizeof(guid_map) - 1);
+  ASSERT_EQ(ZX_ERR_BAD_STATE, Bind(nullptr, fake_parent_.get()));
 }
 
 TEST_F(GptDeviceTest, BlockOpsPropagate) {

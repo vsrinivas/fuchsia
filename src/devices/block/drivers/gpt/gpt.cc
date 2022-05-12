@@ -223,17 +223,23 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   size_t actual;
   uint64_t guid_map_entries = 0;
   guid_map_t guid_map[DEVICE_METADATA_GUID_MAP_MAX_ENTRIES]{};
-  zx_status_t status;
-  status =
+  zx_status_t status =
       device_get_metadata(parent, DEVICE_METADATA_GUID_MAP, guid_map, sizeof(guid_map), &actual);
-  // TODO(http://fxbug.dev/33999): We should not continue loading the driver here. Upper layer
-  //                may rely on guid to take action on a partition.
-  if (status != ZX_OK) {
-    zxlogf(INFO, "gpt: device_get_metadata failed (%d)", status);
-  } else if (actual % sizeof(guid_map[0]) != 0) {
-    zxlogf(INFO, "gpt: GUID map size is invalid (%lu)", actual);
-  } else {
+  // If the block device doesn't have a GUID override mapping defined in its metadata,
+  // device_get_metadata() returns ZX_ERR_NOT_FOUND.
+  if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
+    zxlogf(ERROR, "gpt: device_get_metadata failed: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  if (status == ZX_OK) {
+    if (actual % sizeof(guid_map[0]) != 0) {
+      zxlogf(ERROR, "gpt: GUID map size is invalid (%lu)", actual);
+      return ZX_ERR_BAD_STATE;
+    }
     guid_map_entries = actual / sizeof(guid_map[0]);
+  } else {
+    zxlogf(DEBUG, "gpt: device metadata does not contain a GUID map");
   }
 
   block_impl_protocol_t block_protocol;
