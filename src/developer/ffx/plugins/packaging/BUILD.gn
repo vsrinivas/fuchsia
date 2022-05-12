@@ -12,8 +12,6 @@ ffx_plugin("ffx_packaging") {
     "archive:ffx_packaging_archive",
     "build:ffx_packaging_build",
     "download:ffx_packaging_download",
-    "export:ffx_packaging_export",
-    "import:ffx_packaging_import",
   ]
 
   args_sources = [ "src/args.rs" ]
@@ -21,5 +19,5 @@ ffx_plugin("ffx_packaging") {
 
 group("tests") {
   testonly = true
-  deps = [ "repository:ffx_packaging_repository_test($host_toolchain)" ]
+  deps = []
 }
