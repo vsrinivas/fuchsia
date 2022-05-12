@@ -71,7 +71,7 @@ mod tests {
     use fuchsia_zircon::{self as zx, DurationNum};
 
     #[fuchsia::test]
-    fn one_time_unit_converted_to_microseconds() {
+    fn one_time_unit_conversion_to_microseconds() {
         assert_eq!(1024, TimeUnit(1).into_micros());
     }
 
@@ -82,27 +82,35 @@ mod tests {
         assert_eq!(204800, TimeUnit(200).into_micros());
     }
 
-    #[test]
-    fn timeunit() {
-        let mut duration: zx::Duration = TimeUnit(1).into();
-        assert_eq!(duration, 1024.micros());
+    #[fuchsia::test]
+    fn one_time_unit_conversion_to_duration() {
+        assert_eq!(zx::Duration::from(TimeUnit(1)), 1024.micros());
+    }
 
-        duration = TimeUnit(100).into();
-        assert_eq!(duration, (100 * 1024).micros());
+    #[fuchsia::test]
+    fn time_unit_conversion_to_duration_is_linear() {
+        assert_eq!(zx::Duration::from(TimeUnit(0)), 0.micros());
+        assert_eq!(zx::Duration::from(TimeUnit(1)), 1024.micros());
+        assert_eq!(zx::Duration::from(TimeUnit(200)), 204800.micros());
+    }
 
-        duration = TimeUnit::DEFAULT_BEACON_INTERVAL.into();
-        assert_eq!(duration, (100 * 1024).micros());
+    #[fuchsia::test]
+    fn time_unit_multiplication_with_integer() {
+        assert_eq!(TimeUnit(100) * 20_u8, TimeUnit(2000));
+    }
 
-        duration = (TimeUnit(100) * 20_u8).into();
-        assert_eq!(duration, (100 * 20 * 1024).micros());
+    #[fuchsia::test]
+    fn time_unit_multiplication_with_other_time_unit() {
+        assert_eq!(TimeUnit(100) * TimeUnit(20), TimeUnit(2000));
+    }
 
-        duration = (TimeUnit(100) * TimeUnit(20)).into();
-        assert_eq!(duration, (100 * 20 * 1024).micros());
+    #[fuchsia::test]
+    fn time_unit_addition_with_integer() {
+        assert_eq!(TimeUnit(100) + 20_u16, TimeUnit(120));
+    }
 
-        duration = (TimeUnit(100) + 20_u16).into();
-        assert_eq!(duration, (120 * 1024).micros());
-
-        duration = (TimeUnit(100) + TimeUnit(20)).into();
-        assert_eq!(duration, (120 * 1024).micros());
+    #[fuchsia::test]
+    fn time_unit_addition_with_other_time_unit() {
+        assert_eq!(TimeUnit(100) + TimeUnit(20), TimeUnit(120));
     }
 }
