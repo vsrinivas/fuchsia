@@ -5,7 +5,7 @@
 use anyhow::Result;
 use errors::ffx_bail;
 use ffx_core::ffx_plugin;
-pub use ffx_packaging_build_args::BuildCommand;
+pub use ffx_package_build_args::BuildCommand;
 use fuchsia_pkg::{build, CreationManifest};
 use std::fs::{create_dir_all, File};
 use std::io::{BufReader, Write};

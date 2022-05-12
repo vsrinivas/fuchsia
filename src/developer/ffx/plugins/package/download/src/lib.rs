@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     ffx_core::ffx_plugin,
-    ffx_packaging_download_args::DownloadCommand,
+    ffx_package_download_args::DownloadCommand,
     fuchsia_hyper::new_https_client,
     fuchsia_pkg::PackageManifest,
     pkg::{

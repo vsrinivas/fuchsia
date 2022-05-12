@@ -4,7 +4,7 @@
 
 use anyhow::{Context, Result};
 use ffx_core::ffx_plugin;
-pub use ffx_packaging_archive_args::ArchiveCommand;
+pub use ffx_package_archive_args::ArchiveCommand;
 use fuchsia_pkg::PackageManifest;
 use std::fs::{create_dir_all, File};
 

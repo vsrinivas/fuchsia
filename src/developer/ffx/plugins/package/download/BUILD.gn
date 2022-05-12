@@ -4,17 +4,24 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_packaging_build") {
+ffx_plugin("ffx_package_download") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
   deps = [
-    "//src/lib/fuchsia-async",
+    "//src/developer/ffx/lib/pkg:pkg",
+    "//src/lib/fuchsia-hyper",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:url",
   ]
-
-  test_deps = [ "//third_party/rust_crates:tempfile" ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:camino",
+    "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:walkdir",
+  ]
 
   args_sources = [ "src/args.rs" ]
 
