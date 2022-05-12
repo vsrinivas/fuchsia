@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::TEST_ROOT_REALM_NAME,
+    crate::constants::TEST_ROOT_REALM_NAME,
     anyhow::Error,
     async_trait::async_trait,
     diagnostics_bridge::ArchiveReaderManager,

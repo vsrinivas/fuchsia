@@ -103,6 +103,8 @@ rustc_library("lib") {
   ]
 
   sources = [
+    "src/above_root_capabilities.rs",
+    "src/constants.rs",
     "src/debug_data_server.rs",
     "src/diagnostics.rs",
     "src/enclosing_env.rs",
@@ -111,7 +113,11 @@ rustc_library("lib") {
     "src/lib.rs",
     "src/resolver.rs",
     "src/run_events.rs",
+    "src/running_suite.rs",
     "src/self_diagnostics.rs",
+    "src/test_manager_server.rs",
+    "src/test_suite.rs",
+    "src/utilities.rs",
   ]
 }
 

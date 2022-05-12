@@ -4,8 +4,8 @@
 
 use {
     crate::{
+        constants::{HERMETIC_TESTS_COLLECTION, TEST_TYPE_REALM_MAP},
         error::{FacetError, LaunchTestError},
-        HERMETIC_TESTS_COLLECTION, TEST_TYPE_REALM_MAP,
     },
     anyhow::format_err,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
@@ -104,7 +104,7 @@ fn get_suite_collection(decl: &fdecl::Component) -> Result<&'static str, FacetEr
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
+    use crate::constants::{
         CHROMIUM_TESTS_COLLECTION, CTS_TESTS_COLLECTION, SYSTEM_TESTS_COLLECTION,
         VULKAN_TESTS_COLLECTION,
     };
