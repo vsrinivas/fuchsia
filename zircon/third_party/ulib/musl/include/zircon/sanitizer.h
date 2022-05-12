@@ -111,6 +111,14 @@ zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len, bool 
 // before allowing other threads to resume running normally.  If there are
 // problems stopping threads, no memory callbacks will be made and the
 // argument to the final callback will get an error code rather than ZX_OK.
+//
+// NOTE: Users should be very careful of what they do in their callbacks.
+// All other threads are suspended, but they could still be holding locks.
+// For example, calling `printf` from the callback could cause a deadlock if
+// another thread was suspended mid-`printf`. Each callback is meant to scan
+// over a region of memory and should not do more than that. Callbacks should
+// not use other libc or other library functions other than the simplest things
+// like memcpy.
 typedef void sanitizer_memory_snapshot_callback_t(void* mem, size_t len, void* arg);
 void __sanitizer_memory_snapshot(sanitizer_memory_snapshot_callback_t* globals,
                                  sanitizer_memory_snapshot_callback_t* stacks,
