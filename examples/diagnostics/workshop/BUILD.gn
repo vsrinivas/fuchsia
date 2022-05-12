@@ -2,10 +2,74 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+import("//build/test.gni")
+
+source_set("lib") {
+  sources = [
+    "profile.cc",
+    "profile.h",
+    "profile_store.cc",
+    "profile_store.h",
+  ]
+
+  public_deps = [
+    "fidl:fuchsia.examples.diagnostics",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
+executable("example_profile_store_bin") {
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("profile_store") {
+  deps = [ ":example_profile_store_bin" ]
+  manifest = "meta/profile_store.cml"
+}
+
+fuchsia_package("profile_store_example") {
+  deps = [ ":profile_store" ]
+}
+
+executable("test_bin") {
+  testonly = true
+  output_name = "profile_store_example_unittests"
+
+  sources = [ "profile_unittest_example.cc" ]
+
+  deps = [
+    ":lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("profile_store_example_unittests") {
+  deps = [ ":test_bin" ]
+}
+
 group("workshop") {
-  deps = [ "fidl:fuchsia.examples.diagnostics" ]
+  deps = [
+    ":profile_store_example",
+    "fidl:fuchsia.examples.diagnostics",
+  ]
 }
 
 group("tests") {
-  deps = []
+  testonly = true
+  deps = [ ":profile_store_example_unittests" ]
 }
