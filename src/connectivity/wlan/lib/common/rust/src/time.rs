@@ -16,12 +16,12 @@ use {
 pub struct TimeUnit(pub u16);
 
 #[cfg(target_os = "fuchsia")]
-use fuchsia_zircon::{self as zx, DurationNum};
+use fuchsia_zircon as zx;
 
 #[cfg(target_os = "fuchsia")]
 impl From<TimeUnit> for zx::Duration {
     fn from(tu: TimeUnit) -> zx::Duration {
-        (tu.0 as i64 * 1024).micros()
+        zx::Duration::from_micros(tu.into_micros())
     }
 }
 
@@ -59,12 +59,28 @@ where
 
 impl TimeUnit {
     pub const DEFAULT_BEACON_INTERVAL: Self = Self(100);
+
+    pub const fn into_micros(&self) -> i64 {
+        (self.0 as i64) * 1024
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use fuchsia_zircon::{self as zx, DurationNum};
+
+    #[fuchsia::test]
+    fn one_time_unit_converted_to_microseconds() {
+        assert_eq!(1024, TimeUnit(1).into_micros());
+    }
+
+    #[fuchsia::test]
+    fn time_unit_conversion_to_microseconds_is_linear() {
+        assert_eq!(0, TimeUnit(0).into_micros());
+        assert_eq!(1024, TimeUnit(1).into_micros());
+        assert_eq!(204800, TimeUnit(200).into_micros());
+    }
 
     #[test]
     fn timeunit() {
