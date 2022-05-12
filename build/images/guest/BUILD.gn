@@ -72,6 +72,7 @@ assemble_system("guest") {
     "//src/bringup/bin/watch",
     "//src/bringup/bundles:bootstrap",
     "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/connectivity/ethernet/drivers/ethernet/netdevice-migration",
     "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
     "//src/connectivity/network/bin/ping",
     "//src/connectivity/network/drivers/network-device",

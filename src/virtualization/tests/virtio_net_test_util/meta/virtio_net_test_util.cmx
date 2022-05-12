@@ -7,7 +7,12 @@
     },
     "sandbox": {
         "dev": [
-            "class/ethernet"
+            "class/ethernet",
+            "class/network"
+        ],
+        "services": [
+            "fuchsia.hardware.network.MacAddressing",
+            "fuchsia.hardware.network.Port"
         ]
     }
 }
