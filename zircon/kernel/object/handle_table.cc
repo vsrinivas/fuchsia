@@ -232,7 +232,11 @@ Handle* HandleTable::HandleCursor::Next() {
   }
 
   Handle* result = &*iter_;
-  iter_++;
+
+  // See the note about thread-safety in |HandleCursor|'s class comment for an explanation of why
+  // thread-safety analysis is suppressed.
+  [this]() TA_NO_THREAD_SAFETY_ANALYSIS { iter_++; }();
+
   return result;
 }
 

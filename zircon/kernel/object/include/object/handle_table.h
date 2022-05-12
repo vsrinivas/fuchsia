@@ -185,9 +185,21 @@ class HandleTable {
 
  private:
   using HandleList = fbl::DoublyLinkedListCustomTraits<Handle*, Handle::NodeListTraits>;
-  // HandleCursor is used to reduce the lock duration while iterate over the handle table.
+
+  // HandleCursor is used to reduce lock duration while iterating over a handle table.
   //
-  // It allows iteration over the handle table to be broken up into multiple critical sections.
+  // It allows iteration over the handle table to be broken up into multiple critical sections while
+  // ensuring the iterator remains well defined in the face of handle removal.
+  //
+  // Thread-safety - Instances of this class may be used concurrently by multiple threads as long as
+  // the |Next| method is only called by the thread that creates the object.  Calling |Next| from
+  // any other thread is an error.  This limitation allows the iterating thread to hold the lock in
+  // "read" (a.k.a. shared) mode while iterating.  Because all other methods require holding the
+  // lock in "write" (a.k.a. exclusive) mode, *and* because a reader-writer lock cannot be
+  // simultaneously held in both read and write modes, there is no concurrent access of the |iter_|
+  // field.  However, because the compiler enforces that a TA_GUARDED field (like |iter_|) is never
+  // modified without holding the lock in exclusive mode (which |Next| does do), we need to suppress
+  // thread-safety analysis in |Next| when modifying |iter_|.
   class HandleCursor : public fbl::DoublyLinkedListable<HandleCursor*> {
    public:
     explicit HandleCursor(HandleTable* process);
