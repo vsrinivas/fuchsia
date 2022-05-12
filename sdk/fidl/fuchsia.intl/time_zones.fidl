@@ -140,4 +140,7 @@ type TimeZoneInfo = table {
     /// from UTC at the queried time (`at_time`). If the time zone is ahead of UTC, this will be a
     /// positive value; if behind UTC, a negative value.
     2: total_offset_at_time zx.duration;
+    /// Indicates whether the time zone is in Daylight Savings Time at the queried time
+    /// (`at_time`).
+    3: in_dst_at_time bool;
 };

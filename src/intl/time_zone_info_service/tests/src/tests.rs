@@ -125,6 +125,7 @@ mod tests {
           TimeZoneInfo {
               id: tz_id,
               total_offset_at_time: -4 * SECONDS_PER_HOUR * NANOS_PER_SECOND,
+              in_dst_at_time: true,
           }
         });
         assert_eq!(actual, expected);

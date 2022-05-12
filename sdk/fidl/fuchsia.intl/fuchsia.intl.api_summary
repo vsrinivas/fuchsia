@@ -59,6 +59,7 @@ strict enum fuchsia.intl/TemperatureUnit uint32
 struct/member fuchsia.intl/TimeZoneId.id string
 struct fuchsia.intl/TimeZoneId
 table/member fuchsia.intl/TimeZoneInfo.id fuchsia.intl/TimeZoneId
+table/member fuchsia.intl/TimeZoneInfo.in_dst_at_time bool
 table/member fuchsia.intl/TimeZoneInfo.total_offset_at_time int64
 table fuchsia.intl/TimeZoneInfo
 protocol/member fuchsia.intl/TimeZones.AbsoluteToCivilTime(fuchsia.intl/TimeZoneId time_zone_id,int64 absolute_time) -> (fuchsia.intl/TimeZones_AbsoluteToCivilTime_Result result)

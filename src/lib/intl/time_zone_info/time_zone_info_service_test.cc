@@ -346,6 +346,7 @@ TEST_F(TimeZoneInfoServiceTest, GetTimeZoneInfo_HappyPath) {
   TimeZoneInfo expected;
   expected.set_id(TimeZoneId{.id = kNyc});
   expected.set_total_offset_at_time(-4 * kSecondsPerHour * kNanosecondsPerSecond);
+  expected.set_in_dst_at_time(true);
 
   AssertGetTimeZoneInfo(kNyc, at_time, std::move(expected));
 }
@@ -357,6 +358,7 @@ TEST_F(TimeZoneInfoServiceTest, GetTimeZoneInfo_IntentionallyUnknownTimeZone) {
   TimeZoneInfo expected;
   expected.set_id(TimeZoneId{.id = "Etc/Unknown"});
   expected.set_total_offset_at_time(0);
+  expected.set_in_dst_at_time(false);
 
   AssertGetTimeZoneInfo("Etc/Unknown", at_time, std::move(expected));
 }

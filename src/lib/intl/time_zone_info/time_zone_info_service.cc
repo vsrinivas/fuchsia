@@ -454,6 +454,7 @@ void TimeZoneInfoService::GetTimeZoneInfo(fuchsia::intl::TimeZoneId time_zone_id
   int32_t dst_offset;
   icu::ErrorCode icu_status;
   time_zone->getOffset(at_u_date, false /* not local time */, raw_offset, dst_offset, icu_status);
+  bool in_dst_at_time = time_zone->inDaylightTime(at_u_date, icu_status);
 
   if (icu_status.isFailure()) {
     fuchsia::intl::TimeZonesError tz_error;
@@ -481,6 +482,7 @@ void TimeZoneInfoService::GetTimeZoneInfo(fuchsia::intl::TimeZoneId time_zone_id
 
   zx_duration_t total_offset = (raw_offset + dst_offset) * kNanosecondsPerMillisecond;
   tz_info.set_total_offset_at_time(total_offset);
+  tz_info.set_in_dst_at_time(in_dst_at_time);
 
   callback(GetTimeZoneInfoResult(std::move(tz_info)));
 }
