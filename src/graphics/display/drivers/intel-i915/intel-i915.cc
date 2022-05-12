@@ -39,6 +39,7 @@
 #include "src/graphics/display/drivers/intel-i915/intel-i915-bind.h"
 #include "src/graphics/display/drivers/intel-i915/macros.h"
 #include "src/graphics/display/drivers/intel-i915/pci-ids.h"
+#include "src/graphics/display/drivers/intel-i915/power.h"
 #include "src/graphics/display/drivers/intel-i915/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915/registers-dpll.h"
 #include "src/graphics/display/drivers/intel-i915/registers-pipe.h"
@@ -295,10 +296,11 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     return false;
   }
 
+  ZX_DEBUG_ASSERT(power_);
   if (resume) {
-    power_.Resume();
+    power_->Resume();
   } else {
-    cd_clk_power_well_ = power_.GetCdClockPowerWellRef();
+    cd_clk_power_well_ = power_->GetCdClockPowerWellRef();
   }
 
   // Enable CDCLK PLL to 337.5mhz if the BIOS didn't already enable it. If it needs to be
@@ -503,7 +505,7 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
 
   // Disable IO power
   auto pwc2 = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
-  pwc2.ddi_io_power_request(ddi).set(0);
+  pwc2.skl_ddi_io_power_request(ddi).set(0);
   pwc2.WriteTo(mmio_space());
 
   if (!dpll_manager_->Unmap(ddi)) {
@@ -545,7 +547,10 @@ std::unique_ptr<DisplayDevice> Controller::QueryDisplay(registers::Ddi ddi) {
 bool Controller::LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) {
   registers::DdiRegs regs(ddi);
 
-  if (!registers::PowerWellControl2::Get().ReadFrom(mmio_space()).ddi_io_power_state(ddi).get() ||
+  if (!registers::PowerWellControl2::Get()
+           .ReadFrom(mmio_space())
+           .skl_ddi_io_power_state(ddi)
+           .get() ||
       !regs.DdiBufControl().ReadFrom(mmio_space()).ddi_buffer_enable()) {
     return false;
   }
@@ -2153,6 +2158,9 @@ zx_status_t Controller::Init() {
     mmio_space_ = fdf::MmioBuffer(mapped_bars_[0].mmio);
   }
 
+  zxlogf(TRACE, "Initializing Power");
+  power_ = Power::New(mmio_space(), device_id_);
+
   for (unsigned i = 0; i < registers::kDdiCount; i++) {
     gmbus_i2cs_[i].set_mmio_space(mmio_space());
     dp_auxs_[i].set_mmio_space(mmio_space());
@@ -2260,7 +2268,7 @@ zx_status_t Controller::Init() {
   return ZX_OK;
 }
 
-Controller::Controller(zx_device_t* parent) : DeviceType(parent), power_(this) {
+Controller::Controller(zx_device_t* parent) : DeviceType(parent) {
   mtx_init(&display_lock_, mtx_plain);
   mtx_init(&gtt_lock_, mtx_plain);
   mtx_init(&bar_lock_, mtx_plain);

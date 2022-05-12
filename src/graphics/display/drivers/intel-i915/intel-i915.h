@@ -130,7 +130,7 @@ class Controller : public DeviceType,
   Interrupts* interrupts() { return &interrupts_; }
   uint16_t device_id() const { return device_id_; }
   const IgdOpRegion& igd_opregion() const { return igd_opregion_; }
-  Power* power() { return &power_; }
+  Power* power() { return power_.get(); }
   DisplayPllManager* dpll_manager() { return dpll_manager_.get(); }
 
   // Non-const getter to allow unit tests to modify the IGD.
@@ -150,6 +150,7 @@ class Controller : public DeviceType,
   void SetDpllManagerForTesting(std::unique_ptr<DisplayPllManager> dpll_manager) {
     dpll_manager_ = std::move(dpll_manager);
   }
+  void SetPowerWellForTesting(std::unique_ptr<Power> power_well) { power_ = std::move(power_well); }
   void SetMmioForTesting(fdf::MmioBuffer mmio_space) { mmio_space_ = std::move(mmio_space); }
 
   void ResetMmioSpaceForTesting() { mmio_space_.reset(); }
@@ -245,6 +246,8 @@ class Controller : public DeviceType,
   // appropriate.
   std::optional<fdf::MmioBuffer> mmio_space_;
 
+  std::unique_ptr<Power> power_;
+
   // References to displays. References are owned by devmgr, but will always
   // be valid while they are in this vector.
   fbl::Vector<std::unique_ptr<DisplayDevice>> display_devices_ __TA_GUARDED(display_lock_);
@@ -253,7 +256,6 @@ class Controller : public DeviceType,
 
   fbl::Vector<Pipe> pipes_ __TA_GUARDED(display_lock_);
 
-  Power power_;
   PowerWellRef cd_clk_power_well_;
 
   std::unique_ptr<DisplayPllManager> dpll_manager_;

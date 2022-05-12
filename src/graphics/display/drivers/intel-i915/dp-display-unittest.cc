@@ -11,6 +11,7 @@
 #include "src/graphics/display/drivers/intel-i915/dpll.h"
 #include "src/graphics/display/drivers/intel-i915/fake-dpcd-channel.h"
 #include "src/graphics/display/drivers/intel-i915/intel-i915.h"
+#include "src/graphics/display/drivers/intel-i915/pci-ids.h"
 
 namespace {
 
@@ -87,6 +88,8 @@ class DpDisplayTest : public ::testing::Test {
   void SetUp() override {
     controller_.SetMmioForTesting(mmio_buffer_.View(0));
     controller_.SetDpllManagerForTesting(std::make_unique<TestDpllManager>());
+    controller_.SetPowerWellForTesting(
+        i915::Power::New(controller_.mmio_space(), i915::kTestDeviceDid));
     fake_dpcd_.SetDefaults();
   }
 
@@ -178,7 +181,7 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInit) {
   panel_status.WriteTo(mmio_buffer());
 
   auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_buffer());
-  power_well.ddi_io_power_state(registers::DDI_A).set(1);
+  power_well.skl_ddi_io_power_state(registers::DDI_A).set(1);
   power_well.WriteTo(mmio_buffer());
 
   fake_dpcd()->registers[dpcd::DPCD_LANE0_1_STATUS] = 0xFF;

@@ -557,11 +557,11 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode, registers::Pipe pipe,
 
   // Enable DDI IO power and wait for it
   auto pwc2 = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
-  pwc2.ddi_io_power_request(ddi()).set(1);
+  pwc2.skl_ddi_io_power_request(ddi()).set(1);
   pwc2.WriteTo(mmio_space());
   if (!WAIT_ON_US(registers::PowerWellControl2 ::Get()
                       .ReadFrom(mmio_space())
-                      .ddi_io_power_state(ddi())
+                      .skl_ddi_io_power_state(ddi())
                       .get(),
                   20)) {
     zxlogf(ERROR, "hdmi: failed to enable IO power for ddi");

@@ -1218,11 +1218,11 @@ bool DpDisplay::InitDdi() {
 
   // Enable power for this DDI.
   auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
-  power_well.ddi_io_power_request(ddi()).set(1);
+  power_well.skl_ddi_io_power_request(ddi()).set(1);
   power_well.WriteTo(mmio_space());
   if (!WAIT_ON_US(registers::PowerWellControl2 ::Get()
                       .ReadFrom(mmio_space())
-                      .ddi_io_power_state(ddi())
+                      .skl_ddi_io_power_state(ddi())
                       .get(),
                   20)) {
     zxlogf(ERROR, "Failed to enable IO power for ddi");

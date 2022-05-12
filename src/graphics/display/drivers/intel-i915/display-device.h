@@ -149,6 +149,7 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   Pipe* pipe_ = nullptr;
 
   PowerWellRef ddi_power_;
+  PowerWellRef ddi_io_power_;
 
   bool inited_ = false;
   display_mode_t info_ = {};

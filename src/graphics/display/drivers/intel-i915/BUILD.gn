@@ -93,6 +93,7 @@ test("intel-i915-test") {
     "intel-i915-test.cc",
     "interrupts-unittest.cc",
     "pipe-unittest.cc",
+    "power-unittest.cc",
   ]
   deps = [
     ":common_srcs",

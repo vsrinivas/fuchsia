@@ -120,19 +120,22 @@ class GMBus4 : public hwreg::RegisterBase<GMBus4, uint32_t> {
 // PWR_WELL_CTL
 class PowerWellControl2 : public hwreg::RegisterBase<PowerWellControl2, uint32_t> {
  public:
-  DEF_BIT(31, power_well_2_request);
-  DEF_BIT(30, power_well_2_state);
-  DEF_BIT(29, power_well_1_request);
-  DEF_BIT(28, power_well_1_state);
-  DEF_BIT(1, misc_io_power_request);
-  DEF_BIT(0, misc_io_power_state);
+  hwreg::BitfieldRef<uint32_t> power_request(size_t index) {
+    ZX_DEBUG_ASSERT(index & 1);
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), index, index);
+  }
 
-  hwreg::BitfieldRef<uint32_t> ddi_io_power_request(Ddi ddi) {
+  hwreg::BitfieldRef<uint32_t> power_state(size_t index) {
+    ZX_DEBUG_ASSERT((index & 1) == 0);
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), index, index);
+  }
+
+  hwreg::BitfieldRef<uint32_t> skl_ddi_io_power_request(Ddi ddi) {
     int bit = 2 + ((ddi == DDI_A || ddi == DDI_E) ? 0 : ddi * 2) + 1;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> ddi_io_power_state(Ddi ddi) {
+  hwreg::BitfieldRef<uint32_t> skl_ddi_io_power_state(Ddi ddi) {
     int bit = 2 + ((ddi == DDI_A || ddi == DDI_E) ? 0 : ddi * 2);
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
@@ -147,6 +150,14 @@ class FuseStatus : public hwreg::RegisterBase<FuseStatus, uint32_t> {
   DEF_BIT(27, pg0_dist_status);
   DEF_BIT(26, pg1_dist_status);
   DEF_BIT(25, pg2_dist_status);
+  DEF_BIT(24, pg3_dist_status);  // Only for Icy lake or higher gen
+  DEF_BIT(23, pg4_dist_status);  // Only for Icy lake or higher gen
+  DEF_BIT(22, pg5_dist_status);  // Only for Tiger lake or higher gen
+
+  uint32_t dist_status(size_t index) {
+    ZX_DEBUG_ASSERT(index >= 0 && index <= 31);
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), index, index).get();
+  }
 
   static auto Get() { return hwreg::RegisterAddr<FuseStatus>(0x42000); }
 };

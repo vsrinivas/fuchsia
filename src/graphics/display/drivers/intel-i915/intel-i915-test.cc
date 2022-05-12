@@ -12,6 +12,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mmio-ptr/fake.h>
 #include <lib/zircon-internal/align.h>
+#include <lib/zx/vmar.h>
 #include <zircon/pixelformat.h>
 
 #include <type_traits>
@@ -21,6 +22,7 @@
 
 #include "src/devices/pci/testing/pci_protocol_fake.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
+#include "src/graphics/display/drivers/intel-i915/pci-ids.h"
 
 #define ASSERT_OK(x) ASSERT_EQ(ZX_OK, (x))
 #define EXPECT_OK(x) EXPECT_EQ(ZX_OK, (x))
@@ -101,12 +103,16 @@ class IntegrationTest : public ::testing::Test {
     // required for the tests below.
     pci_.PciWriteConfig16(registers::GmchGfxControl::kAddr, 0x40);
 
+    constexpr uint16_t kIntelVendorId = 0x8086;
+    pci_.SetDeviceInfo(pci_device_info_t{
+        .vendor_id = kIntelVendorId,
+        .device_id = i915::kTestDeviceDid,
+    });
+
     parent_ = MockDevice::FakeRootParent();
     parent_->AddProtocol(ZX_PROTOCOL_SYSMEM, sysmem_.proto_ops(), &sysmem_, "sysmem");
     parent_->AddProtocol(ZX_PROTOCOL_PCI, pci_.get_protocol().ops, pci_.get_protocol().ctx, "pci");
   }
-
-  void TearDown() final { device_async_remove(parent()); }
 
   MockDevice* parent() const { return parent_.get(); }
 
