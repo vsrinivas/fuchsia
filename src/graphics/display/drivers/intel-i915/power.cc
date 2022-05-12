@@ -77,8 +77,19 @@ class TestPowerWell : public Power {
     return PowerWellRef(this, PowerWellId::PG1);
   }
 
+  bool GetDdiIoPowerState(registers::Ddi ddi) override {
+    if (ddi_state_.find(ddi) == ddi_state_.end()) {
+      ddi_state_[ddi] = false;
+    }
+    return ddi_state_[ddi];
+  }
+
+  void SetDdiIoPowerState(registers::Ddi ddi, bool enable) override { ddi_state_[ddi] = enable; }
+
  private:
   void SetPowerWell(PowerWellId power_well, bool enable) override {}
+
+  std::unordered_map<registers::Ddi, bool> ddi_state_;
 };
 
 const std::unordered_map<PowerWellId, PowerWellInfo> kSklPowerWellInfo = {
@@ -119,6 +130,17 @@ class SklPower : public Power {
   }
   PowerWellRef GetDdiPowerWellRef(registers::Ddi ddi) override {
     return PowerWellRef(this, ddi == registers::DDI_A ? PowerWellId::PG1 : PowerWellId::PG2);
+  }
+
+  bool GetDdiIoPowerState(registers::Ddi ddi) override {
+    auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
+    return power_well.skl_ddi_io_power_state(ddi).get();
+  }
+
+  void SetDdiIoPowerState(registers::Ddi ddi, bool enable) override {
+    auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
+    power_well.skl_ddi_io_power_request(ddi).set(1);
+    power_well.WriteTo(mmio_space());
   }
 
  private:

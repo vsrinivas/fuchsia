@@ -505,9 +505,8 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
   }
 
   // Disable IO power
-  auto pwc2 = registers::PowerWellControl2::Get().ReadFrom(mmio_space());
-  pwc2.skl_ddi_io_power_request(ddi).set(0);
-  pwc2.WriteTo(mmio_space());
+  ZX_DEBUG_ASSERT(power_);
+  power_->SetDdiIoPowerState(ddi, /* enable */ false);
 
   if (!dpll_manager_->Unmap(ddi)) {
     zxlogf(ERROR, "Failed to unmap DPLL for DDI %d", ddi);
@@ -548,10 +547,7 @@ std::unique_ptr<DisplayDevice> Controller::QueryDisplay(registers::Ddi ddi) {
 bool Controller::LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) {
   registers::DdiRegs regs(ddi);
 
-  if (!registers::PowerWellControl2::Get()
-           .ReadFrom(mmio_space())
-           .skl_ddi_io_power_state(ddi)
-           .get() ||
+  if (!power_->GetDdiIoPowerState(ddi) ||
       !regs.DdiBufControl().ReadFrom(mmio_space()).ddi_buffer_enable()) {
     return false;
   }

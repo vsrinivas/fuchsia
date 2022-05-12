@@ -75,6 +75,9 @@ class Power {
   virtual PowerWellRef GetPipePowerWellRef(registers::Pipe pipe) = 0;
   virtual PowerWellRef GetDdiPowerWellRef(registers::Ddi ddi) = 0;
 
+  virtual bool GetDdiIoPowerState(registers::Ddi ddi) = 0;
+  virtual void SetDdiIoPowerState(registers::Ddi ddi, bool enable) = 0;
+
   virtual void Resume() = 0;
 
  protected:
