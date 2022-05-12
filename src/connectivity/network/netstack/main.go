@@ -186,53 +186,69 @@ func (*glogEmitter) Emit(depth int, level glog.Level, timestamp time.Time, forma
 }
 
 func InstallThreadProfiles(ctx context.Context, componentCtx *component.Context) {
-	const threadProfile = "fuchsia.netstack.go-worker"
-	channel := zx.GetThreadsChannel()
 	req, provider, err := scheduler.NewProfileProviderWithCtxInterfaceRequest()
 	if err != nil {
-		panic(fmt.Sprintf("failed to create ProfileProvider request: %s", err))
+		panic(fmt.Sprintf("failed to create %s request: %s", req.Name(), err))
 	}
 	componentCtx.ConnectToEnvService(req)
-	for {
-		_, err := zxwait.WaitContext(ctx, channel.Handle().Load(), zx.SignalChannelReadable)
-		if err != nil {
-			_ = syslog.Warnf("stopped observing for thread profiles: %s", err)
-			return
+
+	go func() {
+		const threadProfile = "fuchsia.netstack.go-worker"
+		const handlesPerRead = 1
+
+		channel := zx.GetThreadsChannel()
+		for {
+			if _, err := zxwait.WaitContext(ctx, channel.Handle().Load(), zx.SignalChannelReadable); err != nil {
+				_ = syslog.Warnf("stopped observing for thread profiles: %s", err)
+				return
+			}
+			var handles [handlesPerRead]zx.HandleInfo
+			nb, nh, err := channel.ReadEtc(nil, handles[:], 0)
+			if err != nil {
+				_ = syslog.Errorf("failed to read from threads channel: %s", err)
+				continue
+			}
+			if nb != 0 {
+				panic(fmt.Sprintf("unexpected %d bytes in channel message", nb))
+			}
+			if nh != handlesPerRead {
+				panic(fmt.Sprintf("unexpected %d handles in channel message", nh))
+			}
+			for _, handleInfo := range handles {
+				// Retrieve the koid before transferring the handle.
+				koid := func() string {
+					info, err := handleInfo.Handle.GetInfoHandleBasic()
+					if err != nil {
+						return fmt.Sprintf("<%s>", err)
+					}
+					return fmt.Sprintf("%d", info.Koid)
+				}()
+
+				// Attempt to install our thread profile.
+				status, err := provider.SetProfileByRole(ctx, handleInfo.Handle, threadProfile)
+				if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrPeerClosed {
+					_ = syslog.Warnf("connection to %s closed; will not set thread profiles", req.Name())
+					return
+				}
+				if err != nil {
+					_ = syslog.Errorf("failed to set thread profile for koid=%s; FIDL error: %s", koid, err)
+					continue
+				}
+
+				if status := zx.Status(status); status != zx.ErrOk {
+					_ = syslog.Errorf("failed to set thread profile for koid=%s; rejected with %s", koid, status)
+					continue
+				}
+
+				_ = syslog.Debugf("successfully set thread profile for koid=%s to %s", koid, threadProfile)
+			}
 		}
-		var handles [1]zx.HandleInfo
-		nb, nh, err := channel.ReadEtc(nil, handles[:], 0)
-		if err != nil {
-			_ = syslog.Errorf("failed to read from threads channel %s", err)
-			continue
-		}
-		if nb != 0 {
-			panic(fmt.Sprintf("unexpected %d bytes in channel message", nb))
-		}
-		if nh != 1 {
-			panic(fmt.Sprintf("unexpected %d handles in channel message", nh))
-		}
-		threadHandle := handles[0].Handle
-		// Attempt to install our thread profile.
-		status, err := provider.SetProfileByRole(ctx, threadHandle, threadProfile)
-		if err != nil {
-			_ = syslog.Warnf("failed to set thread profile, FIDL error: %s", err)
-			continue
-		}
-		zxStatus := zx.Status(status)
-		if zxStatus != zx.ErrOk {
-			_ = syslog.Errorf("failed to set thread profile, rejected with %s", &zx.Error{Status: zxStatus})
-			continue
-		}
-		_ = syslog.Debugf("successfully set thread profile for %d to %s", threadHandle, threadProfile)
-	}
+	}()
 }
 
 func Main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	componentCtx := component.NewContextFromStartupInfo()
-	go InstallThreadProfiles(ctx, componentCtx)
 
 	logLevel := syslog.InfoLevel
 
@@ -253,6 +269,8 @@ func Main() {
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		panic(err)
 	}
+
+	componentCtx := component.NewContextFromStartupInfo()
 
 	{
 		req, logSink, err := logger.NewLogSinkWithCtxInterfaceRequest()
@@ -278,6 +296,9 @@ func Main() {
 
 	log.SetFlags(log.Lshortfile)
 	glog.SetTarget(&glogEmitter{})
+
+	// This routine may log; start it after initializing syslog.
+	InstallThreadProfiles(ctx, componentCtx)
 
 	_ = syslog.Infof("starting...")
 
