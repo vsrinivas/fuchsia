@@ -260,15 +260,9 @@ class Controller : public DeviceType,
 
   std::unique_ptr<DisplayPllManager> dpll_manager_;
 
-  GMBusI2c gmbus_i2cs_[registers::kDdiCount] = {
-      GMBusI2c(registers::DDI_A), GMBusI2c(registers::DDI_B), GMBusI2c(registers::DDI_C),
-      GMBusI2c(registers::DDI_D), GMBusI2c(registers::DDI_E),
-  };
-
-  DpAux dp_auxs_[registers::kDdiCount] = {
-      DpAux(registers::DDI_A), DpAux(registers::DDI_B), DpAux(registers::DDI_C),
-      DpAux(registers::DDI_D), DpAux(registers::DDI_E),
-  };
+  cpp20::span<const registers::Ddi> ddis_;
+  fbl::Vector<GMBusI2c> gmbus_i2cs_;
+  fbl::Vector<DpAux> dp_auxs_;
 
   // Plane buffer allocation. If no alloc, start == end == registers::PlaneBufCfg::kBufferCount.
   buffer_allocation_t plane_buffers_[registers::kPipeCount]

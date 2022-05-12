@@ -341,7 +341,8 @@ bool GMBusI2c::I2cClearNack() {
   return true;
 }
 
-GMBusI2c::GMBusI2c(registers::Ddi ddi) : ddi_(ddi) {
+GMBusI2c::GMBusI2c(registers::Ddi ddi, fdf::MmioBuffer* mmio_space)
+    : ddi_(ddi), mmio_space_(mmio_space) {
   ZX_ASSERT(mtx_init(&lock_, mtx_plain) == thrd_success);
 }
 
@@ -511,6 +512,7 @@ bool HdmiDisplay::Query() {
         .stop = 1,
     };
     registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space());
+    // TODO(fxbug.dev/99979): We should read using GMBusI2c directly instead.
     if (controller()->Transact(i2c_bus_id(), &op, 1) == ZX_OK) {
       zxlogf(TRACE, "Found a hdmi/dvi monitor");
       return true;

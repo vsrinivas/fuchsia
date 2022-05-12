@@ -35,7 +35,8 @@ class Interrupts {
   // The lifetimes of |dev|, |pci|, and |mmio_space| must outlast the initialized Interrupts
   // instance.
   zx_status_t Init(PipeVsyncCallback pipe_vsync_callback, HotplugCallback hotplug_callback,
-                   zx_device_t* dev, const pci_protocol_t* pci, fdf::MmioBuffer* mmio_space);
+                   zx_device_t* dev, const pci_protocol_t* pci, fdf::MmioBuffer* mmio_space,
+                   cpp20::span<const registers::Ddi> ddis);
   void FinishInit();
   void Resume();
   void Destroy();
@@ -62,6 +63,7 @@ class Interrupts {
   zx::interrupt irq_;
   pci_interrupt_mode_t irq_mode_;
   std::optional<thrd_t> irq_thread_;  // Valid while irq_ is valid.
+  cpp20::span<const registers::Ddi> ddis_;
 
   intel_gpu_core_interrupt_t interrupt_cb_ __TA_GUARDED(lock_) = {};
   uint32_t interrupt_mask_ __TA_GUARDED(lock_) = 0;

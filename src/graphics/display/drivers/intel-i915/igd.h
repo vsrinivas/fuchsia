@@ -13,6 +13,8 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
+#include <unordered_map>
+
 #include <hwreg/bitfields.h>
 
 #include "src/graphics/display/drivers/intel-i915/registers-ddi.h"
@@ -228,30 +230,40 @@ class IgdOpRegion {
   ~IgdOpRegion();
   zx_status_t Init(pci_protocol_t* pci);
 
-  bool SupportsHdmi(registers::Ddi ddi) const { return ddi_supports_hdmi_[ddi]; }
-  bool SupportsDvi(registers::Ddi ddi) const { return ddi_supports_dvi_[ddi]; }
-  bool SupportsDp(registers::Ddi ddi) const { return ddi_supports_dp_[ddi]; }
-  bool IsEdp(registers::Ddi ddi) const { return ddi_is_edp_[ddi]; }
+  bool HasDdi(registers::Ddi ddi) const { return ddi_features_.find(ddi) != ddi_features_.end(); }
+  bool SupportsHdmi(registers::Ddi ddi) const {
+    return HasDdi(ddi) && ddi_features_.at(ddi).supports_hdmi;
+  }
+  bool SupportsDvi(registers::Ddi ddi) const {
+    return HasDdi(ddi) && ddi_features_.at(ddi).supports_dvi;
+  }
+  bool SupportsDp(registers::Ddi ddi) const {
+    return HasDdi(ddi) && ddi_features_.at(ddi).supports_dp;
+  }
+  bool IsEdp(registers::Ddi ddi) const { return HasDdi(ddi) && ddi_features_.at(ddi).is_edp; }
 
   bool IsLowVoltageEdp(registers::Ddi ddi) const {
     // TODO(stevensd): Support the case where more than one type of edp panel is present.
-    return ddi_is_edp_[ddi] && edp_is_low_voltage_;
+    return HasDdi(ddi) && ddi_features_.at(ddi).is_edp && edp_is_low_voltage_;
   }
 
   uint8_t GetIBoost(registers::Ddi ddi, bool is_dp) const {
-    return is_dp ? iboosts_[ddi].dp_iboost : iboosts_[ddi].hdmi_iboost;
+    return is_dp ? HasDdi(ddi) && ddi_features_.at(ddi).iboosts.dp_iboost
+                 : HasDdi(ddi) && ddi_features_.at(ddi).iboosts.hdmi_iboost;
   }
 
   static constexpr uint8_t kUseDefaultIdx = 0xff;
   uint8_t GetHdmiBufferTranslationIndex(registers::Ddi ddi) const {
     ZX_DEBUG_ASSERT(SupportsHdmi(ddi) || SupportsDvi(ddi));
-    return hdmi_buffer_translation_idx_[ddi];
+    return ddi_features_.at(ddi).hdmi_buffer_translation_idx;
   }
 
   double GetMinBacklightBrightness() const { return min_backlight_brightness_; }
 
-  void SetIsEdpForTesting(registers::Ddi ddi, bool is_edp) { ddi_is_edp_[ddi] = is_edp; }
-  void SetSupportsDpForTesting(registers::Ddi ddi, bool value) { ddi_supports_dp_[ddi] = value; }
+  void SetIsEdpForTesting(registers::Ddi ddi, bool is_edp) { ddi_features_[ddi].is_edp = is_edp; }
+  void SetSupportsDpForTesting(registers::Ddi ddi, bool value) {
+    ddi_features_[ddi].supports_dp = value;
+  }
 
  private:
   template <typename T>
@@ -274,20 +286,23 @@ class IgdOpRegion {
   igd_opregion_t* igd_opregion_;
   bios_data_blocks_header_t* bdb_;
 
-  bool ddi_supports_hdmi_[registers::kDdiCount] = {};
-  bool ddi_supports_dvi_[registers::kDdiCount] = {};
-  bool ddi_supports_dp_[registers::kDdiCount] = {};
-  bool ddi_is_edp_[registers::kDdiCount] = {};
+  struct DdiFeatures {
+    bool supports_hdmi;
+    bool supports_dvi;
+    bool supports_dp;
+    bool is_edp;
+    struct Iboost {
+      uint8_t hdmi_iboost = 0;
+      uint8_t dp_iboost = 0;
+    };
+    Iboost iboosts;
+    uint8_t hdmi_buffer_translation_idx;
+  };
+  std::unordered_map<registers::Ddi, DdiFeatures> ddi_features_;
 
   bool edp_is_low_voltage_ = false;
   uint8_t panel_type_;
   double min_backlight_brightness_;
-
-  struct {
-    uint8_t hdmi_iboost = 0;
-    uint8_t dp_iboost = 0;
-  } iboosts_[registers::kDdiCount];
-  uint8_t hdmi_buffer_translation_idx_[registers::kDdiCount];
 };
 
 }  // namespace i915

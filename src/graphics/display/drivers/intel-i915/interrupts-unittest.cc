@@ -13,6 +13,8 @@
 
 #include "src/devices/pci/testing/pci_protocol_fake.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
+#include "src/graphics/display/drivers/intel-i915/ddi.h"
+#include "src/graphics/display/drivers/intel-i915/pci-ids.h"
 
 namespace {
 
@@ -22,7 +24,8 @@ void NopIrqCb(void*, uint32_t, uint64_t) {}
 
 zx_status_t InitInterrupts(i915::Interrupts* i, zx_device_t* dev, pci::FakePciProtocol* pci,
                            fdf::MmioBuffer* mmio) {
-  return i->Init(NopPipeVsyncCb, NopHotplugCb, dev, &pci->get_protocol(), mmio);
+  return i->Init(NopPipeVsyncCb, NopHotplugCb, dev, &pci->get_protocol(), mmio,
+                 i915::GetDdis(i915::kTestDeviceDid));
 }
 
 // Test interrupt initialization with both MSI and Legacy interrupt modes.

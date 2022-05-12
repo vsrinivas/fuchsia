@@ -9,14 +9,7 @@
 
 namespace registers {
 
-// Number of DDIs that the hardware provides.
-constexpr uint32_t kDdiCount = 5;
-
 enum Ddi { DDI_A, DDI_B, DDI_C, DDI_D, DDI_E };
-
-static const Ddi kDdis[kDdiCount] = {
-    DDI_A, DDI_B, DDI_C, DDI_D, DDI_E,
-};
 
 // South Display Engine Interrupt Bit Definition + SINTERRUPT
 class SdeInterruptBase : public hwreg::RegisterBase<SdeInterruptBase, uint32_t> {

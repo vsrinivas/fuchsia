@@ -5,11 +5,13 @@
 #include "src/graphics/display/drivers/intel-i915/interrupts.h"
 
 #include <lib/device-protocol/pci.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
 #include "src/graphics/display/drivers/intel-i915/intel-i915.h"
 #include "src/graphics/display/drivers/intel-i915/macros.h"
+#include "src/graphics/display/drivers/intel-i915/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915/registers.h"
 
 namespace i915 {
@@ -45,8 +47,7 @@ int Interrupts::IrqLoop() {
               .ReadFrom(mmio_space_);
       auto hp_ctrl1 = registers::HotplugCtrl ::Get(registers::DDI_A).ReadFrom(mmio_space_);
       auto hp_ctrl2 = registers::HotplugCtrl ::Get(registers::DDI_E).ReadFrom(mmio_space_);
-      for (uint32_t i = 0; i < registers::kDdiCount; i++) {
-        registers::Ddi ddi = registers::kDdis[i];
+      for (const auto ddi : ddis_) {
         auto hp_ctrl = ddi < registers::DDI_E ? hp_ctrl1 : hp_ctrl2;
         bool hp_detected =
             sde_int_identity.ddi_bit(ddi).get() &
@@ -104,8 +105,8 @@ void Interrupts::EnablePipeVsync(registers::Pipe pipe, bool enable) {
 
 void Interrupts::EnableHotplugInterrupts() {
   auto sfuse_strap = registers::SouthFuseStrap::Get().ReadFrom(mmio_space_);
-  for (uint32_t i = 0; i < registers::kDdiCount; i++) {
-    registers::Ddi ddi = registers::kDdis[i];
+  ZX_DEBUG_ASSERT(ddis_.data());
+  for (const auto ddi : ddis_) {
     bool enabled = (ddi == registers::DDI_A) || (ddi == registers::DDI_E) ||
                    (ddi == registers::DDI_B && sfuse_strap.port_b_present()) ||
                    (ddi == registers::DDI_C && sfuse_strap.port_c_present()) ||
@@ -140,7 +141,8 @@ zx_status_t Interrupts::SetInterruptCallback(const intel_gpu_core_interrupt_t* c
 
 zx_status_t Interrupts::Init(PipeVsyncCallback pipe_vsync_callback,
                              HotplugCallback hotplug_callback, zx_device_t* dev,
-                             const pci_protocol_t* pci_proto, fdf::MmioBuffer* mmio_space) {
+                             const pci_protocol_t* pci_proto, fdf::MmioBuffer* mmio_space,
+                             cpp20::span<const registers::Ddi> ddis) {
   ZX_DEBUG_ASSERT(pipe_vsync_callback);
   ZX_DEBUG_ASSERT(hotplug_callback);
   ZX_DEBUG_ASSERT(dev);
@@ -156,6 +158,7 @@ zx_status_t Interrupts::Init(PipeVsyncCallback pipe_vsync_callback,
   pipe_vsync_callback_ = std::move(pipe_vsync_callback);
   hotplug_callback_ = std::move(hotplug_callback);
   mmio_space_ = mmio_space;
+  ddis_ = ddis;
 
   // Disable interrupts here, re-enable them in ::FinishInit()
   auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space);

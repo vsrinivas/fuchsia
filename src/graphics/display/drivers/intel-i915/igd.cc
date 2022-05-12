@@ -169,7 +169,7 @@ bool IgdOpRegion::ProcessDdiConfigs() {
     }
 
     auto ddi_flags = DdiFlags::Get().FromValue(cfg->ddi_flags);
-    uint8_t idx;
+    registers::Ddi ddi;
     if (cfg->port_type < 4 || cfg->port_type == 12) {
       // Types 0, 1, 2, 3, and 12 are HDMI ports A, B, C, D, and E
       if (!ddi_flags.tmds()) {
@@ -177,7 +177,7 @@ bool IgdOpRegion::ProcessDdiConfigs() {
         continue;
       }
 
-      idx = cfg->port_type < 4 ? static_cast<registers::Ddi>(cfg->port_type) : registers::DDI_E;
+      ddi = cfg->port_type < 4 ? static_cast<registers::Ddi>(cfg->port_type) : registers::DDI_E;
     } else if (7 <= cfg->port_type && cfg->port_type <= 11) {
       // Types 7, 8, 9, 10, 11 are DP ports B, C, D, A, E
       if (!ddi_flags.dp()) {
@@ -186,34 +186,38 @@ bool IgdOpRegion::ProcessDdiConfigs() {
       }
 
       if (cfg->port_type <= 9) {
-        idx = static_cast<uint8_t>(cfg->port_type - 6);
+        ddi = static_cast<registers::Ddi>(cfg->port_type - 6);
       } else if (cfg->port_type == 10) {
-        idx = registers::DDI_A;
+        ddi = registers::DDI_A;
       } else {
         ZX_DEBUG_ASSERT(cfg->port_type == 11);
-        idx = registers::DDI_E;
+        ddi = registers::DDI_E;
       }
     } else {
       continue;
     }
 
-    if (ddi_supports_dvi_[idx] || ddi_supports_dp_[idx]) {
+    if (ddi_features_.find(ddi) != ddi_features_.end()) {
       zxlogf(WARNING, "Duplicate ddi config");
       continue;
     }
-    ddi_supports_dvi_[idx] = ddi_flags.tmds();
-    ddi_supports_hdmi_[idx] = ddi_flags.tmds() && !ddi_flags.not_hdmi();
-    ddi_supports_dp_[idx] = ddi_flags.dp();
-    ddi_is_edp_[idx] = ddi_flags.dp() && ddi_flags.internal();
 
-    hdmi_buffer_translation_idx_[idx] = cfg->ddi_buf_trans_idx();
-    if (cfg->has_iboost_override()) {
-      iboosts_[idx].dp_iboost = iboost_idx_to_level(cfg->dp_iboost_override());
-      iboosts_[idx].hdmi_iboost = iboost_idx_to_level(cfg->hdmi_iboost_override());
-    } else {
-      iboosts_[idx].dp_iboost = 0;
-      iboosts_[idx].hdmi_iboost = 0;
-    }
+    ddi_features_[ddi] = {
+        .supports_hdmi = ddi_flags.tmds() && !ddi_flags.not_hdmi(),
+        .supports_dvi = static_cast<bool>(ddi_flags.tmds()),
+        .supports_dp = static_cast<bool>(ddi_flags.dp()),
+        .is_edp = ddi_flags.dp() && ddi_flags.internal(),
+        .iboosts =
+            {
+                .hdmi_iboost = cfg->has_iboost_override()
+                                   ? iboost_idx_to_level(cfg->dp_iboost_override())
+                                   : static_cast<uint8_t>(0),
+                .dp_iboost = cfg->has_iboost_override()
+                                 ? iboost_idx_to_level(cfg->hdmi_iboost_override())
+                                 : static_cast<uint8_t>(0),
+            },
+        .hdmi_buffer_translation_idx = cfg->ddi_buf_trans_idx(),
+    };
   }
 
   return true;
@@ -303,8 +307,8 @@ bool IgdOpRegion::GetPanelType(pci_protocol_t* pci, uint8_t* type) {
 
 bool IgdOpRegion::CheckForLowVoltageEdp(pci_protocol_t* pci) {
   bool has_edp = true;
-  for (unsigned i = 0; i < registers::kDdiCount; i++) {
-    has_edp |= ddi_is_edp_[i];
+  for (const auto& kv : ddi_features_) {
+    has_edp |= kv.second.is_edp;
   }
   if (!has_edp) {
     zxlogf(DEBUG, "No edp found");

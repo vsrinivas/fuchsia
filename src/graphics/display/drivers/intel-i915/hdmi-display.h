@@ -13,13 +13,8 @@ namespace i915 {
 
 class GMBusI2c {
  public:
-  GMBusI2c(registers::Ddi ddi);
+  GMBusI2c(registers::Ddi ddi, fdf::MmioBuffer* mmio_space);
   zx_status_t I2cTransact(const i2c_impl_op_t* ops, size_t count);
-
-  void set_mmio_space(fdf::MmioBuffer* mmio_space) {
-    fbl::AutoLock lock(&lock_);
-    mmio_space_ = mmio_space;
-  }
 
  private:
   const registers::Ddi ddi_;
@@ -53,7 +48,7 @@ class HdmiDisplay : public DisplayDevice {
 
   bool CheckPixelRate(uint64_t pixel_rate) final;
 
-  uint32_t i2c_bus_id() const final { return ddi(); }
+  uint32_t i2c_bus_id() const final { return 2 * ddi() + 1; }
 };
 
 }  // namespace i915

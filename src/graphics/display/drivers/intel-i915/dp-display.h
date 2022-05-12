@@ -27,18 +27,13 @@ class DpAuxMessage;
 
 class DpAux : public DpcdChannel {
  public:
-  explicit DpAux(registers::Ddi ddi);
+  DpAux(registers::Ddi ddi, fdf::MmioBuffer* mmio_space);
 
   zx_status_t I2cTransact(const i2c_impl_op_t* ops, size_t count);
 
   // DpcdChannel overrides:
   bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size) final override;
   bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) final override;
-
-  void set_mmio_space(fdf::MmioBuffer* mmio_space) {
-    fbl::AutoLock lock(&lock_);
-    mmio_space_ = mmio_space;
-  }
 
  private:
   const registers::Ddi ddi_;
@@ -201,7 +196,7 @@ class DpDisplay : public DisplayDevice {
 
   bool CheckPixelRate(uint64_t pixel_rate) final;
 
-  uint32_t i2c_bus_id() const final { return ddi() + registers::kDdiCount; }
+  uint32_t i2c_bus_id() const final { return 2 * ddi(); }
 
   bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size);
   bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size);

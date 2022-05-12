@@ -33,6 +33,7 @@
 
 #include <fbl/vector.h>
 
+#include "src/graphics/display/drivers/intel-i915/ddi.h"
 #include "src/graphics/display/drivers/intel-i915/dp-display.h"
 #include "src/graphics/display/drivers/intel-i915/dpll.h"
 #include "src/graphics/display/drivers/intel-i915/hdmi-display.h"
@@ -600,8 +601,8 @@ void Controller::InitDisplays() {
   fbl::AutoLock lock(&display_lock_);
   BringUpDisplayEngine(false);
 
-  for (uint32_t i = 0; i < registers::kDdiCount; i++) {
-    auto disp_device = QueryDisplay(registers::kDdis[i]);
+  for (const auto ddi : ddis_) {
+    auto disp_device = QueryDisplay(ddi);
     if (disp_device) {
       AddDisplay(std::move(disp_device));
     }
@@ -613,10 +614,10 @@ void Controller::InitDisplays() {
 
   // Make a note of what needs to be reset, so we can finish querying the hardware state
   // before touching it, and so we can make sure transcoders are reset before ddis.
-  bool ddi_needs_reset[registers::kDdiCount] = {};
-  DisplayDevice* device_needs_init[registers::kDdiCount] = {};
-  for (unsigned i = 0; i < registers::kDdiCount; i++) {
-    auto ddi = registers::kDdis[i];
+  std::vector<registers::Ddi> ddi_needs_reset;
+  std::vector<DisplayDevice*> device_needs_init;
+
+  for (const auto ddi : ddis_) {
     DisplayDevice* device = nullptr;
     for (auto& d : display_devices_) {
       if (d->ddi() == ddi) {
@@ -626,11 +627,11 @@ void Controller::InitDisplays() {
     }
 
     if (device == nullptr) {
-      ddi_needs_reset[ddi] = true;
+      ddi_needs_reset.push_back(ddi);
     } else {
       if (!LoadHardwareState(ddi, device)) {
-        ddi_needs_reset[ddi] = true;
-        device_needs_init[ddi] = device;
+        ddi_needs_reset.push_back(ddi);
+        device_needs_init.push_back(device);
       } else {
         device->InitBacklight();
       }
@@ -655,13 +656,11 @@ void Controller::InitDisplays() {
 
   // Reset any ddis which don't have a restored display. If we failed to restore a
   // display, try to initialize it here.
-  for (unsigned i = 0; i < registers::kDdiCount; i++) {
-    if (!ddi_needs_reset[i]) {
-      continue;
-    }
-    ResetDdi(static_cast<registers::Ddi>(i));
+  for (const auto& ddi : ddi_needs_reset) {
+    ResetDdi(ddi);
+  }
 
-    DisplayDevice* device = device_needs_init[i];
+  for (auto* device : device_needs_init) {
     if (device && !device->Init()) {
       for (unsigned i = 0; i < display_devices_.size(); i++) {
         if (display_devices_[i].get() == device) {
@@ -733,8 +732,8 @@ void Controller::DisplayControllerImplSetDisplayControllerInterface(
   dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient(intf);
 
   if (ready_for_callback_ && display_devices_.size()) {
-    DisplayDevice* added_displays[registers::kDdiCount];
     uint32_t size = static_cast<uint32_t>(display_devices_.size());
+    DisplayDevice* added_displays[size + 1];
     for (unsigned i = 0; i < size; i++) {
       added_displays[i] = display_devices_[i].get();
     }
@@ -1634,10 +1633,9 @@ void Controller::DisplayControllerImplSetEld(uint64_t display_id, const uint8_t*
 void Controller::DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
                                                          size_t display_count,
                                                          const config_stamp_t* config_stamp) {
-  uint64_t fake_vsyncs[registers::kDdiCount];
-  uint32_t fake_vsync_count = 0;
-
   fbl::AutoLock lock(&display_lock_);
+  uint64_t fake_vsync_display_ids[display_devices_.size() + 1];
+  size_t fake_vsync_size = 0;
 
   bool pipe_change = ReallocatePipes(display_config, display_count);
   ReallocatePlaneBuffers(display_config, display_count, pipe_change);
@@ -1658,14 +1656,14 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
     // fake one if we need to, to inform the client that we're done with the
     // images.
     if (!config || config->layer_count == 0) {
-      fake_vsyncs[fake_vsync_count++] = display->id();
+      fake_vsync_display_ids[fake_vsync_size++] = display->id();
     }
   }
 
   if (dc_intf_.is_valid()) {
-    zx_time_t now = fake_vsync_count ? zx_clock_get_monotonic() : 0;
-    for (unsigned i = 0; i < fake_vsync_count; i++) {
-      dc_intf_.OnDisplayVsync(fake_vsyncs[i], now, config_stamp);
+    zx_time_t now = (fake_vsync_size > 0) ? 0 : zx_clock_get_monotonic();
+    for (size_t i = 0; i < fake_vsync_size; i++) {
+      dc_intf_.OnDisplayVsync(fake_vsync_display_ids[i], now, config_stamp);
     }
   }
 }
@@ -1917,7 +1915,7 @@ void Controller::GpuRelease() {
 
 // I2C methods
 
-uint32_t Controller::GetBusCount() { return registers::kDdiCount * 2; }
+uint32_t Controller::GetBusCount() { return ddis_.size() * 2; }
 
 static constexpr size_t kMaxTxSize = 255;
 zx_status_t Controller::GetMaxTransferSize(uint32_t bus_id, size_t* out_size) {
@@ -1940,14 +1938,16 @@ zx_status_t Controller::Transact(uint32_t bus_id, const i2c_impl_op_t* ops, size
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (bus_id < registers::kDdiCount) {
-    return gmbus_i2cs_[bus_id].I2cTransact(ops, count);
-  } else if (bus_id < 2 * registers::kDdiCount) {
-    bus_id -= registers::kDdiCount;
-    return dp_auxs_[bus_id].I2cTransact(ops, count);
-  } else {
+  size_t ddi_idx = bus_id >> 1;
+  if (ddi_idx >= ddis_.size()) {
     return ZX_ERR_NOT_FOUND;
   }
+
+  bool is_hdmi = bus_id & 1;
+  if (is_hdmi) {
+    return gmbus_i2cs_[ddi_idx].I2cTransact(ops, count);
+  }
+  return dp_auxs_[ddi_idx].I2cTransact(ops, count);
 }
 
 // Ddk methods
@@ -1969,7 +1969,7 @@ void Controller::DdkInit(ddk::InitTxn txn) {
       fbl::AutoLock lock(&display_lock_);
       uint32_t size = static_cast<uint32_t>(display_devices_.size());
       if (size && dc_intf_.is_valid()) {
-        DisplayDevice* added_displays[registers::kDdiCount];
+        DisplayDevice* added_displays[size + 1];
         for (unsigned i = 0; i < size; i++) {
           added_displays[i] = display_devices_[i].get();
         }
@@ -2136,6 +2136,9 @@ zx_status_t Controller::Init() {
     flags_ |= FLAGS_BACKLIGHT;
   }
 
+  zxlogf(TRACE, "Initializing DDIs");
+  ddis_ = GetDdis(device_id_);
+
   status = igd_opregion_.Init(&pci_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to init VBT (%d)", status);
@@ -2161,9 +2164,9 @@ zx_status_t Controller::Init() {
   zxlogf(TRACE, "Initializing Power");
   power_ = Power::New(mmio_space(), device_id_);
 
-  for (unsigned i = 0; i < registers::kDdiCount; i++) {
-    gmbus_i2cs_[i].set_mmio_space(mmio_space());
-    dp_auxs_[i].set_mmio_space(mmio_space());
+  for (unsigned i = 0; i < ddis_.size(); i++) {
+    gmbus_i2cs_.push_back(GMBusI2c(ddis_[i], mmio_space()));
+    dp_auxs_.push_back(DpAux(ddis_[i], mmio_space()));
   }
 
   pp_divisor_val_ = registers::PanelPowerDivisor::Get().ReadFrom(mmio_space()).reg_value();
@@ -2181,7 +2184,7 @@ zx_status_t Controller::Init() {
   zxlogf(TRACE, "Initializing interrupts");
   status = interrupts_.Init(fit::bind_member<&Controller::HandlePipeVsync>(this),
                             fit::bind_member<&Controller::HandleHotplug>(this), parent(), &pci_,
-                            mmio_space());
+                            mmio_space(), ddis_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to initialize interrupts");
     return status;

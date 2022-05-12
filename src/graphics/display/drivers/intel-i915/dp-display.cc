@@ -527,7 +527,7 @@ bool DpAux::DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) {
   return DpAuxWrite(DP_REQUEST_NATIVE_WRITE, addr, buf, size) == ZX_OK;
 }
 
-DpAux::DpAux(registers::Ddi ddi) : ddi_(ddi) {
+DpAux::DpAux(registers::Ddi ddi, fdf::MmioBuffer* mmio_space) : ddi_(ddi), mmio_space_(mmio_space) {
   ZX_ASSERT(mtx_init(&lock_, mtx_plain) == thrd_success);
 }
 
