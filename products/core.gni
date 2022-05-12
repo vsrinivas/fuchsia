@@ -36,6 +36,7 @@ core_realm_shards = [
   "//src/developer/memory/mem:core_shard",
   "//src/developer/memory/monitor:memory_monitor_core_shard",
   "//src/developer/remote-control:laboratory-core-shard",
+  "//src/devices/bin/driver_playground:driver-playground-core-shard",
   "//src/intl/intl_services:intl_services_small_shard",
   "//src/media/audio/audio_core/v2:core_shard",
   "//src/recovery/factory_reset:factory_reset_core_shard",

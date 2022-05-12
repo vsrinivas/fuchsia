@@ -74,6 +74,11 @@ pub async fn driver(
                 .await
                 .context("Restart subcommand failed")?;
         }
+        DriverSubcommand::RunTool(subcmd) => {
+            subcommands::runtool::run_tool(remote_control, subcmd)
+                .await
+                .context("RunTool subcommand failed")?;
+        }
     };
     Ok(())
 }

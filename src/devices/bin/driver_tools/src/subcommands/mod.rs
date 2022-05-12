@@ -14,3 +14,4 @@ pub mod lspci;
 pub mod lsusb;
 pub mod register;
 pub mod restart;
+pub mod runtool;

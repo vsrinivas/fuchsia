@@ -1,0 +1,43 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+executable("bin") {
+  output_name = "driver_playground"
+
+  sources = [
+    "src/main.cc",
+    "src/playground.cc",
+    "src/playground.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.driver.playground:fuchsia.driver.playground_llcpp",
+    "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fdio:fdio-spawn-actions",
+    "//sdk/lib/sys/component/llcpp",
+    "//src/devices/lib/log",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_component("component") {
+  component_name = "driver_playground"
+  manifest = "meta/driver_playground.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("pkg") {
+  package_name = "driver_playground"
+  deps = [ ":component" ]
+}
+
+core_shard("driver-playground-core-shard") {
+  shard_file = "meta/driver_playground.core_shard.cml"
+}

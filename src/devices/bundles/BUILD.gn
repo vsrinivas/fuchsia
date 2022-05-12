@@ -169,5 +169,8 @@ group("debugging") {
 # It is included in //bundles:tools.
 group("tools") {
   testonly = true
-  deps = [ "//sdk/lib/driver_test_realm:package" ]
+  deps = [
+    "//sdk/lib/driver_test_realm:package",
+    "//src/devices/bin/driver_playground:pkg",
+  ]
 }

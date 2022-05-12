@@ -16,6 +16,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework-rustc",
+    "//sdk/fidl/fuchsia.driver.playground:fuchsia.driver.playground-rustc",
     "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar-rustc",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
@@ -23,6 +24,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/devices/lib/bind",
     "//src/devices/pci/bin/lspci:lib",
     "//src/devices/usb/bin/lsusb:lib",
@@ -35,6 +37,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:blocking",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:uuid",
@@ -70,6 +73,8 @@ rustc_library("lib") {
     "src/subcommands/register/mod.rs",
     "src/subcommands/restart/args.rs",
     "src/subcommands/restart/mod.rs",
+    "src/subcommands/runtool/args.rs",
+    "src/subcommands/runtool/mod.rs",
   ]
   inputs = [ "//third_party/pciids/pci.ids.zst" ]
 }

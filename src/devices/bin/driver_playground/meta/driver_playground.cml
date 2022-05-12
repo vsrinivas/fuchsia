@@ -1,0 +1,35 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/driver_playground",
+    },
+    capabilities: [
+        { protocol: "fuchsia.driver.playground.ToolRunner" },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver",
+            ],
+            from: "parent",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/dev",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.driver.playground.ToolRunner",
+            from: "self",
+        },
+    ],
+}

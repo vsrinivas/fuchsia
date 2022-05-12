@@ -1,0 +1,42 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.driver.playground;
+
+using fuchsia.url;
+using zx;
+
+// These lengths were chosen arbitrarily and can be adjusted later if needed.
+const MAX_ARGV_ITEM_LENGTH uint64 = 4096;
+const MAX_ARGV_VECTOR_LENGTH uint64 = 256;
+
+type StdioParams = resource table {
+    1: standard_in zx.handle:SOCKET;
+    2: standard_out zx.handle:SOCKET;
+    3: standard_err zx.handle:SOCKET;
+};
+
+/// Protocol for receiving an event when a tool terminates.
+protocol CloseController {
+    /// This event fires when the tool has terminated.
+    -> OnTerminated(struct {
+        /// The process exit code of the tool.
+        return_code int32;
+    });
+};
+
+/// Protocol for running driver tools in the playground.
+@discoverable
+protocol ToolRunner {
+    /// Run a tool.
+    RunTool(resource struct {
+        /// The path to the tool executable, eg: 'fuchsia-pkg://fuchsia.com/package#bin/tool'.
+        tool string:fuchsia.url.MAX_URL_LENGTH;
+        /// The argv to pass into the tool executable.
+        args vector<string:MAX_ARGV_ITEM_LENGTH>:<MAX_ARGV_VECTOR_LENGTH, optional>;
+        /// The stdio socket handles to give to the tool.
+        stdio_params StdioParams;
+        /// Used by the playground to signal that the started tool has terminated.
+        close_controller server_end:CloseController;
+    }) -> (struct {}) error zx.status;
+};

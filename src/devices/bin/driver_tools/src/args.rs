@@ -8,6 +8,7 @@ use {
         list::args::ListCommand, list_devices::args::ListDevicesCommand,
         list_hosts::args::ListHostsCommand, lsblk::args::LsblkCommand, lspci::args::LspciCommand,
         lsusb::args::LsusbCommand, register::args::RegisterCommand, restart::args::RestartCommand,
+        runtool::args::RunToolCommand,
     },
     argh::FromArgs,
 };
@@ -33,4 +34,5 @@ pub enum DriverSubcommand {
     Lsusb(LsusbCommand),
     Register(RegisterCommand),
     Restart(RestartCommand),
+    RunTool(RunToolCommand),
 }

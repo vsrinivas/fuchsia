@@ -7,7 +7,7 @@ use {
     component_hub::{io::Directory, select::find_components},
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_remotecontrol as fremotecontrol, fidl_fuchsia_driver_development as fdd,
-    fidl_fuchsia_io as fio,
+    fidl_fuchsia_driver_playground, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
     selectors::{self, VerboseError},
 };
@@ -215,6 +215,23 @@ pub async fn get_registrar_proxy(
         }
     };
     remotecontrol_connect::<fidl_fuchsia_driver_registrar::DriverRegistrarMarker>(
+        &remote_control,
+        &selector,
+    )
+    .await
+}
+
+pub async fn get_playground_proxy(
+    remote_control: fremotecontrol::RemoteControlProxy,
+    select: bool,
+) -> Result<fidl_fuchsia_driver_playground::ToolRunnerProxy> {
+    let selector = if select {
+        user_choose_selector(&remote_control, "fuchsia.driver.playground.ToolRunner").await?
+    } else {
+        "core/driver_playground:expose:fuchsia.driver.playground.ToolRunner".to_string()
+    };
+
+    remotecontrol_connect::<fidl_fuchsia_driver_playground::ToolRunnerMarker>(
         &remote_control,
         &selector,
     )

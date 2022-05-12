@@ -1,0 +1,36 @@
+{
+    children: [
+        {
+            name: "driver_playground",
+            url: "fuchsia-pkg://fuchsia.com/driver_playground#meta/driver_playground.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: "#driver_playground",
+        },
+        {
+            protocol: [ "fuchsia.process.Resolver" ],
+            from: "self",
+            to: "#driver_playground",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            to: "#driver_playground",
+            rights: [ "r*" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.driver.playground.ToolRunner",
+            from: "#driver_playground",
+        },
+    ],
+}
