@@ -88,4 +88,103 @@ TEST_F(PowerTest, Skl_PowerWell2) {
   EXPECT_FALSE(pg2_status);
 }
 
+// Verify setting Power Well status on Tiger lake platform.
+TEST_F(PowerTest, Tgl_PowerWell) {
+  auto kPwrWellCtlIndex = registers::PowerWellControl2::Get().addr() / sizeof(uint32_t);
+  auto kFuseStatusIndex = registers::FuseStatus::Get().addr() / sizeof(uint32_t);
+
+  std::unordered_map<PowerWellId, bool> pg_status = {
+      {PowerWellId::PG1, true},  {PowerWellId::PG2, false}, {PowerWellId::PG3, false},
+      {PowerWellId::PG4, false}, {PowerWellId::PG5, false},
+  };
+  uint64_t power_well_ctl_reg = 0u;
+
+  regs_[kPwrWellCtlIndex].SetWriteCallback([&pg_status, &power_well_ctl_reg](uint64_t in) {
+    pg_status[PowerWellId::PG2] = in & (1 << 3);
+    pg_status[PowerWellId::PG3] = in & (1 << 5);
+    pg_status[PowerWellId::PG4] = in & (1 << 7);
+    pg_status[PowerWellId::PG5] = in & (1 << 9);
+
+    power_well_ctl_reg = (pg_status[PowerWellId::PG1] << 0) | (in & (1 << 1)) |
+                         (pg_status[PowerWellId::PG2] << 2) | (in & (1 << 3)) |
+                         (pg_status[PowerWellId::PG3] << 4) | (in & (1 << 5)) |
+                         (pg_status[PowerWellId::PG4] << 6) | (in & (1 << 7)) |
+                         (pg_status[PowerWellId::PG5] << 8) | (in & (1 << 9));
+  });
+
+  regs_[kPwrWellCtlIndex].SetReadCallback(
+      [&power_well_ctl_reg]() -> uint64_t { return power_well_ctl_reg; });
+
+  regs_[kFuseStatusIndex].SetReadCallback([&pg_status]() -> uint64_t {
+    return (pg_status[PowerWellId::PG1] << 26) | (pg_status[PowerWellId::PG2] << 25) |
+           (pg_status[PowerWellId::PG3] << 24) | (pg_status[PowerWellId::PG4] << 23) |
+           (pg_status[PowerWellId::PG5] << 22);
+  });
+
+  constexpr uint16_t kTglDeviceId = 0x9a49;
+  auto tgl_power = Power::New(&*mmio_buffer_, kTglDeviceId);
+
+  // When we enable a power well, all its dependencies will be enabled as well.
+  {
+    auto power_well5_ref = PowerWellRef(tgl_power.get(), PowerWellId::PG5);
+    EXPECT_TRUE(pg_status[PowerWellId::PG1]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG2]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG3]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG4]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG5]);
+  }
+  // When the power well ref is removed, refcount of all dependencies will
+  // decrease and power well will be automatically turned off if not used.
+  EXPECT_FALSE(pg_status[PowerWellId::PG2]);
+  EXPECT_FALSE(pg_status[PowerWellId::PG3]);
+  EXPECT_FALSE(pg_status[PowerWellId::PG4]);
+  EXPECT_FALSE(pg_status[PowerWellId::PG5]);
+
+  // Verify that a power well is disabled only when *all* power well refs that
+  // depends on that power well have been removed.
+  {
+    auto power_well5_ref = PowerWellRef(tgl_power.get(), PowerWellId::PG5);
+    auto power_well3_ref = PowerWellRef(tgl_power.get(), PowerWellId::PG3);
+    EXPECT_TRUE(pg_status[PowerWellId::PG1]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG2]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG3]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG4]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG5]);
+
+    power_well5_ref = {};
+    EXPECT_TRUE(pg_status[PowerWellId::PG2]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG3]);
+    EXPECT_FALSE(pg_status[PowerWellId::PG4]);
+    EXPECT_FALSE(pg_status[PowerWellId::PG5]);
+
+    power_well3_ref = {};
+    EXPECT_FALSE(pg_status[PowerWellId::PG2]);
+    EXPECT_FALSE(pg_status[PowerWellId::PG3]);
+    EXPECT_FALSE(pg_status[PowerWellId::PG4]);
+    EXPECT_FALSE(pg_status[PowerWellId::PG5]);
+  }
+
+  // Test resuming power well state.
+  {
+    auto power_well4_ref = PowerWellRef(tgl_power.get(), PowerWellId::PG4);
+    EXPECT_TRUE(pg_status[PowerWellId::PG2]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG3]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG4]);
+    EXPECT_FALSE(pg_status[PowerWellId::PG5]);
+
+    pg_status[PowerWellId::PG2] = pg_status[PowerWellId::PG3] = pg_status[PowerWellId::PG4] =
+        pg_status[PowerWellId::PG5] = false;
+
+    tgl_power->Resume();
+    EXPECT_TRUE(pg_status[PowerWellId::PG2]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG3]);
+    EXPECT_TRUE(pg_status[PowerWellId::PG4]);
+    EXPECT_FALSE(pg_status[PowerWellId::PG5]);
+  }
+  EXPECT_FALSE(pg_status[PowerWellId::PG2]);
+  EXPECT_FALSE(pg_status[PowerWellId::PG3]);
+  EXPECT_FALSE(pg_status[PowerWellId::PG4]);
+  EXPECT_FALSE(pg_status[PowerWellId::PG5]);
+}
+
 }  // namespace i915

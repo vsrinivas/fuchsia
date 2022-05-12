@@ -23,6 +23,9 @@ class Controller;
 enum class PowerWellId {
   PG1 = 0,
   PG2 = 1,
+  PG3 = 2,
+  PG4 = 3,
+  PG5 = 4,
 };
 
 struct PowerWellInfo {

@@ -143,6 +143,22 @@ class PowerWellControl2 : public hwreg::RegisterBase<PowerWellControl2, uint32_t
   static auto Get() { return hwreg::RegisterAddr<PowerWellControl2>(0x45404); }
 };
 
+// PWR_WELL_CTL_DDI
+class PowerWellControlDdi2 : public hwreg::RegisterBase<PowerWellControlDdi2, uint32_t> {
+ public:
+  hwreg::BitfieldRef<uint32_t> tgl_ddi_io_power_request(Ddi ddi) {
+    int bit = ddi * 2 + 1;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  hwreg::BitfieldRef<uint32_t> tgl_ddi_io_power_state(Ddi ddi) {
+    int bit = ddi * 2;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  static auto Get() { return hwreg::RegisterAddr<PowerWellControlDdi2>(0x45454); }
+};
+
 // FUSE_STATUS
 class FuseStatus : public hwreg::RegisterBase<FuseStatus, uint32_t> {
  public:

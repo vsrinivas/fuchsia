@@ -9,7 +9,20 @@
 
 namespace registers {
 
-enum Ddi { DDI_A, DDI_B, DDI_C, DDI_D, DDI_E };
+enum Ddi {
+  DDI_A = 0,
+  DDI_B,
+  DDI_C,
+  DDI_D,
+  DDI_E,
+
+  DDI_TC_1 = DDI_D,
+  DDI_TC_2,
+  DDI_TC_3,
+  DDI_TC_4,
+  DDI_TC_5,
+  DDI_TC_6,
+};
 
 // South Display Engine Interrupt Bit Definition + SINTERRUPT
 class SdeInterruptBase : public hwreg::RegisterBase<SdeInterruptBase, uint32_t> {

@@ -156,6 +156,123 @@ class SklPower : public Power {
   }
 };
 
+const std::unordered_map<PowerWellId, PowerWellInfo> kTglPowerWellInfo = {
+    {PowerWellId::PG1,
+     {
+         .name = "Power Well 1",
+         .always_on = true,
+         .state_bit_index = 0,
+         .request_bit_index = 1,
+         .fuse_dist_bit_index = 26,
+         .parent = PowerWellId::PG1,
+     }},
+    {PowerWellId::PG2,
+     {
+         .name = "Power Well 2",
+         .state_bit_index = 2,
+         .request_bit_index = 3,
+         .fuse_dist_bit_index = 25,
+         .parent = PowerWellId::PG1,
+     }},
+    {PowerWellId::PG3,
+     {
+         .name = "Power Well 3",
+         .state_bit_index = 4,
+         .request_bit_index = 5,
+         .fuse_dist_bit_index = 24,
+         .parent = PowerWellId::PG2,
+     }},
+    {PowerWellId::PG4,
+     {
+         .name = "Power Well 4",
+         .state_bit_index = 6,
+         .request_bit_index = 7,
+         .fuse_dist_bit_index = 23,
+         .parent = PowerWellId::PG3,
+     }},
+    {PowerWellId::PG5,
+     {
+         .name = "Power Well 5",
+         .state_bit_index = 8,
+         .request_bit_index = 9,
+         .fuse_dist_bit_index = 22,
+         .parent = PowerWellId::PG4,
+     }},
+};
+
+// Power well implementation for Tiger lake platforms.
+class TglPower : public Power {
+ public:
+  explicit TglPower(fdf::MmioBuffer* mmio_space) : Power(mmio_space, &kTglPowerWellInfo) {}
+  void Resume() override {
+    constexpr PowerWellId kPowerWellEnableSeq[] = {
+        PowerWellId::PG2,
+        PowerWellId::PG3,
+        PowerWellId::PG4,
+        PowerWellId::PG5,
+    };
+    for (const auto power_well : kPowerWellEnableSeq) {
+      if (ref_count().find(power_well) != ref_count().end()) {
+        SetPowerWell(power_well, /* enable */ true);
+      }
+    }
+  }
+
+  PowerWellRef GetCdClockPowerWellRef() override { return PowerWellRef(this, PowerWellId::PG1); }
+  PowerWellRef GetPipePowerWellRef(registers::Pipe pipe) override {
+    // TODO(fxbug.dev/95863): Add all pipes supported by gen12.
+    switch (pipe) {
+      case registers::PIPE_A:
+        return PowerWellRef(this, PowerWellId::PG1);
+      case registers::PIPE_B:
+        return PowerWellRef(this, PowerWellId::PG2);
+      case registers::PIPE_C:
+        return PowerWellRef(this, PowerWellId::PG3);
+      case registers::PIPE_INVALID:
+        ZX_ASSERT(false);
+    }
+  }
+
+  PowerWellRef GetDdiPowerWellRef(registers::Ddi ddi) override {
+    switch (ddi) {
+      case registers::DDI_A:
+      case registers::DDI_B:
+      case registers::DDI_C:
+        return PowerWellRef(this, PowerWellId::PG1);
+      case registers::DDI_TC_1:
+      case registers::DDI_TC_2:
+      case registers::DDI_TC_3:
+      case registers::DDI_TC_4:
+      case registers::DDI_TC_5:
+      case registers::DDI_TC_6:
+        return PowerWellRef(this, PowerWellId::PG3);
+    }
+  }
+
+  bool GetDdiIoPowerState(registers::Ddi ddi) override {
+    auto power_well = registers::PowerWellControlDdi2::Get().ReadFrom(mmio_space());
+    return power_well.tgl_ddi_io_power_state(ddi).get();
+  }
+
+  void SetDdiIoPowerState(registers::Ddi ddi, bool enable) override {
+    auto power_well = registers::PowerWellControlDdi2::Get().ReadFrom(mmio_space());
+    power_well.tgl_ddi_io_power_state(ddi).set(1);
+    power_well.WriteTo(mmio_space());
+  }
+
+ private:
+  void SetPowerWell(PowerWellId power_well, bool enable) override {
+    const auto& power_well_info = power_well_info_map()->at(power_well);
+
+    constexpr int32_t kWaitForPwrWellCtlStateUs = 20;
+    constexpr int32_t kWaitForFuseStatusDistUs = 20;
+    auto ok = SetPowerWellImpl(power_well_info, enable, mmio_space(), kWaitForPwrWellCtlStateUs,
+                               kWaitForFuseStatusDistUs);
+
+    ZX_DEBUG_ASSERT(ok);
+  }
+};
+
 }  // namespace
 
 PowerWellRef::PowerWellRef() {}
@@ -233,6 +350,9 @@ void Power::DecRefCount(PowerWellId power_well) {
 std::unique_ptr<Power> Power::New(fdf::MmioBuffer* mmio_space, uint16_t device_id) {
   if (is_skl(device_id) || is_kbl(device_id)) {
     return std::make_unique<SklPower>(mmio_space);
+  }
+  if (is_tgl(device_id)) {
+    return std::make_unique<TglPower>(mmio_space);
   }
   if (is_test_device(device_id)) {
     return std::make_unique<TestPowerWell>(mmio_space);

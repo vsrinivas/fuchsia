@@ -10,28 +10,44 @@
 
 namespace i915 {
 
-inline bool is_skl(uint16_t device_id) { return (device_id & 0xff00) == 0x1900; }
+constexpr bool is_skl(uint16_t device_id) { return (device_id & 0xff00) == 0x1900; }
 
-inline bool is_kbl(uint16_t device_id) {
+constexpr bool is_kbl(uint16_t device_id) {
   return (device_id & 0xff00) == 0x5900 || (device_id & 0xff00) == 0x3e00;
 }
 
-inline bool is_skl_u(uint16_t device_id) {
+constexpr bool is_tgl(uint16_t device_id) { return (device_id & 0xff00) == 0x9a00; }
+
+constexpr bool is_skl_u(uint16_t device_id) {
   return device_id == 0x1916 || device_id == 0x1906 || device_id == 0x1926 || device_id == 0x1927 ||
          device_id == 0x1923;
 }
 
-inline bool is_skl_y(uint16_t device_id) { return device_id == 0x191e; }
+constexpr bool is_skl_y(uint16_t device_id) { return device_id == 0x191e; }
 
-inline bool is_kbl_u(uint16_t device_id) {
+constexpr bool is_kbl_u(uint16_t device_id) {
   return device_id == 0x5916 || device_id == 0x5926 || device_id == 0x5906 || device_id == 0x5927 ||
          device_id == 0x3ea5;
 }
 
-inline bool is_kbl_y(uint16_t device_id) { return device_id == 0x591c || device_id == 0x591e; }
+constexpr bool is_kbl_y(uint16_t device_id) { return device_id == 0x591c || device_id == 0x591e; }
 
 constexpr uint16_t kTestDeviceDid = 0xffff;
-inline bool is_test_device(uint16_t device_id) { return device_id == kTestDeviceDid; }
+constexpr bool is_test_device(uint16_t device_id) { return device_id == kTestDeviceDid; }
+
+constexpr uint16_t intel_display_device_gen(uint16_t device_id) {
+  if (is_skl(device_id) || is_kbl(device_id)) {
+    return 9;
+  }
+  if (is_tgl(device_id)) {
+    return 12;
+  }
+  if (is_test_device(device_id)) {
+    return 9;
+  }
+  ZX_DEBUG_ASSERT_MSG(false, "device id %u not supported", device_id);
+  return 0;
+}
 
 }  // namespace i915
 
