@@ -581,6 +581,33 @@ func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
 	return nil
 }
 
+// Flash the device to the specified build.
+func (c *Client) Flash(ctx context.Context, build artifacts.Build) error {
+	f, err := build.GetFlasher(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get flasher to flash device: %w", err)
+	}
+
+	if err := c.RebootToRecovery(ctx); err != nil {
+		return fmt.Errorf("failed to reboot to recovery during paving: %w", err)
+	}
+
+	if err = f.Flash(ctx); err != nil {
+		return fmt.Errorf("device failed to flash: %w", err)
+	}
+
+	logger.Infof(ctx, "flasher completed, waiting for device to boot")
+
+	// Reconnect to the device.
+	if err = c.Reconnect(ctx); err != nil {
+		return fmt.Errorf("device failed to connect after pave: %w", err)
+	}
+
+	logger.Infof(ctx, "device booted")
+
+	return nil
+}
+
 func (c *Client) waitToFindDeviceInNetboot(ctx context.Context) string {
 	nodeNames := c.deviceResolver.NodeNames()
 

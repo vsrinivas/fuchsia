@@ -51,6 +51,7 @@ if (is_host) {
     }
     sources = [
       "check/check.go",
+      "flash/flash.go",
       "pave/pave.go",
       "reboot_test/config.go",
       "reboot_test/reboot_test.go",

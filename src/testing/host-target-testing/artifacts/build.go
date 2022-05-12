@@ -17,6 +17,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/avb"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/flasher"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/paver"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/zbi"
@@ -46,6 +47,9 @@ type Build interface {
 
 	// GetPaver downloads and returns a paver for the build.
 	GetPaver(ctx context.Context) (paver.Paver, error)
+
+	// GetFlasher downloads and returns a paver for the build.
+	GetFlasher(ctx context.Context) (flasher.Flasher, error)
 
 	// GetSshPublicKey returns the SSH public key used by this build's paver.
 	GetSshPublicKey() ssh.PublicKey
@@ -238,6 +242,35 @@ func (b *ArtifactsBuild) getPaver(ctx context.Context) (*paver.BuildPaver, error
 	return paver.NewBuildPaver(bootserverPath, buildImageDir, paver.SSHPublicKey(b.sshPublicKey))
 }
 
+// GetFlasher downloads and returns a flasher for the build.
+func (b *ArtifactsBuild) GetFlasher(ctx context.Context) (flasher.Flasher, error) {
+	return b.getFlasher(ctx)
+}
+
+func (b *ArtifactsBuild) getFlasher(ctx context.Context) (*flasher.BuildFlasher, error) {
+	buildImageDir, err := b.GetBuildImages(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	currentBuildId := os.Getenv("BUILDBUCKET_ID")
+	if currentBuildId == "" {
+		currentBuildId = b.id
+	}
+	// Use the latest ffx
+	ffxPath := filepath.Join(buildImageDir, "ffx")
+	flashManifest := filepath.Join(buildImageDir, "flash.json")
+	if err := b.archive.download(ctx, currentBuildId, false, ffxPath, []string{"tools/linux-x64/ffx"}); err != nil {
+		return nil, fmt.Errorf("failed to download ffxPath: %w", err)
+	}
+	// Make ffx executable.
+	if err := os.Chmod(ffxPath, os.ModePerm); err != nil {
+		return nil, fmt.Errorf("failed to make ffxPath executable: %w", err)
+	}
+
+	return flasher.NewBuildFlasher(ffxPath, flashManifest, flasher.SSHPublicKey(b.sshPublicKey))
+}
+
 func (b *ArtifactsBuild) GetSshPublicKey() ssh.PublicKey {
 	return b.sshPublicKey
 }
@@ -316,6 +349,14 @@ func (b *FuchsiaDirBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 		filepath.Join(b.dir, "host_x64/bootserver_new"),
 		b.dir,
 		paver.SSHPublicKey(b.sshPublicKey),
+	)
+}
+
+func (b *FuchsiaDirBuild) GetFlasher(ctx context.Context) (flasher.Flasher, error) {
+	return flasher.NewBuildFlasher(
+		filepath.Join(b.dir, "host_x64/ffx"),
+		filepath.Join(b.dir, "flash.json"),
+		flasher.SSHPublicKey(b.sshPublicKey),
 	)
 }
 
@@ -424,6 +465,11 @@ func (b *OmahaBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 		paver.SSHPublicKey(b.GetSshPublicKey()),
 		paver.OverrideVBMetaA(destVbmetaPath),
 	)
+}
+
+// GetFlasher downloads and returns a paver for the build.
+func (b *OmahaBuild) GetFlasher(ctx context.Context) (flasher.Flasher, error) {
+	return b.build.GetFlasher(ctx)
 }
 
 func (b *OmahaBuild) GetSshPublicKey() ssh.PublicKey {
