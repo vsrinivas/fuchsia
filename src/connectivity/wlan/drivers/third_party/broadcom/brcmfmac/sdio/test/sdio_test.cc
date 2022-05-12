@@ -26,6 +26,7 @@
 #include <zircon/types.h>
 
 #include <array>
+#include <memory>
 #include <tuple>
 
 #include <wifi/wifi-config.h>
@@ -73,21 +74,19 @@ class FakeSdioDevice : public wlan::brcmfmac::StubDevice {
   }
 };
 
-constexpr sdio_rw_txn MakeSdioTxn(uint32_t addr, uint32_t data_size, bool incr, bool write,
-                                  bool use_dma = false, zx_handle_t dma_vmo = ZX_HANDLE_INVALID) {
-  return {.addr = addr,
-          .data_size = data_size,
-          .incr = incr,
-          .write = write,
-          .use_dma = use_dma,
-          .dma_vmo = dma_vmo,
-          .virt_buffer = nullptr,
-          .virt_size = 0,
-          .buf_offset = 0};
-}
-
 class MockSdio : public ddk::MockSdio {
  public:
+  // Override these methods because the generated methods in ddk::MockSdio require that
+  // out_read_byte is non-null, which is only the case for reads. For writes it can/should be null.
+  zx_status_t SdioDoRwByte(bool write, uint32_t addr, uint8_t write_byte,
+                           uint8_t* out_read_byte) override {
+    std::tuple<zx_status_t, uint8_t> ret = mock_do_rw_byte_.Call(write, addr, write_byte);
+    if (out_read_byte) {
+      *out_read_byte = std::get<1>(ret);
+    }
+    return std::get<0>(ret);
+  }
+
   zx_status_t SdioDoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
                                         uint8_t* out_read_byte) override {
     auto ret = mock_do_vendor_control_rw_byte_.Call(write, addr, write_byte);
@@ -97,6 +96,89 @@ class MockSdio : public ddk::MockSdio {
 
     return std::get<0>(ret);
   }
+};
+
+class FakeSdioBus {
+ public:
+  static constexpr size_t kVmoSize = 4096;
+  static constexpr size_t kVmoOffset = 0;
+  static constexpr uint8_t kVmoId = 0;
+  static constexpr uint32_t kFrameSize = 1500;
+  static constexpr uint8_t kPortId = 0;
+
+  static zx_status_t Create(std::unique_ptr<FakeSdioBus>* bus) {
+    std::unique_ptr<FakeSdioBus> ptr(new FakeSdioBus());
+
+    zx_status_t status = zx::vmo::create(kVmoSize, 0, &ptr->vmo_);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    zx_vaddr_t addr = 0;
+    status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, kVmoOffset, ptr->vmo_,
+                                        kVmoOffset, kVmoSize, &addr);
+    if (status != ZX_OK) {
+      return status;
+    }
+    ptr->mapped_vmo_addr_ = addr;
+
+    {
+      std::lock_guard lock(ptr->bus_.rx_tx_data.tx_space);
+      wlan::drivers::components::Frame tx_frame(
+          &ptr->bus_.rx_tx_data.tx_space, kVmoId, kVmoOffset, 0,
+          reinterpret_cast<uint8_t*>(ptr->mapped_vmo_addr_.value()), kFrameSize, kPortId);
+      ptr->bus_.rx_tx_data.tx_space.Store(std::move(tx_frame));
+    }
+
+    *bus = std::move(ptr);
+
+    return ZX_OK;
+  }
+
+  ~FakeSdioBus() {
+    if (mapped_vmo_addr_.has_value()) {
+      zx_status_t status = zx::vmar::root_self()->unmap(mapped_vmo_addr_.value(), kVmoSize);
+      if (status != ZX_OK) {
+        BRCMF_ERR("Failed to unmap VMO: %s", zx_status_get_string(status));
+      }
+    }
+  }
+
+  void ExpectDoRwTxnNew(MockSdio& sdio, zx_status_t return_status, uint32_t addr, uint32_t size,
+                        bool incr, bool write) {
+    sdio.mock_do_rw_txn_new().ExpectCallWithMatcher([=](sdio_rw_txn_new_t txn) {
+      EXPECT_EQ(txn.addr, addr);
+      EXPECT_EQ(txn.write, write);
+      EXPECT_EQ(txn.incr, incr);
+      EXPECT_EQ(txn.buffers_count, 1);
+      EXPECT_EQ(txn.buffers_list[0].offset, kVmoOffset);
+      EXPECT_EQ(txn.buffers_list[0].size, size);
+      EXPECT_EQ(txn.buffers_list[0].type, SDMMC_BUFFER_TYPE_VMO_ID);
+      EXPECT_EQ(txn.buffers_list[0].buffer.vmo_id, kVmoId);
+
+      return std::tuple<zx_status_t>{return_status};
+    });
+  }
+
+  void ExpectWriteByte(MockSdio& sdio, zx_status_t return_status, uint32_t expected_addr,
+                       uint8_t expected_write_byte) {
+    sdio.mock_do_rw_byte().ExpectCallWithMatcher(
+        [=](bool write, uint32_t actual_addr, uint8_t actual_write_byte) {
+          EXPECT_EQ(true, write);
+          EXPECT_EQ(expected_addr, actual_addr);
+          EXPECT_EQ(expected_write_byte, actual_write_byte);
+          return std::tuple<zx_status_t, uint8_t>{return_status, 0};
+        });
+  }
+
+  brcmf_sdio* get() { return &bus_; }
+
+ private:
+  FakeSdioBus() = default;
+
+  brcmf_sdio bus_ = {};
+  zx::vmo vmo_;
+  std::optional<zx_vaddr_t> mapped_vmo_addr_;
 };
 
 TEST(Sdio, IntrRegister) {
@@ -212,86 +294,26 @@ TEST(Sdio, VendorControl) {
 
 TEST(Sdio, Transfer) {
   FakeSdioDevice device;
-  brcmf_sdio_dev sdio_dev = {};
-  sdio_dev.drvr = device.drvr();
+  std::unique_ptr<FakeSdioBus> sdio_bus;
+  ASSERT_OK(FakeSdioBus::Create(&sdio_bus));
+  brcmf_sdio_dev sdio_dev = {.drvr = device.drvr(), .bus = sdio_bus->get()};
 
   MockSdio sdio1;
   MockSdio sdio2;
   sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
   sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
 
-  sdio1.ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x458ef43b, 0xd25d48bb, true, true));
-  sdio2.ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x216977b9, 0x9a1d98ed, true, true))
-      .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x9da7a590, 0xdc8290a3, true, true))
-      .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0xecf0a024, 0x57d91422, true, true));
+  sdio_bus->ExpectDoRwTxnNew(sdio1, ZX_OK, 0x458ef43b, FakeSdioBus::kFrameSize / 2, true, true);
+  sdio_bus->ExpectDoRwTxnNew(sdio2, ZX_OK, 0x216977b9, FakeSdioBus::kFrameSize, true, true);
 
-  EXPECT_OK(
-      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x458ef43b, true, nullptr, 0xd25d48bb, false));
-  EXPECT_OK(
-      brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x216977b9, true, nullptr, 0x9a1d98ed, false));
-  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, 0, 0x9da7a590, true, nullptr, 0xdc8290a3, false));
-  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, 200, 0xecf0a024, true, nullptr, 0x57d91422, false));
+  uint8_t some_data[FakeSdioBus::kFrameSize] = {};
+
+  EXPECT_OK(brcmf_sdiod_write(&sdio_dev, &sdio_dev.sdio_proto_fn1, 0x458ef43b, some_data,
+                              FakeSdioBus::kFrameSize / 2, false));
+  EXPECT_OK(brcmf_sdiod_write(&sdio_dev, &sdio_dev.sdio_proto_fn2, 0x216977b9, some_data,
+                              FakeSdioBus::kFrameSize, false));
 
   sdio1.VerifyAndClear();
-  sdio2.VerifyAndClear();
-}
-
-TEST(Sdio, DmaTransfer) {
-  FakeSdioDevice device;
-  brcmf_sdio_dev sdio_dev = {};
-  sdio_dev.drvr = device.drvr();
-
-  // In order to write data to the VMO we need an actual valid address, use some
-  // test data.
-  std::array<unsigned char, 4096> dma_test_data;
-
-  sdio_dev.dma_buffer_size = 16384;
-  ASSERT_OK(zx::vmo::create(sdio_dev.dma_buffer_size, ZX_VMO_RESIZABLE, &sdio_dev.dma_buffer));
-
-  MockSdio sdio1;
-  MockSdio sdio2;
-  sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
-  sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
-
-  // These transactions should not have DMA enabled because they do not meet
-  // the criteria.
-  auto unaligned_size = MakeSdioTxn(0x458ef43b, 1233, true, true, false, ZX_HANDLE_INVALID);
-  auto too_small_for_dma = MakeSdioTxn(0x216977b9, 16, true, true, false, ZX_HANDLE_INVALID);
-  // These transactions should have DMA enabled
-  auto perfect_for_dma =
-      MakeSdioTxn(0x9da7a590, dma_test_data.size(), true, true, true, sdio_dev.dma_buffer.get());
-
-  sdio1.ExpectDoRwTxn(ZX_OK, unaligned_size)
-      .ExpectDoRwTxn(ZX_OK, too_small_for_dma)
-      .ExpectDoRwTxn(ZX_OK, perfect_for_dma);
-
-  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x458ef43b, true, nullptr,
-                                 unaligned_size.data_size, false));
-  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x216977b9, true, nullptr,
-                                 too_small_for_dma.data_size, false));
-  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_1, 0x9da7a590, true, dma_test_data.data(),
-                                 dma_test_data.size(), false));
-
-  sdio1.VerifyAndClear();
-
-  sdio2.ExpectDoRwTxn(ZX_OK, unaligned_size)
-      .ExpectDoRwTxn(ZX_OK, too_small_for_dma)
-      .ExpectDoRwTxn(ZX_OK, perfect_for_dma);
-
-  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x458ef43b, true, nullptr,
-                                 unaligned_size.data_size, false));
-  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x216977b9, true, nullptr,
-                                 too_small_for_dma.data_size, false));
-  EXPECT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x9da7a590, true, dma_test_data.data(),
-                                 dma_test_data.size(), false));
-
-  sdio2.VerifyAndClear();
-
-  // Data provided is a nullptr, ensure this is not OK when using DMA, that
-  // data needs to be copied.
-  EXPECT_NOT_OK(brcmf_sdiod_transfer(&sdio_dev, SDIO_FN_2, 0x9da7a590, true, nullptr,
-                                     dma_test_data.size(), false));
-  // And make sure there are no interactions with sdio
   sdio2.VerifyAndClear();
 }
 
@@ -317,8 +339,10 @@ TEST(Sdio, IoAbort) {
 
 TEST(Sdio, RamRw) {
   FakeSdioDevice device;
-  brcmf_sdio_dev sdio_dev = {};
-  sdio_dev.drvr = device.drvr();
+  std::unique_ptr<FakeSdioBus> sdio_bus;
+  ASSERT_OK(FakeSdioBus::Create(&sdio_bus));
+  brcmf_sdio_dev sdio_dev = {.drvr = device.drvr(), .bus = sdio_bus->get()};
+
   sdio_func func1 = {};
   pthread_mutex_init(&func1.lock, nullptr);
 
@@ -327,20 +351,21 @@ TEST(Sdio, RamRw) {
   sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
   sdio_dev.func1 = &func1;
 
-  sdio1.ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x0000ffe0, 0x00000020, true, true))
-      .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x0001000a, 0x00000001, true, true))
-      .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x0001000b, 0x00000001, true, true))
-      .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x0001000c, 0x00000001, true, true))
-      .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x00008000, 0x00000020, true, true));
+  sdio_bus->ExpectDoRwTxnNew(sdio1, ZX_OK, 0x0000ffe0, 0x00000020, true, true);
+  sdio_bus->ExpectWriteByte(sdio1, ZX_OK, 0x0001000a, 0x80);
+  sdio_bus->ExpectWriteByte(sdio1, ZX_OK, 0x0001000b, 0x00);
+  sdio_bus->ExpectWriteByte(sdio1, ZX_OK, 0x0001000c, 0x00);
+  sdio_bus->ExpectDoRwTxnNew(sdio1, ZX_OK, 0x00008000, 0x00000020, true, true);
 
   /* In this test the address is set to 0x000007fe0, and when running, this function
    will chunk the data which is originally 0x40 bytes big into two pieces to align
    the next transfer address to SBSDIO_SB_OFT_ADDR_LIMIT, which is 0x8000, each one
    is 0x20 bytes big. The first line above corresponding to the first piece, and the
-   fifth line is the second piece, middle three are txns made in
-   brcmf_sdiod_set_backplane_window()
+   fifth line is the second piece, middle three are byte writes made in
+   brcmf_sdiod_set_backplane_window().
    */
-  EXPECT_OK(brcmf_sdiod_ramrw(&sdio_dev, true, 0x00007fe0, nullptr, 0x00000040));
+  uint8_t some_data[128] = {};
+  EXPECT_OK(brcmf_sdiod_ramrw(&sdio_dev, true, 0x00007fe0, some_data, 0x00000040));
   sdio1.VerifyAndClear();
 }
 
@@ -348,8 +373,9 @@ TEST(Sdio, RamRw) {
 // not divisible by 4.
 TEST(Sdio, AlignSize) {
   FakeSdioDevice device;
-  brcmf_sdio_dev sdio_dev = {};
-  sdio_dev.drvr = device.drvr();
+  std::unique_ptr<FakeSdioBus> sdio_bus;
+  ASSERT_OK(FakeSdioBus::Create(&sdio_bus));
+  brcmf_sdio_dev sdio_dev = {.drvr = device.drvr(), .bus = sdio_bus->get()};
   sdio_func func1 = {};
   pthread_mutex_init(&func1.lock, nullptr);
 
@@ -358,34 +384,18 @@ TEST(Sdio, AlignSize) {
   sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
   sdio_dev.func1 = &func1;
 
-  sdio1.ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x00008000, 0x00000020, true, true));
+  sdio_bus->ExpectDoRwTxnNew(sdio1, ZX_OK, 0x00008000, 0x00000020, true, true);
 
+  uint8_t some_data[128] = {};
   // 4-byte-aligned size should succeed.
-  EXPECT_OK(brcmf_sdiod_ramrw(&sdio_dev, true, 0x00000000, nullptr, 0x00000020));
+  EXPECT_OK(brcmf_sdiod_ramrw(&sdio_dev, true, 0x00000000, some_data, 0x00000020));
   // non-4-byte-aligned size for sending should fail and return ZX_ERR_INVALID_ARGS.
-  EXPECT_EQ(brcmf_sdiod_ramrw(&sdio_dev, true, 0x00000000, nullptr, 0x00000021),
+  EXPECT_EQ(brcmf_sdiod_ramrw(&sdio_dev, true, 0x00000000, some_data, 0x00000021),
             ZX_ERR_INVALID_ARGS);
   // non-4-byte-aligned size for receiving should fail and return ZX_ERR_INVALID_ARGS.
-  EXPECT_EQ(brcmf_sdiod_ramrw(&sdio_dev, false, 0x00000000, nullptr, 0x00000021),
+  EXPECT_EQ(brcmf_sdiod_ramrw(&sdio_dev, false, 0x00000000, some_data, 0x00000021),
             ZX_ERR_INVALID_ARGS);
   sdio1.VerifyAndClear();
-}
-
-// This test case verifies the alignment functionality of pkt_align() defined in sdio.cc is correct.
-
-TEST(Sdio, PktAlignTest) {
-  for (uint32_t pkt_size = NOT_ALIGNED_SIZE; pkt_size <= ALIGNED_SIZE; pkt_size++) {
-    struct brcmf_netbuf* buf = brcmf_netbuf_allocate(pkt_size);
-    brcmf_netbuf_grow_tail(buf, pkt_size);
-    // The third parameter is not used to do alignment for buf->len.
-    pkt_align(buf, NOT_ALIGNED_SIZE, DMA_ALIGNMENT);
-    // Check whether the memory position of data pointer is aligned.
-    EXPECT_EQ((unsigned long)buf->data % DMA_ALIGNMENT, 0);
-    // Check whether the "len" field in buf is aligned for SDIO transfer.
-    EXPECT_EQ(buf->len, ALIGNED_SIZE);
-
-    brcmf_netbuf_free(buf);
-  }
 }
 
 /*

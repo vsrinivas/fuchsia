@@ -59,18 +59,18 @@
 #define DMA_ALIGN_MASK 0x03
 
 #define SDIO_FUNC1_BLOCKSIZE 64
-#define SDIO_FUNC2_BLOCKSIZE 512
+// All transfers for func2 will be a multiple of this size, even if only transfering a few bytes
+// it will be padded to match this size. Strike a balance between a large block size that's
+// beneficial for high throughput with big transfers and small transfers where the padding imposes
+// a cost with no benefit.
+#define SDIO_FUNC2_BLOCKSIZE 256
 /* Maximum milliseconds to wait for F2 to come up */
 #define SDIO_WAIT_F2RDY 3000
 
 #define BRCMF_DEFAULT_RXGLOM_SIZE 32 /* max rx frames in glom chain */
 
-// The initial size of the DMA buffer
-constexpr size_t kDmaInitialBufferSize = 4096;
-// The maximum size the DMA buffer should be allowed to grow to
-constexpr size_t kDmaMaxBufferSize = 131072;
-// The minimum size a packet should be to enable DMA
-constexpr size_t kDmaThresholdSize = 64;
+// The maximum number of VMOs that can be transferred in a single SDIO transaction
+constexpr size_t kMaxVmosPerTransfer = 40;
 
 static void brcmf_sdiod_ib_irqhandler(struct brcmf_sdio_dev* sdiodev) {
   BRCMF_DBG(INTR, "IB intr triggered");
@@ -259,106 +259,154 @@ void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_s
   sdiodev->state = state;
 }
 
-zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
-                                 bool write, void* data, size_t size, bool fifo) {
-  sdio_rw_txn_t txn;
-  zx_status_t result;
-  // The size must be a multiple of 4 to use DMA, also don't use DMA for very
-  // small transfers as the overhead might not be worth it.
-  bool use_dma = ((size % 4) == 0) && size > kDmaThresholdSize;
+static zx_status_t brcmf_sdiod_transfer_vmo(struct brcmf_sdio_dev* sdiodev,
+                                            const sdio_protocol_t* proto, uint32_t addr, bool write,
+                                            const wlan::drivers::components::Frame& frame,
+                                            size_t size, bool fifo) {
+  sdmmc_buffer_region_t buffer = {
+      .buffer = {.vmo_id = frame.VmoId()},
+      .type = SDMMC_BUFFER_TYPE_VMO_ID,
+      .offset = frame.VmoOffset(),
+      .size = size,
+  };
+  sdio_rw_txn_new_t txn = {
+      .addr = addr,
+      .incr = !fifo,
+      .write = write,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
 
-  TRACE_DURATION("brcmfmac:isr", "sdiod_transfer", "func", TA_UINT32((uint32_t)func), "type",
-                 TA_STRING(write ? "write" : "read"), "addr", TA_UINT32(addr), "size",
-                 TA_UINT64((uint64_t)size));
-  if (use_dma) {
-    if (size > sdiodev->dma_buffer_size) {
-      // Only resize the DMA buffer if it's not big enough. This saves a
-      // significant amount of time by not resizing the buffer for every
-      // transfer. Use a cached size value to avoid a syscall each time.
-      if (size > kDmaMaxBufferSize) {
-        BRCMF_ERR("Requested SDIO transfer VMO size %" PRIu64 " too large, max is %" PRIu64 "",
-                  size, kDmaMaxBufferSize);
-        return ZX_ERR_NO_MEMORY;
-      }
-      result = sdiodev->dma_buffer.set_size(size);
-      if (result != ZX_OK) {
-        BRCMF_ERR("Error resizing SDIO transfer VMO: %s", zx_status_get_string(result));
-        return result;
-      }
-      sdiodev->dma_buffer_size = size;
-    }
-    if (write) {
-      result = sdiodev->dma_buffer.write(data, 0, size);
-      if (result != ZX_OK) {
-        BRCMF_ERR("Error writing to SDIO transfer VMO: %s", zx_status_get_string(result));
-        return result;
-      }
-    }
+  const uint32_t cache_op =
+      write ? ZX_CACHE_FLUSH_DATA : (ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+  zx_status_t err = zx_cache_flush(frame.Data(), size, cache_op);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Failed to flush cache before SDIO transaction: %s", zx_status_get_string(err));
+    return err;
   }
 
-  txn.addr = addr;
-  txn.write = write;
-  txn.virt_buffer = reinterpret_cast<uint8_t*>(data);
-  if (size > std::numeric_limits<uint32_t>::max()) {
-    BRCMF_ERR("brcmf_sdiod_transfer failed: size invalid (overflow)");
-    return ZX_ERR_INTERNAL;
-  }
-  txn.data_size = static_cast<uint32_t>(size);
-  txn.incr = !fifo;
-  txn.use_dma = use_dma;
-  txn.dma_vmo = use_dma ? sdiodev->dma_buffer.get() : ZX_HANDLE_INVALID;
-  txn.buf_offset = 0;
-
-  if (func == SDIO_FN_1) {
-    result = sdio_do_rw_txn(&sdiodev->sdio_proto_fn1, &txn);
-  } else {
-    result = sdio_do_rw_txn(&sdiodev->sdio_proto_fn2, &txn);
-  }
-
+  TRACE_DURATION("brcmfmac:isr", "sdio_do_rw_txn_new");
+  zx_status_t result = sdio_do_rw_txn_new(proto, &txn);
   if (result != ZX_OK) {
-    if (result == ZX_ERR_TIMED_OUT) {
-      zx_status_t err = sdiodev->drvr->recovery_trigger->sdio_timeout_.Inc();
-      if (err != ZX_OK) {
-        BRCMF_WARN("Failed to trigger, recovery likely in progress - status: %s",
-                   zx_status_get_string(err));
-      }
-    }
-    BRCMF_DBG(TEMP, "SDIO transaction failed: %s", zx_status_get_string(result));
+    BRCMF_ERR("SDIO transaction failed: %s", zx_status_get_string(result));
     return result;
   }
-  // Clear the TriggerCondition counter if SDIO transmission succeeded.
-  sdiodev->drvr->recovery_trigger->sdio_timeout_.Clear();
 
-  if (use_dma && !write) {
-    // This is a read operation, read the data from the VMO to the buffer
-    result = sdiodev->dma_buffer.read(data, 0, size);
+  if (!write) {
+    result = zx_cache_flush(frame.Data(), size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
     if (result != ZX_OK) {
-      BRCMF_ERR("Error reading from SDIO transfer VMO: %s", zx_status_get_string(result));
+      BRCMF_ERR("Failed to flush cache when reading from SDIO: %s", zx_status_get_string(result));
       return result;
+    }
+  }
+
+  return ZX_OK;
+}
+
+template <typename It>
+static zx_status_t brcmf_sdiod_transfer_vmos(struct brcmf_sdio_dev* sdiodev,
+                                             const sdio_protocol_t* proto, uint32_t addr,
+                                             bool write, It begin, It end, size_t count,
+                                             bool fifo) {
+  sdmmc_buffer_region_t buffers[kMaxVmosPerTransfer];
+
+  size_t buffer = 0;
+  for (auto frame = begin; frame != end; ++frame, ++buffer) {
+    if (buffer >= std::size(buffers)) {
+      BRCMF_ERR("Not enough buffers to send frames, sending %lu frames, only have %lu buffers",
+                count, std::size(buffers));
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    buffers[buffer] = {
+        .buffer = {.vmo_id = frame->VmoId()},
+        .type = SDMMC_BUFFER_TYPE_VMO_ID,
+        .offset = frame->VmoOffset(),
+        .size = frame->Size(),
+    };
+
+    const uint32_t cache_op =
+        write ? ZX_CACHE_FLUSH_DATA : (ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+    zx_status_t result = zx_cache_flush(frame->Data(), frame->Size(), cache_op);
+    if (result != ZX_OK) {
+      BRCMF_ERR("Failed to flush cache when writing to SDIO: %s", zx_status_get_string(result));
+      return result;
+    }
+  }
+
+  sdio_rw_txn_new_t txn = {
+      .addr = addr,
+      .incr = !fifo,
+      .write = write,
+      .buffers_list = buffers,
+      .buffers_count = buffer,
+  };
+
+  TRACE_DURATION("brcmfmac:isr", "sdio_do_rw_txn_new");
+  zx_status_t result = sdio_do_rw_txn_new(proto, &txn);
+  if (result != ZX_OK) {
+    BRCMF_ERR("SDIO transaction failed: %s", zx_status_get_string(result));
+  }
+
+  if (!write) {
+    for (auto frame = begin; frame != end; ++frame) {
+      result = zx_cache_flush(frame->Data(), frame->Size(),
+                              ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+      if (result != ZX_OK) {
+        BRCMF_ERR("Failed to flush cache when reading from SDIO: %s", zx_status_get_string(result));
+        return result;
+      }
     }
   }
 
   return result;
 }
 
-static uint8_t brcmf_sdiod_func_rb(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
-                                   zx_status_t* result_out) {
-  uint8_t data;
-  zx_status_t result;
-  result = brcmf_sdiod_transfer(sdiodev, func, addr, false, &data, sizeof(data), false);
-  if (result_out != NULL) {
-    *result_out = result;
+zx_status_t brcmf_sdiod_read(brcmf_sdio_dev* sdiodev, const sdio_protocol_t* proto, uint32_t addr,
+                             void* data, size_t size, bool fifo) {
+  wlan::drivers::components::FrameContainer frames =
+      brcmf_sdio_acquire_internal_rx_space_to_size(sdiodev->bus, size);
+  if (frames.empty()) {
+    return ZX_ERR_NO_RESOURCES;
   }
-  return data;
+
+  zx_status_t status = brcmf_sdiod_transfer_vmos(sdiodev, proto, addr, false, frames.begin(),
+                                                 frames.end(), frames.size(), fifo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  uint32_t remaining = size;
+  size_t offset = 0;
+  for (auto frame = frames.begin(); remaining > 0 && frame != frames.end(); ++frame) {
+    uint32_t to_copy = std::min(remaining, frame->Size());
+    memcpy(reinterpret_cast<uint8_t*>(data) + offset, frame->Data(), to_copy);
+    remaining -= to_copy;
+    offset += to_copy;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t brcmf_sdiod_write(brcmf_sdio_dev* sdiodev, const sdio_protocol_t* proto, uint32_t addr,
+                              void* data, size_t size, bool fifo) {
+  wlan::drivers::components::FrameContainer frames =
+      brcmf_sdio_acquire_and_fill_tx_space(sdiodev->bus, reinterpret_cast<uint8_t*>(data), size);
+  if (frames.empty()) {
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  return brcmf_sdiod_transfer_vmos(sdiodev, proto, addr, true, frames.begin(), frames.end(),
+                                   frames.size(), fifo);
 }
 
 uint8_t brcmf_sdiod_vendor_control_rb(struct brcmf_sdio_dev* sdiodev, uint8_t addr,
                                       zx_status_t* result_out) {
   uint8_t data = 0;
-  zx_status_t result;
   // Any function device can access the vendor control registers; fn2 could be used here instead.
-  result = sdio_do_vendor_control_rw_byte(&sdiodev->sdio_proto_fn1, false, addr, 0, &data);
-  if (result_out != NULL) {
+  zx_status_t result =
+      sdio_do_vendor_control_rw_byte(&sdiodev->sdio_proto_fn1, false, addr, 0, &data);
+  if (result_out) {
     *result_out = result;
   }
   return data;
@@ -366,24 +414,28 @@ uint8_t brcmf_sdiod_vendor_control_rb(struct brcmf_sdio_dev* sdiodev, uint8_t ad
 
 uint8_t brcmf_sdiod_func1_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
                              zx_status_t* result_out) {
-  return brcmf_sdiod_func_rb(sdiodev, SDIO_FN_1, addr, result_out);
+  uint8_t data;
+  zx_status_t result = sdio_do_rw_byte(&sdiodev->sdio_proto_fn1, false, addr, 0, &data);
+  if (result_out) {
+    *result_out = result;
+  }
+  return data;
 }
 
-void brcmf_sdiod_vendor_control_wb(struct brcmf_sdio_dev* sdiodev, uint8_t addr, uint8_t data,
+void brcmf_sdiod_vendor_control_wb(struct brcmf_sdio_dev* sdiodev, uint8_t addr, uint8_t value,
                                    zx_status_t* result_out) {
-  zx_status_t result;
   // Any function device can access the vendor control registers; fn2 could be used here instead.
-  result = sdio_do_vendor_control_rw_byte(&sdiodev->sdio_proto_fn1, true, addr, data, NULL);
-  if (result_out != NULL) {
+  zx_status_t result =
+      sdio_do_vendor_control_rw_byte(&sdiodev->sdio_proto_fn1, true, addr, value, nullptr);
+  if (result_out) {
     *result_out = result;
   }
 }
 
-void brcmf_sdiod_func1_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t data,
+void brcmf_sdiod_func1_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t value,
                           zx_status_t* result_out) {
-  zx_status_t result;
-  result = brcmf_sdiod_transfer(sdiodev, SDIO_FN_1, addr, true, &data, sizeof(data), false);
-  if (result_out != NULL) {
+  zx_status_t result = sdio_do_rw_byte(&sdiodev->sdio_proto_fn1, true, addr, value, nullptr);
+  if (result_out) {
     *result_out = result;
   }
 }
@@ -411,40 +463,46 @@ static zx_status_t brcmf_sdiod_set_backplane_window(struct brcmf_sdio_dev* sdiod
   return err;
 }
 
-uint32_t brcmf_sdiod_func1_rl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, zx_status_t* ret) {
+uint32_t brcmf_sdiod_func1_rl(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
+                              zx_status_t* result_out) {
   uint32_t data = 0;
-  zx_status_t retval;
 
-  retval = brcmf_sdiod_set_backplane_window(sdiodev, addr);
+  zx_status_t retval = brcmf_sdiod_set_backplane_window(sdiodev, addr);
   if (retval == ZX_OK) {
+    wlan::drivers::components::Frame& frame = sdiodev->bus->rx_tx_data.rx_frame;
     SBSDIO_FORMAT_ADDR(addr);
-    retval = brcmf_sdiod_transfer(sdiodev, SDIO_FN_1, addr, false, &data, sizeof(data), false);
+    retval = brcmf_sdiod_transfer_vmo(sdiodev, &sdiodev->sdio_proto_fn1, addr, false, frame,
+                                      sizeof(data), false);
+    if (retval == ZX_OK) {
+      memcpy(&data, frame.Data(), sizeof(data));
+    }
   }
-  if (ret) {
-    *ret = retval;
+  if (result_out) {
+    *result_out = retval;
   }
 
   return data;
 }
 
 void brcmf_sdiod_func1_wl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t data,
-                          zx_status_t* ret) {
-  zx_status_t retval;
-
-  retval = brcmf_sdiod_set_backplane_window(sdiodev, addr);
+                          zx_status_t* result_out) {
+  zx_status_t retval = brcmf_sdiod_set_backplane_window(sdiodev, addr);
   if (retval == ZX_OK) {
+    wlan::drivers::components::Frame& frame = sdiodev->bus->rx_tx_data.tx_frame;
+    memcpy(frame.Data(), &data, sizeof(data));
     SBSDIO_FORMAT_ADDR(addr);
-    retval = brcmf_sdiod_transfer(sdiodev, SDIO_FN_1, addr, true, &data, sizeof(data), false);
+    retval = brcmf_sdiod_transfer_vmo(sdiodev, &sdiodev->sdio_proto_fn1, addr, true, frame,
+                                      sizeof(addr), false);
   }
-  if (ret) {
-    *ret = retval;
+  if (result_out) {
+    *result_out = retval;
   }
 }
 
-static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint8_t func,
-                                           uint32_t addr, uint8_t* data, size_t size) {
-  zx_status_t err;
-  TRACE_DURATION("brcmfmac:isr", "netbuf_read", "func", func, "len", size);
+static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev,
+                                           const sdio_protocol_t* proto, uint32_t addr,
+                                           uint8_t* data, size_t size, bool fifo) {
+  TRACE_DURATION("brcmfmac:isr", "netbuf_read", "len", size);
 
   SBSDIO_FORMAT_ADDR(addr);
   /* Single netbuf use the standard mmc interface */
@@ -453,19 +511,7 @@ static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint8
     return ZX_ERR_INVALID_ARGS;
   }
 
-  switch (func) {
-    case SDIO_FN_1:
-      err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, false);
-      break;
-    case SDIO_FN_2:
-      err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, true);
-      break;
-    default:
-      /* bail out as things are really fishy here */
-      WARN(1, "invalid sdio function number %d");
-      err = ZX_ERR_IO_REFUSED;
-  };
-
+  zx_status_t err = brcmf_sdiod_read(sdiodev, proto, addr, data, size, fifo);
   if (err == ZX_ERR_IO_REFUSED) {
     brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
   }
@@ -473,11 +519,10 @@ static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint8
   return err;
 }
 
-static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, uint8_t func,
-                                            uint32_t addr, uint8_t* data, size_t size) {
-  zx_status_t err;
-
-  TRACE_DURATION("brcmfmac:isr", "sdiod_netbuf_write", "func", func, "len", size);
+static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev,
+                                            const sdio_protocol_t* proto, uint32_t addr,
+                                            uint8_t* data, size_t size) {
+  TRACE_DURATION("brcmfmac:isr", "sdiod_netbuf_write", "len", size);
 
   SBSDIO_FORMAT_ADDR(addr);
   /* Single netbuf use the standard mmc interface */
@@ -486,7 +531,7 @@ static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, uint
     return ZX_ERR_INVALID_ARGS;
   }
 
-  err = brcmf_sdiod_transfer(sdiodev, func, addr, true, data, size, false);
+  zx_status_t err = brcmf_sdiod_write(sdiodev, proto, addr, data, size, false);
 
   if (err == ZX_ERR_IO_REFUSED) {
     brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
@@ -495,81 +540,34 @@ static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, uint
   return err;
 }
 
-zx_status_t brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes) {
+zx_status_t brcmf_sdiod_recv_frame(struct brcmf_sdio_dev* sdiodev,
+                                   wlan::drivers::components::Frame& frame, uint32_t bytes) {
   uint32_t addr = sdiodev->cc_core->base;
-  zx_status_t err = ZX_OK;
-  unsigned int req_sz;
 
-  err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
+  zx_status_t err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
   if (err != ZX_OK) {
     return err;
   }
 
   SBSDIO_FORMAT_ADDR(addr);
 
-  req_sz = ZX_ROUNDUP(nbytes, SDIOD_SIZE_ALIGNMENT);
-
-  err = brcmf_sdiod_transfer(sdiodev, SDIO_FN_2, addr, false, buf, req_sz, true);
-
-  return err;
+  return brcmf_sdiod_transfer_vmo(sdiodev, &sdiodev->sdio_proto_fn2, addr, false, frame, bytes,
+                                  false);
 }
 
-zx_status_t brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf* pkt) {
+zx_status_t brcmf_sdiod_recv_frames(struct brcmf_sdio_dev* sdiodev,
+                                    cpp20::span<wlan::drivers::components::Frame> frames) {
   uint32_t addr = sdiodev->cc_core->base;
-  zx_status_t err = ZX_OK;
-
-  TRACE_DURATION("brcmfmac:isr", "recv_pkt");
-
-  err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
+  zx_status_t err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
   if (err != ZX_OK) {
-    goto done;
+    BRCMF_ERR("Failed to set backplace window: %s", zx_status_get_string(err));
+    return err;
   }
 
-  err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, pkt->data, pkt->len);
+  SBSDIO_FORMAT_ADDR(addr);
 
-done:
-  return err;
-}
-
-zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf_list* pktq,
-                                   uint totlen) {
-  struct brcmf_netbuf* glom_netbuf = NULL;
-  struct brcmf_netbuf* netbuf;
-  uint32_t addr = sdiodev->cc_core->base;
-  zx_status_t err = ZX_OK;
-  uint32_t list_len = brcmf_netbuf_list_length(pktq);
-
-  TRACE_DURATION("brcmfmac:isr", "sdiod_recv_chain", "list_len", TA_UINT32(list_len));
-
-  BRCMF_DBG(SDIO, "addr = 0x%x, size = %d", addr, list_len);
-
-  err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
-  if (err != ZX_OK) {
-    goto done;
-  }
-
-  if (list_len == 1) {
-    netbuf = brcmf_netbuf_list_peek_head(pktq);
-    err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, netbuf->data, netbuf->len);
-  } else {
-    glom_netbuf = brcmu_pkt_buf_get_netbuf(totlen);
-    if (!glom_netbuf) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, glom_netbuf->data, glom_netbuf->len);
-    if (err != ZX_OK) {
-      goto done;
-    }
-
-    brcmf_netbuf_list_for_every(pktq, netbuf) {
-      memcpy(netbuf->data, glom_netbuf->data, netbuf->len);
-      brcmf_netbuf_shrink_head(glom_netbuf, netbuf->len);
-    }
-  }
-
-done:
-  brcmu_pkt_buf_free_netbuf(glom_netbuf);
-  return err;
+  return brcmf_sdiod_transfer_vmos(sdiodev, &sdiodev->sdio_proto_fn2, addr, false, frames.begin(),
+                                   frames.end(), frames.size(), false);
 }
 
 zx_status_t brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes) {
@@ -584,46 +582,48 @@ zx_status_t brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, u
     return err;
   }
 
-  SBSDIO_FORMAT_ADDR(addr);
-
   req_sz = ZX_ROUNDUP(nbytes, SDIOD_SIZE_ALIGNMENT);
 
-  if (err == ZX_OK) {
-    err = brcmf_sdiod_transfer(sdiodev, SDIO_FN_2, addr, true, buf, req_sz, false);
-  }
-
-  if (err == ZX_ERR_IO_REFUSED) {
-    brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
-  }
-
-  return err;
+  return brcmf_sdiod_netbuf_write(sdiodev, &sdiodev->sdio_proto_fn2, addr, buf, req_sz);
 }
 
-zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf_list* pktq) {
-  struct brcmf_netbuf* netbuf;
+zx_status_t brcmf_sdiod_send_frames(struct brcmf_sdio_dev* sdiodev,
+                                    cpp20::span<wlan::drivers::components::Frame>& frames,
+                                    uint32_t* frames_sent_out) {
   uint32_t addr = sdiodev->cc_core->base;
-  zx_status_t err;
+  *frames_sent_out = 0;
 
-  BRCMF_DBG(SDIO, "addr = 0x%x, size = %d", addr, brcmf_netbuf_list_length(pktq));
+  TRACE_DURATION("brcmfmac:isr", "sdiod_send_frames");
 
-  TRACE_DURATION("brcmfmac:isr", "sdiod_send_pkt");
-
-  err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
+  zx_status_t err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
   if (err != ZX_OK) {
     return err;
   }
 
-  brcmf_netbuf_list_for_every(pktq, netbuf) {
-    // We use allocated_size minus head space here to take place of alignment of data size in
-    // netbuf.
-    err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_2, addr, netbuf->data,
-                                   netbuf->allocated_size - brcmf_netbuf_head_space(netbuf));
+  if (sdiodev->txglom && frames.size() > 1) {
+    err = brcmf_sdiod_transfer_vmos(sdiodev, &sdiodev->sdio_proto_fn2, addr, true, frames.begin(),
+                                    frames.end(), frames.size(), false);
     if (err != ZX_OK) {
-      break;
+      if (err == ZX_ERR_IO_REFUSED) {
+        brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
+      }
+      return err;
     }
+    (*frames_sent_out) += frames.size();
+    return ZX_OK;
   }
-
-  return err;
+  for (auto& frame : frames) {
+    err = brcmf_sdiod_transfer_vmo(sdiodev, &sdiodev->sdio_proto_fn2, addr, true, frame,
+                                   frame.Size(), false);
+    if (err != ZX_OK) {
+      if (err == ZX_ERR_IO_REFUSED) {
+        brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
+      }
+      return err;
+    }
+    ++(*frames_sent_out);
+  }
+  return ZX_OK;
 }
 
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
@@ -653,15 +653,15 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
     }
 
     if (write) {
-      err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_1, transfer_address, (uint8_t*)data,
-                                     transfer_size);
+      err = brcmf_sdiod_netbuf_write(sdiodev, &sdiodev->sdio_proto_fn1, transfer_address,
+                                     reinterpret_cast<uint8_t*>(data), transfer_size);
     } else {
-      err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_1, transfer_address, (uint8_t*)data,
-                                    transfer_size);
+      err = brcmf_sdiod_netbuf_read(sdiodev, &sdiodev->sdio_proto_fn1, transfer_address,
+                                    reinterpret_cast<uint8_t*>(data), transfer_size, false);
     }
 
     if (err != ZX_OK) {
-      BRCMF_ERR("membytes transfer failed");
+      BRCMF_ERR("membytes transfer failed: %s", zx_status_get_string(err));
       break;
     }
 
@@ -872,6 +872,7 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
       err = ZX_ERR_INTERNAL;
       goto fail;
     }
+    sdio_get_block_size(&sdio_proto_fn1, &func1->blocksize);
   }
   func2 = static_cast<decltype(func2)>(calloc(1, sizeof(struct sdio_func)));
   if (!func2) {
@@ -884,6 +885,7 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
       err = ZX_ERR_INTERNAL;
       goto fail;
     }
+    sdio_get_block_size(&sdio_proto_fn2, &func2->blocksize);
   }
   sdiodev = new brcmf_sdio_dev{};
   if (!sdiodev) {
@@ -908,13 +910,6 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
 
   sdiodev->manufacturer_id = devinfo.funcs_hw_info[SDIO_FN_1].manufacturer_id;
   sdiodev->product_id = devinfo.funcs_hw_info[SDIO_FN_1].product_id;
-
-  err = zx::vmo::create(kDmaInitialBufferSize, ZX_VMO_RESIZABLE, &sdiodev->dma_buffer);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Error creating DMA buffer: %s", zx_status_get_string(err));
-    goto fail;
-  }
-  sdiodev->dma_buffer_size = kDmaInitialBufferSize;
 
   // No need to call brcmf_sdiod_change_state here. Since the bus struct was allocated above it
   // can't contain any meaningful previous state that we can transition from. So we just need to set

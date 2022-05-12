@@ -40,7 +40,7 @@ class SdioDevice : public Device {
   // Virtual state accessor implementation.
   async_dispatcher_t* GetDispatcher() override;
   DeviceInspect* GetInspect() override;
-  bool IsNetworkDeviceBus() const override { return false; }
+  bool IsNetworkDeviceBus() const override { return true; }
 
   // Trampolines for DDK functions, for platforms that support them
   zx_status_t Init() override;

@@ -21,13 +21,19 @@
 #include <fuchsia/hardware/sdio/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
+#include <zircon/compiler.h>
+
+#include <optional>
+
+#include <wlan/drivers/components/frame_storage.h>
+#include <wlan/drivers/components/priority_queue.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/timer.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/workqueue.h"
 
@@ -171,7 +177,7 @@
   addr &= SBSDIO_SB_OFT_ADDR_MASK; \
   addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
-#define DMA_ALIGNMENT 4
+#define DMA_ALIGNMENT 8
 
 /* Maximum attempt times for firmware and nvram downloading */
 #define FILE_LOAD_MAX_ATTEMPTS 5
@@ -209,6 +215,7 @@ struct brcmf_sdreg {
  * struct brcmf_sdio_pd - SDIO-specific device module parameters
  */
 struct brcmf_sdio_pd {
+  int txglomsz;
   int sd_sgentry_align;
   int sd_head_align;
   int drive_strength;
@@ -238,10 +245,10 @@ struct brcmf_sdio_dev {
   bool oob_irq_requested;
   bool sd_irq_requested;
   bool irq_wake; /* irq wake enable flags */
+  bool txglom;
+  uint32_t txglomsz;
   bool wowl_enabled;
   enum brcmf_sdiod_state state;
-  zx::vmo dma_buffer;     /* DMA buffer used for SDIO transfers */
-  size_t dma_buffer_size; /* Cached size of the DMA buffer */
 };
 
 /* sdio core registers */
@@ -363,8 +370,10 @@ uint32_t brcmf_sdiod_func1_rl(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
 void brcmf_sdiod_func1_wl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t data,
                           zx_status_t* result_out);
 
-zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
-                                 bool write, void* data, size_t size, bool fifo);
+zx_status_t brcmf_sdiod_read(brcmf_sdio_dev* sdiodev, const sdio_protocol_t* proto, uint32_t addr,
+                             void* data, size_t size, bool fifo);
+zx_status_t brcmf_sdiod_write(brcmf_sdio_dev* sdiodev, const sdio_protocol_t* proto, uint32_t addr,
+                              void* data, size_t size, bool fifo);
 
 /* Buffer transfer to/from device (client) core via cmd53.
  *   fn:       function number
@@ -377,13 +386,16 @@ zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func, u
  * Returns 0 or error code.
  * NOTE: Async operation is not currently supported.
  */
-zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf_list* pktq);
 zx_status_t brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes);
+zx_status_t brcmf_sdiod_send_frames(struct brcmf_sdio_dev* sdiodev,
+                                    cpp20::span<wlan::drivers::components::Frame>& frames,
+                                    uint32_t* frames_sent_out);
 
-zx_status_t brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf* pkt);
-zx_status_t brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes);
-zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_netbuf_list* pktq,
-                                   uint totlen);
+zx_status_t brcmf_sdiod_recv_frames(struct brcmf_sdio_dev* sdiodev,
+                                    cpp20::span<wlan::drivers::components::Frame> frames);
+
+zx_status_t brcmf_sdiod_recv_frame(struct brcmf_sdio_dev* sdiodev,
+                                   wlan::drivers::components::Frame& frame, uint32_t bytes);
 
 /* Flags bits */
 
@@ -423,8 +435,6 @@ int brcmf_sdio_oob_irqhandler(void* cookie);
 
 zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus);
 void brcmf_sdio_exit(struct brcmf_bus* bus);
-
-void pkt_align(struct brcmf_netbuf* p, int len, int align);
 
 // The following definitions are made public for unit tests only. Note that sdio/BUILD.gn
 // keeps the scope of these definitions relatively limited by declaring test/* as the
@@ -498,6 +508,49 @@ struct brcmf_sdio_count {
   ulong rx_readahead_cnt; /* packets where header read-ahead was used */
 };
 
+struct brcmf_tx_queue {
+  explicit brcmf_tx_queue(size_t max_frames) : tx_queue(max_frames) {}
+  wlan::drivers::components::PriorityQueue tx_queue __TA_GUARDED(txq_lock);
+  size_t enqueue_count __TA_GUARDED(txq_lock) = 0;
+  std::mutex txq_lock;
+};
+
+struct brcmf_rx_glom {
+  brcmf_rx_glom() { glom_desc.SetSize(0); }
+  wlan::drivers::components::Frame glom_desc;
+  wlan::drivers::components::FrameContainer glom_frames;
+  size_t glom_size;
+  uint32_t glom_count;
+};
+
+struct brcmf_sdio_vmo_data {
+  uint8_t id;
+  zx_handle_t handle;
+  uint64_t size;
+};
+
+struct brcmf_sdio_rx_tx_data {
+  // VMOs
+  brcmf_sdio_vmo_data vmos[MAX_VMOS] __TA_GUARDED(vmos_mutex);
+  std::mutex vmos_mutex;
+  std::array<uint8_t*, MAX_VMOS> vmo_addrs;
+
+  // Frame storage for receiving before we have queued RX space from netdev
+  wlan::drivers::components::FrameStorage rx_space;
+  wlan::drivers::components::FrameStorage rx_space_internal;
+  bool rx_space_valid = false;
+
+  wlan::drivers::components::FrameStorage tx_space;
+
+  // VMO used for internal TX/RX buffers, this is for data that is not exposed outside the driver.
+  zx::vmo internal_vmo;
+
+  // Frames from internal storage that are used for small, frequent tx/rx on func1. Concurrent
+  // access to these will be protected by claim_host/release_host locking for func1.
+  wlan::drivers::components::Frame rx_frame;
+  wlan::drivers::components::Frame tx_frame;
+};
+
 /* misc chip info needed by some of the routines */
 /* Private data for SDIO bus interaction */
 struct brcmf_sdio {
@@ -513,6 +566,8 @@ struct brcmf_sdio {
   uint roundup;       /* Max roundup limit */
 
   struct pktq txq;     /* Queue length used for flow-control */
+  struct brcmf_tx_queue* tx_queue;
+
   uint8_t flowcontrol; /* per prio flow control bitmask */
   uint8_t tx_seq;      /* Transmit sequence number (next) */
   uint8_t tx_max;      /* Maximum transmit sequence allowed */
@@ -529,15 +584,10 @@ struct brcmf_sdio {
   uint txbound; /* Tx frames to send before resched */
   uint txminmax;
 
-  struct brcmf_netbuf* glomd;    /* Packet containing glomming descriptor */
-  struct brcmf_netbuf_list glom; /* Packet list for glommed superframe */
+  struct brcmf_rx_glom* rx_glom;
 
-  uint8_t* rxbuf;      /* Buffer for receiving control packets */
-  uint rxblen;         /* Allocated length of rxbuf */
-  uint8_t* rxctl;      /* Aligned pointer into rxbuf */
-  uint8_t* rxctl_orig; /* pointer for freeing rxctl */
-  uint rxlen;          /* Length of valid data in buffer */
-  // spinlock_t rxctl_lock; /* protection lock for ctrl frame resources */
+  /* ctrl frame resources, protected by bus->sdiodev->drvr->irq_callback_lock */
+  std::vector<uint8_t> rx_ctl_frame;
 
   uint8_t sdpcm_ver; /* Bus protocol reported by dongle */
 
@@ -588,8 +638,11 @@ struct brcmf_sdio {
   bool sleeping;
 
   uint8_t tx_hdrlen;      /* sdio bus header length for tx packet */
+  bool txglom;
   uint16_t head_align;    /* buffer pointer alignment */
   uint16_t sgentry_align; /* scatter-gather buffer alignment */
+
+  brcmf_sdio_rx_tx_data rx_tx_data;
 };
 
 void brcmf_sdio_if_ctrl_frame_stat_set(struct brcmf_sdio* bus, std::function<void()> fn);
@@ -600,5 +653,25 @@ zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, uint msg
 // Load firmware, nvram and CLM binary files. The parameter "reload" means whether this function is
 // called for the firmware reloading process when it crashes.
 zx_status_t brcmf_sdio_load_files(brcmf_pub* drvr, bool reload);
+
+wlan::drivers::components::FrameContainer brcmf_sdio_acquire_rx_space(struct brcmf_sdio* bus,
+                                                                      size_t num);
+std::optional<wlan::drivers::components::Frame> brcmf_sdio_acquire_single_rx_space(
+    struct brcmf_sdio* bus);
+
+std::optional<wlan::drivers::components::Frame> brcmf_sdio_acquire_internal_rx_space(
+    struct brcmf_sdio* bus);
+wlan::drivers::components::FrameContainer brcmf_sdio_acquire_internal_rx_space_to_size(
+    struct brcmf_sdio* bus, size_t size);
+
+wlan::drivers::components::FrameContainer brcmf_sdio_acquire_tx_space(struct brcmf_sdio* bus,
+                                                                      size_t count);
+std::optional<wlan::drivers::components::Frame> brcmf_sdio_acquire_single_tx_space(
+    struct brcmf_sdio* bus);
+
+// Acquire TX space with enough space for |size| bytes and copy |data| into the TX space. This
+// may acquire multiple frames if an individual frame cannot hold |size| bytes.
+wlan::drivers::components::FrameContainer brcmf_sdio_acquire_and_fill_tx_space(
+    struct brcmf_sdio* bus, const void* data, size_t size);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_H_
