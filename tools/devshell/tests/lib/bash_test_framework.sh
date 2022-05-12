@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
+#/ Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 #
 # The Bash Test Framework
@@ -529,7 +529,8 @@ btf::_fail() {
 
 #######################################
 # Outputs the absolute path to the given file, also resolving symbolic links.
-# (Note: This attempts to use the 'realpath' binary, and falls back to Python
+# (Note: This attempts to use the 'realpath' binary, and falls back to
+# look for a valid parent, "cd" to it and use pwd -P.
 # otherwise)
 # Arguments:
 #   $1 - a relative file path. The full path does not have to exist, but
@@ -551,7 +552,19 @@ btf::realpath() {
     status=$?
   fi
   if [[ -z "${rp}" || ${status} -ne 0 ]]; then
-    rp="$(python -c "import os; print(os.path.realpath('${path}'))")"
+    local parent child
+    parent="$(dirname "$path")"
+    child="$(basename "$path")"
+    while [[ -n "$parent" && ! -d "$parent" ]]; do
+      child="$(basename "$parent")/${child}"
+      parent="$(dirname "$parent")"
+    done
+
+    if [[ -z "$parent" ]]; then
+      btf::abort 1 "btf::realpath: path has no valid parent and 'realpath' is not available. Cannot resolve: '${path}'"
+    fi
+
+    rp="$(cd "$parent" && pwd -P)/$child"
   fi
   [[ -n "${rp}" ]] ||
     btf::abort 1 "btf::realpath: result for '${path}' was unexpectedly blank, status=${status}"
