@@ -10,7 +10,6 @@ legacy_base_package_labels += [ "//src/media/audio/bundles:services" ]
 # eventually have to reintroduce some of these packages to support a fully
 # functional product. See fxbug.dev/92985 for milestone progress.
 legacy_base_package_labels -= [
-  "//garnet/bin/setui:setui_service",
   "//src/cobalt/bin/app:cobalt",
   "//src/cobalt/bin/app:cobalt_registry",
   "//src/cobalt/bin/app:config",
@@ -33,6 +32,7 @@ legacy_base_package_labels -= [
   "//src/intl/intl_services/config:sysmgr_small_timezones",
   "//src/media/audio/bundles:services",
   "//src/media/audio/bundles:audio_config",
+  "//src/settings/service:setui_service",
   "//src/sys/activity",
 ]
 

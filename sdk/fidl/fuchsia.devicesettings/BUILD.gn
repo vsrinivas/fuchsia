@@ -17,7 +17,6 @@ fidl("fuchsia.devicesettings") {
 
   visibility = [
     # fxbug.dev/47602 audit the below
-    "//garnet/bin/setui/*",
     "//garnet/bin/setui_client/*",
     "//src/connectivity/network/testing/netemul/*",
     "//src/experiences/session_shells/ermine/settings/*",
@@ -25,6 +24,7 @@ fidl("fuchsia.devicesettings") {
     "//src/modular/bin/basemgr_launcher/*",
     "//src/modular/lib/modular_test_harness/*",
     "//src/modular/tests/*",
+    "//src/settings/service/*",
     "//src/sys/device_settings/*",
   ]
 }

@@ -37,7 +37,7 @@ fuchsia_unittest_package("config_test") {
   manifest = "meta/config_test.cml"
   deps = [
     ":test_jsons",
-    "//garnet/bin/setui:setui-config-test",
+    "//src/settings/service:setui-config-test",
   ]
 }
 

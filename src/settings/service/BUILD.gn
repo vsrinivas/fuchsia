@@ -14,7 +14,6 @@ group("service") {
     ":bin",
     ":lib",
     ":setui_service",
-    ":setui_service_tests",
   ]
 }
 

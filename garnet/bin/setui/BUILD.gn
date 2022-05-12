@@ -2,10 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/config.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_library.gni")
 import("//src/sys/core/build/core_shard.gni")
 
 # Set default visibility for targets to this file only in preparation for
@@ -32,8 +28,6 @@ group("setui_service") {
     ":*",
     "//:developer_base_packages",
     "//:legacy_base_packages",
-    "//src/developer/forensics/feedback/tests/*",
-    "//src/intl/intl_services/tests/*",
   ]
   public_deps = [ "//src/settings/service:setui_service" ]
 }
@@ -44,21 +38,9 @@ group("setui-config-test") {
   visibility = []
   visibility = [
     ":*",
-    "//src/settings/*",
     "//vendor/google/*",
   ]
   public_deps = [ "//src/settings/service:setui-config-test" ]
-}
-
-# TODO(fxbug.dev/98207): remove proxy targets once migration is complete
-group("tests") {
-  visibility = []
-  visibility = [
-    ":*",
-    "//garnet/packages/tests:all",
-  ]
-  testonly = true
-  public_deps = [ "//src/settings/service:tests" ]
 }
 
 group("setui_service_core_shard") {

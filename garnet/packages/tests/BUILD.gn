@@ -25,7 +25,6 @@ group("all") {
     "//garnet/bin/ktrace_provider:ktrace_provider_tests",
     "//garnet/bin/run_test_component:tests",
     "//garnet/bin/sched:tests",
-    "//garnet/bin/setui:tests",
     "//garnet/bin/setui_client:tests",
     "//garnet/bin/sysmgr",
     "//garnet/bin/sysmgr/integration_tests",

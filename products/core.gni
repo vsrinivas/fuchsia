@@ -26,7 +26,6 @@ product_system_image_deps = [
 
 core_realm_package_name = "core"
 core_realm_shards = [
-  "//garnet/bin/setui:setui_service_core_shard",
   "//src/connectivity/network:virtualization-core-shard",
   "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
   "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
@@ -40,6 +39,7 @@ core_realm_shards = [
   "//src/intl/intl_services:intl_services_small_shard",
   "//src/media/audio/audio_core/v2:core_shard",
   "//src/recovery/factory_reset:factory_reset_core_shard",
+  "//src/settings/service:setui_service_core_shard",
   "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
   "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
 
@@ -59,7 +59,6 @@ legacy_base_package_labels += [
 
   # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
   "//src/intl/intl_services/config:sysmgr_small",
-  "//garnet/bin/setui:setui_service",
   "//garnet/bin/sshd-host",
   "//garnet/bin/sshd-host:config",
   "//src/sys/sysmgr",
@@ -105,6 +104,7 @@ legacy_base_package_labels += [
   "//src/recovery/factory_reset",
   "//src/security/policy:appmgr_policy_eng",
   "//src/security/root_ssl_certificates",
+  "//src/settings/service:setui_service",
   "//src/sys/activity",
   "//src/sys/appmgr",
   "//src/sys/appmgr:appmgr_scheme_config",
