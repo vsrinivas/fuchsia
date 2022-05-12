@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   edition = "2018"
-  name = "routing_failed_echo_client"
+  name = "routing_failed_echo_client_rust"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fidl/rust/fidl",

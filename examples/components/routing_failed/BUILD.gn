@@ -4,14 +4,39 @@
 
 import("//build/components.gni")
 
+group("components-routing-failed-example") {
+  testonly = true
+  deps = [
+    ":components-routing-failed-example-cpp",
+    ":components-routing-failed-example-rust",
+  ]
+}
+
 fuchsia_component("echo_realm") {
   manifest = "meta/echo_realm.cml"
 }
 
-fuchsia_package("components-routing-failed-example") {
+# Component manifest that contains an intentionally invalid executable name
+fuchsia_component("echo_server_bad") {
+  # This flag disables build-time checks on the executable path
+  check_references = false
+  manifest = "meta/echo_server_bad.cml"
+}
+
+fuchsia_package("components-routing-failed-example-rust") {
   deps = [
     ":echo_realm",
-    "echo_client",
-    "echo_server:echo_server_components",
+    ":echo_server_bad",
+    "rust:echo_client",
+    "//examples/components/routing/rust/echo_server:echo_server_component",
+  ]
+}
+
+fuchsia_package("components-routing-failed-example-cpp") {
+  deps = [
+    ":echo_realm",
+    ":echo_server_bad",
+    "cpp:echo_client",
+    "//examples/components/routing/cpp/echo_server:echo_server_component",
   ]
 }
