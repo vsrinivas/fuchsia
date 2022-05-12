@@ -33,11 +33,6 @@ void AgentTest::SendResource(std::shared_ptr<DnsResource> resource, MdnsResource
                              const ReplyAddress& reply_address) {
   EXPECT_NE(nullptr, resource);
 
-  if (section == MdnsResourceSection::kExpired) {
-    expirations_.push_back(*resource);
-    return;
-  }
-
   auto& message = outbound_messages_by_reply_address_[reply_address];
   if (message == nullptr) {
     message = std::make_unique<DnsMessage>();
@@ -63,30 +58,8 @@ void AgentTest::SendAddresses(MdnsResourceSection section, const ReplyAddress& r
   SendResource(address_placeholder_, section, reply_address);
 }
 
-void AgentTest::Renew(const DnsResource& resource, Media media, IpVersions ip_versions) {
-  renew_calls_.push_back(resource);
-}
-
-void AgentTest::ExpectRenewCall(DnsResource resource) {
-  for (auto iter = renew_calls_.begin(); iter != renew_calls_.end(); ++iter) {
-    if (*iter == resource) {
-      renew_calls_.erase(iter);
-      return;
-    }
-  }
-
-  EXPECT_TRUE(false) << "Resource not renewed.";
-}
-
-void AgentTest::ExpectExpiration(DnsResource resource) {
-  for (auto iter = expirations_.begin(); iter != expirations_.end(); ++iter) {
-    if (*iter == resource) {
-      expirations_.erase(iter);
-      return;
-    }
-  }
-
-  EXPECT_TRUE(false) << "Resource not expired.";
+void AgentTest::Renew(const DnsResource& resource) {
+  renew_calls_.push(RenewCall{.resource_ = resource});
 }
 
 void AgentTest::RemoveAgent(std::shared_ptr<MdnsAgent> agent) {
@@ -132,17 +105,12 @@ void AgentTest::ExpectNoOther() {
   ExpectNoPostTaskForTime();
   ExpectNoOutboundMessage();
   ExpectNoRenewCalls();
-  ExpectNoExpirations();
   ExpectNoRemoveAgentCall();
 }
 
 void AgentTest::ExpectQuestion(DnsMessage* message, const std::string& name, DnsType type,
                                DnsClass dns_class, bool unicast_response) {
   EXPECT_NE(nullptr, message);
-  if (!message) {
-    return;
-  }
-
   for (auto i = message->questions_.begin(); i != message->questions_.end(); ++i) {
     if ((*i)->name_.dotted_string_.compare(name) == 0 && (*i)->type_ == type &&
         (*i)->class_ == dns_class && (*i)->unicast_response_ == unicast_response) {
@@ -240,7 +208,7 @@ void AgentTest::ExpectAddresses(DnsMessage* message, MdnsResourceSection section
                                 const std::vector<inet::IpAddress>& addresses) {
   bool expect_v4 = false;
   bool expect_v6 = false;
-  for (const auto& address : addresses) {
+  for (auto& address : addresses) {
     if (address.is_v4()) {
       expect_v4 = true;
     } else {
@@ -250,7 +218,7 @@ void AgentTest::ExpectAddresses(DnsMessage* message, MdnsResourceSection section
 
   if (expect_v4) {
     auto resources = ExpectResources(message, section, host_full_name, DnsType::kA);
-    for (const auto& address : addresses) {
+    for (auto& address : addresses) {
       if (address.is_v4()) {
         ExpectAddress(resources, address);
       }
@@ -259,7 +227,7 @@ void AgentTest::ExpectAddresses(DnsMessage* message, MdnsResourceSection section
 
   if (expect_v6) {
     auto resources = ExpectResources(message, section, host_full_name, DnsType::kAaaa);
-    for (const auto& address : addresses) {
+    for (auto& address : addresses) {
       if (address.is_v6()) {
         ExpectAddress(resources, address);
       }

@@ -66,8 +66,8 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     // multicast address.
     virtual void SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_address) = 0;
 
-    // Registers the resource for renewal. See |MdnsAgent::Renew| below.
-    virtual void Renew(const DnsResource& resource, Media media, IpVersions ip_versions) = 0;
+    // Registers the resource for renewal. See |Mdns::Renew|.
+    virtual void Renew(const DnsResource& resource) = 0;
 
     // Removes the specified agent.
     virtual void RemoveAgent(std::shared_ptr<MdnsAgent> agent) = 0;
@@ -162,12 +162,10 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // same name and type but with a TTL of zero. The section parameter
   // accompanying that resource record will be kExpired.
   //
-  // The effect of this call is transient, and there is no way to cancel the
+  // The effect if this call is transient, and there is no way to cancel the
   // renewal. When an agent loses interest in a particular resource, it should
   // simply refrain from renewing the incoming records.
-  void Renew(const DnsResource& resource, Media media, IpVersions ip_versions) const {
-    owner_->Renew(resource, media, ip_versions);
-  }
+  void Renew(const DnsResource& resource) const { owner_->Renew(resource); }
 
   // Removes this agent.
   void RemoveSelf() { owner_->RemoveAgent(shared_from_this()); }

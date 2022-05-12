@@ -17,15 +17,10 @@ fidl("fuchsia.net.mdns") {
   sdk_category = "partner"
 
   sources = [
-    "common.fidl",
-    "host_name_resolver.fidl",
-    "host_name_subscriber.fidl",
     "mdns.fidl",
     "overview.fidl",
     "proxy_host_publisher.fidl",
     "service_instance_publisher.fidl",
-    "service_instance_resolver.fidl",
-    "service_subscriber.fidl",
   ]
 
   public_deps = [

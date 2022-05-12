@@ -63,9 +63,6 @@ struct MdnsNames {
 
   // Determines if |text_string| is a valid text string.
   static bool IsValidTextString(const std::string& text_string);
-
-  // Determines if |text_string| is a valid text string.
-  static bool IsValidTextString(const std::vector<uint8_t>& text_string);
 };
 
 }  // namespace mdns

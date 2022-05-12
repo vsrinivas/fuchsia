@@ -1,21 +1,46 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 library fuchsia.net.mdns;
 
 using fuchsia.net;
 using zx;
+
+/// Identifies a host. Host names consist of one or more labels separated by
+/// '.'s. A host name must not end with a '.'. Labels must each be 63 characters
+/// or less (not including the separator) and are UTF-8-encoded. A complete host
+/// name, including separators, must be 255 characters or less.
+alias host_name = string:255;
+
+/// Identifies a (type of) service being published. Service names consist of
+/// two labels, both terminated with a '.'. The first label must start with an
+/// underscore and be 16 characters or less, including the underscore. The
+/// second label must be either '_tcp' or '_udp'. Labels do not contain '.'s.
+/// With underscores and terminators, that makes for a maximum of 22 characters.
+/// Service names are UTF-8-encoded.
+alias service_name = string:22;
+
+/// Identifies a specific instance of a service being published. Instance names
+/// consist of a single label, which is at most 63 characters long and which
+/// contains no '.'s. Instance names are UTF-8-encoded.
+alias instance_name = string:63;
+
+/// Identifies a subtype of a service. Subtype names consist of a single label,
+/// which is at most 63 characters long and which contains no '.'s. Subtype
+/// names are UTF-8-encoded.
+alias subtype_name = string:63;
 
 /// Provides description relating to a service instance. In typical use, TXT
 /// strings consist of a key and value separated by '='. TXT strings must be
 /// at most 255 characters long and are UTF-8-encoded.
 alias txt_string = string:255;
 
+/// Provides description relating to a service instance. TXT strings must be
+/// at most 255 characters long.
+alias txt_character_string = bytes:255;
+
 /// Discoverable protocol for resolving host names to IP addresses.
-/// Deprecated: use HostNameResolver.
 @discoverable
-@deprecated
 protocol Resolver {
     /// Gets the addresses for the specified host. `timeout` specifies how long
     /// the service should wait before giving up when waiting for a response to
@@ -34,9 +59,7 @@ protocol Resolver {
 };
 
 /// Discoverable protocol for finding service instances.
-/// Deprecated: use ServiceInstanceSubscriber.
 @discoverable
-@deprecated
 protocol Subscriber {
     /// Subscribes to a service. The subscription lasts until `subscriber` is
     /// unbound.
@@ -44,34 +67,6 @@ protocol Subscriber {
         service service_name;
         subscriber client_end:ServiceSubscriber;
     });
-};
-
-/// Client-implemented interface for subscribers. Method replies are used to
-/// throttle traffic. The service won't necessarily wait for a reply before
-/// calling another method.
-@deprecated
-protocol ServiceSubscriber {
-    /// Notifies the subscriber that a service instance has been discovered.
-    OnInstanceDiscovered(struct {
-        instance ServiceInstance;
-    }) -> ();
-
-    /// Notifies the subscriber that addresses or text for a known service
-    /// instance have changed.
-    OnInstanceChanged(struct {
-        instance ServiceInstance;
-    }) -> ();
-
-    /// Notifies the subscriber that a known service instance has been lost.
-    OnInstanceLost(struct {
-        service service_name;
-        instance instance_name;
-    }) -> ();
-
-    /// Notifies the subscriber that a PTR query has been sent.
-    OnQuery(struct {
-        resource_type ResourceType;
-    }) -> ();
 };
 
 /// Discoverable protocol for publishing service instances.
@@ -177,14 +172,50 @@ type Publication = struct {
     txt_ttl zx.duration = DEFAULT_TXT_TTL;
 };
 
-const DEFAULT_SRV_PRIORITY uint16 = 0;
-const DEFAULT_SRV_WEIGHT uint16 = 0;
-const DEFAULT_PTR_TTL zx.duration = 120000000000; // 2 minutes
-const DEFAULT_SRV_TTL zx.duration = 120000000000; // 2 minutes
-const DEFAULT_TXT_TTL zx.duration = 4500000000000; // 75 minutes
+/// Discoverable protocol for resolving service instances.
+@discoverable
+protocol ServiceInstanceResolver {
+    /// Resolves a specific service instance by sending an SRV query and returns
+    /// the endpoints, target and text records.
+    ///
+    /// + request `service` name of the type of service to be resolved. For example, cast uses
+    ///   '_googlecast._tcp.'.
+    /// + request `instance` name of the instance to be resolved. This is often a descriptive name
+    ///   such as `Office Printer` or a name containing a large random number.
+    /// + request `timeout` specifies how long the service should wait before giving up when
+    ///   waiting for a response to a resolution query.
+    ///
+    /// A successful resolution will return target and at least one endpoint.
+    /// Unsuccessful resolution occurs when either the service instance doesn't respond or
+    /// there is no endpoint (IP & port).
+    ResolveServiceInstance(struct {
+        service service_name;
+        instance instance_name;
+        timeout zx.duration;
+    }) -> (struct {
+        instance ServiceInstance;
+    });
+};
+
+/// Specifies network media on which a service instance should be published.
+type Media = strict bits : uint32 {
+    /// Specifies wired interfaces.
+    WIRED = 1;
+
+    /// Specifies wireless interfaces.
+    WIRELESS = 2;
+};
+
+/// Specifies IP versions on which a service instance should be published.
+type IpVersions = strict bits : uint32 {
+    /// Specifies IPv4.
+    V4 = 1;
+
+    /// Specifies IPv6.
+    V6 = 2;
+};
 
 /// Error values for instance publishing.
-@deprecated
 type Error = strict enum : uint32 {
     /// The specified service name is invalid.
     INVALID_SERVICE_NAME = 1;
@@ -200,3 +231,77 @@ type Error = strict enum : uint32 {
     // The specified `Media` value is invalid.
     INVALID_MEDIA = 5;
 };
+
+/// Client-implemented interface for subscribers. Method replies are used to
+/// throttle traffic. The service won't necessarily wait for a reply before
+/// calling another method.
+protocol ServiceSubscriber {
+    /// Notifies the subscriber that a service instance has been discovered.
+    OnInstanceDiscovered(struct {
+        instance ServiceInstance;
+    }) -> ();
+
+    /// Notifies the subscriber that addresses or text for a known service
+    /// instance have changed.
+    OnInstanceChanged(struct {
+        instance ServiceInstance;
+    }) -> ();
+
+    /// Notifies the subscriber that a known service instance has been lost.
+    OnInstanceLost(struct {
+        service service_name;
+        instance instance_name;
+    }) -> ();
+
+    /// Notifies the subscriber that a PTR query has been sent.
+    OnQuery(struct {
+        resource_type ResourceType;
+    }) -> ();
+};
+
+/// DNS resource types.
+type ResourceType = strict enum {
+    /// Domain name pointer.
+    PTR = 12;
+
+    /// Any (wildcard) type.
+    ANY = 255;
+};
+
+/// Describes a service instance.
+type ServiceInstance = table {
+    /// The name of the service.
+    1: service service_name;
+
+    /// The name of the service instance.
+    2: instance instance_name;
+
+    /// IPv4 socket address for the service. May be unset.
+    3: ipv4_endpoint fuchsia.net.Ipv4SocketAddress;
+
+    /// IPv6 socket address for the service. May be unset.
+    4: ipv6_endpoint fuchsia.net.Ipv6SocketAddress;
+
+    /// Text strings describing the instance.
+    5: text vector<txt_string>:MAX_TEXT_STRINGS;
+
+    /// The priority of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    6: srv_priority uint16;
+
+    /// The weight of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    7: srv_weight uint16;
+
+    /// The domain name of the target host.
+    8: target host_name;
+};
+
+const DEFAULT_SRV_PRIORITY uint16 = 0;
+const DEFAULT_SRV_WEIGHT uint16 = 0;
+const DEFAULT_PTR_TTL zx.duration = 120000000000; // 2 minutes
+const DEFAULT_SRV_TTL zx.duration = 120000000000; // 2 minutes
+const DEFAULT_TXT_TTL zx.duration = 4500000000000; // 75 minutes
+const MAX_TEXT_STRINGS uint32 = 256;
+const MAX_SUBTYPES uint32 = 256;
+const MAX_ADDRESSES uint32 = 64;

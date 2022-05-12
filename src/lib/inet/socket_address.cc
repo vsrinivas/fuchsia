@@ -39,12 +39,10 @@ SocketAddress::SocketAddress(const sockaddr_in& addr) {
 }
 
 SocketAddress::SocketAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3, uint16_t w4,
-                             uint16_t w5, uint16_t w6, uint16_t w7, IpPort port,
-                             uint32_t scope_id) {
+                             uint16_t w5, uint16_t w6, uint16_t w7, IpPort port) {
   std::memset(&v6_, 0, sizeof(v6_));
   v6_.sin6_family = AF_INET6;
   v6_.sin6_port = port.as_in_port_t();
-  v6_.sin6_scope_id = scope_id;
   uint16_t* words = v6_.sin6_addr.s6_addr16;
   words[0] = htobe16(w0);
   words[1] = htobe16(w1);
@@ -56,21 +54,19 @@ SocketAddress::SocketAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3,
   words[7] = htobe16(w7);
 }
 
-SocketAddress::SocketAddress(uint16_t w0, uint16_t w7, IpPort port, uint32_t scope_id) {
+SocketAddress::SocketAddress(uint16_t w0, uint16_t w7, IpPort port) {
   std::memset(&v6_, 0, sizeof(v6_));
   v6_.sin6_family = AF_INET6;
   v6_.sin6_port = port.as_in_port_t();
-  v6_.sin6_scope_id = scope_id;
   uint16_t* words = v6_.sin6_addr.s6_addr16;
   words[0] = htobe16(w0);
   words[7] = htobe16(w7);
 }
 
-SocketAddress::SocketAddress(const in6_addr& addr, IpPort port, uint32_t scope_id) {
+SocketAddress::SocketAddress(const in6_addr& addr, IpPort port) {
   std::memset(&v6_, 0, sizeof(v6_));
   v6_.sin6_family = AF_INET6;
   v6_.sin6_port = port.as_in_port_t();
-  v6_.sin6_scope_id = scope_id;
   v6_.sin6_addr = addr;
 }
 
@@ -145,36 +141,7 @@ std::ostream& operator<<(std::ostream& os, const SocketAddress& value) {
     return os << "<invalid>";
   }
 
-  os << value.address() << ":" << value.port();
-
-  if (value.is_v6() && value.scope_id() != 0) {
-    os << "(" << value.scope_id() << ")";
-  }
-
-  return os;
-}
-
-SocketAddress::operator fuchsia::net::Ipv4SocketAddress() const {
-  FX_DCHECK(is_v4());
-  return fuchsia::net::Ipv4SocketAddress{
-      .address = static_cast<fuchsia::net::Ipv4Address>(address()), .port = port().as_uint16_t()};
-}
-
-SocketAddress::operator fuchsia::net::Ipv6SocketAddress() const {
-  FX_DCHECK(is_v6());
-  return fuchsia::net::Ipv6SocketAddress{
-      .address = static_cast<fuchsia::net::Ipv6Address>(address()),
-      .port = port().as_uint16_t(),
-      .zone_index = scope_id()};
-}
-
-SocketAddress::operator fuchsia::net::SocketAddress() const {
-  if (is_v4()) {
-    return fuchsia::net::SocketAddress::WithIpv4(
-        static_cast<fuchsia::net::Ipv4SocketAddress>(*this));
-  }
-
-  return fuchsia::net::SocketAddress::WithIpv6(static_cast<fuchsia::net::Ipv6SocketAddress>(*this));
+  return os << value.address() << ":" << value.port();
 }
 
 }  // namespace inet

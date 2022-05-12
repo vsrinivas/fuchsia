@@ -292,7 +292,7 @@ class RemoteEnd : public fuchsia::net::mdns::PublicationResponder {
     publication->srv_priority = kPriority;
     publication->srv_weight = kWeight;
 
-    for (const auto& source_address : source_addresses) {
+    for (auto& source_address : source_addresses) {
       if (source_address.is_ipv4() && source_address.ipv4().addr != kLocalV4AddressA.addr &&
           source_address.ipv4().addr != kLocalV4AddressB.addr) {
         std::cerr << "Unrecognized source address\n";

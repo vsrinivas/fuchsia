@@ -95,15 +95,15 @@ class InterfacesWatcherImpl : public fuchsia::net::interfaces::testing::Watcher_
 
 class StubInterfaceTransceiver : public MdnsInterfaceTransceiver {
  public:
-  StubInterfaceTransceiver(inet::IpAddress address, const std::string& name, uint32_t id,
+  StubInterfaceTransceiver(inet::IpAddress address, const std::string& name, uint32_t index,
                            Media media)
-      : MdnsInterfaceTransceiver(address, name, id, media),
+      : MdnsInterfaceTransceiver(address, name, index, media),
         ip_versions_(address.is_v4() ? IpVersions::kV4 : IpVersions::kV6) {}
 
   static std::unique_ptr<MdnsInterfaceTransceiver> Create(inet::IpAddress address,
-                                                          const std::string& name, uint32_t id,
+                                                          const std::string& name, uint32_t index,
                                                           Media media) {
-    return std::make_unique<StubInterfaceTransceiver>(address, name, id, media);
+    return std::make_unique<StubInterfaceTransceiver>(address, name, index, media);
   }
 
  protected:

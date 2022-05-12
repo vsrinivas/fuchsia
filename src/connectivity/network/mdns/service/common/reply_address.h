@@ -22,8 +22,7 @@ class ReplyAddress {
   // the appropriate multicast address (V4 or V6) on each interface that meets the qualifications
   // represented by |media| and |ip_versions|.
   static ReplyAddress Multicast(Media media, IpVersions ip_versions) {
-    return ReplyAddress(MdnsAddresses::v4_multicast(), inet::IpAddress(), /* interface_id */ 0,
-                        media, ip_versions);
+    return ReplyAddress(MdnsAddresses::v4_multicast(), inet::IpAddress(), media, ip_versions);
   }
 
   // Creates a reply address with an invalid socket address and interface.
@@ -31,18 +30,16 @@ class ReplyAddress {
 
   // Creates a reply address from an |SocketAddress| and an interface |IpAddress|.
   ReplyAddress(const inet::SocketAddress& socket_address, const inet::IpAddress& interface_address,
-               uint32_t interface_id, Media media, IpVersions ip_versions);
+               Media media, IpVersions ip_versions);
 
   // Creates a reply address from an |sockaddr_storage| struct and an interface
   // |IpAddress|.
   ReplyAddress(const sockaddr_storage& socket_address, const inet::IpAddress& interface_address,
-               uint32_t interface_id, Media media, IpVersions ip_versions);
+               Media media, IpVersions ip_versions);
 
   const inet::SocketAddress& socket_address() const { return socket_address_; }
 
   const inet::IpAddress& interface_address() const { return interface_address_; }
-
-  uint32_t interface_id() const { return interface_id_; }
 
   // Determines whether this |ReplyAddress| is a multicast placeholder as produced by the
   // |Multicast| static method of this class. The V4 multicast address is used to identify such
@@ -71,8 +68,7 @@ class ReplyAddress {
 
   bool operator==(const ReplyAddress& other) const {
     return socket_address_ == other.socket_address() &&
-           interface_address_ == other.interface_address() &&
-           interface_id_ == other.interface_id() && media_ == other.media_ &&
+           interface_address_ == other.interface_address() && media_ == other.media_ &&
            ip_versions_ == other.ip_versions_;
   }
 
@@ -81,7 +77,6 @@ class ReplyAddress {
  private:
   inet::SocketAddress socket_address_;
   inet::IpAddress interface_address_;
-  uint32_t interface_id_;
   Media media_;
   IpVersions ip_versions_;
 };

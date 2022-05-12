@@ -5,7 +5,6 @@
 #include "src/connectivity/network/mdns/service/services/service_instance_resolver_service_impl.h"
 
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
-#include "src/connectivity/network/mdns/service/common/type_converters.h"
 
 namespace mdns {
 
@@ -17,7 +16,6 @@ ServiceInstanceResolverServiceImpl::ServiceInstanceResolverServiceImpl(
 
 void ServiceInstanceResolverServiceImpl::ResolveServiceInstance(
     std::string service, std::string instance, int64_t timeout,
-    fuchsia::net::mdns::ServiceInstanceResolutionOptions options,
     ResolveServiceInstanceCallback callback) {
   if (!MdnsNames::IsValidServiceName(service)) {
     FX_LOGS(ERROR) << "ResolveServiceInstance called with invalid service name " << service
@@ -33,12 +31,8 @@ void ServiceInstanceResolverServiceImpl::ResolveServiceInstance(
     return;
   }
 
-  Media media = options.has_media() ? fidl::To<Media>(options.media()) : Media::kBoth;
-  IpVersions ip_versions =
-      options.has_ip_versions() ? fidl::To<IpVersions>(options.ip_versions()) : IpVersions::kBoth;
-
   mdns().ResolveServiceInstance(
-      service, instance, zx::clock::get_monotonic() + zx::nsec(timeout), media, ip_versions,
+      service, instance, zx::clock::get_monotonic() + zx::nsec(timeout),
       [callback = std::move(callback)](fuchsia::net::mdns::ServiceInstance instance) {
         callback(std::move(instance));
       });

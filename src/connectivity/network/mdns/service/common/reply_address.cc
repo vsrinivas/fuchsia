@@ -9,25 +9,22 @@ namespace mdns {
 ReplyAddress::ReplyAddress()
     : socket_address_(inet::SocketAddress::kInvalid),
       interface_address_(inet::IpAddress::kInvalid),
-      interface_id_(0),
       media_(Media::kBoth),
       ip_versions_(IpVersions::kBoth) {}
 
 ReplyAddress::ReplyAddress(const inet::SocketAddress& socket_address,
-                           const inet::IpAddress& interface_address, uint32_t interface_id,
-                           Media media, IpVersions ip_versions)
+                           const inet::IpAddress& interface_address, Media media,
+                           IpVersions ip_versions)
     : socket_address_(socket_address),
       interface_address_(interface_address),
-      interface_id_(interface_id),
       media_(media),
       ip_versions_(ip_versions) {}
 
 ReplyAddress::ReplyAddress(const sockaddr_storage& socket_address,
-                           const inet::IpAddress& interface_address, uint32_t interface_id,
-                           Media media, IpVersions ip_versions)
+                           const inet::IpAddress& interface_address, Media media,
+                           IpVersions ip_versions)
     : socket_address_(socket_address),
       interface_address_(interface_address),
-      interface_id_(interface_id),
       media_(media),
       ip_versions_(ip_versions) {}
 

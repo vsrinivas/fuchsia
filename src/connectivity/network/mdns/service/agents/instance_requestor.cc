@@ -14,17 +14,14 @@ namespace mdns {
 namespace {
 
 // static
-static constexpr zx::duration kMaxQueryInterval = zx::hour(1);
+static constexpr zx::duration kMaxQueryInterval = zx::sec(60 * 60);
 
 }  // namespace
 
-InstanceRequestor::InstanceRequestor(MdnsAgent::Owner* owner, const std::string& service_name,
-                                     Media media, IpVersions ip_versions)
+InstanceRequestor::InstanceRequestor(MdnsAgent::Owner* owner, const std::string& service_name)
     : MdnsAgent(owner),
       service_name_(service_name),
       service_full_name_(MdnsNames::ServiceFullName(service_name)),
-      media_(media),
-      ip_versions_(ip_versions),
       question_(std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {}
 
 InstanceRequestor::~InstanceRequestor() {}
@@ -50,10 +47,6 @@ void InstanceRequestor::Start(const std::string& local_host_full_name) {
 
 void InstanceRequestor::ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
                                         ReplyAddress sender_address) {
-  if (!sender_address.Matches(media_) || !sender_address.Matches(ip_versions_)) {
-    return;
-  }
-
   switch (resource.type_) {
     case DnsType::kPtr:
       if (resource.name_.dotted_string_ == service_full_name_) {
@@ -75,13 +68,13 @@ void InstanceRequestor::ReceiveResource(const DnsResource& resource, MdnsResourc
     case DnsType::kA: {
       auto iter = target_infos_by_full_name_.find(resource.name_.dotted_string_);
       if (iter != target_infos_by_full_name_.end()) {
-        ReceiveAResource(resource, section, &iter->second, sender_address.interface_id());
+        ReceiveAResource(resource, section, &iter->second);
       }
     } break;
     case DnsType::kAaaa: {
       auto iter = target_infos_by_full_name_.find(resource.name_.dotted_string_);
       if (iter != target_infos_by_full_name_.end()) {
-        ReceiveAaaaResource(resource, section, &iter->second, sender_address.interface_id());
+        ReceiveAaaaResource(resource, section, &iter->second);
       }
     } break;
     default:
@@ -109,7 +102,7 @@ void InstanceRequestor::EndOfMessage() {
       continue;
     }
 
-    if (target_info.addresses_.empty()) {
+    if (!target_info.v4_address_ && !target_info.v6_address_) {
       // No addresses yet.
       continue;
     }
@@ -118,17 +111,19 @@ void InstanceRequestor::EndOfMessage() {
     if (instance_info.new_) {
       instance_info.new_ = false;
       for (auto subscriber : subscribers_) {
-        subscriber->InstanceDiscovered(service_name_, instance_info.instance_name_,
-                                       Addresses(target_info, instance_info.port_),
-                                       instance_info.text_, instance_info.srv_priority_,
-                                       instance_info.srv_weight_, instance_info.target_);
+        subscriber->InstanceDiscovered(
+            service_name_, instance_info.instance_name_,
+            inet::SocketAddress(target_info.v4_address_, instance_info.port_),
+            inet::SocketAddress(target_info.v6_address_, instance_info.port_), instance_info.text_,
+            instance_info.srv_priority_, instance_info.srv_weight_, instance_info.target_);
       }
     } else {
       for (auto subscriber : subscribers_) {
-        subscriber->InstanceChanged(service_name_, instance_info.instance_name_,
-                                    Addresses(target_info, instance_info.port_),
-                                    instance_info.text_, instance_info.srv_priority_,
-                                    instance_info.srv_weight_, instance_info.target_);
+        subscriber->InstanceChanged(
+            service_name_, instance_info.instance_name_,
+            inet::SocketAddress(target_info.v4_address_, instance_info.port_),
+            inet::SocketAddress(target_info.v6_address_, instance_info.port_), instance_info.text_,
+            instance_info.srv_priority_, instance_info.srv_weight_, instance_info.target_);
       }
     }
 
@@ -149,7 +144,7 @@ void InstanceRequestor::EndOfMessage() {
 }
 
 void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
-  for (const auto& [_, instance_info] : instance_infos_by_full_name_) {
+  for (auto& [_, instance_info] : instance_infos_by_full_name_) {
     if (instance_info.target_.empty()) {
       // We haven't yet seen an SRV record for this instance.
       continue;
@@ -159,21 +154,22 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
     FX_DCHECK(iter != target_infos_by_full_name_.end());
     TargetInfo& target_info = iter->second;
 
-    if (target_info.addresses_.empty()) {
+    if (!target_info.v4_address_ && !target_info.v6_address_) {
       // No addresses yet.
       continue;
     }
 
-    subscriber->InstanceDiscovered(service_name_, instance_info.instance_name_,
-                                   Addresses(target_info, instance_info.port_), instance_info.text_,
-                                   instance_info.srv_priority_, instance_info.srv_weight_,
-                                   instance_info.target_);
+    subscriber->InstanceDiscovered(
+        service_name_, instance_info.instance_name_,
+        inet::SocketAddress(target_info.v4_address_, instance_info.port_),
+        inet::SocketAddress(target_info.v6_address_, instance_info.port_), instance_info.text_,
+        instance_info.srv_priority_, instance_info.srv_weight_, instance_info.target_);
   }
 }
 
 void InstanceRequestor::SendQuery() {
-  SendQuestion(question_, ReplyAddress::Multicast(media_, ip_versions_));
-  for (const auto& subscriber : subscribers_) {
+  SendQuestion(question_, ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+  for (auto& subscriber : subscribers_) {
     subscriber->Query(question_->type_);
   }
 
@@ -210,7 +206,7 @@ void InstanceRequestor::ReceivePtrResource(const DnsResource& resource,
     iter->second.instance_name_ = instance_name;
   }
 
-  Renew(resource, media_, ip_versions_);
+  Renew(resource);
 }
 
 void InstanceRequestor::ReceiveSrvResource(const DnsResource& resource, MdnsResourceSection section,
@@ -245,7 +241,7 @@ void InstanceRequestor::ReceiveSrvResource(const DnsResource& resource, MdnsReso
     instance_info->dirty_ = true;
   }
 
-  Renew(resource, media_, ip_versions_);
+  Renew(resource);
 }
 
 void InstanceRequestor::ReceiveTxtResource(const DnsResource& resource, MdnsResourceSection section,
@@ -271,46 +267,45 @@ void InstanceRequestor::ReceiveTxtResource(const DnsResource& resource, MdnsReso
     }
   }
 
-  Renew(resource, media_, ip_versions_);
+  Renew(resource);
 }
 
 void InstanceRequestor::ReceiveAResource(const DnsResource& resource, MdnsResourceSection section,
-                                         TargetInfo* target_info, uint32_t scope_id) {
-  inet::SocketAddress address(resource.a_.address_.address_, inet::IpPort(), scope_id);
-
+                                         TargetInfo* target_info) {
   if (resource.time_to_live_ == 0) {
-    if (target_info->addresses_.erase(address)) {
+    if (target_info->v4_address_) {
+      target_info->v4_address_ = inet::IpAddress::kInvalid;
       target_info->dirty_ = true;
     }
 
     return;
   }
 
-  if (target_info->addresses_.insert(address).second) {
+  if (target_info->v4_address_ != resource.a_.address_.address_) {
+    target_info->v4_address_ = resource.a_.address_.address_;
     target_info->dirty_ = true;
   }
 
-  Renew(resource, media_, ip_versions_);
+  Renew(resource);
 }
 
 void InstanceRequestor::ReceiveAaaaResource(const DnsResource& resource,
-                                            MdnsResourceSection section, TargetInfo* target_info,
-                                            uint32_t scope_id) {
-  inet::SocketAddress address(resource.aaaa_.address_.address_, inet::IpPort(), scope_id);
-
+                                            MdnsResourceSection section, TargetInfo* target_info) {
   if (resource.time_to_live_ == 0) {
-    if (target_info->addresses_.erase(address)) {
+    if (target_info->v6_address_) {
+      target_info->v6_address_ = inet::IpAddress::kInvalid;
       target_info->dirty_ = true;
     }
 
     return;
   }
 
-  if (target_info->addresses_.insert(address).second) {
+  if (target_info->v6_address_ != resource.aaaa_.address_.address_) {
+    target_info->v6_address_ = resource.aaaa_.address_.address_;
     target_info->dirty_ = true;
   }
 
-  Renew(resource, media_, ip_versions_);
+  Renew(resource);
 }
 
 void InstanceRequestor::RemoveInstance(const std::string& instance_full_name) {
@@ -322,16 +317,6 @@ void InstanceRequestor::RemoveInstance(const std::string& instance_full_name) {
 
     instance_infos_by_full_name_.erase(iter);
   }
-}
-
-std::vector<inet::SocketAddress> InstanceRequestor::Addresses(const TargetInfo& target_info,
-                                                              inet::IpPort port) {
-  std::vector<inet::SocketAddress> result;
-  std::transform(target_info.addresses_.begin(), target_info.addresses_.end(),
-                 std::back_inserter(result), [port](const inet::SocketAddress& address) {
-                   return inet::SocketAddress(address.address(), port, address.scope_id());
-                 });
-  return result;
 }
 
 }  // namespace mdns

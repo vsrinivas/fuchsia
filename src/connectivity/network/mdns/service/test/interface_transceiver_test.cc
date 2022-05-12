@@ -20,9 +20,9 @@ namespace test {
 
 class MdnsInterfaceTransceiverTest : public MdnsInterfaceTransceiver {
  public:
-  MdnsInterfaceTransceiverTest(inet::IpAddress address, const std::string& name, uint32_t id,
+  MdnsInterfaceTransceiverTest(inet::IpAddress address, const std::string& name, uint32_t index,
                                Media media)
-      : MdnsInterfaceTransceiver(address, name, id, media),
+      : MdnsInterfaceTransceiver(address, name, index, media),
         ip_versions_(address.is_v4() ? IpVersions::kV4 : IpVersions::kV6) {}
 
   virtual ~MdnsInterfaceTransceiverTest() override {}
@@ -81,13 +81,13 @@ TEST(InterfaceTransceiverTest, Construct) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
-  uint32_t nic_id = 1234;
+  uint32_t nic_index = 1234;
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   EXPECT_EQ(nic_address, under_test.address());
   EXPECT_EQ(nic_name, under_test.name());
-  EXPECT_EQ(nic_id, under_test.id());
+  EXPECT_EQ(nic_index, under_test.index());
   EXPECT_EQ(Media::kWired, under_test.media());
 }
 
@@ -96,11 +96,11 @@ TEST(InterfaceTransceiverTest, SendSimpleMessage) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
-  uint32_t nic_id = 1234;
+  uint32_t nic_index = 1234;
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   auto ptr_resource = std::make_shared<DnsResource>("_test_name._whatever.", DnsType::kPtr);
   ptr_resource->time_to_live_ = 234;
@@ -136,11 +136,11 @@ TEST(InterfaceTransceiverTest, SendLeadingA) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
-  uint32_t nic_id = 1234;
+  uint32_t nic_index = 1234;
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -185,11 +185,11 @@ TEST(InterfaceTransceiverTest, SendLeadingAAndAAAA) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
-  uint32_t nic_id = 1234;
+  uint32_t nic_index = 1234;
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -237,11 +237,11 @@ TEST(InterfaceTransceiverTest, SendTrailingAAndAAAA) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
-  uint32_t nic_id = 1234;
+  uint32_t nic_index = 1234;
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -289,11 +289,11 @@ TEST(InterfaceTransceiverTest, SendBracketingAAndAAAA) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
-  uint32_t nic_id = 1234;
+  uint32_t nic_index = 1234;
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -342,11 +342,11 @@ TEST(InterfaceTransceiverTest, SendLeadingAWithAlternate) {
   inet::IpAddress nic_address(1, 2, 3, 4);
   inet::IpAddress alternate_address(1, 2);
   std::string nic_name = "testnic";
-  uint32_t nic_id = 1234;
+  uint32_t nic_index = 1234;
 
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
-  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_index, Media::kWired);
   under_test.SetAlternateAddress(alternate_address);
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);

@@ -9,7 +9,6 @@
 #include <sstream>
 
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
-#include "src/connectivity/network/mdns/service/common/type_converters.h"
 #include "src/lib/json_parser/rapidjson_validation.h"
 
 namespace mdns {
@@ -115,7 +114,7 @@ void Config::IntegrateDocument(const rapidjson::Document& document,
 
   if (document.HasMember(kPublicationsKey)) {
     FX_DCHECK(document[kPublicationsKey].IsArray());
-    for (const auto& item : document[kPublicationsKey].GetArray()) {
+    for (auto& item : document[kPublicationsKey].GetArray()) {
       IntegratePublication(item, local_host_name);
       if (parser_.HasError()) {
         return;
@@ -168,7 +167,7 @@ void Config::IntegratePublication(const rapidjson::Value& value,
   std::vector<std::string> text;
   if (value.HasMember(kTextKey)) {
     FX_DCHECK(value[kTextKey].IsArray());
-    for (const auto& item : value[kTextKey].GetArray()) {
+    for (auto& item : value[kTextKey].GetArray()) {
       FX_DCHECK(item.IsString());
       if (!MdnsNames::IsValidTextString(item.GetString())) {
         parser_.ReportError((std::stringstream() << kTextKey << " item value " << item.GetString()
@@ -204,8 +203,7 @@ void Config::IntegratePublication(const rapidjson::Value& value,
       .service_ = service,
       .instance_ = instance,
       .publication_ =
-          Mdns::Publication::Create(inet::IpPort::From_uint16_t(static_cast<uint16_t>(port)),
-                                    fidl::To<std::vector<std::vector<uint8_t>>>(text)),
+          Mdns::Publication::Create(inet::IpPort::From_uint16_t(static_cast<uint16_t>(port)), text),
       .perform_probe_ = perform_probe,
       .media_ = media});
 }

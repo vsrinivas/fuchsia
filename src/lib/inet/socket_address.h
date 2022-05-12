@@ -36,13 +36,13 @@ class SocketAddress {
 
   // Creates an IPV6 socket address from eight address words and an IpPort.
   SocketAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3, uint16_t w4, uint16_t w5,
-                uint16_t w6, uint16_t w7, IpPort port, uint32_t scope_id = 0);
+                uint16_t w6, uint16_t w7, IpPort port);
 
   // Creates an IPV6 socket address from two address words and an IpPort.
-  SocketAddress(uint16_t w0, uint16_t w7, IpPort port, uint32_t scope_id = 0);
+  SocketAddress(uint16_t w0, uint16_t w7, IpPort port);
 
   // Creates an IPV6 socket address from an in6_addr struct and an IpPort.
-  SocketAddress(const in6_addr& addr, IpPort port, uint32_t scope_id = 0);
+  SocketAddress(const in6_addr& addr, IpPort port);
 
   // Creates an IPV6 socket address from an sockaddr_in6 struct.
   explicit SocketAddress(const sockaddr_in6& addr);
@@ -74,7 +74,7 @@ class SocketAddress {
 
   IpPort port() const { return IpPort::From_in_port_t(v4_.sin_port); }
 
-  uint32_t scope_id() const { return is_v6() ? as_sockaddr_in6().sin6_scope_id : 0; }
+  uint32_t scope_id() const { return as_sockaddr_in6().sin6_scope_id; }
 
   const sockaddr_in& as_sockaddr_in() const {
     FX_DCHECK(is_v4());
@@ -100,12 +100,6 @@ class SocketAddress {
   }
 
   bool operator!=(const SocketAddress& other) const { return !(*this == other); }
-
-  explicit operator fuchsia::net::Ipv4SocketAddress() const;
-
-  explicit operator fuchsia::net::Ipv6SocketAddress() const;
-
-  explicit operator fuchsia::net::SocketAddress() const;
 
  private:
   void Build(const IpAddress& address, IpPort port, uint32_t scope_id);

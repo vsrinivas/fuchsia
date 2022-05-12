@@ -17,12 +17,9 @@
 #include "src/connectivity/network/mdns/service/common/mdns_fidl_util.h"
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
 #include "src/connectivity/network/mdns/service/common/type_converters.h"
-#include "src/connectivity/network/mdns/service/services/host_name_resolver_service_impl.h"
-#include "src/connectivity/network/mdns/service/services/host_name_subscriber_service_impl.h"
 #include "src/connectivity/network/mdns/service/services/proxy_host_publisher_service_impl.h"
 #include "src/connectivity/network/mdns/service/services/service_instance_publisher_service_impl.h"
 #include "src/connectivity/network/mdns/service/services/service_instance_resolver_service_impl.h"
-#include "src/connectivity/network/mdns/service/services/service_subscriber_service_impl.h"
 
 namespace mdns {
 namespace {
@@ -51,18 +48,6 @@ MdnsServiceImpl::MdnsServiceImpl(sys::ComponentContext* component_context)
     : component_context_(component_context),
       mdns_(transceiver_),
       deprecated_services_(mdns_, component_context),
-      host_name_resolver_manager_(
-          [this](fidl::InterfaceRequest<fuchsia::net::mdns::HostNameResolver> request,
-                 fit::closure deleter) {
-            return std::make_unique<HostNameResolverServiceImpl>(mdns_, std::move(request),
-                                                                 std::move(deleter));
-          }),
-      host_name_subscriber_manager_(
-          [this](fidl::InterfaceRequest<fuchsia::net::mdns::HostNameSubscriber> request,
-                 fit::closure deleter) {
-            return std::make_unique<HostNameSubscriberServiceImpl>(mdns_, std::move(request),
-                                                                   std::move(deleter));
-          }),
       proxy_host_publisher_manager_(
           [this](fidl::InterfaceRequest<fuchsia::net::mdns::ProxyHostPublisher> request,
                  fit::closure deleter) {
@@ -75,23 +60,14 @@ MdnsServiceImpl::MdnsServiceImpl(sys::ComponentContext* component_context)
             return std::make_unique<ServiceInstancePublisherServiceImpl>(mdns_, std::move(request),
                                                                          std::move(deleter));
           }),
-      service_subscriber_manager_(
-          [this](fidl::InterfaceRequest<fuchsia::net::mdns::ServiceSubscriber2> request,
-                 fit::closure deleter) {
-            return std::make_unique<ServiceSubscriberServiceImpl>(mdns_, std::move(request),
-                                                                  std::move(deleter));
-          }),
       service_instance_resolver_manager_(
           [this](fidl::InterfaceRequest<fuchsia::net::mdns::ServiceInstanceResolver> request,
                  fit::closure deleter) {
             return std::make_unique<ServiceInstanceResolverServiceImpl>(mdns_, std::move(request),
                                                                         std::move(deleter));
           }) {
-  host_name_resolver_manager_.AddOutgoingPublicService(component_context);
-  host_name_subscriber_manager_.AddOutgoingPublicService(component_context);
   proxy_host_publisher_manager_.AddOutgoingPublicService(component_context);
   service_instance_publisher_manager_.AddOutgoingPublicService(component_context);
-  service_subscriber_manager_.AddOutgoingPublicService(component_context);
   service_instance_resolver_manager_.AddOutgoingPublicService(component_context);
 
   Start();
@@ -127,7 +103,7 @@ void MdnsServiceImpl::OnReady() {
   ready_ = true;
 
   // Publish as indicated in config files.
-  for (const auto& publication : config_.publications()) {
+  for (auto& publication : config_.publications()) {
     PublishServiceInstance(
         publication.service_, publication.instance_, publication.publication_->Clone(),
         publication.perform_probe_, publication.media_,
@@ -139,11 +115,8 @@ void MdnsServiceImpl::OnReady() {
         });
   }
 
-  host_name_resolver_manager_.OnReady();
-  host_name_subscriber_manager_.OnReady();
   proxy_host_publisher_manager_.OnReady();
   service_instance_publisher_manager_.OnReady();
-  service_subscriber_manager_.OnReady();
   service_instance_resolver_manager_.OnReady();
 }
 

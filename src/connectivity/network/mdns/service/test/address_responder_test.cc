@@ -39,7 +39,6 @@ class AddressResponderTest : public AgentTest {
 constexpr char kHostFullName[] = "test2host.local.";
 const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
                                               inet::IpAddress(192, 168, 1, 201)};
-constexpr uint32_t kInterfaceId = 1;
 
 // Tests initial startup of the responder.
 TEST_F(AddressResponderTest, Startup) {
@@ -62,10 +61,10 @@ TEST_F(AddressResponderTest, MulticastRateLimit) {
 
   ReplyAddress sender_address0(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kV4);
+      inet::IpAddress(192, 168, 1, 100), Media::kWireless, IpVersions::kV4);
   ReplyAddress sender_address1(
       inet::SocketAddress(192, 168, 1, 2, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(0xfe80, 1), kInterfaceId, Media::kWired, IpVersions::kV6);
+      inet::IpAddress(0xfe80, 1), Media::kWired, IpVersions::kV6);
 
   // First question.
   under_test.ReceiveQuestion(DnsQuestion(kLocalHostFullName, DnsType::kA),
@@ -105,7 +104,7 @@ TEST_F(AddressResponderTest, HostNameAndAddresses) {
 
   ReplyAddress sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kV4);
+      inet::IpAddress(192, 168, 1, 100), Media::kWireless, IpVersions::kV4);
 
   under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
@@ -125,7 +124,7 @@ TEST_F(AddressResponderTest, WiredOnly) {
 
   ReplyAddress sender_address0(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kV4);
+      inet::IpAddress(192, 168, 1, 100), Media::kWireless, IpVersions::kV4);
 
   under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
@@ -135,7 +134,7 @@ TEST_F(AddressResponderTest, WiredOnly) {
 
   ReplyAddress sender_address1(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kBoth);
 
   under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
@@ -155,7 +154,7 @@ TEST_F(AddressResponderTest, WirelessOnly) {
 
   ReplyAddress sender_address0(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kV4);
+      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kV4);
 
   under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
@@ -165,7 +164,7 @@ TEST_F(AddressResponderTest, WirelessOnly) {
 
   ReplyAddress sender_address1(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kBoth);
+      inet::IpAddress(192, 168, 1, 100), Media::kWireless, IpVersions::kBoth);
 
   under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
@@ -185,7 +184,7 @@ TEST_F(AddressResponderTest, V4Only) {
 
   ReplyAddress sender_address0(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(0xfe80, 1), kInterfaceId, Media::kWireless, IpVersions::kV6);
+      inet::IpAddress(0xfe80, 1), Media::kWireless, IpVersions::kV6);
 
   under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
@@ -195,7 +194,7 @@ TEST_F(AddressResponderTest, V4Only) {
 
   ReplyAddress sender_address1(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kV4);
+      inet::IpAddress(192, 168, 1, 100), Media::kWired, IpVersions::kV4);
 
   under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
@@ -204,7 +203,7 @@ TEST_F(AddressResponderTest, V4Only) {
   ExpectNoOther();
 }
 
-// Tests operation with Vt ip_version only.
+// Tests operation with V6 ip_version only.
 TEST_F(AddressResponderTest, V6Only) {
   AddressResponder under_test(this, kHostFullName, kAddresses, Media::kBoth, IpVersions::kV6);
   SetAgent(under_test);
@@ -215,7 +214,7 @@ TEST_F(AddressResponderTest, V6Only) {
 
   ReplyAddress sender_address0(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kV4);
+      inet::IpAddress(192, 168, 1, 100), Media::kWireless, IpVersions::kV4);
 
   under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
@@ -225,7 +224,7 @@ TEST_F(AddressResponderTest, V6Only) {
 
   ReplyAddress sender_address1(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(0xfe80, 1), kInterfaceId, Media::kWired, IpVersions::kV6);
+      inet::IpAddress(0xfe80, 1), Media::kWired, IpVersions::kV6);
 
   under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
                              ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),

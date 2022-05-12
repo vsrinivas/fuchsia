@@ -100,7 +100,7 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataPtr& value) 
 }
 
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataTxt& value) {
-  for (const auto& string : value.strings_) {
+  for (auto& string : value.strings_) {
     if (string.size() > std::numeric_limits<uint8_t>::max()) {
       continue;
     }

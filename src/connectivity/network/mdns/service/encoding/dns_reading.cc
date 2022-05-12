@@ -185,9 +185,9 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataTxt& value) {
       break;
     }
 
-    const uint8_t* start = reader.Bytes(length);
+    const char* start = reinterpret_cast<const char*>(reader.Bytes(length));
 
-    std::vector<uint8_t> s(start, start + length);
+    std::string s(start, length);
     value.strings_.emplace_back(s);
   }
 

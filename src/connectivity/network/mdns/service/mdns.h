@@ -27,7 +27,6 @@
 
 namespace mdns {
 
-class HostNameRequestor;
 class InstanceProber;
 class InstanceRequestor;
 class InstanceResponder;
@@ -71,42 +70,18 @@ class Mdns : public MdnsAgent::Owner {
   // Describes an initial instance publication or query response.
   struct Publication {
     static std::unique_ptr<Publication> Create(
-        inet::IpPort port,
-        const std::vector<std::vector<uint8_t>>& text = std::vector<std::vector<uint8_t>>(),
+        inet::IpPort port, const std::vector<std::string>& text = std::vector<std::string>(),
         uint16_t srv_priority = 0, uint16_t srv_weight = 0);
 
     std::unique_ptr<Publication> Clone();
 
     inet::IpPort port_;
-    std::vector<std::vector<uint8_t>> text_;
+    std::vector<std::string> text_;
     uint16_t srv_priority_ = 0;
     uint16_t srv_weight_ = 0;
     uint32_t ptr_ttl_seconds_ = 120;   // default 2 minutes
     uint32_t srv_ttl_seconds_ = 120;   // default 2 minutes
     uint32_t txt_ttl_seconds_ = 4500;  // default 75 minutes
-  };
-
-  // Abstract base class for client-supplied subscriber.
-  class HostNameSubscriber {
-   public:
-    virtual ~HostNameSubscriber();
-
-    // Unsubscribes from the host name. If this |Subscriber| is already
-    // unsubscribed, this method does nothing.
-    void Unsubscribe();
-
-    // Called when addresses associated with the host name are changed.
-    virtual void AddressesChanged(std::vector<HostAddress> addresses) = 0;
-
-   protected:
-    HostNameSubscriber() = default;
-
-   private:
-    void Connect(std::shared_ptr<HostNameRequestor> host_name_requestor);
-
-    std::shared_ptr<HostNameRequestor> host_name_requestor_;
-
-    friend class Mdns;
   };
 
   // Abstract base class for client-supplied subscriber.
@@ -120,17 +95,17 @@ class Mdns : public MdnsAgent::Owner {
 
     // Called when a new instance is discovered.
     virtual void InstanceDiscovered(const std::string& service, const std::string& instance,
-                                    const std::vector<inet::SocketAddress>& addresses,
-                                    const std::vector<std::vector<uint8_t>>& text,
-                                    uint16_t srv_priority, uint16_t srv_weight,
-                                    const std::string& target) = 0;
+                                    const inet::SocketAddress& v4_address,
+                                    const inet::SocketAddress& v6_address,
+                                    const std::vector<std::string>& text, uint16_t srv_priority,
+                                    uint16_t srv_weight, const std::string& target) = 0;
 
     // Called when a previously discovered instance changes addresses or text.
     virtual void InstanceChanged(const std::string& service, const std::string& instance,
-                                 const std::vector<inet::SocketAddress>& addresses,
-                                 const std::vector<std::vector<uint8_t>>& text,
-                                 uint16_t srv_priority, uint16_t srv_weight,
-                                 const std::string& target) = 0;
+                                 const inet::SocketAddress& v4_address,
+                                 const inet::SocketAddress& v6_address,
+                                 const std::vector<std::string>& text, uint16_t srv_priority,
+                                 uint16_t srv_weight, const std::string& target) = 0;
 
     // Called when an instance is lost.
     virtual void InstanceLost(const std::string& service, const std::string& instance) = 0;
@@ -232,7 +207,8 @@ class Mdns : public MdnsAgent::Owner {
   };
 
   using ResolveHostNameCallback =
-      fit::function<void(const std::string& host_name, std::vector<HostAddress> addresses)>;
+      fit::function<void(const std::string& host_name, const inet::IpAddress& v4_address,
+                         const inet::IpAddress& v6_address)>;
 
   using ResolveServiceInstanceCallback = fit::function<void(fuchsia::net::mdns::ServiceInstance)>;
 
@@ -257,30 +233,21 @@ class Mdns : public MdnsAgent::Owner {
   // passed in to |Start| if address probing detected conflicts.
   std::string local_host_name() { return local_host_name_; }
 
-  // Resolves |host_name| to |IpAddress|es. Must not be called before |Start|'s ready callback is
-  // called.
-  void ResolveHostName(const std::string& host_name, zx::duration timeout, Media media,
-                       IpVersions ip_versions, ResolveHostNameCallback callback);
-
-  // Subscribers to the specified host name. Must not be called before
-  // |Start|'s ready callback is called. The subscription is cancelled when
-  // the subscriber is deleted or its |Unsubscribe| method is called.
-  // Multiple subscriptions may be created for a given host name.
-  void SubscribeToHostName(const std::string& host_name, Media media, IpVersions ip_versions,
-                           HostNameSubscriber* subscriber);
+  // Resolves |host_name| to one or two |IpAddress|es. Must not be called before
+  // |Start|'s ready callback is called.
+  void ResolveHostName(const std::string& host_name, zx::time timeout,
+                       ResolveHostNameCallback callback);
 
   // Resolves |service+instance| to a node, i.e sends an SRV query and gets
   // a valid response if the service instance exists/is active.
   void ResolveServiceInstance(const std::string& service, const std::string& instance,
-                              zx::time timeout, Media media, IpVersions ip_versions,
-                              ResolveServiceInstanceCallback callback);
+                              zx::time timeout, ResolveServiceInstanceCallback callback);
 
   // Subscribes to the specified service. The subscription is cancelled when
   // the subscriber is deleted or its |Unsubscribe| method is called.
   // Multiple subscriptions may be created for a given service name. Must not be
   // called before |Start|'s ready callback is called.
-  void SubscribeToService(const std::string& service_name, Media media, IpVersions ip_versions,
-                          Subscriber* subscriber);
+  void SubscribeToService(const std::string& service_name, Subscriber* subscriber);
 
   // Publishes a service instance. Returns false if and only if the instance was
   // already published locally. The instance is unpublished when the publisher
@@ -335,9 +302,8 @@ class Mdns : public MdnsAgent::Owner {
     std::size_t operator()(const ReplyAddress& reply_address) const noexcept {
       return std::hash<inet::SocketAddress>{}(reply_address.socket_address()) ^
              (std::hash<inet::IpAddress>{}(reply_address.interface_address()) << 1) ^
-             (std::hash<uint32_t>{}(reply_address.interface_id()) << 2) ^
-             (std::hash<Media>{}(reply_address.media()) << 3) ^
-             (std::hash<IpVersions>{}(reply_address.ip_versions()) << 4);
+             (std::hash<Media>{}(reply_address.media()) << 2) ^
+             (std::hash<IpVersions>{}(reply_address.ip_versions()) << 3);
     }
   };
 
@@ -350,28 +316,6 @@ class Mdns : public MdnsAgent::Owner {
   struct ResourceEqual {
     bool operator()(std::shared_ptr<DnsResource> a, std::shared_ptr<DnsResource> b) const noexcept {
       return a ? (b ? *a == *b : false) : !b;
-    }
-  };
-
-  struct RequestorKey {
-    RequestorKey() = default;
-
-    RequestorKey(std::string name, Media media, IpVersions ip_versions)
-        : name_(std::move(name)), media_(media), ip_versions_(ip_versions) {}
-
-    bool operator==(const RequestorKey& other) const {
-      return name_ == other.name_ && media_ == other.media_ && ip_versions_ == other.ip_versions_;
-    }
-
-    std::string name_;
-    Media media_;
-    IpVersions ip_versions_;
-  };
-
-  struct RequestorKeyHash {
-    std::size_t operator()(const RequestorKey& value) const noexcept {
-      return std::hash<std::string>{}(value.name_) ^ (std::hash<Media>{}(value.media_) << 1) ^
-             (std::hash<IpVersions>{}(value.ip_versions_) << 2);
     }
   };
 
@@ -396,7 +340,7 @@ class Mdns : public MdnsAgent::Owner {
       }
     }
 
-    void Build(DnsMessage& message_out) const {
+    void Build(DnsMessage& message_out) {
       if (questions_.empty()) {
         message_out.header_.SetResponse(true);
         message_out.header_.SetAuthoritativeAnswer(true);
@@ -456,7 +400,7 @@ class Mdns : public MdnsAgent::Owner {
 
   void SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_address) override;
 
-  void Renew(const DnsResource& resource, Media media, IpVersions ip_versions) override;
+  void Renew(const DnsResource& resource) override;
 
   void RemoveAgent(std::shared_ptr<MdnsAgent> agent) override;
 
@@ -495,10 +439,8 @@ class Mdns : public MdnsAgent::Owner {
       outbound_message_builders_by_reply_address_;
   std::vector<std::shared_ptr<MdnsAgent>> agents_awaiting_start_;
   std::unordered_set<std::shared_ptr<MdnsAgent>> agents_;
-  std::unordered_map<RequestorKey, std::shared_ptr<HostNameRequestor>, RequestorKeyHash>
-      host_name_requestors_by_key_;
-  std::unordered_map<RequestorKey, std::shared_ptr<InstanceRequestor>, RequestorKeyHash>
-      instance_requestors_by_key_;
+  std::unordered_map<std::string, std::shared_ptr<InstanceRequestor>>
+      instance_requestors_by_service_name_;
   std::unordered_map<std::string, std::shared_ptr<InstanceResponder>>
       instance_responders_by_instance_full_name_;
   std::unordered_map<std::string, std::shared_ptr<AddressResponder>>

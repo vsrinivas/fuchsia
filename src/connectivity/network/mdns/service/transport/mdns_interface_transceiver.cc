@@ -32,20 +32,20 @@ namespace mdns {
 // static
 std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(inet::IpAddress address,
                                                                            const std::string& name,
-                                                                           uint32_t id,
+                                                                           uint32_t index,
                                                                            Media media) {
   if (address.is_v4()) {
-    return std::make_unique<MdnsInterfaceTransceiverV4>(address, name, id, media);
+    return std::make_unique<MdnsInterfaceTransceiverV4>(address, name, index, media);
   } else {
-    return std::make_unique<MdnsInterfaceTransceiverV6>(address, name, id, media);
+    return std::make_unique<MdnsInterfaceTransceiverV6>(address, name, index, media);
   }
 }
 
 MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(inet::IpAddress address, const std::string& name,
-                                                   uint32_t id, Media media)
+                                                   uint32_t index, Media media)
     : address_(address),
       name_(name),
-      id_(id),
+      index_(index),
       media_(media),
       inbound_buffer_(kMaxPacketSize),
       outbound_buffer_(kMaxPacketSize) {
@@ -149,9 +149,9 @@ void MdnsInterfaceTransceiver::LogTraffic() {
 
 int MdnsInterfaceTransceiver::SetOptionBindToDevice() {
   char ifname[IF_NAMESIZE];
-  uint32_t id = this->id();
-  if (if_indextoname(id, ifname) == nullptr) {
-    FX_LOGS(ERROR) << "Failed to look up interface name with index=" << id << ", error "
+  uint32_t index = this->index();
+  if (if_indextoname(index, ifname) == nullptr) {
+    FX_LOGS(ERROR) << "Failed to look up interface name with index=" << index << ", error "
                    << strerror(errno);
   }
   int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_BINDTODEVICE, &ifname,
@@ -202,7 +202,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status, uint32_t events)
   ++messages_received_;
   bytes_received_ += result;
 
-  ReplyAddress reply_address(source_address_storage, address_, id_, media_, IpVersions());
+  ReplyAddress reply_address(source_address_storage, address_, media_, IpVersions());
 
   if (reply_address.socket_address().address() == address_) {
     // This is an outgoing message that's bounced back to us. Drop it.

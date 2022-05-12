@@ -6,7 +6,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/connectivity/network/mdns/service/common/type_converters.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -81,15 +80,14 @@ TEST(ConfigTest, OneValidFile) {
   EXPECT_FALSE(under_test.perform_host_name_probe());
   EXPECT_EQ(1u, under_test.publications().size());
   if (!under_test.publications().empty()) {
-    EXPECT_TRUE((Config::Publication{
-                    .service_ = "_fuchsia._udp.",
-                    .instance_ = kHostName,
-                    .publication_ = std::make_unique<Mdns::Publication>(Mdns::Publication{
-                        .port_ = inet::IpPort::From_uint16_t(5353),
-                        .text_ = {fidl::To<std::vector<uint8_t>>(std::string("chins=2")),
-                                  fidl::To<std::vector<uint8_t>>(std::string("thumbs=10"))}}),
-                    .perform_probe_ = false,
-                    .media_ = Media::kWireless}) == under_test.publications()[0]);
+    EXPECT_TRUE(
+        (Config::Publication{
+            .service_ = "_fuchsia._udp.",
+            .instance_ = kHostName,
+            .publication_ = std::make_unique<Mdns::Publication>(Mdns::Publication{
+                .port_ = inet::IpPort::From_uint16_t(5353), .text_ = {"chins=2", "thumbs=10"}}),
+            .perform_probe_ = false,
+            .media_ = Media::kWireless}) == under_test.publications()[0]);
   }
 
   EXPECT_TRUE(files::DeletePath(kTestDir, true));

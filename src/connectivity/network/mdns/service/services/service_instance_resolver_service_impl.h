@@ -26,7 +26,6 @@ class ServiceInstanceResolverServiceImpl
 
   // fuchsia::net:mdns::ServiceInstanceResolver implementation.
   void ResolveServiceInstance(std::string service, std::string instance, int64_t timeout,
-                              fuchsia::net::mdns::ServiceInstanceResolutionOptions options,
                               ResolveServiceInstanceCallback callback) override;
 };
 

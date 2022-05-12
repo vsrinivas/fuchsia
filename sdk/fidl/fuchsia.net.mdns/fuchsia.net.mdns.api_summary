@@ -8,22 +8,6 @@ enum/member fuchsia.net.mdns/Error.INVALID_INSTANCE_NAME 2
 enum/member fuchsia.net.mdns/Error.INVALID_MEDIA 5
 enum/member fuchsia.net.mdns/Error.INVALID_SERVICE_NAME 1
 strict enum fuchsia.net.mdns/Error uint32
-struct/member fuchsia.net.mdns/HostAddress.address fuchsia.net/IpAddress
-struct/member fuchsia.net.mdns/HostAddress.interface uint64
-struct/member fuchsia.net.mdns/HostAddress.ttl int64
-struct fuchsia.net.mdns/HostAddress
-table/member fuchsia.net.mdns/HostNameResolutionOptions.ip_versions fuchsia.net.mdns/IpVersions
-table/member fuchsia.net.mdns/HostNameResolutionOptions.media fuchsia.net.mdns/Media
-table fuchsia.net.mdns/HostNameResolutionOptions
-protocol/member fuchsia.net.mdns/HostNameResolver.ResolveHostName(string:255 host,int64 timeout,fuchsia.net.mdns/HostNameResolutionOptions options) -> (vector<fuchsia.net.mdns/HostAddress>:64 addresses)
-protocol fuchsia.net.mdns/HostNameResolver
-protocol/member fuchsia.net.mdns/HostNameSubscriber.SubscribeToHostName(string:255 host,fuchsia.net.mdns/HostNameSubscriptionOptions options,client_end:fuchsia.net.mdns/HostNameSubscriptionListener listener)
-protocol fuchsia.net.mdns/HostNameSubscriber
-protocol/member fuchsia.net.mdns/HostNameSubscriptionListener.OnAddressesChanged(vector<fuchsia.net.mdns/HostAddress>:64 addresses) -> ()
-protocol fuchsia.net.mdns/HostNameSubscriptionListener
-table/member fuchsia.net.mdns/HostNameSubscriptionOptions.ip_versions fuchsia.net.mdns/IpVersions
-table/member fuchsia.net.mdns/HostNameSubscriptionOptions.media fuchsia.net.mdns/Media
-table fuchsia.net.mdns/HostNameSubscriptionOptions
 bits/member fuchsia.net.mdns/IpVersions.V4 1
 bits/member fuchsia.net.mdns/IpVersions.V6 2
 strict bits fuchsia.net.mdns/IpVersions uint32
@@ -77,8 +61,7 @@ protocol/member fuchsia.net.mdns/Resolver.ResolveHostName(string:255 host,int64 
 protocol fuchsia.net.mdns/Resolver
 enum/member fuchsia.net.mdns/ResourceType.ANY 255
 enum/member fuchsia.net.mdns/ResourceType.PTR 12
-flexible enum fuchsia.net.mdns/ResourceType uint32
-table/member fuchsia.net.mdns/ServiceInstance.addresses vector<fuchsia.net/SocketAddress>:64
+strict enum fuchsia.net.mdns/ResourceType uint32
 table/member fuchsia.net.mdns/ServiceInstance.instance string:63
 table/member fuchsia.net.mdns/ServiceInstance.ipv4_endpoint fuchsia.net/Ipv4SocketAddress
 table/member fuchsia.net.mdns/ServiceInstance.ipv6_endpoint fuchsia.net/Ipv6SocketAddress
@@ -87,7 +70,6 @@ table/member fuchsia.net.mdns/ServiceInstance.srv_priority uint16
 table/member fuchsia.net.mdns/ServiceInstance.srv_weight uint16
 table/member fuchsia.net.mdns/ServiceInstance.target string:255
 table/member fuchsia.net.mdns/ServiceInstance.text vector<string:255>:256
-table/member fuchsia.net.mdns/ServiceInstance.text_strings vector<vector<uint8>:255>:256
 table fuchsia.net.mdns/ServiceInstance
 table/member fuchsia.net.mdns/ServiceInstancePublication.port uint16
 table/member fuchsia.net.mdns/ServiceInstancePublication.ptr_ttl int64
@@ -120,26 +102,13 @@ struct fuchsia.net.mdns/ServiceInstancePublisher_PublishServiceInstance_Response
 union/member fuchsia.net.mdns/ServiceInstancePublisher_PublishServiceInstance_Result.err fuchsia.net.mdns/PublishServiceInstanceError
 union/member fuchsia.net.mdns/ServiceInstancePublisher_PublishServiceInstance_Result.response fuchsia.net.mdns/ServiceInstancePublisher_PublishServiceInstance_Response
 strict union fuchsia.net.mdns/ServiceInstancePublisher_PublishServiceInstance_Result
-table/member fuchsia.net.mdns/ServiceInstanceResolutionOptions.ip_versions fuchsia.net.mdns/IpVersions
-table/member fuchsia.net.mdns/ServiceInstanceResolutionOptions.media fuchsia.net.mdns/Media
-table fuchsia.net.mdns/ServiceInstanceResolutionOptions
-protocol/member fuchsia.net.mdns/ServiceInstanceResolver.ResolveServiceInstance(string:22 service,string:63 instance,int64 timeout,fuchsia.net.mdns/ServiceInstanceResolutionOptions options) -> (fuchsia.net.mdns/ServiceInstance instance)
+protocol/member fuchsia.net.mdns/ServiceInstanceResolver.ResolveServiceInstance(string:22 service,string:63 instance,int64 timeout) -> (fuchsia.net.mdns/ServiceInstance instance)
 protocol fuchsia.net.mdns/ServiceInstanceResolver
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceChanged(fuchsia.net.mdns/ServiceInstance instance) -> ()
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceDiscovered(fuchsia.net.mdns/ServiceInstance instance) -> ()
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceLost(string:22 service,string:63 instance) -> ()
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnQuery(fuchsia.net.mdns/ResourceType resource_type) -> ()
 protocol fuchsia.net.mdns/ServiceSubscriber
-protocol/member fuchsia.net.mdns/ServiceSubscriber2.SubscribeToService(string:22 service,fuchsia.net.mdns/ServiceSubscriptionOptions options,client_end:fuchsia.net.mdns/ServiceSubscriptionListener listener)
-protocol fuchsia.net.mdns/ServiceSubscriber2
-protocol/member fuchsia.net.mdns/ServiceSubscriptionListener.OnInstanceChanged(fuchsia.net.mdns/ServiceInstance instance) -> ()
-protocol/member fuchsia.net.mdns/ServiceSubscriptionListener.OnInstanceDiscovered(fuchsia.net.mdns/ServiceInstance instance) -> ()
-protocol/member fuchsia.net.mdns/ServiceSubscriptionListener.OnInstanceLost(string:22 service,string:63 instance) -> ()
-protocol/member fuchsia.net.mdns/ServiceSubscriptionListener.OnQuery(fuchsia.net.mdns/ResourceType resource_type) -> ()
-protocol fuchsia.net.mdns/ServiceSubscriptionListener
-table/member fuchsia.net.mdns/ServiceSubscriptionOptions.ip_versions fuchsia.net.mdns/IpVersions
-table/member fuchsia.net.mdns/ServiceSubscriptionOptions.media fuchsia.net.mdns/Media
-table fuchsia.net.mdns/ServiceSubscriptionOptions
 protocol/member fuchsia.net.mdns/Subscriber.SubscribeToService(string:22 service,client_end:fuchsia.net.mdns/ServiceSubscriber subscriber)
 protocol fuchsia.net.mdns/Subscriber
 library fuchsia.net.mdns

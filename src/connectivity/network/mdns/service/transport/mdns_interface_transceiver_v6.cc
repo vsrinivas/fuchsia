@@ -14,9 +14,9 @@
 namespace mdns {
 
 MdnsInterfaceTransceiverV6::MdnsInterfaceTransceiverV6(inet::IpAddress address,
-                                                       const std::string& name, uint32_t id,
+                                                       const std::string& name, uint32_t index,
                                                        Media media)
-    : MdnsInterfaceTransceiver(address, name, id, media) {}
+    : MdnsInterfaceTransceiver(address, name, index, media) {}
 
 MdnsInterfaceTransceiverV6::~MdnsInterfaceTransceiverV6() {}
 
@@ -40,7 +40,7 @@ int MdnsInterfaceTransceiverV6::SetOptionDisableMulticastLoop() {
 int MdnsInterfaceTransceiverV6::SetOptionJoinMulticastGroup() {
   ipv6_mreq param;
   param.ipv6mr_multiaddr = MdnsAddresses::v6_multicast().as_sockaddr_in6().sin6_addr;
-  param.ipv6mr_interface = id();
+  param.ipv6mr_interface = index();
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_JOIN_GROUP, &param, sizeof(param));
   if (result < 0) {
     if (errno == ENODEV) {
@@ -55,8 +55,9 @@ int MdnsInterfaceTransceiverV6::SetOptionJoinMulticastGroup() {
 }
 
 int MdnsInterfaceTransceiverV6::SetOptionOutboundInterface() {
-  uint32_t id = this->id();
-  int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_IF, &id, sizeof(id));
+  uint32_t index = this->index();
+  int result =
+      setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_IF, &index, sizeof(index));
   if (result < 0) {
     if (errno == EADDRNOTAVAIL) {
       // This is expected when the interface is removed as we try to use it. We still return

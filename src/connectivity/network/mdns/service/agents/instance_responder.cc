@@ -163,7 +163,7 @@ void InstanceResponder::SendAnnouncement() {
 
 void InstanceResponder::SendAnyServiceResponse(const ReplyAddress& reply_address) {
   auto ptr_resource = std::make_shared<DnsResource>(MdnsNames::kAnyServiceFullName, DnsType::kPtr);
-  ptr_resource->ptr_.pointer_domain_name_ = DnsName(MdnsNames::ServiceFullName(service_name_));
+  ptr_resource->ptr_.pointer_domain_name_ = MdnsNames::ServiceFullName(service_name_);
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 }
 
@@ -250,7 +250,7 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
   auto ptr_resource =
       std::make_shared<DnsResource>(MdnsNames::ServiceFullName(service_name_), DnsType::kPtr);
   ptr_resource->time_to_live_ = publication.ptr_ttl_seconds_;
-  ptr_resource->ptr_.pointer_domain_name_ = DnsName(instance_full_name_);
+  ptr_resource->ptr_.pointer_domain_name_ = instance_full_name_;
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 
   auto srv_resource = std::make_shared<DnsResource>(instance_full_name_, DnsType::kSrv);
@@ -258,7 +258,7 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
   srv_resource->srv_.priority_ = publication.srv_priority_;
   srv_resource->srv_.weight_ = publication.srv_weight_;
   srv_resource->srv_.port_ = publication.port_;
-  srv_resource->srv_.target_ = DnsName(host_full_name_);
+  srv_resource->srv_.target_ = host_full_name_;
   SendResource(srv_resource, MdnsResourceSection::kAdditional, reply_address);
 
   auto txt_resource = std::make_shared<DnsResource>(instance_full_name_, DnsType::kTxt);
@@ -285,7 +285,7 @@ void InstanceResponder::SendSubtypePtrRecord(const std::string& subtype, uint32_
   auto ptr_resource = std::make_shared<DnsResource>(
       MdnsNames::ServiceSubtypeFullName(service_name_, subtype), DnsType::kPtr);
   ptr_resource->time_to_live_ = ttl;
-  ptr_resource->ptr_.pointer_domain_name_ = DnsName(instance_full_name_);
+  ptr_resource->ptr_.pointer_domain_name_ = instance_full_name_;
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 }
 

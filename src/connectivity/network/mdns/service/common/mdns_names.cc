@@ -33,7 +33,7 @@ std::string Concatenate(const std::initializer_list<const std::string*>& strings
 
   result.reserve(result_size);
 
-  for (const auto& string : strings) {
+  for (auto& string : strings) {
     FX_DCHECK(string);
     result.append(*string);
   }
@@ -226,12 +226,6 @@ bool MdnsNames::IsValidSubtypeName(const std::string& subtype_name) {
 bool MdnsNames::IsValidTextString(const std::string& text_string) {
   // Text strings must be at most 255 characters long.
   return text_string.length() <= kMaxTextStringLength;
-}
-
-// static
-bool MdnsNames::IsValidTextString(const std::vector<uint8_t>& text_string) {
-  // Text strings must be at most 255 characters long.
-  return text_string.size() <= kMaxTextStringLength;
 }
 
 }  // namespace mdns

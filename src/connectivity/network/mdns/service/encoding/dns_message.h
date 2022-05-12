@@ -105,7 +105,8 @@ struct DnsClassAndFlag {
 // Domain name.
 struct DnsName {
   DnsName() {}
-  explicit DnsName(std::string dotted_string) : dotted_string_(std::move(dotted_string)) {}
+  DnsName(const std::string dotted_string) : dotted_string_(dotted_string) {}
+  DnsName(const char* dotted_string) : dotted_string_(dotted_string) {}
 
   std::string dotted_string_;
 };
@@ -238,7 +239,7 @@ struct DnsResourceDataPtr {
 
 // Additional data for type 'TXT' resource records.
 struct DnsResourceDataTxt {
-  std::vector<std::vector<std::uint8_t>> strings_;
+  std::vector<std::string> strings_;
 
   bool operator==(const DnsResourceDataTxt& other) const { return strings_ == other.strings_; }
 };
@@ -289,7 +290,7 @@ struct DnsResource {
 
   DnsResource();
   DnsResource(const std::string& name, DnsType type);
-  DnsResource(const std::string& name, inet::IpAddress address);
+  DnsResource(std::string name, inet::IpAddress address);
   DnsResource(const DnsResource& other);
   ~DnsResource();
 
@@ -391,23 +392,11 @@ struct std::hash<mdns::DnsResourceDataPtr> {
 };
 
 template <>
-struct std::hash<std::vector<uint8_t>> {
-  std::size_t operator()(const std::vector<uint8_t>& value) const noexcept {
-    size_t result = 0;
-    for (const auto& c : value) {
-      result = (result << 1) ^ std::hash<uint8_t>{}(c);
-    }
-
-    return result;
-  }
-};
-
-template <>
 struct std::hash<mdns::DnsResourceDataTxt> {
   std::size_t operator()(const mdns::DnsResourceDataTxt& value) const noexcept {
     size_t result = 0;
-    for (const auto& s : value.strings_) {
-      result = (result << 1) ^ std::hash<std::vector<uint8_t>>{}(s);
+    for (auto& s : value.strings_) {
+      result = (result << 1) ^ std::hash<std::string>{}(s);
     }
 
     return result;
@@ -436,7 +425,7 @@ template <>
 struct std::hash<mdns::DnsResourceDataOpt> {
   std::size_t operator()(const mdns::DnsResourceDataOpt& value) const noexcept {
     size_t result = 0;
-    for (const auto& option : value.options_) {
+    for (auto& option : value.options_) {
       result = (result << 1) ^ option;
     }
 
@@ -448,7 +437,7 @@ template <>
 struct std::hash<mdns::DnsResourceDataNSec> {
   std::size_t operator()(const mdns::DnsResourceDataNSec& value) const noexcept {
     size_t result = std::hash<std::string>{}(value.next_domain_.dotted_string_);
-    for (const auto& bit : value.bits_) {
+    for (auto& bit : value.bits_) {
       result = (result << 1) ^ bit;
     }
 

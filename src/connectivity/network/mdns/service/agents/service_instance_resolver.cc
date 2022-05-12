@@ -9,21 +9,17 @@
 
 #include "src/connectivity/network/mdns/service/common/mdns_fidl_util.h"
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
-#include "src/connectivity/network/mdns/service/common/type_converters.h"
 
 namespace mdns {
 
 ServiceInstanceResolver::ServiceInstanceResolver(MdnsAgent::Owner* owner,
                                                  const std::string& service,
                                                  const std::string& instance, zx::time timeout,
-                                                 Media media, IpVersions ip_versions,
                                                  Mdns::ResolveServiceInstanceCallback callback)
     : MdnsAgent(owner),
       service_(service),
       instance_name_(instance),
       timeout_(timeout),
-      media_(media),
-      ip_versions_(ip_versions),
       callback_(std::move(callback)) {
   FX_DCHECK(callback_);
 }
@@ -57,7 +53,7 @@ void ServiceInstanceResolver::Start(const std::string& service_instance) {
   MdnsAgent::Start(service_instance);
   service_instance_ = MdnsNames::InstanceFullName(instance_name_, service_);
   SendQuestion(std::make_shared<DnsQuestion>(service_instance_, DnsType::kSrv),
-               ReplyAddress::Multicast(media_, ip_versions_));
+               ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
 
   PostTaskForTime(
       [this]() {
@@ -73,10 +69,6 @@ void ServiceInstanceResolver::Start(const std::string& service_instance) {
 void ServiceInstanceResolver::ReceiveResource(const DnsResource& resource,
                                               MdnsResourceSection section,
                                               ReplyAddress sender_address) {
-  if (!sender_address.Matches(media_) || !sender_address.Matches(ip_versions_)) {
-    return;
-  }
-
   switch (resource.type_) {
     case DnsType::kSrv:
       if (resource.name_.dotted_string_ == service_instance_) {
@@ -102,7 +94,7 @@ void ServiceInstanceResolver::ReceiveResource(const DnsResource& resource,
       break;
     case DnsType::kTxt:
       if (instance_.has_target() && (resource.name_.dotted_string_ == instance_.target())) {
-        instance_.set_text(fidl::To<std::vector<std::string>>(resource.txt_.strings_));
+        instance_.set_text(resource.txt_.strings_);
       }
       break;
     default:
