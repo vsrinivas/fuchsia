@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fuchsia_zircon::{self as zx, DurationNum},
-    wlan_common::TimeUnit,
-};
+use fuchsia_zircon::{self as zx, DurationNum};
 
 /// Struct used to count remaining time BSS has not been detected. Used to determine
 /// when trigger auto deauth.
@@ -27,11 +24,10 @@ pub struct LostBssCounter {
 /// during this period. To counter this effect, call should_deauthenticate() before calling
 /// add_beacon_interval().
 impl LostBssCounter {
-    pub fn start(beacon_period: u16, full_timeout_beacon_count: u32) -> Self {
+    pub fn start(beacon_period: zx::Duration, full_timeout_beacon_count: u32) -> Self {
         Self {
-            beacon_period: zx::Duration::from(TimeUnit(beacon_period)),
-            full_timeout: zx::Duration::from(TimeUnit(beacon_period))
-                * full_timeout_beacon_count as i64,
+            beacon_period: beacon_period.clone(),
+            full_timeout: beacon_period * full_timeout_beacon_count as i64,
             time_since_last_beacon: 0.nanos(),
         }
     }
@@ -61,9 +57,9 @@ impl LostBssCounter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, wlan_common::time::TimeUnit};
 
-    const TEST_BEACON_PERIOD: u16 = 42;
+    const TEST_BEACON_PERIOD: zx::Duration = zx::Duration::from_micros(TimeUnit(42).into_micros());
     const TEST_TIMEOUT_BCN_COUNT: u32 = 1000;
 
     #[test]
@@ -99,9 +95,7 @@ mod tests {
     fn test_add_time_uninterrupted() {
         let mut counter = LostBssCounter::start(TEST_BEACON_PERIOD, TEST_TIMEOUT_BCN_COUNT);
         // about to timeout but not yet.
-        counter.add_time(
-            zx::Duration::from(TimeUnit(TEST_BEACON_PERIOD)) * TEST_TIMEOUT_BCN_COUNT - 1.nanos(),
-        );
+        counter.add_time(TEST_BEACON_PERIOD * TEST_TIMEOUT_BCN_COUNT - 1.nanos());
         assert!(!counter.should_deauthenticate());
         // any more time will trigger auto deauth
         counter.add_time(1.nanos());
@@ -119,7 +113,7 @@ mod tests {
 
         // Verify that calling `handle_timeout` at originally scheduled time would not
         // return false, indicating no auto-deauth yet
-        counter.add_time(zx::Duration::from(TimeUnit(TEST_BEACON_PERIOD)));
+        counter.add_time(TEST_BEACON_PERIOD);
         assert!(!counter.should_deauthenticate());
         // But if no beacon is received in timeout + 1 intervals, auto-deauth will trigger
         counter.add_beacon_interval(TEST_TIMEOUT_BCN_COUNT - 1);

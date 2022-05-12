@@ -34,7 +34,6 @@ use {
         mac::{self, PowerState},
         stats::SignalStrengthAverage,
         tim,
-        time::TimeUnit,
         timer::{EventId, Timer},
     },
     wlan_statemachine::*,
@@ -408,12 +407,11 @@ fn extract_ht_vht_op<B: ByteSlice>(elements: B) -> (Option<HtOpByteArray>, Optio
 }
 
 pub fn schedule_association_status_timeout(
-    beacon_period: u16,
+    beacon_period: zx::Duration,
     timer: &mut Timer<TimedEvent>,
 ) -> StatusCheckTimeout {
     let last_fired = timer.now();
-    let duration =
-        zx::Duration::from(TimeUnit(beacon_period)) * ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT;
+    let duration = beacon_period * ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT;
     StatusCheckTimeout {
         last_fired,
         next_id: Some(timer.schedule_after(duration, TimedEvent::AssociationStatusCheck)),
@@ -502,8 +500,7 @@ impl Associated {
             Ok(()) => {
                 // Setting timeout in term of beacon period allows us to adjust the realtime
                 // timeout in hw-sim, where we set a longer duration in case of a slowbot.
-                let duration = zx::Duration::from(TimeUnit(sta.sta.beacon_period()))
-                    * REASSOC_TIMEOUT_BCN_PERIODS;
+                let duration = sta.sta.beacon_period() * REASSOC_TIMEOUT_BCN_PERIODS;
                 Ok(sta.ctx.timer.schedule_after(duration, TimedEvent::Reassociating))
             }
             Err(e) => {
@@ -855,8 +852,8 @@ impl States {
             States::Joined(state) => {
                 // Setting timeout in term of beacon period allows us to adjust the realtime
                 // timeout in hw-sim, where we set a longer duration in case of a slowbot.
-                let duration = zx::Duration::from(TimeUnit(sta.sta.beacon_period()))
-                    * sta.sta.connect_req.connect_failure_timeout;
+                let duration =
+                    sta.sta.beacon_period() * sta.sta.connect_req.connect_failure_timeout;
                 let timeout = sta.ctx.timer.schedule_after(duration, TimedEvent::Connecting);
                 sta.sta.connect_timeout.replace(timeout);
                 match state.start_authenticating(sta) {

@@ -46,6 +46,7 @@ use {
         mac::{self, Aid, CapabilityInfo, PowerState},
         mgmt_writer,
         sequence::SequenceManager,
+        time::TimeUnit,
         timer::{EventId, Timer},
         wmm,
     },
@@ -571,8 +572,8 @@ impl Client {
         self.connect_req.selected_bss.bssid
     }
 
-    pub fn beacon_period(&self) -> u16 {
-        self.connect_req.selected_bss.beacon_period
+    pub fn beacon_period(&self) -> zx::Duration {
+        zx::Duration::from(TimeUnit(self.connect_req.selected_bss.beacon_period))
     }
 
     pub fn eapol_required(&self) -> bool {
