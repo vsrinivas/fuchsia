@@ -70,7 +70,7 @@ pub fn create_galaxy(
     )
     .context("failed to open /pkg")?;
     let pkg_dir_proxy = fio::DirectorySynchronousProxy::new(client);
-    let mut kernel = Kernel::new(&to_cstr(&CONFIG.name))?;
+    let mut kernel = Kernel::new(&to_cstr(&CONFIG.name), &CONFIG.features)?;
     kernel.cmdline = CONFIG.kernel_cmdline.as_bytes().to_vec();
     *kernel.outgoing_dir.lock() = outgoing_dir.take().map(|server_end| server_end.into_channel());
     let kernel = Arc::new(kernel);
@@ -142,7 +142,7 @@ fn mount_apexes(init_task: &CurrentTask) -> Result<(), Error> {
     if !CONFIG.apex_hack.is_empty() {
         init_task
             .lookup_path_from_root(b"apex")?
-            .mount(WhatToMount::Fs(TmpFs::new()), MountFlags::empty())?;
+            .mount(WhatToMount::Fs(TmpFs::new(init_task.kernel())), MountFlags::empty())?;
         let apex_dir = init_task.lookup_path_from_root(b"apex")?;
         for apex in &CONFIG.apex_hack {
             let apex = apex.as_bytes();

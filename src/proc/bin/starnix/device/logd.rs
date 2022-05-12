@@ -18,10 +18,10 @@ const LOGD_TAG: &'static str = "logd";
 
 /// Creates a socket at /dev/socket/logdw and starts a thread that reads from it and emits logd log
 /// messages.
-pub fn create_socket_and_start_server(kernel: &Kernel) {
+pub fn create_socket_and_start_server(kernel: &Arc<Kernel>) {
     let logdw_socket = Socket::new(SocketDomain::Unix, SocketType::Datagram);
 
-    let devfs_root = crate::fs::devtmpfs::dev_tmp_fs(&kernel).root().clone();
+    let devfs_root = crate::fs::devtmpfs::dev_tmp_fs(kernel).root().clone();
     devfs_root
         .create_node(b"socket", FileMode::IFDIR | FileMode::ALLOW_ALL, DeviceType::NONE)
         .expect("create /dev/socket")

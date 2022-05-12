@@ -4,7 +4,9 @@
 
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use once_cell::sync::OnceCell;
+use std::collections::HashSet;
 use std::ffi::CStr;
+use std::iter::FromIterator;
 use std::sync::Arc;
 
 use crate::device::{DeviceMode, DeviceRegistry};
@@ -62,10 +64,14 @@ pub struct Kernel {
     ///
     /// Note: This assumes there is only one component running in the Kernel.
     pub outgoing_dir: Mutex<Option<fidl::Channel>>,
+
+    // The features enabled for the galaxy this kernel is associated with, as specified in
+    // the galaxy's configuration file.
+    pub features: HashSet<String>,
 }
 
 impl Kernel {
-    pub fn new(name: &CStr) -> Result<Kernel, zx::Status> {
+    pub fn new(name: &CStr, features: &Vec<String>) -> Result<Kernel, zx::Status> {
         let unix_address_maker = Box::new(|x: Vec<u8>| -> SocketAddress { SocketAddress::Unix(x) });
         let vsock_address_maker = Box::new(|x: u32| -> SocketAddress { SocketAddress::Vsock(x) });
         let job = fuchsia_runtime::job_default().create_child_job()?;
@@ -89,13 +95,15 @@ impl Kernel {
             selinux_fs: OnceCell::new(),
             device_registry: RwLock::new(DeviceRegistry::new_with_common_devices()),
             outgoing_dir: Mutex::new(None),
+            features: HashSet::from_iter(features.iter().cloned()),
         })
     }
 
     #[cfg(test)]
     pub fn new_for_testing() -> Arc<Kernel> {
         Arc::new(
-            Self::new(&CString::new("testing").unwrap()).expect("Failed to create test kernel."),
+            Self::new(&CString::new("testing").unwrap(), &Vec::new())
+                .expect("Failed to create test kernel."),
         )
     }
 
@@ -110,5 +118,9 @@ impl Kernel {
     ) -> Result<Box<dyn FileOps>, Errno> {
         let registry = self.device_registry.read();
         registry.open_device(current_task, node, flags, dev, mode)
+    }
+
+    pub fn selinux_enabled(&self) -> bool {
+        self.features.contains("selinux_enabled")
     }
 }

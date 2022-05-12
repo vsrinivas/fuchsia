@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use std::sync::Arc;
+use std::sync::Weak;
 
 use super::directory_file::MemoryDirectoryFile;
 use super::*;
 use crate::lock::{Mutex, MutexGuard};
+use crate::task::Kernel;
 use crate::types::*;
 
 pub struct TmpFs(());
@@ -59,9 +61,9 @@ impl FileSystemOps for Arc<TmpFs> {
 }
 
 impl TmpFs {
-    pub fn new() -> FileSystemHandle {
+    pub fn new(kernel: &Arc<Kernel>) -> FileSystemHandle {
         let fs = FileSystem::new_with_permanent_entries(Arc::new(TmpFs(())));
-        fs.set_root(TmpfsDirectory::new());
+        fs.set_root(TmpfsDirectory::new(Arc::downgrade(kernel)));
         fs
     }
 }
@@ -69,22 +71,28 @@ impl TmpFs {
 pub struct TmpfsDirectory {
     xattrs: MemoryXattrStorage,
     child_count: Mutex<u32>,
+    kernel: Weak<Kernel>,
 }
 
 impl TmpfsDirectory {
-    pub fn new() -> Self {
-        Self { xattrs: MemoryXattrStorage::default(), child_count: Mutex::new(0) }
+    pub fn new(kernel: Weak<Kernel>) -> Self {
+        Self { xattrs: MemoryXattrStorage::default(), child_count: Mutex::new(0), kernel: kernel }
+    }
+
+    fn create_node(
+        &self,
+        parent: &FsNode,
+        node: Box<dyn FsNodeOps>,
+        mode: FileMode,
+    ) -> Result<FsNodeHandle, Errno> {
+        let node = parent.fs().create_node(node, mode);
+        if self.kernel.upgrade().expect("Kernel should exist.").selinux_enabled() {
+            let _ = node.set_xattr(b"security.selinux", b"u:object_r:tmpfs:s0", XattrOp::Create);
+        }
+        Ok(node)
     }
 }
 
-fn create_node(
-    parent: &FsNode,
-    node: Box<dyn FsNodeOps>,
-    mode: FileMode,
-) -> Result<FsNodeHandle, Errno> {
-    let node = parent.fs().create_node(node, mode);
-    Ok(node)
-}
 impl FsNodeOps for TmpfsDirectory {
     fs_node_impl_xattr_delegate!(self, self.xattrs);
 
@@ -99,7 +107,7 @@ impl FsNodeOps for TmpfsDirectory {
     fn mkdir(&self, node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
         node.info_write().link_count += 1;
         *self.child_count.lock() += 1;
-        create_node(node, Box::new(TmpfsDirectory::new()), FileMode::IFDIR)
+        self.create_node(node, Box::new(TmpfsDirectory::new(self.kernel.clone())), FileMode::IFDIR)
     }
 
     fn mknod(&self, node: &FsNode, _name: &FsStr, mode: FileMode) -> Result<FsNodeHandle, Errno> {
@@ -112,7 +120,7 @@ impl FsNodeOps for TmpfsDirectory {
             _ => return error!(EACCES),
         };
         *self.child_count.lock() += 1;
-        create_node(node, ops, mode)
+        self.create_node(node, ops, mode)
     }
 
     fn create_symlink(
@@ -122,7 +130,7 @@ impl FsNodeOps for TmpfsDirectory {
         target: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
         *self.child_count.lock() += 1;
-        create_node(node, Box::new(SymlinkNode::new(target)), FileMode::IFLNK)
+        self.create_node(node, Box::new(SymlinkNode::new(target)), FileMode::IFLNK)
     }
 
     fn link(&self, _node: &FsNode, _name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
@@ -163,14 +171,17 @@ impl FsNodeOps for TmpfsSpecialNode {
 mod test {
     use super::*;
     use crate::mm::*;
+    use crate::task::*;
     use crate::testing::*;
     use fuchsia_zircon as zx;
+    use std::ffi::CString;
     use std::sync::Arc;
     use zerocopy::AsBytes;
 
     #[::fuchsia::test]
     fn test_tmpfs() {
-        let fs = TmpFs::new();
+        let (kernel, _current_task) = create_kernel_and_task();
+        let fs = TmpFs::new(&kernel);
         let root = fs.root();
         let usr = root.create_dir(b"usr").unwrap();
         let _etc = root.create_dir(b"etc").unwrap();
@@ -292,7 +303,11 @@ mod test {
 
     #[::fuchsia::test]
     fn test_persistence() {
-        let fs = TmpFs::new();
+        let kernel = Arc::new(
+            Kernel::new(&CString::new("test-kernel").unwrap(), &Vec::new())
+                .expect("failed to create kernel"),
+        );
+        let fs = TmpFs::new(&kernel);
         {
             let root = fs.root();
             let usr = root.create_dir(b"usr").expect("failed to create usr");
@@ -300,9 +315,21 @@ mod test {
             usr.create_dir(b"bin").expect("failed to create usr/bin");
         }
 
-        // At this point, all the nodes are dropped.
+        let current_task = Task::create_process_without_parent(
+            &kernel.clone(),
+            CString::new("test-task").unwrap(),
+            FsContext::new(fs),
+        )
+        .expect("failed to create first task");
 
-        let (_kernel, current_task) = create_kernel_and_task_with_fs(FsContext::new(fs));
+        // Take the lock on thread group and task in the correct order to ensure any wrong ordering
+        // will trigger the tracing-mutex at the right call site.
+        {
+            let _l1 = current_task.thread_group.read();
+            let _l2 = current_task.read();
+        }
+
+        // At this point, all the nodes are dropped.
 
         current_task
             .open_file(b"/usr/bin", OpenFlags::RDONLY | OpenFlags::DIRECTORY)

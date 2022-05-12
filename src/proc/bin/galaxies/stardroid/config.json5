@@ -6,6 +6,7 @@
         "binder",
         "logd",
         "wayland",
+        "selinux_enabled",
     ],
     init: [],
     init_user: "root:x:0:0",

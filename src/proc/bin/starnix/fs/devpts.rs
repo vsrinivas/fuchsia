@@ -23,7 +23,7 @@ pub const DEVPTS_COUNT: u32 = DEVPTS_MAJOR_COUNT * 256;
 // https://github.com/google/gvisor/blob/master/test/syscalls/linux/pty.cc
 const BLOCK_SIZE: i64 = 1024;
 
-pub fn dev_pts_fs(kernel: &Kernel) -> &FileSystemHandle {
+pub fn dev_pts_fs(kernel: &Arc<Kernel>) -> &FileSystemHandle {
     kernel.dev_pts_fs.get_or_init(|| init_devpts(kernel))
 }
 
@@ -42,8 +42,8 @@ pub fn create_pts_node(fs: &FileSystemHandle, task: &CurrentTask, id: u32) -> Re
     Ok(())
 }
 
-fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
-    let fs = TmpFs::new();
+fn init_devpts(kernel: &Arc<Kernel>) -> FileSystemHandle {
+    let fs = TmpFs::new(kernel);
 
     // Create ptmx
     let ptmx = fs

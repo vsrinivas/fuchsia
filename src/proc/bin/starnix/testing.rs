@@ -31,22 +31,33 @@ fn create_pkgfs() -> Arc<FsContext> {
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
 pub fn create_kernel_and_task_with_pkgfs() -> (Arc<Kernel>, CurrentTask) {
-    create_kernel_and_task_with_fs(create_pkgfs())
+    create_kernel_and_task_with_fs(Some(create_pkgfs()))
 }
 
 pub fn create_kernel_and_task() -> (Arc<Kernel>, CurrentTask) {
-    create_kernel_and_task_with_fs(FsContext::new(TmpFs::new()))
+    create_kernel_and_task_with_fs(None)
 }
 /// Creates a `Kernel` and `Task` for testing purposes.
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
-pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, CurrentTask) {
+pub fn create_kernel_and_task_with_fs(
+    mut fs: Option<Arc<FsContext>>,
+) -> (Arc<Kernel>, CurrentTask) {
     let kernel = Arc::new(
-        Kernel::new(&CString::new("test-kernel").unwrap()).expect("failed to create kernel"),
+        Kernel::new(&CString::new("test-kernel").unwrap(), &Vec::new())
+            .expect("failed to create kernel"),
     );
 
-    let task = Task::create_process_without_parent(&kernel, CString::new("test-task").unwrap(), fs)
-        .expect("failed to create first task");
+    if fs.is_none() {
+        fs = Some(FsContext::new(TmpFs::new(&kernel)));
+    }
+
+    let task = Task::create_process_without_parent(
+        &kernel,
+        CString::new("test-task").unwrap(),
+        fs.unwrap(),
+    )
+    .expect("failed to create first task");
 
     // Take the lock on thread group and task in the correct order to ensure any wrong ordering
     // will trigger the tracing-mutex at the right call site.

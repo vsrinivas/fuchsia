@@ -6,13 +6,14 @@ use crate::fs::tmpfs::*;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
+use std::sync::Arc;
 
-pub fn dev_tmp_fs(kernel: &Kernel) -> &FileSystemHandle {
-    kernel.dev_tmp_fs.get_or_init(init_devtmpfs)
+pub fn dev_tmp_fs(kernel: &Arc<Kernel>) -> &FileSystemHandle {
+    kernel.dev_tmp_fs.get_or_init(|| init_devtmpfs(kernel))
 }
 
-fn init_devtmpfs() -> FileSystemHandle {
-    let fs = TmpFs::new();
+fn init_devtmpfs(kernel: &Arc<Kernel>) -> FileSystemHandle {
+    let fs = TmpFs::new(kernel);
     let root = fs.root();
 
     let mkchr = |name, device_type| {
