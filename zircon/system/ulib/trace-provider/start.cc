@@ -6,6 +6,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/sync/completion.h>
 #include <lib/trace-provider/provider.h>
+#include <lib/trace-provider/start.h>
 #include <lib/trace/observer.h>
 #include <lib/zx/process.h>
 
@@ -67,22 +68,9 @@ void TraceProviderThread(sync_completion_t* completion) {
 
 }  // namespace
 
-namespace perftest {
-namespace internal {
-
-// Starts a TraceProvider on a background thread and only returns when the
-// TraceProvider's setup is complete.  If tracing is currently enabled,
-// that means it only returns when this process's tracing is ready to
-// record tracing events.
-//
-// TODO(https://fxbug.dev/22911): This function should be moved in order to
-// make it generally available to users of tracing.
-void StartTraceProvider() {
+void trace_provider_start() {
   sync_completion_t completion;
   std::thread thread(TraceProviderThread, &completion);
   thread.detach();
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
-
-}  // namespace internal
-}  // namespace perftest

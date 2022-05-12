@@ -107,8 +107,16 @@ trace_provider_library("trace-provider") {
   sdk_headers = trace_provider_fdio_connect_headers
   public_deps = [ "//zircon/system/ulib/trace-engine" ]
   sources = trace_provider_fdio_sources
+  sources += [ "start.cc" ]
   deps = trace_provider_fdio_connect_source_deps
-  deps += [ "//zircon/system/ulib/trace-engine" ]
+  deps += [
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-engine",
+  ]
 }
 
 # Shared version for the SDK.
@@ -117,6 +125,9 @@ trace_provider_library("trace-provider") {
 # implemented in C++ we can't export as "static".
 # TODO(fxbug.dev/23081): The name here is temporary, pending being able to build
 # the library as "libtrace-provider.so".
+#
+# TODO(fxbug.dev/22911): Add start.cc to this library in order to match the
+# non-shared version of the library.
 trace_provider_library("trace-provider-so") {
   sdk_publishable = true
   sdk = "shared"

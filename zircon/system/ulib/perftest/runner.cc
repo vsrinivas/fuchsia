@@ -5,6 +5,7 @@
 #include <getopt.h>
 
 #if defined(__Fuchsia__)
+#include <lib/trace-provider/start.h>
 #include <lib/trace/event.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
@@ -487,7 +488,7 @@ static bool PerfTestMode(const char* test_suite, int argc, char** argv) {
 
 #if defined(__Fuchsia__)
   if (args.enable_tracing) {
-    internal::StartTraceProvider();
+    trace_provider_start();
   }
   zx_duration_t duration = static_cast<zx_duration_t>(ZX_SEC(1) * args.startup_delay_seconds);
   zx_nanosleep(zx_deadline_after(duration));

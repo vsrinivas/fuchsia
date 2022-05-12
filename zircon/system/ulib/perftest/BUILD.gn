@@ -19,17 +19,10 @@ zx_library("perftest") {
   public_deps = [ "//zircon/system/ulib/fbl" ]
   deps = [ "//third_party/re2" ]
   if (is_fuchsia) {
-    sources += [ "trace-provider.cc" ]
     deps += [
-      "//zircon/system/ulib/async",
-      "//zircon/system/ulib/async-loop",
-      "//zircon/system/ulib/async-loop:async-loop-cpp",
-      "//zircon/system/ulib/async-loop:async-loop-default",
-      "//zircon/system/ulib/sync",
       "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace-engine",
       "//zircon/system/ulib/trace-provider",
-      "//zircon/system/ulib/zx",
     ]
   }
 }
