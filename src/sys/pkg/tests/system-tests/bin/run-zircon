@@ -218,7 +218,7 @@ if (( $DISK )); then
     if [[ "$DISKTYPE" == "virtio" ]]; then
         ARGS+=" -device virtio-blk-pci,drive=mydisk"
     elif [[ "$DISKTYPE" == "ahci" ]]; then
-        ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
+        ARGS+=" -device ahci,id=ahci -device ide-hd,drive=mydisk,bus=ahci.0"
     elif [[ "$DISKTYPE" == "nvme" ]]; then
         ARGS+=" -device nvme,drive=mydisk,serial=zircon"
     elif [[ "$DISKTYPE" == "virtio-scsi" ]]; then
@@ -365,7 +365,7 @@ esac
 cd /
 set -x
 exec $QEMU \
-  -drive "if=pflash,format=raw,readonly,file=${OVMF_CODE}" \
+  -drive "if=pflash,format=raw,readonly=on,file=${OVMF_CODE}" \
   -drive "if=pflash,format=raw,file=${OVMF_VARS}" \
   $ARGS \
   "$@"
