@@ -26,11 +26,3 @@ fidl("echofactory") {
 
   public_deps = [ "//examples/components/routing/fidl:echo" ]
 }
-
-fidl("fuchsia.test.workscheduler") {
-  sdk_category = "internal"
-
-  sources = [ "fuchsia.test.workscheduler.fidl" ]
-
-  public_deps = [ "//sdk/fidl/fuchsia.sys2" ]
-}
