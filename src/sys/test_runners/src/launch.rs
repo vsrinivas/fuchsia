@@ -5,7 +5,6 @@
 //! Helpers for launching components.
 
 use {
-    crate::errors::FdioError,
     crate::logs::{create_log_stream, create_std_combined_log_stream, LoggerError, LoggerStream},
     anyhow::Error,
     fidl_fuchsia_process as fproc,
@@ -22,9 +21,6 @@ use {
 pub enum LaunchError {
     #[error("{:?}", _0)]
     Logger(#[from] LoggerError),
-
-    #[error("{:?}", _0)]
-    Fdio(#[from] FdioError),
 
     #[error("Error connecting to launcher: {:?}", _0)]
     Launcher(Error),

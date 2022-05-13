@@ -32,7 +32,7 @@ async fn main() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-/// Error encountered while calling fdio operations.
+/// Error encountered by builder.
 #[derive(Debug, Error)]
 pub enum BuilderError {
     #[error("Cannot read request: {:?}", _0)]

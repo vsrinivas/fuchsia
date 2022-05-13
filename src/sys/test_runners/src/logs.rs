@@ -5,8 +5,11 @@
 //! Helpers for capturing logs from Fuchsia processes.
 
 use {
-    crate::errors::FdioError, fdio::fdio_sys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::prelude::*, std::num::NonZeroUsize, std::os::unix::prelude::AsRawFd, thiserror::Error,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::{future, AsyncReadExt as _, AsyncWriteExt as _, FutureExt as _},
+    std::num::NonZeroUsize,
+    thiserror::Error,
+    zx::HandleBased as _,
 };
 
 /// Buffer size for socket read calls to `LoggerStream::buffer_and_drain`.
@@ -16,11 +19,11 @@ const NEWLINE: u8 = b'\n';
 /// Error returned by this library.
 #[derive(Debug, PartialEq, Eq, Error, Clone)]
 pub enum LoggerError {
-    #[error("fdio error: {:?}", _0)]
-    Fdio(#[from] FdioError),
-
     #[error("cannot create socket: {:?}", _0)]
     CreateSocket(zx::Status),
+
+    #[error("cannot duplicate socket: {:?}", _0)]
+    DuplicateSocket(zx::Status),
 
     #[error("invalid socket: {:?}", _0)]
     InvalidSocket(zx::Status),
@@ -44,31 +47,12 @@ pub fn create_std_combined_log_stream(
 ) -> Result<(LoggerStream, zx::Handle, zx::Handle), LoggerError> {
     let (client, log) =
         zx::Socket::create(zx::SocketOpts::STREAM).map_err(LoggerError::CreateSocket)?;
-    let mut stderr_file_handle = zx::sys::ZX_HANDLE_INVALID;
 
-    let std_file: std::fs::File =
-        fdio::create_fd(log.into()).map_err(|s| LoggerError::Fdio(FdioError::Create(s)))?;
+    let stream = LoggerStream::new(client).map_err(LoggerError::InvalidSocket)?;
+    let clone =
+        log.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(LoggerError::DuplicateSocket)?;
 
-    unsafe {
-        let status = fdio_sys::fdio_fd_clone(
-            std_file.as_raw_fd(),
-            &mut stderr_file_handle as *mut zx::sys::zx_handle_t,
-        );
-        if let Err(s) = zx::Status::ok(status) {
-            return Err(LoggerError::Fdio(FdioError::Clone(s)));
-        }
-    }
-
-    let stdout_file_handle =
-        fdio::transfer_fd(std_file).map_err(|s| LoggerError::Fdio(FdioError::Transfer(s)))?;
-
-    unsafe {
-        Ok((
-            LoggerStream::new(client).map_err(LoggerError::InvalidSocket)?,
-            stdout_file_handle,
-            zx::Handle::from_raw(stderr_file_handle),
-        ))
-    }
+    Ok((stream, log.into_handle(), clone.into_handle()))
 }
 
 /// Creates a socket handle for stdout/stderr and hooks it to a file handle.
@@ -77,13 +61,9 @@ pub fn create_log_stream() -> Result<(LoggerStream, zx::Handle), LoggerError> {
     let (client, log) =
         zx::Socket::create(zx::SocketOpts::STREAM).map_err(LoggerError::CreateSocket)?;
 
-    let std_file =
-        fdio::create_fd(log.into()).map_err(|s| LoggerError::Fdio(FdioError::Create(s)))?;
+    let stream = LoggerStream::new(client).map_err(LoggerError::InvalidSocket)?;
 
-    let file_handle =
-        fdio::transfer_fd(std_file).map_err(|s| LoggerError::Fdio(FdioError::Transfer(s)))?;
-
-    Ok((LoggerStream::new(client).map_err(LoggerError::InvalidSocket)?, file_handle))
+    Ok((stream, log.into_handle()))
 }
 /// Collects logs in background and gives a way to collect those logs.
 pub struct LogStreamReader {
@@ -184,10 +164,9 @@ impl SocketLogWriter {
 mod tests {
     use {
         super::*,
-        anyhow::{format_err, Context, Error},
+        anyhow::{format_err, Context as _, Error},
         assert_matches::assert_matches,
-        fuchsia_async::{self as fasync, futures::try_join},
-        fuchsia_zircon as zx,
+        futures::{try_join, TryStreamExt as _},
         rand::{
             distributions::{Alphanumeric, DistString as _},
             thread_rng,

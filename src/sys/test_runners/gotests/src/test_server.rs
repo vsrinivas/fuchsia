@@ -12,10 +12,9 @@ use {
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon as zx,
     futures::{
-        future::{abortable, AbortHandle, FutureExt as _},
+        future::{abortable, AbortHandle, Future},
         lock::Mutex,
-        prelude::*,
-        TryStreamExt,
+        stream, AsyncReadExt as _, FutureExt as _, StreamExt as _, TryStreamExt as _,
     },
     lazy_static::lazy_static,
     log::{debug, error},
@@ -35,6 +34,7 @@ use {
         launch,
         logs::{LogError, LogStreamReader, LoggerStream, SocketLogWriter},
     },
+    zx::HandleBased as _,
 };
 
 /// Implements `fuchsia.test.Suite` and runs provided test.
@@ -415,12 +415,8 @@ where
     let mut handle_infos = vec![];
 
     const STDIN: u16 = 0;
-    let stdin_file =
-        fdio::create_fd(log.into()).map_err(|s| launch::LaunchError::Fdio(FdioError::Create(s)))?;
-    let stdin_file_handle = fdio::transfer_fd(stdin_file)
-        .map_err(|s| launch::LaunchError::Fdio(FdioError::Clone(s)))?;
     handle_infos.push(fproc::HandleInfo {
-        handle: stdin_file_handle,
+        handle: log.into_handle(),
         id: HandleInfo::new(HandleType::FileDescriptor, STDIN).as_raw(),
     });
 
@@ -456,7 +452,7 @@ mod tests {
         fidl_fuchsia_test::{
             Result_ as TestResult, RunListenerMarker, RunOptions, Status, SuiteMarker,
         },
-        itertools::Itertools,
+        itertools::Itertools as _,
         pretty_assertions::assert_eq,
         test_runners_lib::cases::TestCaseInfo,
         test_runners_test_lib::{

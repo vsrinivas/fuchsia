@@ -157,19 +157,6 @@ pub enum RunTestError {
     Component(#[from] Arc<ComponentError>),
 }
 
-/// Error encountered while calling fdio operations.
-#[derive(Debug, PartialEq, Eq, Error, Clone)]
-pub enum FdioError {
-    #[error("Cannot create file descriptor: {:?}", _0)]
-    Create(zx::Status),
-
-    #[error("Cannot clone file descriptor: {:?}", _0)]
-    Clone(zx::Status),
-
-    #[error("Cannot transfer file descriptor: {:?}", _0)]
-    Transfer(zx::Status),
-}
-
 impl From<ComponentError> for RunTestError {
     fn from(e: ComponentError) -> Self {
         RunTestError::Component(Arc::new(e))

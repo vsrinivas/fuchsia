@@ -39,7 +39,7 @@ where
     Ok(())
 }
 
-/// Error encountered while calling fdio operations.
+/// Error encountered by runner.
 #[derive(Debug, Error)]
 pub enum RunnerError {
     #[error("Cannot read request: {:?}", _0)]
