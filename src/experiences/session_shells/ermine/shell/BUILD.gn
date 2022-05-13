@@ -32,7 +32,6 @@ dart_library("lib") {
   ]
 
   services = [
-    "src/services/automator_service.dart",
     "src/services/focus_service.dart",
     "src/services/launch_service.dart",
     "src/services/pointer_events_service.dart",
@@ -124,7 +123,6 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.update.channelcontrol",
     "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.policy",
-    "//src/experiences/session_shells/ermine/fidl",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//src/experiences/session_shells/ermine/utils:ermine_utils",

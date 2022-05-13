@@ -3,12 +3,9 @@
 // found in the LICENSE file.
 
 // ignore_for_file: unnecessary_lambdas
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:collection/collection.dart';
-import 'package:ermine/src/services/automator_service.dart';
 import 'package:ermine/src/services/focus_service.dart';
 import 'package:ermine/src/services/launch_service.dart';
 import 'package:ermine/src/services/pointer_events_service.dart';
@@ -22,8 +19,6 @@ import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/states/view_state_impl.dart';
 import 'package:ermine_utils/ermine_utils.dart';
-import 'package:fidl_ermine_tools/fidl_async.dart';
-import 'package:fidl/fidl.dart';
 import 'package:flutter/material.dart' hide Action;
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_logger/logger.dart';
@@ -33,7 +28,6 @@ import 'package:mobx/mobx.dart';
 
 /// Defines the implementation of [AppState].
 class AppStateImpl with Disposable implements AppState {
-  final AutomatorService automatorService;
   final FocusService focusService;
   final LaunchService launchService;
   final StartupService startupService;
@@ -53,7 +47,6 @@ class AppStateImpl with Disposable implements AppState {
       '/pkg/config/enable_user_feedback';
 
   AppStateImpl({
-    required this.automatorService,
     required this.startupService,
     required this.launchService,
     required this.focusService,
@@ -65,9 +58,6 @@ class AppStateImpl with Disposable implements AppState {
   }) : _localeStream = startupService.stream.asObservable() {
     launchService.onControllerClosed = _onElementClosed;
     focusService.onFocusMoved = _onFocusMoved;
-    automatorService
-      ..automator = _AutomatorImpl(this)
-      ..serve(startupService.componentContext);
     presenterService
       ..onPresenterDisposed = dispose
       ..onViewPresented = _onViewPresented
@@ -947,45 +937,5 @@ class AppStateImpl with Disposable implements AppState {
     runInAction(() {
       _feedbackPage.value = FeedbackPage.failed;
     });
-  }
-}
-
-class _AutomatorImpl implements Automator {
-  final AppStateImpl state;
-  _AutomatorImpl(this.state);
-
-  @override
-  Future<void> launch(String appName) async {
-    final entry = state.appLaunchEntries
-        .firstWhereOrNull((entry) => entry['title'] == appName);
-    if (entry == null) {
-      throw MethodException(AutomatorErrorCode.invalidArgs);
-    }
-
-    state.launch(entry['title']!, entry['url']!,
-        alternateServiceName: entry['element_manager_name']);
-
-    // Wait for the app to launch and receive focus.
-    final completer = Completer();
-    late ReactionDisposer disposer;
-    disposer = reaction<ViewHandle?>((_) => state._focusedView.value, (view) {
-      // Check if a child view received focus and it is the launched view.
-      if (!state.shellHasFocus.value && state.topView.title == entry['title']) {
-        completer.complete();
-        disposer();
-      }
-    });
-    // If the app does not launch in a reasonable time, throw failed exception.
-    Future.delayed(
-        Duration(seconds: 30),
-        (() => completer
-            .completeError(MethodException(AutomatorErrorCode.failed))));
-
-    return completer.future;
-  }
-
-  @override
-  Future<void> closeAll() async {
-    state.closeAll();
   }
 }

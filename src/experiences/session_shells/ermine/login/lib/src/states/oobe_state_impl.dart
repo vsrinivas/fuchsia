@@ -7,8 +7,6 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:ermine_utils/ermine_utils.dart';
-import 'package:fidl_ermine_tools/fidl_async.dart';
-import 'package:fidl/fidl.dart';
 import 'package:flutter/services.dart';
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_logger/logger.dart';
@@ -18,7 +16,6 @@ import 'package:fuchsia_vfs/vfs.dart';
 import 'package:internationalization/strings.dart';
 import 'package:login/src/services/auth_service.dart';
 import 'package:login/src/services/channel_service.dart';
-import 'package:login/src/services/automator_service.dart';
 import 'package:login/src/services/device_service.dart';
 import 'package:login/src/services/privacy_consent_service.dart';
 import 'package:login/src/services/shell_service.dart';
@@ -37,7 +34,6 @@ class OobeStateImpl with Disposable implements OobeState {
   final ComponentContext componentContext;
   final AuthService authService;
   final ChannelService channelService;
-  final AutomatorService automatorService;
   final DeviceService deviceService;
   final SshKeysService sshKeysService;
   final ShellService shellService;
@@ -45,20 +41,16 @@ class OobeStateImpl with Disposable implements OobeState {
 
   OobeStateImpl({
     required this.authService,
-    required this.automatorService,
     required this.deviceService,
     required this.shellService,
     required this.channelService,
     required this.sshKeysService,
     required this.privacyConsentService,
-  })  : componentContext = ComponentContext.create(),
+  })   : componentContext = ComponentContext.create(),
         _localeStream = channelService.stream.asObservable() {
     shellService
       ..onShellReady = _onErmineShellReady
       ..onShellExit = _onErmineShellExit;
-    automatorService
-      ..automator = _AutomatorImpl(this)
-      ..serve(componentContext);
     deviceService
       ..onInspect = _onInspect
       ..serve(componentContext);
@@ -341,12 +333,10 @@ class OobeStateImpl with Disposable implements OobeState {
   void finish() => runInAction(() {
         // Mark login step as done.
         _loginDone.value = true;
-        // Reset screen to loading.
-        _screen.value = OobeScreen.loading;
       });
 
   @override
-  Future<void> setPassword(String password) async {
+  void setPassword(String password) async {
     try {
       runInAction(() {
         _authError.value = '';
@@ -369,7 +359,7 @@ class OobeStateImpl with Disposable implements OobeState {
   void resetAuthError() => runInAction(() => _authError.value = '');
 
   @override
-  Future<void> login(String password) async {
+  void login(String password) async {
     try {
       runInAction(() {
         _authError.value = '';
@@ -455,68 +445,6 @@ class OobeStateImpl with Disposable implements OobeState {
       node.stringProperty('screen')!.setValue('login');
     } else {
       node.stringProperty('screen')!.setValue(screen.name);
-    }
-  }
-}
-
-class _AutomatorImpl implements Automator {
-  final OobeStateImpl state;
-  _AutomatorImpl(this.state);
-
-  @override
-  bool get authenticated => state.authService.authenticated;
-
-  @override
-  Future<OobeScreen> getScreen() async {
-    return state.screen;
-  }
-
-  @override
-  Future<void> login(String password) async {
-    if (state.loginDone || state.screen != OobeScreen.loading) {
-      throw MethodException(AutomatorErrorCode.invalidState);
-    }
-
-    await state.login(password);
-    if (!authenticated || !state.loginDone) {
-      throw MethodException(AutomatorErrorCode.invalidArgs);
-    }
-    // Wait for ermine shell to load.
-    await state.shellService.loaded;
-  }
-
-  @override
-  Future<void> logout() {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> setPassword(String password) async {
-    if (state.screen != OobeScreen.password) {
-      throw MethodException(AutomatorErrorCode.invalidState);
-    }
-
-    await state.setPassword(password);
-    if (!authenticated) {
-      throw MethodException(AutomatorErrorCode.invalidArgs);
-    }
-  }
-
-  @override
-  Future<void> skipScreen() async {
-    // Skip screen command is valid on OOBE screens, not when shell is visible.
-    if (state.loginDone ||
-        state.screen == OobeScreen.loading ||
-        state.screen == OobeScreen.password) {
-      throw MethodException(AutomatorErrorCode.invalidState);
-    }
-
-    if (state.screen == OobeScreen.done) {
-      state.finish();
-      // Wait for ermine shell to load.
-      await state.shellService.loaded;
-    } else {
-      state.nextScreen();
     }
   }
 }

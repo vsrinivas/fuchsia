@@ -26,7 +26,6 @@ class ShellService {
   late final VoidCallback onShellExit;
   late final bool _useFlatland;
   _ErmineViewConnection? _ermine;
-  var _loadedCompleter = Completer();
 
   ShellService() {
     ScenicProxy scenic = ScenicProxy();
@@ -43,9 +42,6 @@ class ShellService {
   bool get ready => _ready.value;
   final _ready = false.asObservable();
 
-  /// Returns the future when shell is loaded and finished rendering a frame.
-  Future get loaded => _loadedCompleter.future;
-
   void dispose() {
     _focusSubscription.cancel();
   }
@@ -55,11 +51,7 @@ class ShellService {
     assert(_ermine == null, 'Instance of ermine shell already exists.');
     _ermine = _ErmineViewConnection(
       useFlatland: _useFlatland,
-      onReady: () {
-        _loadedCompleter.complete();
-        _loadedCompleter = Completer();
-        onShellReady();
-      },
+      onReady: onShellReady,
       onExit: onShellExit,
     );
     return _ermine!.fuchsiaViewConnection;
