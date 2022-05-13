@@ -698,19 +698,25 @@ template("assemble_system") {
 
     binary_label = "//build/assembly/scripts:compare_image_assembly_configs"
     deps = [
-      ":${labels.image_assembly_config}",
-      ":${labels.product_assembler}",
-    ]
+             ":${labels.image_assembly_config}",
+             ":${labels.product_assembler}",
+           ] + labels.product_assembly_config_deps
+
     inputs = [
       files.image_assembly_config,
       files.regenerated_image_assembly_config,
+      files.product_assembly_config,
     ]
     outputs = [ files.compare_image_assembly_configs ]
     args = [
       "--stamp",
       rebase_path(files.compare_image_assembly_configs, root_build_dir),
+      "--legacy-image-assembly-config",
       rebase_path(files.image_assembly_config, root_build_dir),
+      "--generated-image-assembly-config",
       rebase_path(files.regenerated_image_assembly_config, root_build_dir),
+      "--product-assembly-config",
+      rebase_path(files.product_assembly_config, root_build_dir),
     ]
   }
 

@@ -5,6 +5,7 @@
 
 import argparse
 import hashlib
+import json
 import sys
 from typing import Dict, Iterable, List, Set, TypeVar
 
@@ -132,7 +133,7 @@ def compare_file_hash_maps(
             continue
 
         if name not in second_map:
-            errors.append(f"missing from second ({item_type}): {name}")
+            errors.append(f"missing ({item_type}): {name}")
             continue
 
         # Use pop() so only items in second, but not in first, remain after
@@ -147,7 +148,7 @@ def compare_file_hash_maps(
         for name in second_map.keys():
             if name in MISMATCH_EXCEPTIONS:
                 continue
-            errors.append(f"missing from first ({item_type}): {name}")
+            errors.append(f"added ({item_type}): {name}")
 
     return errors
 
@@ -156,15 +157,9 @@ def compare_sets(item_type: str, first: Set[T], second: Set[T]) -> List[str]:
     errors: List[str] = []
 
     errors.extend(
-        [
-            f"missing from first {item_type}: {item}"
-            for item in first.difference(second)
-        ])
+        [f"added ({item_type}): {item}" for item in first.difference(second)])
     errors.extend(
-        [
-            f"missing from second ({item_type}): {item}"
-            for item in second.difference(first)
-        ])
+        [f"missing ({item_type}): {item}" for item in second.difference(first)])
 
     return errors
 
@@ -176,55 +171,88 @@ def main() -> int:
     )
 
     parser.add_argument(
-        "first",
-        help='The first Image Assembly config',
-        type=argparse.FileType('r'))
+        "--legacy-image-assembly-config",
+        help='The legacy Image Assembly config',
+        type=argparse.FileType('r'),
+        required=True)
     parser.add_argument(
-        "second",
-        help='The second Image Assembly config',
-        type=argparse.FileType('r'))
+        "--generated-image-assembly-config",
+        help='The Product Assembly-generated Image Assembly config',
+        type=argparse.FileType('r'),
+        required=True)
+    parser.add_argument(
+        "--product-assembly-config",
+        help=
+        "The Product Assembly configuration used to generate the Image Assembly config",
+        type=argparse.FileType('r'),
+        required=False)
     parser.add_argument(
         "--stamp",
         help='The file to touch when the action has been run sucessfully')
 
     args = parser.parse_args()
 
-    first = ImageAssemblyConfig.json_load(args.first)
-    second = ImageAssemblyConfig.json_load(args.second)
+    legacy = ImageAssemblyConfig.json_load(args.legacy_image_assembly_config)
+    generated = ImageAssemblyConfig.json_load(
+        args.generated_image_assembly_config)
+    product_assembly_config = {}
+    if args.product_assembly_config:
+        product_assembly_config = json.load(args.product_assembly_config)
+
+    product_config = product_assembly_config.get('product', {})
+    product_packages = product_config.get('packages', {})
 
     errors = []
-    errors.extend(compare_pkg_sets(first.base, second.base, "base"))
-    errors.extend(compare_pkg_sets(first.cache, second.cache, "cache"))
-    errors.extend(compare_pkg_sets(first.system, second.system, "system"))
+    errors.extend(
+        compare_pkg_sets(
+            legacy.base | set(product_packages.get('base', [])), generated.base,
+            "base"))
+    errors.extend(
+        compare_pkg_sets(
+            legacy.cache | set(product_packages.get('cache', [])),
+            generated.cache, "cache"))
+    errors.extend(
+        compare_pkg_sets(
+            legacy.system | set(product_packages.get('system', [])),
+            generated.system, "system"))
 
     errors.extend(
         compare_file_entry_sets(
-            first.bootfs_files, second.bootfs_files, "bootfs"))
-
-    errors.extend(compare_sets("boot arg", first.boot_args, second.boot_args))
-
-    if first.kernel.path and not second.kernel.path:
-        errors.append("second is missing a kernel")
-    elif not first.kernel.path and second.kernel.path:
-        errors.append("first is missing a kernel")
-    elif first.kernel.path and second.kernel.path:
-        if hash_file(first.kernel.path) != hash_file(second.kernel.path):
-            errors.append(
-                "kernels are different: {} and {}".format(
-                    first.kernel.path, second.kernel.path))
+            legacy.bootfs_files, generated.bootfs_files, "bootfs"))
 
     errors.extend(
-        compare_sets("kernel arg", first.kernel.args, second.kernel.args))
+        compare_sets("boot arg", legacy.boot_args, generated.boot_args))
 
-    if first.kernel.clock_backstop != second.kernel.clock_backstop:
+    if legacy.kernel.path and not generated.kernel.path:
+        errors.append("generated image assembly config is missing a kernel")
+    elif not legacy.kernel.path and generated.kernel.path:
+        errors.append("legacy image assembly config is missing a kernel")
+    elif legacy.kernel.path and generated.kernel.path:
+        if hash_file(legacy.kernel.path) != hash_file(generated.kernel.path):
+            errors.append(
+                "kernels are different: {} and {}".format(
+                    legacy.kernel.path, generated.kernel.path))
+
+    errors.extend(
+        compare_sets("kernel arg", legacy.kernel.args, generated.kernel.args))
+
+    if legacy.kernel.clock_backstop != generated.kernel.clock_backstop:
         errors.append(
             "clock_backstops are different: {} and {}".format(
-                first.kernel.clock_backstop, second.kernel.clock_backstop))
+                legacy.kernel.clock_backstop, generated.kernel.clock_backstop))
 
     if errors:
         print('Errors found comparing image assembly configs:')
-        print(f'  first: {args.first.name}')
-        print(f' second: {args.second.name}')
+        print(
+            f'      legacy image assembly config: {args.legacy_image_assembly_config.name}'
+        )
+        print(
+            f'   generated image assembly config: {args.generated_image_assembly_config.name}'
+        )
+        if args.product_assembly_config:
+            print(
+                f'      from product assembly config: {args.product_assembly_config.name}'
+            )
         for error in errors:
             print(error, file=sys.stderr)
     else:
