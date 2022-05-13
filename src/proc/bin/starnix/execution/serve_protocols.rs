@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::execution::Galaxy;
 use anyhow::Error;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_component as fcomponent;
@@ -13,7 +12,6 @@ use fuchsia_async as fasync;
 use fuchsia_runtime::{HandleInfo, HandleType};
 use fuchsia_zircon::HandleBased;
 use futures::TryStreamExt;
-use std::sync::Arc;
 use tracing::error;
 
 use super::*;
@@ -43,14 +41,12 @@ pub async fn serve_starnix_manager(
 
 pub async fn serve_component_runner(
     mut request_stream: fcrunner::ComponentRunnerRequestStream,
-    galaxy: Arc<Galaxy>,
 ) -> Result<(), Error> {
     while let Some(event) = request_stream.try_next().await? {
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
-                let galaxy = galaxy.clone();
                 fasync::Task::local(async move {
-                    if let Err(e) = start_component(start_info, controller, galaxy).await {
+                    if let Err(e) = start_component(start_info, controller).await {
                         error!("failed to start component: {:?}", e);
                     }
                 })

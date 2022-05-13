@@ -12,7 +12,7 @@ use std::sync::Arc;
 use crate::device::{DeviceMode, DeviceRegistry};
 use crate::fs::socket::SocketAddress;
 use crate::fs::{FileOps, FileSystemHandle, FsNode};
-use crate::lock::RwLock;
+use crate::lock::{Mutex, RwLock};
 use crate::task::*;
 use crate::types::{DeviceType, Errno, OpenFlags};
 
@@ -59,6 +59,12 @@ pub struct Kernel {
     /// The registry of device drivers.
     pub device_registry: RwLock<DeviceRegistry>,
 
+    /// The outgoing directory for the component that is being run. This is used to serve a
+    /// `ViewProvider` on behalf of the component, if the component displays graphics.
+    ///
+    /// Note: This assumes there is only one component running in the Kernel.
+    pub outgoing_dir: Mutex<Option<fidl::Channel>>,
+
     // The features enabled for the galaxy this kernel is associated with, as specified in
     // the galaxy's configuration file.
     pub features: HashSet<String>,
@@ -88,6 +94,7 @@ impl Kernel {
             sys_fs: OnceCell::new(),
             selinux_fs: OnceCell::new(),
             device_registry: RwLock::new(DeviceRegistry::new_with_common_devices()),
+            outgoing_dir: Mutex::new(None),
             features: HashSet::from_iter(features.iter().cloned()),
         })
     }
