@@ -198,15 +198,15 @@ func InstallThreadProfiles(ctx context.Context, componentCtx *component.Context)
 
 		channel := zx.GetThreadsChannel()
 		for {
-			if _, err := zxwait.WaitContext(ctx, channel.Handle().Load(), zx.SignalChannelReadable); err != nil {
-				_ = syslog.Warnf("stopped observing for thread profiles: %s", err)
-				return
-			}
 			var handles [handlesPerRead]zx.HandleInfo
-			nb, nh, err := channel.ReadEtc(nil, handles[:], 0)
-			if err != nil {
-				_ = syslog.Errorf("failed to read from threads channel: %s", err)
-				continue
+			var nb, nh uint32
+			if err := zxwait.WithRetryContext(ctx, func() error {
+				var err error
+				nb, nh, err = channel.ReadEtc(nil, handles[:], 0)
+				return err
+			}, *channel.Handle(), zx.SignalChannelReadable, zx.SignalChannelPeerClosed); err != nil {
+				_ = syslog.Errorf("stopped observing for thread profiles: %s", err)
+				return
 			}
 			if nb != 0 {
 				panic(fmt.Sprintf("unexpected %d bytes in channel message", nb))
