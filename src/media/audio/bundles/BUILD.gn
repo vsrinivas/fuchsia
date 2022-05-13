@@ -31,18 +31,10 @@ group("examples") {
   ]
 }
 
-group("config") {
-  testonly = true
-  deps = [ "//src/media/audio/config" ]
-}
-
 group("virtual_audio_driver") {
   public_deps = [ "//src/media/audio/drivers/virtual_audio" ]
 }
 
-# We use this instead of :config, because an external repro removes it from a list. Using :config
-# instead would break that repo.
+# TODO(fxbug.dev/90408): delete after all out-of-tree references are gone
 group("audio_config") {
-  testonly = true
-  deps = [ ":config" ]
 }

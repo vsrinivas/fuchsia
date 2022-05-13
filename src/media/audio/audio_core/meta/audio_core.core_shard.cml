@@ -2,7 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    // TODO(fxbug.dev/90408): Fill this out. This is temporarily empty to not
-    // break out-of-tree builds. See:
-    // https://fuchsia.dev/fuchsia-src/development/components/v2/migration/components#considerations_for_out-of-tree_components
+    include: [ "//src/media/audio/audio_core/meta/audio_core.core_shard.base.cml" ],
+    children: [
+        {
+            name: "audio_core",
+            url: "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#audio_core",
+            subdir: "audio_core",
+        },
+    ],
 }

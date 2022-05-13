@@ -29,7 +29,6 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.thermal.ClientStateConnector",
-                "fuchsia.thermal.ClientStateWatcher",
                 "fuchsia.tracing.provider.Registry",
             ],
         },

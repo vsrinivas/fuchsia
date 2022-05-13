@@ -1234,6 +1234,37 @@
                         message: "A `use from parent` declaration was found at `/core/omaha-client-service` for `fuchsia.update.config.OptOut`, but no matching `offer` declaration was found in the parent",
                     },
                 },
+                {
+                    // `ProcessorCreator` is not present in all products.
+                    "using_node": "/core/audio_core",
+                    "capability": "fuchsia.audio.effects.ProcessorCreator",
+                    "error": {
+                      "error": {
+                        "analyzer_model_error": {
+                          "routing_error": {
+                            "use_from_parent_not_found": {
+                              "moniker": {
+                                "path": [
+                                  {
+                                    "name": "core",
+                                    "collection": null,
+                                    "rep": "core"
+                                  },
+                                  {
+                                    "name": "audio_core",
+                                    "collection": null,
+                                    "rep": "audio_core"
+                                  }
+                                ]
+                              },
+                              "capability_id": "fuchsia.audio.effects.ProcessorCreator"
+                            }
+                          }
+                        }
+                      },
+                      "message": "A `use from parent` declaration was found at `/core/audio_core` for `fuchsia.audio.effects.ProcessorCreator`, but no matching `offer` declaration was found in the parent"
+                    }
+                },
             ],
         },
     },

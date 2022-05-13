@@ -1,0 +1,57 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    use: [
+        {
+            // Make available to v1 components.
+            protocol: [
+                "fuchsia.media.ActivityReporter",
+                "fuchsia.media.Audio",
+                "fuchsia.media.audio.EffectsController",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.media.UsageGainReporter",
+                "fuchsia.media.UsageReporter",
+            ],
+            from: "#audio_core",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-audio-input",
+            to: "#audio_core",
+            subdir: "class/audio-input",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-audio-output",
+            to: "#audio_core",
+            subdir: "class/audio-output",
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            from: "#cobalt",
+            to: "#audio_core",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "self",
+            to: "#audio_core",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.thermal.ClientStateConnector",
+            ],
+            from: "parent",
+            to: "#audio_core",
+        },
+    ],
+}
