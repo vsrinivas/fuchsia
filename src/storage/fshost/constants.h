@@ -27,6 +27,7 @@ inline const char* kFactoryfsPath = "/pkg/bin/factoryfs";
 // These are default sizes of data partition.
 inline const uint64_t kDefaultMinfsMaxBytes = 24 * 1024 * 1024;
 inline const uint64_t kDefaultF2fsMinBytes = 100 * 1024 * 1024;
+
 }  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_CONSTANTS_H_

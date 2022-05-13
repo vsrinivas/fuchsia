@@ -222,6 +222,24 @@ __EXPORT std::string_view DiskFormatString(DiskFormat fs_type) {
   return format->name().c_str();
 }
 
+__EXPORT DiskFormat DiskFormatFromString(std::string_view str) {
+  static auto* formats = [] {
+    auto* formats = new std::unordered_map<std::string_view, DiskFormat>();
+    for (auto format : {kDiskFormatGpt, kDiskFormatMbr, kDiskFormatMinfs, kDiskFormatFat,
+                        kDiskFormatBlobfs, kDiskFormatFvm, kDiskFormatZxcrypt, kDiskFormatFactoryfs,
+                        kDiskFormatBlockVerity, kDiskFormatVbmeta, kDiskFormatBootpart,
+                        kDiskFormatFxfs, kDiskFormatF2fs, kDiskFormatNandBroker}) {
+      formats->emplace(DiskFormatString(format), format);
+    }
+    return formats;
+  }();
+  if (auto iter = formats->find(str); iter == formats->end()) {
+    return kDiskFormatUnknown;
+  } else {
+    return iter->second;
+  }
+}
+
 __EXPORT std::string_view DiskFormatComponentUrl(DiskFormat fs_type) {
   switch (fs_type) {
     case kDiskFormatBlobfs:

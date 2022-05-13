@@ -430,12 +430,15 @@ impl MutableDirectory for FxDirectory {
 impl DirectoryEntry for FxDirectory {
     fn open(
         self: Arc<Self>,
-        scope: ExecutionScope,
+        _scope: ExecutionScope,
         flags: fio::OpenFlags,
         mode: u32,
         path: Path,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
+        // Ignore the provided scope which might be for the parent pseudo filesystem and use the
+        // volume's scope instead.
+        let scope = self.volume().scope().clone();
         scope.clone().spawn_with_shutdown(move |shutdown| async move {
             match self.lookup(flags, mode, path).await {
                 Err(e) => send_on_open_with_error(flags, server_end, map_to_status(e)),

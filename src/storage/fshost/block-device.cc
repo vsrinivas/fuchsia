@@ -568,9 +568,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
   switch (format_) {
     case fs_management::kDiskFormatF2fs:
     case fs_management::kDiskFormatFxfs: {
-      std::string binary_path = device_config_->data_filesystem_binary_path();
-      FX_LOGS(INFO) << "Starting fsck with binary " << binary_path;
-      status = CheckCustomFilesystem(binary_path);
+      status = CheckCustomFilesystem(format_);
       break;
     }
     case fs_management::kDiskFormatMinfs: {
@@ -636,15 +634,7 @@ zx_status_t BlockDevice::FormatFilesystem() {
     }
     case fs_management::kDiskFormatFxfs:
     case fs_management::kDiskFormatF2fs: {
-      const auto binary_path = device_config_->data_filesystem_binary_path();
-      if (binary_path.empty()) {
-        FX_LOGS(ERROR) << "Attempting to format a filesystem that requires an external binary, but "
-                       << "data_filesystem_binary_path is not specified; this is most likely a "
-                       << "misconfiguration.";
-        return ZX_ERR_BAD_STATE;
-      }
-      FX_LOGS(INFO) << "Formatting using " << binary_path;
-      status = FormatCustomFilesystem(binary_path);
+      status = FormatCustomFilesystem(format_);
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to format: " << zx_status_get_string(status);
       }
@@ -733,64 +723,6 @@ zx_status_t BlockDevice::MountFilesystem() {
   }
 }
 
-zx_status_t BlockDevice::MaybeChangeDataPartitionFormat() const {
-  auto endpoint_or = GetDeviceEndPoint();
-  if (endpoint_or.is_error()) {
-    FX_LOGS(ERROR) << "Failed to get device endpoint: " << endpoint_or.error_value();
-    return ZX_ERR_BAD_STATE;
-  }
-  fbl::Vector<const char*> argv = {kMinfsPath, "mount", nullptr};
-  auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  if (export_root_or.is_error()) {
-    FX_LOGS(ERROR) << "Failed to create endpoints.";
-    return ZX_ERR_BAD_STATE;
-  }
-  if (zx_status_t status =
-          RunBinary(argv, std::move(endpoint_or).value(), std::move(export_root_or->server));
-      status != ZX_OK) {
-    // Device might not be minfs. That's ok.
-    return ZX_ERR_BAD_STATE;
-  }
-
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> root_dir_or =
-      fs_management::FsRootHandle(export_root_or->client);
-  if (root_dir_or.is_error()) {
-    FX_LOGS(ERROR) << "Failed to get root handle: " << root_dir_or.error_value();
-    return ZX_ERR_BAD_STATE;
-  }
-
-  fbl::unique_fd fd;
-  if (zx_status_t status =
-          fdio_fd_create(root_dir_or->TakeChannel().release(), fd.reset_and_get_address());
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "fdio_fd_create failed";
-    return ZX_ERR_BAD_STATE;
-  }
-
-  std::string binary_path;
-  std::string fmt_str;
-  if (files::ReadFileToStringAt(fd.get(), "fs_switch", &fmt_str)) {
-    if (fmt_str.back() == '\n') {
-      fmt_str.pop_back();
-    }
-    if (fmt_str == "fxfs") {
-      binary_path = kFxfsPath;
-    } else if (fmt_str == "f2fs") {
-      binary_path = kF2fsPath;
-    } else if (fmt_str == "minfs") {
-      binary_path = kMinfsPath;
-    }
-  }
-
-  if (fs_management::Shutdown(export_root_or->client).is_error()) {
-    return ZX_ERR_BAD_STATE;
-  }
-  if (!binary_path.empty()) {
-    return FormatCustomFilesystem(binary_path);
-  }
-  return ZX_ERR_BAD_STATE;
-}
-
 // Attempt to mount the device at a known location.
 //
 // Returns ZX_ERR_ALREADY_BOUND if the device could be mounted, but something
@@ -804,9 +736,6 @@ zx_status_t BlockDevice::MountData(fs_management::MountOptions* options, zx::cha
   if (gpt_is_sys_guid(guid, GPT_GUID_LEN)) {
     return ZX_ERR_NOT_SUPPORTED;
   } else if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
-    if (device_config_->fs_switch() && content_format() == fs_management::kDiskFormatMinfs) {
-      MaybeChangeDataPartitionFormat();
-    }
     return mounter_->MountData(std::move(block_device), *options, content_format());
   } else if (gpt_is_durable_guid(guid, GPT_GUID_LEN)) {
     return mounter_->MountDurable(std::move(block_device), *options);
@@ -925,7 +854,15 @@ zx::status<fidl::ClientEnd<fuchsia_io::Node>> BlockDevice::GetDeviceEndPoint() c
   return zx::ok(std::move(end_points_or->client));
 }
 
-zx_status_t BlockDevice::CheckCustomFilesystem(const std::string& binary_path) const {
+zx_status_t BlockDevice::CheckCustomFilesystem(fs_management::DiskFormat format) const {
+  const std::string binary_path(BinaryPathForFormat(format));
+  if (binary_path.empty()) {
+    FX_LOGS(ERROR) << "Unsupported data format";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  FX_LOGS(INFO) << "Starting fsck with format " << DiskFormatString(format);
+
   fbl::Vector<const char*> argv;
   argv.push_back(binary_path.c_str());
   argv.push_back("fsck");
@@ -941,7 +878,15 @@ zx_status_t BlockDevice::CheckCustomFilesystem(const std::string& binary_path) c
 }
 
 // This is a destructive operation and isn't atomic (i.e. not resilient to power interruption).
-zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) const {
+zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format) const {
+  const std::string binary_path(BinaryPathForFormat(format));
+  if (binary_path.empty()) {
+    FX_LOGS(ERROR) << "Unsupported data format";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  FX_LOGS(INFO) << "Formatting " << DiskFormatString(format);
+
   // Try mounting minfs and slurp all existing data off.
   zx_handle_t handle;
   if (zx_status_t status = fdio_fd_clone(fd_.get(), &handle); status != ZX_OK)
@@ -1039,18 +984,20 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     // Due to reserved and over-provisoned area of f2fs, it needs volume size at least 100 MiB.
     const uint64_t slices_available =
         response->manager->slice_count - response->manager->assigned_slice_count;
-    const uint64_t min_slices =
-        binary_path == kF2fsPath ? fbl::round_up(kDefaultF2fsMinBytes, slice_size) / slice_size : 2;
+    const uint64_t min_slices = format == fs_management::kDiskFormatF2fs
+                                    ? fbl::round_up(kDefaultF2fsMinBytes, slice_size) / slice_size
+                                    : 2;
     if (slices_available < min_slices) {
-      FX_LOGS(ERROR) << "Not enough space for " << binary_path << " partition";
+      FX_LOGS(ERROR) << "Not enough space for " << DiskFormatString(format) << " partition";
       return ZX_ERR_NO_SPACE;
     }
     uint64_t slice_target = kDefaultMinfsMaxBytes;
-    if (binary_path == kF2fsPath) {
+    if (format == fs_management::kDiskFormatF2fs) {
       slice_target = kDefaultF2fsMinBytes;
     }
     if (slices_available < slice_target) {
-      FX_LOGS(WARNING) << "Only " << slices_available << " slices available for " << binary_path
+      FX_LOGS(WARNING) << "Only " << slices_available << " slices available for "
+                       << DiskFormatString(format)
                        << " partition; some functionality may be missing.";
     }
     slice_count = std::min(slices_available, std::max<uint64_t>(response->manager->slice_count / 10,
@@ -1061,7 +1008,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     --slice_count;
   }
   FX_LOGS(INFO) << "Allocating " << slice_count << " slices (" << slice_count * slice_size
-                << " bytes) for " << binary_path << " partition";
+                << " bytes) for " << DiskFormatString(format) << " partition";
 
   auto extend_result =
       fidl::WireCall(volume_client)

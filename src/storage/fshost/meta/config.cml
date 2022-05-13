@@ -40,12 +40,8 @@
         // Automatically formats the data partition if it is found to be corrupted.
         format_data_on_corruption: { type: "bool" },
 
-        // If enabled, users can change the data partition from the default minfs filesystem to
-        // either fxfs or f2fs by writing "fxfs" or "f2fs" to /data/fs_switch and then rebooting.
-        fs_switch: { type: "bool" },
-
-        // Use the given binary as the filesystem for the data partition.
-        data_filesystem_binary_path: {
+        // Use the given format as the filesystem for the data partition.
+        data_filesystem_format: {
             type: "string",
             max_size: 64,
         },

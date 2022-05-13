@@ -196,11 +196,11 @@ source_set("block-watcher") {
     sources += [ "extract-metadata-noop.cc" ]
   }
 
-  if (fs_switch || data_filesystem_format == "fxfs") {
-    deps += [ "//src/storage/fxfs" ]
+  if (data_filesystem_format == "fxfs") {
+    deps += [ "//src/storage/fxfs:fxfs_component" ]
   }
 
-  if (fs_switch || data_filesystem_format == "f2fs") {
+  if (data_filesystem_format == "f2fs") {
     deps += [ "//src/storage/bin/f2fs" ]
   }
 
@@ -245,7 +245,7 @@ executable("fshost") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 
-  if (fs_switch || data_filesystem_format == "fxfs") {
+  if (data_filesystem_format == "fxfs") {
     deps += [ "//src/storage/fxfs-crypt" ]
   }
 
@@ -411,7 +411,7 @@ cmc_merge("test-fshost.cml") {
     "meta/config.cml",
     "meta/core_fshost.cml",
     "meta/cpp_fshost.cml",
-    "meta/fxfs_fshost.cml",
+    "meta/no_fxfs_fshost.cml",
   ]
 }
 
@@ -539,9 +539,13 @@ cmc_merge("fshost.cml") {
     "meta/base_fshost.cml",
     "meta/config.cml",
     "meta/cpp_fshost.cml",
-    "meta/fxfs_fshost.cml",
     "meta/real_fshost.cml",
   ]
+  if (data_filesystem_format == "fxfs") {
+    sources += [ "meta/fxfs_fshost.cml" ]
+  } else {
+    sources += [ "meta/no_fxfs_fshost.cml" ]
+  }
   if (!bootfs_only) {
     sources += [ "meta/core_fshost.cml" ]
   }
@@ -583,6 +587,10 @@ integration_test_config = {
 
   # The BlockDeviceManagerIntegration.SetPartitionName test needs this.
   allow_legacy_data_partition_names = true
+
+  # TODO(fxbug.dev/100264) For now, the integration tests only pass if the data filesystem format is
+  # minfs.
+  data_filesystem_format = ""
 }
 
 generated_fshost_config("integration_test_config") {

@@ -7,6 +7,10 @@
             name: "fxfs-crypt",
             url: "fuchsia-boot:///#meta/fxfs-crypt.cm",
         },
+        {
+            name: "fxfs",
+            url: "fuchsia-boot:///#meta/fxfs.cm",
+        },
     ],
     use: [
         {
@@ -17,12 +21,35 @@
             protocol: "fuchsia.fxfs.CryptManagement",
             from: "#fxfs-crypt",
         },
+        {
+            protocol: "fuchsia.fs.startup.Startup",
+            from: "#fxfs",
+            path: "/fxfs/fuchsia.fs.startup.Startup",
+        },
+
+        // Required for inspect data.
+        {
+            directory: "root",
+            from: "#fxfs",
+            rights: [ "r*" ],
+            path: "/data_root",
+        },
     ],
     offer: [
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
-            to: "#fxfs-crypt",
+            to: [
+                "#fxfs",
+                "#fxfs-crypt",
+            ],
+        },
+    ],
+    expose: [
+        {
+            directory: "root",
+            from: "#fxfs",
+            as: "minfs",
         },
     ],
 }

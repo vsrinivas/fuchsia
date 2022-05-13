@@ -33,10 +33,6 @@ declare_args() {
   # migrated in-place to the specified format when fshost mounts it.
   data_filesystem_format = "minfs"
 
-  # If enabled, users can change the data partition from the default minfs filesystem to either fxfs
-  # or f2fs by writing "fxfs" or "f2fs" to /data/fs_switch and then rebooting.
-  fs_switch = false
-
   # Set to true to enable legacy data partition names.
   allow_legacy_data_partition_names = false
 
@@ -116,12 +112,11 @@ template("generated_fshost_config") {
       blobfs_max_bytes = 0
       bootpart = true
       data = true
-      data_filesystem_binary_path = ""
+      data_filesystem_format = ""
       data_max_bytes = 0
       durable = false
       factory = false
       format_data_on_corruption = true
-      fs_switch = false
       fvm = true
       gpt = true
       mbr = false
@@ -162,18 +157,7 @@ template("generated_fshost_config") {
       if (!format_minfs_on_corruption) {
         format_data_on_corruption = false
       }
-      if (invoker.fs_switch) {
-        fs_switch = true
-      }
-      if (invoker.data_filesystem_format == "fxfs") {
-        data_filesystem_binary_path = "/pkg/bin/fxfs"
-      } else if (invoker.data_filesystem_format == "f2fs") {
-        data_filesystem_binary_path = "/pkg/bin/f2fs"
-      } else if (invoker.data_filesystem_format != "minfs") {
-        assert(false,
-               "Invalid data_filesystem_format: '" +
-                   invoker.data_filesystem_format + "'")
-      }
+      data_filesystem_format = invoker.data_filesystem_format
       if (fshost_watch_for_nand) {
         nand = true
       }

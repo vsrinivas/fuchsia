@@ -16,7 +16,7 @@ use {
         },
     },
     anyhow::{Context, Error},
-    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker},
+    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, ServerEnd},
     fidl_fuchsia_fs::{AdminMarker, AdminRequest, AdminRequestStream},
     fidl_fuchsia_fs_startup::{
         CheckOptions, FormatOptions, StartOptions, StartupMarker, StartupRequest,
@@ -39,7 +39,7 @@ use {
         inspect::{FsInspect, FsInspectTree},
         path::Path,
         registry::token_registry,
-        remote::remote,
+        remote::remote_boxed_with_type,
     },
 };
 
@@ -50,7 +50,7 @@ fn map_to_raw_status(e: Error) -> zx::sys::zx_status_t {
 /// Runs Fxfs as a component.
 pub struct Component {
     // This is None until Start is called with a block device.
-    inner: Mutex<Option<Inner>>,
+    state: Mutex<State>,
 
     // The execution scope of the pseudo filesystem.
     scope: ExecutionScope,
@@ -59,10 +59,32 @@ pub struct Component {
     outgoing_dir: Arc<vfs::directory::immutable::Simple>,
 }
 
-struct Inner {
+enum State {
+    PreStart { queued: Vec<(fio::OpenFlags, u32, Path, ServerEnd<fio::NodeMarker>)> },
+    Started(Started),
+    Stopped,
+}
+
+struct Started {
     fs: OpenFxFilesystem,
     volumes: VolumesDirectory,
     _inspect_tree: FsInspectTree,
+}
+
+impl State {
+    fn maybe_stop(&mut self) -> Option<Started> {
+        if let State::Started(_) = self {
+            if let State::Started(started) = std::mem::replace(self, State::Stopped) {
+                Some(started)
+            } else {
+                unsafe {
+                    std::hint::unreachable_unchecked();
+                }
+            }
+        } else {
+            None
+        }
+    }
 }
 
 impl Component {
@@ -70,7 +92,7 @@ impl Component {
         let registry = token_registry::Simple::new();
         let outgoing_dir = vfs::directory::immutable::simple();
         Arc::new(Self {
-            inner: Mutex::new(None),
+            state: Mutex::new(State::PreStart { queued: Vec::new() }),
             scope: ExecutionScope::build().token_registry(registry).new(),
             outgoing_dir,
         })
@@ -92,6 +114,24 @@ impl Component {
                 ),
             )
             .expect("unable to create diagnostics dir");
+
+        let weak = Arc::downgrade(&self);
+        self.outgoing_dir.add_entry(
+            "root",
+            // remote_boxed_with_type will work slightly differently to how it will once we've
+            // mounted because opening with NODE_REFERENCE will succeed and open the pseudo
+            // entry. This difference shouldn't matter.
+            remote_boxed_with_type(
+                Box::new(move |_, open_flags, mode, path, channel| {
+                    if let Some(me) = weak.upgrade() {
+                        if let State::PreStart { queued } = &mut *me.state.lock().unwrap() {
+                            queued.push((open_flags, mode, path, channel));
+                        }
+                    }
+                }),
+                fio::DirentType::Directory,
+            ),
+        )?;
 
         let svc_dir = vfs::directory::immutable::simple();
         self.outgoing_dir.add_entry("svc", svc_dir.clone()).expect("Unable to create svc dir");
@@ -168,16 +208,16 @@ impl Component {
         // start another instance.  This is a problem whilst we are using static routing.  We can
         // probably address this by switching to dynamic routing: e.g. change the Start method so
         // that it supplies an export root and then we can notice when the client goes away.
-        let inner = self.inner.lock().unwrap().take();
-        if let Some(inner) = inner {
+        let state = self.state.lock().unwrap().maybe_stop();
+        if let Some(state) = state {
             // TODO(fxbug.dev/99591): There's a race here that we should think about: it's
             // possible that Shutdown has been called on an old filesystem but hasn't completed,
-            // in which case this we'll skip over here and possible fail below.
+            // in which case this we'll skip over here and possibly fail below.
             let _ = self
                 .outgoing_dir
                 .remove_entry_impl("root".into(), /* must_be_directory: */ false);
-            inner.volumes.terminate().await;
-            let _ = inner.fs.close().await;
+            state.volumes.terminate().await;
+            let _ = state.fs.close().await;
         }
         let client = RemoteBlockClient::new(device.into_channel()).await?;
         let fs = FxFilesystem::open_with_options(
@@ -193,15 +233,24 @@ impl Component {
         let volume = volumes
             .open_or_create_volume(DEFAULT_VOLUME_NAME, Some(crypt), /* create_only: */ false)
             .await?;
-        *self.inner.lock().unwrap() = Some(Inner {
-            fs,
-            volumes,
-            _inspect_tree: FsInspectTree::new(
-                Arc::downgrade(volume.volume()) as Weak<dyn FsInspect + Send + Sync>,
-                &crate::metrics::FXFS_ROOT_NODE.lock().unwrap(),
-            ),
-        });
         self.start_serving(&volume).await?;
+        if let State::PreStart { queued } = std::mem::replace(
+            &mut *self.state.lock().unwrap(),
+            State::Started(Started {
+                fs,
+                volumes,
+                _inspect_tree: FsInspectTree::new(
+                    Arc::downgrade(volume.volume()) as Weak<dyn FsInspect + Send + Sync>,
+                    &crate::metrics::FXFS_ROOT_NODE.lock().unwrap(),
+                ),
+            }),
+        ) {
+            let root = volume.root();
+            let scope = volume.volume().scope();
+            for (open_flags, mode, path, channel) in queued {
+                root.clone().open(scope.clone(), open_flags, mode, path, channel);
+            }
+        }
         Ok(())
     }
 
@@ -256,13 +305,13 @@ impl Component {
         match req {
             AdminRequest::Shutdown { responder } => {
                 log::info!("Received shutdown request");
-                let inner = self.inner.lock().unwrap().take();
-                if let Some(inner) = inner {
+                let state = self.state.lock().unwrap().maybe_stop();
+                if let Some(state) = state {
                     let _ = self
                         .outgoing_dir
                         .remove_entry_impl("root".into(), /* must_be_directory: */ false);
-                    inner.volumes.terminate().await;
-                    let _ = inner.fs.close().await;
+                    state.volumes.terminate().await;
+                    let _ = state.fs.close().await;
                 }
                 log::info!("Filesystem terminated");
                 responder
@@ -275,13 +324,10 @@ impl Component {
 
     /// Serves this volume on `outgoing_dir`.
     async fn start_serving(&self, volume: &FxVolumeAndRoot) -> Result<(), Error> {
-        let root = volume.root().clone();
-        let scope = volume.volume().scope().clone();
-        self.outgoing_dir.add_entry(
-            "root",
-            remote(move |_, open_flags, mode, path, channel| {
-                root.clone().open(scope.clone(), open_flags, mode, path, channel)
-            }),
+        self.outgoing_dir.add_entry_impl(
+            "root".to_string(),
+            volume.root().clone(),
+            /* overwrite: */ true,
         )?;
 
         Ok(())

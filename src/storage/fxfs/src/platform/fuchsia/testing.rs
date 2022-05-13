@@ -16,10 +16,7 @@ use {
     fuchsia_zircon::Status,
     std::sync::Arc,
     storage_device::{fake_device::FakeDevice, DeviceHolder},
-    vfs::{
-        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
-        registry::token_registry,
-    },
+    vfs::{directory::entry::DirectoryEntry, path::Path},
 };
 
 struct State {
@@ -35,7 +32,6 @@ impl From<State> for (OpenFxFilesystem, FxVolumeAndRoot) {
 }
 
 pub struct TestFixture {
-    scope: ExecutionScope,
     state: Option<State>,
     encrypted: bool,
 }
@@ -83,11 +79,10 @@ impl TestFixture {
             .unwrap();
             (filesystem, vol)
         };
-        let scope = ExecutionScope::build().token_registry(token_registry::Simple::new()).new();
         let (root, server_end) =
             create_proxy::<fio::DirectoryMarker>().expect("create_proxy failed");
         volume.root().clone().open(
-            scope.clone(),
+            volume.volume().scope().clone(),
             fio::OpenFlags::DIRECTORY
                 | fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::RIGHT_WRITABLE,
@@ -95,7 +90,7 @@ impl TestFixture {
             Path::dot(),
             ServerEnd::new(server_end.into_channel()),
         );
-        Self { scope, state: Some(State { filesystem, volume, root }), encrypted }
+        Self { state: Some(State { filesystem, volume, root }), encrypted }
     }
 
     /// Closes the test fixture, shutting down the filesystem. Returns the device, which can be
@@ -121,7 +116,7 @@ impl TestFixture {
         // Wait for all tasks to finish running.  If we don't do this, it's possible that we haven't
         // yet noticed that a connection has closed, and so tasks can still be running and they can
         // hold references to the volume which we want to unwrap.
-        self.scope.wait().await;
+        volume.volume().scope().wait().await;
 
         volume.volume().terminate().await;
 
@@ -158,7 +153,6 @@ impl TestFixture {
         device.ensure_unique();
         device.reopen();
 
-        self.scope.shutdown();
         device
     }
 

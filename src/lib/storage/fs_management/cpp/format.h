@@ -36,6 +36,7 @@ enum DiskFormat {
 };
 
 std::string_view DiskFormatString(DiskFormat fs_type);
+DiskFormat DiskFormatFromString(std::string_view str);
 
 // Get the component url for the disk format, if it's known. If it's not known, this returns an
 // empty string.

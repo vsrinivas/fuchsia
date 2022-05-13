@@ -64,14 +64,11 @@ class BlockDevice : public BlockDeviceInterface {
   const std::string& topological_path() const override { return topological_path_; }
   const std::string& partition_name() const override;
   zx::status<fidl::ClientEnd<fuchsia_io::Node>> GetDeviceEndPoint() const;
-  zx_status_t CheckCustomFilesystem(const std::string& binary_path) const;
-  zx_status_t FormatCustomFilesystem(const std::string& binary_path) const;
+  zx_status_t CheckCustomFilesystem(fs_management::DiskFormat format) const;
+  zx_status_t FormatCustomFilesystem(fs_management::DiskFormat format) const;
 
  private:
   zx_status_t MountData(fs_management::MountOptions* options, zx::channel block_device);
-
-  // TODO(https://fxbug.dev/92302): Temporarily allow selection of filesystem format.
-  zx_status_t MaybeChangeDataPartitionFormat() const;
 
   FilesystemMounter* mounter_ = nullptr;
   fbl::unique_fd fd_;

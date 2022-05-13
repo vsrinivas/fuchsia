@@ -34,11 +34,6 @@
             path: "/fs/pkgfs/packages/shell-commands/0/bin",
         },
         {
-            directory: "minfs",
-            rights: [ "rw*" ],
-            path: "/fs/data",
-        },
-        {
             directory: "config-data",
             rights: [ "r*" ],
             path: "/fs/pkgfs/packages/config-data/0/meta/data",
@@ -107,7 +102,6 @@
                 "bin",
                 "build-info",
                 "config-data",
-                "minfs",
                 "pkgfs",
                 "pkgfs-packages",
                 "root-ssl-certificates",

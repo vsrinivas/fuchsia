@@ -241,11 +241,8 @@ class DataPartitionMatcher : public BlockDeviceManager::Matcher {
       variant.zxcrypt = ZxcryptVariant::kNormal;
     }
 
-    if (config.data_filesystem_binary_path().find("fxfs") != std::string::npos) {
-      variant.format = fs_management::kDiskFormatFxfs;
-    } else if (config.data_filesystem_binary_path().find("f2fs") != std::string::npos) {
-      variant.format = fs_management::kDiskFormatF2fs;
-    }
+    if (!config.data_filesystem_format().empty())
+      variant.format = fs_management::DiskFormatFromString(config.data_filesystem_format());
 
     variant.format_data_on_corruption = config.format_data_on_corruption();
     return variant;

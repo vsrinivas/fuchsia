@@ -115,6 +115,8 @@ class FilesystemMounter {
   fidl::ClientEnd<fuchsia_io::Directory> crypt_outgoing_directory_;
 };
 
+std::string_view BinaryPathForFormat(fs_management::DiskFormat format);
+
 }  // namespace fshost
 
 #endif  // SRC_STORAGE_FSHOST_FILESYSTEM_MOUNTER_H_

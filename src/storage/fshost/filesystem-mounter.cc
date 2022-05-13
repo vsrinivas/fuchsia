@@ -145,52 +145,40 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client;
-  std::string binary_path = config_.data_filesystem_binary_path();
-  // Config overrides passed in format.
+  std::string binary_path(BinaryPathForFormat(format));
   if (binary_path.empty()) {
-    switch (format) {
-      case fs_management::kDiskFormatFxfs: {
-        binary_path = kFxfsPath;
-        break;
-      }
-      case fs_management::kDiskFormatMinfs: {
-        binary_path = kMinfsPath;
-        break;
-      }
-      case fs_management::kDiskFormatF2fs: {
-        binary_path = kF2fsPath;
-        break;
-      }
-      default: {
-        FX_LOGS(INFO) << "Device format '" << fs_management::DiskFormatString(format)
-                      << "'. Defaulting to minfs.";
-        format = fs_management::kDiskFormatMinfs;
-        binary_path = kMinfsPath;
-      }
-    }
+    FX_LOGS(ERROR) << "Unsupported format: " << DiskFormatString(format);
+    return ZX_ERR_INVALID_ARGS;
   }
 
-  if (binary_path == kFxfsPath) {
+  if (format == fs_management::kDiskFormatFxfs) {
+    // TODO(fxbug.dev/99591): Statically route the crypt service.
     auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
     if (crypt_client_or.is_error()) {
       return crypt_client_or.error_value();
     }
-    crypt_client = std::move(crypt_client_or).value();
-  }
 
-  if (auto result = MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
-                                    std::move(block_device), FS_SVC, std::move(crypt_client));
-      result.is_error()) {
-    return result.error_value();
-  }
+    auto fidl_options = options.as_start_options();
+    fidl_options->crypt = std::move(crypt_client_or).value();
 
-  if (zx_status_t status = fshost_.ForwardFsDiagnosticsDirectory(
-          FsManager::MountPoint::kData, fs_management::DiskFormatString(format));
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to add diagnostic directory for "
-                   << fs_management::DiskFormatString(format) << ": "
-                   << zx_status_get_string(status);
+    if (zx::status<> status =
+            LaunchFsComponent(std::move(block_device), *std::move(fidl_options), "fxfs");
+        status.is_error()) {
+      return status.error_value();
+    }
+  } else {
+    if (auto result = MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
+                                      std::move(block_device), FS_SVC, {});
+        result.is_error()) {
+      return result.error_value();
+    }
+
+    if (zx_status_t status = fshost_.ForwardFsDiagnosticsDirectory(
+            FsManager::MountPoint::kData, fs_management::DiskFormatString(format));
+        status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "failed to add diagnostic directory for "
+                              << fs_management::DiskFormatString(format);
+    }
   }
 
   data_mounted_ = true;
@@ -270,7 +258,7 @@ void FilesystemMounter::ReportDataPartitionCorrupted() {
 }
 
 zx::status<> FilesystemMounter::MaybeInitCryptClient() {
-  if (config_.data_filesystem_binary_path() != kFxfsPath) {
+  if (config_.data_filesystem_format() != "fxfs") {
     FX_LOGS(INFO) << "Not initializing Crypt client due to configuration";
     return zx::ok();
   }
@@ -311,6 +299,19 @@ zx::status<> FilesystemMounter::MaybeInitCryptClient() {
     return zx::error(result.status());
   }
   return zx::ok();
+}
+
+std::string_view BinaryPathForFormat(fs_management::DiskFormat format) {
+  switch (format) {
+    case fs_management::kDiskFormatFxfs:
+      return kFxfsPath;
+    case fs_management::kDiskFormatF2fs:
+      return kF2fsPath;
+    case fs_management::kDiskFormatMinfs:
+      return kMinfsPath;
+    default:
+      return "";
+  }
 }
 
 }  // namespace fshost

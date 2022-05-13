@@ -177,14 +177,32 @@ zx_status_t FsManager::Initialize(
   outgoing_dir->AddEntry("fs", fs_dir_);
 
   // Add the diagnostics directory
-  zx::status data_root_or =
-      fs_management::FsRootHandle(mount_nodes_[MountPoint::kData].export_root);
-  if (data_root_or.is_error()) {
-    return data_root_or.status_value();
+  fidl::ClientEnd<fuchsia_io::Directory> data_root;
+  if (config.data_filesystem_format() == "fxfs") {
+    auto endpoints_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (endpoints_or.is_error())
+      return endpoints_or.error_value();
+    // Fxfs is launched as a component, so we need to get access to it via the local namespace.
+    if (zx_status_t status = fdio_open(
+            "/data_root", static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable),
+            endpoints_or->server.TakeChannel().release());
+        status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Unable to open /data_root";
+      return status;
+    }
+    data_root = std::move(endpoints_or->client);
+  } else {
+    if (auto data_root_or =
+            fs_management::FsRootHandle(mount_nodes_[MountPoint::kData].export_root);
+        data_root_or.is_error()) {
+      return data_root_or.status_value();
+    } else {
+      data_root = *std::move(data_root_or);
+    }
   }
   diagnostics_dir_ = inspect_.Initialize(global_loop_->dispatcher());
   outgoing_dir->AddEntry("diagnostics", diagnostics_dir_);
-  inspect_.ServeStats("data", std::move(*data_root_or));
+  inspect_.ServeStats("data", std::move(data_root));
 
   fbl::RefPtr<memfs::VnodeDir> tmp_vnode;
   status = memfs::Memfs::Create(global_loop_->dispatcher(), "<tmp>", &tmp_, &tmp_vnode);
