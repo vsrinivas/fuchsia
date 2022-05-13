@@ -139,7 +139,12 @@ impl DirEntry {
     /// Look up a directory entry with the given name as direct child of this
     /// entry.
     pub fn component_lookup(self: &DirEntryHandle, name: &FsStr) -> Result<DirEntryHandle, Errno> {
-        let (node, _) = self.get_or_create_child(name, || self.node.lookup(name))?;
+        let (node, _) = self.get_or_create_child(name, || {
+            if !self.node.info().mode.contains(FileMode::IWUSR) {
+                return error!(EACCES);
+            }
+            self.node.lookup(name)
+        })?;
         Ok(node)
     }
 

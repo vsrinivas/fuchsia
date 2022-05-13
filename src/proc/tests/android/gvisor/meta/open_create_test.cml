@@ -2,6 +2,5 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/open_create_test",
-        args: [ "--gunit_filter=-*.CreateFailsOnDirWithoutWritePerms:*.ChmodReadToWriteBetweenOpens:*.ChmodWriteToReadBetweenOpens:*.CreateWithReadFlagNotAllowedByMode:*.CreateWithWriteFlagNotAllowedByMode" ],
     },
 }

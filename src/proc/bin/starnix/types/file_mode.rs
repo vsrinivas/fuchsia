@@ -7,6 +7,7 @@
 use std::ops;
 
 use crate::types::uapi;
+use crate::types::*;
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub struct FileMode(u32);
@@ -85,6 +86,16 @@ impl FileMode {
 
     pub fn is_sock(&self) -> bool {
         (self.bits() & uapi::S_IFMT) == uapi::S_IFSOCK
+    }
+
+    pub fn has_open_access(&self, flags: OpenFlags) -> bool {
+        let access_mode = flags & OpenFlags::ACCESS_MASK;
+        match access_mode {
+            OpenFlags::RDONLY => self.contains(FileMode::IRUSR),
+            OpenFlags::WRONLY => self.contains(FileMode::IWUSR),
+            OpenFlags::RDWR => self.contains(FileMode::IRUSR) && self.contains(FileMode::IWUSR),
+            _ => true, // Nonstandard access modes can be opened but will fail to read or write.
+        }
     }
 }
 

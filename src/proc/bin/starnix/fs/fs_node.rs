@@ -539,7 +539,7 @@ mod tests {
         current_task
             .fs
             .root
-            .create_node(b"zero", FileMode::IFCHR, DeviceType::ZERO)
+            .create_node(b"zero", FileMode::IFCHR | FileMode::from_bits(0o666), DeviceType::ZERO)
             .expect("create_node");
 
         // Prepare the user buffer with some values other than the expected content (non-zero).

@@ -645,7 +645,7 @@ pub fn sys_fchmod(current_task: &CurrentTask, fd: FdNumber, mode: FileMode) -> R
     if mode & FileMode::IFMT != FileMode::EMPTY {
         return error!(EINVAL);
     }
-    let file = current_task.files.get(fd)?;
+    let file = current_task.files.get_unless_opath(fd)?;
     file.name.entry.node.chmod(mode);
     Ok(())
 }

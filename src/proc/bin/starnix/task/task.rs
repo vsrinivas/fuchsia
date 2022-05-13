@@ -674,6 +674,11 @@ impl CurrentTask {
             return error!(ELOOP);
         }
 
+        // Mode only applies to future accesses of newly created files.
+        if !flags.contains(OpenFlags::CREAT) && !mode.has_open_access(flags) {
+            return error!(EACCES);
+        }
+
         if mode.is_dir() {
             if flags.can_write()
                 || flags.contains(OpenFlags::CREAT)
