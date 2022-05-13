@@ -1558,6 +1558,48 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_all_next_header_values() {
+        // Test that, when parsing a packet with the fixed header's Next Header
+        // field set to any value, parsing does not panic. A previous version
+        // of this code would panic on some Next Header values.
+
+        // This packet was found via fuzzing to trigger a panic.
+        let mut buf = [
+            0x81, 0x13, 0x27, 0xeb, 0x75, 0x92, 0x33, 0x89, 0x01, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+            0x03, 0x70, 0x00, 0x22, 0xf7, 0x30, 0x2c, 0x06, 0xfe, 0xc9, 0x00, 0x2d, 0x3b, 0xeb,
+            0xad, 0x3e, 0x5c, 0x41, 0xc8, 0x70, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf6, 0x11, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4f, 0x4f, 0x4f, 0x6f, 0x4f, 0x4f, 0x4f, 0x4f,
+            0x4f, 0x4f, 0x4f, 0x4f, 0x4f, 0x4f, 0x4f, 0x4f, 0x4f, 0x4f, 0x4f, 0x4f, 0x19, 0x19,
+            0x19, 0x19, 0x19, 0x4f, 0x4f, 0x4f, 0x4f, 0x29, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x4f, 0x4f, 0x5a, 0x5a, 0x5a, 0xc9, 0x5a, 0x46, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a,
+            0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0xe4, 0x5a, 0x5a, 0x5a, 0x5a,
+        ];
+
+        // First, assert that the Next Header value found by the fuzzer (51)
+        // produces the error we expect.
+        assert_matches!(
+            (&buf[..]).parse::<Ipv6Packet<_>>(),
+            Err(IpParseError::ParameterProblem {
+                src_ip: _,
+                dst_ip: _,
+                code: Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
+                pointer: 0,
+                must_send_icmp: false,
+                header_len: (),
+                action: IpParseErrorAction::DiscardPacket,
+            })
+        );
+
+        // Second, ensure that, regardless of the exact result produced, no Next
+        // Header value causes parsing to panic.
+        for b in 0u8..=255 {
+            // Overwrite the Next Header field.
+            buf[6] = b;
+            let _: Result<_, _> = (&buf[..]).parse::<Ipv6Packet<_>>();
+        }
+    }
+
+    #[test]
     fn test_partial_parse() {
         use std::convert::TryInto as _;
         use std::ops::Deref as _;

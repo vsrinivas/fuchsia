@@ -369,7 +369,30 @@ impl<'a> RecordsImpl<'a> for Ipv6ExtensionHeaderImpl {
             Ipv6ExtHdrType::Routing => Self::parse_routing(data, context),
             Ipv6ExtHdrType::Fragment => Self::parse_fragment(data, context),
             Ipv6ExtHdrType::DestinationOptions => Self::parse_destination_options(data, context),
-            _ => {
+            Ipv6ExtHdrType::EncapsulatingSecurityPayload | Ipv6ExtHdrType::Authentication => {
+                // We don't implement these extension header types.
+                //
+                // Per RFC 2460:
+                //   If, as a result of processing a header, a node is required to
+                //   proceed to the next header but the Next Header value in the
+                //   current header is unrecognized by the node, it should discard
+                //   the packet and send an ICMP Parameter Problem message to the
+                //   source of the packet, with an ICMP Code value of 1
+                //   ("unrecognized Next Header type encountered") and the ICMP
+                //   Pointer field containing the offset of the unrecognized value
+                //   within the original packet.
+                Err(Ipv6ExtensionHeaderParsingError::UnrecognizedNextHeader {
+                    // TODO(https://fxbug.dev/78130): When overhauling packet
+                    // validation, return the right values for `pointer` and
+                    // `header_len`.
+                    pointer: u32::MAX,
+                    header_len: 0,
+                    // This is false because of the "should" in the quoted RFC
+                    // text.
+                    must_send_icmp: false,
+                })
+            }
+            Ipv6ExtHdrType::Other(_) => {
                 if is_valid_next_header_upper_layer(expected_hdr) {
                     // Stop parsing extension headers when we find a Next Header value
                     // for a higher level protocol.
