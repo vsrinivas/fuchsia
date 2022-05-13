@@ -44,7 +44,16 @@ void LoaderServiceBase::Bind(fidl::ServerEnd<fuchsia_ldsvc::Loader> channel) {
   auto conn = std::make_unique<LoaderConnection>(shared_from_this());
   // This returns a ServerBindingRef, but we don't need it since we don't currently need a way
   // to unbind connections from the server side. Dropping it does not automatically unbind.
-  auto _ = fidl::BindServer(dispatcher_, std::move(channel), std::move(conn));
+  (void)fidl::BindServer(
+      dispatcher_, std::move(channel), std::move(conn),
+      [](LoaderConnection* connection, fidl::UnbindInfo info,
+         fidl::ServerEnd<fuchsia_ldsvc::Loader> server_end) {
+        if (info.is_peer_closed() || info.is_user_initiated() || info.is_dispatcher_shutdown()) {
+          // Client broke away or server shutting down.
+          return;
+        }
+        FX_LOGS(ERROR) << "Loader connection error: " << info;
+      });
 }
 
 void LoaderConnection::Done(DoneRequestView request, DoneCompleter::Sync& completer) {
