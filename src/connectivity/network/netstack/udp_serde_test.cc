@@ -8,6 +8,8 @@
 #include <errno.h>
 #include <string.h>
 
+#include <iostream>
+
 #include <gtest/gtest.h>
 
 namespace {
@@ -51,6 +53,32 @@ class AddrKind {
   enum Kind kind;
 };
 
+class span : public cpp20::span<const uint8_t> {
+ public:
+  span(const uint8_t* data, size_t size) : cpp20::span<const uint8_t>(data, size) {}
+
+  bool operator==(const span& other) const {
+    return std::equal(begin(), end(), other.begin(), other.end());
+  }
+
+  friend std::ostream& operator<<(std::ostream& out, const span& buf);
+};
+
+std::ostream& operator<<(std::ostream& out, const span& span) {
+  out << '[';
+  const std::ios_base::fmtflags flags = out.flags();
+  out.flags(std::ios::hex | std::ios::showbase);
+  for (auto it = span.begin(); it != span.end(); ++it) {
+    if (it != span.begin()) {
+      out << ", ";
+    }
+    out << static_cast<unsigned int>(*it);
+  }
+  out.flags(flags);
+  out << ']';
+  return out;
+}
+
 class UdpSerdeTest : public ::testing::TestWithParam<AddrKind> {};
 
 TEST_P(UdpSerdeTest, SendSerializeThenDeserialize) {
@@ -69,7 +97,7 @@ TEST_P(UdpSerdeTest, SendSerializeThenDeserialize) {
       ipv4_socket_addr.port = kPort;
       socket_addr = fuchsia_net::wire::SocketAddress::WithIpv4(alloc, ipv4_socket_addr);
       expected_addr_type = IpAddrType::Ipv4;
-      expected_addr = kIPv4Addr.begin();
+      expected_addr = kIPv4Addr.data();
     } break;
     case AddrKind::Kind::V6: {
       fuchsia_net::wire::Ipv6Address ipv6_addr;
@@ -79,7 +107,7 @@ TEST_P(UdpSerdeTest, SendSerializeThenDeserialize) {
       ipv6_socket_addr.port = kPort;
       socket_addr = fuchsia_net::wire::SocketAddress::WithIpv6(alloc, ipv6_socket_addr);
       expected_addr_type = IpAddrType::Ipv6;
-      expected_addr = kIPv6Addr.begin();
+      expected_addr = kIPv6Addr.data();
     }
   }
   meta_builder.to(socket_addr);
@@ -88,62 +116,63 @@ TEST_P(UdpSerdeTest, SendSerializeThenDeserialize) {
   fuchsia_posix_socket::wire::SendMsgMeta meta = meta_builder.Build();
   ASSERT_TRUE(serialize_send_msg_meta(meta, cpp20::span<uint8_t>(kBuf, kTxUdpPreludeSize)));
 
-  Buffer in_buf = Buffer{
+  const Buffer in_buf = {
       .buf = kBuf,
       .buf_size = kTxUdpPreludeSize,
   };
 
-  DeserializeSendMsgMetaResult res = deserialize_send_msg_meta(in_buf);
+  const DeserializeSendMsgMetaResult res = deserialize_send_msg_meta(in_buf);
 
   ASSERT_EQ(res.err, DeserializeSendMsgMetaErrorNone);
   EXPECT_EQ(res.port, kPort);
   EXPECT_EQ(res.to_addr.addr_type, expected_addr_type);
-  EXPECT_EQ(res.to_addr.addr_size, GetParam().AddrLen());
-  EXPECT_EQ(0, memcmp(res.to_addr.addr, expected_addr, GetParam().AddrLen()));
+  const size_t addr_len = GetParam().AddrLen();
+  const span found_addr(res.to_addr.addr, res.to_addr.addr_size);
+  const span expected(expected_addr, addr_len);
+  EXPECT_EQ(found_addr, expected);
 }
 
 TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
   const size_t addr_len = GetParam().AddrLen();
   uint8_t addr[kIPv6AddrLen];
   IpAddrType addr_type;
+  CmsgSet cmsg_set = {
+      .has_timestamp_nanos = true,
+      .timestamp_nanos = 42,
+  };
   switch (GetParam().Kind()) {
     case AddrKind::Kind::V4: {
       addr_type = IpAddrType::Ipv4;
-      memcpy(addr, kIPv4Addr.begin(), addr_len);
+      memcpy(addr, kIPv4Addr.data(), addr_len);
+      cmsg_set.has_ip_tos = true;
+      cmsg_set.ip_tos = 43;
+      cmsg_set.has_ip_ttl = true;
+      cmsg_set.ip_ttl = 44;
     } break;
     case AddrKind::Kind::V6: {
       addr_type = IpAddrType::Ipv6;
-      memcpy(addr, kIPv6Addr.begin(), addr_len);
+      memcpy(addr, kIPv6Addr.data(), addr_len);
+      cmsg_set.has_ipv6_tclass = true;
+      cmsg_set.ipv6_tclass = 45;
+      cmsg_set.has_ipv6_hoplimit = true;
+      cmsg_set.ipv6_hoplimit = 46;
     }
   }
 
-  const Buffer addr_buf = Buffer{
+  const Buffer addr_buf = {
       .buf = addr,
       .buf_size = addr_len,
   };
 
-  const CmsgSet cmsg_set = CmsgSet{
-      .has_ip_tos = true,
-      .ip_tos = 42,
-      .has_ip_ttl = true,
-      .ip_ttl = 43,
-      .has_ipv6_tclass = true,
-      .ipv6_tclass = 44,
-      .has_ipv6_hoplimit = true,
-      .ipv6_hoplimit = 45,
-      .has_timestamp_nanos = true,
-      .timestamp_nanos = 46,
-  };
-
   uint8_t kBuf[kRxUdpPreludeSize];
 
-  const Buffer out_buf = Buffer{
+  const Buffer out_buf = {
       .buf = kBuf,
       .buf_size = kRxUdpPreludeSize,
   };
   constexpr size_t kPayloadSize = 41;
   ASSERT_EQ(serialize_recv_msg_meta(
-                RecvMsgMeta{
+                {
                     .cmsg_set = cmsg_set,
                     .from_addr_type = addr_type,
                     .payload_size = kPayloadSize,
@@ -155,40 +184,65 @@ TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
       deserialize_recv_msg_meta(cpp20::span<uint8_t>(out_buf.buf, out_buf.buf_size));
   ASSERT_TRUE(decoded.ok());
 
-  fuchsia_posix_socket::wire::RecvMsgMeta* recv_meta = decoded.PrimaryObject();
+  const fuchsia_posix_socket::wire::RecvMsgMeta& recv_meta = *decoded.PrimaryObject();
+
+  ASSERT_TRUE(recv_meta.has_control());
+  const fuchsia_posix_socket::wire::DatagramSocketRecvControlData& control = recv_meta.control();
+
+  ASSERT_TRUE(control.has_network());
+  const fuchsia_posix_socket::wire::NetworkSocketRecvControlData& network_control =
+      control.network();
+
+  ASSERT_TRUE(network_control.has_socket());
+  const fuchsia_posix_socket::wire::SocketRecvControlData& socket_control =
+      network_control.socket();
+
+  ASSERT_TRUE(socket_control.has_timestamp());
+  EXPECT_EQ(socket_control.timestamp().nanoseconds(), cmsg_set.timestamp_nanos);
+
+  ASSERT_TRUE(recv_meta.has_from());
+  const fuchsia_net::wire::SocketAddress& from = recv_meta.from();
 
   switch (GetParam().Kind()) {
     case AddrKind::Kind::V4: {
-      EXPECT_EQ(recv_meta->from().Which(), fuchsia_net::wire::SocketAddress::Tag::kIpv4);
-      EXPECT_EQ(recv_meta->from().ipv4().port, kPort);
-      EXPECT_EQ(0, memcmp(recv_meta->from().ipv4().address.addr.begin(), kIPv4Addr.begin(),
-                          kIPv4AddrLen));
+      ASSERT_EQ(from.Which(), fuchsia_net::wire::SocketAddress::Tag::kIpv4);
+      EXPECT_EQ(from.ipv4().port, kPort);
+      const span found_addr(from.ipv4().address.addr.data(), from.ipv4().address.addr.size());
+      const span expected_addr(kIPv4Addr.data(), kIPv4Addr.size());
+      EXPECT_EQ(found_addr, expected_addr);
+
+      ASSERT_TRUE(network_control.has_ip());
+      const fuchsia_posix_socket::wire::IpRecvControlData& ip_control = network_control.ip();
+
+      ASSERT_TRUE(ip_control.has_tos());
+      EXPECT_EQ(ip_control.tos(), cmsg_set.ip_tos);
+
+      ASSERT_TRUE(ip_control.has_ttl());
+      EXPECT_EQ(ip_control.ttl(), cmsg_set.ip_ttl);
+
+      EXPECT_FALSE(network_control.has_ipv6());
     } break;
     case AddrKind::Kind::V6: {
-      EXPECT_EQ(recv_meta->from().Which(), fuchsia_net::wire::SocketAddress::Tag::kIpv6);
-      EXPECT_EQ(recv_meta->from().ipv6().port, kPort);
-      EXPECT_EQ(0, memcmp(recv_meta->from().ipv6().address.addr.begin(), kIPv6Addr.begin(),
-                          kIPv6AddrLen));
+      ASSERT_EQ(from.Which(), fuchsia_net::wire::SocketAddress::Tag::kIpv6);
+      EXPECT_EQ(from.ipv6().port, kPort);
+      const span found_addr(from.ipv6().address.addr.data(), from.ipv6().address.addr.size());
+      const span expected_addr(kIPv6Addr.data(), kIPv6Addr.size());
+      EXPECT_EQ(found_addr, expected_addr);
+
+      ASSERT_TRUE(recv_meta.control().network().has_ipv6());
+      const fuchsia_posix_socket::wire::Ipv6RecvControlData& ipv6_control = network_control.ipv6();
+
+      ASSERT_TRUE(ipv6_control.has_tclass());
+      EXPECT_EQ(ipv6_control.tclass(), cmsg_set.ipv6_tclass);
+
+      ASSERT_TRUE(ipv6_control.has_hoplimit());
+      EXPECT_EQ(ipv6_control.hoplimit(), cmsg_set.ipv6_hoplimit);
+
+      EXPECT_FALSE(network_control.has_ip());
     }
   }
 
-  EXPECT_EQ(recv_meta->control().network().ip().has_tos(), cmsg_set.has_ip_tos);
-  EXPECT_EQ(recv_meta->control().network().ip().tos(), cmsg_set.ip_tos);
-
-  EXPECT_EQ(recv_meta->control().network().ip().has_ttl(), cmsg_set.has_ip_ttl);
-  EXPECT_EQ(recv_meta->control().network().ip().ttl(), cmsg_set.ip_ttl);
-
-  EXPECT_EQ(recv_meta->control().network().ipv6().has_tclass(), cmsg_set.has_ipv6_tclass);
-  EXPECT_EQ(recv_meta->control().network().ipv6().tclass(), cmsg_set.ipv6_tclass);
-
-  EXPECT_EQ(recv_meta->control().network().ipv6().has_hoplimit(), cmsg_set.has_ipv6_hoplimit);
-  EXPECT_EQ(recv_meta->control().network().ipv6().hoplimit(), cmsg_set.ipv6_hoplimit);
-
-  EXPECT_EQ(recv_meta->control().network().socket().has_timestamp(), cmsg_set.has_timestamp_nanos);
-  EXPECT_EQ(recv_meta->control().network().socket().timestamp().nanoseconds(),
-            cmsg_set.timestamp_nanos);
-
-  EXPECT_EQ(recv_meta->payload_len(), kPayloadSize);
+  EXPECT_EQ(recv_meta.payload_len(), kPayloadSize);
 }
 
 TEST_P(UdpSerdeTest, DeserializeRecvErrors) {
@@ -223,7 +277,7 @@ TEST_P(UdpSerdeTest, DeserializeRecvErrors) {
 
 TEST_P(UdpSerdeTest, DeserializeSendErrors) {
   // Null buffer.
-  DeserializeSendMsgMetaResult null_buffer = deserialize_send_msg_meta({
+  const DeserializeSendMsgMetaResult null_buffer = deserialize_send_msg_meta({
       .buf = nullptr,
       .buf_size = 0,
   });
@@ -232,7 +286,7 @@ TEST_P(UdpSerdeTest, DeserializeSendErrors) {
   uint8_t kBuf[kTxUdpPreludeSize];
 
   // Buffer too short.
-  DeserializeSendMsgMetaResult buf_too_short = deserialize_send_msg_meta({
+  const DeserializeSendMsgMetaResult buf_too_short = deserialize_send_msg_meta({
       .buf = kBuf,
       .buf_size = 0,
   });
@@ -240,7 +294,7 @@ TEST_P(UdpSerdeTest, DeserializeSendErrors) {
 
   // Nonzero prelude.
   memset(kBuf, 1, kTxUdpPreludeSize);
-  DeserializeSendMsgMetaResult nonzero_prelude = deserialize_send_msg_meta({
+  const DeserializeSendMsgMetaResult nonzero_prelude = deserialize_send_msg_meta({
       .buf = kBuf,
       .buf_size = kTxUdpPreludeSize,
   });
@@ -250,7 +304,7 @@ TEST_P(UdpSerdeTest, DeserializeSendErrors) {
   memset(kBuf, 0, kTxUdpPreludeSize);
   uint16_t meta_size = std::numeric_limits<uint16_t>::max();
   memcpy(kBuf, &meta_size, sizeof(meta_size));
-  DeserializeSendMsgMetaResult meta_exceeds_buf = deserialize_send_msg_meta({
+  const DeserializeSendMsgMetaResult meta_exceeds_buf = deserialize_send_msg_meta({
       .buf = kBuf,
       .buf_size = static_cast<uint64_t>(meta_size - 1),
   });
@@ -258,7 +312,7 @@ TEST_P(UdpSerdeTest, DeserializeSendErrors) {
 
   // Failed to decode.
   memset(kBuf, 0, kTxUdpPreludeSize);
-  DeserializeSendMsgMetaResult failed_to_decode = deserialize_send_msg_meta({
+  const DeserializeSendMsgMetaResult failed_to_decode = deserialize_send_msg_meta({
       .buf = kBuf,
       .buf_size = kTxUdpPreludeSize,
   });
@@ -277,21 +331,21 @@ TEST_P(UdpSerdeTest, SerializeRecvErrors) {
   RecvMsgMeta meta = RecvMsgMeta();
   switch (GetParam().Kind()) {
     case AddrKind::Kind::V4: {
-      std::memmove(addr, kIPv4Addr.begin(), addr_len);
+      std::memmove(addr, kIPv4Addr.data(), addr_len);
       meta.from_addr_type = IpAddrType::Ipv4;
     } break;
     case AddrKind::Kind::V6: {
-      std::memmove(addr, kIPv6Addr.begin(), addr_len);
+      std::memmove(addr, kIPv6Addr.data(), addr_len);
       meta.from_addr_type = IpAddrType::Ipv6;
     }
   }
 
-  Buffer addr_buf = Buffer{
+  const Buffer addr_buf = {
       .buf = addr,
       .buf_size = addr_len,
   };
 
-  // Null buffer.
+  // Output buffer null.
   EXPECT_EQ(serialize_recv_msg_meta(meta, addr_buf,
                                     {
                                         .buf = nullptr,
@@ -301,7 +355,7 @@ TEST_P(UdpSerdeTest, SerializeRecvErrors) {
 
   uint8_t kBuf[kTxUdpPreludeSize];
 
-  // Buffer too short.
+  // Output buffer too short.
   EXPECT_EQ(serialize_recv_msg_meta(meta, addr_buf,
                                     {
                                         .buf = kBuf,
