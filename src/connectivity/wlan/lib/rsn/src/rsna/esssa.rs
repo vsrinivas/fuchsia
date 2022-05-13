@@ -392,6 +392,8 @@ impl EssSa {
                 // Always install keys immediately to avoid race conditions after the eapol
                 // exchange completes. This is a particular issue for WPA1, where we may miss
                 // the first PTK-encrypted frame of the group key handshake.
+                // TODO(fxbug.dev/100315): Preemptively requesting the key to be set before
+                //                         receiving eapol confirm may not be necessary.
                 update_sink.push(update);
             } else if let Some(updates_awaiting_confirm) = &mut self.updates_awaiting_confirm {
                 // If we've sent an eapol frame, buffer all other non-key
