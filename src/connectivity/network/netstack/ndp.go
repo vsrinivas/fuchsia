@@ -142,6 +142,10 @@ type ndpDispatcher struct {
 	// configuration options available for an interface.
 	dynamicAddressSourceTracker ipv6AddressConfigTracker
 
+	// getAddressPrefix is a hook to retrieve a prefix for an address from the
+	// NICInfo. It is abstracted out for testing purposes.
+	getAddressPrefix func(info *stack.NICInfo, addr tcpip.Address) (int, bool)
+
 	mu struct {
 		sync.Mutex
 
@@ -452,12 +456,20 @@ func (n *ndpDispatcher) handleEvent(event ndpEvent) {
 				_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending address added event...", event.addr, event.nicID)
 				if nicInfo, ok := n.ns.stack.NICInfo()[event.nicID]; ok {
 					ifs := nicInfo.Context.(*ifState)
-					ifs.mu.Lock()
-					n.ns.onAddressAddLocked(event.nicID, tcpip.AddressWithPrefix{
-						Address:   event.addr,
-						PrefixLen: 8 * header.IPv6AddressSize,
-					}, false /* strict */)
-					ifs.mu.Unlock()
+					if prefix, found := n.getAddressPrefix(&nicInfo, event.addr); found {
+						ifs.mu.Lock()
+						n.ns.onAddressAddLocked(event.nicID, tcpip.AddressWithPrefix{
+							Address:   event.addr,
+							PrefixLen: prefix,
+						}, false /* strict */)
+						ifs.mu.Unlock()
+					} else {
+						// NB: We can find ourselves here if there's a race
+						// between DAD succeeding and the address being removed.
+						// Given DAD events are not strict right now (see
+						// above), we're allowing this to just be logged.
+						_ = syslog.Warnf("could not retrieve prefix DAD address %s", event.addr)
+					}
 				}
 				return true, true
 			case *stack.DADError:
@@ -606,5 +618,13 @@ func newNDPDispatcher() *ndpDispatcher {
 		// share some relationship. See ndpDispatcher for more details.
 		sem:      make(chan struct{}, 1),
 		notifyCh: make(chan struct{}, 1),
+		getAddressPrefix: func(nicInfo *stack.NICInfo, a tcpip.Address) (int, bool) {
+			for _, addr := range nicInfo.ProtocolAddresses {
+				if addr.AddressWithPrefix.Address == a {
+					return addr.AddressWithPrefix.PrefixLen, true
+				}
+			}
+			return 0, false
+		},
 	}
 }

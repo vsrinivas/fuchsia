@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
-	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/interfaces"
 
 	"github.com/google/go-cmp/cmp"
@@ -101,6 +101,12 @@ func TestInterfacesChangeEvent(t *testing.T) {
 	si := &interfaceStateImpl{watcherChan: watcherChan}
 
 	ndpDisp := newNDPDispatcherForTest()
+	ndpDisp.getAddressPrefix = func(info *stack.NICInfo, addr tcpip.Address) (int, bool) {
+		if addr != testProtocolAddr1.AddressWithPrefix.Address {
+			t.Fatalf("got %s, want %s", addr, testProtocolAddr1.AddressWithPrefix.Address)
+		}
+		return testProtocolAddr1.AddressWithPrefix.PrefixLen, true
+	}
 	ns, _ := newNetstack(t, netstackTestOptions{ndpDisp: ndpDisp, interfaceEventChan: eventChan})
 	ndpDisp.start(ctx)
 
@@ -118,13 +124,8 @@ func TestInterfacesChangeEvent(t *testing.T) {
 	}
 	hasAddr := func(addresses []interfaces.Address) bool {
 		for _, a := range addresses {
-			if a.HasValue() {
-				ifAddr := a.GetValue()
-				if ifAddr.Which() == net.InterfaceAddressIpv6 {
-					return tcpip.Address(ifAddr.Ipv6.Addr[:]) == testProtocolAddr1.AddressWithPrefix.Address
-				} else {
-					panic(fmt.Sprintf("unexpected IP address version: %#v", ifAddr))
-				}
+			if a.HasAddr() && fidlconv.ToTCPIPProtocolAddress(a.GetAddr()) == testProtocolAddr1 {
+				return true
 			}
 		}
 		return false

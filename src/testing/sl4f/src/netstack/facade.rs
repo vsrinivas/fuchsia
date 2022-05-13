@@ -90,16 +90,13 @@ impl From<(fidl_fuchsia_net_interfaces_ext::Properties, Option<fidl_fuchsia_net:
         };
         let (ipv4_addresses, ipv6_addresses) =
             addresses.into_iter().partition_map::<_, _, _, std::net::Ipv4Addr, std::net::Ipv6Addr>(
-                |fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| match value {
-                    fidl_fuchsia_net::InterfaceAddress::Ipv4(
-                        fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                            addr: fidl_fuchsia_net::Ipv4Address { addr },
-                            prefix_len: _,
-                        },
-                    ) => itertools::Either::Left(addr.into()),
-                    fidl_fuchsia_net::InterfaceAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
-                        addr,
-                    }) => itertools::Either::Right(addr.into()),
+                |fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                    let fidl_fuchsia_net_ext::Subnet { addr, prefix_len: _ } = addr.into();
+                    let fidl_fuchsia_net_ext::IpAddress(addr) = addr;
+                    match addr {
+                        std::net::IpAddr::V4(addr) => itertools::Either::Left(addr),
+                        std::net::IpAddr::V6(addr) => itertools::Either::Right(addr),
+                    }
                 },
             );
         Self {
@@ -210,7 +207,7 @@ impl NetstackFacade {
         Ok(response)
     }
 
-    async fn get_addresses<T, F: Copy + FnMut(fidl_fuchsia_net::InterfaceAddress) -> Option<T>>(
+    async fn get_addresses<T, F: Copy + FnMut(fidl_fuchsia_net::Subnet) -> Option<T>>(
         &self,
         f: F,
     ) -> Result<Vec<T>, Error> {
@@ -233,10 +230,10 @@ impl NetstackFacade {
                             .into_iter()
                             .map(
                                 |fidl_fuchsia_net_interfaces::Address {
-                                     value,
+                                     addr,
                                      valid_until: _,
                                      ..
-                                 }| value.unwrap(),
+                                 }| addr.unwrap(),
                             )
                             .filter_map(f),
                     );
@@ -254,10 +251,12 @@ impl NetstackFacade {
     pub fn get_ipv6_addresses(
         &self,
     ) -> impl std::future::Future<Output = Result<Vec<std::net::Ipv6Addr>, Error>> + '_ {
-        self.get_addresses(|addr| match addr {
-            fidl_fuchsia_net::InterfaceAddress::Ipv4(_) => None,
-            fidl_fuchsia_net::InterfaceAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr }) => {
-                Some(addr.into())
+        self.get_addresses(|addr| {
+            let fidl_fuchsia_net_ext::Subnet { addr, prefix_len: _ } = addr.into();
+            let fidl_fuchsia_net_ext::IpAddress(addr) = addr;
+            match addr {
+                std::net::IpAddr::V4(_) => None,
+                std::net::IpAddr::V6(addr) => Some(addr),
             }
         })
     }
@@ -332,11 +331,11 @@ mod tests {
             (proxy, stream_fut)
         }
 
-        fn expect_get_ipv6_addresses(self, result: Vec<fnet::InterfaceAddress>) -> Self {
+        fn expect_get_ipv6_addresses(self, result: Vec<fnet::Subnet>) -> Self {
             let addresses = result
                 .into_iter()
                 .map(|addr| finterfaces::Address {
-                    value: Some(addr),
+                    addr: Some(addr),
                     ..finterfaces::Address::EMPTY
                 })
                 .collect();
@@ -355,11 +354,16 @@ mod tests {
     async fn test_get_ipv6_addresses() {
         let ipv6_octets = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
-        let ipv6_address = fnet::InterfaceAddress::Ipv6(fnet::Ipv6Address { addr: ipv6_octets });
-        let ipv4_address = fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-            addr: fnet::Ipv4Address { addr: [0, 1, 2, 3] },
+        let ipv6_address = fnet::Subnet {
+            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: ipv6_octets }),
+            // NB: prefix length is ignored, use invalid value to prove it.
+            prefix_len: 137,
+        };
+        let ipv4_address = fnet::Subnet {
+            addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 1, 2, 3] }),
+            // NB: prefix length is ignored, use invalid value to prove it.
             prefix_len: 139,
-        });
+        };
         let all_addresses = [ipv6_address.clone(), ipv4_address.clone()];
         let (facade, stream_fut) = MockStateTester::new()
             .expect_get_ipv6_addresses(all_addresses.to_vec())
@@ -373,16 +377,24 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_link_local_ipv6_addresses() {
-        let ipv6_address = fnet::InterfaceAddress::Ipv6(fnet::Ipv6Address {
-            addr: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        });
+        let ipv6_address = fnet::Subnet {
+            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                addr: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+            }),
+            // NB: prefix length is ignored, use invalid value to prove it.
+            prefix_len: 137,
+        };
         let link_local_ipv6_octets = [0xfe, 0x80, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-        let link_local_ipv6_address =
-            fnet::InterfaceAddress::Ipv6(fnet::Ipv6Address { addr: link_local_ipv6_octets });
-        let ipv4_address = fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-            addr: fnet::Ipv4Address { addr: [0, 1, 2, 3] },
+        let link_local_ipv6_address = fnet::Subnet {
+            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: link_local_ipv6_octets }),
+            // NB: prefix length is ignored, use invalid value to prove it.
+            prefix_len: 139,
+        };
+        let ipv4_address = fnet::Subnet {
+            addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 1, 2, 3] }),
+            // NB: prefix length is ignored, use invalid value to prove it.
             prefix_len: 141,
-        });
+        };
         let all_addresses =
             [ipv6_address.clone(), link_local_ipv6_address.clone(), ipv4_address.clone()];
         let (facade, stream_fut) = MockStateTester::new()

@@ -17,10 +17,7 @@ use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
-use net_declare::{
-    fidl_ip_v4_with_prefix, fidl_ip_v6, fidl_ip_v6_with_prefix, fidl_mac, fidl_subnet, std_ip_v4,
-    std_ip_v6, std_socket_addr,
-};
+use net_declare::{fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
     get_component_moniker,
@@ -42,20 +39,6 @@ use packet_formats::{
     ip::IpPacketBuilder as _,
 };
 use test_case::test_case;
-
-fn ipv4_with_prefix_to_subnet(
-    addr: fidl_fuchsia_net::Ipv4AddressWithPrefix,
-) -> fidl_fuchsia_net::Subnet {
-    let fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len } = addr;
-    fidl_fuchsia_net::Subnet { addr: fidl_fuchsia_net::IpAddress::Ipv4(addr), prefix_len }
-}
-
-fn ipv6_with_prefix_to_subnet(
-    addr: fidl_fuchsia_net::Ipv6AddressWithPrefix,
-) -> fidl_fuchsia_net::Subnet {
-    let fidl_fuchsia_net::Ipv6AddressWithPrefix { addr, prefix_len } = addr;
-    fidl_fuchsia_net::Subnet { addr: fidl_fuchsia_net::IpAddress::Ipv6(addr), prefix_len }
-}
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn add_ethernet_device() {
@@ -249,23 +232,22 @@ async fn add_del_interface_address_deprecated<N: Netstack>(name: &str) {
     .await
     .expect("wait device online");
 
-    let interface_addr_with_prefix = fidl_ip_v4_with_prefix!("1.1.1.1/32");
-    let mut interface_subnet = ipv4_with_prefix_to_subnet(interface_addr_with_prefix);
+    let mut interface_address = fidl_subnet!("1.1.1.1/32");
     let res = stack
-        .add_interface_address_deprecated(id, &mut interface_subnet)
+        .add_interface_address_deprecated(id, &mut interface_address)
         .await
         .expect("add_interface_address_deprecated");
     assert_eq!(res, Ok(()));
 
     // Should be an error the second time.
     let res = stack
-        .add_interface_address_deprecated(id, &mut interface_subnet)
+        .add_interface_address_deprecated(id, &mut interface_address)
         .await
         .expect("add_interface_address_deprecated");
     assert_eq!(res, Err(fnet_stack::Error::AlreadyExists));
 
     let res = stack
-        .add_interface_address_deprecated(id + 1, &mut interface_subnet)
+        .add_interface_address_deprecated(id + 1, &mut interface_address)
         .await
         .expect("add_interface_address_deprecated");
     assert_eq!(res, Err(fnet_stack::Error::NotFound));
@@ -273,7 +255,7 @@ async fn add_del_interface_address_deprecated<N: Netstack>(name: &str) {
     let error = stack
         .add_interface_address_deprecated(
             id,
-            &mut fidl_fuchsia_net::Subnet { prefix_len: 43, ..interface_subnet },
+            &mut fidl_fuchsia_net::Subnet { prefix_len: 43, ..interface_address },
         )
         .await
         .expect("add_interface_address_deprecated")
@@ -287,22 +269,19 @@ async fn add_del_interface_address_deprecated<N: Netstack>(name: &str) {
     )
     .await
     .expect("retrieve existing interface");
-
-    let interface_address = fidl_fuchsia_net::InterfaceAddress::Ipv4(interface_addr_with_prefix);
-
     // We use contains here because netstack can generate link-local addresses
     // that can't be predicted.
     assert_matches::assert_matches!(
         interface,
         fidl_fuchsia_net_interfaces_ext::InterfaceState::Known(p)
             if p.addresses.contains(&fidl_fuchsia_net_interfaces_ext::Address {
-            value: interface_address,
+                addr: interface_address,
                 valid_until: zx::sys::ZX_TIME_INFINITE,
             })
     );
 
     let res = stack
-        .del_interface_address_deprecated(id, &mut interface_subnet)
+        .del_interface_address_deprecated(id, &mut interface_address)
         .await
         .expect("del_interface_address_deprecated");
     assert_eq!(res, Ok(()));
@@ -320,7 +299,7 @@ async fn add_del_interface_address_deprecated<N: Netstack>(name: &str) {
         interface,
         fidl_fuchsia_net_interfaces_ext::InterfaceState::Known(p)
             if !p.addresses.contains(&fidl_fuchsia_net_interfaces_ext::Address {
-            value: interface_address,
+                addr: interface_address,
                 valid_until: zx::sys::ZX_TIME_INFINITE,
             })
     );
@@ -461,9 +440,8 @@ async fn test_log_packets() {
     });
 }
 
-const IPV4_LOOPBACK: fidl_fuchsia_net::Ipv4AddressWithPrefix =
-    fidl_ip_v4_with_prefix!("127.0.0.1/8");
-const IPV6_LOOPBACK: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!("::1");
+const IPV4_LOOPBACK: fidl_fuchsia_net::Subnet = fidl_subnet!("127.0.0.1/8");
+const IPV6_LOOPBACK: fidl_fuchsia_net::Subnet = fidl_subnet!("::1/128");
 
 #[variants_test]
 async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
@@ -483,15 +461,9 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
     );
     let addresses: Vec<_> = addresses
         .into_iter()
-        .map(|fidl_fuchsia_net_interfaces_ext::Address { value, .. }| value)
+        .map(|fidl_fuchsia_net_interfaces_ext::Address { addr, .. }| addr)
         .collect();
-    assert_eq!(
-        addresses[..],
-        [
-            fidl_fuchsia_net::InterfaceAddress::Ipv4(IPV4_LOOPBACK),
-            fidl_fuchsia_net::InterfaceAddress::Ipv6(IPV6_LOOPBACK),
-        ]
-    );
+    assert_eq!(addresses[..], [IPV4_LOOPBACK, IPV6_LOOPBACK,]);
 
     let stack = realm
         .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
@@ -505,17 +477,11 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
             .expect("del_interface_address")
             .expect("expected to remove address")
     };
-    del_addr(ipv4_with_prefix_to_subnet(IPV4_LOOPBACK)).await;
-    del_addr(fidl_fuchsia_net::Subnet {
-        addr: fidl_fuchsia_net::IpAddress::Ipv6(IPV6_LOOPBACK),
-        prefix_len: 128, // Bogus value to appease legacy API.
-    })
-    .await;
+    del_addr(IPV4_LOOPBACK).await;
+    del_addr(IPV6_LOOPBACK).await;
 
-    const NEW_IPV4_ADDRESS: fidl_fuchsia_net::Ipv4AddressWithPrefix =
-        fidl_ip_v4_with_prefix!("1.1.1.1/24");
-    const NEW_IPV6_ADDRESS: fidl_fuchsia_net::Ipv6AddressWithPrefix =
-        fidl_ip_v6_with_prefix!("a::1/64");
+    const NEW_IPV4_ADDRESS: fidl_fuchsia_net::Subnet = fidl_subnet!("1.1.1.1/24");
+    const NEW_IPV6_ADDRESS: fidl_fuchsia_net::Subnet = fidl_subnet!("a::1/64");
     let add_addr = |mut addr| async move {
         stack
             .add_interface_address_deprecated(loopback_id, &mut addr)
@@ -523,8 +489,8 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
             .expect("add_interface_address")
             .expect("expected to add address")
     };
-    add_addr(ipv4_with_prefix_to_subnet(NEW_IPV4_ADDRESS)).await;
-    add_addr(ipv6_with_prefix_to_subnet(NEW_IPV6_ADDRESS)).await;
+    add_addr(NEW_IPV4_ADDRESS).await;
+    add_addr(NEW_IPV6_ADDRESS).await;
 
     // Wait for the addresses to be set.
     let interface_state = realm
@@ -547,19 +513,13 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
             assert_eq!(loopback_id, *id, "Don't expect to see other interfaces");
             let addresses: Vec<_> = addresses
                 .into_iter()
-                .map(|fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| value)
+                .map(|fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| addr)
                 .collect();
             if addresses.len() < 2 {
                 println!("waiting for at least two addresses to be set; got {:?}", addresses);
                 None
             } else {
-                assert_eq!(
-                    addresses[..],
-                    [
-                        &fidl_fuchsia_net::InterfaceAddress::Ipv4(NEW_IPV4_ADDRESS),
-                        &fidl_fuchsia_net::InterfaceAddress::Ipv6(NEW_IPV6_ADDRESS.addr),
-                    ]
-                );
+                assert_eq!(addresses[..], [&NEW_IPV4_ADDRESS, &NEW_IPV6_ADDRESS,]);
                 Some(())
             }
         },

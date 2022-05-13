@@ -441,9 +441,15 @@ impl EventContext<netstack3_core::DadEvent<DeviceId>> for BindingsDispatcher {
     fn on_event(&mut self, event: netstack3_core::DadEvent<DeviceId>) {
         match event {
             netstack3_core::DadEvent::AddressAssigned { device, addr } => {
+                // TODO(https://fxbug.dev/100047): Remove this absolute heresy
+                // once we can publish address state changes through DAD, as
+                // opposed to only address assigned events.
+                //
+                // For now, hack our way around it with common subnet values.
+                let prefix_len = if *addr == *Ipv6::LOOPBACK_ADDRESS { 128 } else { 64 };
                 self.on_event(netstack3_core::IpDeviceEvent::<_, Ipv6>::AddressAssigned {
                     device,
-                    addr,
+                    addr: AddrSubnet::new(addr.into(), prefix_len).unwrap(),
                 })
             }
         }

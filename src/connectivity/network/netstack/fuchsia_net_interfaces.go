@@ -85,27 +85,27 @@ func (wi *interfaceWatcherImpl) onEvent(e interfaces.Event) {
 	}
 }
 
-func cmpInterfaceAddress(ifAddr1 net.InterfaceAddress, ifAddr2 net.InterfaceAddress) int {
-	switch ifAddr1.Which() {
-	case net.InterfaceAddressIpv4:
-		if ifAddr2.Which() == net.InterfaceAddressIpv6 {
+func cmpSubnet(ifAddr1 net.Subnet, ifAddr2 net.Subnet) int {
+	switch ifAddr1.Addr.Which() {
+	case net.IpAddressIpv4:
+		if ifAddr2.Addr.Which() == net.IpAddressIpv6 {
 			return -1
 		}
-		if diff := bytes.Compare(ifAddr1.Ipv4.Addr.Addr[:], ifAddr2.Ipv4.Addr.Addr[:]); diff != 0 {
+		if diff := bytes.Compare(ifAddr1.Addr.Ipv4.Addr[:], ifAddr2.Addr.Ipv4.Addr[:]); diff != 0 {
 			return diff
 		}
-		if ifAddr1.Ipv4.PrefixLen < ifAddr2.Ipv4.PrefixLen {
-			return -1
-		} else if ifAddr1.Ipv4.PrefixLen > ifAddr2.Ipv4.PrefixLen {
+	case net.IpAddressIpv6:
+		if ifAddr2.Addr.Which() == net.IpAddressIpv4 {
 			return 1
 		}
-	case net.InterfaceAddressIpv6:
-		if ifAddr2.Which() == net.InterfaceAddressIpv4 {
-			return 1
-		}
-		if diff := bytes.Compare(ifAddr1.Ipv6.Addr[:], ifAddr2.Ipv6.Addr[:]); diff != 0 {
+		if diff := bytes.Compare(ifAddr1.Addr.Ipv6.Addr[:], ifAddr2.Addr.Ipv6.Addr[:]); diff != 0 {
 			return diff
 		}
+	}
+	if ifAddr1.PrefixLen < ifAddr2.PrefixLen {
+		return -1
+	} else if ifAddr1.PrefixLen > ifAddr2.PrefixLen {
+		return 1
 	}
 	return 0
 }
@@ -222,31 +222,13 @@ func (addressRemoved) isInterfaceEvent() {}
 
 type validUntilChanged struct {
 	nicid      tcpip.NICID
-	address    net.InterfaceAddress
+	subnet     net.Subnet
 	validUntil time.Time
 }
 
 var _ interfaceEvent = (*validUntilChanged)(nil)
 
 func (validUntilChanged) isInterfaceEvent() {}
-
-func subnetToInterfaceAddress(subnet net.Subnet) net.InterfaceAddress {
-	switch tag := subnet.Addr.Which(); tag {
-	case net.IpAddressIpv4:
-		var v4 net.Ipv4Address
-		copy(v4.Addr[:], subnet.Addr.Ipv4.Addr[:])
-		return net.InterfaceAddressWithIpv4(net.Ipv4AddressWithPrefix{
-			Addr:      v4,
-			PrefixLen: subnet.PrefixLen,
-		})
-	case net.IpAddressIpv6:
-		var v6 net.Ipv6Address
-		copy(v6.Addr[:], subnet.Addr.Ipv6.Addr[:])
-		return net.InterfaceAddressWithIpv6(v6)
-	default:
-		panic(fmt.Sprintf("unknown fuchsia.net/IpAddress tag: %d", tag))
-	}
-}
 
 func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-chan interfaces.WatcherWithCtxInterfaceRequest) {
 	watchers := make(map[*interfaceWatcherImpl]struct{})
@@ -340,9 +322,8 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 					break
 				}
 				addresses := properties.GetAddresses()
-				ifAddr := subnetToInterfaceAddress(event.subnet)
 				i := sort.Search(len(addresses), func(i int) bool {
-					diff := cmpInterfaceAddress(ifAddr, addresses[i].GetValue())
+					diff := cmpSubnet(event.subnet, addresses[i].GetAddr())
 					if diff == 0 {
 						// TODO(https://fxbug.dev/97731): Panic if we receive duplicate DAD success
 						// within the same link once address assignment state is tracked.
@@ -358,7 +339,6 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 				copy(addresses[i+1:], addresses[i:])
 				newAddr := &addresses[i]
 				newAddr.SetAddr(event.subnet)
-				newAddr.SetValue(ifAddr)
 				newAddr.SetValidUntil(int64(zx.TimensecInfinite))
 				properties.SetAddresses(addresses)
 				propertiesMap[event.nicid] = properties
@@ -378,11 +358,10 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 					break
 				}
 				addresses := properties.GetAddresses()
-				ifAddr := subnetToInterfaceAddress(event.subnet)
 				i := sort.Search(len(addresses), func(i int) bool {
-					return cmpInterfaceAddress(ifAddr, addresses[i].GetValue()) <= 0
+					return cmpSubnet(event.subnet, addresses[i].GetAddr()) <= 0
 				})
-				if i == len(addresses) || cmpInterfaceAddress(ifAddr, addresses[i].GetValue()) != 0 {
+				if i == len(addresses) || cmpSubnet(event.subnet, addresses[i].GetAddr()) != 0 {
 					// TODO(https://fxbug.dev/97731): Panic when the address being removed
 					// isn't assigned or tentative when `event.strict` is true.
 					_ = syslog.WarnTf(watcherProtocolName, "address removed event for non-existent address: %#v", event)
@@ -408,9 +387,9 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 				}
 				addresses := properties.GetAddresses()
 				i := sort.Search(len(addresses), func(i int) bool {
-					return cmpInterfaceAddress(event.address, addresses[i].GetValue()) <= 0
+					return cmpSubnet(event.subnet, addresses[i].GetAddr()) <= 0
 				})
-				if i == len(addresses) || cmpInterfaceAddress(event.address, addresses[i].GetValue()) != 0 {
+				if i == len(addresses) || cmpSubnet(event.subnet, addresses[i].GetAddr()) != 0 {
 					// TODO(https://fxbug.dev/96130): Change this to panic once DHCPv4 client
 					// is guaranteed to not send this event if the address is missing.
 					_ = syslog.ErrorTf(watcherProtocolName, "validUntil changed event for non-existent address: %#v", event)

@@ -199,14 +199,14 @@ pub enum IpDeviceEvent<DeviceId, I: Ip> {
         /// The device.
         device: DeviceId,
         /// The new address.
-        addr: I::InterfaceAddress,
+        addr: AddrSubnet<I::Addr>,
     },
     /// Address was unassigned.
     AddressUnassigned {
         /// The device.
         device: DeviceId,
         /// The removed address.
-        addr: I::InterfaceAddress,
+        addr: AddrSubnet<I::Addr>,
     },
 }
 
@@ -765,9 +765,10 @@ fn del_ipv6_addr_core<C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler>(
     leave_ip_multicast(sync_ctx, device_id, addr.to_solicited_node_address());
 
     match entry.state {
-        AddressState::Assigned => {
-            sync_ctx.on_event(IpDeviceEvent::AddressUnassigned { device: device_id, addr })
-        }
+        AddressState::Assigned => sync_ctx.on_event(IpDeviceEvent::AddressUnassigned {
+            device: device_id,
+            addr: entry.addr_sub.to_witness(),
+        }),
         AddressState::Tentative { .. } => {}
     }
 

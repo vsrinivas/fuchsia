@@ -17,7 +17,7 @@ use futures::{
     channel::mpsc, ready, sink::SinkExt as _, task::Poll, Future, FutureExt as _, StreamExt as _,
     TryFutureExt as _, TryStreamExt as _,
 };
-use net_types::ip::{InterfaceAddr, IpVersion};
+use net_types::ip::{AddrSubnetEither, IpVersion};
 
 /// Possible errors when serving `fuchsia.net.interfaces/State`.
 #[derive(thiserror::Error, Debug)]
@@ -185,8 +185,8 @@ impl Watcher {
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone, Eq, PartialEq))]
 pub enum InterfaceUpdate {
-    AddressAssigned { addr: InterfaceAddr, properties: AddressState },
-    AddressUnassigned(InterfaceAddr),
+    AddressAssigned { addr: AddrSubnetEither, properties: AddressState },
+    AddressUnassigned(AddrSubnetEither),
     DefaultRouteChanged { version: IpVersion, has_default_route: bool },
     OnlineChanged(bool),
 }
@@ -205,7 +205,7 @@ pub struct InterfaceProperties {
 pub struct InterfaceState {
     properties: InterfaceProperties,
     online: bool,
-    addresses: HashMap<InterfaceAddr, AddressState>,
+    addresses: HashMap<AddrSubnetEither, AddressState>,
     has_default_ipv4_route: bool,
     has_default_ipv6_route: bool,
 }
@@ -270,9 +270,9 @@ pub enum WorkerError {
     #[error("attempted to update nonexisting interface with id {0}")]
     UpdateNonexistentInterface(BindingId),
     #[error("attempted to assign already assigned address {addr} on interface {interface}")]
-    AssignExistingAddr { interface: BindingId, addr: InterfaceAddr },
+    AssignExistingAddr { interface: BindingId, addr: AddrSubnetEither },
     #[error("attempted to unassign nonexisting interface address {addr} on interface {interface}")]
-    UnassignNonexistentAddr { interface: BindingId, addr: InterfaceAddr },
+    UnassignNonexistentAddr { interface: BindingId, addr: AddrSubnetEither },
 }
 
 pub struct Worker {
@@ -494,13 +494,13 @@ impl Worker {
     }
 
     fn collect_addresses<T: SortableInterfaceAddress>(
-        addrs: &HashMap<InterfaceAddr, AddressState>,
+        addrs: &HashMap<AddrSubnetEither, AddressState>,
     ) -> Vec<T> {
         let mut addrs = addrs
             .iter()
             .map(|(addr, AddressState { valid_until })| {
                 finterfaces_ext::Address {
-                    value: addr.clone().into_fidl(),
+                    addr: addr.clone().into_fidl(),
                     valid_until: valid_until.into_nanos(),
                 }
                 .into()
@@ -521,16 +521,16 @@ trait SortableInterfaceAddress: From<finterfaces_ext::Address> {
 }
 
 impl SortableInterfaceAddress for finterfaces_ext::Address {
-    type Key = fnet::InterfaceAddress;
-    fn get_sort_key(&self) -> fnet::InterfaceAddress {
-        self.value.clone()
+    type Key = fnet::Subnet;
+    fn get_sort_key(&self) -> fnet::Subnet {
+        self.addr.clone()
     }
 }
 
 impl SortableInterfaceAddress for finterfaces::Address {
-    type Key = Option<fnet::InterfaceAddress>;
-    fn get_sort_key(&self) -> Option<fnet::InterfaceAddress> {
-        self.value.clone()
+    type Key = Option<fnet::Subnet>;
+    fn get_sort_key(&self) -> Option<fnet::Subnet> {
+        self.addr.clone()
     }
 }
 
@@ -594,7 +594,7 @@ mod tests {
     use fixture::fixture;
     use futures::{Future, Stream};
     use itertools::Itertools as _;
-    use net_types::ip::Ipv6;
+    use net_types::ip::{AddrSubnet, IpAddress as _, Ipv6, Ipv6Addr};
     use std::convert::{TryFrom as _, TryInto as _};
     use test_case::test_case;
 
@@ -685,7 +685,9 @@ mod tests {
             ))
         );
 
-        const ADDR1: InterfaceAddr = InterfaceAddr::V6(Ipv6::LOOPBACK_IPV6_ADDRESS);
+        let addr1 = AddrSubnetEither::V6(
+            AddrSubnet::new(*Ipv6::LOOPBACK_IPV6_ADDRESS, Ipv6Addr::BYTES * 8).unwrap(),
+        );
         const ADDR_VALID_UNTIL: zx::Time = zx::Time::from_nanos(12345);
         const BASE_PROPERTIES: finterfaces::Properties =
             finterfaces::Properties { id: Some(IFACE1_ID), ..finterfaces::Properties::EMPTY };
@@ -693,12 +695,12 @@ mod tests {
         for (event, expect) in [
             (
                 InterfaceUpdate::AddressAssigned {
-                    addr: ADDR1,
+                    addr: addr1.clone(),
                     properties: AddressState { valid_until: ADDR_VALID_UNTIL },
                 },
                 finterfaces::Event::Changed(finterfaces::Properties {
                     addresses: Some(vec![finterfaces_ext::Address {
-                        value: ADDR1.into_fidl(),
+                        addr: addr1.clone().into_fidl(),
                         valid_until: ADDR_VALID_UNTIL.into_nanos(),
                     }
                     .into()]),
@@ -758,7 +760,7 @@ mod tests {
                     device_class: IFACE1_CLASS,
                     online: true,
                     addresses: vec![finterfaces_ext::Address {
-                        value: ADDR1.into_fidl(),
+                        addr: addr1.into_fidl(),
                         valid_until: ADDR_VALID_UNTIL.into_nanos()
                     }
                     .into()],
@@ -908,7 +910,9 @@ mod tests {
 
     #[test]
     fn consume_changed_address_asigned() {
-        let addr = InterfaceAddr::V6(Ipv6::LOOPBACK_IPV6_ADDRESS);
+        let addr = AddrSubnetEither::V6(
+            AddrSubnet::new(*Ipv6::LOOPBACK_IPV6_ADDRESS, Ipv6Addr::BYTES * 8).unwrap(),
+        );
         let valid_until = zx::Time::from_nanos(1234);
         let address_properties = AddressState { valid_until };
         let (id, initial_state) = iface1_initial_state();
@@ -929,7 +933,7 @@ mod tests {
             Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                 id: Some(id),
                 addresses: Some(vec![finterfaces_ext::Address {
-                    value: addr.clone().into_fidl(),
+                    addr: addr.clone().into_fidl(),
                     valid_until: valid_until.into_nanos()
                 }
                 .into()]),
@@ -950,7 +954,9 @@ mod tests {
 
     #[test]
     fn consume_changed_address_unasigned() {
-        let addr = InterfaceAddr::V6(Ipv6::LOOPBACK_IPV6_ADDRESS);
+        let addr = AddrSubnetEither::V6(
+            AddrSubnet::new(*Ipv6::LOOPBACK_IPV6_ADDRESS, Ipv6Addr::BYTES * 8).unwrap(),
+        );
         let address_properties = AddressState { valid_until: zx::Time::INFINITE };
         let (id, initial_state) = iface1_initial_state();
         let initial_state = InterfaceState {
@@ -1189,9 +1195,9 @@ mod tests {
         let mut watcher = watcher_sink.create_watcher_event_stream();
         assert_eq!(watcher.next().await, Some(finterfaces::Event::Idle(finterfaces::Empty {})));
 
-        const ADDR1: fnet::InterfaceAddress = net_declare::fidl_if_addr!("2000::1");
-        const ADDR2: fnet::InterfaceAddress = net_declare::fidl_if_addr!("192.168.1.1/24");
-        const ADDR3: fnet::InterfaceAddress = net_declare::fidl_if_addr!("192.168.1.2/24");
+        const ADDR1: fnet::Subnet = net_declare::fidl_subnet!("2000::1/64");
+        const ADDR2: fnet::Subnet = net_declare::fidl_subnet!("192.168.1.1/24");
+        const ADDR3: fnet::Subnet = net_declare::fidl_subnet!("192.168.1.2/24");
 
         for addrs in IntoIterator::into_iter([ADDR1, ADDR2, ADDR3]).permutations(3) {
             let producer = interface_sink
@@ -1231,7 +1237,7 @@ mod tests {
                 );
                 let addresses = addresses
                     .into_iter()
-                    .map(|finterfaces::Address { value, .. }| value.expect("missing address value"))
+                    .map(|finterfaces::Address { addr, .. }| addr.expect("missing address"))
                     .collect::<Vec<_>>();
                 assert_eq!(addresses, expect);
             }

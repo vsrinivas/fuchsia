@@ -27,6 +27,7 @@ rustc_binary("bin") {
     "//src/connectivity/network/lib/explicit",
     "//src/connectivity/network/lib/todo_unused",
     "//src/lib/async-utils",
+    "//src/lib/const-unwrap",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

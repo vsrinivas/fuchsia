@@ -203,7 +203,6 @@ func TestInterfacesWatcher(t *testing.T) {
 		addressAdded := id
 		var address interfaces.Address
 		address.SetAddr(fidlconv.ToNetSubnet(protocolAddr.AddressWithPrefix))
-		address.SetValue(subnetToInterfaceAddress(address.GetAddr()))
 		address.SetValidUntil(int64(zx.TimensecInfinite))
 		addressAdded.SetAddresses([]interfaces.Address{address})
 		verifyWatchResults(t, interfaces.EventWithChanged(addressAdded))
@@ -244,10 +243,6 @@ func TestInterfacesWatcher(t *testing.T) {
 	ifs.dhcpAcquired(context.Background(), tcpip.AddressWithPrefix{}, acquiredAddr, dhcp.Config{UpdatedAt: initUpdatedAt, LeaseLength: leaseLength})
 	dhcpAddressAdded := id
 	var address interfaces.Address
-	address.SetValue(fidlnet.InterfaceAddressWithIpv4(fidlnet.Ipv4AddressWithPrefix{
-		Addr:      addr,
-		PrefixLen: uint8(acquiredAddr.PrefixLen),
-	}))
 	address.SetAddr(fidlnet.Subnet{
 		Addr:      fidlnet.IpAddressWithIpv4(addr),
 		PrefixLen: uint8(acquiredAddr.PrefixLen),

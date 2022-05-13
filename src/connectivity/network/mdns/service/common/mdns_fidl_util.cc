@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
+#include "fuchsia/net/cpp/fidl.h"
 #include "src/connectivity/network/mdns/service/common/type_converters.h"
 
 namespace mdns {
@@ -71,15 +72,15 @@ fuchsia::net::Ipv6SocketAddress MdnsFidlUtil::CreateSocketAddressV6(
 }
 
 // static
-inet::IpAddress MdnsFidlUtil::IpAddressFrom(const fuchsia::net::InterfaceAddress& addr) {
+inet::IpAddress MdnsFidlUtil::IpAddressFrom(const fuchsia::net::IpAddress& addr) {
   switch (addr.Which()) {
-    case fuchsia::net::InterfaceAddress::Tag::kIpv4:
-      FX_DCHECK(addr.ipv4().addr.addr.size() == sizeof(in_addr));
-      return inet::IpAddress(*reinterpret_cast<const in_addr*>(addr.ipv4().addr.addr.data()));
-    case fuchsia::net::InterfaceAddress::Tag::kIpv6:
+    case fuchsia::net::IpAddress::Tag::kIpv4:
+      FX_DCHECK(addr.ipv4().addr.size() == sizeof(in_addr));
+      return inet::IpAddress(*reinterpret_cast<const in_addr*>(addr.ipv4().addr.data()));
+    case fuchsia::net::IpAddress::Tag::kIpv6:
       FX_DCHECK(addr.ipv6().addr.size() == sizeof(in6_addr));
       return inet::IpAddress(*reinterpret_cast<const in6_addr*>(addr.ipv6().addr.data()));
-    case fuchsia::net::InterfaceAddress::Tag::Invalid:
+    case fuchsia::net::IpAddress::Tag::Invalid:
       return inet::IpAddress();
   }
 }

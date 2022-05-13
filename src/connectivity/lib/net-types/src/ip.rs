@@ -275,9 +275,6 @@ pub trait Ip:
     ///
     /// [`Ipv4Addr`] for IPv4 and [`Ipv6Addr`] for IPv6.
     type Addr: IpAddress<Version = Self>;
-
-    /// The interface address type for this IP version.
-    type InterfaceAddress: Send + 'static + Into<InterfaceAddr> + Display + Debug;
 }
 
 /// IPv4.
@@ -336,7 +333,6 @@ impl Ip for Ipv4 {
     /// [RFC 791 Section 3.2]: https://tools.ietf.org/html/rfc791#section-3.2
     const MINIMUM_LINK_MTU: u16 = 68;
     type Addr = Ipv4Addr;
-    type InterfaceAddress = AddrSubnet<Ipv4Addr>;
 }
 
 impl Ipv4 {
@@ -482,7 +478,6 @@ impl Ip for Ipv6 {
     /// [RFC 8200 Section 5]: https://tools.ietf.org/html/rfc8200#section-5
     const MINIMUM_LINK_MTU: u16 = 1280;
     type Addr = Ipv6Addr;
-    type InterfaceAddress = UnicastAddr<Ipv6Addr>;
 }
 
 impl Ipv6 {
@@ -2527,38 +2522,18 @@ impl<S: IpAddress, A: IpAddressWitness<S> + Copy> From<AddrSubnet<S, A>>
     }
 }
 
-/// An address that can be assigned to an interface.
-///
-/// `InterfaceAddr` upholds the following invariants:
-/// - Addresses must be unicast.
-/// - IPv4 addresses have a defined containing subnet so the broadcast address
-/// is known.
-#[allow(missing_docs)]
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
-pub enum InterfaceAddr {
-    V4(AddrSubnet<Ipv4Addr>),
-    V6(UnicastAddr<Ipv6Addr>),
-}
-
-impl Display for InterfaceAddr {
+impl<A> Display for AddrSubnetEither<A>
+where
+    A: IpAddrWitness,
+    A::V4: Display,
+    A::V6: Display,
+{
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             Self::V4(a) => write!(f, "{}", a),
             Self::V6(a) => write!(f, "{}", a),
         }
-    }
-}
-
-impl From<AddrSubnet<Ipv4Addr>> for InterfaceAddr {
-    fn from(a: AddrSubnet<Ipv4Addr>) -> Self {
-        Self::V4(a)
-    }
-}
-
-impl From<UnicastAddr<Ipv6Addr>> for InterfaceAddr {
-    fn from(a: UnicastAddr<Ipv6Addr>) -> Self {
-        Self::V6(a)
     }
 }
 

@@ -32,14 +32,14 @@ struct DhcpTestConfig {
 }
 
 impl DhcpTestConfig {
-    fn expected_acquired(&self) -> fidl_fuchsia_net::Ipv4AddressWithPrefix {
+    fn expected_acquired(&self) -> fidl_fuchsia_net::Subnet {
         let Self {
             server_addr: _,
             managed_addrs:
                 dhcp::configuration::ManagedAddresses { mask, pool_range_start, pool_range_stop: _ },
         } = self;
-        fidl_fuchsia_net::Ipv4AddressWithPrefix {
-            addr: pool_range_start.into_fidl(),
+        fidl_fuchsia_net::Subnet {
+            addr: fidl_fuchsia_net::IpAddress::Ipv4(pool_range_start.into_fidl()),
             prefix_len: mask.ones(),
         }
     }
@@ -78,7 +78,7 @@ const DEFAULT_TEST_CONFIG: DhcpTestConfig = DhcpTestConfig {
 const DEFAULT_NETWORK_NAME: &str = "net1";
 
 enum DhcpEndpointType {
-    Client { expected_acquired: fidl_fuchsia_net::Ipv4AddressWithPrefix },
+    Client { expected_acquired: fidl_fuchsia_net::Subnet },
     Server { static_addrs: Vec<fidl_fuchsia_net::Subnet> },
     Unbound { static_addrs: Vec<fidl_fuchsia_net::Subnet> },
 }
@@ -160,7 +160,7 @@ async fn set_server_settings(
 async fn assert_client_acquires_addr(
     client_realm: &netemul::TestRealm<'_>,
     client_interface: &netemul::TestInterface<'_>,
-    expected_acquired: fidl_fuchsia_net::Ipv4AddressWithPrefix,
+    expected_acquired: fidl_fuchsia_net::Subnet,
     cycles: usize,
     client_renews: bool,
 ) {
@@ -226,8 +226,8 @@ async fn assert_client_acquires_addr(
                  name: _,
              }| {
                 if addresses.iter().any(
-                    |&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
-                        value == fidl_fuchsia_net::InterfaceAddress::Ipv4(expected_acquired)
+                    |&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                        addr == expected_acquired
                     },
                 ) {
                     None
@@ -243,7 +243,7 @@ async fn assert_client_acquires_addr(
 
 async fn assert_interface_assigned_addr(
     client_realm: &netemul::TestRealm<'_>,
-    expected_acquired: fidl_fuchsia_net::Ipv4AddressWithPrefix,
+    expected_acquired: fidl_fuchsia_net::Subnet,
     watcher: &fidl_fuchsia_net_interfaces::WatcherProxy,
     mut properties: &mut fidl_fuchsia_net_interfaces_ext::InterfaceState,
 ) {
@@ -260,11 +260,12 @@ async fn assert_interface_assigned_addr(
              name: _,
          }| {
             addresses.iter().find_map(
-                |&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| match value {
-                    fidl_fuchsia_net::InterfaceAddress::Ipv4(addr) => Some(addr),
-                    fidl_fuchsia_net::InterfaceAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
-                        addr: _,
-                    }) => None,
+                |&fidl_fuchsia_net_interfaces_ext::Address { addr: subnet, valid_until: _ }| {
+                    let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = subnet;
+                    match addr {
+                        fidl_fuchsia_net::IpAddress::Ipv4(_) => Some(subnet),
+                        fidl_fuchsia_net::IpAddress::Ipv6(_) => None,
+                    }
                 },
             )
         },
@@ -289,13 +290,11 @@ async fn assert_interface_assigned_addr(
 
 fn bind<'a>(
     client_realm: &'a netemul::TestRealm<'_>,
-    addr: fidl_fuchsia_net::Ipv4AddressWithPrefix,
+    fidl_fuchsia_net::Subnet { addr, prefix_len: _ }: fidl_fuchsia_net::Subnet,
 ) -> impl futures::Future<Output = Result<std::net::UdpSocket>> + 'a {
     use netemul::RealmUdpSocket as _;
 
-    let fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len: _ } = addr;
-    let fidl_fuchsia_net_ext::IpAddress(ip_address) =
-        fidl_fuchsia_net::IpAddress::Ipv4(addr).into();
+    let fidl_fuchsia_net_ext::IpAddress(ip_address) = addr.into();
     std::net::UdpSocket::bind_in_realm(client_realm, std::net::SocketAddr::new(ip_address, 0))
 }
 
@@ -403,18 +402,25 @@ async fn acquire_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(name: &s
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let network = DhcpTestNetwork::new(DEFAULT_NETWORK_NAME, &sandbox);
 
-    let fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len } =
-        DEFAULT_TEST_CONFIG.expected_acquired();
-    let expected_acquired =
-        fidl_fuchsia_net::Subnet { addr: fidl_fuchsia_net::IpAddress::Ipv4(addr), prefix_len };
-    let expected_addr = {
-        let mut addr = addr;
-        let fidl_fuchsia_net::Ipv4Address { addr: octets } = &mut addr;
-        // We expect to assign the address numericaly succeeding the default client address
-        // since the default client address will be assigned to a neighbor of the client so
-        // the client should decline the offer and restart DHCP.
-        *octets.iter_mut().last().expect("IPv4 addresses have a non-zero number of octets") += 1;
-        fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len }
+    let expected_acquired = DEFAULT_TEST_CONFIG.expected_acquired();
+    let expected_addr = match expected_acquired.addr {
+        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr: mut octets }) => {
+            // We expect to assign the address numericaly succeeding the default client address
+            // since the default client address will be assigned to a neighbor of the client so
+            // the client should decline the offer and restart DHCP.
+            *octets.iter_mut().last().expect("IPv4 addresses have a non-zero number of octets") +=
+                1;
+
+            fidl_fuchsia_net::Subnet {
+                addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                    addr: octets,
+                }),
+                ..expected_acquired
+            }
+        }
+        fidl_fuchsia_net::IpAddress::Ipv6(a) => {
+            panic!("expected IPv4 address; got IPv6 address = {:?}", a)
+        }
     };
 
     test_dhcp::<E>(

@@ -168,30 +168,25 @@ async fn add_address_errors() {
     }
 
     let (control, v4_addr, v6_addr) = futures::stream::iter(addresses).fold((control, None, None), |(control, v4, v6), fidl_fuchsia_net_interfaces_ext::Address {
-        value,
+        addr: fidl_fuchsia_net::Subnet { addr, prefix_len },
         valid_until: _,
     }| {
-        let (addr, v4, v6) = match value {
-            fidl_fuchsia_net::InterfaceAddress::Ipv4(addr) => {
-                {
-                    let fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                        addr: fidl_fuchsia_net::Ipv4Address { addr },
-                        prefix_len: _,
-                    } = addr;
-                    let nt_addr = net_types::ip::Ipv4Addr::new(addr);
-                    assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
-                }
+        let (addr, v4, v6) = match addr {
+            fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
+                let nt_addr = net_types::ip::Ipv4Addr::new(addr.addr);
+                assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
+                let addr = fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                    addr,
+                    prefix_len,
+                };
                 assert_eq!(v4, None, "v4 address already present, found {:?}", addr);
-                (value, Some(addr), v6)
+                (fidl_fuchsia_net::InterfaceAddress::Ipv4(addr), Some(addr), v6)
             }
-            fidl_fuchsia_net::InterfaceAddress::Ipv6(addr) => {
-                {
-                    let fidl_fuchsia_net::Ipv6Address { addr } = addr;
-                    let nt_addr = net_types::ip::Ipv6Addr::from_bytes(addr);
-                    assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
-                }
+            fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
+                let nt_addr = net_types::ip::Ipv6Addr::from_bytes(addr.addr);
+                assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
                 assert_eq!(v6, None, "v6 address already present, found {:?}", addr);
-                (value, v4, Some(addr))
+                (fidl_fuchsia_net::InterfaceAddress::Ipv6(addr), v4, Some(addr))
             }
         };
         async move {
@@ -456,8 +451,8 @@ async fn add_address_success() {
              }| {
                 addresses
                     .iter()
-                    .any(|&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
-                        value == address
+                    .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                        addr == subnet
                     })
                     .then(|| ())
             },
@@ -482,8 +477,8 @@ async fn add_address_success() {
              }| {
                 addresses
                     .iter()
-                    .all(|&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
-                        value != address
+                    .all(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                        addr != subnet
                     })
                     .then(|| ())
             },
@@ -496,6 +491,10 @@ async fn add_address_success() {
     {
         let addr = fidl_ip_v4_with_prefix!("2.2.2.2/32");
         let address = fidl_fuchsia_net::InterfaceAddress::Ipv4(addr);
+        let subnet = fidl_fuchsia_net::Subnet {
+            addr: fidl_fuchsia_net::IpAddress::Ipv4(addr.addr),
+            prefix_len: addr.prefix_len,
+        };
 
         let address_state_provider =
             interfaces::add_address_wait_assigned(&control, address, VALID_ADDRESS_PARAMETERS)
@@ -524,8 +523,8 @@ async fn add_address_success() {
              }| {
                 addresses
                     .iter()
-                    .all(|&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
-                        value != address
+                    .all(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                        addr != subnet
                     })
                     .then(|| ())
             },

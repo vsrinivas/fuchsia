@@ -574,10 +574,10 @@ func (ns *Netstack) onAddressRemoveLocked(nicid tcpip.NICID, addrWithPrefix tcpi
 	}
 }
 
-func (ns *Netstack) onAddressValidUntilChangeLocked(nicid tcpip.NICID, protocolAddr tcpip.ProtocolAddress, validUntil zxtime.Time) {
+func (ns *Netstack) onAddressValidUntilChangeLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix, validUntil zxtime.Time) {
 	ns.interfaceEventChan <- validUntilChanged{
 		nicid:      nicid,
-		address:    toNetInterfaceAddress(protocolAddr),
+		subnet:     fidlconv.ToNetSubnet(addrWithPrefix),
 		validUntil: validUntil,
 	}
 }
@@ -685,11 +685,7 @@ func (ifs *ifState) dhcpAcquired(ctx context.Context, lost, acquired tcpip.Addre
 	}
 
 	if acquired != (tcpip.AddressWithPrefix{}) {
-		protocolAddr := tcpip.ProtocolAddress{
-			Protocol:          header.IPv4ProtocolNumber,
-			AddressWithPrefix: acquired,
-		}
-		ifs.ns.onAddressValidUntilChangeLocked(ifs.nicid, protocolAddr, config.UpdatedAt.Add(config.LeaseLength.Duration()))
+		ifs.ns.onAddressValidUntilChangeLocked(ifs.nicid, acquired, config.UpdatedAt.Add(config.LeaseLength.Duration()))
 	}
 
 	if updated := ifs.setDNSServers(config.DNS); updated {

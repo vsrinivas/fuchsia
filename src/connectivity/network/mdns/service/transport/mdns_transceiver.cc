@@ -109,19 +109,19 @@ bool MdnsTransceiver::StartInterfaceTransceivers(const net::interfaces::Properti
   // version.
   inet::IpAddress v4_addr, v6_addr;
   for (const auto& net_interfaces_addr : properties.addresses()) {
-    const fuchsia::net::InterfaceAddress& addr = net_interfaces_addr.value();
+    const fuchsia::net::IpAddress& addr = net_interfaces_addr.addr().addr;
     switch (addr.Which()) {
-      case fuchsia::net::InterfaceAddress::kIpv4:
+      case fuchsia::net::IpAddress::kIpv4:
         if (!v4_addr.is_valid()) {
           v4_addr = MdnsFidlUtil::IpAddressFrom(addr);
         }
         break;
-      case fuchsia::net::InterfaceAddress::kIpv6:
+      case fuchsia::net::IpAddress::kIpv6:
         if (!v6_addr.is_valid()) {
           v6_addr = MdnsFidlUtil::IpAddressFrom(addr);
         }
         break;
-      case fuchsia::net::InterfaceAddress::Invalid:
+      case fuchsia::net::IpAddress::Invalid:
         FX_LOGS(ERROR) << "invalid address found in properties for interface id="
                        << properties.id();
         break;
@@ -133,7 +133,7 @@ bool MdnsTransceiver::StartInterfaceTransceivers(const net::interfaces::Properti
 
   bool started = false;
   for (const auto& net_interfaces_addr : properties.addresses()) {
-    const inet::IpAddress addr = MdnsFidlUtil::IpAddressFrom(net_interfaces_addr.value());
+    const inet::IpAddress addr = MdnsFidlUtil::IpAddressFrom(net_interfaces_addr.addr().addr);
     const inet::IpAddress& alternate_addr = addr.is_v4() ? v6_addr : v4_addr;
     const uint64_t id = properties.id();
     // NB: fuchsia.net.interfaces/Properties reports IDs as uint64_t but we store them as uint32
@@ -226,17 +226,18 @@ void MdnsTransceiver::OnInterfacesEvent(fuchsia::net::interfaces::Event event) {
           auto& addresses_to_remove =
               change.has_addresses() ? change.addresses() : properties.addresses();
           for (const auto& address : addresses_to_remove) {
-            link_change |= StopInterfaceTransceiver(MdnsFidlUtil::IpAddressFrom(address.value()));
+            link_change |=
+                StopInterfaceTransceiver(MdnsFidlUtil::IpAddressFrom(address.addr().addr));
           }
         }
       } else if (change.has_addresses() && properties.online()) {
         std::unordered_set<inet::IpAddress> addresses;
         addresses.reserve(properties.addresses().size());
         for (const auto& address : properties.addresses()) {
-          addresses.emplace(MdnsFidlUtil::IpAddressFrom(address.value()));
+          addresses.emplace(MdnsFidlUtil::IpAddressFrom(address.addr().addr));
         }
         for (const auto& address : change.addresses()) {
-          const auto previous_address = MdnsFidlUtil::IpAddressFrom(address.value());
+          const auto previous_address = MdnsFidlUtil::IpAddressFrom(address.addr().addr);
           // This could be a lookup, but we might as well erase from the set to keep the set as
           // small as possible.
           if (addresses.erase(previous_address) == 0) {
@@ -255,7 +256,7 @@ void MdnsTransceiver::OnInterfacesEvent(fuchsia::net::interfaces::Event event) {
             << "Removed event for unknown interface from fuchsia.net.interfaces/Watcher";
       } else {
         for (const auto& address : nh.mapped().addresses()) {
-          link_change |= StopInterfaceTransceiver(MdnsFidlUtil::IpAddressFrom(address.value()));
+          link_change |= StopInterfaceTransceiver(MdnsFidlUtil::IpAddressFrom(address.addr().addr));
         }
       }
       break;

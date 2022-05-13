@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_COMMON_MDNS_FIDL_UTIL_H_
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_COMMON_MDNS_FIDL_UTIL_H_
 
+#include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/net/mdns/cpp/fidl.h>
 
@@ -28,7 +29,7 @@ class MdnsFidlUtil {
   static fuchsia::net::Ipv6SocketAddress CreateSocketAddressV6(
       const inet::SocketAddress& socket_address);
 
-  static inet::IpAddress IpAddressFrom(const fuchsia::net::InterfaceAddress& addr);
+  static inet::IpAddress IpAddressFrom(const fuchsia::net::IpAddress& addr);
 
   static void FillServiceInstance(fuchsia::net::mdns::ServiceInstance* service_instance,
                                   const std::string& service, const std::string& instance,

@@ -396,8 +396,7 @@ impl NetworkInterface for TunNetworkInterface {
                                     state.prev_prop.addresses.as_ref().unwrap_or(&empty_addrs);
                                 state.next_events.extend(
                                     addrs.iter().filter(|x| !prev_addrs.contains(x)).filter_map(
-                                        |Address { addr, value: _, valid_until: _, .. }| {
-                                            // TODO(https://fxbug.dev/92368): migrate to `value`.
+                                        |Address { addr, valid_until: _, .. }| {
                                             addr.unwrap()
                                                 .try_into()
                                                 .ok()
@@ -407,8 +406,7 @@ impl NetworkInterface for TunNetworkInterface {
                                 );
                                 state.next_events.extend(
                                     prev_addrs.iter().filter(|x| !addrs.contains(x)).filter_map(
-                                        |Address { addr, value: _, valid_until: _, .. }| {
-                                            // TODO(https://fxbug.dev/92368): migrate to `value`.
+                                        |Address { addr, valid_until: _, .. }| {
                                             addr.unwrap()
                                                 .try_into()
                                                 .ok()

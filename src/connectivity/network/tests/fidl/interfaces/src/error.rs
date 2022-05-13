@@ -10,7 +10,7 @@ use std::collections::HashMap;
 
 use fidl::endpoints::Proxy as _;
 use fuchsia_zircon as zx;
-use net_declare::fidl_if_addr;
+use net_declare::fidl_subnet;
 use netstack_testing_common::realms::{Netstack, NetstackVersion, TestSandboxExt as _};
 use netstack_testing_macros::variants_test;
 
@@ -56,11 +56,11 @@ async fn interfaces_watcher_after_invalid_state_request<N: Netstack>(name: &str)
                 online: true,
                 addresses: vec![
                     fidl_fuchsia_net_interfaces_ext::Address {
-                        value: fidl_if_addr!("127.0.0.1/8"),
+                        addr: fidl_subnet!("127.0.0.1/8"),
                         valid_until: zx::sys::ZX_TIME_INFINITE,
                     },
                     fidl_fuchsia_net_interfaces_ext::Address {
-                        value: fidl_if_addr!("::1"),
+                        addr: fidl_subnet!("::1/128"),
                         valid_until: zx::sys::ZX_TIME_INFINITE,
                     },
                 ],
