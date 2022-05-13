@@ -1636,7 +1636,7 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
   }
 
   if (dc_intf_.is_valid()) {
-    zx_time_t now = (fake_vsync_size > 0) ? 0 : zx_clock_get_monotonic();
+    zx_time_t now = (fake_vsync_size > 0) ? zx_clock_get_monotonic() : 0;
     for (size_t i = 0; i < fake_vsync_size; i++) {
       dc_intf_.OnDisplayVsync(fake_vsync_display_ids[i], now, config_stamp);
     }
