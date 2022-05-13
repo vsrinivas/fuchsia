@@ -15,562 +15,573 @@ import("//build/testing/host_test_data.gni")
 import("//build/testing/verify_files_match.gni")
 import("//src/sys/core/build/core.gni")
 
-##################################################
-# Shared parameters across assemblies in this file
-##################################################
-
-supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
-
-fuchsia_base = {
-  testonly = fuchsia_zbi_testonly
-  generate_fvm = !bootfs_only
-  board_name = board_name
-  output_dir = root_build_dir
-  fshost_config = board_fshost_config
-
-  check_production_tag = check_production_eligibility
-
-  include_component_id_index = true
-
-  # Use the GN arg for including shell commands.
-  include_shell_commands = include_shell_commands_package
-
-  # If the product definition is specifying a product assembly config file, then
-  # pass that to the assemble_system() call(s).
-  if (fuchsia_product_assembly_config_file != false) {
-    product_assembly_config_file = fuchsia_product_assembly_config_file
+if (is_host) {
+  host_test_data("fuchsia_zbi_for_host_tests") {
+    sources = [ "$root_build_dir/fuchsia.zbi" ]
+    # This dep cannot be specified, because it creates a dependency cycle.  It
+    # could be added if all tests using this were not in any package set (and
+    # were just in host_labels)
+    #deps = [ ":fuchsia($default_toolchain)" ]
   }
-  if (fuchsia_product_assembly_config_label != false) {
-    product_assembly_config_dep = fuchsia_product_assembly_config_label
-  }
+}
 
-  cmdline_deps = [ "//build/input:bootfs" ]
+# The assembly operation should only be defined in the default (fuchsia)
+# toolchain.  GN should not attempt to process the rest of this file in any
+# other toolchain
+if (is_fuchsia) {
+  assert(current_toolchain == default_toolchain)
 
-  base_packages = [
-    "//:developer_base_driver_packages",
-    "//:developer_base_packages",
-    "//:legacy_base_driver_packages",
-    "//:legacy_base_packages",
-    ":core_realm",
-  ]
+  ##################################################
+  # Shared parameters across assemblies in this file
+  ##################################################
 
-  # Include the product-defined meta package labels.
-  meta_packages = meta_package_labels + [ "//src/sys/component_index" ]
+  supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
 
-  # Add the base package labels for the selected SWD policy.
-  if (defined(policy_labels.swd)) {
-    foreach(policy, policies_swd) {
-      if (policy.name == policy_labels.swd) {
-        base_packages += policy.base_package_deps
-      }
+  fuchsia_base = {
+    testonly = fuchsia_zbi_testonly
+    generate_fvm = !bootfs_only
+    board_name = board_name
+    output_dir = root_build_dir
+    fshost_config = board_fshost_config
+
+    check_production_tag = check_production_eligibility
+
+    include_component_id_index = true
+
+    # Use the GN arg for including shell commands.
+    include_shell_commands = include_shell_commands_package
+
+    # If the product definition is specifying a product assembly config file, then
+    # pass that to the assemble_system() call(s).
+    if (fuchsia_product_assembly_config_file != false) {
+      product_assembly_config_file = fuchsia_product_assembly_config_file
     }
-  }
+    if (fuchsia_product_assembly_config_label != false) {
+      product_assembly_config_dep = fuchsia_product_assembly_config_label
+    }
 
-  # Add the base package labels for the selected SWD policy.
-  extra_core_realm_shards = []
-  if (defined(policy_labels.update_checker)) {
-    foreach(policy, policies_update_checker) {
-      if (policy.name == policy_labels.update_checker) {
-        # TODO(fxbug.dev/93695) Remove the need for
-        # `if_board_supports_update_configurator` and
-        # `board_supports_update_configurator`, replacing them with an
-        # optional capability route when that feature is available.
-        if (board_supports_update_configurator) {
-          inner = policy.if_board_supports_update_configurator
+    cmdline_deps = [ "//build/input:bootfs" ]
 
-          extra_core_realm_shards += inner.core_realm_shards
+    base_packages = [
+      "//:developer_base_driver_packages",
+      "//:developer_base_packages",
+      "//:legacy_base_driver_packages",
+      "//:legacy_base_packages",
+      ":core_realm",
+    ]
+
+    # Include the product-defined meta package labels.
+    meta_packages = meta_package_labels + [ "//src/sys/component_index" ]
+
+    # Add the base package labels for the selected SWD policy.
+    if (defined(policy_labels.swd)) {
+      foreach(policy, policies_swd) {
+        if (policy.name == policy_labels.swd) {
+          base_packages += policy.base_package_deps
         }
       }
     }
+
+    # Add the base package labels for the selected SWD policy.
+    extra_core_realm_shards = []
+    if (defined(policy_labels.update_checker)) {
+      foreach(policy, policies_update_checker) {
+        if (policy.name == policy_labels.update_checker) {
+          # TODO(fxbug.dev/93695) Remove the need for
+          # `if_board_supports_update_configurator` and
+          # `board_supports_update_configurator`, replacing them with an
+          # optional capability route when that feature is available.
+          if (board_supports_update_configurator) {
+            inner = policy.if_board_supports_update_configurator
+
+            extra_core_realm_shards += inner.core_realm_shards
+          }
+        }
+      }
+    }
+
+    base_driver_packages = [
+      "//:developer_base_driver_packages",
+      "//:legacy_base_driver_packages",
+    ]
+    cache_packages = [
+      "//:developer_cache_packages",
+      "//:legacy_cache_packages",
+    ]
+    system_image_deps = [ "//build/input:system_image" ]
+    universe_packages = [
+      "//:developer_universe_packages",
+      "//:legacy_universe_packages",
+    ]
+    bootfs_labels = [ "//build/input:bootfs" ]
+
+    if (!bootfs_only) {
+      # minfs arguments
+      if (minfs_product_minimum_data_bytes != false) {
+        minfs_minimum_data_bytes = minfs_product_minimum_data_bytes
+      } else if (minfs_board_minimum_data_bytes != false) {
+        minfs_minimum_data_bytes = minfs_board_minimum_data_bytes
+      }
+      if (minfs_product_maximum_bytes != false) {
+        minfs_maximum_bytes = minfs_product_maximum_bytes
+      } else if (minfs_board_maximum_bytes != false) {
+        minfs_maximum_bytes = minfs_board_maximum_bytes
+      }
+
+      # blobfs arguments
+      assembly_blob_layout_format = blob_layout_format
+      assembly_compress_blobs = compress_blobs
+      if (blobfs_product_minimum_inodes != false) {
+        blobfs_minimum_inodes = blobfs_product_minimum_inodes
+      } else if (blobfs_board_minimum_inodes != false) {
+        blobfs_minimum_inodes = blobfs_board_minimum_inodes
+      }
+      if (blobfs_product_minimum_data_bytes != false) {
+        blobfs_minimum_data_bytes = blobfs_product_minimum_data_bytes
+      } else if (blobfs_board_minimum_data_bytes != false) {
+        blobfs_minimum_data_bytes = blobfs_board_minimum_data_bytes
+      }
+      if (blobfs_product_maximum_bytes != false) {
+        blobfs_maximum_bytes = blobfs_product_maximum_bytes
+      } else if (blobfs_board_maximum_bytes != false) {
+        blobfs_maximum_bytes = blobfs_board_maximum_bytes
+      }
+
+      # fvm arguments
+      assembly_include_account_in_fvm = include_account_in_fvm
+      assembly_fvm_slice_size = fvm_slice_size
+    }
+
+    # zbi arguments
+    if (custom_signing_script != "") {
+      zbi_signing_script = custom_signing_script
+      deps = custom_signing_script_deps
+    } else if (use_vboot) {
+      zbi_signing_script = vboot_action.script
+      zbi_signing_args = vboot_action.args
+      deps = vboot_action.deps
+      inputs = vboot_action.inputs
+    }
   }
 
-  base_driver_packages = [
-    "//:developer_base_driver_packages",
-    "//:legacy_base_driver_packages",
-  ]
-  cache_packages = [
-    "//:developer_cache_packages",
-    "//:legacy_cache_packages",
-  ]
-  system_image_deps = [ "//build/input:system_image" ]
-  universe_packages = [
-    "//:developer_universe_packages",
-    "//:legacy_universe_packages",
-  ]
-  bootfs_labels = [ "//build/input:bootfs" ]
+  core_realm("core_realm") {
+    package_name = core_realm_package_name
+    deps = core_realm_shards + board_core_realm_shards +
+           fuchsia_base.extra_core_realm_shards
+    restrict_persistent_storage = core_realm_restrict_persistent_storage
+    restrict_full_resolver_to_base = !auto_update_packages
+  }
 
+  ##################################################
+  # Fuchsia
+  ##################################################
+
+  # Copy the blob.blk to the old location for assembled images.
+  # TODO(fxbug.dev/82077): Delete this once clients do not depend on the old path.
   if (!bootfs_only) {
-    # minfs arguments
-    if (minfs_product_minimum_data_bytes != false) {
-      minfs_minimum_data_bytes = minfs_product_minimum_data_bytes
-    } else if (minfs_board_minimum_data_bytes != false) {
-      minfs_minimum_data_bytes = minfs_board_minimum_data_bytes
-    }
-    if (minfs_product_maximum_bytes != false) {
-      minfs_maximum_bytes = minfs_product_maximum_bytes
-    } else if (minfs_board_maximum_bytes != false) {
-      minfs_maximum_bytes = minfs_board_maximum_bytes
-    }
+    old_blobfs_path = "${root_out_dir}/obj/build/images/blob.blk"
+    copy("copy_blobfs") {
+      testonly = fuchsia_zbi_testonly
+      sources = [ "${target_out_dir}/fuchsia/blob.blk" ]
+      outputs = [ old_blobfs_path ]
+      deps = [ ":fuchsia_assembly" ]
 
-    # blobfs arguments
-    assembly_blob_layout_format = blob_layout_format
-    assembly_compress_blobs = compress_blobs
-    if (blobfs_product_minimum_inodes != false) {
-      blobfs_minimum_inodes = blobfs_product_minimum_inodes
-    } else if (blobfs_board_minimum_inodes != false) {
-      blobfs_minimum_inodes = blobfs_board_minimum_inodes
+      metadata = {
+        # Declare all the generated images.
+        images = [
+          # BlobFS
+          {
+            label = get_label_info(":fuchsia", "label_with_toolchain")
+            name = "blob"
+            path = rebase_path(old_blobfs_path, root_build_dir)
+            type = "blk"
+          },
+        ]
+      }
     }
-    if (blobfs_product_minimum_data_bytes != false) {
-      blobfs_minimum_data_bytes = blobfs_product_minimum_data_bytes
-    } else if (blobfs_board_minimum_data_bytes != false) {
-      blobfs_minimum_data_bytes = blobfs_board_minimum_data_bytes
-    }
-    if (blobfs_product_maximum_bytes != false) {
-      blobfs_maximum_bytes = blobfs_product_maximum_bytes
-    } else if (blobfs_board_maximum_bytes != false) {
-      blobfs_maximum_bytes = blobfs_board_maximum_bytes
-    }
-
-    # fvm arguments
-    assembly_include_account_in_fvm = include_account_in_fvm
-    assembly_fvm_slice_size = fvm_slice_size
   }
 
-  # zbi arguments
-  if (custom_signing_script != "") {
-    zbi_signing_script = custom_signing_script
-    deps = custom_signing_script_deps
-  } else if (use_vboot) {
-    zbi_signing_script = vboot_action.script
-    zbi_signing_args = vboot_action.args
-    deps = vboot_action.deps
-    inputs = vboot_action.inputs
+  # Copy the fvm.blob.sparse.blk to the old location for assembled images.
+  # TODO(fxbug.dev/82077): Delete this once clients do not depend on the old path.
+  if (include_fvm_blob_sparse) {
+    old_fvm_blob_sparse_path =
+        "${root_out_dir}/obj/build/images/fvm.blob.sparse.blk"
+    copy("copy_fvm_blob_sparse") {
+      testonly = fuchsia_zbi_testonly
+      sources = [ "${target_out_dir}/fuchsia/fvm.blob.sparse.blk" ]
+      outputs = [ old_fvm_blob_sparse_path ]
+      deps = [ ":fuchsia_assembly" ]
+
+      metadata = {
+        images = [
+          {
+            label = get_label_info(":fuchsia", "label_with_toolchain")
+
+            # Hack: Infra expects bootserver_pave to be present
+            # in the GN graph for this image to be built.
+            bootserver_pave = []
+            name = "fvm.blob.sparse"
+            path = rebase_path(old_fvm_blob_sparse_path, root_build_dir)
+            type = "blk"
+          },
+        ]
+      }
+    }
   }
-}
 
-core_realm("core_realm") {
-  package_name = core_realm_package_name
-  deps = core_realm_shards + board_core_realm_shards +
-         fuchsia_base.extra_core_realm_shards
-  restrict_persistent_storage = core_realm_restrict_persistent_storage
-  restrict_full_resolver_to_base = !auto_update_packages
-}
-
-##################################################
-# Fuchsia
-##################################################
-
-# Copy the blob.blk to the old location for assembled images.
-# TODO(fxbug.dev/82077): Delete this once clients do not depend on the old path.
-if (!bootfs_only) {
-  old_blobfs_path = "${root_out_dir}/obj/build/images/blob.blk"
-  copy("copy_blobfs") {
+  group("fuchsia") {
     testonly = fuchsia_zbi_testonly
-    sources = [ "${target_out_dir}/fuchsia/blob.blk" ]
-    outputs = [ old_blobfs_path ]
-    deps = [ ":fuchsia_assembly" ]
+    public_deps = [
+      ":fuchsia_assembly",
+      ":update",
+    ]
+    if (!bootfs_only) {
+      public_deps += [ ":copy_blobfs" ]
+    }
+    if (include_fvm_blob_sparse) {
+      public_deps += [ ":copy_fvm_blob_sparse" ]
+    }
+  }
+
+  assemble_system("fuchsia_assembly") {
+    forward_variables_from(fuchsia_base, "*")
+    image_name = "fuchsia"
+
+    if (fuchsia_zbi_kernel_cmdline_goldens != []) {
+      cmdline_goldens = fuchsia_zbi_kernel_cmdline_goldens
+    }
+    if (fuchsia_zbi_bootfs_filelist_goldens != []) {
+      bootfs_goldens = fuchsia_zbi_bootfs_filelist_goldens
+    }
+    if (fuchsia_static_pkgs_goldens != []) {
+      static_pkgs_goldens = fuchsia_static_pkgs_goldens
+    }
+    if (fuchsia_route_sources_config != "") {
+      route_sources_config = fuchsia_route_sources_config
+    }
+
+    create_legacy_aib_archive = true
+    create_legacy_aib_archive = true
+
+    # Calculate the paths of the generated images.
+    files = {
+      outdir = target_out_dir + "/" + image_name
+
+      zbi = "${outdir}/fuchsia.zbi"
+      zbi_signed = "${outdir}/fuchsia.zbi.signed"
+      vbmeta = "${outdir}/fuchsia.vbmeta"
+      minfs = "${outdir}/data.blk"
+      blobfs = "${outdir}/blob.blk"
+      fvm = "${outdir}/fvm.blk"
+      fvm_sparse = "${outdir}/fvm.sparse.blk"
+      fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
+      fvm_fastboot = "${outdir}/fvm.fastboot.blk"
+    }
+    rebased_files = {
+      zbi = rebase_path(files.zbi, root_build_dir)
+      zbi_signed = rebase_path(files.zbi_signed, root_build_dir)
+      vbmeta = rebase_path(files.vbmeta, root_build_dir)
+      minfs = rebase_path(files.minfs, root_build_dir)
+      blobfs = rebase_path(files.blobfs, root_build_dir)
+      fvm = rebase_path(files.fvm, root_build_dir)
+      fvm_sparse = rebase_path(files.fvm_sparse, root_build_dir)
+      fvm_blob_sparse = rebase_path(files.fvm_blob_sparse, root_build_dir)
+      fvm_fastboot = rebase_path(files.fvm_fastboot, root_build_dir)
+    }
 
     metadata = {
       # Declare all the generated images.
       images = [
-        # BlobFS
+        # MinFS
         {
-          label = get_label_info(":fuchsia", "label_with_toolchain")
-          name = "blob"
-          path = rebase_path(old_blobfs_path, root_build_dir)
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "data"
+          path = rebased_files.minfs
+          type = "blk"
+        },
+
+        # TODO(fxbug.dev/82077): Add this back once clients move to the new path.
+        # BlobFS
+        #{
+        #  label = get_label_info(":$target_name", "label_with_toolchain")
+        #  name = "blob"
+        #  path = rebased_files.blobfs
+        #  type = "blk"
+        #},
+
+        # ZBI
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "zircon-a"
+
+          # We are using the copied-to path, becuase some e2e tests depend on it
+          # for their host_test_data.
+          path = "fuchsia.zbi"
+          type = "zbi"
+
+          archive = true
+          bootserver_pave = []
+
+          # TODO(fxbug.dev/31931): we want to reduce the usage of mexec, but currently we
+          # do not have sufficient boot control on x64.
+          if (target_cpu == "x64") {
+            bootserver_pave += [ "--boot" ]
+          }
+          if (custom_signing_script == "" && !use_vboot) {
+            bootserver_pave += [
+              "--zircona",
+              # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
+              # zircon-r, so for now zedboot is being paved to this slot.
+              # "--zirconb",
+            ]
+
+            fastboot_flash = []
+            if (zircon_a_partition != "") {
+              fastboot_flash += [ zircon_a_partition ]
+            }
+            if (zircon_b_partition != "") {
+              fastboot_flash += [ zircon_b_partition ]
+            }
+          }
+        },
+
+        # FVM
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          archive = add_qemu_to_build_archives
+          name = "storage-full"
+          path = rebased_files.fvm
+          type = "blk"
+        },
+
+        # Sparse FVM
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          archive = true
+          bootserver_pave = [ "--fvm" ]
+          name = "storage-sparse"
+          path = rebased_files.fvm_sparse
           type = "blk"
         },
       ]
+
+      # Declare the paths to the images.
+      image_paths = [
+        "IMAGE_DATA_RAW=${rebased_files.minfs}",
+        "IMAGE_BLOB_RAW=${rebased_files.blobfs}",
+        "IMAGE_ZIRCONA_ZBI=fuchsia.zbi",
+        "IMAGE_FVM_RAW=${rebased_files.fvm}",
+        "IMAGE_FVM_SPARSE=${rebased_files.fvm_sparse}",
+        "IMAGE_FVM_BLOB_SPARSE=${rebased_files.fvm_blob_sparse}",
+
+        # TODO(mcgrathr): The complete ZBI can be used with a separate
+        # kernel too, the kernel image in it will just be ignored.  So
+        # just use the primary ZBI for this until all uses are
+        # converted to using the ZBI alone.  Then remove this as
+        # IMAGE_BOOT_RAM variable should no longer be in use.
+        "IMAGE_BOOT_RAM=fuchsia.zbi",
+      ]
+
+      # Optionally add the signed images.
+      if (custom_signing_script != "" || use_vboot) {
+        images += [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            archive = true
+            bootserver_pave = [ "--zircona" ]
+            name = "zircon-a.signed"
+            path = "fuchsia.zbi.signed"
+            type = "zbi.signed"
+
+            fastboot_flash = []
+            if (zircon_a_partition != "") {
+              fastboot_flash += [ zircon_a_partition ]
+            }
+            if (zircon_b_partition != "") {
+              fastboot_flash += [ zircon_b_partition ]
+            }
+          },
+        ]
+        image_paths += [ "IMAGE_ZIRCONA_SIGNEDZBI=fuchsia.zbi.signed" ]
+      }
+
+      # Optionally add the vbmeta image.
+      if (use_vbmeta) {
+        images += [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            archive = true
+            name = "zircon-a"
+            path = "fuchsia.vbmeta"
+            type = "vbmeta"
+
+            bootserver_pave = [ "--vbmetaa" ]
+
+            fastboot_flash = []
+            if (vbmeta_a_partition != "") {
+              fastboot_flash += [ vbmeta_a_partition ]
+            }
+            if (vbmeta_b_partition != "") {
+              fastboot_flash += [ vbmeta_b_partition ]
+            }
+          },
+        ]
+        image_paths += [ "IMAGE_VBMETAA_RAW=fuchsia.vbmeta" ]
+      }
+
+      # TODO(fxbug.dev/82077): Add this back once clients move to the new path.
+      # Optionally include the blob-only sparse FVM.
+      # if (include_fvm_blob_sparse) {
+      #   images += [
+      #     {
+      #       label = get_label_info(":$target_name", "label_with_toolchain")
+
+      #       # Hack: Infra expects bootserver_pave to be present
+      #       # in the GN graph for this image to be built.
+      #       bootserver_pave = []
+      #       name = "fvm.blob.sparse"
+      #       path = rebased_files.fvm_blob_sparse
+      #       type = "blk"
+      #     },
+      #   ]
+      # }
+
+      # Optionally include the fastboot FVM.
+      if (supports_fastboot_fvm) {
+        images += [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            archive = true
+            name = "fvm.fastboot"
+            path = rebased_files.fvm_fastboot
+            type = "blk"
+            fastboot_flash = [ fvm_partition ]
+          },
+        ]
+        image_paths += [ "IMAGE_FVM_FASTBOOT=${rebased_files.fvm_fastboot}" ]
+      }
     }
   }
-}
 
-# Copy the fvm.blob.sparse.blk to the old location for assembled images.
-# TODO(fxbug.dev/82077): Delete this once clients do not depend on the old path.
-if (include_fvm_blob_sparse) {
-  old_fvm_blob_sparse_path =
-      "${root_out_dir}/obj/build/images/fvm.blob.sparse.blk"
-  copy("copy_fvm_blob_sparse") {
+  partitions_config = "$target_out_dir/partitions_config.json"
+  generated_partitions_config("partitions_config") {
+    output_path = partitions_config
+    hw_revision = board_name
+    bootstrap_partitions = bootstrap_files
+    unlock_credentials = board_fastboot_unlock_credentials
+  }
+
+  update_package("update") {
+    files = {
+      _fuchsia_out =
+          get_label_info(":fuchsia_assembly", "target_out_dir") + "/fuchsia"
+      _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
+                      get_label_info(recovery_label, "name")
+      fuchsia_packages = "${_fuchsia_out}/packages.json"
+      fuchsia_images = "${_fuchsia_out}/images.json"
+      recovery_images = "${_recovery_out}/images.json"
+    }
+
     testonly = fuchsia_zbi_testonly
-    sources = [ "${target_out_dir}/fuchsia/fvm.blob.sparse.blk" ]
-    outputs = [ old_fvm_blob_sparse_path ]
-    deps = [ ":fuchsia_assembly" ]
+    deps = [
+      ":fuchsia_assembly",
+      ":partitions_config",
+      "//build/info:latest-commit-date",
+      recovery_label,
+    ]
+    partitions = partitions_config
+    packages = files.fuchsia_packages
+    system_a = files.fuchsia_images
+    system_r = files.recovery_images
+    board_name = board_name
+    version_file = build_info_files.version
+    epoch = "1"
+  }
+
+  ##################################################
+  # Fuchsia Prime
+  ##################################################
+
+  # Generate a fuchsia_prime system, which is the same as a fuchsia system, but
+  # with the addition of a dummy file in the system_image package. This can be
+  # used for OTA tests.
+  resource("dummy_resources") {
+    sources = [ "dummy.txt" ]
+    outputs = [ "dummy.txt" ]
+    visibility = [ ":*" ]
+  }
+  fuchsia_package("dummy") {
+    deps = [ ":dummy_resources" ]
+    visibility = [ ":*" ]
+  }
+
+  assemble_system("fuchsia_prime_assembly") {
+    forward_variables_from(fuchsia_base, "*")
+    system_image_deps += [ ":dummy" ]
+    base_package_name = "system_image_prime"
+  }
+
+  update_package("fuchsia_prime") {
+    files = {
+      _fuchsia_out = get_label_info(":fuchsia_prime", "target_out_dir") +
+                     "/fuchsia_prime_assembly"
+      _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
+                      get_label_info(recovery_label, "name")
+      fuchsia_packages = "${_fuchsia_out}/packages.json"
+      fuchsia_images = "${_fuchsia_out}/images.json"
+      recovery_images = "${_recovery_out}/images.json"
+    }
+
+    testonly = fuchsia_zbi_testonly
+    deps = [
+      ":fuchsia_prime_assembly",
+      ":partitions_config",
+      "//build/info:latest-commit-date",
+      recovery_label,
+    ]
+    name = "update_prime"
+    partitions = partitions_config
+    packages = files.fuchsia_packages
+    system_a = files.fuchsia_images
+    system_r = files.recovery_images
+    board_name = board_name
+    version_file = build_info_files.version
+    epoch = "1"
+  }
+
+  ##################################################
+  # Netboot
+  ##################################################
+
+  # This rolls the primary ZBI together with a compressed RAMDISK image of
+  # fvm.blk into a fat ZBI that boots the full system without using any real
+  # storage.  The system decompresses the fvm.blk image into memory and then
+  # sees that RAM disk just as if it were a real disk on the device.
+  assemble_system("netboot") {
+    forward_variables_from(fuchsia_base, "*")
+    ramdisk_fvm_in_zbi = true
 
     metadata = {
       images = [
         {
-          label = get_label_info(":fuchsia", "label_with_toolchain")
-
-          # Hack: Infra expects bootserver_pave to be present
-          # in the GN graph for this image to be built.
-          bootserver_pave = []
-          name = "fvm.blob.sparse"
-          path = rebase_path(old_fvm_blob_sparse_path, root_build_dir)
-          type = "blk"
-        },
-      ]
-    }
-  }
-}
-
-group("fuchsia") {
-  testonly = fuchsia_zbi_testonly
-  public_deps = [
-    ":fuchsia_assembly",
-    ":update",
-  ]
-  if (!bootfs_only) {
-    public_deps += [ ":copy_blobfs" ]
-  }
-  if (include_fvm_blob_sparse) {
-    public_deps += [ ":copy_fvm_blob_sparse" ]
-  }
-}
-
-assemble_system("fuchsia_assembly") {
-  forward_variables_from(fuchsia_base, "*")
-  image_name = "fuchsia"
-
-  if (fuchsia_zbi_kernel_cmdline_goldens != []) {
-    cmdline_goldens = fuchsia_zbi_kernel_cmdline_goldens
-  }
-  if (fuchsia_zbi_bootfs_filelist_goldens != []) {
-    bootfs_goldens = fuchsia_zbi_bootfs_filelist_goldens
-  }
-  if (fuchsia_static_pkgs_goldens != []) {
-    static_pkgs_goldens = fuchsia_static_pkgs_goldens
-  }
-  if (fuchsia_route_sources_config != "") {
-    route_sources_config = fuchsia_route_sources_config
-  }
-
-  create_legacy_aib_archive = true
-  create_legacy_aib_archive = true
-
-  # Calculate the paths of the generated images.
-  files = {
-    outdir = target_out_dir + "/" + image_name
-
-    zbi = "${outdir}/fuchsia.zbi"
-    zbi_signed = "${outdir}/fuchsia.zbi.signed"
-    vbmeta = "${outdir}/fuchsia.vbmeta"
-    minfs = "${outdir}/data.blk"
-    blobfs = "${outdir}/blob.blk"
-    fvm = "${outdir}/fvm.blk"
-    fvm_sparse = "${outdir}/fvm.sparse.blk"
-    fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
-    fvm_fastboot = "${outdir}/fvm.fastboot.blk"
-  }
-  rebased_files = {
-    zbi = rebase_path(files.zbi, root_build_dir)
-    zbi_signed = rebase_path(files.zbi_signed, root_build_dir)
-    vbmeta = rebase_path(files.vbmeta, root_build_dir)
-    minfs = rebase_path(files.minfs, root_build_dir)
-    blobfs = rebase_path(files.blobfs, root_build_dir)
-    fvm = rebase_path(files.fvm, root_build_dir)
-    fvm_sparse = rebase_path(files.fvm_sparse, root_build_dir)
-    fvm_blob_sparse = rebase_path(files.fvm_blob_sparse, root_build_dir)
-    fvm_fastboot = rebase_path(files.fvm_fastboot, root_build_dir)
-  }
-
-  metadata = {
-    # Declare all the generated images.
-    images = [
-      # MinFS
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        name = "data"
-        path = rebased_files.minfs
-        type = "blk"
-      },
-
-      # TODO(fxbug.dev/82077): Add this back once clients move to the new path.
-      # BlobFS
-      #{
-      #  label = get_label_info(":$target_name", "label_with_toolchain")
-      #  name = "blob"
-      #  path = rebased_files.blobfs
-      #  type = "blk"
-      #},
-
-      # ZBI
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        name = "zircon-a"
-
-        # We are using the copied-to path, becuase some e2e tests depend on it
-        # for their host_test_data.
-        path = "fuchsia.zbi"
-        type = "zbi"
-
-        archive = true
-        bootserver_pave = []
-
-        # TODO(fxbug.dev/31931): we want to reduce the usage of mexec, but currently we
-        # do not have sufficient boot control on x64.
-        if (target_cpu == "x64") {
-          bootserver_pave += [ "--boot" ]
-        }
-        if (custom_signing_script == "" && !use_vboot) {
-          bootserver_pave += [
-            "--zircona",
-            # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
-            # zircon-r, so for now zedboot is being paved to this slot.
-            # "--zirconb",
-          ]
-
-          fastboot_flash = []
-          if (zircon_a_partition != "") {
-            fastboot_flash += [ zircon_a_partition ]
-          }
-          if (zircon_b_partition != "") {
-            fastboot_flash += [ zircon_b_partition ]
-          }
-        }
-      },
-
-      # FVM
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        archive = add_qemu_to_build_archives
-        name = "storage-full"
-        path = rebased_files.fvm
-        type = "blk"
-      },
-
-      # Sparse FVM
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        archive = true
-        bootserver_pave = [ "--fvm" ]
-        name = "storage-sparse"
-        path = rebased_files.fvm_sparse
-        type = "blk"
-      },
-    ]
-
-    # Declare the paths to the images.
-    image_paths = [
-      "IMAGE_DATA_RAW=${rebased_files.minfs}",
-      "IMAGE_BLOB_RAW=${rebased_files.blobfs}",
-      "IMAGE_ZIRCONA_ZBI=fuchsia.zbi",
-      "IMAGE_FVM_RAW=${rebased_files.fvm}",
-      "IMAGE_FVM_SPARSE=${rebased_files.fvm_sparse}",
-      "IMAGE_FVM_BLOB_SPARSE=${rebased_files.fvm_blob_sparse}",
-
-      # TODO(mcgrathr): The complete ZBI can be used with a separate
-      # kernel too, the kernel image in it will just be ignored.  So
-      # just use the primary ZBI for this until all uses are
-      # converted to using the ZBI alone.  Then remove this as
-      # IMAGE_BOOT_RAM variable should no longer be in use.
-      "IMAGE_BOOT_RAM=fuchsia.zbi",
-    ]
-
-    # Optionally add the signed images.
-    if (custom_signing_script != "" || use_vboot) {
-      images += [
-        {
           label = get_label_info(":$target_name", "label_with_toolchain")
-          archive = true
-          bootserver_pave = [ "--zircona" ]
-          name = "zircon-a.signed"
-          path = "fuchsia.zbi.signed"
-          type = "zbi.signed"
-
-          fastboot_flash = []
-          if (zircon_a_partition != "") {
-            fastboot_flash += [ zircon_a_partition ]
-          }
-          if (zircon_b_partition != "") {
-            fastboot_flash += [ zircon_b_partition ]
-          }
+          archive = enable_netboot
+          bootserver_netboot = [ "--boot" ]
+          name = "netboot"
+          path = "netboot.zbi"
+          type = "zbi"
         },
       ]
-      image_paths += [ "IMAGE_ZIRCONA_SIGNEDZBI=fuchsia.zbi.signed" ]
-    }
+      image_paths = [
+        "IMAGE_NETBOOT_ZBI=netboot.zbi",
 
-    # Optionally add the vbmeta image.
-    if (use_vbmeta) {
-      images += [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          archive = true
-          name = "zircon-a"
-          path = "fuchsia.vbmeta"
-          type = "vbmeta"
-
-          bootserver_pave = [ "--vbmetaa" ]
-
-          fastboot_flash = []
-          if (vbmeta_a_partition != "") {
-            fastboot_flash += [ vbmeta_a_partition ]
-          }
-          if (vbmeta_b_partition != "") {
-            fastboot_flash += [ vbmeta_b_partition ]
-          }
-        },
+        # TODO(mcgrathr): The complete ZBI can be used with a separate kernel
+        # too, the kernel image in it will just be ignored.  So just use the
+        # primary ZBI for this until all uses are converted to using the ZBI
+        # alone.  Then remove this as IMAGE_BOOT_RAM variable should no
+        # longer be in use.
+        "IMAGE_NETBOOT_RAM=netboot.zbi",
       ]
-      image_paths += [ "IMAGE_VBMETAA_RAW=fuchsia.vbmeta" ]
     }
-
-    # TODO(fxbug.dev/82077): Add this back once clients move to the new path.
-    # Optionally include the blob-only sparse FVM.
-    # if (include_fvm_blob_sparse) {
-    #   images += [
-    #     {
-    #       label = get_label_info(":$target_name", "label_with_toolchain")
-
-    #       # Hack: Infra expects bootserver_pave to be present
-    #       # in the GN graph for this image to be built.
-    #       bootserver_pave = []
-    #       name = "fvm.blob.sparse"
-    #       path = rebased_files.fvm_blob_sparse
-    #       type = "blk"
-    #     },
-    #   ]
-    # }
-
-    # Optionally include the fastboot FVM.
-    if (supports_fastboot_fvm) {
-      images += [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          archive = true
-          name = "fvm.fastboot"
-          path = rebased_files.fvm_fastboot
-          type = "blk"
-          fastboot_flash = [ fvm_partition ]
-        },
-      ]
-      image_paths += [ "IMAGE_FVM_FASTBOOT=${rebased_files.fvm_fastboot}" ]
-    }
-  }
-}
-
-partitions_config = "$target_out_dir/partitions_config.json"
-generated_partitions_config("partitions_config") {
-  output_path = partitions_config
-  hw_revision = board_name
-  bootstrap_partitions = bootstrap_files
-  unlock_credentials = board_fastboot_unlock_credentials
-}
-
-update_package("update") {
-  files = {
-    _fuchsia_out =
-        get_label_info(":fuchsia_assembly", "target_out_dir") + "/fuchsia"
-    _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
-                    get_label_info(recovery_label, "name")
-    fuchsia_packages = "${_fuchsia_out}/packages.json"
-    fuchsia_images = "${_fuchsia_out}/images.json"
-    recovery_images = "${_recovery_out}/images.json"
-  }
-
-  testonly = fuchsia_zbi_testonly
-  deps = [
-    ":fuchsia_assembly",
-    ":partitions_config",
-    "//build/info:latest-commit-date",
-    recovery_label,
-  ]
-  partitions = partitions_config
-  packages = files.fuchsia_packages
-  system_a = files.fuchsia_images
-  system_r = files.recovery_images
-  board_name = board_name
-  version_file = build_info_files.version
-  epoch = "1"
-}
-
-if (is_host) {
-  host_test_data("fuchsia_zbi_for_host_tests") {
-    sources = [ "$root_build_dir/fuchsia.zbi" ]
-  }
-}
-
-##################################################
-# Fuchsia Prime
-##################################################
-
-# Generate a fuchsia_prime system, which is the same as a fuchsia system, but
-# with the addition of a dummy file in the system_image package. This can be
-# used for OTA tests.
-resource("dummy_resources") {
-  sources = [ "dummy.txt" ]
-  outputs = [ "dummy.txt" ]
-  visibility = [ ":*" ]
-}
-fuchsia_package("dummy") {
-  deps = [ ":dummy_resources" ]
-  visibility = [ ":*" ]
-}
-
-assemble_system("fuchsia_prime_assembly") {
-  forward_variables_from(fuchsia_base, "*")
-  system_image_deps += [ ":dummy" ]
-  base_package_name = "system_image_prime"
-}
-
-update_package("fuchsia_prime") {
-  files = {
-    _fuchsia_out = get_label_info(":fuchsia_prime", "target_out_dir") +
-                   "/fuchsia_prime_assembly"
-    _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
-                    get_label_info(recovery_label, "name")
-    fuchsia_packages = "${_fuchsia_out}/packages.json"
-    fuchsia_images = "${_fuchsia_out}/images.json"
-    recovery_images = "${_recovery_out}/images.json"
-  }
-
-  testonly = fuchsia_zbi_testonly
-  deps = [
-    ":fuchsia_prime_assembly",
-    ":partitions_config",
-    "//build/info:latest-commit-date",
-    recovery_label,
-  ]
-  name = "update_prime"
-  partitions = partitions_config
-  packages = files.fuchsia_packages
-  system_a = files.fuchsia_images
-  system_r = files.recovery_images
-  board_name = board_name
-  version_file = build_info_files.version
-  epoch = "1"
-}
-
-##################################################
-# Netboot
-##################################################
-
-# This rolls the primary ZBI together with a compressed RAMDISK image of
-# fvm.blk into a fat ZBI that boots the full system without using any real
-# storage.  The system decompresses the fvm.blk image into memory and then
-# sees that RAM disk just as if it were a real disk on the device.
-assemble_system("netboot") {
-  forward_variables_from(fuchsia_base, "*")
-  ramdisk_fvm_in_zbi = true
-
-  metadata = {
-    images = [
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        archive = enable_netboot
-        bootserver_netboot = [ "--boot" ]
-        name = "netboot"
-        path = "netboot.zbi"
-        type = "zbi"
-      },
-    ]
-    image_paths = [
-      "IMAGE_NETBOOT_ZBI=netboot.zbi",
-
-      # TODO(mcgrathr): The complete ZBI can be used with a separate kernel
-      # too, the kernel image in it will just be ignored.  So just use the
-      # primary ZBI for this until all uses are converted to using the ZBI
-      # alone.  Then remove this as IMAGE_BOOT_RAM variable should no
-      # longer be in use.
-      "IMAGE_NETBOOT_RAM=netboot.zbi",
-    ]
   }
 }
