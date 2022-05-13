@@ -66,6 +66,7 @@ bool CompareExchange16Test() {
   END_TEST;
 }
 
+#ifndef __riscv
 // Most of atomic_ref's tests are in ulib, along the rest of FBL.
 // We test __int128 specifically in the kernel unit tests, since __int128 is unconditionally
 // available in the kernel environment.
@@ -96,6 +97,7 @@ bool AtomicRef128Test() {
 
   END_TEST;
 }
+#endif
 
 }  // namespace
 
@@ -103,5 +105,7 @@ UNITTEST_START_TESTCASE(libc_atomic_tests)
 UNITTEST("load_16", Load16Test)
 UNITTEST("store_16", Store16Test)
 UNITTEST("compare_exchange_16", CompareExchange16Test)
+#ifndef __riscv
 UNITTEST("atomic_ref_128", AtomicRef128Test)
+#endif
 UNITTEST_END_TESTCASE(libc_atomic_tests, "libc_atomic", "libc/atomic tests")
