@@ -48,12 +48,6 @@ config("implicit-host-libs") {
     "-Wl,-rpath=\$ORIGIN/",
   ]
 
-  # TODO(fxbug.dev/26846) The implicitly linked static libc++.a depends on these.
-  libs = [
-    "dl",
-    "pthread",
-  ]
-
   rustflags = []
   foreach(flag, ldflags) {
     rustflags += [ "-Clink-arg=$flag" ]
