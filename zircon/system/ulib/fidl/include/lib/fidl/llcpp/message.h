@@ -886,7 +886,7 @@ class DecodedMessage<FidlType, Transport,
                                       bytes, byte_actual, handles, handle_metadata, handle_actual,
                                       ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+  explicit DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(static_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes, c_msg->handles,
                        reinterpret_cast<fidl_channel_handle_metadata_t*>(c_msg->handle_metadata),
                        c_msg->num_handles) {}
