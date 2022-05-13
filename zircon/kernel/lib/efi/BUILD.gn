@@ -18,12 +18,9 @@ zx_library("efi") {
   sdk = "source"
   sdk_headers = [
     "efi/boot-services.h",
-    "efi/runtime-services.h",
-    "efi/system-table.h",
-    "efi/types.h",
     "efi/protocol/block-io.h",
-    "efi/protocol/device-path.h",
     "efi/protocol/device-path-to-text.h",
+    "efi/protocol/device-path.h",
     "efi/protocol/disk-io.h",
     "efi/protocol/driver-binding.h",
     "efi/protocol/file.h",
@@ -33,12 +30,16 @@ zx_library("efi") {
     "efi/protocol/managed-network.h",
     "efi/protocol/pci-root-bridge-io.h",
     "efi/protocol/service-binding.h",
+    "efi/protocol/shell-parameters.h",
     "efi/protocol/simple-file-system.h",
     "efi/protocol/simple-network.h",
     "efi/protocol/simple-text-input.h",
     "efi/protocol/simple-text-output.h",
     "efi/protocol/tcp6.h",
     "efi/protocol/usb-io.h",
+    "efi/runtime-services.h",
+    "efi/system-table.h",
+    "efi/types.h",
   ]
 }
 

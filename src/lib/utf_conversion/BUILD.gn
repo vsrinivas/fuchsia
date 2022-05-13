@@ -9,7 +9,13 @@ import("//build/test.gni")
 static_library("utf_conversion") {
   public = [ "utf_conversion.h" ]
   sources = [ "utf_conversion.cc" ]
-  deps = [ "//zircon/system/ulib/fbl" ]
+  deps = [ "//sdk/lib/stdcompat" ]
+  if (is_kernel) {
+    deps += [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
 }
 
 test("utf_conversion_test") {

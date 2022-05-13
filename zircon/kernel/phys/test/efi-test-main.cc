@@ -7,14 +7,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <ktl/span.h>
 #include <phys/efi/main.h>
 
 #include "test-main.h"
+
+#include <ktl/enforce.h>
 
 PHYS_SINGLETHREAD int main(int argc, char** argv) {
   // Early boot may have filled the screen with logs. Add a newline to
   // terminate any previous line, and another newline to leave a blank.
   printf("\n\n");
+
+  if (argc > 0) {
+    printf("*** UEFI test application arguments ***");
+    for (const char* arg : ktl::span(argv, argc)) {
+      printf(" \"%s\"", arg);
+    }
+    printf("\n");
+  }
 
   // Run the test.
   int status = TestMain(nullptr, gEfiEntryTicks);

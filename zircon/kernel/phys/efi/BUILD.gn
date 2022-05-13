@@ -108,7 +108,7 @@ source_set("main") {
   deps = [ ":protocol" ]
   allow_circular_includes_from = [ ":protocol" ]
 
-  if (is_efi_toolchain) {
+  if (is_kernel) {
     sources = [
       "allocation.cc",
       "efi-main.cc",
@@ -119,6 +119,7 @@ source_set("main") {
       "..:main",
       "..:stdio",
       "..:symbolize",
+      "//src/lib/utf_conversion",
       "//zircon/kernel/arch/$zircon_cpu/phys/efi",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/ktl",
@@ -126,6 +127,7 @@ source_set("main") {
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/uart",
     ]
+    include_dirs = [ "//" ]  # utf_conversion isn't a proper library.
   }
 }
 

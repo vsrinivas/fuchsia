@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/utf_conversion/utf_conversion.h"
+#include "utf_conversion.h"
 
-#include <endian.h>
+#include <lib/stdcompat/bit.h>
 #include <zircon/assert.h>
 
 namespace {
@@ -14,13 +14,10 @@ enum class Endianness {
   INVERT,
 };
 
-#if BYTE_ORDER == BIG_ENDIAN
-constexpr Endianness kBigEndian = Endianness::HOST;
-constexpr Endianness kLittleEndian = Endianness::INVERT;
-#else
-constexpr Endianness kBigEndian = Endianness::INVERT;
-constexpr Endianness kLittleEndian = Endianness::HOST;
-#endif
+constexpr Endianness kBigEndian =
+    cpp20::endian::native == cpp20::endian::big ? Endianness::HOST : Endianness::INVERT;
+constexpr Endianness kLittleEndian =
+    cpp20::endian::native == cpp20::endian::little ? Endianness::HOST : Endianness::INVERT;
 
 template <Endianness E>
 struct CodeUnit;
