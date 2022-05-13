@@ -243,6 +243,10 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
     uber_struct->local_image_sample_regions[handle] = sample_region;
   }
 
+  for (const auto& [handle, opacity_value] : opacity_values_) {
+    uber_struct->local_opacity_values[handle] = opacity_value;
+  }
+
   for (const auto& [handle, clip_region] : clip_regions_) {
     uber_struct->local_clip_regions[handle] = clip_region;
   }
@@ -567,6 +571,42 @@ void Flatland::SetScale(TransformId transform_id, VecF scale) {
   }
 
   matrices_[transform_kv->second].SetScale(scale);
+}
+
+void Flatland::SetOpacity(TransformId transform_id, float value) {
+  if (transform_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "SetOpacity called with transform_id 0";
+    ReportBadOperationError();
+    return;
+  }
+
+  if (isinf(value) || isnan(value)) {
+    error_reporter_->ERROR() << "SetOpacity failed, invalid opacity value " << value;
+    ReportBadOperationError();
+    return;
+  }
+
+  if (value < 0.f || value > 1.f) {
+    error_reporter_->ERROR() << "Opacity value is not within valid range [0,1].";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto transform_kv = transforms_.find(transform_id.value);
+
+  if (transform_kv == transforms_.end()) {
+    error_reporter_->ERROR() << "SetOpacity failed, transform_id " << transform_id.value
+                             << " not found";
+    ReportBadOperationError();
+    return;
+  }
+
+  // Erase the value from the map since we store 1.f implicity.
+  if (value == 1.f) {
+    opacity_values_.erase(transform_kv->second);
+  } else {
+    opacity_values_[transform_kv->second] = value;
+  }
 }
 
 void Flatland::SetClipBoundary(TransformId transform_id,

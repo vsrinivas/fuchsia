@@ -558,6 +558,20 @@ protocol Flatland {
         scale fuchsia.math.VecF;
     });
 
+    /// Sets an opacity in linear space to be applied to a transform and its descendents,
+    /// which include other transforms and content. Opacity values must be in the range
+    /// of [0.0, 1.0], where 0.0 is completely transparent and 1.0 is completely opaque.
+    /// Attempting to call this function with values outside that range will result in
+    /// an error. A transform's opacity value is multiplied with that of its parent. This
+    /// effect works differently from group opacity. Using group opacity, child nodes are
+    /// rendered together first, and then have the parent's opacity applied as a post-effect.
+    /// Here, opacity is applied to each child individually. This may result in a very
+    /// different effect.
+    SetOpacity(struct {
+        transform_id TransformId;
+        value float32;
+    });
+
     /// Sets the bounds, expressed in the local coordinate space of the transform, that
     /// constrains the region that content attached to this transform can be rendered to.
     /// If the content's area exceeds the clip bounds, the area outside the bounds will
@@ -603,13 +617,6 @@ protocol Flatland {
     /// objects that are not referenced by the new root.
     SetRootTransform(struct {
         transform_id TransformId;
-    });
-
-    /// Sets an opacity in linear space to be applied to a flatland image. Opacity values must
-    /// be in the range [0.0, 1.0].
-    SetImageOpacity(struct {
-        image_id ContentId;
-        val float32;
     });
 
     /// Sets the interactive areas for a Transform. By default, Content is not interactive; hit
@@ -736,6 +743,12 @@ protocol Flatland {
         blend_mode BlendMode;
     });
 
+    /// Sets an opacity in linear space to be applied to a flatland image. Opacity values must
+    /// be in the range [0.0, 1.0].
+    SetImageOpacity(struct {
+        image_id ContentId;
+        val float32;
+    });
 
     /// Creates a solid-color rectangle. By default a filled-rect does not have a defined
     /// color or size. It is necessary to call |SetSolidFill| to specify a color and size

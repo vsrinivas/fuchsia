@@ -3865,7 +3865,7 @@ TEST_F(FlatlandTest, CreateImageValidCase) {
               std::move(properties));
 }
 
-TEST_F(FlatlandTest, SetOpacityTestCases) {
+TEST_F(FlatlandTest, SetImageOpacityTestCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
   const TransformId kTransformId = {3};
   const ContentId kId = {1};
@@ -3954,6 +3954,55 @@ TEST_F(FlatlandTest, SetOpacityTestCases) {
     flatland->SetRootTransform(kTransformId);
     flatland->SetContent(kTransformId, kId);
     flatland->SetImageOpacity(kId, 0.7);
+    PRESENT(flatland, true);
+  }
+}
+
+TEST_F(FlatlandTest, SetTransformOpacityTestCases) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  const TransformId kId = {1};
+  const TransformId kIdChild = {2};
+
+  // Zero is not a valid transform ID.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetOpacity({0}, 0.5);
+    PRESENT(flatland, false);
+  }
+
+  // The transform id hasn't been imported yet.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetOpacity(kId, 0.5);
+    PRESENT(flatland, false);
+  }
+
+  // The alpha values are out of range.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    // Setup a valid transform.
+    flatland->CreateTransform(kId);
+    flatland->SetRootTransform(kId);
+    flatland->SetOpacity(kId, -0.5);
+    PRESENT(flatland, false);
+  }
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    // Setup a valid transform.
+    flatland->CreateTransform(kId);
+    flatland->SetRootTransform(kId);
+    flatland->SetOpacity(kId, 1.5);
+    PRESENT(flatland, false);
+  }
+
+  // Testing now with good values should finally work.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    // Setup a valid transform.
+    flatland->CreateTransform(kId);
+    PRESENT(flatland, true);
+    flatland->SetRootTransform(kId);
+    flatland->SetOpacity(kId, 0.5);
     PRESENT(flatland, true);
   }
 }

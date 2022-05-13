@@ -49,6 +49,7 @@ protocol/member fuchsia.ui.composition/Flatland.SetImageBlendingFunction(fuchsia
 protocol/member fuchsia.ui.composition/Flatland.SetImageDestinationSize(fuchsia.ui.composition/ContentId image_id,fuchsia.math/SizeU size)
 protocol/member fuchsia.ui.composition/Flatland.SetImageOpacity(fuchsia.ui.composition/ContentId image_id,float32 val)
 protocol/member fuchsia.ui.composition/Flatland.SetImageSampleRegion(fuchsia.ui.composition/ContentId image_id,fuchsia.math/RectF rect)
+protocol/member fuchsia.ui.composition/Flatland.SetOpacity(fuchsia.ui.composition/TransformId transform_id,float32 value)
 protocol/member fuchsia.ui.composition/Flatland.SetOrientation(fuchsia.ui.composition/TransformId transform_id,fuchsia.ui.composition/Orientation orientation)
 protocol/member fuchsia.ui.composition/Flatland.SetRootTransform(fuchsia.ui.composition/TransformId transform_id)
 protocol/member fuchsia.ui.composition/Flatland.SetScale(fuchsia.ui.composition/TransformId transform_id,fuchsia.math/VecF scale)
