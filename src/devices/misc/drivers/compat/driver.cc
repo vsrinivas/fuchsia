@@ -52,6 +52,52 @@ constexpr auto kLibDriverPath = "/pkg/driver/compat.so";
 
 namespace compat {
 
+zx_status_t AddMetadata(Device* device,
+                        fidl::VectorView<fuchsia_driver_compat::wire::Metadata> data) {
+  for (auto& metadata : data) {
+    size_t size;
+    zx_status_t status = metadata.data.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size));
+    if (status != ZX_OK) {
+      return status;
+    }
+    std::vector<uint8_t> data(size);
+    status = metadata.data.read(data.data(), 0, data.size());
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    status = device->AddMetadata(metadata.type, data.data(), data.size());
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
+promise<void, zx_status_t> GetAndAddMetadata(
+    fidl::WireSharedClient<fuchsia_driver_compat::Device>& client, Device* device) {
+  bridge<void, zx_status_t> bridge;
+  client->GetMetadata().Then(
+      [device, completer = std::move(bridge.completer)](
+          fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetMetadata>& result) mutable {
+        if (!result.ok()) {
+          return;
+        }
+        auto* response = result.Unwrap();
+        if (response->result.is_err()) {
+          completer.complete_error(response->result.err());
+          return;
+        }
+        zx_status_t status = AddMetadata(device, response->result.response().metadata);
+        if (status != ZX_OK) {
+          completer.complete_error(status);
+          return;
+        }
+        completer.complete_ok();
+      });
+  return bridge.consumer.promise_or(error(ZX_ERR_INTERNAL));
+}
+
 std::vector<std::string> GetFragmentNames(
     fuchsia_driver_framework::wire::DriverStartArgs& start_args) {
   std::vector<std::string> fragments;
@@ -170,10 +216,19 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
     parent_client_ = std::move(parent_client.value());
   }
 
+  for (auto& fragment : device_.fragments()) {
+    auto client = ConnectToParentDevice(dispatcher_, &ns_, fragment);
+    if (client.is_error()) {
+      FDF_LOG(WARNING, "Connecting to compat service failed with %s", client.status_string());
+      continue;
+    }
+    parent_clients_.insert({fragment, std::move(*client)});
+  }
+
   auto compat_connect = Driver::GetDeviceInfo().then(
       [this](result<void, zx_status_t>& result) -> fpromise::result<void, zx_status_t> {
         if (result.is_error()) {
-          FDF_LOG(WARNING, "Connecting to compat service failed with %s",
+          FDF_LOG(WARNING, "Getting DeviceInfo failed with: %s",
                   zx_status_get_string(result.error()));
         }
         return ok();
@@ -437,6 +492,8 @@ promise<void, zx_status_t> Driver::GetDeviceInfo() {
     return fpromise::make_result_promise<void, zx_status_t>(error(ZX_ERR_PEER_CLOSED));
   }
 
+  std::vector<promise<void, zx_status_t>> promises;
+
   bridge<void, zx_status_t> topo_bridge;
   parent_client_->GetTopologicalPath().Then(
       [this, completer = std::move(topo_bridge.completer)](
@@ -450,41 +507,32 @@ promise<void, zx_status_t> Driver::GetDeviceInfo() {
         completer.complete_ok();
       });
 
-  bridge<void, zx_status_t> metadata_bridge;
-  parent_client_->GetMetadata().Then(
-      [this, completer = std::move(metadata_bridge.completer)](
-          fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetMetadata>& result) mutable {
-        if (!result.ok()) {
-          return;
-        }
-        auto* response = result.Unwrap();
-        if (response->result.is_err()) {
-          completer.complete_error(response->result.err());
-          return;
-        }
-        for (auto& metadata : response->result.response().metadata) {
-          size_t size;
-          zx_status_t status =
-              metadata.data.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size));
-          if (status != ZX_OK) {
-            completer.complete_error(status);
-            return;
-          }
-          std::vector<uint8_t> data(size);
-          status = metadata.data.read(data.data(), 0, data.size());
-          if (status != ZX_OK) {
-            completer.complete_error(status);
-            return;
-          }
+  promises.push_back(topo_bridge.consumer.promise_or(error(ZX_ERR_INTERNAL)));
 
-          device_.AddMetadata(metadata.type, data.data(), data.size());
+  // Get the metadata for each one of our fragments.
+  for (auto& client : parent_clients_) {
+    promises.push_back(GetAndAddMetadata(client.second, &device_));
+  }
+
+  // We only want to get the default metadata if we don't have composites.
+  // Otherwise this would be duplicate entries.
+  if (parent_clients_.empty()) {
+    promises.push_back(GetAndAddMetadata(parent_client_, &device_));
+  }
+
+  // Collect all our promises and return the first error we see.
+  return join_promise_vector(std::move(promises))
+      .then([](fpromise::result<std::vector<fpromise::result<void, zx_status_t>>>& results) {
+        if (results.is_error()) {
+          return fpromise::make_result_promise(error(ZX_ERR_INTERNAL));
         }
-        completer.complete_ok();
+        for (auto& result : results.value()) {
+          if (result.is_error()) {
+            return fpromise::make_result_promise(error(result.error()));
+          }
+        }
+        return fpromise::make_result_promise<void, zx_status_t>(ok());
       });
-
-  // The task may be abandoned in the code paths above due to the use of |Then| and early returns.
-  return topo_bridge.consumer.promise_or(error(ZX_ERR_INTERNAL))
-      .and_then(metadata_bridge.consumer.promise_or(error(ZX_ERR_INTERNAL)));
 }
 
 void* Driver::Context() const { return context_; }

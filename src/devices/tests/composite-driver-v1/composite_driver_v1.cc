@@ -90,16 +90,14 @@ zx_status_t CompositeDriverV1::Bind(void* ctx, zx_device_t* dev) {
     return ZX_ERR_INTERNAL;
   }
 
-  if (!device_is_dfv2(dev)) {
-    status = device_get_metadata(dev, 2, &metadata, sizeof(metadata), &actual);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to get metadata 2: %s", zx_status_get_string(status));
-      return ZX_ERR_INTERNAL;
-    }
-    if (metadata != 5) {
-      zxlogf(ERROR, "Got wrong metadata: expected 5: got %d", metadata);
-      return ZX_ERR_INTERNAL;
-    }
+  status = device_get_metadata(dev, 2, &metadata, sizeof(metadata), &actual);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to get metadata 2: %s", zx_status_get_string(status));
+    return ZX_ERR_INTERNAL;
+  }
+  if (metadata != 5) {
+    zxlogf(ERROR, "Got wrong metadata: expected 5: got %d", metadata);
+    return ZX_ERR_INTERNAL;
   }
 
   auto device = std::make_unique<CompositeDriverV1>(dev);

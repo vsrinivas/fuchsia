@@ -143,7 +143,7 @@ zx::status<Interop> Interop::Create(async_dispatcher_t* dispatcher, const driver
 
 zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParentDevice(
     async_dispatcher_t* dispatcher, const driver::Namespace* ns, std::string_view name) {
-  auto result = ns->OpenService<fuchsia_driver_compat::Service>("default");
+  auto result = ns->OpenService<fuchsia_driver_compat::Service>(name);
   if (result.is_error()) {
     return result.take_error();
   }
