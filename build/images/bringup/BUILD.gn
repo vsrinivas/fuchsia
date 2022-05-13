@@ -27,14 +27,26 @@ bringup_base = {
 
   bootfs_labels = base_driver_packages + [
                     "//build/input:bootfs",
-                    "//build/input:system_image",
+                    "//build/input/board:system_image_deps",
                     "//:developer_base_packages",
                     "//:developer_cache_packages",
                     "//:developer_universe_packages",
-                    "//:legacy_base_packages",
-                    "//:legacy_cache_packages",
-                    "//:legacy_universe_packages",
                   ]
+
+  _ignored = {
+    import("//build/dev.gni")
+    import("//build/product.gni")
+    all_empty = true
+    if (dev_system_image_deps != []) {
+      print("dev_system_image_deps not empty: ${dev_system_image_deps}")
+      all_empty = false
+    }
+    if (product_system_image_deps != []) {
+      print("product_system_image_deps not empty: ${product_system_image_deps}")
+      all_empty = false
+    }
+    assert(all_empty)
+  }
 }
 
 # This target generates a (potentially signed) bringup ZBI and a corresponding
