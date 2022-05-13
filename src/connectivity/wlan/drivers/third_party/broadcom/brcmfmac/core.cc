@@ -1027,9 +1027,13 @@ zx_status_t brcmf_get_tail_length(struct brcmf_pub* drvr, uint16_t* tail_length_
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // No tail space needed at the moment.
-  *tail_length_out = 0;
+  if (drvr->bus_if->ops->get_tail_length) {
+    return brcmf_bus_get_tail_length(drvr->bus_if, tail_length_out);
+  }
 
+  // Assume that a bus that doesn't implement this doesn't need tail space
+  BRCMF_WARN("Bus does not implement get_tail_length");
+  *tail_length_out = 0;
   return ZX_OK;
 }
 

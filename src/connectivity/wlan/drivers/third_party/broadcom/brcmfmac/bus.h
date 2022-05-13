@@ -78,6 +78,7 @@ struct brcmf_bus_ops {
   zx_status_t (*flush_buffers)(brcmf_bus* bus);
   zx_status_t (*get_tx_depth)(brcmf_bus* bus, uint16_t* tx_depth_out);
   zx_status_t (*get_rx_depth)(brcmf_bus* bus, uint16_t* rx_depth_out);
+  zx_status_t (*get_tail_length)(brcmf_bus* bus, uint16_t* tail_length_out);
   zx_status_t (*recovery)(brcmf_bus* bus);
   void (*log_stats)(brcmf_bus* bus);
   zx_status_t (*prepare_vmo)(brcmf_bus* bus, uint8_t vmo_id, zx_handle_t vmo, uint8_t* mapped_addr,
@@ -154,6 +155,11 @@ static inline zx_status_t brcmf_bus_get_tx_depth(struct brcmf_bus* bus, uint16_t
 
 static inline zx_status_t brcmf_bus_get_rx_depth(struct brcmf_bus* bus, uint16_t* rx_depth_out) {
   return bus->ops->get_rx_depth(bus, rx_depth_out);
+}
+
+static inline zx_status_t brcmf_bus_get_tail_length(struct brcmf_bus* bus,
+                                                   uint16_t* tail_length_out) {
+  return bus->ops->get_tail_length(bus, tail_length_out);
 }
 
 static inline zx_status_t brcmf_bus_flush_txq(struct brcmf_bus* bus, int ifidx) {

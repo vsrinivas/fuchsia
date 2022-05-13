@@ -2233,6 +2233,15 @@ static zx_status_t brcmf_sdio_bus_get_rx_depth(brcmf_bus* bus_if, uint16_t* out_
   return ZX_OK;
 }
 
+static zx_status_t brcmf_sdio_get_tail_length(brcmf_bus* bus_if, uint16_t* tail_length_out) {
+  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
+
+  // Allow for block size padding at the end of frames
+  *tail_length_out = sdiodev->func2->blocksize;
+  return ZX_OK;
+}
+
+
 static zx_status_t brcmf_sdio_bus_flush_txq(brcmf_bus* bus_if, int ifidx) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
@@ -3716,6 +3725,7 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .flush_buffers = brcmf_sdio_bus_flush_buffers,
     .get_tx_depth = brcmf_sdio_bus_get_tx_depth,
     .get_rx_depth = brcmf_sdio_bus_get_rx_depth,
+    .get_tail_length = brcmf_sdio_get_tail_length,
     .recovery = brcmf_sdio_recovery,
     .log_stats = brcmf_sdio_log_stats,
     .prepare_vmo = brcmf_sdio_prepare_vmo,
