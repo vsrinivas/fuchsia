@@ -106,16 +106,18 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
   {{- end }}
   SetStatus(outgoing);
   {{- if .Result }}
-    auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(
-        {{- if .Result.ValueParameters -}}
-          &(raw_response->result.response())
-        {{- end -}}
-      );
+    if (ok()) {
+      auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
+          bytes_.data() + sizeof(fidl_message_header_t));
+      if (raw_response->result.is_err()) {
+        result_ = fitx::error(raw_response->result.err());
+      } else if (raw_response->result.is_response()) {
+        result_ = fitx::ok(
+          {{- if .Result.ValueParameters -}}
+            &(raw_response->result.response())
+          {{- end -}}
+        );
+      }
     }
   {{- end }}
 }
@@ -132,16 +134,18 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
     client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()), fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
   {{- if .Result }}
-    auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(
-        {{- if .Result.ValueParameters -}}
-          &(raw_response->result.response())
-        {{- end -}}
-      );
+    if (ok()) {
+      auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
+          bytes_.data() + sizeof(fidl_message_header_t));
+      if (raw_response->result.is_err()) {
+        result_ = fitx::error(raw_response->result.err());
+      } else if (raw_response->result.is_response()) {
+        result_ = fitx::ok(
+          {{- if .Result.ValueParameters -}}
+            &(raw_response->result.response())
+          {{- end -}}
+        );
+      }
     }
   {{- end }}
 }

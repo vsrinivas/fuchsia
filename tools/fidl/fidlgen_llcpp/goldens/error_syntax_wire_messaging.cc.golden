@@ -53,13 +53,16 @@ extern "C" const fidl_type_t
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<
+        ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                 ComposedCallWhichMayFail>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
 }
 
@@ -85,13 +88,16 @@ extern "C" const fidl_type_t
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<
+        ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                 ComposedCallWhichMayFail>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
 }
 namespace test_errorsyntax {
@@ -137,13 +143,16 @@ namespace test_errorsyntax {
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>*>(
-      bytes_ + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (outgoing.ok()) {
+    auto* raw_response = reinterpret_cast<
+        ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                 ComposedCallWhichMayFail>*>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
   ::fidl::Status::operator=(outgoing);
 }
@@ -171,13 +180,15 @@ namespace test_errorsyntax {
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
 }
 
@@ -202,13 +213,15 @@ namespace test_errorsyntax {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
 }
 namespace test_errorsyntax {
@@ -252,13 +265,15 @@ namespace test_errorsyntax {
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-      bytes_ + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (outgoing.ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
   ::fidl::Status::operator=(outgoing);
 }

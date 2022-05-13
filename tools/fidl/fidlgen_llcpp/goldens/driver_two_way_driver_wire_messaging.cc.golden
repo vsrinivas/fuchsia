@@ -38,13 +38,11 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
               fidl::internal::DriverTransport>(arena.get()),
       .out_incoming_transport_context = &incoming_context,
   };
-  uint8_t* call_result_bytes;
   uint32_t call_result_num_bytes;
   outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_drivertwoway::TwoWay::Add>>(
-      client_end.handle(), &call_result_bytes, &call_result_num_bytes,
-      std::move(call_options));
-  bytes_ = call_result_bytes;
+      ::test_drivertwoway::TwoWay::Add>>(client_end.handle(), &bytes_,
+                                         &call_result_num_bytes,
+                                         std::move(call_options));
   arena_ =
       fdf::Arena(incoming_context.release<fidl::internal::DriverTransport>());
   ::fidl::Status::operator=(outgoing);

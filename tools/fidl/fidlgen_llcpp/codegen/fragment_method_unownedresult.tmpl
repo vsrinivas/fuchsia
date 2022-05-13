@@ -170,16 +170,18 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
   outgoing.Call<{{ .WireTransactionalResponse }}>(client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
   {{- if .Result }}
-  auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
-      bytes_ + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(
-      {{- if .Result.ValueParameters -}}
-        &(raw_response->result.response())
-      {{- end -}}
-    );
+  if (outgoing.ok()) {
+    auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(
+        {{- if .Result.ValueParameters -}}
+          &(raw_response->result.response())
+        {{- end -}}
+      );
+    }
   }
   {{- end }}
 {{- else }}

@@ -83,3 +83,41 @@ TEST(SyncClientErrorTest, DecodeError) {
       "detail: not a valid enum member",
       result.FormatDescription());
 }
+
+TEST(SyncClientErrorTest, DecodeErrorWithErrorSyntax) {
+  zx::status endpoints = fidl::CreateEndpoints<test::ErrorMethods>();
+  ASSERT_OK(endpoints.status_value());
+  std::thread replier{[&] {
+    zx_signals_t observed;
+    ASSERT_OK(
+        endpoints->server.channel().wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
+    ASSERT_EQ(ZX_CHANNEL_READABLE, observed & ZX_CHANNEL_READABLE);
+    fidl::internal::TransactionalRequest<test::ErrorMethods::ManyArgsCustomError> request{};
+    uint32_t actual;
+    endpoints->server.channel().read(0, &request, nullptr, sizeof(request), 0, &actual, nullptr);
+    ASSERT_EQ(sizeof(request), actual);
+    fidl::internal::TransactionalResponse<test::ErrorMethods::ManyArgsCustomError> message;
+
+    // Zero the message body, to prevent hitting the "non-zero padding bytes" error, which is
+    // checked before the "not valid enum member" error we're interested in
+    memset(&message, 0, sizeof(message));
+
+    // Send the number 42 as |MyError|, which will fail validation at the sync client when it
+    // receives the message.
+    fidl::InitTxnHeader(&message.header, request.header.txid, request.header.ordinal,
+                        fidl::MessageDynamicFlags::kStrictMethod);
+    message.body.result = test::wire::ErrorMethodsManyArgsCustomErrorResult::WithErr(
+        static_cast<test::wire::MyError>(42));
+    ASSERT_OK(endpoints->server.channel().write(0, reinterpret_cast<void*>(&message),
+                                                sizeof(message), nullptr, 0));
+  }};
+  auto client = fidl::BindSyncClient(std::move(endpoints->client));
+  auto result = client->ManyArgsCustomError(true);
+  replier.join();
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
+  EXPECT_EQ(fidl::Reason::kDecodeError, result.reason());
+  EXPECT_EQ(
+      "FIDL operation failed due to decode error, status: ZX_ERR_INVALID_ARGS (-10), "
+      "detail: not a valid enum member",
+      result.FormatDescription());
+}

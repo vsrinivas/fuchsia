@@ -156,23 +156,23 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
        arena.get()),
     .out_incoming_transport_context = &incoming_context,
   };
-  uint8_t* call_result_bytes;
   uint32_t call_result_num_bytes;
   outgoing.Call<{{ .WireTransactionalResponse }}>(
-    client_end.handle(), &call_result_bytes, &call_result_num_bytes, std::move(call_options));
-  bytes_ = call_result_bytes;
+    client_end.handle(), &bytes_, &call_result_num_bytes, std::move(call_options));
   arena_ = fdf::Arena(incoming_context.release<fidl::internal::DriverTransport>());
   {{- if .Result }}
-  auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
-      bytes_ + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(
-      {{- if .Result.ValueParameters -}}
-        &(raw_response->result.response())
-      {{- end -}}
-    );
+  if (outgoing.ok()) {
+    auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(
+        {{- if .Result.ValueParameters -}}
+          &(raw_response->result.response())
+        {{- end -}}
+      );
+    }
   }
   {{- end }}
 {{- else }}

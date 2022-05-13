@@ -4122,13 +4122,15 @@ extern "C" const fidl_type_t
       ::test_protocols::WithErrorSyntax::ResponseAsStruct>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_protocols::WithErrorSyntax::ResponseAsStruct>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_protocols::WithErrorSyntax::ResponseAsStruct>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
 }
 
@@ -4150,13 +4152,15 @@ extern "C" const fidl_type_t
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_protocols::WithErrorSyntax::ResponseAsStruct>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_protocols::WithErrorSyntax::ResponseAsStruct>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
 }
 namespace test_protocols {
@@ -4197,13 +4201,15 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::ResponseAsStruct>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_protocols::WithErrorSyntax::ResponseAsStruct>*>(
-      bytes_ + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (outgoing.ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_protocols::WithErrorSyntax::ResponseAsStruct>*>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
   ::fidl::Status::operator=(outgoing);
 }
@@ -4228,13 +4234,15 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok();
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
   }
 }
 
@@ -4256,13 +4264,15 @@ namespace test_protocols {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok();
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
   }
 }
 namespace test_protocols {
@@ -4303,13 +4313,15 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(
-      bytes_ + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok();
+  if (outgoing.ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
   }
   ::fidl::Status::operator=(outgoing);
 }
@@ -4333,13 +4345,15 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::ErrorAsEnum>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok();
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<
+        ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
   }
 }
 
@@ -4360,13 +4374,15 @@ namespace test_protocols {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok();
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<
+        ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
   }
 }
 namespace test_protocols {
@@ -4407,13 +4423,15 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::ErrorAsEnum>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  auto* raw_response = reinterpret_cast<
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>*>(
-      bytes_ + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok();
+  if (outgoing.ok()) {
+    auto* raw_response = reinterpret_cast<
+        ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>*>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok();
+    }
   }
   ::fidl::Status::operator=(outgoing);
 }
@@ -4438,13 +4456,15 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::HandleInResult>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_protocols::WithErrorSyntax::HandleInResult>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
 }
 
@@ -4466,13 +4486,15 @@ namespace test_protocols {
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetStatus(outgoing);
-  auto* raw_response = reinterpret_cast<
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>*>(
-      bytes_.data() + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_protocols::WithErrorSyntax::HandleInResult>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
 }
 namespace test_protocols {
@@ -4513,13 +4535,15 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::HandleInResult>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  auto* raw_response = reinterpret_cast<
-      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>*>(
-      bytes_ + sizeof(fidl_message_header_t));
-  if (raw_response->result.is_err()) {
-    result_ = fitx::error(raw_response->result.err());
-  } else if (raw_response->result.is_response()) {
-    result_ = fitx::ok(&(raw_response->result.response()));
+  if (outgoing.ok()) {
+    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
+        ::test_protocols::WithErrorSyntax::HandleInResult>*>(
+        bytes_ + sizeof(fidl_message_header_t));
+    if (raw_response->result.is_err()) {
+      result_ = fitx::error(raw_response->result.err());
+    } else if (raw_response->result.is_response()) {
+      result_ = fitx::ok(&(raw_response->result.response()));
+    }
   }
   ::fidl::Status::operator=(outgoing);
 }
