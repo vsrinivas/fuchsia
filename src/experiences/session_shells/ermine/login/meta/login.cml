@@ -18,7 +18,10 @@
     ],
     capabilities: [
         {
-            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            protocol: [
+                "ermine.tools.OobeAutomator",
+                "fuchsia.ui.app.ViewProvider",
+            ],
         },
         {
             directory: "account_data_dir",
@@ -170,7 +173,10 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            protocol: [
+                "ermine.tools.OobeAutomator",
+                "fuchsia.ui.app.ViewProvider",
+            ],
             from: "self",
         },
         {
