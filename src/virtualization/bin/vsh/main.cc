@@ -96,7 +96,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  if (!parse_args(argc - 1, &argv[1], &loop, context.get(), &func)) {
+  if (!parse_args(argc, argv, &loop, context.get(), &func)) {
     usage();
     return ZX_ERR_INVALID_ARGS;
   }
