@@ -11,8 +11,10 @@
 #include <efi/types.h>
 #include <ktl/span.h>
 #include <phys/efi/main.h>
+#include <phys/efi/protocol.h>
 #include <phys/main.h>
 #include <phys/stdio.h>
+#include <phys/symbolize.h>
 
 #include <ktl/enforce.h>
 
@@ -21,18 +23,10 @@ efi_handle gEfiImageHandle;
 efi_loaded_image_protocol* gEfiLoadedImage;
 efi_system_table* gEfiSystemTable;
 
-namespace {
+template <>
+constexpr const efi_guid& kEfiProtocolGuid<efi_loaded_image_protocol> = LoadedImageProtocol;
 
-efi_loaded_image_protocol* GetLoadedImage(efi_handle image_handle) {
-  void* ptr;
-  efi_status status =
-      gEfiSystemTable->BootServices->HandleProtocol(image_handle, &LoadedImageProtocol, &ptr);
-  if (status != EFI_SUCCESS) {
-    printf("EFI: Failed to get EFI_LOADED_IMAGE_PROTOCOL: %#zx\n", status);
-    return nullptr;
-  }
-  return static_cast<efi_loaded_image_protocol*>(ptr);
-}
+namespace {
 
 ktl::span<char*> GetImageArgs() {
   // TODO(mcgrathr): EFI_SHELL_PARAMETERS_PROTOCOL, convert to utf8
@@ -85,7 +79,11 @@ efi_status EfiMain(efi_handle image_handle, efi_system_table* systab) {
   InitStdout();
   SetEfiStdout(systab);
 
-  gEfiLoadedImage = GetLoadedImage(image_handle);
+  if (auto image = EfiOpenProtocol<efi_loaded_image_protocol>(image_handle); image.is_ok()) {
+    gEfiLoadedImage = image.value().release();
+  } else {
+    printf("%s: Cannot open EFI_LOADED_IMAGE_PROTOCOL: %#zx\n", ProgramName(), image.error_value());
+  }
 
   ArchSetUp(nullptr);
 

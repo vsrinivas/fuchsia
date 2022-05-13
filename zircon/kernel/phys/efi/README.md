@@ -15,6 +15,19 @@ UEFI code can use dynamic relocation freely, and can have static constructors
 and destructors.  (Destructors are called only if `main` returns.  There is no
 standard C `exit()` function.)
 
+## Unit Testing
+
+Though meant for low-level situations, the UEFI API is just a bunch of C data
+structures and function pointers.  So it's eminently amenable to mocking for
+unit tests.  The [`//zircon/kernel/lib/efi/testing`](../../lib/efi/testing)
+library works with gmock and gtest to make this easy.  So most `phys/efi` code
+is written to allow compilation on host platforms for the benefit of unit
+tests.  To this end, it uses standard C++ headers and `std::` symbols directly
+rather than using `<ktl/....h>` headers and `ktl::` symbols as kernel code
+normally does.  Like library code shared between kernel and other contexts, it
+must adhere to the strict subset of standard C++ library features that have
+`ktl` counterparts defined.
+
 ## Running Tests Manually
 
 UEFI supports standard disk partitioning and the VFAT filesystem format, which

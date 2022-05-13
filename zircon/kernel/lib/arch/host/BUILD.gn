@@ -11,5 +11,8 @@ zx_library("host") {
   sources = []
 
   sdk = "source"
-  sdk_headers = [ "lib/arch/intrin.h" ]
+  sdk_headers = [
+    "lib/arch/intrin.h",
+    "lib/arch/ticks.h",
+  ]
 }

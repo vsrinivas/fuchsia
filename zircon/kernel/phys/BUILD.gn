@@ -463,6 +463,7 @@ group("tests") {
   testonly = true
   deps = [
     "boot-shim:tests",
+    "efi:tests",
     "test",
     "//zircon/kernel/arch/$zircon_cpu/phys:tests",
   ]

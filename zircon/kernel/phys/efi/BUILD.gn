@@ -5,9 +5,11 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/config/zircon/standard.gni")
+import("//build/test.gni")
 import("//build/toolchain/toolchain_environment.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/zircon/zircon_cpu.gni")
+import("efi_executable.gni")
 
 if (current_toolchain == default_toolchain) {
   # The default toolchain just defines the EFI environment.
@@ -85,28 +87,38 @@ if (current_toolchain == default_toolchain) {
       "//src/lib/llvm-profdata",
     ]
   }
+}
 
-  config("includes") {
-    visibility = [ ":*" ]
-    include_dirs = [ "include" ]
-  }
+# Much of the code can also be compiled in non-EFI contexts for testing.
 
-  source_set("main") {
-    public = [ "include/phys/efi/main.h" ]
-    public_deps = [
-      "//zircon/kernel/lib/arch",
-      "//zircon/kernel/lib/efi",
-    ]
-    public_configs = [ ":includes" ]
+config("includes") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+source_set("main") {
+  public = [ "include/phys/efi/main.h" ]
+  public_deps = [
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/efi",
+  ]
+  public_configs = [ ":includes" ]
+
+  # efi-main.cc uses :protocol but protocol.cc depends on main.h.
+  deps = [ ":protocol" ]
+  allow_circular_includes_from = [ ":protocol" ]
+
+  if (is_efi_toolchain) {
     sources = [
       "allocation.cc",
       "efi-main.cc",
       "stdout.cc",
     ]
-    deps = [
+    deps += [
       "..:allocation",
       "..:main",
       "..:stdio",
+      "..:symbolize",
       "//zircon/kernel/arch/$zircon_cpu/phys/efi",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/ktl",
@@ -115,4 +127,42 @@ if (current_toolchain == default_toolchain) {
       "//zircon/system/ulib/uart",
     ]
   }
+}
+
+source_set("protocol") {
+  public = [ "include/phys/efi/protocol.h" ]
+  public_configs = [ ":includes" ]
+  public_deps = [
+    "//zircon/kernel/lib/efi",
+    "//zircon/system/ulib/zxc",
+  ]
+
+  sources = [ "protocol.cc" ]
+
+  # This is in public_deps of :main, but also needed here because of the
+  # circularity that prevents having :main in deps here.
+  deps = [ "//zircon/kernel/lib/arch" ]
+
+  if (is_kernel) {
+    public_deps += [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":efi-unittests($host_toolchain)" ]
+}
+
+test("efi-unittests") {
+  sources = [ "protocol-tests.cc" ]
+  deps = [
+    ":main",
+    ":protocol",
+    "//sdk/lib/fit",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/kernel/lib/efi/testing",
+  ]
 }
