@@ -79,13 +79,8 @@ Reviews are performed by the Rust Working Group.
 
 ## Currently Used Features
 
-- `min_specialization` and `specialization`
-  - [Tracking issue](https://fxbug.dev/98399).
-  - Used by some netstack3 targets via the
-  `netstack3_only_specialization_feature` config.
-- `stdsimd` and `aarch64_target_feature`
-  - [Tracking issue](https://fxbug.dev/98400).
-  - Used by the `aes-v0_7_5` crate via the `allow_simd` config.
+Unstable features are tracked by issues filed under the the
+[`Rust>unstable`](https://fxbug.dev?q=component:Rust>unstable) component.
 
 [the edition guide]: https://rust-lang-nursery.github.io/edition-guide/editions/index.html
 [Rust 2018: an early preview]: https://internals.rust-lang.org/t/rust-2018-an-early-preview/7776
