@@ -588,10 +588,6 @@ func (c *Client) Flash(ctx context.Context, build artifacts.Build) error {
 		return fmt.Errorf("failed to get flasher to flash device: %w", err)
 	}
 
-	if err := c.RebootToRecovery(ctx); err != nil {
-		return fmt.Errorf("failed to reboot to recovery during paving: %w", err)
-	}
-
 	if err = f.Flash(ctx); err != nil {
 		return fmt.Errorf("device failed to flash: %w", err)
 	}
