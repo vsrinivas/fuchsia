@@ -66,6 +66,7 @@ core_realm_shards +=
 legacy_cache_package_labels += [
   "//src/connectivity/bluetooth/profiles/bt-a2dp:source-only",
   "//src/connectivity/bluetooth/profiles/bt-avrcp-target",
+  "//src/connectivity/bluetooth/profiles/bt-avrcp",
 
   # TODO(fxbug.dev/79542): Demote to universe when sysui handles pairing+connecting
   "//src/connectivity/bluetooth/tools/bt-cli",
