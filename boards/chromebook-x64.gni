@@ -29,12 +29,21 @@ _common_bootfs_deps = [
   "//src/devices/mcu/drivers/chromiumos-ec-lpc",
   "//src/devices/misc/drivers/chromeos-acpi",
   "//src/devices/nand/drivers/intel-spi-flash",
+  "//src/devices/nand/drivers/intel-spi-flash",
+  "//src/devices/tpm/drivers/cr50-spi",
   "//src/devices/tpm/drivers/cr50-spi",
   "//src/firmware/bin/vboot-fwparam:bootfs",
   "//src/firmware/bin/vboot-fwparam/client:cros-nvtool",
   "//src/media/audio/drivers/codecs/da7219:component",
   "//src/security/cr50_agent:bootfs",
   "//src/storage/flashmap:bootfs",
+]
+
+# Include DFv2 specific bind rules for testing.
+# TODO(fxbug.dev/93333) : Add dynamic binding and remove these.
+_common_bootfs_deps += [
+  "//src/devices/i2c/drivers/intel-i2c:intel-i2c-dfv2",
+  "//src/ui/input/drivers/i2c-hid:i2c-hid-dfv2",
 ]
 
 # Include driver_host2 for testing.

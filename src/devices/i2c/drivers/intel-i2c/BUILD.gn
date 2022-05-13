@@ -14,6 +14,17 @@ driver_bind_rules("intel_i2c_bind") {
   ]
 }
 
+driver_bind_rules("intel_i2c_bind_dfv2") {
+  rules = "intel_i2c_dfv2.bind"
+  bind_output = "intel_i2c_dfv2.bindbc"
+  deps = [
+    "//src/devices/bind/fuchsia.acpi",
+    "//src/devices/bind/fuchsia.driver.framework",
+    "//src/devices/bind/fuchsia.intel.pci",
+    "//src/devices/bind/fuchsia.pci",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [ ":intel_i2c_bind_test" ]
@@ -30,7 +41,6 @@ fuchsia_driver("intel-i2c-driver") {
     "intel-i2c-subordinate.cc",
   ]
   deps = [
-    ":intel_i2c_bind",
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
@@ -61,7 +71,30 @@ fuchsia_driver("intel-i2c-driver") {
 
 fuchsia_driver_component("intel-i2c") {
   component_name = "intel-i2c"
-  deps = [ ":intel-i2c-driver" ]
+  deps = [
+    ":intel-i2c-driver",
+    ":intel_i2c_bind",
+  ]
   info = "intel-i2c-info.json"
   colocate = true
+}
+
+fuchsia_driver_component("intel-i2c-dfv2") {
+  deps = [
+    ":intel-i2c-driver",
+    ":intel_i2c_bind_dfv2",
+  ]
+  composite_nodes = [
+    "acpi",
+    "pci",
+  ]
+  info = "intel-i2c-info.json"
+  colocate = true
+}
+
+group("drivers") {
+  deps = [
+    ":intel-i2c",
+    ":intel-i2c-dfv2",
+  ]
 }

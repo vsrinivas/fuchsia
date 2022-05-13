@@ -13,7 +13,7 @@ group("drivers") {
     "hid-input-report",
     "hid-input-report:hid-input-report-v2",
     "hidctl",
-    "i2c-hid",
+    "i2c-hid:drivers",
     "usb-hid",
   ]
   if (current_cpu == "x64") {

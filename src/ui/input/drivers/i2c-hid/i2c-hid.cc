@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
+#include <lib/ddk/binding_driver.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -24,7 +25,6 @@
 #include <fbl/auto_lock.h>
 
 #include "src/devices/lib/acpi/client.h"
-#include "src/ui/input/drivers/i2c-hid/i2c_hid_bind.h"
 
 namespace i2c_hid {
 

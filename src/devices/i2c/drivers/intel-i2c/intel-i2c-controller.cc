@@ -199,7 +199,8 @@ zx_status_t IntelI2cController::Init() {
   char name[ZX_DEVICE_NAME_MAX];
   snprintf(name, sizeof(name), "i2c-bus-%04x", device_id);
 
-  status = DdkAdd(name);
+  status =
+      DdkAdd(ddk::DeviceAddArgs(name).forward_metadata(parent(), DEVICE_METADATA_I2C_CHANNELS));
   if (status < 0) {
     zxlogf(ERROR, "device add failed: %s", zx_status_get_string(status));
     return status;
@@ -777,8 +778,7 @@ zx_status_t IntelI2cController::AddSubordinates() {
   auto buffer_deleter = std::make_unique<uint8_t[]>(metadata_size);
   auto buffer = buffer_deleter.get();
   size_t actual;
-  status =
-      device_get_metadata(zxdev(), DEVICE_METADATA_I2C_CHANNELS, buffer, metadata_size, &actual);
+  status = DdkGetMetadata(DEVICE_METADATA_I2C_CHANNELS, buffer, metadata_size, &actual);
   if (status != ZX_OK || actual != metadata_size) {
     zxlogf(ERROR, "%s: device_get_metadata failed %d", __func__, status);
     return (status == ZX_OK) ? ZX_ERR_INTERNAL : status;

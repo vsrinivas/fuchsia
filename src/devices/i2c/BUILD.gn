@@ -7,7 +7,7 @@ group("drivers") {
   deps = [
     "drivers/aml-i2c",
     "drivers/i2c",
-    "drivers/intel-i2c",
+    "drivers/intel-i2c:drivers",
   ]
 }
 

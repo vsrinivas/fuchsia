@@ -7,12 +7,29 @@ import("//build/components.gni")
 import("//build/drivers.gni")
 import("//build/test.gni")
 
+group("drivers") {
+  deps = [
+    ":i2c-hid",
+    ":i2c-hid-dfv2",
+  ]
+}
+
 driver_bind_rules("i2c_hid_bind") {
   rules = "i2c_hid.bind"
   header_output = "i2c_hid_bind.h"
   tests = "tests.json"
   deps = [
     "//src/devices/bind/fuchsia.acpi",
+    "//src/devices/bind/fuchsia.i2c",
+  ]
+}
+
+driver_bind_rules("i2c_hid_bind_dfv2") {
+  rules = "i2c_hid_dfv2.bind"
+  deps = [
+    "//src/devices/bind/fuchsia.acpi",
+    "//src/devices/bind/fuchsia.acpi",
+    "//src/devices/bind/fuchsia.driver.framework",
     "//src/devices/bind/fuchsia.i2c",
   ]
 }
@@ -25,7 +42,6 @@ fuchsia_driver("i2c-hid-driver") {
   ]
   sources = [ "i2c-hid.cc" ]
   deps = [
-    ":i2c_hid_bind",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c",
@@ -42,7 +58,23 @@ fuchsia_driver("i2c-hid-driver") {
 
 fuchsia_driver_component("i2c-hid") {
   component_name = "i2c-hid"
-  deps = [ ":i2c-hid-driver" ]
+  deps = [
+    ":i2c-hid-driver",
+    ":i2c_hid_bind",
+  ]
+  info = "i2c-hid-info.json"
+  colocate = true
+}
+
+fuchsia_driver_component("i2c-hid-dfv2") {
+  deps = [
+    ":i2c-hid-driver",
+    ":i2c_hid_bind_dfv2",
+  ]
+  composite_nodes = [
+    "acpi",
+    "i2c",
+  ]
   info = "i2c-hid-info.json"
   colocate = true
 }

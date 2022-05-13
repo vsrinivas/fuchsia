@@ -1,0 +1,30 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite inteli2c;
+
+using fuchsia.acpi;
+using fuchsia.pci;
+using fuchsia.intel.pci;
+using fuchsia.driver.framework;
+
+primary node "pci" {
+    fuchsia.driver.framework.dfv2 == true;
+
+    fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.INTEL;
+
+    accept fuchsia.BIND_PCI_DID {
+        // For now we only add the DID for the touchpad.
+        fuchsia.intel.pci.BIND_PCI_DID.SUNRISE_POINT_SERIALIO_I2C2,
+    }
+}
+
+node "acpi" {
+    fuchsia.driver.framework.dfv2 == true;
+
+    fuchsia.BIND_ACPI_ID == 0x000034;
+    fuchsia.BIND_PCI_TOPO == 0x0000aa;
+    fuchsia.BIND_ACPI_BUS_TYPE == 0x000001;
+}

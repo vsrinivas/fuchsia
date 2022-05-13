@@ -105,7 +105,7 @@ zx_status_t I2cDevice::Init(ddk::I2cImplProtocolClient i2c) {
 
 void I2cDevice::AddChildren(async_dispatcher_t* dispatcher) {
   auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata>(
-      zxdev(), DEVICE_METADATA_I2C_CHANNELS);
+      parent(), DEVICE_METADATA_I2C_CHANNELS);
   if (!decoded.is_ok()) {
     return;
   }

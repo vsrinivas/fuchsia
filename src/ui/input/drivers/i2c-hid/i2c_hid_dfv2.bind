@@ -1,0 +1,30 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite i2chid;
+
+using fuchsia.i2c;
+using fuchsia.acpi;
+using fuchsia.acpi;
+using fuchsia.driver.framework;
+
+primary node "i2c" {
+    fuchsia.driver.framework.dfv2 == true;
+
+    fuchsia.BIND_I2C_BUS_ID == 0x1;
+    fuchsia.BIND_I2C_ADDRESS == 0x15;
+
+    // We need to make sure we don't bind to the acpi node.
+    // TODO(fxbug.dev/100242): Remove this when we can bind to the FIDL device.
+    fuchsia.acpi.first_cid != "PNP0C50";
+}
+
+node "acpi" {
+    fuchsia.driver.framework.dfv2 == true;
+
+    fuchsia.BIND_I2C_BUS_ID == 0x1;
+    fuchsia.BIND_I2C_ADDRESS == 0x15;
+
+    fuchsia.acpi.first_cid == "PNP0C50";
+}
