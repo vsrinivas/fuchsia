@@ -7,17 +7,25 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/dispatcher.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/zx/channel.h>
 
 #include <string>
+
+const inspect::StringReference kBytesUsed("byte_used");
+const inspect::StringReference kBytesAvailable("byte_available");
 
 // StorageWatchdog can be used to observe the storage usage on a given
 // partition, and when the storage usage reaches 95% the isolated component
 // storage under a given path will be deleted.
 class StorageWatchdog {
  public:
-  StorageWatchdog(std::string path_to_watch, std::string path_to_clean)
-      : path_to_watch_(path_to_watch), path_to_clean_(path_to_clean) {}
+  StorageWatchdog(inspect::Node node, std::string path_to_watch, std::string path_to_clean)
+      : node_(std::move(node)),
+        bytes_used_(node_.CreateUint(kBytesUsed, 0)),
+        bytes_avail_(node_.CreateUint(kBytesAvailable, 0)),
+        path_to_watch_(std::move(path_to_watch)),
+        path_to_clean_(std::move(path_to_clean)) {}
 
   void Run(async_dispatcher_t* dispatcher);
   struct StorageUsage {
@@ -42,6 +50,9 @@ class StorageWatchdog {
                                         fuchsia_io::wire::FilesystemInfo* out_info);
 
  private:
+  inspect::Node node_;
+  inspect::UintProperty bytes_used_;
+  inspect::UintProperty bytes_avail_;
   const std::string path_to_watch_;
   const std::string path_to_clean_;
 };

@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/namespace.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sync/completion.h>
 
 #include <algorithm>
@@ -54,7 +55,7 @@ class StorageWatchdogTest : public ::testing::Test {
 class TestStorageWatchdog : public StorageWatchdog {
  public:
   TestStorageWatchdog(std::string path_to_watch, std::string path_to_clean)
-      : StorageWatchdog(path_to_watch, path_to_clean) {}
+      : StorageWatchdog(inspect::Node(), path_to_watch, path_to_clean) {}
 
   zx_status_t GetFilesystemInfo(zx_handle_t directory, fio::wire::FilesystemInfo* out_info) {
     if (directory == ZX_HANDLE_INVALID) {

@@ -137,8 +137,8 @@ StorageWatchdog::StorageUsage StorageWatchdog::GetStorageUsage() {
 
 void StorageWatchdog::CheckStorage(async_dispatcher_t* dispatcher, size_t threshold_purge_percent) {
   StorageUsage usage = this->GetStorageUsage();
-  FX_LOGS(INFO) << "storage usage at " << usage.percent() << "\% capacity (" << usage.used
-                << " used, " << usage.avail << " avail)";
+  this->bytes_used_.Set(usage.used);
+  this->bytes_avail_.Set(usage.avail);
   if (usage.percent() >= threshold_purge_percent) {
     FX_LOGS(INFO) << "storage usage has reached threshold of " << threshold_purge_percent
                   << "\%, purging the cache now";

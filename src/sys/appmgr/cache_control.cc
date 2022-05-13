@@ -4,6 +4,7 @@
 
 #include "src/sys/appmgr/cache_control.h"
 
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/trace/event.h>
 
 #include "src/sys/appmgr/constants.h"
@@ -22,7 +23,7 @@ void CacheControl::Clear(ClearCallback callback) {
   auto cc_trace_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("appmgr", "CacheControl::Clear", cc_trace_id);
 
-  StorageWatchdog storage_watchdog = StorageWatchdog(kRootDataDir, kRootCacheDir);
+  StorageWatchdog storage_watchdog = StorageWatchdog(inspect::Node(), kRootDataDir, kRootCacheDir);
   storage_watchdog.PurgeCache();
 
   callback();
