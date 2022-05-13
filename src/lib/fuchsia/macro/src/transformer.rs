@@ -4,10 +4,9 @@
 
 use {
     fidl_fuchsia_diagnostics::Severity,
-    proc_macro::TokenStream,
+    proc_macro2::TokenStream,
     quote::{quote, quote_spanned, TokenStreamExt},
     syn::{
-        parse,
         parse::{Parse, ParseStream},
         Attribute, Block, Error, Ident, ItemFn, LitBool, LitInt, LitStr, Signature, Token,
         Visibility,
@@ -56,7 +55,7 @@ impl Executor {
 }
 
 impl quote::ToTokens for Executor {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend(match self {
             Executor::None => quote! { ::fuchsia::main_not_async(func) },
             Executor::Test => quote! { ::fuchsia::test_not_async(func) },
@@ -76,7 +75,7 @@ trait Finish {
         Self: Sized;
 }
 
-struct Transformer {
+pub struct Transformer {
     executor: Executor,
     attrs: Vec<Attribute>,
     vis: Visibility,
@@ -103,7 +102,7 @@ struct LoggingTags {
 }
 
 impl quote::ToTokens for LoggingTags {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         for tag in &self.tags {
             tag.as_str().to_tokens(tokens);
             tokens.append(proc_macro2::Punct::new(',', proc_macro2::Spacing::Alone));
@@ -152,7 +151,7 @@ impl Parse for Interest {
 }
 
 impl quote::ToTokens for Interest {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend(match self.min_severity {
             None => quote! { ::fuchsia::Interest::EMPTY },
             Some(severity) => match severity {
@@ -268,14 +267,26 @@ impl Parse for Args {
 }
 
 impl Transformer {
+    pub fn parse_main(args: TokenStream, input: TokenStream) -> Result<Self, Error> {
+        Self::parse(FunctionType::Component, args, input)
+    }
+
+    pub fn parse_test(args: TokenStream, input: TokenStream) -> Result<Self, Error> {
+        Self::parse(FunctionType::Test, args, input)
+    }
+
+    pub fn finish(self) -> TokenStream {
+        Finish::finish(self)
+    }
+
     // Construct a new Transformer, verifying correctness.
     fn parse(
         function_type: FunctionType,
         args: TokenStream,
         input: TokenStream,
     ) -> Result<Transformer, Error> {
-        let args: Args = parse(args)?;
-        let ItemFn { attrs, vis, sig, block } = parse(input)?;
+        let args: Args = syn::parse2(args)?;
+        let ItemFn { attrs, vis, sig, block } = syn::parse2(input)?;
         let is_async = sig.asyncness.is_some();
 
         let err = |message| Err(Error::new(sig.ident.span(), message));
@@ -422,54 +433,4 @@ impl<R: Finish, E: Finish> Finish for Result<R, E> {
             Err(e) => e.finish(),
         }
     }
-}
-
-/// Define a fuchsia main function.
-///
-/// This attribute should be applied to the process `main` function.
-/// It will take care of setting up various Fuchsia crates for the component.
-/// If an async function is provided, a fuchsia-async Executor will be used to execute it.
-///
-/// Arguments:
-///  - `threads` - integer worker thread count for the component. Must be >0. Default 1.
-///  - `logging` - boolean toggle for whether to initialize logging (or not). Default true.
-///  - `logging_tags` - optional list of string to be used as tags for logs. Default: None.
-///  - `logging_minimum_severity` - optional minimum severity to be set for logs. Default: None,
-///                                 the logging library will choose it (typically `info`).
-///
-/// The main function can return either () or a Result<(), E> where E is an error type.
-#[proc_macro_attribute]
-pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
-    Transformer::parse(FunctionType::Component, args, input).finish()
-}
-
-/// Define a fuchsia test.
-///
-/// This attribute should be applied to a function in a cfg(test) module.
-/// It will take care of setting up various Fuchsia crates for the test.
-/// If an async function is provided, a fuchsia-async Executor will be used to execute it.
-///
-/// Arguments:
-///  - `threads`       - integer worker thread count for the test. Must be >0. Default 1.
-///  - `logging`       - boolean toggle for whether to initialize logging (or not). Default true.
-///                      This currently does nothing on host. On Fuchsia fuchsia-syslog is used.
-///  - `logging_tags` - optional list of string to be used as tags for logs. Default: None.
-///  - `logging_minimum_severity` - optional minimum severity to be set for logs. Default: None,
-///                                 the logging library will choose it (typically `info`).
-///  - `allow_stalls`  - boolean toggle for whether the async test is allowed to stall during
-///                      execution (if true), or whether the function must complete without pausing
-///                      (if false).
-///                      `.await` is not a stall if something preceding the await will guarantee
-///                      that it finishes within one loop of the Executor. Defaults to true.
-///                      This argument is not currently available for host tests.
-///  - `add_test_attr` - boolean toggle for whether to apply the `#[test]` attribute to the
-///                      function. When daisy-chaining with other proc macros, it may be desirable
-///                      to omit this attribute. Default true.
-///
-/// The test function can return either () or a Result<(), E> where E is an error type.
-/// The test function can either take no arguments, or a single usize argument. If it takes an
-/// argument, that value will be the current iteration count of running this test repeatedly.
-#[proc_macro_attribute]
-pub fn test(args: TokenStream, input: TokenStream) -> TokenStream {
-    Transformer::parse(FunctionType::Test, args, input).finish()
 }
