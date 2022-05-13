@@ -199,6 +199,18 @@
                 "#core",
             ],
         },
+        {
+            protocol: "fuchsia.sys2.RealmExplorer",
+            from: "framework",
+            as: "fuchsia.sys2.RealmExplorer.root",
+            to: "#core",
+        },
+        {
+            protocol: "fuchsia.sys2.RealmQuery",
+            from: "framework",
+            as: "fuchsia.sys2.RealmQuery.root",
+            to: "#core",
+        },
 
         // Offer events to `bootstrap` for diagnostics usage.
         {

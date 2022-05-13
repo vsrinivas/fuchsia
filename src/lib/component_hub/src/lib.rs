@@ -7,5 +7,6 @@
 pub mod doctor;
 pub mod io;
 pub mod list;
+pub mod new;
 pub mod select;
 pub mod show;

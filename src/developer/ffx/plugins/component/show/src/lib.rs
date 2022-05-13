@@ -17,6 +17,8 @@ use {
     fuchsia_zircon_status::Status,
 };
 
+mod new;
+
 /// The number of times the command should be retried before assuming failure.
 const NUM_ATTEMPTS: u64 = 3;
 
@@ -26,7 +28,11 @@ pub async fn show(
     #[ffx(machine = Vec<Component>)] writer: Writer,
     cmd: ComponentShowCommand,
 ) -> Result<()> {
-    show_impl(rcs_proxy, writer, &cmd.filter).await
+    if let Ok(true) = ffx_config::get::<bool, _>("component.experimental.no_hub").await {
+        crate::new::show_impl(rcs_proxy, writer, &cmd.filter).await
+    } else {
+        show_impl(rcs_proxy, writer, &cmd.filter).await
+    }
 }
 
 // Attempt to get matching components `NUM_ATTEMPTS` times. If all attempts fail, return the

@@ -19,6 +19,8 @@ use {
     serde::{Deserialize, Serialize},
 };
 
+mod new;
+
 /// The number of times listing components from the hub should be retried before assuming failure.
 const NUM_COMPONENT_LIST_ATTEMPTS: u64 = 3;
 
@@ -52,7 +54,11 @@ pub async fn list(
     #[ffx(machine = Vec<ListComponent>)] writer: Writer,
     cmd: ComponentListCommand,
 ) -> Result<()> {
-    list_impl(rcs_proxy, writer, cmd.only, cmd.verbose).await
+    if let Ok(true) = ffx_config::get::<bool, _>("component.experimental.no_hub").await {
+        crate::new::list_impl(rcs_proxy, writer, cmd.only, cmd.verbose).await
+    } else {
+        list_impl(rcs_proxy, writer, cmd.only, cmd.verbose).await
+    }
 }
 
 // Attempt to get the component list `NUM_COMPONENT_LIST_ATTEMPTS` times. If all attempts fail, return the

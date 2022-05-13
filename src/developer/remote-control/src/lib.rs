@@ -5,6 +5,7 @@
 use {
     crate::host_identifier::HostIdentifier,
     anyhow::{Context as _, Result},
+    fidl::endpoints::ProtocolMarker,
     fidl::endpoints::Proxy as _,
     fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_diagnostics::Selector,
@@ -103,6 +104,28 @@ impl RemoteControlService {
                 responder.send(
                     &mut io_util::connect_in_namespace(
                         HUB_ROOT,
+                        server.into_channel(),
+                        io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
+                    )
+                    .map_err(|i| i.into_raw()),
+                )?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::RootRealmExplorer { server, responder } => {
+                responder.send(
+                    &mut io_util::connect_in_namespace(
+                        &format!("/svc/{}.root", fidl_fuchsia_sys2::RealmExplorerMarker::NAME),
+                        server.into_channel(),
+                        io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
+                    )
+                    .map_err(|i| i.into_raw()),
+                )?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::RootRealmQuery { server, responder } => {
+                responder.send(
+                    &mut io_util::connect_in_namespace(
+                        &format!("/svc/{}.root", fidl_fuchsia_sys2::RealmQueryMarker::NAME),
                         server.into_channel(),
                         io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
                     )

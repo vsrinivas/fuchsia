@@ -6,6 +6,7 @@ library fuchsia.developer.remotecontrol;
 using fuchsia.diagnostics as diagnostics;
 using fuchsia.io as io;
 using fuchsia.net as net;
+using fuchsia.sys2 as sys2;
 using zx;
 
 const MAX_NUM_MATCHES uint16 = 250;
@@ -39,12 +40,21 @@ protocol RemoteControl {
     });
 
     // Connects to the Hub root directory. The server side will be connected to
-    // a fuchsia.io.Directory handle, which can then be connected to on the
+    // a [`fuchsia.io/Directory`] handle, which can then be connected to on the
     // client side via a Directory proxy.
-    //
-    // This is, currently, a read-only view into the hub.
+    @deprecated("Use RootRealmExplorer and RootRealmQuery instead")
     OpenHub(resource struct {
         server server_end:io.Directory;
+    }) -> (struct {}) error zx.status;
+
+    /// Connects to the root [`fuchsia.sys2/RealmExplorer`] protocol.
+    RootRealmExplorer(resource struct {
+        server server_end:sys2.RealmExplorer;
+    }) -> (struct {}) error zx.status;
+
+    /// Connects to the root [`fuchsia.sys2/RealmQuery`] protocol.
+    RootRealmQuery(resource struct {
+        server server_end:sys2.RealmQuery;
     }) -> (struct {}) error zx.status;
 
     IdentifyHost() -> (struct {

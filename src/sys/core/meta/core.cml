@@ -803,6 +803,17 @@
             from: "parent",
             to: "#remote-control",
         },
+
+        // Note: These protocols are scoped to the root of the component topoology,
+        // hence the `.root` suffix
+        {
+            protocol: [
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
+            ],
+            from: "parent",
+            to: "#remote-control",
+        },
         {
             storage: [
                 "cache",
