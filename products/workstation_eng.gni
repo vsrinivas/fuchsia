@@ -124,8 +124,12 @@ legacy_cache_package_labels += [
   "//src/flutter:flutter_jit",
   "//src/dart:dart_aot",
   "//src/flutter:flutter_aot",
-  "//src/experiences/session_shells/ermine/session:session_manager",
 ]
+
+# Use the product assembly config file to specify the session manager (and the
+# deps for the session).
+fuchsia_product_assembly_config_label = "//products/workstation"
+fuchsia_product_assembly_config_file = "${root_build_dir}/obj/products/workstation/workstation/product_assembly_config.json"
 
 # Use Fxfs for the data partition.
 data_filesystem_format = "fxfs"
