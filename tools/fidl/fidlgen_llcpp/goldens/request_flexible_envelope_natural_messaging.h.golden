@@ -91,6 +91,9 @@ class ::fidl::Result<
       ::fidl::Error,
       ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -128,6 +131,9 @@ class ::fidl::Result<
       ::fidl::Error,
       ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

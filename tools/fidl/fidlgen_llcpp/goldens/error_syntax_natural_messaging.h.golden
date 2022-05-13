@@ -137,6 +137,9 @@ class ::fidl::Result<
                              ComposedCallWhichMayFail>,
       ::test_errorsyntax_parent::
           ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -215,6 +218,9 @@ class ::fidl::Result<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
       ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::
       result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

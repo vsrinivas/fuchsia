@@ -7,6 +7,8 @@
 
 #include <zxtest/zxtest.h>
 
+namespace {
+
 TEST(Response, DefaultConstruction) {
   fidl::Response<test_types::Baz::Foo> response;
   EXPECT_EQ(0, response.res().bar());
@@ -178,3 +180,11 @@ TEST(Event, InheritFromDomainObjectErrorSyntax) {
                     sizeof(fidl::Event<test_types::ErrorSyntax::EventEmptyPayload>),
                 "Message wrapper must not add any state");
 }
+
+TEST(Result, DefaultConstruction) {
+  static_assert(
+      !cpp17::is_default_constructible_v<fidl::Result<test_types::ErrorSyntax::EmptyPayload>>,
+      "Cannot default construct invalid result type");
+}
+
+}  // namespace

@@ -63,6 +63,9 @@ class ::fidl::Result<
  public:
   using ::fitx::result<::fidl::Error,
                        ::test_middle::MiddleGetFooTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

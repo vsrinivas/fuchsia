@@ -658,6 +658,9 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
   using ::fitx::result<::fidl::Error,
                        ::test_protocollayouts_imported::
                            ComposedProtocolTwoWayAnonComposedResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -738,6 +741,9 @@ class ::fidl::Result<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>,
       ::test_protocollayouts_imported::
           ComposedProtocolTwoWayAnonComposedWithErrorResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -767,6 +773,9 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocollayouts_imported::ImportTablePayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -840,6 +849,9 @@ class ::fidl::Result<
       ::fidl::AnyErrorIn<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>,
       ::test_protocollayouts_imported::ImportUnionPayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -867,6 +879,9 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImport> final
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocollayouts_imported::ImportTablePayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -939,6 +954,9 @@ class ::fidl::Result<
       ::fidl::AnyErrorIn<
           ::test_protocollayouts::MainProtocol::TwoWayImportWithError>,
       ::test_protocollayouts_imported::ImportUnionPayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -965,6 +983,9 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocal> final
  public:
   using ::fitx::result<::fidl::Error,
                        ::test_protocollayouts::LocalTablePayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -1034,6 +1055,9 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
       ::fidl::AnyErrorIn<
           ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>,
       ::test_protocollayouts::LocalUnionPayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -1063,6 +1087,9 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnon> final
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocollayouts::MainProtocolTwoWayAnonResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -1138,6 +1165,9 @@ class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
       ::fidl::AnyErrorIn<
           ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>,
       ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

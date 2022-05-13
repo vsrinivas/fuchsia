@@ -87,6 +87,9 @@ class ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive> final
   using ::fitx::result<
       ::fidl::Error,
       ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

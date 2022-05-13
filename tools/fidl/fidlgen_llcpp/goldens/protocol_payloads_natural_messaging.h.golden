@@ -514,6 +514,9 @@ class ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposed>
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocolpayloads_imported::ImportStructPayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -588,6 +591,9 @@ class ::fidl::Result<
       ::fidl::AnyErrorIn<
           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>,
       ::test_protocolpayloads_imported::ImportStructPayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -614,6 +620,9 @@ class ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayLocal> final
  public:
   using ::fitx::result<::fidl::Error,
                        ::test_protocolpayloads::LocalStructPayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -685,6 +694,9 @@ class ::fidl::Result<
       ::fidl::AnyErrorIn<
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
       ::test_protocolpayloads::LocalStructPayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -714,6 +726,9 @@ class ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImport> final
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocolpayloads_imported::ImportStructPayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -787,6 +802,9 @@ class ::fidl::Result<
       ::fidl::AnyErrorIn<
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>,
       ::test_protocolpayloads_imported::ImportStructPayload>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -816,6 +834,9 @@ class ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnon> final
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -891,6 +912,9 @@ class ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
       ::fidl::AnyErrorIn<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
       ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

@@ -60,6 +60,9 @@ class ::fidl::Result<::test_nullable::SimpleProtocol::Add> final
  public:
   using ::fitx::result<::fidl::Error,
                        ::test_nullable::SimpleProtocolAddTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

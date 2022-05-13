@@ -154,6 +154,9 @@ class ::fidl::Result<
     final : public ::fitx::result<::fidl::Error> {
  public:
   using ::fitx::result<::fidl::Error>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -194,6 +197,9 @@ class ::fidl::Result<
       ::test_protocols::
           WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>::
       result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -216,6 +222,9 @@ class ::fidl::Result<
     final : public ::fitx::result<::fidl::Error> {
  public:
   using ::fitx::result<::fidl::Error>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -258,6 +267,9 @@ class ::fidl::Result<
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>::
       result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -733,6 +745,9 @@ class ::fidl::Result<::test_protocols::Transitional::Request> final
  public:
   using ::fitx::result<
       ::fidl::Error, ::test_protocols::TransitionalRequestTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -1144,6 +1159,9 @@ class ::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds> final
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocols::WithProtocolEndsClientEndsTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -1173,6 +1191,9 @@ class ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> final
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocols::WithProtocolEndsServerEndsTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -1206,6 +1227,9 @@ class ::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds>
       ::fidl::Error,
       ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>::
       result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -1668,6 +1692,9 @@ class ::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod>
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -2016,6 +2043,9 @@ class ::fidl::Result<::test_protocols::WithErrorSyntax::ResponseAsStruct> final
   using ::fitx::result<
       ::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ResponseAsStruct>,
       ::test_protocols::WithErrorSyntaxResponseAsStructResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -2074,6 +2104,9 @@ class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final
  public:
   using ::fitx::result<::fidl::AnyErrorIn<
       ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -2132,6 +2165,9 @@ class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum> final
  public:
   using ::fitx::result<::fidl::AnyErrorIn<
       ::test_protocols::WithErrorSyntax::ErrorAsEnum>>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -2197,6 +2233,9 @@ class ::fidl::Result<::test_protocols::WithErrorSyntax::HandleInResult> final
   using ::fitx::result<
       ::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::HandleInResult>,
       ::test_protocols::WithErrorSyntaxHandleInResultResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -2701,6 +2740,9 @@ class ::fidl::Result<::test_protocols::ChannelProtocol::MethodB> final
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocols::ChannelProtocolMethodBTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -2720,6 +2762,9 @@ class ::fidl::Result<::test_protocols::ChannelProtocol::TakeHandle> final
     : public ::fitx::result<::fidl::Error> {
  public:
   using ::fitx::result<::fidl::Error>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -2749,6 +2794,9 @@ class ::fidl::Result<::test_protocols::ChannelProtocol::MutateSocket> final
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocols::ChannelProtocolMutateSocketTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

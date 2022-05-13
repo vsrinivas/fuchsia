@@ -55,6 +55,9 @@ class ::fdf::Result<::test_drivertwoway::TwoWay::Add> final
  public:
   using ::fitx::result<::fidl::Error,
                        ::test_drivertwoway::TwoWayAddTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

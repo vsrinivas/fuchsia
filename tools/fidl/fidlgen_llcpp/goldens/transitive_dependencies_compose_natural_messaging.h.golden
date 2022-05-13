@@ -60,6 +60,9 @@ class ::fidl::Result<::test_transitivedependenciescompose::Top::GetFoo> final
  public:
   using ::fitx::result<::fidl::Error,
                        ::test_bottom::BottomGetFooTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

@@ -81,6 +81,9 @@ class ::fidl::Result<::test_protocolrequest::Parent::GetChild> final
  public:
   using ::fitx::result<
       ::fidl::Error, ::test_protocolrequest::ParentGetChildTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -110,6 +113,9 @@ class ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> final
   using ::fitx::result<
       ::fidl::Error,
       ::test_protocolrequest::ParentGetChildRequestTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

@@ -87,6 +87,9 @@ class ::fidl::Result<::test_error::Example::Foo> final
  public:
   using ::fitx::result<::fidl::AnyErrorIn<::test_error::Example::Foo>,
                        ::test_error::ExampleFooResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

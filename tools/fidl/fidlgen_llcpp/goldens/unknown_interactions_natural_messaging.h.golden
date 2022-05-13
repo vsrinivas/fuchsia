@@ -94,6 +94,9 @@ class ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay> final
     : public ::fitx::result<::fidl::Error> {
  public:
   using ::fitx::result<::fidl::Error>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -124,6 +127,9 @@ class ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay> final
   using ::fitx::result<
       ::fidl::Error,
       ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

@@ -56,6 +56,9 @@ class ::fidl::Result<::test_inheritance::Super::Foo> final
  public:
   using ::fitx::result<::fidl::Error,
                        ::test_inheritance::SuperFooTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -231,6 +234,9 @@ class ::fidl::Result<::test_inheritance::Sub::Foo> final
  public:
   using ::fitx::result<::fidl::Error,
                        ::test_inheritance::SuperFooTopResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

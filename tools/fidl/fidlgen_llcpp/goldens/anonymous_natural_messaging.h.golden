@@ -99,6 +99,9 @@ class ::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod> final
   using ::fitx::result<
       ::fidl::AnyErrorIn<::test_anonymous::SomeProtocol::SomeMethod>,
       ::test_anonymous::SomeProtocolSomeMethodResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

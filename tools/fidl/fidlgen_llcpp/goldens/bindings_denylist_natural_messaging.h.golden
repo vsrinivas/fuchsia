@@ -154,6 +154,9 @@ class ::fidl::Result<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
     final : public ::fitx::result<::fidl::Error> {
  public:
   using ::fitx::result<::fidl::Error>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -748,6 +751,9 @@ class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
       ::fidl::AnyErrorIn<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -815,6 +821,9 @@ class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final
   using ::fitx::result<
       ::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -892,6 +901,9 @@ class ::fidl::Result<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::
       result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -963,6 +975,9 @@ class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
       ::fidl::AnyErrorIn<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::result;
+
+ protected:
+  Result() = default;
 };
 
 template <>
@@ -1040,6 +1055,9 @@ class ::fidl::Result<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
       ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::
       result;
+
+ protected:
+  Result() = default;
 };
 
 template <>

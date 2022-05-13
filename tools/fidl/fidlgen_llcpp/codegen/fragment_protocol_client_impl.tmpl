@@ -108,6 +108,9 @@ template <>
 class {{ .NaturalResult }} final : public {{ .NaturalResultBase }} {
  public:
   using {{ .NaturalResultBase }}::result;
+
+ protected:
+  {{ .NaturalResult.Self }}() = default;
 };
 {{ end }}
 
