@@ -235,19 +235,19 @@ class DataPartitionMatcher : public BlockDeviceManager::Matcher {
 
   static Variant GetVariantFromConfig(const fshost_config::Config& config) {
     Variant variant;
-    if (config.no_zxcrypt) {
+    if (config.no_zxcrypt()) {
       variant.zxcrypt = ZxcryptVariant::kNoZxcrypt;
     } else {
       variant.zxcrypt = ZxcryptVariant::kNormal;
     }
 
-    if (config.data_filesystem_binary_path.find("fxfs") != std::string::npos) {
+    if (config.data_filesystem_binary_path().find("fxfs") != std::string::npos) {
       variant.format = fs_management::kDiskFormatFxfs;
-    } else if (config.data_filesystem_binary_path.find("f2fs") != std::string::npos) {
+    } else if (config.data_filesystem_binary_path().find("f2fs") != std::string::npos) {
       variant.format = fs_management::kDiskFormatF2fs;
     }
 
-    variant.format_data_on_corruption = config.format_data_on_corruption;
+    variant.format_data_on_corruption = config.format_data_on_corruption();
     return variant;
   }
 
@@ -416,32 +416,32 @@ DataPartitionMatcher::PartitionNames GetDataPartitionNames(bool include_legacy) 
 BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : config_(*config) {
   static constexpr fuchsia_hardware_block_partition::wire::Guid data_type_guid = GUID_DATA_VALUE;
 
-  if (config_.bootpart) {
+  if (config_.bootpart()) {
     matchers_.push_back(std::make_unique<BootpartMatcher>());
   }
-  if (config_.nand) {
+  if (config_.nand()) {
     matchers_.push_back(std::make_unique<NandMatcher>());
   }
 
   auto gpt =
-      std::make_unique<PartitionMapMatcher>(fs_management::kDiskFormatGpt, config_.gpt_all, "",
+      std::make_unique<PartitionMapMatcher>(fs_management::kDiskFormatGpt, config_.gpt_all(), "",
                                             /*ramdisk_required=*/false);
   auto fvm = std::make_unique<PartitionMapMatcher>(
-      fs_management::kDiskFormatFvm, /*allow_multiple=*/false, "/fvm", config_.fvm_ramdisk);
+      fs_management::kDiskFormatFvm, /*allow_multiple=*/false, "/fvm", config_.fvm_ramdisk());
 
-  bool gpt_required = config_.gpt || config_.gpt_all;
-  bool fvm_required = config_.fvm;
+  bool gpt_required = config_.gpt() || config_.gpt_all();
+  bool fvm_required = config_.fvm();
 
   // Maximum partition limits. The limits only apply to physical devices (not ramdisks) unless
   // apply_limits_to_ramdisk is set.
-  PartitionLimit blobfs_limit{.apply_to_ramdisk = config_.apply_limits_to_ramdisk,
-                              .max_bytes = config_.blobfs_max_bytes};
-  PartitionLimit data_limit{.apply_to_ramdisk = config_.apply_limits_to_ramdisk,
-                            .max_bytes = config_.data_max_bytes};
+  PartitionLimit blobfs_limit{.apply_to_ramdisk = config_.apply_limits_to_ramdisk(),
+                              .max_bytes = config_.blobfs_max_bytes()};
+  PartitionLimit data_limit{.apply_to_ramdisk = config_.apply_limits_to_ramdisk(),
+                            .max_bytes = config_.data_max_bytes()};
 
-  if (!config_.netboot) {
+  if (!config_.netboot()) {
     // GPT partitions:
-    if (config_.durable) {
+    if (config_.durable()) {
       static constexpr fuchsia_hardware_block_partition::wire::Guid durable_type_guid =
           GPT_DURABLE_TYPE_GUID;
       matchers_.push_back(std::make_unique<DataPartitionMatcher>(
@@ -450,13 +450,13 @@ BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : co
           PartitionLimit()));
       gpt_required = true;
     }
-    if (config_.factory) {
+    if (config_.factory()) {
       matchers_.push_back(std::make_unique<FactoryfsMatcher>(*gpt));
       gpt_required = true;
     }
 
     // FVM partitions:
-    if (config_.blobfs) {
+    if (config_.blobfs()) {
       static constexpr fuchsia_hardware_block_partition::wire::Guid blobfs_type_guid =
           GUID_BLOB_VALUE;
       matchers_.push_back(std::make_unique<SimpleMatcher>(
@@ -464,9 +464,9 @@ BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : co
           fs_management::kDiskFormatBlobfs, blobfs_limit));
       fvm_required = true;
     }
-    if (config_.data) {
+    if (config_.data()) {
       matchers_.push_back(std::make_unique<DataPartitionMatcher>(
-          *fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names),
+          *fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names()),
           kDataPartitionLabel, data_type_guid, DataPartitionMatcher::GetVariantFromConfig(config_),
           data_limit));
       fvm_required = true;
@@ -476,15 +476,15 @@ BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : co
   // The partition map matchers go last because they match on content.
   if (fvm_required) {
     std::unique_ptr<PartitionMapMatcher> non_ramdisk_fvm;
-    if (config_.fvm_ramdisk) {
+    if (config_.fvm_ramdisk()) {
       // Add another matcher for the non-ramdisk version of FVM.
       non_ramdisk_fvm = std::make_unique<PartitionMapMatcher>(fs_management::kDiskFormatFvm,
                                                               /*allow_multiple=*/false, "/fvm",
                                                               /*ramdisk_required=*/false);
 
-      if (config_.zxcrypt_non_ramdisk) {
+      if (config_.zxcrypt_non_ramdisk()) {
         matchers_.push_back(std::make_unique<DataPartitionMatcher>(
-            *non_ramdisk_fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names),
+            *non_ramdisk_fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names()),
             kDataPartitionLabel, data_type_guid,
             DataPartitionMatcher::Variant{.zxcrypt =
                                               DataPartitionMatcher::ZxcryptVariant::kZxcryptOnly},
@@ -499,7 +499,7 @@ BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : co
   if (gpt_required) {
     matchers_.push_back(std::move(gpt));
   }
-  if (config_.mbr) {
+  if (config_.mbr()) {
     // Default to allowing multiple devices because mbr support is disabled by default and if
     // it's enabled, it's likely required for removable devices and so supporting multiple
     // devices is probably appropriate.

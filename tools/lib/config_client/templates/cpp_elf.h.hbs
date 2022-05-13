@@ -9,13 +9,10 @@
 
 namespace {{cpp_namespace}} {
 struct Config {
-  {{#each fields}}
-    {{(cpp_type type_)}} {{ident}};
-  {{/each}}
-
+public:
   static Config from_args() noexcept;
 
-  void record_to_inspect(inspect::Inspector * inspector);
+  {{> typedef }}
 };
 
 std::ostream& operator<<(std::ostream& os, const {{cpp_namespace}}::Config& c);

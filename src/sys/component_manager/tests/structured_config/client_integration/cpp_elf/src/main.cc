@@ -19,26 +19,26 @@
 class PuppetImpl : public test::structuredconfig::receiver::ConfigReceiverPuppet {
  public:
   explicit PuppetImpl(const receiver_config::Config& c) {
-    this->c.my_flag = c.my_flag;
-    this->c.my_int8 = c.my_int8;
-    this->c.my_int16 = c.my_int16;
-    this->c.my_int32 = c.my_int32;
-    this->c.my_int64 = c.my_int64;
-    this->c.my_uint8 = c.my_uint8;
-    this->c.my_uint16 = c.my_uint16;
-    this->c.my_uint32 = c.my_uint32;
-    this->c.my_uint64 = c.my_uint64;
-    this->c.my_string = c.my_string;
-    this->c.my_vector_of_flag = c.my_vector_of_flag;
-    this->c.my_vector_of_int8 = c.my_vector_of_int8;
-    this->c.my_vector_of_int16 = c.my_vector_of_int16;
-    this->c.my_vector_of_int32 = c.my_vector_of_int32;
-    this->c.my_vector_of_int64 = c.my_vector_of_int64;
-    this->c.my_vector_of_uint8 = c.my_vector_of_uint8;
-    this->c.my_vector_of_uint16 = c.my_vector_of_uint16;
-    this->c.my_vector_of_uint32 = c.my_vector_of_uint32;
-    this->c.my_vector_of_uint64 = c.my_vector_of_uint64;
-    this->c.my_vector_of_string = c.my_vector_of_string;
+    this->c.my_flag = c.my_flag();
+    this->c.my_int8 = c.my_int8();
+    this->c.my_int16 = c.my_int16();
+    this->c.my_int32 = c.my_int32();
+    this->c.my_int64 = c.my_int64();
+    this->c.my_uint8 = c.my_uint8();
+    this->c.my_uint16 = c.my_uint16();
+    this->c.my_uint32 = c.my_uint32();
+    this->c.my_uint64 = c.my_uint64();
+    this->c.my_string = c.my_string();
+    this->c.my_vector_of_flag = c.my_vector_of_flag();
+    this->c.my_vector_of_int8 = c.my_vector_of_int8();
+    this->c.my_vector_of_int16 = c.my_vector_of_int16();
+    this->c.my_vector_of_int32 = c.my_vector_of_int32();
+    this->c.my_vector_of_int64 = c.my_vector_of_int64();
+    this->c.my_vector_of_uint8 = c.my_vector_of_uint8();
+    this->c.my_vector_of_uint16 = c.my_vector_of_uint16();
+    this->c.my_vector_of_uint32 = c.my_vector_of_uint32();
+    this->c.my_vector_of_uint64 = c.my_vector_of_uint64();
+    this->c.my_vector_of_string = c.my_vector_of_string();
   }
 
   void GetConfig(GetConfigCallback callback) override { callback(this->c); }

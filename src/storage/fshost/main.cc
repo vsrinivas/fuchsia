@@ -175,7 +175,7 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
   auto metrics = DefaultMetrics();
   FsManager fs_manager(boot_args, std::move(metrics));
 
-  if (config.netboot) {
+  if (config.netboot()) {
     FX_LOGS(INFO) << "disabling automount";
   }
 

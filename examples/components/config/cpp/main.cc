@@ -19,7 +19,7 @@ int main(int argc, const char* argv[], char* envp[]) {
   // [END get_config]
 
   // Print greeting to the log
-  FX_LOGS(INFO) << "Hello, " << c.greeting << "!";
+  FX_LOGS(INFO) << "Hello, " << c.greeting() << "!";
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 

@@ -41,7 +41,7 @@ using BlockDeviceManagerIntegration = FshostIntegrationTest;
 
 TEST(BlockDeviceManager, BlobfsLimit) {
   auto config = DefaultConfig();
-  config.blobfs_max_bytes = 7654321;
+  config.blobfs_max_bytes() = 7654321;
   BlockDeviceManager manager(&config);
 
   // When there's no FVM we expect no match and no max size call.
@@ -67,7 +67,7 @@ TEST(BlockDeviceManager, BlobfsLimit) {
 
 TEST(BlockDeviceManager, MinfsLimit) {
   auto config = DefaultConfig();
-  config.data_max_bytes = 7654321;
+  config.data_max_bytes() = 7654321;
   BlockDeviceManager manager(&config);
 
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());

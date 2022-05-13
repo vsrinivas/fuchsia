@@ -162,7 +162,7 @@ class TestMounter : public FilesystemMounter {
 };
 
 TEST_F(MounterTest, DurableMount) {
-  config_.durable = true;
+  config_.durable() = true;
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
@@ -171,7 +171,7 @@ TEST_F(MounterTest, DurableMount) {
 }
 
 TEST_F(MounterTest, FactoryMount) {
-  config_.factory = true;
+  config_.factory() = true;
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kFactoryfs);

@@ -29,6 +29,7 @@ std::unique_ptr<uint8_t[]> fidl_struct(new uint8_t[fidl_struct_size]);
 status = config_vmo.read(fidl_struct.get(), header, fidl_struct_size);
 ZX_ASSERT_MSG(status == ZX_OK, "Could not read FIDL struct from config VMO");
 
+// TODO(https://fxbug.dev/100147) use fidl::Unpersist(header_and_struct_bytes) instead
 // Decode the FIDL struct
 fidl::unstable::DecodedMessage<::{{fidl_cpp_namespace}}::wire::Config> decoded(
 fidl::internal::WireFormatVersion::kV2, fidl_struct.get(), static_cast<uint32_t>(fidl_struct_size));
@@ -36,7 +37,7 @@ ZX_ASSERT_MSG(decoded.ok(), "Could not decode Config FIDL structure");
 ::{{fidl_cpp_namespace}}::wire::Config* fidl_config = decoded.PrimaryObject();
 
 // Convert the configuration into a new struct
-Config c{
+Config c\{{
 {{#each fields}}
     {{#if (is_string_vector type_)}}
     .{{ident}} = from_vector_string_view(fidl_config->{{ident}})
@@ -53,6 +54,6 @@ Config c{
     {{/if}}
     {{~#unless @last}},{{/unless}}
 {{~/each~}}
-};
+}};
 
 return c;

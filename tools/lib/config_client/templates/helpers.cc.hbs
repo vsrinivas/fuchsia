@@ -2,22 +2,22 @@ void Config::record_to_inspect(inspect::Inspector* inspector) {
   inspect::Node inspect_config = inspector->GetRoot().CreateChild("config");
   {{#each fields}}
     {{#if (is_string_vector type_)}}
-      auto {{ident}} = inspect_config.CreateStringArray("{{ident}}", this->{{ident}}.size());
-      for (size_t i = 0; i < this->{{ident}}.size(); i++) {
-        auto ref = std::string_view(this->{{ident}}[i].data());
+      auto {{ident}} = inspect_config.CreateStringArray("{{ident}}", this->{{ident}}().size());
+      for (size_t i = 0; i < this->{{ident}}().size(); i++) {
+        auto ref = std::string_view(this->{{ident}}()[i].data());
         {{ident}}.Set(i, ref);
       }
       inspector->emplace(std::move({{ident}}));
     {{else}}
       {{#if (is_vector type_)}}
         auto {{ident}} =
-          inspect_config.Create{{(inspect_type type_)}}Array("{{ident}}", this->{{ident}}.size());
-        for (size_t i = 0; i < this->{{ident}}.size(); i++) {
-            {{ident}}.Set(i, this->{{ident}}[i]);
+          inspect_config.Create{{(inspect_type type_)}}Array("{{ident}}", this->{{ident}}().size());
+        for (size_t i = 0; i < this->{{ident}}().size(); i++) {
+            {{ident}}.Set(i, this->{{ident}}()[i]);
         }
         inspector->emplace(std::move({{ident}}));
       {{else}}
-        inspect_config.Create{{(inspect_type type_)}}("{{ident}}", this->{{ident}}, inspector);
+        inspect_config.Create{{(inspect_type type_)}}("{{ident}}", this->{{ident}}(), inspector);
       {{/if}}
     {{/if}}
 
@@ -29,12 +29,12 @@ std::ostream& operator<<(std::ostream& os, const Config& c) {
   {{#each fields}}
     {{#if (is_vector type_)}}
       os << "  {{ident}}: [" << std::endl;
-      for (auto value : c.{{ident}}) {
+      for (auto value : c.{{ident}}()) {
         os << "    " << value << "," << std::endl;
       }
       os << "]" << std::endl;
     {{else}}
-      os << "  {{ident}}: " << c.{{ident}} << std::endl;
+      os << "  {{ident}}: " << c.{{ident}}() << std::endl;
     {{/if}}
   {{~/each~}}
   return os;

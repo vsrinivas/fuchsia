@@ -123,43 +123,43 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
 
     fidl::Arena<65536> arena;
 
-    auto bool_vector_view = fidl::VectorView<bool>(arena, config_.my_vector_of_flag.size());
+    auto bool_vector_view = fidl::VectorView<bool>(arena, config_.my_vector_of_flag().size());
     auto string_vector_view =
-        fidl::VectorView<fidl::StringView>(arena, config_.my_vector_of_string.size());
-    for (size_t i = 0; i < config_.my_vector_of_flag.size(); i++) {
-      bool_vector_view[i] = config_.my_vector_of_flag[i];
+        fidl::VectorView<fidl::StringView>(arena, config_.my_vector_of_string().size());
+    for (size_t i = 0; i < config_.my_vector_of_flag().size(); i++) {
+      bool_vector_view[i] = config_.my_vector_of_flag()[i];
     }
-    for (size_t i = 0; i < config_.my_vector_of_string.size(); i++) {
-      string_vector_view[i] = fidl::StringView::FromExternal(config_.my_vector_of_string[i]);
+    for (size_t i = 0; i < config_.my_vector_of_string().size(); i++) {
+      string_vector_view[i] = fidl::StringView::FromExternal(config_.my_vector_of_string()[i]);
     }
 
-    receiver_config.my_flag = config_.my_flag;
-    receiver_config.my_int8 = config_.my_int8;
-    receiver_config.my_int16 = config_.my_int16;
-    receiver_config.my_int32 = config_.my_int32;
-    receiver_config.my_int64 = config_.my_int64;
-    receiver_config.my_uint8 = config_.my_uint8;
-    receiver_config.my_uint16 = config_.my_uint16;
-    receiver_config.my_uint32 = config_.my_uint32;
-    receiver_config.my_uint64 = config_.my_uint64;
-    receiver_config.my_string = fidl::StringView::FromExternal(config_.my_string);
+    receiver_config.my_flag = config_.my_flag();
+    receiver_config.my_int8 = config_.my_int8();
+    receiver_config.my_int16 = config_.my_int16();
+    receiver_config.my_int32 = config_.my_int32();
+    receiver_config.my_int64 = config_.my_int64();
+    receiver_config.my_uint8 = config_.my_uint8();
+    receiver_config.my_uint16 = config_.my_uint16();
+    receiver_config.my_uint32 = config_.my_uint32();
+    receiver_config.my_uint64 = config_.my_uint64();
+    receiver_config.my_string = fidl::StringView::FromExternal(config_.my_string());
     receiver_config.my_vector_of_flag = bool_vector_view;
     receiver_config.my_vector_of_uint8 =
-        fidl::VectorView<uint8_t>::FromExternal(config_.my_vector_of_uint8);
+        fidl::VectorView<uint8_t>::FromExternal(config_.my_vector_of_uint8());
     receiver_config.my_vector_of_uint16 =
-        fidl::VectorView<uint16_t>::FromExternal(config_.my_vector_of_uint16);
+        fidl::VectorView<uint16_t>::FromExternal(config_.my_vector_of_uint16());
     receiver_config.my_vector_of_uint32 =
-        fidl::VectorView<uint32_t>::FromExternal(config_.my_vector_of_uint32);
+        fidl::VectorView<uint32_t>::FromExternal(config_.my_vector_of_uint32());
     receiver_config.my_vector_of_uint64 =
-        fidl::VectorView<uint64_t>::FromExternal(config_.my_vector_of_uint64);
+        fidl::VectorView<uint64_t>::FromExternal(config_.my_vector_of_uint64());
     receiver_config.my_vector_of_int8 =
-        fidl::VectorView<int8_t>::FromExternal(config_.my_vector_of_int8);
+        fidl::VectorView<int8_t>::FromExternal(config_.my_vector_of_int8());
     receiver_config.my_vector_of_int16 =
-        fidl::VectorView<int16_t>::FromExternal(config_.my_vector_of_int16);
+        fidl::VectorView<int16_t>::FromExternal(config_.my_vector_of_int16());
     receiver_config.my_vector_of_int32 =
-        fidl::VectorView<int32_t>::FromExternal(config_.my_vector_of_int32);
+        fidl::VectorView<int32_t>::FromExternal(config_.my_vector_of_int32());
     receiver_config.my_vector_of_int64 =
-        fidl::VectorView<int64_t>::FromExternal(config_.my_vector_of_int64);
+        fidl::VectorView<int64_t>::FromExternal(config_.my_vector_of_int64());
     receiver_config.my_vector_of_string = string_vector_view;
 
     _completer.Reply(receiver_config);

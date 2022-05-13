@@ -121,12 +121,12 @@ zx_status_t FsManager::Initialize(
   // capability can be successfully routed.
   std::vector<MountPoint> mount_points;
   mount_points.push_back(MountPoint::kData);
-  if (config.durable) {
+  if (config.durable()) {
     mount_points.push_back(MountPoint::kDurable);
   } else {
     fs_dir_->AddEntry(MountPointPath(MountPoint::kDurable), fbl::MakeRefCounted<fs::PseudoDir>());
   }
-  if (config.factory) {
+  if (config.factory()) {
     mount_points.push_back(MountPoint::kFactory);
   } else {
     fs_dir_->AddEntry(MountPointPath(MountPoint::kFactory), fbl::MakeRefCounted<fs::PseudoDir>());

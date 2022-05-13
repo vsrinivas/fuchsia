@@ -13,10 +13,10 @@
 namespace {
 
 TEST(ConsoleArgsTestCase, BootArgsPrecedence) {
-  console_config::Config config{
+  console_config::Config config{{
       .allowed_log_tags = {"qux"},
       .denied_log_tags = {"foo", "baz"},
-  };
+  }};
   mock_boot_arguments::Server mock_args(
       {{"console.allowed_log_tags", "foo,bar"}, {"console.denied_log_tags", "qux"}});
 

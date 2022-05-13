@@ -8,19 +8,19 @@ namespace fshost {
 
 fshost_config::Config DefaultConfig() {
   auto config = EmptyConfig();
-  config.blobfs = true;
-  config.bootpart = true;
-  config.check_filesystems = true;
-  config.fvm = true;
-  config.gpt = true;
-  config.data = true;
-  config.format_data_on_corruption = true;
-  config.allow_legacy_data_partition_names = false;
+  config.blobfs() = true;
+  config.bootpart() = true;
+  config.check_filesystems() = true;
+  config.fvm() = true;
+  config.gpt() = true;
+  config.data() = true;
+  config.format_data_on_corruption() = true;
+  config.allow_legacy_data_partition_names() = false;
   return config;
 }
 
 fshost_config::Config EmptyConfig() {
-  fshost_config::Config config{
+  fshost_config::Config config{{
       .allow_legacy_data_partition_names = false,
       .apply_limits_to_ramdisk = false,
       .blobfs = false,
@@ -44,16 +44,16 @@ fshost_config::Config EmptyConfig() {
       .no_zxcrypt = false,
       .sandbox_decompression = false,
       .zxcrypt_non_ramdisk = false,
-  };
+  }};
   return config;
 }
 
 void ApplyBootArgsToConfig(fshost_config::Config& config, const FshostBootArgs& boot_args) {
   if (boot_args.netboot()) {
-    config.netboot = true;
+    config.netboot() = true;
   }
   if (boot_args.check_filesystems()) {
-    config.check_filesystems = true;
+    config.check_filesystems() = true;
   }
 }
 

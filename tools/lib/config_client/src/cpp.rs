@@ -15,6 +15,7 @@ static CC_DRIVER_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_driver.c
 static H_DRIVER_SOURCE_TEMPLATE: &str = include_str!("../templates/cpp_driver.h.hbs");
 
 static HELPERS_SOURCE_TEMPLATE: &str = include_str!("../templates/helpers.cc.hbs");
+static TYPEDEF_SOURCE_TEMPLATE: &str = include_str!("../templates/typedef.h.hbs");
 static VMO_PARSE_SOURCE_TEMPLATE: &str = include_str!("../templates/vmo_parse.cc.hbs");
 
 pub struct CppSource {
@@ -73,6 +74,7 @@ pub fn create_cpp_wrapper(
     hbars.register_template_string("cc_source", cc_source_template).pretty_unwrap();
     hbars.register_template_string("h_source", h_source_template).pretty_unwrap();
     hbars.register_template_string("helpers", HELPERS_SOURCE_TEMPLATE).pretty_unwrap();
+    hbars.register_template_string("typedef", TYPEDEF_SOURCE_TEMPLATE).pretty_unwrap();
     hbars.register_template_string("vmo_parse", VMO_PARSE_SOURCE_TEMPLATE).pretty_unwrap();
     let cc_source = hbars.render("cc_source", &vars).pretty_unwrap();
     let h_source = hbars.render("h_source", &vars).pretty_unwrap();

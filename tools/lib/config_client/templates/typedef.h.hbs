@@ -1,0 +1,27 @@
+private:
+  struct Storage_;
+
+public:
+  Config(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  Config() = default;
+#pragma clang diagnostic pop
+
+  void record_to_inspect(inspect::Inspector* inspector);
+
+  {{#each fields}}
+    const {{(cpp_type type_)}}& {{ident}}() const { return storage_.{{ident}}; }
+    {{(cpp_type type_)}}& {{ident}}() { return storage_.{{ident}}; }
+
+  {{/each}}
+
+private:
+  // TODO(https://fxbug.dev/100147) store a natural types object here instead
+  struct Storage_ final {
+    {{#each fields}}
+        {{(cpp_type type_)}} {{ident}};
+    {{/each}}
+  };
+
+  Storage_ storage_;

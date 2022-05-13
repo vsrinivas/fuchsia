@@ -20,94 +20,94 @@ namespace cpp_elf_config_lib {
 
 void Config::record_to_inspect(inspect::Inspector* inspector) {
   inspect::Node inspect_config = inspector->GetRoot().CreateChild("config");
-  inspect_config.CreateBool("my_flag", this->my_flag, inspector);
+  inspect_config.CreateBool("my_flag", this->my_flag(), inspector);
 
-  inspect_config.CreateInt("my_int16", this->my_int16, inspector);
+  inspect_config.CreateInt("my_int16", this->my_int16(), inspector);
 
-  inspect_config.CreateInt("my_int32", this->my_int32, inspector);
+  inspect_config.CreateInt("my_int32", this->my_int32(), inspector);
 
-  inspect_config.CreateInt("my_int64", this->my_int64, inspector);
+  inspect_config.CreateInt("my_int64", this->my_int64(), inspector);
 
-  inspect_config.CreateInt("my_int8", this->my_int8, inspector);
+  inspect_config.CreateInt("my_int8", this->my_int8(), inspector);
 
-  inspect_config.CreateString("my_string", this->my_string, inspector);
+  inspect_config.CreateString("my_string", this->my_string(), inspector);
 
-  inspect_config.CreateUint("my_uint16", this->my_uint16, inspector);
+  inspect_config.CreateUint("my_uint16", this->my_uint16(), inspector);
 
-  inspect_config.CreateUint("my_uint32", this->my_uint32, inspector);
+  inspect_config.CreateUint("my_uint32", this->my_uint32(), inspector);
 
-  inspect_config.CreateUint("my_uint64", this->my_uint64, inspector);
+  inspect_config.CreateUint("my_uint64", this->my_uint64(), inspector);
 
-  inspect_config.CreateUint("my_uint8", this->my_uint8, inspector);
+  inspect_config.CreateUint("my_uint8", this->my_uint8(), inspector);
 
   auto my_vector_of_flag = inspect_config.CreateUintArray(
-      "my_vector_of_flag", this->my_vector_of_flag.size());
-  for (size_t i = 0; i < this->my_vector_of_flag.size(); i++) {
-    my_vector_of_flag.Set(i, this->my_vector_of_flag[i]);
+      "my_vector_of_flag", this->my_vector_of_flag().size());
+  for (size_t i = 0; i < this->my_vector_of_flag().size(); i++) {
+    my_vector_of_flag.Set(i, this->my_vector_of_flag()[i]);
   }
   inspector->emplace(std::move(my_vector_of_flag));
 
   auto my_vector_of_int16 = inspect_config.CreateIntArray(
-      "my_vector_of_int16", this->my_vector_of_int16.size());
-  for (size_t i = 0; i < this->my_vector_of_int16.size(); i++) {
-    my_vector_of_int16.Set(i, this->my_vector_of_int16[i]);
+      "my_vector_of_int16", this->my_vector_of_int16().size());
+  for (size_t i = 0; i < this->my_vector_of_int16().size(); i++) {
+    my_vector_of_int16.Set(i, this->my_vector_of_int16()[i]);
   }
   inspector->emplace(std::move(my_vector_of_int16));
 
   auto my_vector_of_int32 = inspect_config.CreateIntArray(
-      "my_vector_of_int32", this->my_vector_of_int32.size());
-  for (size_t i = 0; i < this->my_vector_of_int32.size(); i++) {
-    my_vector_of_int32.Set(i, this->my_vector_of_int32[i]);
+      "my_vector_of_int32", this->my_vector_of_int32().size());
+  for (size_t i = 0; i < this->my_vector_of_int32().size(); i++) {
+    my_vector_of_int32.Set(i, this->my_vector_of_int32()[i]);
   }
   inspector->emplace(std::move(my_vector_of_int32));
 
   auto my_vector_of_int64 = inspect_config.CreateIntArray(
-      "my_vector_of_int64", this->my_vector_of_int64.size());
-  for (size_t i = 0; i < this->my_vector_of_int64.size(); i++) {
-    my_vector_of_int64.Set(i, this->my_vector_of_int64[i]);
+      "my_vector_of_int64", this->my_vector_of_int64().size());
+  for (size_t i = 0; i < this->my_vector_of_int64().size(); i++) {
+    my_vector_of_int64.Set(i, this->my_vector_of_int64()[i]);
   }
   inspector->emplace(std::move(my_vector_of_int64));
 
   auto my_vector_of_int8 = inspect_config.CreateIntArray(
-      "my_vector_of_int8", this->my_vector_of_int8.size());
-  for (size_t i = 0; i < this->my_vector_of_int8.size(); i++) {
-    my_vector_of_int8.Set(i, this->my_vector_of_int8[i]);
+      "my_vector_of_int8", this->my_vector_of_int8().size());
+  for (size_t i = 0; i < this->my_vector_of_int8().size(); i++) {
+    my_vector_of_int8.Set(i, this->my_vector_of_int8()[i]);
   }
   inspector->emplace(std::move(my_vector_of_int8));
 
   auto my_vector_of_string = inspect_config.CreateStringArray(
-      "my_vector_of_string", this->my_vector_of_string.size());
-  for (size_t i = 0; i < this->my_vector_of_string.size(); i++) {
-    auto ref = std::string_view(this->my_vector_of_string[i].data());
+      "my_vector_of_string", this->my_vector_of_string().size());
+  for (size_t i = 0; i < this->my_vector_of_string().size(); i++) {
+    auto ref = std::string_view(this->my_vector_of_string()[i].data());
     my_vector_of_string.Set(i, ref);
   }
   inspector->emplace(std::move(my_vector_of_string));
 
   auto my_vector_of_uint16 = inspect_config.CreateUintArray(
-      "my_vector_of_uint16", this->my_vector_of_uint16.size());
-  for (size_t i = 0; i < this->my_vector_of_uint16.size(); i++) {
-    my_vector_of_uint16.Set(i, this->my_vector_of_uint16[i]);
+      "my_vector_of_uint16", this->my_vector_of_uint16().size());
+  for (size_t i = 0; i < this->my_vector_of_uint16().size(); i++) {
+    my_vector_of_uint16.Set(i, this->my_vector_of_uint16()[i]);
   }
   inspector->emplace(std::move(my_vector_of_uint16));
 
   auto my_vector_of_uint32 = inspect_config.CreateUintArray(
-      "my_vector_of_uint32", this->my_vector_of_uint32.size());
-  for (size_t i = 0; i < this->my_vector_of_uint32.size(); i++) {
-    my_vector_of_uint32.Set(i, this->my_vector_of_uint32[i]);
+      "my_vector_of_uint32", this->my_vector_of_uint32().size());
+  for (size_t i = 0; i < this->my_vector_of_uint32().size(); i++) {
+    my_vector_of_uint32.Set(i, this->my_vector_of_uint32()[i]);
   }
   inspector->emplace(std::move(my_vector_of_uint32));
 
   auto my_vector_of_uint64 = inspect_config.CreateUintArray(
-      "my_vector_of_uint64", this->my_vector_of_uint64.size());
-  for (size_t i = 0; i < this->my_vector_of_uint64.size(); i++) {
-    my_vector_of_uint64.Set(i, this->my_vector_of_uint64[i]);
+      "my_vector_of_uint64", this->my_vector_of_uint64().size());
+  for (size_t i = 0; i < this->my_vector_of_uint64().size(); i++) {
+    my_vector_of_uint64.Set(i, this->my_vector_of_uint64()[i]);
   }
   inspector->emplace(std::move(my_vector_of_uint64));
 
   auto my_vector_of_uint8 = inspect_config.CreateUintArray(
-      "my_vector_of_uint8", this->my_vector_of_uint8.size());
-  for (size_t i = 0; i < this->my_vector_of_uint8.size(); i++) {
-    my_vector_of_uint8.Set(i, this->my_vector_of_uint8[i]);
+      "my_vector_of_uint8", this->my_vector_of_uint8().size());
+  for (size_t i = 0; i < this->my_vector_of_uint8().size(); i++) {
+    my_vector_of_uint8.Set(i, this->my_vector_of_uint8()[i]);
   }
   inspector->emplace(std::move(my_vector_of_uint8));
 
@@ -115,63 +115,63 @@ void Config::record_to_inspect(inspect::Inspector* inspector) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Config& c) {
-  os << "  my_flag: " << c.my_flag << std::endl;
-  os << "  my_int16: " << c.my_int16 << std::endl;
-  os << "  my_int32: " << c.my_int32 << std::endl;
-  os << "  my_int64: " << c.my_int64 << std::endl;
-  os << "  my_int8: " << c.my_int8 << std::endl;
-  os << "  my_string: " << c.my_string << std::endl;
-  os << "  my_uint16: " << c.my_uint16 << std::endl;
-  os << "  my_uint32: " << c.my_uint32 << std::endl;
-  os << "  my_uint64: " << c.my_uint64 << std::endl;
-  os << "  my_uint8: " << c.my_uint8 << std::endl;
+  os << "  my_flag: " << c.my_flag() << std::endl;
+  os << "  my_int16: " << c.my_int16() << std::endl;
+  os << "  my_int32: " << c.my_int32() << std::endl;
+  os << "  my_int64: " << c.my_int64() << std::endl;
+  os << "  my_int8: " << c.my_int8() << std::endl;
+  os << "  my_string: " << c.my_string() << std::endl;
+  os << "  my_uint16: " << c.my_uint16() << std::endl;
+  os << "  my_uint32: " << c.my_uint32() << std::endl;
+  os << "  my_uint64: " << c.my_uint64() << std::endl;
+  os << "  my_uint8: " << c.my_uint8() << std::endl;
   os << "  my_vector_of_flag: [" << std::endl;
-  for (auto value : c.my_vector_of_flag) {
+  for (auto value : c.my_vector_of_flag()) {
     os << "    " << value << "," << std::endl;
   }
   os << "]" << std::endl;
   os << "  my_vector_of_int16: [" << std::endl;
-  for (auto value : c.my_vector_of_int16) {
+  for (auto value : c.my_vector_of_int16()) {
     os << "    " << value << "," << std::endl;
   }
   os << "]" << std::endl;
   os << "  my_vector_of_int32: [" << std::endl;
-  for (auto value : c.my_vector_of_int32) {
+  for (auto value : c.my_vector_of_int32()) {
     os << "    " << value << "," << std::endl;
   }
   os << "]" << std::endl;
   os << "  my_vector_of_int64: [" << std::endl;
-  for (auto value : c.my_vector_of_int64) {
+  for (auto value : c.my_vector_of_int64()) {
     os << "    " << value << "," << std::endl;
   }
   os << "]" << std::endl;
   os << "  my_vector_of_int8: [" << std::endl;
-  for (auto value : c.my_vector_of_int8) {
+  for (auto value : c.my_vector_of_int8()) {
     os << "    " << value << "," << std::endl;
   }
   os << "]" << std::endl;
   os << "  my_vector_of_string: [" << std::endl;
-  for (auto value : c.my_vector_of_string) {
+  for (auto value : c.my_vector_of_string()) {
     os << "    " << value << "," << std::endl;
   }
   os << "]" << std::endl;
   os << "  my_vector_of_uint16: [" << std::endl;
-  for (auto value : c.my_vector_of_uint16) {
+  for (auto value : c.my_vector_of_uint16()) {
     os << "    " << value << "," << std::endl;
   }
   os << "]" << std::endl;
   os << "  my_vector_of_uint32: [" << std::endl;
-  for (auto value : c.my_vector_of_uint32) {
+  for (auto value : c.my_vector_of_uint32()) {
     os << "    " << value << "," << std::endl;
   }
   os << "]" << std::endl;
   os << "  my_vector_of_uint64: [" << std::endl;
-  for (auto value : c.my_vector_of_uint64) {
+  for (auto value : c.my_vector_of_uint64()) {
     os << "    " << value << "," << std::endl;
   }
   os << "]" << std::endl;
   os << "  my_vector_of_uint8: [" << std::endl;
-  for (auto value : c.my_vector_of_uint8) {
+  for (auto value : c.my_vector_of_uint8()) {
     os << "    " << value << "," << std::endl;
   }
   os << "]" << std::endl;
@@ -197,6 +197,7 @@ std::vector<std::string> from_vector_string_view(
   }
   return data;
 }
+
 Config Config::from_args() noexcept {
   // Get the VMO containing FIDL config
   zx_handle_t config_vmo_handle = zx_take_startup_handle(PA_CONFIG_VMO);
@@ -236,7 +237,8 @@ Config Config::from_args() noexcept {
   status = config_vmo.read(fidl_struct.get(), header, fidl_struct_size);
   ZX_ASSERT_MSG(status == ZX_OK, "Could not read FIDL struct from config VMO");
 
-  // Decode the FIDL struct
+  // TODO(https://fxbug.dev/100147) use fidl::Unpersist(header_and_struct_bytes)
+  // instead Decode the FIDL struct
   fidl::unstable::DecodedMessage<::my_config_lib::wire::Config> decoded(
       fidl::internal::WireFormatVersion::kV2, fidl_struct.get(),
       static_cast<uint32_t>(fidl_struct_size));
@@ -245,27 +247,31 @@ Config Config::from_args() noexcept {
 
   // Convert the configuration into a new struct
   Config c{
-      .my_flag = fidl_config->my_flag,
-      .my_int16 = fidl_config->my_int16,
-      .my_int32 = fidl_config->my_int32,
-      .my_int64 = fidl_config->my_int64,
-      .my_int8 = fidl_config->my_int8,
-      .my_string = std::string(fidl_config->my_string.get()),
-      .my_uint16 = fidl_config->my_uint16,
-      .my_uint32 = fidl_config->my_uint32,
-      .my_uint64 = fidl_config->my_uint64,
-      .my_uint8 = fidl_config->my_uint8,
-      .my_vector_of_flag = from_vector_view(fidl_config->my_vector_of_flag),
-      .my_vector_of_int16 = from_vector_view(fidl_config->my_vector_of_int16),
-      .my_vector_of_int32 = from_vector_view(fidl_config->my_vector_of_int32),
-      .my_vector_of_int64 = from_vector_view(fidl_config->my_vector_of_int64),
-      .my_vector_of_int8 = from_vector_view(fidl_config->my_vector_of_int8),
-      .my_vector_of_string =
-          from_vector_string_view(fidl_config->my_vector_of_string),
-      .my_vector_of_uint16 = from_vector_view(fidl_config->my_vector_of_uint16),
-      .my_vector_of_uint32 = from_vector_view(fidl_config->my_vector_of_uint32),
-      .my_vector_of_uint64 = from_vector_view(fidl_config->my_vector_of_uint64),
-      .my_vector_of_uint8 = from_vector_view(fidl_config->my_vector_of_uint8)};
+      {.my_flag = fidl_config->my_flag,
+       .my_int16 = fidl_config->my_int16,
+       .my_int32 = fidl_config->my_int32,
+       .my_int64 = fidl_config->my_int64,
+       .my_int8 = fidl_config->my_int8,
+       .my_string = std::string(fidl_config->my_string.get()),
+       .my_uint16 = fidl_config->my_uint16,
+       .my_uint32 = fidl_config->my_uint32,
+       .my_uint64 = fidl_config->my_uint64,
+       .my_uint8 = fidl_config->my_uint8,
+       .my_vector_of_flag = from_vector_view(fidl_config->my_vector_of_flag),
+       .my_vector_of_int16 = from_vector_view(fidl_config->my_vector_of_int16),
+       .my_vector_of_int32 = from_vector_view(fidl_config->my_vector_of_int32),
+       .my_vector_of_int64 = from_vector_view(fidl_config->my_vector_of_int64),
+       .my_vector_of_int8 = from_vector_view(fidl_config->my_vector_of_int8),
+       .my_vector_of_string =
+           from_vector_string_view(fidl_config->my_vector_of_string),
+       .my_vector_of_uint16 =
+           from_vector_view(fidl_config->my_vector_of_uint16),
+       .my_vector_of_uint32 =
+           from_vector_view(fidl_config->my_vector_of_uint32),
+       .my_vector_of_uint64 =
+           from_vector_view(fidl_config->my_vector_of_uint64),
+       .my_vector_of_uint8 =
+           from_vector_view(fidl_config->my_vector_of_uint8)}};
 
   return c;
 }

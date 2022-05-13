@@ -232,7 +232,7 @@ fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
     const fshost_config::Config* config, std::shared_ptr<FshostBootArgs> boot_args) {
   fuchsia_fs_startup::wire::StartOptions options;
   options.write_compression_level = -1;
-  options.sandbox_decompression = config->sandbox_decompression;
+  options.sandbox_decompression = config->sandbox_decompression();
   if (boot_args) {
     std::optional<std::string> algorithm = boot_args->blobfs_write_compression_algorithm();
     if (algorithm == "UNCOMPRESSED") {
@@ -568,7 +568,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
   switch (format_) {
     case fs_management::kDiskFormatF2fs:
     case fs_management::kDiskFormatFxfs: {
-      std::string binary_path = device_config_->data_filesystem_binary_path;
+      std::string binary_path = device_config_->data_filesystem_binary_path();
       FX_LOGS(INFO) << "Starting fsck with binary " << binary_path;
       status = CheckCustomFilesystem(binary_path);
       break;
@@ -636,7 +636,7 @@ zx_status_t BlockDevice::FormatFilesystem() {
     }
     case fs_management::kDiskFormatFxfs:
     case fs_management::kDiskFormatF2fs: {
-      const auto binary_path = device_config_->data_filesystem_binary_path;
+      const auto binary_path = device_config_->data_filesystem_binary_path();
       if (binary_path.empty()) {
         FX_LOGS(ERROR) << "Attempting to format a filesystem that requires an external binary, but "
                        << "data_filesystem_binary_path is not specified; this is most likely a "
@@ -804,7 +804,7 @@ zx_status_t BlockDevice::MountData(fs_management::MountOptions* options, zx::cha
   if (gpt_is_sys_guid(guid, GPT_GUID_LEN)) {
     return ZX_ERR_NOT_SUPPORTED;
   } else if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
-    if (device_config_->fs_switch && content_format() == fs_management::kDiskFormatMinfs) {
+    if (device_config_->fs_switch() && content_format() == fs_management::kDiskFormatMinfs) {
       MaybeChangeDataPartitionFormat();
     }
     return mounter_->MountData(std::move(block_device), *options, content_format());
@@ -1024,7 +1024,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     }
   }
 
-  uint64_t slice_count = device_config_->data_max_bytes / slice_size;
+  uint64_t slice_count = device_config_->data_max_bytes() / slice_size;
 
   if (slice_count == 0) {
     auto query_result = fidl::WireCall(volume_client)->GetVolumeInfo();

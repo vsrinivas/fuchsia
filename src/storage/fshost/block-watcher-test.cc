@@ -33,17 +33,17 @@ namespace {
 
 fshost_config::Config FactoryOptions() {
   auto options = fshost::DefaultConfig();
-  options.factory = true;
+  options.factory() = true;
   return options;
 }
 fshost_config::Config DurableOptions() {
   auto options = fshost::DefaultConfig();
-  options.durable = true;
+  options.durable() = true;
   return options;
 }
 fshost_config::Config NandOptions() {
   auto options = fshost::DefaultConfig();
-  options.nand = true;
+  options.nand() = true;
   return options;
 }
 
@@ -113,7 +113,7 @@ TEST(AddDeviceTestCase, AddFVMDevice) {
 // Tests adding a device with an MBR format.
 TEST(AddDeviceTestCase, AddMBRDevice) {
   auto config = fshost::DefaultConfig();
-  config.mbr = true;
+  config.mbr() = true;
   BlockDeviceManager manager(&config);
   MockBlockDevice device(MockBlockDevice::Options{
       .content_format = fs_management::kDiskFormatMbr,
@@ -265,7 +265,7 @@ TEST(AddDeviceTestCase, AddValidBlobDevice) {
 
 TEST(AddDeviceTestCase, NetbootingDoesNotMountBlobfs) {
   auto config = fshost::DefaultConfig();
-  config.netboot = true;
+  config.netboot() = true;
   BlockDeviceManager manager(&config);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
@@ -308,7 +308,7 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDeviceWithFormatOnCorruptionEnabled) {
     }
   };
   auto config = fshost::DefaultConfig();
-  EXPECT_TRUE(config.format_data_on_corruption);
+  EXPECT_TRUE(config.format_data_on_corruption());
   BlockDeviceManager manager(&config);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
@@ -335,7 +335,7 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDeviceWithFormatOnCorruptionDisabled) {
     }
   };
   auto config = fshost::DefaultConfig();
-  config.format_data_on_corruption = false;
+  config.format_data_on_corruption() = false;
   BlockDeviceManager manager(&config);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
@@ -383,7 +383,7 @@ TEST(AddDeviceTestCase, FormatMinfsDeviceWithZxcrypt) {
 
 TEST(AddDeviceTestCase, MinfsWithNoZxcryptOptionMountsWithoutZxcrypt) {
   auto config = fshost::DefaultConfig();
-  config.no_zxcrypt = true;
+  config.no_zxcrypt() = true;
   BlockDeviceManager manager(&config);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
@@ -399,7 +399,7 @@ TEST(AddDeviceTestCase, MinfsRamdiskMounts) {
   // The fvm-ramdisk option will check that the topological path actually has an expected ramdisk
   // prefix.
   auto config = fshost::DefaultConfig();
-  config.fvm_ramdisk = true;
+  config.fvm_ramdisk() = true;
   BlockDeviceManager manager(&config);
   auto options = MockBlockDevice::FvmOptions();
   constexpr std::string_view kBasePath = "/dev/sys/platform/00:00:2d/ramctl/mock_device/block";
@@ -416,8 +416,8 @@ TEST(AddDeviceTestCase, MinfsRamdiskMounts) {
 
 TEST(AddDeviceTestCase, MinfsRamdiskDeviceNotRamdiskDoesNotMount) {
   auto config = fshost::DefaultConfig();
-  config.fvm_ramdisk = true;
-  config.zxcrypt_non_ramdisk = true;
+  config.fvm_ramdisk() = true;
+  config.zxcrypt_non_ramdisk() = true;
   BlockDeviceManager manager(&config);
   auto fvm_options = MockBlockDevice::FvmOptions();
   fvm_options.topological_path = "/dev/sys/platform/00:00:2d/ramctl/mock_device/block";
@@ -434,7 +434,7 @@ TEST(AddDeviceTestCase, MinfsRamdiskDeviceNotRamdiskDoesNotMount) {
 
 TEST(AddDeviceTestCase, MinfsRamdiskWithoutZxcryptAttachOption) {
   auto config = fshost::DefaultConfig();
-  config.fvm_ramdisk = true;
+  config.fvm_ramdisk() = true;
   BlockDeviceManager manager(&config);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
@@ -446,7 +446,7 @@ TEST(AddDeviceTestCase, MinfsWithAlternateNameMounts) {
   for (int pass = 0; pass < 2; ++pass) {
     auto config = fshost::DefaultConfig();
     if (pass == 1)
-      config.allow_legacy_data_partition_names = true;
+      config.allow_legacy_data_partition_names() = true;
     for (const auto& name :
          {kDataPartitionLabel, std::string_view("minfs"), std::string_view("fuchsia-data")}) {
       BlockDeviceManager manager(&config);
@@ -717,7 +717,7 @@ TEST(AddDeviceTestCase, MultipleGptDevicesDoNotMatch) {
 
 TEST(AddDeviceTestCase, MultipleGptDevicesWithGptAllOptionMatch) {
   auto config = fshost::DefaultConfig();
-  config.gpt_all = true;
+  config.gpt_all() = true;
   BlockDeviceManager manager(&config);
   {
     MockBlockDevice gpt_device(MockBlockDevice::GptOptions());

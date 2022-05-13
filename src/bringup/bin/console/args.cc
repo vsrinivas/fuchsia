@@ -54,8 +54,8 @@ void RemoveIntersection(std::vector<T>& first, const std::vector<T>& second) {
 
 zx_status_t ParseArgs(console_config::Config&& config,
                       const fidl::WireSyncClient<fuchsia_boot::Arguments>& client, Options* opts) {
-  opts->allowed_log_tags = std::move(config.allowed_log_tags);
-  opts->denied_log_tags = std::move(config.denied_log_tags);
+  opts->allowed_log_tags = std::move(config.allowed_log_tags());
+  opts->denied_log_tags = std::move(config.denied_log_tags());
 
   zx::status<Options> boot_args = GetBootArguments(client);
   if (boot_args.is_error()) {

@@ -18,6 +18,7 @@ if (is_host) {
       "templates/cpp_elf.cc.hbs",
       "templates/cpp_driver.cc.hbs",
       "templates/cpp_driver.h.hbs",
+      "templates/typedef.h.hbs",
       "templates/vmo_parse.cc.hbs",
       "templates/helpers.cc.hbs",
     ]

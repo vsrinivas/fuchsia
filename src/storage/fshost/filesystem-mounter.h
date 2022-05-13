@@ -37,8 +37,8 @@ class FilesystemMounter {
     return fshost_.TakePkgfsServerEnd();
   }
 
-  bool Netbooting() const { return config_.netboot; }
-  bool ShouldCheckFilesystems() const { return config_.check_filesystems; }
+  bool Netbooting() const { return config_.netboot(); }
+  bool ShouldCheckFilesystems() const { return config_.check_filesystems(); }
 
   // Attempts to mount a block device to "/data".
   // Fails if already mounted.

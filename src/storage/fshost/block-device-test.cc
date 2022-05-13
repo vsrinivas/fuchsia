@@ -213,7 +213,7 @@ TEST_F(BlockDeviceTest, TestMinfsGoodGUID) {
 
 TEST_F(BlockDeviceTest, TestMinfsReformat) {
   auto config = EmptyConfig();
-  config.check_filesystems = true;
+  config.check_filesystems() = true;
   FilesystemMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.
@@ -235,7 +235,7 @@ TEST_F(BlockDeviceTest, TestMinfsReformat) {
 
 TEST_F(BlockDeviceTest, TestBlobfs) {
   auto config = EmptyConfig();
-  config.check_filesystems = true;
+  config.check_filesystems() = true;
   FilesystemMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.
@@ -257,7 +257,7 @@ TEST_F(BlockDeviceTest, TestBlobfs) {
 
 TEST_F(BlockDeviceTest, TestCorruptionEventLogged) {
   auto config = EmptyConfig();
-  config.check_filesystems = true;
+  config.check_filesystems() = true;
   FilesystemMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.
@@ -325,7 +325,7 @@ std::pair<fbl::unique_fd, fbl::unique_fd> SetupLog() {
 TEST_F(BlockDeviceTest, ExtractMinfsOnCorruptionToLog) {
   auto fd_pair = SetupLog();
   auto config = EmptyConfig();
-  config.check_filesystems = true;
+  config.check_filesystems() = true;
   FilesystemMounter mounter(manager_, &config);
 
   // Initialize Ramdisk with a data GUID.

@@ -24,48 +24,49 @@ class EchoServer : public test::placeholders::Echo {
     std::string intercept = value.value_or("");
 
     std::string return_value =
-        intercept + " [" + std::to_string(config.my_flag) + "][" + std::to_string(config.my_uint8) +
-        "][" + std::to_string(config.my_uint16) + "][" + std::to_string(config.my_uint32) + "][" +
-        std::to_string(config.my_uint64) + "][" + std::to_string(config.my_int8) + "][" +
-        std::to_string(config.my_int16) + "][" + std::to_string(config.my_int32) + "][" +
-        std::to_string(config.my_int64) + "][" + config.my_string + "][";
-    for (const auto& value : config.my_vector_of_flag) {
+        intercept + " [" + std::to_string(config.my_flag()) + "][" +
+        std::to_string(config.my_uint8()) + "][" + std::to_string(config.my_uint16()) + "][" +
+        std::to_string(config.my_uint32()) + "][" + std::to_string(config.my_uint64()) + "][" +
+        std::to_string(config.my_int8()) + "][" + std::to_string(config.my_int16()) + "][" +
+        std::to_string(config.my_int32()) + "][" + std::to_string(config.my_int64()) + "][" +
+        config.my_string() + "][";
+    for (const auto& value : config.my_vector_of_flag()) {
       return_value += std::to_string(value) + ",";
     }
     return_value += "][";
-    for (const auto& value : config.my_vector_of_uint8) {
+    for (const auto& value : config.my_vector_of_uint8()) {
       return_value += std::to_string(value) + ",";
     }
     return_value += "][";
-    for (const auto& value : config.my_vector_of_uint16) {
+    for (const auto& value : config.my_vector_of_uint16()) {
       return_value += std::to_string(value) + ",";
     }
     return_value += "][";
-    for (const auto& value : config.my_vector_of_uint32) {
+    for (const auto& value : config.my_vector_of_uint32()) {
       return_value += std::to_string(value) + ",";
     }
     return_value += "][";
-    for (const auto& value : config.my_vector_of_uint64) {
+    for (const auto& value : config.my_vector_of_uint64()) {
       return_value += std::to_string(value) + ",";
     }
     return_value += "][";
-    for (const auto& value : config.my_vector_of_int8) {
+    for (const auto& value : config.my_vector_of_int8()) {
       return_value += std::to_string(value) + ",";
     }
     return_value += "][";
-    for (const auto& value : config.my_vector_of_int16) {
+    for (const auto& value : config.my_vector_of_int16()) {
       return_value += std::to_string(value) + ",";
     }
     return_value += "][";
-    for (const auto& value : config.my_vector_of_int32) {
+    for (const auto& value : config.my_vector_of_int32()) {
       return_value += std::to_string(value) + ",";
     }
     return_value += "][";
-    for (const auto& value : config.my_vector_of_int64) {
+    for (const auto& value : config.my_vector_of_int64()) {
       return_value += std::to_string(value) + ",";
     }
     return_value += "][";
-    for (const auto& value : config.my_vector_of_string) {
+    for (const auto& value : config.my_vector_of_string()) {
       return_value += value + ",";
     }
     return_value += "]";

@@ -167,7 +167,7 @@ TEST_F(FshostBootArgsTest, BlobfsStartOptionsChunkedEvictSandbox) {
   ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(boot_config));
 
   auto fshost_config = EmptyConfig();
-  fshost_config.sandbox_decompression = true;
+  fshost_config.sandbox_decompression() = true;
 
   startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared());
   ASSERT_EQ(options.write_compression_algorithm, startup::wire::CompressionAlgorithm::kZstdChunked);
@@ -186,7 +186,7 @@ TEST_F(FshostBootArgsTest, BlobfsStartOptionsGarbage) {
   // don't care about. This is the equivalent of putting "sandbox-decompression=GARBAGE_VALUE" in
   // the fshost config file.
   auto fshost_config = EmptyConfig();
-  fshost_config.sandbox_decompression = true;
+  fshost_config.sandbox_decompression() = true;
 
   startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared());
   ASSERT_EQ(options.write_compression_algorithm, startup::wire::CompressionAlgorithm::kZstdChunked);

@@ -146,7 +146,7 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
   }
 
   fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client;
-  std::string binary_path = config_.data_filesystem_binary_path;
+  std::string binary_path = config_.data_filesystem_binary_path();
   // Config overrides passed in format.
   if (binary_path.empty()) {
     switch (format) {
@@ -270,7 +270,7 @@ void FilesystemMounter::ReportDataPartitionCorrupted() {
 }
 
 zx::status<> FilesystemMounter::MaybeInitCryptClient() {
-  if (config_.data_filesystem_binary_path != kFxfsPath) {
+  if (config_.data_filesystem_binary_path() != kFxfsPath) {
     FX_LOGS(INFO) << "Not initializing Crypt client due to configuration";
     return zx::ok();
   }
