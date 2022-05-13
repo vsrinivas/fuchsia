@@ -6,92 +6,144 @@ import("//build/components.gni")
 import("//build/dist/resource.gni")
 import("//build/rust/rustc_library.gni")
 
+lib_deps = [
+  "//garnet/lib/rust/io_util",
+  "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+  "//src/lib/assembly/util",
+  "//src/lib/fidl/rust/fidl",
+  "//src/lib/fuchsia-url",
+  "//src/lib/versioning/version-history/rust:version-history",
+  "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+  "//src/sys/pkg/lib/fuchsia-hash",
+  "//src/sys/pkg/lib/fuchsia-merkle",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:proptest",
+  "//third_party/rust_crates:serde",
+  "//third_party/rust_crates:serde_json",
+  "//third_party/rust_crates:tempfile",
+  "//third_party/rust_crates:thiserror",
+  "//third_party/rust_crates:walkdir",
+]
+
+test_deps = [
+  "//src/lib/fuchsia-async",
+  "//third_party/rust_crates:assert_matches",
+  "//third_party/rust_crates:lazy_static",
+  "//third_party/rust_crates:maplit",
+  "//third_party/rust_crates:pretty_assertions",
+  "//third_party/rust_crates:proptest-derive",
+  "//third_party/rust_crates:rand",
+  "//third_party/rust_crates:regex",
+  "//third_party/rust_crates:tempfile",
+]
+
+lib_sources = [
+  "src/build.rs",
+  "src/creation_manifest.rs",
+  "src/errors.rs",
+  "src/lib.rs",
+  "src/meta_contents.rs",
+  "src/meta_package.rs",
+  "src/package.rs",
+  "src/package_builder.rs",
+  "src/package_directory.rs",
+  "src/package_manifest.rs",
+  "src/package_manifest_list.rs",
+  "src/path.rs",
+  "src/path_to_string.rs",
+  "src/test.rs",
+]
+
 rustc_library("fuchsia-pkg") {
   version = "0.1.0"
   edition = "2018"
-  with_unit_tests = true
 
-  deps = [
-    "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/assembly/util",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-url",
-    "//src/lib/versioning/version-history/rust:version-history",
-    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-    "//src/sys/pkg/lib/fuchsia-hash",
-    "//src/sys/pkg/lib/fuchsia-merkle",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:proptest",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:walkdir",
-  ]
-
-  test_deps = [
-    "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:pretty_assertions",
-    "//third_party/rust_crates:proptest-derive",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:regex",
-    "//third_party/rust_crates:tempfile",
-  ]
-
-  sources = [
-    "src/build.rs",
-    "src/creation_manifest.rs",
-    "src/errors.rs",
-    "src/lib.rs",
-    "src/meta_contents.rs",
-    "src/meta_package.rs",
-    "src/package.rs",
-    "src/package_builder.rs",
-    "src/package_directory.rs",
-    "src/package_manifest.rs",
-    "src/package_manifest_list.rs",
-    "src/path.rs",
-    "src/path_to_string.rs",
-    "src/test.rs",
-  ]
+  deps = lib_deps
+  sources = lib_sources
 }
 
-resource("dup1") {
-  testonly = true
-  sources = [ "duplicate-blob.txt" ]
-  outputs = [ "data/dup1" ]
+if (is_fuchsia) {
+  fuchsia_package("package_for_archive") {
+    testonly = true
+    deps = [
+      ":dup1",
+      ":dup2",
+    ]
+  }
+
+  fuchsia_package_archive("test_package_archive") {
+    testonly = true
+    package = ":package_for_archive"
+  }
+
+  resource("dup1") {
+    testonly = true
+    sources = [ "duplicate-blob.txt" ]
+    outputs = [ "data/dup1" ]
+  }
+
+  resource("dup2") {
+    testonly = true
+    sources = [ "duplicate-blob.txt" ]
+    outputs = [ "data/dup2" ]
+  }
+
+  rustc_test("lib_test") {
+    output_name = "fuchsia_pkg_lib_test"
+    deps = lib_deps + test_deps
+    sources = lib_sources
+  }
+
+  fuchsia_component("test-component") {
+    component_name = "fuchsia-pkg-lib-test"
+    visibility = [ ":*" ]
+    testonly = true
+    deps = [
+      ":dup1",
+      ":dup2",
+      ":lib_test",
+    ]
+    manifest = "meta/fuchsia-pkg-tests.cml"
+  }
+
+  fuchsia_test_package("fuchsia-pkg-tests") {
+    test_components = [ ":test-component" ]
+  }
 }
 
-resource("dup2") {
-  testonly = true
-  sources = [ "duplicate-blob.txt" ]
-  outputs = [ "data/dup2" ]
-}
+if (is_host) {
+  # manually get path to output, dep'ing on the archive through the host toolchain causes a cycle
+  _archive_out_dir = get_label_info(":test_package_archive($default_toolchain)",
+                                    "target_out_dir")
+  _test_package_archive_path = "$_archive_out_dir/package_for_archive.far"
+  config("archived_package_path_config") {
+    rustenv = [ "TEST_PACKAGE_ARCHIVE=" +
+                rebase_path(_test_package_archive_path, "src") ]
+  }
 
-fuchsia_component("test-component") {
-  component_name = "fuchsia-pkg-lib-test"
-  visibility = [ ":*" ]
-  testonly = true
-  deps = [
-    ":dup1",
-    ":dup2",
-    ":fuchsia-pkg_test",
-  ]
-  manifest = "meta/fuchsia-pkg-tests.cml"
-}
+  rustc_test("lib_test") {
+    output_name = "fuchsia_pkg_lib_test"
+    deps =
+        lib_deps + test_deps + [ ":test_package_archive($default_toolchain)" ]
+    inputs = [ _test_package_archive_path ]
+    sources = lib_sources
+    configs += [
+      ":archived_package_path_config",
 
-fuchsia_test_package("fuchsia-pkg-tests") {
-  test_components = [ ":test-component" ]
+      # The archive file is referenced from the source dir *to* the
+      # output dir, which means the output dir leaks into the command.
+      # This command will only succeed with a matching output dir,
+      # so we must disable working-dir canonicalization.
+      "//build/config/rust:output_dir_sensitive",
+    ]
+    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
+  }
 }
 
 group("tests") {
   testonly = true
   public_deps = [
-    ":fuchsia-pkg-tests",
-    ":fuchsia-pkg_test($host_toolchain)",
+    ":fuchsia-pkg-tests($default_toolchain)",
+    ":lib_test($host_toolchain)",
   ]
 }
