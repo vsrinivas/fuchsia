@@ -165,6 +165,7 @@ group("cmx_allowlist") {
     "//src/connectivity/bluetooth/tools/dai-info:*",
     "//src/connectivity/bluetooth/tools/tests/bt-tool-cli-tests:*",
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm:*",
+    "//src/connectivity/lib/packet-formats:*",
     "//src/connectivity/lowpan/drivers/lowpan-dummy-driver:*",
     "//src/connectivity/lowpan/drivers/lowpan-ot-driver:*",
     "//src/connectivity/lowpan/drivers/lowpan-spinel-driver:*",

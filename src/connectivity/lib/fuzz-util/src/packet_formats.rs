@@ -9,19 +9,36 @@ use net_types::{
 };
 use packet::{Nested, NestedPacketBuilder as _};
 use packet_formats::{
-    ethernet::{EtherType, EthernetFrameBuilder},
+    ethernet::{EtherType, EthernetFrameBuilder, EthernetFrameLengthCheck},
+    icmp::IcmpParseArgs,
     ip::IpPacketBuilder,
     ipv4::Ipv4PacketBuilder,
     ipv6::Ipv6PacketBuilder,
-    tcp::TcpSegmentBuilder,
-    udp::UdpPacketBuilder,
+    tcp::{TcpParseArgs, TcpSegmentBuilder},
+    udp::{UdpPacketBuilder, UdpParseArgs},
 };
+use zerocopy::FromBytes;
 
 use crate::{zerocopy::ArbitraryFromBytes, Fuzzed};
 
 impl<'a> Arbitrary<'a> for Fuzzed<EtherType> {
     fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
         Ok(Self(u16::arbitrary(u)?.into()))
+    }
+}
+
+impl<'a> Arbitrary<'a> for Fuzzed<EthernetFrameLengthCheck> {
+    fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
+        const CHOICES: [EthernetFrameLengthCheck; 2] =
+            [EthernetFrameLengthCheck::Check, EthernetFrameLengthCheck::NoCheck];
+        // Define this with a match to ensure that CHOICES needs to be updated if
+        // EthernetFrameLengthCheck is changed.
+        u.choose(&CHOICES).map(|e| {
+            Self(match e {
+                EthernetFrameLengthCheck::Check => EthernetFrameLengthCheck::Check,
+                EthernetFrameLengthCheck::NoCheck => EthernetFrameLengthCheck::NoCheck,
+            })
+        })
     }
 }
 
@@ -66,6 +83,30 @@ impl<'a> Arbitrary<'a> for Fuzzed<Ipv6PacketBuilder> {
         builder.flowlabel(u.int_in_range(0..=(1 << 20 - 1))?);
 
         Ok(Self(builder))
+    }
+}
+
+impl<'a, A: IpAddress + FromBytes> Arbitrary<'a> for Fuzzed<IcmpParseArgs<A>> {
+    fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
+        let src = A::arbitrary_from_bytes(u)?;
+        let dst = A::arbitrary_from_bytes(u)?;
+        Ok(Self(IcmpParseArgs::new(src, dst)))
+    }
+}
+
+impl<'a, A: IpAddress + FromBytes> Arbitrary<'a> for Fuzzed<UdpParseArgs<A>> {
+    fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
+        let src = A::arbitrary_from_bytes(u)?;
+        let dst = A::arbitrary_from_bytes(u)?;
+        Ok(Self(UdpParseArgs::new(src, dst)))
+    }
+}
+
+impl<'a, A: IpAddress + FromBytes> Arbitrary<'a> for Fuzzed<TcpParseArgs<A>> {
+    fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
+        let src = A::arbitrary_from_bytes(u)?;
+        let dst = A::arbitrary_from_bytes(u)?;
+        Ok(Self(TcpParseArgs::new(src, dst)))
     }
 }
 

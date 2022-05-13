@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("packet-formats") {
@@ -68,9 +69,36 @@ fuchsia_unittest_package("packet-formats-test-package") {
   deps = [ ":packet-formats_test" ]
 }
 
+rustc_fuzzer("fuzz-parse-packet") {
+  sources = [ "fuzz/parse_packet.rs" ]
+  source_root = "fuzz/parse_packet.rs"
+  rustfunction = "fuzz_parse_packet"
+  deps = [
+    ":packet-formats",
+    "//src/connectivity/lib/fuzz-util",
+    "//src/connectivity/lib/net-types",
+    "//src/connectivity/lib/packet-formats-dhcp",
+    "//src/connectivity/ppp/lib/ppp_packet",
+    "//src/lib/mdns/rust:mdns",
+    "//src/lib/network/netsvc-proto",
+    "//src/lib/network/packet",
+    "//src/lib/zerocopy",
+    "//third_party/rust_crates:arbitrary",
+  ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust:no_features" ]
+  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
+}
+
+fuzzers_package("packet-formats-fuzzers") {
+  rust_fuzzers = [ ":fuzz-parse-packet" ]
+  fuzz_host = true
+}
+
 group("tests") {
   testonly = true
   public_deps = [
+    ":packet-formats-fuzzers",
     ":packet-formats-test-package",
     ":packet-formats_test($host_toolchain)",
   ]
