@@ -78,11 +78,11 @@ void TestView::DrawCoordinateGrid() {
   scenic::EntityNode root_node(session_.get());
   test_view_->AddChild(root_node);
 
-  auto view_width = width();
-  auto view_height = height();
+  const float view_width = width();
+  const float view_height = height();
 
-  static const float pane_width = view_width / 2;
-  static const float pane_height = view_height / 2;
+  const float pane_width = view_width / 2;
+  const float pane_height = view_height / 2;
 
   for (uint8_t i = 0; i < 2; i++) {
     for (uint8_t j = 0; j < 2; j++) {

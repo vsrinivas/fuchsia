@@ -15,8 +15,8 @@ void CoordinateTestView::Draw(float cx, float cy, float sx, float sy) {
   EntityNode root_node(session());
   view()->AddChild(root_node);
 
-  static const float pane_width = sx / 2;
-  static const float pane_height = sy / 2;
+  const float pane_width = sx / 2;
+  const float pane_height = sy / 2;
 
   for (uint8_t i = 0; i < 2; i++) {
     for (uint8_t j = 0; j < 2; j++) {
