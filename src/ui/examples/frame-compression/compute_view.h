@@ -7,7 +7,6 @@
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect/cpp/value_list.h>
 #include <lib/inspect/cpp/vmo/types.h>
 
 #include "base_view.h"

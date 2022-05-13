@@ -632,7 +632,7 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
         MAGMA_LOG(INFO, "%s", str.c_str());
       }
       InspectEvent event(&events_, "gpu_irq");
-      event.node.CreateUint("irq", irq_status.reg_value(), &event.properties);
+      event.node.RecordUint("irq", irq_status.reg_value());
 
       AppendInspectEvent(std::move(event));
     }
@@ -1630,8 +1630,8 @@ void MsdArmDevice::SetCurrentThreadToDefaultPriority() {
 MsdArmDevice::InspectEvent::InspectEvent(inspect::Node* parent, std::string type) {
   static std::atomic_uint64_t event_count;
   node = parent->CreateChild(std::to_string(event_count++));
-  node.CreateUint("@time", magma::get_monotonic_ns(), &properties);
-  node.CreateString("type", std::move(type), &properties);
+  node.RecordUint("@time", magma::get_monotonic_ns());
+  node.RecordString("type", std::move(type));
 }
 
 void MsdArmDevice::AppendInspectEvent(InspectEvent event) {

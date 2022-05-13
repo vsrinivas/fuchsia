@@ -728,13 +728,13 @@ std::optional<ArmMaliResultCode> MsdArmConnection::AllocateNewJitMemoryRegion(
   static std::atomic_uint64_t region_num;
   region.node = jit_regions_.CreateChild(std::to_string(region_num++));
   region.id_property = region.node.CreateUint("id", 0);
-  region.node.CreateUint("gpu_address", region.gpu_address, &region.properties);
-  region.node.CreateUint("size", region.buffer->platform_buffer()->size(), &region.properties);
-  region.node.CreateUint("usage_id", region.usage_id, &region.properties);
-  region.node.CreateUint("bin_id", region.bin_id, &region.properties);
-  region.node.CreateUint("koid", region.buffer->platform_buffer()->id(), &region.properties);
-  region.node.CreateUint("extend_page_count", info.extend_page_count, &region.properties);
-  region.node.CreateUint("max_allocations", info.max_allocations, &region.properties);
+  region.node.RecordUint("gpu_address", region.gpu_address);
+  region.node.RecordUint("size", region.buffer->platform_buffer()->size());
+  region.node.RecordUint("usage_id", region.usage_id);
+  region.node.RecordUint("bin_id", region.bin_id);
+  region.node.RecordUint("koid", region.buffer->platform_buffer()->id());
+  region.node.RecordUint("extend_page_count", info.extend_page_count);
+  region.node.RecordUint("max_allocations", info.max_allocations);
   region.requested_comitted_pages_property =
       region.node.CreateUint("requested_comitted_pages", info.committed_page_count);
   region.comitted_page_count_property =

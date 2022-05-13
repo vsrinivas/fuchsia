@@ -110,7 +110,7 @@ class CobaltApp {
   CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
             fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,
             fit::callback<void()> shutdown, inspect::Node inspect_node,
-            inspect::Node inspect_config_node, inspect::ValueList inspect_values,
+            inspect::Node inspect_config_node,
             std::unique_ptr<CobaltServiceInterface> cobalt_service,
             std::unique_ptr<FuchsiaSystemClockInterface> validated_clock,
             bool start_event_aggregator_worker, bool watch_for_user_consent);
@@ -121,7 +121,6 @@ class CobaltApp {
 
   inspect::Node inspect_node_;
   inspect::Node inspect_config_node_;
-  inspect::ValueList inspect_values_;
 
   std::unique_ptr<CobaltServiceInterface> cobalt_service_;
 

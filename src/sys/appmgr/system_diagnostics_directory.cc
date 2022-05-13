@@ -11,7 +11,7 @@
 #include "debug_info_retriever.h"
 #include "lib/fpromise/promise.h"
 #include "lib/inspect/cpp/inspector.h"
-#include "lib/inspect/cpp/value_list.h"
+#include "lib/inspect/cpp/vmo/types.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"
 
@@ -146,20 +146,20 @@ fpromise::promise<inspect::Inspector> PopulateThreadInspect(zx::process* process
   GetThreads(process, &threads);
 
   for (const auto& thread : threads) {
-    inspect::ValueList values;
+    auto values = std::make_unique<inspect::ValueList>();
     auto koid_string = StringPrintf("%lu", thread.koid);
     auto thread_obj = inspector.GetRoot().CreateChild(koid_string);
-    thread_obj.CreateString("name", thread.name.data(), &values);
-    thread_obj.CreateInt("total_runtime", thread.runtime, &values);
+    thread_obj.CreateString("name", thread.name.data(), values.get());
+    thread_obj.CreateInt("total_runtime", thread.runtime, values.get());
     auto stack_obj = thread_obj.CreateChild("stack");
     zx_koid_t koids[] = {thread.koid};
     stack_obj.CreateString(
         "dump",
         StringPrintf("\n%s", component::DebugInfoRetriever::GetInfo(process, koids, 1).data()),
-        &values);
+        values.get());
 
-    values.emplace(std::move(thread_obj));
-    values.emplace(std::move(stack_obj));
+    values.get()->emplace(std::move(thread_obj));
+    values.get()->emplace(std::move(stack_obj));
     inspector.emplace(std::move(values));
   }
 

@@ -48,9 +48,9 @@ class InspectReaderTest : public gtest::RealLoopFixture {
   fidl::InterfaceRequestHandler<fuchsia::inspect::Tree> handler_;
 };
 
-inspect::ValueList RecordValues(inspect::Node& root) {
-  inspect::ValueList values;
-  root.CreateInt("val", 1, &values);
+std::unique_ptr<inspect::ValueList> RecordValues(inspect::Node& root) {
+  auto values = std::make_unique<inspect::ValueList>();
+  root.CreateInt("val", 1, values.get());
   root.CreateLazyNode(
       "test",
       [] {
@@ -66,7 +66,7 @@ inspect::ValueList RecordValues(inspect::Node& root) {
             &insp);
         return fpromise::make_ok_promise(std::move(insp));
       },
-      &values);
+      values.get());
   root.CreateLazyNode(
       "next",
       [] {
@@ -74,13 +74,13 @@ inspect::ValueList RecordValues(inspect::Node& root) {
         insp.GetRoot().CreateInt("val4", 4, &insp);
         return fpromise::make_ok_promise(std::move(insp));
       },
-      &values);
+      values.get());
   root.CreateLazyNode(
       "node_error", [] { return fpromise::make_result_promise<Inspector>(fpromise::error()); },
-      &values);
+      values.get());
   root.CreateLazyNode(
       "values_error", [] { return fpromise::make_result_promise<Inspector>(fpromise::error()); },
-      &values);
+      values.get());
 
   return values;
 }

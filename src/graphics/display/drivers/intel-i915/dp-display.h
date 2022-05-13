@@ -164,7 +164,6 @@ struct DpCapabilities final {
   std::optional<Edp> edp_dpcd_;
 
   inspect::Node node_;
-  inspect::ValueList inspect_properties_;
 };
 
 class DpDisplay : public DisplayDevice {

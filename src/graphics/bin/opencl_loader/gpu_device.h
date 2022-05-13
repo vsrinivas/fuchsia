@@ -28,7 +28,6 @@ class GpuDevice {
  protected:
   struct IcdData {
     inspect::Node node;
-    inspect::ValueList values;
   };
 
   explicit GpuDevice(LoaderApp* app) : app_(app) {}

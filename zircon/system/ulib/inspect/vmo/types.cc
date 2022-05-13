@@ -346,6 +346,7 @@ Node& Node::operator=(Node&& other) noexcept {
   state_ = std::move(other.state_);
   name_index_ = std::move(other.name_index_);
   value_index_ = std::move(other.value_index_);
+  value_list_ = std::move(other.value_list_);
   return *this;
 }
 
@@ -356,11 +357,21 @@ Node Node::CreateChild(BorrowedStringValue name) {
   return Node();
 }
 
+void Node::RecordChild(BorrowedStringValue name, RecordChildCallbackFn callback) {
+  auto node = CreateChild(name);
+  callback(node);
+  value_list_.emplace(std::move(node));
+}
+
 IntProperty Node::CreateInt(BorrowedStringValue name, int64_t value) {
   if (state_) {
     return state_->CreateIntProperty(name, value_index_, value);
   }
   return IntProperty();
+}
+
+void Node::RecordInt(BorrowedStringValue name, int64_t value) {
+  value_list_.emplace(CreateInt(name, value));
 }
 
 UintProperty Node::CreateUint(BorrowedStringValue name, uint64_t value) {
@@ -370,11 +381,19 @@ UintProperty Node::CreateUint(BorrowedStringValue name, uint64_t value) {
   return UintProperty();
 }
 
+void Node::RecordUint(BorrowedStringValue name, int64_t value) {
+  value_list_.emplace(CreateUint(name, value));
+}
+
 DoubleProperty Node::CreateDouble(BorrowedStringValue name, double value) {
   if (state_) {
     return state_->CreateDoubleProperty(name, value_index_, value);
   }
   return DoubleProperty();
+}
+
+void Node::RecordDouble(BorrowedStringValue name, double value) {
+  value_list_.emplace(CreateDouble(name, value));
 }
 
 BoolProperty Node::CreateBool(BorrowedStringValue name, bool value) {
@@ -384,11 +403,19 @@ BoolProperty Node::CreateBool(BorrowedStringValue name, bool value) {
   return BoolProperty();
 }
 
+void Node::RecordBool(BorrowedStringValue name, bool value) {
+  value_list_.emplace(CreateBool(name, value));
+}
+
 StringProperty Node::CreateString(BorrowedStringValue name, const std::string& value) {
   if (state_) {
     return state_->CreateStringProperty(name, value_index_, value);
   }
   return StringProperty();
+}
+
+void Node::RecordString(BorrowedStringValue name, const std::string& value) {
+  value_list_.emplace(CreateString(name, value));
 }
 
 ByteVectorProperty Node::CreateByteVector(BorrowedStringValue name,
@@ -397,6 +424,10 @@ ByteVectorProperty Node::CreateByteVector(BorrowedStringValue name,
     return state_->CreateByteVectorProperty(name, value_index_, value);
   }
   return ByteVectorProperty();
+}
+
+void Node::RecordByteVector(BorrowedStringValue name, cpp20::span<const uint8_t> value) {
+  value_list_.emplace(CreateByteVector(name, value));
 }
 
 IntArray Node::CreateIntArray(BorrowedStringValue name, size_t slots) {

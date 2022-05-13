@@ -6,13 +6,13 @@ import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 
-fuchsia_unittest_package("inspect-unittest-package") {
+fuchsia_unittest_package("inspect-cpp-unittest") {
   deps = [ ":inspect" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":inspect-unittest-package" ]
+  deps = [ ":inspect-cpp-unittest" ]
 }
 
 test("inspect") {

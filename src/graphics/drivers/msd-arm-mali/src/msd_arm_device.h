@@ -187,7 +187,6 @@ class MsdArmDevice : public msd_device_t,
     InspectEvent(inspect::Node* parent, std::string type);
 
     inspect::Node node;
-    inspect::ValueList properties;
   };
 
   mali::RegisterIo* register_io() override {

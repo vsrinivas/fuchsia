@@ -259,7 +259,7 @@ to help you get started.
   in your component's Inspect output. This is true for child Nodes as well.
 
   If you are creating a value that doesn't need to be modified, use a
-  [`ValueList`](/zircon/system/ulib/inspect/include/lib/inspect/cpp/value_list.h)
+  [`ValueList`](/zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h)
   to keep them alive until they are no longer needed.
 
   * Inspection is best-effort.

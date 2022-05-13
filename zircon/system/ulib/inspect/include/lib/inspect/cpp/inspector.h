@@ -6,7 +6,6 @@
 #define LIB_INSPECT_CPP_INSPECTOR_H_
 
 #include <lib/fpromise/result.h>
-#include <lib/inspect/cpp/value_list.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/zx/vmo.h>
 

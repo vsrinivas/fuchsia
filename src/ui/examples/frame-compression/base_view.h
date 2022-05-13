@@ -6,7 +6,6 @@
 #define SRC_UI_EXAMPLES_FRAME_COMPRESSION_BASE_VIEW_H_
 
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect/cpp/value_list.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>

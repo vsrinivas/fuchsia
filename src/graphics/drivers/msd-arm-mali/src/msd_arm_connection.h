@@ -153,7 +153,6 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
     uint64_t committed_pages;
     std::shared_ptr<MsdArmBuffer> buffer;
     inspect::Node node;
-    inspect::ValueList properties;
     inspect::UintProperty id_property;
     inspect::UintProperty comitted_page_count_property;
     inspect::UintProperty requested_comitted_pages_property;

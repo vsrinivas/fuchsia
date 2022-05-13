@@ -49,10 +49,9 @@ bool GoldfishDevice::Initialize(int dir_fd, std::string name, inspect::Node* par
     app()->RemoveDevice(this);
   });
 
-  IcdData data;
-  data.node = node().CreateChild("0");
+  auto data = node().CreateChild("0");
   std::string component_url = "fuchsia-pkg://fuchsia.com/libvulkan_goldfish#meta/vulkan.cm";
-  data.node.CreateString("component_url", component_url, &data.values);
+  data.RecordString("component_url", component_url);
 
   icd_list_.Add(app()->CreateIcdComponent(component_url));
   icds().push_back(std::move(data));

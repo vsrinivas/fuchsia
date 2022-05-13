@@ -136,15 +136,14 @@ CobaltApp CobaltApp::CreateCobaltApp(
     bool start_event_aggregator_worker, bool use_memory_observation_store,
     size_t max_bytes_per_observation_store, StorageQuotas storage_quotas,
     const std::string& product_name, const std::string& board_name, const std::string& version) {
-  inspect::ValueList inspect_values;
   inspect::Node inspect_config_node = inspect_node.CreateChild("configuration_data");
-  inspect_config_node.CreateString("product_name", product_name, &inspect_values);
-  inspect_config_node.CreateString("board_name", board_name, &inspect_values);
-  inspect_config_node.CreateString("version", version, &inspect_values);
+  inspect_config_node.RecordString("product_name", product_name);
+  inspect_config_node.RecordString("board_name", board_name);
+  inspect_config_node.RecordString("version", version);
 
   // Create the configuration data from the data in the filesystem.
   FuchsiaConfigurationData configuration_data;
-  configuration_data.PopulateInspect(inspect_config_node, inspect_values);
+  configuration_data.PopulateInspect(inspect_config_node);
 
   sys::ComponentContext* context_ptr = context.get();
 
@@ -167,7 +166,7 @@ CobaltApp CobaltApp::CreateCobaltApp(
 
   return CobaltApp(std::move(context), dispatcher, std::move(lifecycle_handle), std::move(shutdown),
                    std::move(inspect_node), std::move(inspect_config_node),
-                   std::move(inspect_values), std::move(cobalt_service), std::move(validated_clock),
+                   std::move(cobalt_service), std::move(validated_clock),
                    start_event_aggregator_worker, configuration_data.GetWatchForUserConsent());
 }
 
@@ -175,13 +174,12 @@ CobaltApp::CobaltApp(
     std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
     fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,
     fit::callback<void()> shutdown, inspect::Node inspect_node, inspect::Node inspect_config_node,
-    inspect::ValueList inspect_values, std::unique_ptr<CobaltServiceInterface> cobalt_service,
+    std::unique_ptr<CobaltServiceInterface> cobalt_service,
     std::unique_ptr<FuchsiaSystemClockInterface> validated_clock,
     bool start_event_aggregator_worker, bool watch_for_user_consent)
     : context_(std::move(context)),
       inspect_node_(std::move(inspect_node)),
       inspect_config_node_(std::move(inspect_config_node)),
-      inspect_values_(std::move(inspect_values)),
       cobalt_service_(std::move(cobalt_service)),
       validated_clock_(std::move(validated_clock)),
       timer_manager_(dispatcher) {

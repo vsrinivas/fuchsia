@@ -727,31 +727,25 @@ void LogicalBufferCollection::InitializeConstraintSnapshots(
     snapshot.inspect_node =
         inspect_node().CreateChild(CreateUniqueName("collection-at-allocation-"));
     if (constraints.constraints().has_min_buffer_count_for_camping()) {
-      snapshot.inspect_node.CreateUint("min_buffer_count_for_camping",
-                                       constraints.constraints().min_buffer_count_for_camping(),
-                                       &snapshot.node_constraints);
+      snapshot.inspect_node.RecordUint("min_buffer_count_for_camping",
+                                       constraints.constraints().min_buffer_count_for_camping());
     }
     if (constraints.constraints().has_min_buffer_count_for_shared_slack()) {
-      snapshot.inspect_node.CreateUint(
+      snapshot.inspect_node.RecordUint(
           "min_buffer_count_for_shared_slack",
-          constraints.constraints().min_buffer_count_for_shared_slack(),
-          &snapshot.node_constraints);
+          constraints.constraints().min_buffer_count_for_shared_slack());
     }
     if (constraints.constraints().has_min_buffer_count_for_dedicated_slack()) {
-      snapshot.inspect_node.CreateUint(
+      snapshot.inspect_node.RecordUint(
           "min_buffer_count_for_dedicated_slack",
-          constraints.constraints().min_buffer_count_for_dedicated_slack(),
-          &snapshot.node_constraints);
+          constraints.constraints().min_buffer_count_for_dedicated_slack());
     }
     if (constraints.constraints().has_min_buffer_count()) {
-      snapshot.inspect_node.CreateUint("min_buffer_count",
-                                       constraints.constraints().min_buffer_count(),
-                                       &snapshot.node_constraints);
+      snapshot.inspect_node.RecordUint("min_buffer_count",
+                                       constraints.constraints().min_buffer_count());
     }
-    snapshot.inspect_node.CreateUint("debug_id", constraints.client_debug_info().id,
-                                     &snapshot.node_constraints);
-    snapshot.inspect_node.CreateString("debug_name", constraints.client_debug_info().name,
-                                       &snapshot.node_constraints);
+    snapshot.inspect_node.RecordUint("debug_id", constraints.client_debug_info().id);
+    snapshot.inspect_node.RecordString("debug_name", constraints.client_debug_info().name);
     constraints_at_allocation_.push_back(std::move(snapshot));
   }
 }

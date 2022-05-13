@@ -6,7 +6,6 @@
 #define SRC_SYS_APPMGR_CPU_WATCHER_H_
 
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect/cpp/value_list.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/zx/job.h>
@@ -217,7 +216,7 @@ class CpuWatcher {
   zx_duration_t exited_queue_ __TA_GUARDED(mutex_) = 0;
   inspect::Node total_node_;
   size_t next_total_measurement_id_ __TA_GUARDED(mutex_) = 0;
-  std::deque<inspect::ValueList> total_measurements_ __TA_GUARDED(mutex_);
+  std::deque<inspect::Node> total_measurements_ __TA_GUARDED(mutex_);
 
   inspect::LazyNode recent_cpu_usage_;
   inspect::Node histograms_node_;

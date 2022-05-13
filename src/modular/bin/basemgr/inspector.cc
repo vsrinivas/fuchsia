@@ -25,7 +25,7 @@ void BasemgrInspector::AddConfig(const fuchsia::modular::session::ModularConfig&
 
 void BasemgrInspector::AddSessionStartedAt(zx_time_t timestamp) {
   auto& item = session_started_at_list_.CreateItem();
-  item.node.CreateInt(kInspectTimePropertyName, timestamp, &item.values);
+  item.node.RecordInt(kInspectTimePropertyName, timestamp);
 }
 
 }  // namespace modular

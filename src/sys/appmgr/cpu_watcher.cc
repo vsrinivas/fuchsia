@@ -147,11 +147,10 @@ void CpuWatcher::Measure() {
     inspect::ValueList value_list;
     inspect::Node total_measurement =
         total_node_.CreateChild(std::to_string(next_total_measurement_id_++));
-    total_measurement.CreateInt(kTimestamp, overall.timestamp, &value_list);
-    total_measurement.CreateInt(kCpuTime, overall.cpu_time, &value_list);
-    total_measurement.CreateInt(kQueueTime, overall.queue_time, &value_list);
-    value_list.emplace(std::move(total_measurement));
-    total_measurements_.emplace_back(std::move(value_list));
+    total_measurement.RecordInt(kTimestamp, overall.timestamp);
+    total_measurement.RecordInt(kCpuTime, overall.cpu_time);
+    total_measurement.RecordInt(kQueueTime, overall.queue_time);
+    total_measurements_.emplace_back(std::move(total_measurement));
     while (total_measurements_.size() > max_samples_) {
       total_measurements_.pop_front();
     }

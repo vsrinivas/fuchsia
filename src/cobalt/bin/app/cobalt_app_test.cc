@@ -172,8 +172,7 @@ class CobaltAppTest : public gtest::TestLoopFixture {
         cobalt_app_(
             context_provider_.TakeContext(), dispatcher(), lifecycle_.NewRequest(dispatcher()),
             []() { /* Stub shutdown callback */ }, inspector_.GetRoot().CreateChild("cobalt_app"),
-            inspect::Node(), inspect::ValueList(),
-            std::unique_ptr<testing::FakeCobaltService>(fake_service_),
+            inspect::Node(), std::unique_ptr<testing::FakeCobaltService>(fake_service_),
             std::unique_ptr<FakeFuchsiaSystemClock>(clock_), true, false) {}
 
  protected:

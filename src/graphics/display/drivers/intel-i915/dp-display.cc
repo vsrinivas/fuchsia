@@ -678,9 +678,9 @@ bool DpCapabilities::ProcessSupportedLinkRates(DpcdChannel* dp_aux) {
 }
 
 void DpCapabilities::PublishInspect() {
-  node_.CreateString("dpcd_revision", DpcdRevisionToString(dpcd_revision()), &inspect_properties_);
-  node_.CreateUint("sink_count", sink_count(), &inspect_properties_);
-  node_.CreateUint("max_lane_count", max_lane_count(), &inspect_properties_);
+  node_.RecordString("dpcd_revision", DpcdRevisionToString(dpcd_revision()));
+  node_.RecordUint("sink_count", sink_count());
+  node_.RecordUint("max_lane_count", max_lane_count());
 
   {
     auto node = node_.CreateUintArray("supported_link_rates_mbps_per_lane",
@@ -688,13 +688,13 @@ void DpCapabilities::PublishInspect() {
     for (size_t i = 0; i < supported_link_rates_mbps_.size(); ++i) {
       node.Add(i, supported_link_rates_mbps_[i]);
     }
-    inspect_properties_.emplace(std::move(node));
+    node_.Record(std::move(node));
   }
 
   {
     std::string value =
         edp_dpcd_.has_value() ? EdpDpcdRevisionToString(edp_dpcd_->revision) : "not supported";
-    node_.CreateString("edp_revision", std::move(value), &inspect_properties_);
+    node_.RecordString("edp_revision", std::move(value));
   }
 }
 

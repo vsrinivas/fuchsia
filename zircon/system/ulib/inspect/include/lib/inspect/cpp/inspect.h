@@ -6,7 +6,6 @@
 #define LIB_INSPECT_CPP_INSPECT_H_
 
 #include <lib/inspect/cpp/inspector.h>
-#include <lib/inspect/cpp/value_list.h>
 #include <lib/inspect/cpp/vmo/state.h>
 #include <lib/inspect/cpp/vmo/types.h>
 

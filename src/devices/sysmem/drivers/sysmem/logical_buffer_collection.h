@@ -39,7 +39,6 @@ class MemoryAllocator;
 // at a particular point in time.
 struct ConstraintInfoSnapshot {
   inspect::Node inspect_node;
-  inspect::ValueList node_constraints;
 };
 
 // TODO(dustingreen): MaybeAllocate() should sweep all related incoming channels for ZX_PEER_CLOSED

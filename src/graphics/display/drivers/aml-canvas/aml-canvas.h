@@ -41,7 +41,6 @@ struct CanvasEntry {
     pmt = std::move(right.pmt);
     vmo = std::move(right.vmo);
     node = std::move(right.node);
-    properties = std::move(right.properties);
     return *this;
   }
 
@@ -55,7 +54,6 @@ struct CanvasEntry {
   // process.  See fxbug.dev/75877.
   zx::vmo vmo;
   inspect::Node node;
-  inspect::ValueList properties;
 };
 
 class AmlCanvas : public DeviceType,

@@ -92,9 +92,9 @@ zx_status_t AmlCanvas::AmlogicCanvasConfig(zx::vmo vmo, size_t offset, const can
   entry.pmt = std::move(pmt);
   entry.vmo = std::move(vmo);
   entry.node = inspect_root_.CreateChild(std::to_string(index));
-  entry.node.CreateUint("width", width, &entry.properties);
-  entry.node.CreateUint("height", height, &entry.properties);
-  entry.node.CreateUint("pin_flags", pin_flags, &entry.properties);
+  entry.node.RecordUint("width", width);
+  entry.node.RecordUint("height", height);
+  entry.node.RecordUint("pin_flags", pin_flags);
 
   entries_[index] = std::move(entry);
 

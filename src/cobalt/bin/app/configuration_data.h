@@ -65,7 +65,7 @@ class FuchsiaConfigurationData {
   // Returns the cobalt API key. If it cannot be found, return the default API key.
   std::string GetApiKey() const;
 
-  void PopulateInspect(inspect::Node& inspect_node, inspect::ValueList& inspect_values) const;
+  void PopulateInspect(inspect::Node& inspect_node) const;
 
  private:
   static const char kDefaultConfigDir[];

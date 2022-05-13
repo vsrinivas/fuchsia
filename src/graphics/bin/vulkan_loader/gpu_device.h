@@ -22,21 +22,16 @@ class GpuDevice {
   uint64_t icd_count() { return icds_.size(); }
 
  protected:
-  struct IcdData {
-    inspect::Node node;
-    inspect::ValueList values;
-  };
-
   explicit GpuDevice(LoaderApp* app) : app_(app) {}
 
   LoaderApp* app() { return app_; }
   inspect::Node& node() { return node_; }
-  std::vector<IcdData>& icds() { return icds_; }
+  std::vector<inspect::Node>& icds() { return icds_; }
 
  private:
   LoaderApp* app_;
   inspect::Node node_;
-  std::vector<IcdData> icds_;
+  std::vector<inspect::Node> icds_;
 };
 
 #endif  // SRC_GRAPHICS_BIN_VULKAN_LOADER_GPU_DEVICE_H_

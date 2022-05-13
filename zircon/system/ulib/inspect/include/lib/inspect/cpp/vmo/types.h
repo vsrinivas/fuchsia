@@ -6,6 +6,7 @@
 #define LIB_INSPECT_CPP_VMO_TYPES_H_
 
 #include <lib/fit/function.h>
+#include <lib/fit/thread_safety.h>
 #include <lib/fpromise/promise.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/stdcompat/optional.h>
@@ -19,6 +20,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <mutex>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -29,6 +31,7 @@ class Inspector;
 
 using LazyNodeCallbackFn = fit::function<fpromise::promise<Inspector>()>;
 using AtomicUpdateCallbackFn = fit::function<void(Node&)>;
+using RecordChildCallbackFn = fit::function<void(Node&)>;
 
 // StringReference is a type that can be used as a name of a Node in the Inspect API.
 // Each StringReference will have a single allocation in the appropriate VMO.
@@ -75,6 +78,19 @@ using BorrowedStringValue = cpp17::variant<cpp17::string_view, StringReference>;
 
 namespace internal {
 class State;
+
+// Base class for ValueHolder types, which approximate std::any.
+struct BaseHolder {
+  virtual ~BaseHolder() = default;
+};
+
+// Holder for an arbitrary type.
+template <typename T>
+struct ValueHolder final : public BaseHolder {
+  explicit ValueHolder(T val) : value(std::move(val)) {}
+  ~ValueHolder() override = default;
+  T value;
+};
 
 // A property containing a templated numeric type. All methods wrap the
 // corresponding functionality on |State|, and concrete
@@ -436,7 +452,81 @@ enum StringReferenceWrapperDiscriminant {
   isStringLiteral,
   isStringReference,
 };
+
+class InnerValueList final {
+ public:
+  InnerValueList() = default;
+
+  // Disallow copy and assign.
+  InnerValueList(const InnerValueList&) = delete;
+  InnerValueList(InnerValueList&& other) = delete;
+  InnerValueList& operator=(const InnerValueList&) = delete;
+  InnerValueList& operator=(InnerValueList&& other) = delete;
+
+  // Emplaces a value in this ValueList.
+  template <typename T>
+  void emplace(T value) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    values_.emplace_back(std::make_unique<internal::ValueHolder<T>>(std::move(value)));
+  }
+
+  void clear() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    values_.clear();
+  }
+
+ private:
+  mutable std::mutex mutex_;
+  // The list of values.
+  std::vector<std::unique_ptr<internal::BaseHolder>> values_ FIT_GUARDED(mutex_);
+};
+
 }  // namespace internal
+
+// A ValueList is a holder for arbitrary values that do not need to be explicitly named or modified
+// after creation.
+//
+// This class is not thread-safe, and it requires external synchronization if accessed from multiple
+// threads.
+//
+// Example:
+//   struct Item {
+//     // The inspect::Node for this item.
+//     Node node;
+//
+//     // List of unnamed values that should be retained for this item.
+//     ValueList values;
+//
+//     Item(Node* parent, const std::string& name, int value) {
+//        node = parent->CreateChild(name);
+//        // Expose the value, but enlist it in the ValueList so it doesn't need a name.
+//        node.CreateInt("value", value, &values);
+//        // "Stats" computes and stores some stats under the node it is given. Keep this in the
+//        // ValueList as well since it doesn't need a name.
+//        values.emplace(Stats(this, node.CreateChild("stats")));
+//     }
+//   }
+class ValueList final {
+ public:
+  ValueList() { list_ = std::make_shared<internal::InnerValueList>(); }
+
+  // Disallow copy and assign.
+  // ValueList(const ValueList&) = delete;
+  // ValueList(ValueList&& other) = delete;
+  // ValueList& operator=(const ValueList&) = delete;
+  // ValueList& operator=(ValueList&& other) = delete;
+
+  // Emplaces a value in this ValueList.
+  template <typename T>
+  void emplace(T value) {
+    list_->emplace(std::move(value));
+  }
+
+  void clear() { list_->clear(); }
+
+ private:
+  std::shared_ptr<internal::InnerValueList> list_;
+};
 
 // A node under which properties, metrics, and other nodes may be nested.
 // All methods wrap the corresponding functionality on |State|.
@@ -467,10 +557,24 @@ class Node final {
     list->emplace(CreateChild(name));
   }
 
+  /// Associates the lifetime of the given value with the node lifetime.
+  template <typename T>
+  void Record(T value) {
+    value_list_.emplace(std::move(value));
+  }
+
+  // Create a new |Node| with the given name that is a child of this node.
+  // The new child lifetime will be the same as the parent node.
+  void RecordChild(BorrowedStringValue name, RecordChildCallbackFn callback);
+
   // Create a new |IntProperty| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
   IntProperty CreateInt(BorrowedStringValue name, int64_t value) __WARN_UNUSED_RESULT;
+
+  // Create a new |IntProperty| with the given name that is a child of this node.
+  // The new property lifetime will be the same as the parent node.
+  void RecordInt(BorrowedStringValue name, int64_t value);
 
   // Same as CreateInt, but emplaces the value in the given container.
   //
@@ -486,6 +590,10 @@ class Node final {
   // also not be stored in a buffer.
   UintProperty CreateUint(BorrowedStringValue name, uint64_t value) __WARN_UNUSED_RESULT;
 
+  // Create a new |IntProperty| with the given name that is a child of this node.
+  // The new property lifetime will be the same as the parent node.
+  void RecordUint(BorrowedStringValue name, int64_t value);
+
   // Same as CreateUint, but emplaces the value in the given container.
   //
   // The type of |list| must have method emplace(UintProperty).
@@ -500,6 +608,10 @@ class Node final {
   // also not be stored in a buffer.
   DoubleProperty CreateDouble(BorrowedStringValue name, double value) __WARN_UNUSED_RESULT;
 
+  // Create a new |DoubleProperty| with the given name that is a child of this node.
+  // The new property lifetime will be the same as the parent node.
+  void RecordDouble(BorrowedStringValue name, double value);
+
   // Same as CreateDouble, but emplaces the value in the given container.
   //
   // The type of |list| must have method emplace(DoubleProperty).
@@ -513,6 +625,10 @@ class Node final {
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
   BoolProperty CreateBool(BorrowedStringValue name, bool value) __WARN_UNUSED_RESULT;
+
+  // Create a new |BoolProperty| with the given name that is a child of this node.
+  // The new property lifetime will be the same as the parent node.
+  void RecordBool(BorrowedStringValue name, bool value);
 
   // Same as CreateBool, but emplaces the value in the given container.
   //
@@ -529,6 +645,10 @@ class Node final {
   StringProperty CreateString(BorrowedStringValue name,
                               const std::string& value) __WARN_UNUSED_RESULT;
 
+  // Create a new |StringProperty| with the given name that is a child of this node.
+  // The new property lifetime will be the same as the parent node.
+  void RecordString(BorrowedStringValue name, const std::string& value);
+
   // Same as CreateString, but emplaces the value in the given container.
   //
   // The type of |list| must have method emplace(StringProperty).
@@ -543,6 +663,10 @@ class Node final {
   // also not be stored in a buffer.
   ByteVectorProperty CreateByteVector(BorrowedStringValue name,
                                       cpp20::span<const uint8_t> value) __WARN_UNUSED_RESULT;
+
+  // Create a new |ByteVectorProperty| with the given name that is a child of this node.
+  // The new property lifetime will be the same as the parent node.
+  void RecordByteVector(BorrowedStringValue name, cpp20::span<const uint8_t> value);
 
   // Same as CreateByteVector, but emplaces the value in the given container.
   //
@@ -725,6 +849,11 @@ class Node final {
 
   // Index of the value block in the state.
   internal::BlockIndex value_index_;
+
+  // Internally stored values owned by this Node.
+  //
+  // Shared pointers are used so Node is copyable.
+  ValueList value_list_;
 };
 
 }  // namespace inspect
