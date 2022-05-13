@@ -5,6 +5,7 @@
 #ifndef CTS_TESTS_PKG_FIDL_CPP_TEST_TEST_UTIL_H_
 #define CTS_TESTS_PKG_FIDL_CPP_TEST_TEST_UTIL_H_
 
+#include <lib/fidl/cpp/wire_format_metadata.h>
 #include <lib/fidl/internal.h>
 
 #include <cstdint>
@@ -19,12 +20,6 @@
 namespace fidl {
 namespace test {
 namespace util {
-
-constexpr fidl_message_header_t kV2Header = {
-    .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
-    .dynamic_flags = 0,
-    .magic_number = kFidlWireFormatMagicNumberInitial,
-};
 
 inline bool operator==(zx_handle_disposition_t a, zx_handle_disposition_t b) {
   return a.operation == b.operation && a.handle == b.handle && a.type == b.type &&
@@ -87,7 +82,8 @@ Output RoundTrip(const Input& input) {
       HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size())));
   oubgoing_body.ClearHandlesUnsafe();
   EXPECT_EQ(ZX_OK,
-            incoming_body.Decode(fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header),
+            incoming_body.Decode(fidl::internal::WireFormatMetadataForVersion(
+                                     fidl::internal::WireFormatVersion::kV2),
                                  Output::FidlType, &err_msg),
             "%s", err_msg);
 
@@ -105,7 +101,8 @@ Output DecodedBytes(std::vector<uint8_t> input) {
 
   const char* error = nullptr;
   EXPECT_EQ(ZX_OK,
-            body.Decode(fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header),
+            body.Decode(fidl::internal::WireFormatMetadataForVersion(
+                            fidl::internal::WireFormatVersion::kV2),
                         Output::FidlType, &error),
             "%s", error);
 
@@ -117,7 +114,7 @@ Output DecodedBytes(std::vector<uint8_t> input) {
 }
 
 template <class Output>
-Output DecodedBytes(const fidl_message_header_t& header, std::vector<uint8_t> bytes,
+Output DecodedBytes(internal::WireFormatVersion wire_format, std::vector<uint8_t> bytes,
                     std::vector<zx_handle_info_t> handle_infos) {
   HLCPPIncomingBody body(
       BytePart(bytes.data(), static_cast<uint32_t>(bytes.capacity()),
@@ -128,7 +125,7 @@ Output DecodedBytes(const fidl_message_header_t& header, std::vector<uint8_t> by
 
   const char* error = nullptr;
   EXPECT_EQ(ZX_OK,
-            body.Decode(fidl::WireFormatMetadata::FromTransactionalHeader(header), Output::FidlType,
+            body.Decode(fidl::internal::WireFormatMetadataForVersion(wire_format), Output::FidlType,
                         &error),
             "%s", error);
 
@@ -195,7 +192,7 @@ bool ValueToBytes(internal::WireFormatVersion wire_format, Input input,
 }
 
 template <class Output>
-void CheckDecodeFailure(const fidl_message_header_t& header, std::vector<uint8_t> input,
+void CheckDecodeFailure(internal::WireFormatVersion wire_format, std::vector<uint8_t> input,
                         std::vector<zx_handle_info_t> handle_infos,
                         const zx_status_t expected_failure_code) {
   HLCPPIncomingBody body(
@@ -207,7 +204,7 @@ void CheckDecodeFailure(const fidl_message_header_t& header, std::vector<uint8_t
 
   const char* error = nullptr;
   EXPECT_EQ(expected_failure_code,
-            body.Decode(fidl::WireFormatMetadata::FromTransactionalHeader(header), Output::FidlType,
+            body.Decode(fidl::internal::WireFormatMetadataForVersion(wire_format), Output::FidlType,
                         &error),
             "%s", error);
 }

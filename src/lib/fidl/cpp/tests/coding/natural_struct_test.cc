@@ -14,16 +14,6 @@
 
 #include "test_util.h"
 
-namespace {
-
-constexpr fidl_message_header_t kV2Header = {
-    .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
-    .dynamic_flags = 0,
-    .magic_number = kFidlWireFormatMagicNumberInitial,
-};
-
-}  // namespace
-
 TEST(NaturalStruct, Decode) {
   // Set up a message.
   // clang-format off
@@ -38,7 +28,8 @@ TEST(NaturalStruct, Decode) {
       fidl::IncomingMessage::kSkipMessageHeaderValidation);
 
   // Indicate V2 wire format.
-  auto wire_format = ::fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header);
+  auto wire_format =
+      ::fidl::internal::WireFormatMetadataForVersion(::fidl::internal::WireFormatVersion::kV2);
 
   // Perform decoding.
   fitx::result result = ::fidl::Decode<test_types::CopyableStruct>(std::move(message), wire_format);
@@ -77,7 +68,8 @@ TEST(NaturalStructWithHandle, Decode) {
       fidl::IncomingMessage::kSkipMessageHeaderValidation);
 
   // Indicate V2 wire format.
-  auto wire_format = ::fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header);
+  auto wire_format =
+      fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2);
 
   // Perform decoding.
   fitx::result result = ::fidl::Decode<test_types::MoveOnlyStruct>(std::move(message), wire_format);

@@ -58,11 +58,9 @@ TEST(NaturalResponsePayload, Decode) {
       bytes.data(), static_cast<uint32_t>(bytes.size()), nullptr, nullptr, 0,
       fidl::IncomingMessage::kSkipMessageHeaderValidation);
 
-  // Create a fake V2 |WireFormatMetadata|.
-  fidl_message_header_t header;
-  fidl::InitTxnHeader(&header, 0, 0, fidl::MessageDynamicFlags::kStrictMethod);
-  header.at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
-  auto metadata = fidl::WireFormatMetadata::FromTransactionalHeader(header);
+  // Create a V2 |WireFormatMetadata|.
+  auto metadata =
+      fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2);
 
   // Perform decoding.
   fitx::result result = fidl::Decode<test_types::BazFooTopResponse>(std::move(message), metadata);

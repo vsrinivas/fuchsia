@@ -13,12 +13,6 @@ namespace hlcpp_benchmarks {
 
 namespace {
 constexpr uint64_t kOrdinal = 1234;
-constexpr fidl_message_header_t kV2Header = {
-    .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2},
-    .dynamic_flags = 0,
-    .magic_number = kFidlWireFormatMagicNumberInitial,
-    .ordinal = kOrdinal,
-};
 }  // namespace
 
 template <typename BuilderFunc>
@@ -57,7 +51,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
           fidl::HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size()),
                                static_cast<uint32_t>(handle_infos.size())));
       const char* error_msg;
-      const auto metadata = fidl::WireFormatMetadata::FromTransactionalHeader(kV2Header);
+      const auto metadata =
+          fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2);
 
       ZX_ASSERT_MSG(ZX_OK == decode_body.Decode(metadata, FidlType::FidlType, &error_msg), "%s",
                     error_msg);
