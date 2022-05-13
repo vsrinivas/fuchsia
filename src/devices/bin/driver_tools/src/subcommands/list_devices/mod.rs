@@ -8,8 +8,8 @@ use {
     super::common::{self, DFv1Device, DFv2Node, Device},
     anyhow::Result,
     args::ListDevicesCommand,
-    fidl_fuchsia_developer_remotecontrol as fremotecontrol, fidl_fuchsia_driver_development as fdd,
-    fidl_fuchsia_driver_framework as fdf,
+    fidl_fuchsia_developer_remotecontrol as fremotecontrol, fidl_fuchsia_device_manager as fdm,
+    fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_framework as fdf,
 };
 
 trait DevicePrinter {
@@ -51,8 +51,8 @@ impl DevicePrinter for DFv1Device {
                     .map(std::clone::Clone::clone)
                     .unwrap_or_else(|| format!("{:#08}", prop.id));
                 println!(
-                    "[{0: >2}/ {1: >2}] : Value {2:#08x} Id {3}",
-                    idx, count, prop.value, id_name
+                    "[{0: >2}/ {1: >2}] : Key {2:30} Value {3:#08x}",
+                    idx, count, id_name, prop.value,
                 );
                 idx += 1;
             }
@@ -61,8 +61,16 @@ impl DevicePrinter for DFv1Device {
             idx = 1;
             for prop in property_list.str_props.iter() {
                 println!(
-                    "[{0: >2}/ {1: >2}] : Key {2} Value {3:?}",
-                    idx, count, prop.key, prop.value
+                    "[{0: >2}/ {1: >2}] : Key {2:30} Value {3:?}",
+                    idx,
+                    count,
+                    prop.key,
+                    match prop.value {
+                        fdm::PropertyValue::IntValue(value) => value.to_string(),
+                        fdm::PropertyValue::StrValue(ref value) => format!("{}", value),
+                        fdm::PropertyValue::BoolValue(value) => value.to_string(),
+                        fdm::PropertyValue::EnumValue(ref value) => format!("Enum({})", value),
+                    }
                 );
                 idx += 1;
             }
@@ -92,14 +100,19 @@ impl DevicePrinter for DFv2Node {
             for i in 0..node_property_list.len() {
                 let node_property = &node_property_list[i];
                 println!(
-                    "[{:>2}/ {:>2}] : Key {} Value {}",
+                    "[{:>2}/ {:>2}] : Key {:30} Value {}",
                     i + 1,
                     node_property_list.len(),
                     node_property
                         .key
                         .as_ref()
                         .map(|key| match key {
-                            fdf::NodePropertyKey::IntValue(value) => value.to_string(),
+                            fdf::NodePropertyKey::IntValue(value) => {
+                                bind::compiler::get_deprecated_key_identifiers()
+                                    .get(value)
+                                    .map(std::clone::Clone::clone)
+                                    .unwrap_or_else(|| format!("{:#08}", value))
+                            }
                             fdf::NodePropertyKey::StringValue(ref value) =>
                                 format!("\"{}\"", value),
                         })
