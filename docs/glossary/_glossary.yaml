@@ -161,6 +161,17 @@
   related_guides: [""]
   area: ["Component Framework"]
 
+- term: "CIPD"
+  short_description: "A cloud service for storing and distributing packages. Packages can be
+  arbitrary collections of files, but most often contain prebuilt binaries."
+  full_description: "The Fuchsia project uses CIPD to download, publish, and distribute compiled
+  software such as the Fuchsia SDK. <a href=\"/docs/glossary#jiri\">Jiri</a> has built-in support
+  for versioning and downloading CIPD packages."
+  see_also: ["<a href=\"https://chromium.googlesource.com/infra/luci/luci-go/+/refs/heads/main/cipd\">CIPD source code</a>",
+             "<a href=\"https://chrome-infra-packages.appspot.com/\">CIPD web UI</a>"]
+  related_guides: [""]
+  area: ["General", "Developer"]
+
 - term: "Component"
   short_description: "Components are the common abstraction that defines how all software
   is described, sandboxed, and executed on a Fuchsia system."
