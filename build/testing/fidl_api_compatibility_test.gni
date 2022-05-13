@@ -1,9 +1,9 @@
 # Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 import("//build/fidl/fidl_summary.gni")
 import("//build/fidl/fidlc.gni")
+import("//build/testing/config.gni")
 
 template("fidl_api_compatibility_test") {
   assert(defined(invoker.fidl_target_name), "fidl_target_name is required")
@@ -79,6 +79,9 @@ template("fidl_api_compatibility_test") {
       rebase_path("$root_build_dir/host_x64/fidl_api_diff", root_build_dir),
     ]
 
+    if (bless_goldens) {
+      args += [ "--update_golden" ]
+    }
     deps += [
       ":$summarization_target_name",
       "//tools/fidl/fidl_api_diff:host",
