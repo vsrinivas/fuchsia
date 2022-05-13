@@ -300,6 +300,14 @@ impl<'a, K: Eq + Hash + IterShadows, V: Tagged> VacantEntry<'a, K, V> {
         *len += 1;
         SocketMap::increment_descendant_counts(map, iter_shadows, tag);
     }
+
+    /// Gets the descendant counts for this entry.
+    pub(crate) fn descendant_counts(
+        &self,
+    ) -> impl ExactSizeIterator<Item = &'_ (V::Tag, NonZeroUsize)> {
+        let Self(socket_map, key) = self;
+        socket_map.descendant_counts(&key)
+    }
 }
 
 impl<T: Eq, const INLINE_SIZE: usize> DescendantCounts<T, INLINE_SIZE> {

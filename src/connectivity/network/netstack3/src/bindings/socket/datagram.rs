@@ -255,7 +255,7 @@ pub(crate) trait TransportState<I: Ip, C: IpDeviceIdContext<I>>: Transport<I> {
     fn set_socket_device(
         ctx: &mut C,
         id: SocketId<I, Self>,
-        device: C::DeviceId,
+        device: Option<C::DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError>;
 }
 
@@ -394,7 +394,7 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
     fn set_socket_device(
         ctx: &mut C,
         id: SocketId<I, Self>,
-        device: C::DeviceId,
+        device: Option<C::DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError> {
         match id {
             SocketId::Unbound(id) => {
@@ -792,7 +792,7 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext> TransportState
     fn set_socket_device(
         _ctx: &mut Ctx<D, C>,
         _id: SocketId<I, Self>,
-        _device: <Ctx<D, C> as IpDeviceIdContext<I>>::DeviceId,
+        _device: Option<<Ctx<D, C> as IpDeviceIdContext<I>>::DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
@@ -1443,30 +1443,34 @@ where
                             value,
                             responder,
                         } => {
+                            // This is a hack to allow an application to bind a
+                            // socket to a device without proper device name
+                            // support in Netstack3.  Instead of a device name,
+                            // the `value` field in a `SetBindToDevice` call
+                            // must be specified as "ifindex/{index}", where the
+                            // placeholder `{index}` is a base-10 string
+                            // representation of a u64 device index.
+                            //
+                            // TODO(https://fxbug.dev/48969): Support real
+                            // device names once those are available.
+                            fn parse_index(value: &str) -> Option<u64> {
+                                value.split_once("/").and_then(|(prefix, index): (&str, &str)|
+                                    match prefix {
+                                        "ifindex" => index.parse().ok_checked::<ParseIntError>(),
+                                        _ => None,
+                                    })
+                                }
                             responder_send!(
                                 responder,
                                 &mut async {
-                                    // This is a hack to allow an application to
-                                    // bind a socket to a device without proper
-                                    // device name support in Netstack3.
-                                    // Instead of a device name, the `value`
-                                    // field in a `SetBindToDevice` call must be
-                                    // specified as "ifindex/{index}", where the
-                                    // placeholder `{index}` is a base-10 string
-                                    // representation of a u64 device index.
-                                    //
-                                    // TODO(https://fxbug.dev/48969): Support
-                                    // real device names once those are
-                                    // available.
-                                    let index = value.split_once("/").and_then(
-                                        |(prefix, index)| if prefix == "ifindex" {
-                                            index.parse().ok_checked::<ParseIntError>()
-                                        } else {
-                                            None
-                                        });
+                                    let index = if value.is_empty() {
+                                        Ok(None)
+                                    } else {
+                                        parse_index(&value).ok_or(fposix::Errno::Enodev).map(Some)
+                                    };
                                     match index {
-                                        Some(index) => self.make_handler().await.bind_to_device(index),
-                                        None => Err(fposix::Errno::Enodev),
+                                        Ok(index) => self.make_handler().await.bind_to_device(index),
+                                        Err(e) => Err(e)
                                     }
                                 }.await);
                         }
@@ -2227,9 +2231,13 @@ where
         .map(|()| len)
     }
 
-    fn bind_to_device(mut self, index: u64) -> Result<(), fposix::Errno> {
-        let device = TryFromFidlWithContext::try_from_fidl_with_ctx(&self.ctx.dispatcher, index)
-            .map_err(|DeviceNotFoundError {}| fposix::Errno::Enodev)?;
+    fn bind_to_device(mut self, index: Option<u64>) -> Result<(), fposix::Errno> {
+        let device = index
+            .map(|index| {
+                TryFromFidlWithContext::try_from_fidl_with_ctx(&self.ctx.dispatcher, index)
+                    .map_err(|DeviceNotFoundError {}| fposix::Errno::Enodev)
+            })
+            .transpose()?;
         let id = match self.get_state_mut().info.state {
             SocketState::Unbound { unbound_id } => SocketId::Unbound(unbound_id),
             SocketState::BoundListen { listener_id } => BoundSocketId::Listener(listener_id).into(),

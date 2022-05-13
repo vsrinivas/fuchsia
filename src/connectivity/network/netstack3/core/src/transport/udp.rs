@@ -37,7 +37,7 @@ use crate::{
         id_map::Entry as IdMapEntry, socketmap::IterShadows as _, IdMap, IdMapCollectionKey,
     },
     device::DeviceId,
-    error::LocalAddressError,
+    error::{ExistsError, LocalAddressError},
     ip::{
         icmp::{IcmpIpExt, Icmpv4ErrorCode, Icmpv6ErrorCode},
         socket::{IpSock, IpSockCreationError, IpSockSendError, IpSocket, UnroutableBehavior},
@@ -49,7 +49,7 @@ use crate::{
             ConnAddr, ConnIpAddr, ListenerAddr, ListenerIpAddr, PosixAddrVec, PosixAddrVecIter,
             PosixSocketMapSpec,
         },
-        BoundSocketMap, InsertConnError, InsertListenerError, MoveError,
+        BoundSocketMap, InsertConnError, InsertListenerError,
     },
     BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
 };
@@ -1098,17 +1098,20 @@ fn create_udp_conn<I: IpExt, C: UdpStateContext<I>>(
 pub fn set_unbound_udp_device<I: IpExt, C: UdpStateContext<I>>(
     sync_ctx: &mut C,
     id: UdpUnboundId<I>,
-    device_id: C::DeviceId,
+    device_id: Option<C::DeviceId>,
 ) {
     let UnboundSocketState { ref mut device } = sync_ctx
         .get_first_state_mut()
         .unbound
         .get_mut(id.into())
         .expect("unbound UDP socket not found");
-    *device = Some(device_id);
+    *device = device_id;
 }
 
-/// Binds the socket to the specified device.
+/// Sets the device the specified socket is bound to.
+///
+/// Updates the socket state to set the bound-to device if one is provided, or
+/// to remove any device binding if not.
 ///
 /// # Panics
 ///
@@ -1116,32 +1119,22 @@ pub fn set_unbound_udp_device<I: IpExt, C: UdpStateContext<I>>(
 pub fn set_bound_udp_device<I: IpExt, C: UdpStateContext<I>>(
     sync_ctx: &mut C,
     id: UdpBoundId<I>,
-    device_id: C::DeviceId,
+    device_id: Option<C::DeviceId>,
 ) -> Result<(), LocalAddressError> {
     let UdpConnectionState { ref mut bound } = sync_ctx.get_first_state_mut().conn_state;
     match id {
         UdpBoundId::Listening(id) => bound
-            .try_update_listener_addr(&id, |ListenerAddr { ip, device }| match device {
-                // TODO(https://fxbug.dev/96573): Handle rebinding to a
-                // different device.
-                Some(_) => Err(LocalAddressError::CannotBindToAddress),
-                None => Ok(ListenerAddr { ip, device: Some(device_id) }),
+            .try_update_listener_addr(&id, |ListenerAddr { ip, device: _ }| ListenerAddr {
+                ip,
+                device: device_id,
             })
-            .map_err(|e| match e {
-                MoveError::AlreadyExists => LocalAddressError::AddressInUse,
-                MoveError::NewAddrFailed(e) => e,
-            }),
+            .map_err(|ExistsError {}| LocalAddressError::AddressInUse),
         UdpBoundId::Connected(id) => bound
-            .try_update_conn_addr(&id, |ConnAddr { ip, device }| match device {
-                // TODO(https://fxbug.dev/96573): Handle rebinding to a
-                // different device.
-                Some(_) => Err(LocalAddressError::CannotBindToAddress),
-                None => Ok(ConnAddr { ip, device: Some(device_id) }),
+            .try_update_conn_addr(&id, |ConnAddr { ip, device: _ }| ConnAddr {
+                ip,
+                device: device_id,
             })
-            .map_err(|e| match e {
-                MoveError::AlreadyExists => LocalAddressError::AddressInUse,
-                MoveError::NewAddrFailed(e) => e,
-            }),
+            .map_err(|ExistsError| LocalAddressError::AddressInUse),
     }
 }
 
@@ -2445,14 +2438,14 @@ mod tests {
                 REMOTE_PORT,
             )
             .expect("connect should succeed");
-            set_bound_udp_device(ctx, conn.into(), MultipleDevicesId::A)
+            set_bound_udp_device(ctx, conn.into(), Some(MultipleDevicesId::A))
                 .expect("bind should succeed");
             conn
         };
 
         let bound_second_device = {
             let unbound = create_udp_unbound(ctx);
-            set_unbound_udp_device(ctx, unbound, MultipleDevicesId::B);
+            set_unbound_udp_device(ctx, unbound, Some(MultipleDevicesId::B));
             listen_udp(ctx, unbound, None, Some(LOCAL_PORT)).expect("listen should succeed")
         };
 
@@ -2502,7 +2495,7 @@ mod tests {
         let ctx = &mut ctx;
         let bound_on_devices = [MultipleDevicesId::A, MultipleDevicesId::B].map(|device| {
             let unbound = create_udp_unbound(ctx);
-            set_unbound_udp_device(ctx, unbound, device);
+            set_unbound_udp_device(ctx, unbound, Some(device));
             listen_udp(ctx, unbound, None, Some(LOCAL_PORT)).expect("listen should succeed")
         });
 
@@ -2543,6 +2536,81 @@ mod tests {
             .collect::<Vec<_>>();
         received_devices.sort();
         assert_eq!(received_devices, [&MultipleDevicesId::A, &MultipleDevicesId::B]);
+    }
+
+    fn receive_packet_on<I: Ip + TestIpExt>(
+        ctx: &mut MultiDeviceDummyCtx<I>,
+        device: MultipleDevicesId,
+    ) where
+        MultiDeviceDummyCtx<I>: DummyDeviceCtxBound<I, MultipleDevicesId>,
+    {
+        const BODY: [u8; 5] = [1, 2, 3, 4, 5];
+        receive_udp_packet(
+            ctx,
+            device,
+            I::get_other_remote_ip_address(1).get(),
+            local_ip::<I>().get(),
+            REMOTE_PORT,
+            LOCAL_PORT,
+            &BODY[..],
+        )
+    }
+
+    /// Check that sockets can be bound to and unbound from devices.
+    #[ip_test]
+    fn test_bind_unbind_device<I: Ip + TestIpExt>()
+    where
+        MultiDeviceDummyCtx<I>: DummyDeviceCtxBound<I, MultipleDevicesId>,
+    {
+        set_logger_for_test();
+        let mut ctx = MultiDeviceDummyCtx::<I>::default();
+        let ctx = &mut ctx;
+
+        // Start with `socket` bound to a device on all IPs.
+        let socket = {
+            let unbound = create_udp_unbound(ctx);
+            set_unbound_udp_device(ctx, unbound, Some(MultipleDevicesId::A));
+            listen_udp(ctx, unbound, None, Some(LOCAL_PORT)).expect("listen failed")
+        };
+
+        // Since it is bound, it does not receive a packet from another device.
+        receive_packet_on(ctx, MultipleDevicesId::B);
+        let listen_data = &ctx.get_ref().listen_data;
+        assert_matches!(&listen_data[..], &[]);
+
+        // When unbound, the socket can receive packets on the other device.
+        set_bound_udp_device(ctx, socket.into(), None).expect("clearing bound device failed");
+        receive_packet_on(ctx, MultipleDevicesId::B);
+        let listen_data = &ctx.get_ref().listen_data;
+        assert_matches!(&listen_data[..],
+            &[ListenData {listener, body:_, src_ip: _, dst_ip: _, src_port: _ }] =>
+            assert_eq!(listener, socket));
+    }
+
+    /// Check that bind fails as expected when it would cause illegal shadowing.
+    #[ip_test]
+    fn test_unbind_device_fails<I: Ip + TestIpExt>()
+    where
+        MultiDeviceDummyCtx<I>: DummyDeviceCtxBound<I, MultipleDevicesId>,
+    {
+        set_logger_for_test();
+        let mut ctx = MultiDeviceDummyCtx::<I>::default();
+        let ctx = &mut ctx;
+
+        let bound_on_devices = [MultipleDevicesId::A, MultipleDevicesId::B].map(|device| {
+            let unbound = create_udp_unbound(ctx);
+            set_unbound_udp_device(ctx, unbound, Some(device));
+            listen_udp(ctx, unbound, None, Some(LOCAL_PORT)).expect("listen should succeed")
+        });
+
+        // Clearing the bound device is not allowed for either socket since it
+        // would then be shadowed by the other socket.
+        for socket in bound_on_devices {
+            assert_matches!(
+                set_bound_udp_device(ctx, socket.into(), None),
+                Err(LocalAddressError::AddressInUse)
+            );
+        }
     }
 
     /// Tests establishing a UDP connection without providing a local IP
