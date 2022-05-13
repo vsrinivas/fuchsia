@@ -304,7 +304,7 @@ zx_status_t F2fs::FillSuper() {
 
   node_vnode_ = std::make_unique<VnodeF2fs>(this, GetSuperblockInfo().GetNodeIno());
   meta_vnode_ = std::make_unique<VnodeF2fs>(this, GetSuperblockInfo().GetMetaIno());
-  writer_ = std::make_unique<Writer>(this, bc_.get());
+  writer_ = std::make_unique<Writer>(bc_.get());
 
   if (err = GetValidCheckpoint(); err != ZX_OK) {
     return err;

@@ -36,10 +36,9 @@ class SegmentWriteBuffer {
   ~SegmentWriteBuffer();
 
   PageOperations TakeOperations() __TA_EXCLUDES(mutex_);
-  zx::status<uint32_t> ReserveOperation(storage::Operation &operation, LockedPage &page)
+  zx::status<size_t> ReserveOperation(storage::Operation &operation, LockedPage &page)
       __TA_EXCLUDES(mutex_);
   void ReleaseBuffers(const PageOperations &operation) __TA_EXCLUDES(mutex_);
-  block_t GetCapacity() const { return safemath::checked_cast<block_t>(buffer_.capacity()); }
 
  private:
   static constexpr std::string_view kVmoBufferLabels[static_cast<uint32_t>(PageType::kNrPageType)] =
@@ -52,8 +51,8 @@ class SegmentWriteBuffer {
 #else
   storage::ArrayBuffer buffer_;
 #endif  // __Fuchsia__
-  uint32_t start_index_ __TA_GUARDED(mutex_) = 0;
-  uint32_t count_ __TA_GUARDED(mutex_) = 0;
+  size_t start_index_ __TA_GUARDED(mutex_) = 0;
+  size_t count_ __TA_GUARDED(mutex_) = 0;
   std::condition_variable_any cvar_;
   std::mutex mutex_;
 };
@@ -100,7 +99,7 @@ class PageOperations {
 
 class Writer {
  public:
-  Writer(F2fs *fs, Bcache *bc);
+  Writer(Bcache *bc);
   Writer() = delete;
   Writer(const Writer &) = delete;
   Writer &operator=(const Writer &) = delete;
@@ -124,7 +123,6 @@ class Writer {
 
   std::array<std::unique_ptr<SegmentWriteBuffer>, static_cast<uint32_t>(PageType::kNrPageType)>
       write_buffer_;
-  F2fs *fs_ = nullptr;
   fs::TransactionHandler *transaction_handler_ = nullptr;
 #ifdef __Fuchsia__
   fs::BackgroundExecutor executor_;

@@ -29,18 +29,17 @@ void SegmentWriteBuffer::ReleaseBuffers(const PageOperations &operation) {
   if (!operation.Empty()) {
     // Decrease count_ to allow waiters to reserve buffer_.
     std::lock_guard lock(mutex_);
-    count_ -= operation.GetLength();
+    count_ = safemath::CheckSub(count_, operation.GetLength()).ValueOrDie();
     cvar_.notify_all();
   }
 }
 
-zx::status<uint32_t> SegmentWriteBuffer::ReserveOperation(storage::Operation &operation,
-                                                          LockedPage &page) {
+zx::status<size_t> SegmentWriteBuffer::ReserveOperation(storage::Operation &operation,
+                                                        LockedPage &page) {
   // It will be unmapped when there is no reference.
   ZX_ASSERT(page->Map() == ZX_OK);
 
   std::lock_guard lock(mutex_);
-
   // Wait until there is a room in |buffer_|.
   while (count_ == buffer_.capacity()) {
     if (auto wait_result = cvar_.wait_for(mutex_, kWriteTimeOut);
@@ -60,12 +59,13 @@ zx::status<uint32_t> SegmentWriteBuffer::ReserveOperation(storage::Operation &op
   if (++start_index_ == buffer_.capacity()) {
     start_index_ = 0;
   }
-  return zx::ok(++count_);
+  ++count_;
+  return zx::ok(pages_.size());
 }
 
 SegmentWriteBuffer::~SegmentWriteBuffer() { ZX_DEBUG_ASSERT(pages_.size() == 0); }
 
-Writer::Writer(F2fs *fs, Bcache *bc) : fs_(fs), transaction_handler_(bc) {
+Writer::Writer(Bcache *bc) : transaction_handler_(bc) {
   for (const auto type : {PageType::kData, PageType::kNode, PageType::kMeta}) {
     write_buffer_[static_cast<uint32_t>(type)] =
         std::make_unique<SegmentWriteBuffer>(bc, kDefaultBlocksPerSegment, kBlockSize, type);
@@ -84,9 +84,8 @@ void Writer::EnqueuePage(storage::Operation &operation, LockedPage &page, PageTy
   if (ret.is_error()) {
     // Should not happen.
     ZX_ASSERT(0);
-  } else if (ret.value() >= std::min(kDefaultBlocksPerSegment / 2,
-                                     write_buffer_[static_cast<uint32_t>(type)]->GetCapacity())) {
-    // Submit Pages once they are merged as much as half of either its buffer or segment.
+  } else if (ret.value() >= kDefaultBlocksPerSegment / 2) {
+    // Submit Pages once they are merged as much as a half of segment.
     ScheduleSubmitPages(nullptr, type);
   }
 }
@@ -112,11 +111,6 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType 
       page.ClearWriteback();
       return ZX_OK;
     });
-    if (fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback) >
-        static_cast<int>(kDefaultBlocksPerSegment)) {
-      FX_LOGS(WARNING) << "[f2fs] High pending WB Pages : "
-                       << fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback);
-    }
     if (completion) {
       sync_completion_signal(completion);
     }
