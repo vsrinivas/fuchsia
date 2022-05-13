@@ -49,12 +49,14 @@ pub fn serve_wayland(
     current_task: &CurrentTask,
     display_path: FsString,
     device_path: FsString,
+    outgoing_dir: &mut Option<fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>>,
 ) -> Result<(), Errno> {
     let display_socket = create_display_socket(current_task, display_path)?;
     create_device_file(current_task, device_path)?;
 
     let kernel = current_task.thread_group.kernel.clone();
-    let outgoing_dir_channel = kernel.outgoing_dir.lock().take().ok_or(errno!(EINVAL))?;
+    let outgoing_dir_channel =
+        outgoing_dir.take().map(|server_end| server_end.into_channel()).ok_or(errno!(EINVAL))?;
 
     // Add `ViewProvider` to the exposed services of the component, and then serve the
     // outgoing directory.

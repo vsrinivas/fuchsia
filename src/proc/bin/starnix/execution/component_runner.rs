@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::device::run_component_features;
 use ::runner::{get_program_string, get_program_strvec};
 use anyhow::{anyhow, format_err, Context, Error};
 use fidl::endpoints::ServerEnd;
@@ -9,20 +10,17 @@ use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_decl as fdecl;
 use fidl_fuchsia_component_runner::{ComponentControllerMarker, ComponentStartInfo};
 use fidl_fuchsia_io as fio;
-use fuchsia_async as fasync;
-use fuchsia_async::DurationExt;
 use fuchsia_component::client as fclient;
 use fuchsia_zircon as zx;
 use rand::Rng;
 use std::ffi::CString;
+use std::sync::Arc;
 use tracing::info;
 
 use crate::auth::Credentials;
 use crate::execution::{
-    create_filesystem_from_spec, execute_task, galaxy::create_galaxy, galaxy::Galaxy,
-    parse_numbered_handles,
+    create_filesystem_from_spec, execute_task, galaxy::Galaxy, parse_numbered_handles,
 };
-use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
 
@@ -42,11 +40,12 @@ use crate::types::*;
 pub async fn start_component(
     mut start_info: ComponentStartInfo,
     controller: ServerEnd<ComponentControllerMarker>,
+    galaxy: Arc<Galaxy>,
 ) -> Result<(), Error> {
-    let galaxy = create_galaxy(&mut start_info.outgoing_dir).context("failed to create galaxy")?;
+    let url = start_info.resolved_url.clone().unwrap_or("<unknown>".to_string());
     info!(
         "start_component: {}\narguments: {:?}\nmanifest: {:?}",
-        start_info.resolved_url.clone().unwrap_or("<unknown>".to_string()),
+        url.clone(),
         start_info.numbered_handles,
         start_info.program,
     );
@@ -108,15 +107,12 @@ pub async fn start_component(
 
     current_task.exec(argv[0].clone(), argv.clone(), environ.clone())?;
 
-    if let Some(init_task) = galaxy.init_task {
-        execute_task(init_task, |result| {
-            info!("Finished running init process: {:?}", result);
+    // run per-component features
+    // TODO(fxb/100316) - we should examine start_info to determine which features are needed for this component.
+    run_component_features(&galaxy.kernel.features, &current_task, &mut start_info.outgoing_dir)
+        .unwrap_or_else(|e| {
+            tracing::error!("failed to set component features for {} - {:?}", url, e);
         });
-
-        if let Some(startup_file_path) = galaxy.startup_file_path {
-            wait_for_init_file(&startup_file_path, &current_task).await?;
-        }
-    }
 
     execute_task(current_task, |result| {
         // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
@@ -160,24 +156,6 @@ fn mount_component_pkg_data(
     Ok(())
 }
 
-async fn wait_for_init_file(
-    startup_file_path: &str,
-    current_task: &CurrentTask,
-) -> Result<(), Error> {
-    // TODO(fxb/96299): Use inotify machinery to wait for the file.
-    loop {
-        fasync::Timer::new(fasync::Duration::from_millis(100).after_now()).await;
-        let root = current_task.fs.namespace_root();
-        let mut context = LookupContext::default();
-        match current_task.lookup_path(&mut context, root, startup_file_path.as_bytes()) {
-            Ok(_) => break,
-            Err(error) if error == ENOENT => continue,
-            Err(error) => return Err(anyhow::Error::new(error)),
-        }
-    }
-    Ok(())
-}
-
 /// Creates a new child component in the `playground` collection.
 ///
 /// # Parameters
@@ -210,71 +188,4 @@ pub async fn create_child_component(
     // The component is run in a `SingleRun` collection instance, and will be automatically
     // deleted when it exits.
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use super::wait_for_init_file;
-    use crate::fs::FdNumber;
-    use crate::testing::create_kernel_and_task;
-    use crate::types::*;
-    use fuchsia_async as fasync;
-    use futures::{SinkExt, StreamExt};
-
-    #[fuchsia::test]
-    async fn test_init_file_already_exists() {
-        let (_kernel, current_task) = create_kernel_and_task();
-        let (mut sender, mut receiver) = futures::channel::mpsc::unbounded();
-
-        let path = "/path";
-        current_task
-            .open_file_at(
-                FdNumber::AT_FDCWD,
-                &path.as_bytes(),
-                OpenFlags::CREAT,
-                FileMode::default(),
-            )
-            .expect("Failed to create file");
-
-        fasync::Task::local(async move {
-            wait_for_init_file(&path, &current_task).await.expect("failed to wait for file");
-            sender.send(()).await.expect("failed to send message");
-        })
-        .detach();
-
-        // Wait for the file creation to have been detected.
-        assert!(receiver.next().await.is_some());
-    }
-
-    #[fuchsia::test]
-    async fn test_init_file_wait_required() {
-        let (_kernel, current_task) = create_kernel_and_task();
-        let (mut sender, mut receiver) = futures::channel::mpsc::unbounded();
-
-        let init_task = current_task.clone_task_for_test(CLONE_FS as u64);
-        let path = "/path";
-
-        fasync::Task::local(async move {
-            sender.send(()).await.expect("failed to send message");
-            wait_for_init_file(&path, &init_task).await.expect("failed to wait for file");
-            sender.send(()).await.expect("failed to send message");
-        })
-        .detach();
-
-        // Wait for message that file check has started.
-        assert!(receiver.next().await.is_some());
-
-        // Create the file that is being waited on.
-        current_task
-            .open_file_at(
-                FdNumber::AT_FDCWD,
-                &path.as_bytes(),
-                OpenFlags::CREAT,
-                FileMode::default(),
-            )
-            .expect("Failed to create file");
-
-        // Wait for the file creation to be detected.
-        assert!(receiver.next().await.is_some());
-    }
 }
