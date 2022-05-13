@@ -16,8 +16,8 @@ group("tests") {
 if (host_os == "linux") {
   test("syscalls_test") {
     sources = [
-      "orphaned_process_group_test.cc",
       "restart_read_test.cc",
+      "terminal_test.cc",
       "trivial_test.cc",
     ]
     deps = [
