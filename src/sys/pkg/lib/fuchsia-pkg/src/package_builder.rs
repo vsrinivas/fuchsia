@@ -703,9 +703,11 @@ mod tests {
         // Build the package
         let manifest = builder.build(&outdir, &metafar_path).unwrap();
 
-        // The manifest should have paths relative to itself
-        let blob = manifest.blobs().first().unwrap();
-        assert_eq!(blob.source_path, "contents/data_file");
+        manifest
+            .blobs()
+            .iter()
+            .find(|b| b.source_path == "contents/data_file")
+            .expect("The manifest should have paths relative to itself");
 
         // The written manifest is tested in [crate::package_manifest::host_tests]
     }

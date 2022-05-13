@@ -157,18 +157,18 @@ impl PackageManifest {
 
     pub fn from_package(package: Package) -> Result<Self, PackageManifestError> {
         let mut blobs = Vec::with_capacity(package.blobs().len());
-        for (merkle, blob_entry) in package.blobs().iter() {
+        for (blob_path, blob_entry) in package.blobs() {
             let source_path = blob_entry.source_path();
 
             blobs.push(BlobInfo {
                 source_path: source_path.into_os_string().into_string().map_err(|source_path| {
                     PackageManifestError::InvalidBlobPath {
-                        merkle: *merkle,
+                        merkle: blob_entry.hash(),
                         source_path: source_path.into(),
                     }
                 })?,
-                path: blob_entry.blob_path().to_string(),
-                merkle: *merkle,
+                path: blob_path,
+                merkle: blob_entry.hash(),
                 size: blob_entry.size(),
             })
         }

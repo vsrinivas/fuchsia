@@ -14,7 +14,7 @@ use std::path::PathBuf;
 pub struct Package {
     meta_contents: MetaContents,
     meta_package: MetaPackage,
-    blobs: BTreeMap<Hash, BlobEntry>,
+    blobs: BTreeMap<String, BlobEntry>,
 }
 
 impl Package {
@@ -28,8 +28,8 @@ impl Package {
         self.meta_package.clone()
     }
 
-    /// Get the meta_package.
-    pub fn blobs(&self) -> BTreeMap<Hash, BlobEntry> {
+    /// Get the blobs.
+    pub fn blobs(&self) -> BTreeMap<String, BlobEntry> {
         self.blobs.clone()
     }
 
@@ -41,7 +41,7 @@ impl Package {
     /// Generate a Package from a meta.far file.
     pub fn from_meta_far<R: Read + Seek>(
         mut meta_far: R,
-        blobs: BTreeMap<Hash, BlobEntry>,
+        blobs: BTreeMap<String, BlobEntry>,
     ) -> Result<Self> {
         let mut meta_far = fuchsia_archive::Reader::new(&mut meta_far)?;
         let meta_contents =
@@ -55,7 +55,7 @@ impl Package {
 pub(crate) struct Builder {
     contents: HashMap<String, Hash>,
     meta_package: MetaPackage,
-    blobs: BTreeMap<Hash, BlobEntry>,
+    blobs: BTreeMap<String, BlobEntry>,
 }
 
 impl Builder {
@@ -71,7 +71,7 @@ impl Builder {
         if blob_path != "meta/".to_string() {
             self.contents.insert(blob_path.clone(), hash);
         }
-        self.blobs.insert(hash, BlobEntry { source_path, blob_path, size });
+        self.blobs.insert(blob_path, BlobEntry { source_path, size, hash });
     }
 
     pub fn build(self) -> Result<Package, MetaContentsError> {
@@ -86,7 +86,7 @@ impl Builder {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlobEntry {
     source_path: PathBuf,
-    blob_path: String,
+    hash: Hash,
     size: u64,
 }
 
@@ -95,12 +95,12 @@ impl BlobEntry {
         self.source_path.clone()
     }
 
-    pub fn blob_path(&self) -> String {
-        self.blob_path.clone()
-    }
-
     pub fn size(&self) -> u64 {
         self.size
+    }
+
+    pub fn hash(&self) -> Hash {
+        self.hash
     }
 }
 
@@ -135,16 +135,15 @@ mod test_package {
         let meta_contents = MetaContents::from_map(map).unwrap();
         let blob_entry = BlobEntry {
             source_path: PathBuf::from("src/bin/my_prog"),
-            blob_path: "bin/my_prog".to_string(),
             size: 1,
+            hash: Hash::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
         };
         let blobs = btreemap! {
-        Hash::from_str(
-         "0000000000000000000000000000000000000000000000000000000000000000")
-        .unwrap() => blob_entry.clone(),
-        Hash::from_str(
-           "1111111111111111111111111111111111111111111111111111111111111111")
-        .unwrap() => blob_entry.clone(),
+            "bin/my_prog".to_string() => blob_entry.clone(),
+            "bin/my_prog2".to_string() => blob_entry.clone(),
         };
         let package = Package {
             meta_contents: meta_contents.clone(),
@@ -205,16 +204,15 @@ mod test_package {
 
         let blob_entry = BlobEntry {
             source_path: PathBuf::from("src/bin/my_prog"),
-            blob_path: "bin/my_prog".to_string(),
             size: 1,
+            hash: Hash::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
         };
         let blobs = btreemap! {
-        Hash::from_str(
-         "0000000000000000000000000000000000000000000000000000000000000000")
-        .unwrap() => blob_entry.clone(),
-        Hash::from_str(
-           "1111111111111111111111111111111111111111111111111111111111111111")
-        .unwrap() => blob_entry.clone(),
+            "bin/my_prog".to_string() => blob_entry.clone(),
+            "bin/my_prog2".to_string() => blob_entry.clone(),
         };
         let package =
             Package::from_meta_far(File::open(&meta_far_path).unwrap(), blobs.clone()).unwrap();
@@ -233,16 +231,15 @@ mod test_package {
         let file = File::open(&file_path).unwrap();
         let blob_entry = BlobEntry {
             source_path: PathBuf::from("src/bin/my_prog"),
-            blob_path: "bin/my_prog".to_string(),
             size: 1,
+            hash: Hash::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
         };
         let blobs = btreemap! {
-        Hash::from_str(
-         "0000000000000000000000000000000000000000000000000000000000000000")
-        .unwrap() => blob_entry.clone(),
-        Hash::from_str(
-           "1111111111111111111111111111111111111111111111111111111111111111")
-        .unwrap() => blob_entry.clone(),
+            "bin/my_prog".to_string() => blob_entry.clone(),
+            "bin/my_prog2".to_string() => blob_entry.clone(),
         };
         let package = Package::from_meta_far(file, blobs.clone());
         assert!(package.is_err());
