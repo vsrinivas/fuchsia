@@ -139,23 +139,6 @@ executable("stub_exception_handler_exe") {
   ]
 }
 
-executable("limbo_client_unittest_exe") {
-  testonly = true
-
-  sources = [ "limbo_client_unittest.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.exception",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/exceptions/limbo_client:lib",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
 ###############################################################################
 # RESOURCES
 ###############################################################################
@@ -225,10 +208,6 @@ fuchsia_component("process_launch_failure_unittest") {
   ]
 }
 
-fuchsia_unittest_component("limbo_client_unittest") {
-  deps = [ ":limbo_client_unittest_exe" ]
-}
-
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -236,7 +215,6 @@ fuchsia_test_package("exception-broker-tests") {
   test_components = [
     ":exception_broker_config_test",
     ":exception_broker_unittest",
-    ":limbo_client_unittest",
     ":process_launch_failure_unittest",
   ]
 

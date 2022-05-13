@@ -26,7 +26,6 @@ group("tools") {
     "//src/developer/fastboot",
     "//src/developer/ffx:ffx_tool",
     "//src/developer/ffx:runtime",
-    "//src/developer/forensics/exceptions/limbo_client:limbo-client",
     "//src/developer/memory/mem",
     "//src/devices/bundles:tools",
     "//src/devices/lib/bind",
