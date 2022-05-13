@@ -147,7 +147,11 @@ impl FileOps for MagmaFile {
                 ) = read_control_and_response(current_task, &command)?;
 
                 let connection = control.connection as magma_connection_t;
-                unsafe { magma_release_connection(connection) };
+                let mut connections = self.connections.lock();
+                if connections.contains_key(&connection) {
+                    unsafe { magma_release_connection(connection) };
+                    connections.remove(&connection);
+                }
 
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_RELEASE_CONNECTION as u32;
