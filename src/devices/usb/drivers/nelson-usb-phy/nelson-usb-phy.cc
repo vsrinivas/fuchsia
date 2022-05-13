@@ -26,6 +26,7 @@
 namespace nelson_usb_phy {
 
 constexpr auto kStabilizeTime = zx::sec(1);
+constexpr int kPhyReadyRetryCount = 1000;
 
 void NelsonUsbPhy::InitPll(fdf::MmioBuffer* mmio) {
   PLL_REGISTER_40::Get()
@@ -187,9 +188,9 @@ zx_status_t NelsonUsbPhy::InitPhy() {
 
     int count = 0;
     while (!u2p_r1.ReadFrom(&usbctrl_mmio).phy_rdy()) {
-      // wait phy ready max 1ms, common is 100us
-      if (count > 200) {
-        zxlogf(ERROR, "NelsonUsbPhy::InitPhy U2P_R1_PHY_RDY wait failed");
+      // wait phy ready max 5ms, common is 100us
+      if (count > kPhyReadyRetryCount) {
+        zxlogf(WARNING, "NelsonUsbPhy::InitPhy U2P_R1_PHY_RDY wait failed");
         break;
       }
       count++;
