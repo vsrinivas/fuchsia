@@ -203,9 +203,9 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
       }
     }
     if (unlikely(pointee_type == PointeeType::kString)) {
-      auto status = fidl_validate_string(reinterpret_cast<const char*>(&bytes_[next_out_of_line_]),
-                                         inline_size);
-      if (status != ZX_OK) {
+      bool valid = fidl_validate_string(reinterpret_cast<const char*>(&bytes_[next_out_of_line_]),
+                                        inline_size);
+      if (!valid) {
         SetError("encountered invalid UTF8 string");
         return Status::kConstraintViolationError;
       }
@@ -441,7 +441,7 @@ zx_status_t internal__fidl_decode_impl__may_break(
   }
 
   uint8_t* b = reinterpret_cast<uint8_t*>(bytes);
-  for (size_t i = primary_size; i < size_t(next_out_of_line); i++) {
+  for (uint32_t i = primary_size; i < next_out_of_line; i++) {
     if (b[i] != 0) {
       set_error("non-zero padding bytes detected");
       drop_all_handles();
@@ -503,18 +503,18 @@ zx_status_t internal__fidl_decode_etc_hlcpp__v2__may_break(const fidl_type_t* ty
                                                            uint32_t num_bytes,
                                                            const zx_handle_info_t* handle_infos,
                                                            uint32_t num_handle_infos,
-                                                           const char** out_error_msg) {
+                                                           const char** error_msg_out) {
   return fidl_decode_impl_handle_info<FIDL_WIRE_FORMAT_VERSION_V2>(
       default_channel_encoding_configuration, type, bytes, num_bytes, handle_infos,
-      num_handle_infos, out_error_msg, true);
+      num_handle_infos, error_msg_out, true);
 }
 
 zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                             const zx_handle_info_t* handle_infos, uint32_t num_handle_infos,
-                            const char** out_error_msg) {
+                            const char** error_msg_out) {
   return fidl_decode_impl_handle_info<FIDL_WIRE_FORMAT_VERSION_V2>(
       default_channel_encoding_configuration, type, bytes, num_bytes, handle_infos,
-      num_handle_infos, out_error_msg, false);
+      num_handle_infos, error_msg_out, false);
 }
 
 zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
@@ -575,7 +575,7 @@ zx_status_t fidl_validate_impl(const fidl_type_t* type, const void* bytes, uint3
   }
 
   const uint8_t* b = reinterpret_cast<const uint8_t*>(bytes);
-  for (size_t i = primary_size; i < size_t(next_out_of_line); i++) {
+  for (uint32_t i = primary_size; i < next_out_of_line; i++) {
     if (b[i] != 0) {
       set_error("non-zero padding bytes detected");
       return ZX_ERR_INVALID_ARGS;
@@ -583,8 +583,8 @@ zx_status_t fidl_validate_impl(const fidl_type_t* type, const void* bytes, uint3
   }
 
   FidlDecoder<Mode::Validate, WireFormatVersion, const uint8_t> validator(
-      default_channel_encoding_configuration, b, num_bytes, (fidl_handle_t*)(nullptr), nullptr,
-      num_handles, next_out_of_line, out_error_msg, false);
+      default_channel_encoding_configuration, b, num_bytes, nullptr, nullptr, num_handles,
+      next_out_of_line, out_error_msg, false);
   fidl::Walk<WireFormatVersion>(validator, type, DecodingPosition<const uint8_t>{b});
 
   if (validator.status() == ZX_OK) {

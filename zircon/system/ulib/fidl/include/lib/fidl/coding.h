@@ -54,8 +54,8 @@ zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_b
 // IT MAY BREAK AT ANY TIME OR BE REMOVED WITHOUT NOTICE.
 zx_status_t internal__fidl_decode_etc_hlcpp__v2__may_break(const fidl_type_t* type, void* bytes,
                                                            uint32_t num_bytes,
-                                                           const zx_handle_info_t* handles,
-                                                           uint32_t num_handles,
+                                                           const zx_handle_info_t* handle_infos,
+                                                           uint32_t num_handle_infos,
                                                            const char** error_msg_out);
 
 // This function assumes that the message being passed in has a 16-byte transaction header
@@ -83,7 +83,7 @@ zx_status_t internal__fidl_validate__v2__may_break(const fidl_type_t* type, cons
 // The |data| is not modified.
 //
 // See also http://www.unicode.org/versions/Unicode13.0.0/ch03.pdf#G7404
-zx_status_t fidl_validate_string(const char* data, uint64_t size);
+bool fidl_validate_string(const char* data, uint64_t size);
 
 // Stores the name of a fidl type into the provided buffer.
 // Truncates the name if it is too long to fit into the buffer.

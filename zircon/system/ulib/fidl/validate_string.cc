@@ -7,12 +7,12 @@
 #include <cstdint>
 #include <cstring>
 
-zx_status_t fidl_validate_string(const char* data, uint64_t size) {
+bool fidl_validate_string(const char* data, uint64_t size) {
   if (!data) {
-    return ZX_ERR_INVALID_ARGS;
+    return false;
   }
   if (size > FIDL_MAX_SIZE) {
-    return ZX_ERR_INVALID_ARGS;
+    return false;
   }
 
   uint64_t pos = 0;
@@ -44,56 +44,56 @@ zx_status_t fidl_validate_string(const char* data, uint64_t size) {
     if (byte < 0b11100000) {  // Matches 0b110x xxxx
       next_pos = pos + 2;
       if (next_pos > size) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
       if ((data[pos + 1] & 0b11000000) != 0b10000000) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
       // range check
       code_point = (byte & 0b00011111) << 6 | (data[pos + 1] & 0b00111111);
       if (code_point < 0x80 || 0x7ff < code_point) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
     } else if (byte < 0b11110000) {  // Matches 0b1110 xxxx
       next_pos = pos + 3;
       if (next_pos > size) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
       if ((data[pos + 1] & 0b11000000) != 0b10000000) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
       if ((data[pos + 2] & 0b11000000) != 0b10000000) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
       // range check
       code_point = (byte & 0b00001111) << 12 | (data[pos + 1] & 0b00111111) << 6 |
                    (data[pos + 2] & 0b00111111);
       if (code_point < 0x800 || 0xffff < code_point ||
           (0xd7ff < code_point && code_point < 0xe000)) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
     } else {  // Matches 0b1111 xxxx
       next_pos = pos + 4;
       if (next_pos > size) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
       if ((data[pos + 1] & 0b11000000) != 0b10000000) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
       if ((data[pos + 2] & 0b11000000) != 0b10000000) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
       if ((data[pos + 3] & 0b11000000) != 0b10000000) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
       // range check
       code_point = (byte & 0b00000111) << 18 | (data[pos + 1] & 0b00111111) << 12 |
                    (data[pos + 2] & 0b00111111) << 6 | (data[pos + 3] & 0b00111111);
       if (code_point < 0xffff || 0x10ffff < code_point) {
-        return ZX_ERR_INVALID_ARGS;
+        return false;
       }
     }
     pos = next_pos;
   }
-  return ZX_OK;
+  return true;
 }

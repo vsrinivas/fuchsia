@@ -49,7 +49,7 @@ bool ForEachEntry(int root_fd, const std::string& path,
     return false;
   }
   std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(fdopendir(dir_fd), SafeCloseDir);
-  if (!dir.get())
+  if (!dir)
     return false;
   for (struct dirent* entry = readdir(dir.get()); entry != nullptr; entry = readdir(dir.get())) {
     char* name = entry->d_name;
@@ -158,17 +158,18 @@ std::string SimplifyPath(std::string path) {
     put += last_component_size;
   }
 
-  if (put >= 2 && path[put - 1] == '/')
+  if (put >= 2 && path[put - 1] == '/') {
     --put;  // Trim trailing /
-  else if (put == 0)
+  } else if (put == 0) {
     return ".";  // Use . for otherwise empty paths to treat them as relative.
+  }
 
   path.resize(put);
   return path;
 }
 
 std::string AbsolutePath(const std::string& path) {
-  if (path.size() > 0) {
+  if (!path.empty()) {
     if (path[0] == '/') {
       // Path is already absolute.
       return path;
@@ -179,10 +180,9 @@ std::string AbsolutePath(const std::string& path) {
       current_directory = "";
     }
     return current_directory + "/" + path;
-  } else {
-    // Path is empty.
-    return GetCurrentDirectory();
   }
+  // Path is empty.
+  return GetCurrentDirectory();
 }
 
 std::string GetDirectoryName(const std::string& path) {
@@ -215,7 +215,7 @@ bool IsValidName(std::string_view name) {
   if (name == ".." || name == ".") {
     return false;
   }
-  if (fidl_validate_string(name.data(), name.length()) != ZX_OK) {
+  if (!fidl_validate_string(name.data(), name.length())) {
     return false;
   }
   // * It cannot contain "/".
@@ -247,7 +247,7 @@ bool IsValidCanonicalPath(std::string_view path) {
     return false;
   }
 
-  if (fidl_validate_string(path.data(), path.length()) != ZX_OK) {
+  if (!fidl_validate_string(path.data(), path.length())) {
     return false;
   }
 

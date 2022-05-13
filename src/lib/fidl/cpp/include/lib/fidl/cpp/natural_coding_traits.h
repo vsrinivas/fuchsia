@@ -132,7 +132,8 @@ struct NaturalCodingTraits<T, NaturalCodingConstraintEmpty,
   static constexpr size_t inline_size_v2 = sizeof(T);
   static constexpr bool is_memcpy_compatible = true;
 
-  static void Encode(NaturalEncoder* encoder, T* value, size_t offset, size_t recursion_depth) {
+  static void Encode(NaturalEncoder* encoder, const T* value, size_t offset,
+                     size_t recursion_depth) {
     *encoder->template GetPtr<T>(offset) = *value;
   }
   static void Decode(NaturalDecoder* decoder, T* value, size_t offset, size_t recursion_depth) {
@@ -145,11 +146,12 @@ struct NaturalCodingTraits<bool, NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(bool);
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(NaturalEncoder* encoder, bool* value, size_t offset, size_t recursion_depth) {
+  static void Encode(NaturalEncoder* encoder, const bool* value, size_t offset,
+                     size_t recursion_depth) {
     *encoder->template GetPtr<bool>(offset) = *value;
   }
-  static void Encode(NaturalEncoder* encoder, std::vector<bool>::iterator value, size_t offset,
-                     size_t recursion_depth) {
+  static void Encode(NaturalEncoder* encoder, const std::vector<bool>::iterator& value,
+                     size_t offset, size_t recursion_depth) {
     bool b = *value;
     Encode(encoder, &b, offset, recursion_depth);
   }
@@ -162,8 +164,8 @@ struct NaturalCodingTraits<bool, NaturalCodingConstraintEmpty> {
 
     *value = *decoder->template GetPtr<bool>(offset);
   }
-  static void Decode(NaturalDecoder* decoder, std::vector<bool>::iterator value, size_t offset,
-                     size_t recursion_depth) {
+  static void Decode(NaturalDecoder* decoder, const std::vector<bool>::iterator& value,
+                     size_t offset, size_t recursion_depth) {
     bool b;
     Decode(decoder, &b, offset, recursion_depth);
     *value = b;
@@ -300,7 +302,7 @@ struct NaturalCodingTraits<::std::array<T, N>, Constraint> {
                      size_t recursion_depth) {
     size_t stride = NaturalEncodingInlineSize<T, Constraint>(encoder);
     if constexpr (is_memcpy_compatible) {
-      memcpy(encoder->template GetPtr<void>(offset), &value[0], N * stride);
+      memcpy(encoder->template GetPtr<void>(offset), value->data(), N * stride);
     } else {
       for (size_t i = 0; i < N; ++i) {
         NaturalCodingTraits<T, Constraint>::Encode(encoder, &value->at(i), offset + i * stride,
@@ -312,7 +314,7 @@ struct NaturalCodingTraits<::std::array<T, N>, Constraint> {
                      size_t recursion_depth) {
     size_t stride = NaturalDecodingInlineSize<T, Constraint>(decoder);
     if constexpr (is_memcpy_compatible) {
-      memcpy(&value[0], decoder->template GetPtr<void>(offset), N * stride);
+      memcpy(value->data(), decoder->template GetPtr<void>(offset), N * stride);
     } else {
       for (size_t i = 0; i < N; ++i) {
         NaturalCodingTraits<T, Constraint>::Decode(decoder, &value->at(i), offset + i * stride,
@@ -480,8 +482,8 @@ struct NaturalCodingTraits<::std::string, Constraint> final {
       encoder->SetError(kCodingErrorStringLimitExceeded);
       return;
     }
-    zx_status_t status = fidl_validate_string(value->data(), value->size());
-    if (status != ZX_OK) {
+    bool valid = fidl_validate_string(value->data(), value->size());
+    if (!valid) {
       encoder->SetError(kCodingErrorStringNotValidUtf8);
       return;
     }
@@ -526,8 +528,8 @@ struct NaturalCodingTraits<::std::string, Constraint> final {
       return;
     }
     char* payload = decoder->template GetPtr<char>(base);
-    zx_status_t status = fidl_validate_string(payload, string->size);
-    if (status != ZX_OK) {
+    bool valid = fidl_validate_string(payload, string->size);
+    if (!valid) {
       decoder->SetError(kCodingErrorStringNotValidUtf8);
       return;
     }

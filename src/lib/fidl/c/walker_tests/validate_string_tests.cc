@@ -6,27 +6,25 @@
 
 #include <zxtest/zxtest.h>
 
-#define EXPECT_VALID_STRING(input)                            \
-  {                                                           \
-    const char* bytes = input;                                \
-    uint32_t num_bytes = sizeof(input) - 1;                   \
-    EXPECT_EQ(ZX_OK, fidl_validate_string(bytes, num_bytes)); \
+#define EXPECT_VALID_STRING(input)                       \
+  {                                                      \
+    const char* bytes = input;                           \
+    uint32_t num_bytes = sizeof(input) - 1;              \
+    EXPECT_TRUE(fidl_validate_string(bytes, num_bytes)); \
   }
 
-#define EXPECT_INVALID_STRING(input, explanation)                                        \
-  {                                                                                      \
-    const char* bytes = input;                                                           \
-    uint32_t num_bytes = sizeof(input) - 1;                                              \
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, fidl_validate_string(bytes, num_bytes), explanation); \
+#define EXPECT_INVALID_STRING(input, explanation)                      \
+  {                                                                    \
+    const char* bytes = input;                                         \
+    uint32_t num_bytes = sizeof(input) - 1;                            \
+    EXPECT_FALSE(fidl_validate_string(bytes, num_bytes), explanation); \
   }
 
-TEST(ValidateString, safe_on_nullptr) {
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fidl_validate_string(nullptr, 10));
-}
+TEST(ValidateString, safe_on_nullptr) { EXPECT_FALSE(fidl_validate_string(nullptr, 10)); }
 
 TEST(ValidateString, string_with_size_too_big) {
   uint64_t size_too_big = static_cast<uint64_t>(FIDL_MAX_SIZE) + 1;
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fidl_validate_string("", size_too_big));
+  EXPECT_FALSE(fidl_validate_string("", size_too_big));
 }
 
 TEST(ValidateString, min_max_code_units_and_minus_one_and_plus_one) {

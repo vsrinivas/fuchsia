@@ -92,7 +92,7 @@ class FidlEncoder final : public ::fidl::Visitor<WireFormatVersion, fidl::Mutati
   using EnvelopePointer = typename Base::EnvelopePointer;
   using Position = EncodingPosition;
 
-  FidlEncoder(EncodeArgs args)
+  explicit FidlEncoder(EncodeArgs args)
       : current_iovec_uses_backing_buffer_(true),
         encoding_configuration_(args.encoding_configuration),
         backing_buffer_(args.backing_buffer),
@@ -241,9 +241,8 @@ class FidlEncoder final : public ::fidl::Visitor<WireFormatVersion, fidl::Mutati
       //  TODO(fxbug.dev/52215): For strings, it would most likely be more efficient
       //  to validate and copy at the same time.
       if (unlikely(pointee_type == PointeeType::kString)) {
-        auto validation_status =
-            fidl_validate_string(reinterpret_cast<char*>(*object_ptr_ptr), inline_size);
-        if (validation_status != ZX_OK) {
+        bool valid = fidl_validate_string(reinterpret_cast<char*>(*object_ptr_ptr), inline_size);
+        if (!valid) {
           SetError("encoder encountered invalid UTF8 string");
           return Status::kConstraintViolationError;
         }
@@ -433,9 +432,10 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
               "num_backing_buffer must be aligned to FIDL_ALIGNMENT");
   USER_ASSERT(handles != nullptr || num_handles == 0,
               "Cannot provide non-zero handle count and null handle pointer");
-  if (num_handles == 0)
+  if (num_handles == 0) {
     USER_ASSERT(handle_metadata == nullptr,
                 "Cannot provide non-zero handle count and null handle pointer");
+  }
 
   zx_status_t status;
   uint32_t primary_size = 0;

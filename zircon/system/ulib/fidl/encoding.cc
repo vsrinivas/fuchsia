@@ -77,7 +77,7 @@ class FidlEncoder final
   using EnvelopePointer = typename Base::EnvelopePointer;
   using Position = EncodingPosition;
 
-  FidlEncoder(BufferEncodeArgs args)
+  explicit FidlEncoder(BufferEncodeArgs args)
       : bytes_(args.bytes),
         num_bytes_(args.num_bytes),
         handles_(args.handles),
@@ -103,11 +103,10 @@ class FidlEncoder final
     if (unlikely(object_ptr != &bytes_[next_out_of_line_])) {
       SetError("noncontiguous out of line storage during encode");
       return Status::kMemoryError;
-    } else {
-      // Zero padding between out of line storage.
-      memset(&bytes_[next_out_of_line_] + inline_size, 0,
-             (new_offset - next_out_of_line_) - inline_size);
     }
+    // Zero padding between out of line storage.
+    memset(&bytes_[next_out_of_line_] + inline_size, 0,
+           (new_offset - next_out_of_line_) - inline_size);
 
     // Instruct the walker to traverse the pointee afterwards.
     *out_position = Position::Create(object_ptr, bytes_ + next_out_of_line_);
@@ -132,9 +131,8 @@ class FidlEncoder final
     // TODO(fxbug.dev/52215): For strings, it would most likely be more efficient
     // to validate and copy at the same time.
     if (unlikely(pointee_type == PointeeType::kString)) {
-      auto validation_status =
-          fidl_validate_string(reinterpret_cast<char*>(object_ptr), inline_size);
-      if (validation_status != ZX_OK) {
+      bool valid = fidl_validate_string(reinterpret_cast<char*>(object_ptr), inline_size);
+      if (!valid) {
         SetError("encoder encountered invalid UTF8 string");
         return Status::kConstraintViolationError;
       }
@@ -368,10 +366,11 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
 
 zx_status_t fidl_encode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                             zx_handle_disposition_t* handle_dispositions,
-                            uint32_t max_handle_dispositions, uint32_t* out_actual_handles,
-                            const char** out_error_msg) {
+                            uint32_t max_handle_dispositions,
+                            uint32_t* out_actual_handle_dispositions, const char** out_error_msg) {
   return fidl_encode_impl(type, bytes, num_bytes, handle_dispositions, max_handle_dispositions,
-                          out_actual_handles, out_error_msg, close_handle_dispositions_op);
+                          out_actual_handle_dispositions, out_error_msg,
+                          close_handle_dispositions_op);
 }
 
 zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* msg,

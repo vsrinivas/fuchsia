@@ -16,7 +16,7 @@ namespace {
     while (state->KeepRunning()) {                                               \
       const char* bytes = lib_fidl_microbenchmarks::Name##_S_##Num;              \
       uint32_t num_bytes = sizeof(lib_fidl_microbenchmarks::Name##_S_##Num) - 1; \
-      ZX_ASSERT(ZX_OK == fidl_validate_string(bytes, num_bytes));                \
+      ZX_ASSERT(fidl_validate_string(bytes, num_bytes));                         \
     }                                                                            \
     return true;                                                                 \
   }
