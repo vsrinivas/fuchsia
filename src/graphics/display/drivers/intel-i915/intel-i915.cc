@@ -48,15 +48,8 @@
 #include "src/graphics/display/drivers/intel-i915/registers.h"
 #include "src/graphics/display/drivers/intel-i915/tiling.h"
 
-#define INTEL_I915_BROADWELL_DID (0x1616)
-
 #define INTEL_I915_REG_WINDOW_SIZE (0x1000000u)
 #define INTEL_I915_FB_WINDOW_SIZE (0x10000000u)
-
-#define BACKLIGHT_CTRL_OFFSET (0xc8250)
-#define BACKLIGHT_CTRL_BIT ((uint32_t)(1u << 31))
-
-#define FLAGS_BACKLIGHT 1
 
 namespace {
 static zx_pixel_format_t supported_formats[4] = {
@@ -176,20 +169,6 @@ zx::status<FramebufferInfo> GetFramebufferInfo() {
 }  // namespace
 
 namespace i915 {
-
-void Controller::EnableBacklight(bool enable) {
-  if (flags_ & FLAGS_BACKLIGHT) {
-    uint32_t tmp = mmio_space()->Read32(BACKLIGHT_CTRL_OFFSET);
-
-    if (enable) {
-      tmp |= BACKLIGHT_CTRL_BIT;
-    } else {
-      tmp &= ~BACKLIGHT_CTRL_BIT;
-    }
-
-    mmio_space()->Write32(BACKLIGHT_CTRL_OFFSET, tmp);
-  }
-}
 
 void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
   zxlogf(TRACE, "Hotplug detected on ddi %d (long_pulse=%d)", ddi, long_pulse);
@@ -1976,7 +1955,6 @@ void Controller::DdkInit(ddk::InitTxn txn) {
     }
 
     interrupts_.FinishInit();
-    EnableBacklight(true);
 
     zxlogf(TRACE, "i915: display initialization done");
     txn.Reply(ZX_OK);
@@ -2127,10 +2105,6 @@ zx_status_t Controller::Init() {
 
   pci_read_config16(&pci_, PCI_CONFIG_DEVICE_ID, &device_id_);
   zxlogf(TRACE, "Device id %x", device_id_);
-  if (device_id_ == INTEL_I915_BROADWELL_DID) {
-    // TODO: this should be based on the specific target
-    flags_ |= FLAGS_BACKLIGHT;
-  }
 
   zxlogf(TRACE, "Initializing DDIs");
   ddis_ = GetDdis(device_id_);
@@ -2276,8 +2250,6 @@ Controller::Controller(zx_device_t* parent) : DeviceType(parent) {
 Controller::~Controller() {
   interrupts_.Destroy();
   if (mmio_space()) {
-    EnableBacklight(false);
-
     for (unsigned i = 0; i < registers::kPipeCount; i++) {
       fbl::AutoLock lock(&display_lock_);
       interrupts()->EnablePipeVsync(pipes_[i].pipe(), true);

@@ -169,7 +169,6 @@ class Controller : public DeviceType,
   zx_status_t Init();
 
   const std::unique_ptr<GttRegion>& GetGttRegion(uint64_t handle);
-  void EnableBacklight(bool enable);
   void InitDisplays();
   std::unique_ptr<DisplayDevice> QueryDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
   bool LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) __TA_REQUIRES(display_lock_);
