@@ -40,7 +40,7 @@ use {
         any::Any,
         borrow::Borrow,
         cmp::min,
-        collections::{BTreeMap, HashSet, VecDeque},
+        collections::{BTreeMap, VecDeque},
         convert::TryInto,
         marker::PhantomData,
         ops::{Bound, Range},
@@ -427,8 +427,9 @@ struct Inner {
     committed_deallocated: VecDeque<(u64, Range<u64>)>,
     // The total number of committed deallocated bytes.
     committed_deallocated_bytes: u64,
-    // A collection of |owner_object_id| that should be filtered out at next compaction time.
-    marked_for_deletion: HashSet<u64>,
+    // A map of of |owner_object_id| to bytes allocated. We should filter out
+    // data for these owners and free up bytes at next major compaction time.
+    marked_for_deletion: BTreeMap<u64, i64>,
 }
 
 impl Inner {
@@ -471,7 +472,7 @@ impl SimpleAllocator {
                 reserved_bytes: 0,
                 committed_deallocated: VecDeque::new(),
                 committed_deallocated_bytes: 0,
-                marked_for_deletion: HashSet::new(),
+                marked_for_deletion: BTreeMap::new(),
             }),
             allocation_mutex: futures::lock::Mutex::new(()),
             stats: SimpleAllocatorStats::new(max_extent_size_bytes),
@@ -923,7 +924,10 @@ impl Mutations for SimpleAllocator {
     ) {
         match mutation {
             Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
-                self.inner.lock().unwrap().marked_for_deletion.insert(owner_object_id);
+                let mut inner = self.inner.lock().unwrap();
+                if let Some(bytes) = inner.allocated_bytes.remove(&owner_object_id) {
+                    inner.marked_for_deletion.insert(owner_object_id, bytes);
+                }
             }
             Mutation::Allocator(AllocatorMutation::Allocate { device_range, owner_object_id }) => {
                 let item = AllocatorItem {
@@ -1091,11 +1095,7 @@ impl Mutations for SimpleAllocator {
         transaction.commit().await?;
 
         let marked_for_deletion =
-            std::mem::replace(&mut self.inner.lock().unwrap().marked_for_deletion, HashSet::new());
-
-        // Track the bytes we deallocate due to mark_for_deletion.
-        let deallocated_bytes: Arc<Mutex<BTreeMap<u64, i64>>> =
-            Arc::new(Mutex::new(BTreeMap::new()));
+            std::mem::replace(&mut self.inner.lock().unwrap().marked_for_deletion, BTreeMap::new());
 
         let layer_set = self.tree.immutable_layer_set();
         {
@@ -1103,17 +1103,8 @@ impl Mutations for SimpleAllocator {
             let iter = filter_tombstones(Box::new(merger.seek(Bound::Unbounded).await?)).await?;
             let iter = Box::new(
                 iter.filter(|x| match x {
-                    ItemRef {
-                        key: AllocatorKey { device_range },
-                        value: AllocatorValue::Abs { owner_object_id, .. },
-                        ..
-                    } => {
-                        if marked_for_deletion.contains(owner_object_id) {
-                            *deallocated_bytes
-                                .lock()
-                                .unwrap()
-                                .entry(*owner_object_id)
-                                .or_insert(0) += device_range.length().unwrap() as i64;
+                    ItemRef { value: AllocatorValue::Abs { owner_object_id, .. }, .. } => {
+                        if marked_for_deletion.contains_key(&owner_object_id) {
                             false
                         } else {
                             true
@@ -1143,11 +1134,6 @@ impl Mutations for SimpleAllocator {
         let mut serialized_info = Vec::new();
         {
             let mut inner = self.inner.lock().unwrap();
-
-            // Reduce allocated bytes associated with any filtered mark_for_deletion extents.
-            for (k, v) in deallocated_bytes.lock().unwrap().iter() {
-                *inner.allocated_bytes.entry(*k).or_insert(0) -= *v;
-            }
 
             // Move all the existing layers to the graveyard.
             for object_id in &inner.info.layers {
@@ -1595,18 +1581,15 @@ mod tests {
         transaction.commit().await.expect("commit failed");
 
         // Expect that deallocation hasn't happened yet -- it happens at flush time.
-        assert_eq!(
-            initial_allocated_bytes + fs.block_size() * 200,
-            allocator.get_allocated_bytes()
-        );
+        assert_eq!(initial_allocated_bytes, allocator.get_allocated_bytes());
         check_allocations(&allocator, &device_ranges).await;
 
         allocator.flush().await.expect("flush failed");
 
         // The flush above seems to trigger a two block allocation for the allocator itself.
+        assert_eq!(fs.block_size() * 2, allocator.get_allocated_bytes());
         device_ranges.clear();
         device_ranges.push(fs.block_size() * 200..fs.block_size() * (200 + 2));
-        assert_eq!(fs.block_size() * 2, allocator.get_allocated_bytes());
         check_allocations(&allocator, &device_ranges).await;
     }
 
