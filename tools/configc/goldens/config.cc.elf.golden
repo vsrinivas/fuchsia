@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "config.h"
+#include "cpp_elf_config_lib.h"
 
 namespace cpp_elf_config_lib {
 

@@ -22,9 +22,13 @@ pub struct GenerateCppSource {
     #[argh(option)]
     cm: PathBuf,
 
-    /// path to which to output source files
+    /// path to which to output a header file
     #[argh(option)]
-    output_path: PathBuf,
+    h_output: PathBuf,
+
+    /// path to which to output a source file
+    #[argh(option)]
+    cc_output: PathBuf,
 
     /// namespace used by library
     #[argh(option)]
@@ -59,14 +63,16 @@ impl GenerateCppSource {
         let formatted_h_source = format_source(&self.clang_format, h_source)?;
 
         // Make sure directories exist
-        fs::create_dir_all(&self.output_path)
-            .context("Failed to create directories for source files")?;
+        fs::create_dir_all(
+            &self.cc_output.parent().expect("source output path must have a parent directory"),
+        )
+        .context("Failed to create directories for source files")?;
 
         let mut cc_out_file = fs::OpenOptions::new()
             .create(true)
             .truncate(true)
             .write(true)
-            .open(self.output_path.join("config.cc"))
+            .open(&self.cc_output)
             .context("opening cc output file")?;
         cc_out_file.write(formatted_cc_source.as_bytes()).context("writing cc file to output")?;
 
@@ -74,7 +80,7 @@ impl GenerateCppSource {
             .create(true)
             .truncate(true)
             .write(true)
-            .open(self.output_path.join("config.h"))
+            .open(&self.h_output)
             .context("opening h output file")?;
         h_out_file.write(formatted_h_source.as_bytes()).context("writing h file to output")?;
 

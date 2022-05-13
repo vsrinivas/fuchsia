@@ -30,7 +30,6 @@
 #include <thread>
 
 #include <fbl/unique_fd.h>
-#include <fshost_config/config.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zstd/zstd.h>
 
@@ -40,6 +39,7 @@
 #include "metrics.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
+#include "src/storage/fshost/fshost_config.h"
 
 namespace fio = fuchsia_io;
 

@@ -16,11 +16,11 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
-#include <fshost_config/config.h>
 
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/filesystem-mounter.h"
+#include "src/storage/fshost/fshost_config.h"
 
 namespace fshost {
 

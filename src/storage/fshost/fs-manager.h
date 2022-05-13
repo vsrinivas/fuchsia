@@ -19,11 +19,10 @@
 #include <iterator>
 #include <map>
 
-#include <fshost_config/config.h>
-
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/fshost/fdio.h"
 #include "src/storage/fshost/fshost-boot-args.h"
+#include "src/storage/fshost/fshost_config.h"
 #include "src/storage/fshost/inspect-manager.h"
 #include "src/storage/fshost/metrics.h"
 #include "src/storage/memfs/memfs.h"

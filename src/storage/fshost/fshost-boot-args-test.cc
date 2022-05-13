@@ -16,7 +16,6 @@
 #include <map>
 #include <memory>
 
-#include <fshost_config/config.h>
 #include <gtest/gtest.h>
 #include <mock-boot-arguments/server.h>
 

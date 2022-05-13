@@ -25,12 +25,12 @@
 #include <vector>
 
 #include <bind/fuchsia/test/cpp/fidl.h>
-#include <receiver_config/config.h>
 
 #include "fidl/test.structuredconfig.receiver.shim/cpp/wire_messaging.h"
 #include "lib/fidl/llcpp/arena.h"
 #include "lib/fidl/llcpp/string_view.h"
 #include "lib/fidl/llcpp/vector_view.h"
+#include "src/sys/component_manager/tests/structured_config/client_integration/cpp_driver/receiver_config.h"
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

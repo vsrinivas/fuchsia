@@ -11,9 +11,8 @@
 #include <string_view>
 #include <vector>
 
-#include <fshost_config/config.h>
-
 #include "src/storage/fshost/block-device-interface.h"
+#include "src/storage/fshost/fshost_config.h"
 
 namespace fshost {
 

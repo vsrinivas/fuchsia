@@ -478,7 +478,7 @@ template("fuchsia_structured_config_cpp_elf_lib") {
   source_gen_dir =
       get_label_info(":bogus($default_toolchain)", "target_out_dir")
   fidl_source_file = "${source_gen_dir}/${fidl_source_target}.fidl"
-  cpp_elf_cc_source_file = "${source_gen_dir}/${namespace}/config.cc"
+  cpp_elf_cc_source_file = "${source_gen_dir}/${namespace}.cc"
 
   # generate the FIDL library
   fidl_library_target = "${target_name}_fidl_internal"
@@ -493,9 +493,9 @@ template("fuchsia_structured_config_cpp_elf_lib") {
 
   library_headers(cpp_elf_headers_target) {
     forward_variables_from(invoker, [ "testonly" ])
-    include_dir = "${source_gen_dir}"
+    include_dir = "$root_build_dir/obj"
     headers = [ "${namespace}/config.h" ]
-    deps = [ ":${cpp_elf_source_target}($default_toolchain)" ]
+    public_deps = [ ":${cpp_elf_source_target}($default_toolchain)" ]
   }
 
   # generate the wrapper C++ library
@@ -503,7 +503,6 @@ template("fuchsia_structured_config_cpp_elf_lib") {
     forward_variables_from(invoker, [ "testonly" ])
     sources = [ cpp_elf_cc_source_file ]
     deps = [
-      ":${cpp_elf_source_target}($default_toolchain)",
       ":${fidl_library_target}_llcpp",
       "//sdk/lib/sys/cpp",
       "//zircon/system/ulib/fidl",
@@ -511,6 +510,7 @@ template("fuchsia_structured_config_cpp_elf_lib") {
 
     public_deps = [
       ":${cpp_elf_headers_target}",
+      ":${cpp_elf_source_target}($default_toolchain)",
       "//sdk/lib/sys/inspect/cpp",
     ]
 
@@ -663,7 +663,7 @@ template("fuchsia_structured_config_cpp_driver_lib") {
   source_gen_dir =
       get_label_info(":bogus($default_toolchain)", "target_out_dir")
   fidl_source_file = "${source_gen_dir}/${fidl_source_target}.fidl"
-  cpp_driver_cc_source_file = "${source_gen_dir}/${namespace}/config.cc"
+  cpp_driver_cc_source_file = "${source_gen_dir}/${namespace}.cc"
 
   # generate the FIDL library
   fidl_library_target = "${target_name}_fidl_internal"
@@ -678,9 +678,9 @@ template("fuchsia_structured_config_cpp_driver_lib") {
 
   library_headers(cpp_driver_headers_target) {
     forward_variables_from(invoker, [ "testonly" ])
-    include_dir = "${source_gen_dir}"
+    include_dir = "$root_build_dir/obj"
     headers = [ "${namespace}/config.h" ]
-    deps = [ ":${cpp_driver_source_target}($default_toolchain)" ]
+    public_deps = [ ":${cpp_driver_source_target}($default_toolchain)" ]
   }
 
   # generate the wrapper C++ library
@@ -688,7 +688,6 @@ template("fuchsia_structured_config_cpp_driver_lib") {
     forward_variables_from(invoker, [ "testonly" ])
     sources = [ cpp_driver_cc_source_file ]
     deps = [
-      ":${cpp_driver_source_target}($default_toolchain)",
       ":${fidl_library_target}_llcpp",
       "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
       "//sdk/lib/sys/cpp",
@@ -697,6 +696,7 @@ template("fuchsia_structured_config_cpp_driver_lib") {
 
     public_deps = [
       ":${cpp_driver_headers_target}",
+      ":${cpp_driver_source_target}($default_toolchain)",
       "//sdk/lib/sys/inspect/cpp",
     ]
 

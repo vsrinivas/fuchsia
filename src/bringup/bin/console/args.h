@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include <console_config/config.h>
+#include "src/bringup/bin/console/console_config.h"
 
 struct Options {
   std::vector<std::string> allowed_log_tags;

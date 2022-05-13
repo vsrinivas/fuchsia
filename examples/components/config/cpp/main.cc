@@ -9,7 +9,8 @@
 #include <lib/syslog/cpp/macros.h>
 
 // [START imports]
-#include <example_config/config.h>
+// Import the header as if it's located in the same directory as BUILD.gn:
+#include "examples/components/config/cpp/example_config.h"
 // [END imports]
 
 int main(int argc, const char* argv[], char* envp[]) {

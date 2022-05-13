@@ -5,9 +5,8 @@
 #ifndef SRC_STORAGE_FSHOST_CONFIG_H_
 #define SRC_STORAGE_FSHOST_CONFIG_H_
 
-#include <fshost_config/config.h>
-
 #include "src/storage/fshost/fshost-boot-args.h"
+#include "src/storage/fshost/fshost_config.h"
 
 namespace fshost {
 // Returns the default/base configuration for fshost when run without configuration from the

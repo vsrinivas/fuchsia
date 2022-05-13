@@ -11,10 +11,10 @@
 
 #include <iostream>
 
-#include <receiver_config/config.h>
 #include <test/structuredconfig/receiver/cpp/fidl.h>
 
 #include "lib/inspect/cpp/vmo/types.h"
+#include "src/sys/component_manager/tests/structured_config/client_integration/cpp_elf/receiver_config.h"
 
 class PuppetImpl : public test::structuredconfig::receiver::ConfigReceiverPuppet {
  public:

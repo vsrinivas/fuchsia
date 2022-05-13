@@ -13,8 +13,9 @@
 #include <string>
 #include <utility>
 
-#include <echo_server_config_lib/config.h>
 #include <test/placeholders/cpp/fidl.h>
+
+#include "sdk/lib/sys/component/cpp/tests/echo_server_config_lib.h"
 
 class EchoServer : public test::placeholders::Echo {
  public:

@@ -268,16 +268,17 @@ template("cpp_config_client_lib_source") {
       "${clang_prefix}/clang-format",
     ]
 
-    output_path = "${target_out_dir}/${namespace}"
-    cc_source_file_path = "${output_path}/config.cc"
-    h_source_file_path = "${output_path}/config.h"
+    cc_source_file_path = "${target_out_dir}/${namespace}.cc"
+    h_source_file_path = "${target_out_dir}/${namespace}.h"
 
     args = [
       "cpp",
       "--cm",
       rebase_path(compiled_manifest, root_build_dir),
-      "--output-path",
-      rebase_path(output_path, root_build_dir),
+      "--h-output",
+      rebase_path(h_source_file_path, root_build_dir),
+      "--cc-output",
+      rebase_path(cc_source_file_path, root_build_dir),
       "--namespace",
       namespace,
       "--fidl-library-name",
