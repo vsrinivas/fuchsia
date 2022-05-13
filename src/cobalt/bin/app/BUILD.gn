@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//build/type/config.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 declare_args() {
@@ -25,6 +26,11 @@ config_data("cobalt_registry") {
   deps = [ ":global_metrics_registry" ]
   sources = [ "$target_gen_dir/global_metrics_registry.pb" ]
   outputs = [ "global_metrics_registry.pb" ]
+}
+
+# Create build_type_* packages to include in different products.
+build_type_config_data("build_type") {
+  for_pkg = "cobalt"
 }
 
 source_set("lib") {
