@@ -209,6 +209,7 @@ void mac_query_security_support(security_support_t* out_resp) {
   memset(out_resp, 0, sizeof(*out_resp));
   // TODO(43517): Better handling of driver features
   out_resp->mfp.supported = true;
+  out_resp->sae.sme_handler_supported = true;
 }
 
 void mac_query_spectrum_management_support(spectrum_management_support_t* out_resp) {
