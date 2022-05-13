@@ -57,19 +57,15 @@ void ServiceInstancePublisherServiceImpl::PublishServiceInstance(
                                                      : default_ip_versions_;
   bool perform_probe = options.has_perform_probe() ? options.perform_probe() : true;
 
-  uint64_t id = next_publisher_id_++;
-  auto publisher =
-      std::make_unique<ResponderPublisher>(publication_responder.Bind(), std::move(callback),
-                                           [this, id]() { publishers_by_id_.erase(id); });
+  auto publisher = new ResponderPublisher(publication_responder.Bind(), std::move(callback));
 
   if (!mdns().PublishServiceInstance(host_name_, addresses_, service, instance, media, ip_versions,
-                                     perform_probe, publisher.get())) {
+                                     perform_probe, publisher)) {
+    delete publisher;
     callback(fpromise::error(
         fuchsia::net::mdns::PublishServiceInstanceError::ALREADY_PUBLISHED_LOCALLY));
     return;
   }
-
-  publishers_by_id_.emplace(id, std::move(publisher));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -77,14 +73,15 @@ void ServiceInstancePublisherServiceImpl::PublishServiceInstance(
 
 ServiceInstancePublisherServiceImpl::ResponderPublisher::ResponderPublisher(
     fuchsia::net::mdns::ServiceInstancePublicationResponderPtr responder,
-    PublishServiceInstanceCallback callback, fit::closure deleter)
-    : responder_(std::move(responder)),
-      callback_(std::move(callback)),
-      deleter_(std::move(deleter)) {
+    PublishServiceInstanceCallback callback)
+    : responder_(std::move(responder)), callback_(std::move(callback)) {
   FX_DCHECK(responder_);
   FX_DCHECK(callback_);
-  FX_DCHECK(deleter_);
 
+  // This handler ensures that |Quit| will be called when the responder channel is closed. We don't
+  // unbind from this end or remove the handler, except in the destructor. |Quit| causes this
+  // publisher to be deleted, so the lifetime of the publisher is effectively scoped to the lifetime
+  // of the channel.
   responder_.set_error_handler([this](zx_status_t status) mutable { Quit(); });
 
   responder_.events().SetSubtypes = [this](std::vector<std::string> subtypes) {
@@ -105,25 +102,17 @@ ServiceInstancePublisherServiceImpl::ResponderPublisher::ResponderPublisher(
 }
 
 ServiceInstancePublisherServiceImpl::ResponderPublisher::~ResponderPublisher() {
-  // Make sure we don't call |deleter_|.
-  deleter_ = nullptr;
-  Quit();
-}
-
-void ServiceInstancePublisherServiceImpl::ResponderPublisher::Quit() {
   responder_.set_error_handler(nullptr);
 
   if (responder_.is_bound()) {
     responder_.Unbind();
   }
+}
 
-  if (deleter_) {
-    auto deleter = std::move(deleter_);
-    FX_DCHECK(!deleter_);
-    deleter();
-    // The deleter probably deletes |*this| synchronously, so it's unsafe to access members after
-    // this point.
-  }
+void ServiceInstancePublisherServiceImpl::ResponderPublisher::Quit() {
+  // This method is called by the error handler for the responder channel, ensuring that this
+  // publisher will be destroyed shortly after the channel is closed from the other end.
+  delete this;
 }
 
 void ServiceInstancePublisherServiceImpl::ResponderPublisher::ReportSuccess(bool success) {

@@ -41,7 +41,7 @@ class ServiceInstancePublisherServiceImpl
   class ResponderPublisher : public Mdns::Publisher {
    public:
     ResponderPublisher(fuchsia::net::mdns::ServiceInstancePublicationResponderPtr responder,
-                       PublishServiceInstanceCallback callback, fit::closure deleter);
+                       PublishServiceInstanceCallback callback);
 
     ~ResponderPublisher() override;
 
@@ -90,7 +90,6 @@ class ServiceInstancePublisherServiceImpl
 
     fuchsia::net::mdns::ServiceInstancePublicationResponderPtr responder_;
     PublishServiceInstanceCallback callback_;
-    fit::closure deleter_;
     std::queue<Entry> pending_publications_;
     uint32_t on_publication_calls_in_progress_ = 0;
   };
@@ -99,8 +98,6 @@ class ServiceInstancePublisherServiceImpl
   std::vector<inet::IpAddress> addresses_;
   Media default_media_;
   IpVersions default_ip_versions_;
-  std::unordered_map<uint64_t, std::unique_ptr<Mdns::Publisher>> publishers_by_id_;
-  uint64_t next_publisher_id_ = 0;
 };
 
 }  // namespace mdns

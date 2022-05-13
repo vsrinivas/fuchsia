@@ -155,6 +155,7 @@ test("mdns_test") {
     "test/resource_renewer_test.cc",
     "test/responder_publisher_test.cc",
     "test/service_impl_manager_test.cc",
+    "test/service_instance_publisher_service_impl_test.cc",
   ]
 
   deps = [
