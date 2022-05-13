@@ -34,9 +34,10 @@ using fpromise::ok;
 using fpromise::promise;
 using fpromise::result;
 
-// The root resource must only be written once, as it is shared by all drivers within a single
-// process.
-std::mutex kRootResourceLock;
+// This lock protects any globals, as globals could be accessed by other
+// drivers and other threads within the process.
+// Currently this protects the root resource and the loader service.
+std::mutex kDriverGlobalsLock;
 zx::resource kRootResource;
 
 namespace {
@@ -181,7 +182,7 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
   auto root_resource =
       fpromise::make_result_promise<zx::resource, zx_status_t>(error(ZX_ERR_ALREADY_BOUND)).box();
   {
-    std::scoped_lock lock(kRootResourceLock);
+    std::scoped_lock lock(kDriverGlobalsLock);
     if (!kRootResource.is_valid()) {
       // If the root resource is invalid, try fetching it. Once we've fetched it we might find that
       // we lost the race with another process -- we'll handle that later.
@@ -273,7 +274,7 @@ result<std::tuple<zx::vmo, zx::vmo>, zx_status_t> Driver::Join(
   }
   auto& [root_resource, loader_vmo, driver_vmo] = results.value();
   if (root_resource.is_ok()) {
-    std::scoped_lock lock(kRootResourceLock);
+    std::scoped_lock lock(kDriverGlobalsLock);
     if (!kRootResource.is_valid()) {
       kRootResource = root_resource.take_value();
     }
@@ -294,6 +295,8 @@ result<void, zx_status_t> Driver::LoadDriver(std::tuple<zx::vmo, zx::vmo>& vmos)
   // Replace loader service to load the DFv1 driver, load the driver,
   // then place the original loader service back.
   {
+    // This requires a lock because the loader is a global variable.
+    std::scoped_lock lock(kDriverGlobalsLock);
     auto endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
     if (endpoints.is_error()) {
       return error(endpoints.status_value());

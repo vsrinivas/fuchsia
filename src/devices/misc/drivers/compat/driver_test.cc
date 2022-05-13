@@ -511,7 +511,7 @@ TEST_F(DriverTest, DISABLED_Start_RootResourceIsConstant) {
   // Set the root resource before the test starts.
   zx_handle_t resource;
   {
-    std::scoped_lock lock(kRootResourceLock);
+    std::scoped_lock lock(kDriverGlobalsLock);
     ASSERT_EQ(ZX_OK, zx_event_create(0, kRootResource.reset_and_get_address()));
     resource = kRootResource.get();
   }

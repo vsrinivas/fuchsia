@@ -79,7 +79,7 @@ __EXPORT zx_off_t device_get_size(zx_device_t* dev) { return 0; }
 // LibDriver Misc Interfaces
 
 __EXPORT zx_handle_t get_root_resource() {
-  std::scoped_lock lock(kRootResourceLock);
+  std::scoped_lock lock(kDriverGlobalsLock);
   return kRootResource.get();
 }
 
@@ -218,7 +218,6 @@ __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, 
 
 __EXPORT zx_status_t device_connect_fidl_protocol(zx_device_t* dev, const char* protocol_name,
                                                   zx_handle_t request) {
-
   return dev->ConnectFragmentFidl("default", protocol_name, zx::channel(request));
 }
 

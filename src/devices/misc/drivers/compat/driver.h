@@ -151,7 +151,7 @@ struct zx_driver : public compat::DriverList {
   // NOTE: Intentionally empty, do not add to this.
 };
 
-extern std::mutex kRootResourceLock;
-extern zx::resource kRootResource __TA_GUARDED(kRootResourceLock);
+extern std::mutex kDriverGlobalsLock;
+extern zx::resource kRootResource __TA_GUARDED(kDriverGlobalsLock);
 
 #endif  // SRC_DEVICES_MISC_DRIVERS_COMPAT_DRIVER_H_
