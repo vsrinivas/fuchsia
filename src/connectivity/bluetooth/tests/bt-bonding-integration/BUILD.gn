@@ -21,11 +21,18 @@ rustc_test("bt_bonding_integration_tests") {
 }
 
 fuchsia_test_component("bt-bonding-integration-tests-component") {
-  manifest = "meta/bt-bonding-integration-tests.cmx"
+  manifest = "meta/bt-bonding-integration-tests.cml"
   deps = [ ":bt_bonding_integration_tests" ]
 }
 
 fuchsia_test_package("bt-bonding-integration-tests") {
+  # These tests intentionally provide malformed bonding data to bt-host. Because this data is only
+  # expected to come from trusted sources in prod, bt-host logs this failure at an ERROR level.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   test_components = [ ":bt-bonding-integration-tests-component" ]
   deps = [ "//src/connectivity/bluetooth/hci/emulator" ]
 }

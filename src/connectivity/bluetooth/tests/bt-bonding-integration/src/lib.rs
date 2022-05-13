@@ -8,7 +8,7 @@
 
 use {
     anyhow::Error,
-    bt_test_harness::host_driver::{self, HostDriverHarness},
+    bt_test_harness::host_driver::v2::{self as host_driver, HostDriverHarness},
     fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::{
         expect_eq,
