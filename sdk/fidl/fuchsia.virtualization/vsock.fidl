@@ -78,7 +78,11 @@ protocol GuestVsockEndpoint {
 /// port and to manage dynamic port allocation for outbound connections.
 @discoverable
 protocol HostVsockEndpoint {
-    /// Register `acceptor` to be invoked for any connection requests to `port`.
+    /// Instructs the device to listen for guest initiated connections to a given port by
+    /// using `acceptor` when the guest creates a connection.
+    ///
+    /// Possible errors:
+    ///     - ZX_ERR_ALREADY_BOUND: A client is already listening on this port.
     Listen(resource struct {
         port uint32;
         acceptor client_end:HostVsockAcceptor;
@@ -91,4 +95,22 @@ protocol HostVsockEndpoint {
         port uint32;
         socket zx.handle:SOCKET;
     }) -> (struct {}) error zx.status;
+
+    /// Attempts to create a vsock connection to a guest on 'guest_port'. Uses a dynamically chosen
+    /// ephemeral host port.
+    ///
+    /// Possible errors:
+    ///     - ZX_ERR_NO_RESOURCES: The device couldn't allocate an unused host port.
+    ///     - ZX_ERR_CONNECTION_REFUSED: The guest refused this connection.
+    ///
+    /// Other errors are related to socket creation, see
+    /// [zx_socket_create](https://fuchsia.dev/fuchsia-src/reference/syscalls/socket_create.md)
+    ///
+    /// NOTE: This is currently non functional, see fxb/97355 for progress.
+    @transitional
+    Connect2(struct {
+        guest_port uint32;
+    }) -> (resource struct {
+        socket zx.handle:SOCKET;
+    }) error zx.status;
 };
