@@ -300,13 +300,14 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
 
   // Assemble the CPU topology.
   acpi_madt_t* madt = (acpi_madt_t*)load_table_with_signature(rsdp, (uint8_t*)kMadtSignature);
+  uint8_t num_cpu_nodes = 0;
   if (madt != 0) {
     zbi_topology_node_t nodes[MAX_CPU_COUNT];
-    uint8_t num_nodes = topology_from_madt(madt, nodes, MAX_CPU_COUNT);
-    if (num_nodes != 0) {
+    num_cpu_nodes = topology_from_madt(madt, nodes, MAX_CPU_COUNT);
+    if (num_cpu_nodes != 0) {
       result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_CPU_TOPOLOGY,
                                              sizeof(zbi_topology_node_t), 0, &nodes,
-                                             sizeof(zbi_topology_node_t) * num_nodes);
+                                             sizeof(zbi_topology_node_t) * num_cpu_nodes);
       if (result != ZBI_RESULT_OK) {
         return -1;
       }
@@ -493,16 +494,20 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
       num_ranges += 1;
     }
   } else if (gic_version == 0x3) {
+    // We should never have a GICv3 system with less than one core.
+    if (num_cpu_nodes < 1) {
+      goto fail;
+    }
     // This memory range must encompass the GICD and GICR register ranges.
+    uint64_t gic_mem_size = 0x10000;  // GICD size.
+    gic_mem_size += v3_gic_cfg.gicr_offset + v3_gic_cfg.gicd_offset;
+    // Add the GICR size. Each GICR in GICv3 consists of 2 adjacent 64 KiB frames.
+    gic_mem_size += num_cpu_nodes * 0x20000;
+    // Add any padding between GICRs on multi-core systems.
+    gic_mem_size += (num_cpu_nodes - 1) * v3_gic_cfg.gicr_stride;
     ranges[num_ranges] = (zbi_mem_range_t){
         .paddr = v3_gic_cfg.mmio_phys,
-        .length = 16 * ZX_PAGE_SIZE,
-        .type = ZBI_MEM_RANGE_PERIPHERAL,
-    };
-    num_ranges += 1;
-    ranges[num_ranges] = (zbi_mem_range_t){
-        .paddr = v3_gic_cfg.mmio_phys + v3_gic_cfg.gicd_offset + v3_gic_cfg.gicr_offset,
-        .length = 16 * ZX_PAGE_SIZE,
+        .length = gic_mem_size,
         .type = ZBI_MEM_RANGE_PERIPHERAL,
     };
     num_ranges += 1;
