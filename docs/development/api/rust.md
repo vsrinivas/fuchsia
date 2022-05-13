@@ -111,20 +111,19 @@ See [C-HIDDEN](https://rust-lang.github.io/api-guidelines/documentation.html#c-h
 
 #### Every `unsafe` block has an accompanying justification
 
-> This guideline pertains only to safety documentation when performing unsafe operations.
->
-> See [C-FAILURE](https://rust-lang.github.io/api-guidelines/documentation.html#c-failure) for
-> guidelines on documenting function safety requirements.
+Note: This guideline pertains only to safety documentation when performing unsafe operations. See
+[C-FAILURE](https://rust-lang.github.io/api-guidelines/documentation.html#c-failure) for guidelines
+on documenting function safety requirements.
 
 Safety justifications should begin with `// SAFETY: ` and explain why the unsafe block is sound.
 
-*DO*
+**Do**
 
 ```rust
 // SAFETY: <why this unsafe operation's safety requirements are met>
 ```
 
-*DON'T*
+**Don't**
 
 ```rust
 // Safety: <...>
@@ -137,7 +136,7 @@ Unsafe code should explain why the unsafe block is necessary and why the code co
 block is sound. If there are safe alternatives which may appear suitable but cannot be used, the
 reason why they cannot be used should be documented as well.
 
-*DO*
+**Do**
 
 ```rust
 // SAFETY: The `bytes` returned from our string builder are guaranteed to be
@@ -146,7 +145,7 @@ reason why they cannot be used should be documented as well.
 let s = unsafe { String::from_utf8_unchecked(bytes) };
 ```
 
-*DON'T*
+**Don't**
 
 ```rust
 // SAFETY: We shouldn't have to validate `bytes`, and the safe version is slow.
@@ -156,7 +155,7 @@ let s = unsafe { String::from_utf8_unchecked(bytes) };
 Justifications should directly address the requirements for the operation. It's okay to summarize as
 long as all of the requirements are addressed.
 
-*DO*
+**Do**
 
 ```rust
 // SAFETY: The caller has guaranteed that `ptr` is valid for reads, properly
@@ -166,7 +165,7 @@ unsafe {
 }
 ```
 
-*DO*
+**Do**
 
 ```rust
 // SAFETY: The caller has guaranteed that `ptr` points to a valid `T`.
@@ -175,7 +174,7 @@ unsafe {
 }
 ```
 
-*DON'T*
+**Don't**
 
 ```rust
 // SAFETY: `ptr` is safe to read.
@@ -184,10 +183,10 @@ unsafe {
 }
 ```
 
-Safety justifications should address *why* an operation is justified, not just *that* an operation
-is justified.
+Safety justifications should address *why* an operation is justified, not just that an operation is
+justified.
 
-*DO*
+**Do**
 
 ```rust
 const BUFFER_LEN: usize = 1024;
@@ -213,7 +212,7 @@ fn partially_init(n: usize) -> MaybeUninit<[i32; BUFFER_LEN]> {
 }
 ```
 
-*DON'T*
+**Don't**
 
 ```rust
 const BUFFER_LEN: usize = 1024;
@@ -250,7 +249,7 @@ unsafe trait implementations should be justified (See
 [c-failure]: https://rust-lang.github.io/api-guidelines/documentation.html#c-failure
 [every-unsafe-block]: #every-unsafe-block-has-an-accompanying-justification
 
-*DO*
+**Do**
 
 ```rust
 /// A labeler that always returns unique labels.
@@ -282,7 +281,7 @@ unsafe impl UniqueLabeler for SequentialLabeler {
 }
 ```
 
-*DON'T*
+**Don't**
 
 ```rust
 /// A labeler that always returns unique labels.
@@ -309,14 +308,13 @@ unsafe impl UniqueLabeler for SequentialLabeler {
 
 #### Unsafe operations are always in an `unsafe` block
 
-> This guideline depends on a change to linting behavior and cannot yet be followed
-> ([tracking issue](https://fxbug.dev/94323)). Continue to adhere to other guidelines in this
-> section.
+Note: This guideline depends on a change to linting behavior and cannot yet be followed
+([tracking issue](https://fxbug.dev/94323)). Continue to adhere to other guidelines in this section.
 
 `unsafe` functions are not considered unsafe contexts in Fuchsia. Unsafe operations must always be
 located inside an `unsafe` block, even if they are in an `unsafe` function body.
 
-*DO*
+**Do**
 
 ```rust
 unsafe fn clear_slice(ptr: *mut i32, len: usize) {
@@ -334,7 +332,7 @@ unsafe fn clear_slice(ptr: *mut i32, len: usize) {
 }
 ```
 
-*DON'T*
+**Don't**
 
 ```rust
 unsafe fn clear_slice(ptr: *mut i32, len: usize) {
