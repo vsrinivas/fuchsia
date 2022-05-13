@@ -124,6 +124,7 @@ maplit = "1.0"
 maybe-owned = "0.3.2"
 memchr = "2.0"
 memoffset = "0.5.3"
+miniz_oxide = "0.3.6"
 # TODO(fxbug.dev/66092) limit to tests
 mockall = "0.9"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }

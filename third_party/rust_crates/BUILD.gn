@@ -454,6 +454,10 @@ group("memoffset") {
   public_deps = [ ":memoffset-v0_5_3" ]
 }
 
+group("miniz_oxide") {
+  public_deps = [ ":miniz_oxide-v0_3_6" ]
+}
+
 group("mockall") {
   public_deps = [ ":mockall-v0_9_0" ]
 }

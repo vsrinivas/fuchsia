@@ -1396,6 +1396,7 @@ dependencies = [
  "maybe-owned",
  "memchr",
  "memoffset 0.5.3",
+ "miniz_oxide",
  "mockall",
  "nix",
  "nom",

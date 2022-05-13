@@ -106,7 +106,7 @@ where
     F: Future<Output = Result<(), E>>,
 {
     /// Transforms this stream of `GeneratorState<I, Result<(), E>>` into a stream of `Result<I, E>`.
-    pub fn into_try_stream(self) -> impl Stream<Item = Result<I, E>> {
+    pub fn into_try_stream(self) -> impl Stream<Item = Result<I, E>> + FusedStream {
         self.filter_map(|state| {
             future::ready(match state {
                 GeneratorState::Yielded(i) => Some(Ok(i)),
