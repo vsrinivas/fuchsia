@@ -6,12 +6,12 @@
 #define SRC_CONNECTIVITY_BLUETOOTH_HCI_TRANSPORT_USB_BT_TRANSPORT_USB_H_
 
 #include <fuchsia/hardware/bt/hci/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sync/completion.h>
-#include <threads.h>
 
 #include <mutex>
 #include <queue>
-#include <thread>
 
 #include <ddktl/device.h>
 #include <usb/usb.h>
@@ -33,11 +33,16 @@ using DeviceType = ddk::Device<Device, ddk::GetProtocolable, ddk::Unbindable>;
 // BtHciProtocol is not a ddk::base_protocol because vendor drivers proxy requests to this driver.
 class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
  public:
-  explicit Device(zx_device_t* parent);
+  // If |dispatcher| is non-null, it will be used instead of a new work thread.
+  // tests.
+  explicit Device(zx_device_t* parent, async_dispatcher_t* dispatcher);
 
   // Static bind function for the ZIRCON_DRIVER() declaration. Binds a Device and passes ownership
   // to the driver manager.
   static zx_status_t Create(void* ctx, zx_device_t* parent);
+
+  // Constructor for tests to inject a dispatcher for the work thread.
+  static zx_status_t Create(zx_device_t* parent, async_dispatcher_t* dispatcher);
 
   // Adds the device.
   zx_status_t Bind();
@@ -58,13 +63,6 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   zx_status_t BtHciOpenSnoopChannel(zx::channel channel);
 
  private:
-  enum class ReadThreadPortKey : uint64_t {
-    kCommandChannel,
-    kAclChannel,
-    kScoChannel,
-    kUnbind,
-  };
-
   struct IsocEndpointDescriptors {
     usb_endpoint_descriptor_t in;
     usb_endpoint_descriptor_t out;
@@ -77,13 +75,70 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
     void* cookie;
   };
 
+  class ChannelWrapper;
+
+  // This wrapper around async_wait enables us to get a Device* in the handler.
+  // We use this instead of async::WaitMethod because async::WaitBase isn't thread safe.
+  struct Wait : public async_wait {
+    explicit Wait(Device* device, ChannelWrapper* channel);
+    static void Handler(async_dispatcher_t* dispatcher, async_wait_t* async_wait,
+                        zx_status_t status, const zx_packet_signal_t* signal);
+    Device* device;
+    // Indicates whether a wait has begun and not ended.
+    bool pending = false;
+    // The channel that this wait waits on.
+    ChannelWrapper* channel;
+  };
+
+  // This wrapper around zx::channel enables us to process handles more generically and tightly
+  // couple a channel with its Wait.
+  class ChannelWrapper {
+   public:
+    using SignalHandler = void (Device::*)(zx_signals_t);
+
+    explicit ChannelWrapper(const char* name, Device* device, SignalHandler handler)
+        : device_(device), wait_(device, this), signal_handler_(handler), name_(name) {}
+
+    bool IsOpen() const { return channel_.is_valid(); }
+
+    void CleanUp();
+
+    bool WaitPending() const { return wait_.pending; }
+
+    // Begins waiting for signals. Cleans up the channel on error.
+    // Returns true if the wait was successfully started.
+    bool BeginWait();
+
+    zx_status_t Read(void* bytes, uint32_t num_bytes, uint32_t* actual_bytes) {
+      return channel_.read(/*flags=*/0, bytes, /*handles=*/nullptr, num_bytes, /*num_handles=*/0,
+                           actual_bytes, /*actual_handles=*/nullptr);
+    }
+
+    zx_status_t Write(const void* bytes, uint32_t num_bytes) {
+      return channel_.write(/*flags=*/0, bytes, num_bytes, /*handles=*/nullptr, /*num_handles=*/0);
+    }
+
+    void set_channel(zx::channel channel) {
+      channel_ = std::move(channel);
+      wait_.object = channel_.get();
+    }
+
+    const char* name() const { return name_; }
+
+   private:
+    friend struct Wait;
+
+    Device* device_;
+    zx::channel channel_;
+    Wait wait_;
+    const SignalHandler signal_handler_;
+    const char* const name_;
+  };
+
   // The number of currently supported HCI channel endpoints. We currently have
   // one channel for command/event flow and one for ACL data flow. The snoop channel is managed
   // separately.
   static const int kNumChannels = 2;
-
-  // changed event, unbind event
-  static const int kNumReadWaitEvents = 2;
 
   static const int kEventBufSize = 255 + 2;  // 2 byte header + payload
 
@@ -107,8 +162,6 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   void QueueScoReadRequestsLocked() __TA_REQUIRES(mutex_);
 
   void QueueInterruptRequestsLocked() __TA_REQUIRES(mutex_);
-
-  void ChannelCleanupLocked(zx::channel* channel) __TA_REQUIRES(mutex_);
 
   void SnoopChannelWriteLocked(uint8_t flags, const uint8_t* bytes, size_t length)
       __TA_REQUIRES(mutex_);
@@ -134,19 +187,18 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   void HciScoWriteComplete(usb_request_t* req);
 
   // Handle a readable or closed signal from the command channel.
-  void HciHandleCmdReadEvents(const zx_port_packet_t& packet);
+  void HciHandleCmdReadEvents(zx_signals_t);
 
   // Handle a readable or closed signal from the ACL channel.
-  void HciHandleAclReadEvents(const zx_port_packet_t& packet);
+  void HciHandleAclReadEvents(zx_signals_t);
 
   // Handle a readable or closed signal from the SCO channel.
-  void HciHandleScoReadEvents(const zx_port_packet_t& packet);
+  void HciHandleScoReadEvents(zx_signals_t);
 
-  // The read thread reads outbound command and ACL packets from the command and ACL channels and
-  // forwards them to the USB device.
-  static int HciReadThread(void* void_dev);
+  // Handle a readable or closed signal from the snoop channel.
+  void HciHandleSnoopSignals(zx_signals_t);
 
-  zx_status_t HciOpenChannel(zx::channel* out, zx::channel in, ReadThreadPortKey key);
+  zx_status_t HciOpenChannel(ChannelWrapper* out, zx::channel in);
 
   zx_status_t AllocBtUsbPackets(int limit, uint64_t data_size, uint8_t ep_address, size_t req_size,
                                 list_node_t* list);
@@ -159,12 +211,19 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
 
   void ProcessNextIsocAltSettingRequest();
 
+  mtx_t mutex_;
+
   usb_protocol_t usb_ __TA_GUARDED(mutex_);
 
-  zx::channel cmd_channel_ __TA_GUARDED(mutex_);
-  zx::channel acl_channel_ __TA_GUARDED(mutex_);
-  zx::channel sco_channel_ __TA_GUARDED(mutex_);
-  zx::channel snoop_channel_ __TA_GUARDED(mutex_);
+  std::optional<async::Loop> loop_;
+  // In production, this is loop_.dispatcher(). In tests, this is the test dispatcher.
+  async_dispatcher_t* dispatcher_ = nullptr;
+
+  ChannelWrapper cmd_channel_ __TA_GUARDED(mutex_){"command", this,
+                                                   &Device::HciHandleCmdReadEvents};
+  ChannelWrapper acl_channel_ __TA_GUARDED(mutex_){"ACL", this, &Device::HciHandleAclReadEvents};
+  ChannelWrapper sco_channel_ __TA_GUARDED(mutex_){"SCO", this, &Device::HciHandleScoReadEvents};
+  ChannelWrapper snoop_channel_ __TA_GUARDED(mutex_){"snoop", this, &Device::HciHandleSnoopSignals};
 
   // Set during binding and never modified after.
   std::optional<usb_endpoint_descriptor_t> bulk_out_endp_desc_;
@@ -183,15 +242,6 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   // Set during bind, never modified afterwards.
   std::vector<IsocEndpointDescriptors> isoc_endp_descriptors_;
 
-  // Port to queue PEER_CLOSED signals on
-  zx_handle_t snoop_watch_ = ZX_HANDLE_INVALID;
-
-  // Port that the read thread waits on. Events that need to be signaled to the read thread should
-  // be sent on this port.
-  zx_handle_t read_thread_port_ = ZX_HANDLE_INVALID;
-
-  thrd_t read_thread_ __TA_GUARDED(mutex_) = 0;
-
   // for accumulating HCI events
   uint8_t event_buffer_[kEventBufSize] __TA_GUARDED(mutex_);
   size_t event_buffer_offset_ __TA_GUARDED(mutex_) = 0u;
@@ -206,7 +256,6 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   list_node_t free_sco_read_reqs_ __TA_GUARDED(mutex_);
   list_node_t free_sco_write_reqs_ __TA_GUARDED(mutex_);
 
-  mtx_t mutex_;
   size_t parent_req_size_ = 0u;
   std::atomic_size_t allocated_requests_count_ = 0u;
   std::atomic_size_t pending_request_count_ = 0u;
@@ -227,10 +276,6 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   // This is separate from mutex_ so that request operations don't need to acquire mutex_ (which
   // may degrade performance).
   mtx_t pending_request_lock_ __TA_ACQUIRED_AFTER(mutex_);
-
-  // Thread to clean up requests on when the driver is unbound. This avoids blocking the main
-  // thread.
-  std::thread unbind_thread_;
 };
 
 }  // namespace bt_transport_usb
