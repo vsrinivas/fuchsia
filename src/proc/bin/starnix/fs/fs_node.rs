@@ -234,6 +234,8 @@ macro_rules! fs_node_impl_symlink {
     };
 }
 
+#[allow(unknown_lints)] // TODO(fxbug.dev/99424): remove this after toolchain roll when lint is known
+#[allow(unused_macro_rules)] // TODO(fxbug.dev/100318): remove unused macro rules and re-enable
 /// Implements [`FsNodeOps::set_xattr`] by delegating to another [`FsNodeOps`]
 /// object.
 macro_rules! fs_node_impl_xattr_delegate {

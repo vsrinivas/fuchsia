@@ -798,6 +798,8 @@ pub fn rsa_verify_pss_mgf1(
     }
 }
 
+#[allow(unknown_lints)] // TODO(fxbug.dev/99424): remove this after toolchain roll when lint is known
+#[allow(unused_macro_rules)] // TODO(fxbug.dev/100318): remove unused macro rules and re-enable
 /// Implements `CStackWrapper` for a hash context type.
 ///
 /// The caller provides doc comments, a public method name, and a private
