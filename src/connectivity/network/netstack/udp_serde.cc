@@ -258,44 +258,67 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_
   fidl::WireTableBuilder<fuchsia_posix_socket::wire::NetworkSocketRecvControlData>
       net_control_builder =
           fuchsia_posix_socket::wire::NetworkSocketRecvControlData::Builder(alloc);
+  bool net_control_set = false;
 
-  if (meta.cmsg_set.has_ip_tos || meta.cmsg_set.has_ip_ttl) {
+  {
     fidl::WireTableBuilder<fuchsia_posix_socket::wire::IpRecvControlData> ip_control_builder =
         fuchsia_posix_socket::wire::IpRecvControlData::Builder(alloc);
+    bool ip_control_set = false;
     if (meta.cmsg_set.has_ip_tos) {
+      ip_control_set = true;
       ip_control_builder.tos(meta.cmsg_set.ip_tos);
     }
     if (meta.cmsg_set.has_ip_ttl) {
+      ip_control_set = true;
       ip_control_builder.ttl(meta.cmsg_set.ip_ttl);
     }
-    net_control_builder.ip(ip_control_builder.Build());
+    if (ip_control_set) {
+      net_control_set = true;
+      net_control_builder.ip(ip_control_builder.Build());
+    }
   }
 
-  if (meta.cmsg_set.has_ipv6_hoplimit || meta.cmsg_set.has_ipv6_tclass) {
-    fidl::WireTableBuilder<fuchsia_posix_socket::wire::Ipv6RecvControlData> ip_control_builder =
+  {
+    fidl::WireTableBuilder<fuchsia_posix_socket::wire::Ipv6RecvControlData> ipv6_control_builder =
         fuchsia_posix_socket::wire::Ipv6RecvControlData::Builder(alloc);
+    bool ipv6_control_set = false;
     if (meta.cmsg_set.has_ipv6_hoplimit) {
-      ip_control_builder.hoplimit(meta.cmsg_set.ipv6_hoplimit);
+      ipv6_control_set = true;
+      ipv6_control_builder.hoplimit(meta.cmsg_set.ipv6_hoplimit);
     }
     if (meta.cmsg_set.has_ipv6_tclass) {
-      ip_control_builder.tclass(meta.cmsg_set.ipv6_tclass);
+      ipv6_control_set = true;
+      ipv6_control_builder.tclass(meta.cmsg_set.ipv6_tclass);
     }
-    net_control_builder.ipv6(ip_control_builder.Build());
+    if (ipv6_control_set) {
+      net_control_set = true;
+      net_control_builder.ipv6(ipv6_control_builder.Build());
+    }
   }
 
-  if (meta.cmsg_set.has_timestamp_nanos) {
+  {
     fidl::WireTableBuilder<fuchsia_posix_socket::wire::SocketRecvControlData> sock_control_builder =
         fuchsia_posix_socket::wire::SocketRecvControlData::Builder(alloc);
-    sock_control_builder.timestamp(fuchsia_posix_socket::wire::Timestamp::WithNanoseconds(
-        alloc, meta.cmsg_set.timestamp_nanos));
-    net_control_builder.socket(sock_control_builder.Build());
+    bool sock_control_set = false;
+    if (meta.cmsg_set.has_timestamp_nanos) {
+      sock_control_set = true;
+      sock_control_builder.timestamp(fuchsia_posix_socket::wire::Timestamp::WithNanoseconds(
+          alloc, meta.cmsg_set.timestamp_nanos));
+    }
+    if (sock_control_set) {
+      net_control_set = true;
+      net_control_builder.socket(sock_control_builder.Build());
+    }
   }
 
-  fidl::WireTableBuilder<fuchsia_posix_socket::wire::DatagramSocketRecvControlData>
-      datagram_control_builder =
-          fuchsia_posix_socket::wire::DatagramSocketRecvControlData::Builder(alloc);
-  datagram_control_builder.network(net_control_builder.Build());
-  meta_builder.control(datagram_control_builder.Build());
+  if (net_control_set) {
+    fidl::WireTableBuilder<fuchsia_posix_socket::wire::DatagramSocketRecvControlData>
+        datagram_control_builder =
+            fuchsia_posix_socket::wire::DatagramSocketRecvControlData::Builder(alloc);
+    datagram_control_builder.network(net_control_builder.Build());
+    meta_builder.control(datagram_control_builder.Build());
+  }
+
   meta_builder.payload_len(meta.payload_size);
 
   fuchsia_posix_socket::wire::RecvMsgMeta fsocket_meta = meta_builder.Build();
