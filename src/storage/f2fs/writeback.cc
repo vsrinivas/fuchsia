@@ -55,7 +55,7 @@ zx::status<size_t> SegmentWriteBuffer::ReserveOperation(storage::Operation &oper
   }
   // Here, |operation| can be merged into a previous operation.
   builder_.Add(operation, &buffer_);
-  pages_.push_back(page.CopyRefPtr());
+  pages_.push_back(page.release());
   if (++start_index_ == buffer_.capacity()) {
     start_index_ = 0;
   }
@@ -103,12 +103,15 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType 
     if (ret = transaction_handler_->RunRequests(operations.TakeOperations()); ret != ZX_OK) {
       FX_LOGS(WARNING) << "[f2fs] RunRequest fails..Redirty Pages..";
     }
-    operations.Completion([ret](Page &page) {
-      if (ret != ZX_OK && page.IsUptodate()) {
+    operations.Completion([ret](fbl::RefPtr<Page> page) {
+      if (ret != ZX_OK && page->IsUptodate()) {
         // Just redirty it in case of IO failure.
-        page.SetDirty();
+        LockedPage locked_page(std::move(page));
+        locked_page->SetDirty();
+        locked_page->ClearWriteback();
+        return ret;
       }
-      page.ClearWriteback();
+      page->ClearWriteback();
       return ZX_OK;
     });
     if (completion) {

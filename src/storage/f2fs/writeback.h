@@ -83,7 +83,7 @@ class PageOperations {
   void Completion(PageCallback put_page) {
     release_buffers_(*this);
     for (auto &page : pages_) {
-      put_page(*page);
+      put_page(std::move(page));
     }
     pages_.clear();
     pages_.shrink_to_fit();

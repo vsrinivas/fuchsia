@@ -440,14 +440,16 @@ std::vector<LockedPage> FileCache::GetLockedDirtyPagesUnsafe(const WritebackOper
 
     if (page->IsDirty()) {
       ZX_DEBUG_ASSERT(page->IsLastReference());
-      if (!operation.if_page || operation.if_page(*page) == ZX_OK) {
+      auto page_ref = page.CopyRefPtr();
+      if (!operation.if_page || operation.if_page(page_ref) == ZX_OK) {
         ZX_DEBUG_ASSERT(page->IsUptodate());
         page->SetActive();
         pages.push_back(std::move(page));
         ++nwritten;
       } else {
+        // It prevents |page_ref| from entering RecyclePage() and
+        // keeps |page| alive in FileCache.
         fbl::RefPtr<Page> unlocked = page.release();
-        // It is the last reference. Just leak it and keep it alive in FileCache.
         __UNUSED auto leak = fbl::ExportToRawPtr(&unlocked);
       }
     } else if (!page->IsMmapped() && (operation.bReleasePages || !vnode_->IsActive())) {
@@ -491,7 +493,6 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
       ZX_ASSERT(page->Map() == ZX_OK);
     }
     zx_status_t ret = vnode_->WriteDirtyPage(page, false);
-    ZX_DEBUG_ASSERT(!page->IsDirty());
     if (ret != ZX_OK) {
       if (ret != ZX_ERR_NOT_FOUND && ret != ZX_ERR_OUT_OF_RANGE) {
         if (page->IsUptodate()) {

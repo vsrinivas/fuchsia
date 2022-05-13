@@ -150,8 +150,12 @@ TEST_F(FileCacheTest, WritebackOperation) {
     ASSERT_EQ(vn->GetDirtyPageCount(), 2);
 
     key = page->GetKey();
-    op = {.start = 0, .end = 2, .to_write = 2, .bSync = false, .if_page = [&key](Page &page) {
-            if (page.GetKey() <= key) {
+    op = {.start = 0,
+          .end = 2,
+          .to_write = 2,
+          .bSync = false,
+          .if_page = [&key](fbl::RefPtr<Page> page) {
+            if (page->GetKey() <= key) {
               return ZX_OK;
             }
             return ZX_ERR_NEXT;
