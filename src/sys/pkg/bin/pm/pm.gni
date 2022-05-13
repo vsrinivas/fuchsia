@@ -35,6 +35,7 @@ template("_pm") {
                              "public_deps",
                              "testonly",
                              "visibility",
+                             "no_output_dir_leaks",
                            ])
   }
 }
@@ -68,6 +69,7 @@ template("pm_archive") {
                            [
                              "testonly",
                              "visibility",
+                             "no_output_dir_leaks",
                            ])
 
     deps = [
