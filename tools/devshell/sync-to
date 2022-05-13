@@ -191,9 +191,9 @@ class SyncToCommand:
             "-C",
             self.integration_dir,
             "fetch",
+            "--quiet",
             "origin",
-            stderr=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             dry_run_safe=True)
 
         # Force-checkout every repository at JIRI_HEAD to ensure subsequent
