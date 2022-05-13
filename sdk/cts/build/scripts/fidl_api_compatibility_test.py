@@ -8,14 +8,34 @@ import json
 import os
 import sys
 import plasa_differ
+from enum import Enum
+
+
+class Policy(Enum):
+    # update_golden tells this script to overwrite the existing golden with
+    # the current golden. This is useful for batch updates.
+    update_golden = 'update_golden'
+
+    # no_breaking_changes tells this script to fail if breaking changes
+    # are detected, or if any changes are detected to prevent a stale
+    # golden.
+    no_breaking_changes = 'no_breaking_changes'
+
+    # no_changes tells this script to fail if any changes are detected.
+    no_changes = 'no_changes'
+
+    def __str__(self):
+        return self.value
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--update_golden',
-        help="Overwrites current with golden if they don't match.",
-        action='store_true')
+        '--policy',
+        help="How to handle failures",
+        type=Policy,
+        default=Policy.no_breaking_changes,
+        choices=list(Policy))
     parser.add_argument(
         '--api-level', help='The API level being tested', required=True)
     parser.add_argument(
@@ -30,33 +50,66 @@ def main():
         required=True)
     args = parser.parse_args()
 
+    ret = 0
+    if args.policy == Policy.update_golden:
+        ret = update_golden(args)
+    elif args.policy == Policy.no_breaking_changes:
+        ret = fail_on_breaking_changes(args)
+    elif args.policy == Policy.no_changes:
+        ret = fail_on_changes(args)
+    else:
+        raise ValueError("unknown policy: {}".format(args.policy))
+
+    with open(args.stamp, 'w') as stamp_file:
+        stamp_file.write('Golden!\n')
+
+    return ret
+
+
+def update_golden(args):
+    import subprocess
+    c = update_cmd(args.current, args.golden)
+    subprocess.run(c.split())
+    return 0
+
+
+def fail_on_breaking_changes(args):
+    """Fails if current is not backward compatible with golden or if
+    current and golden aren't identical.
+    """
     differ = plasa_differ.PlasaDiffer(args.fidl_api_diff_path)
     breaking_changes = differ.find_breaking_changes_in_fragment_file(
         args.golden, args.current)
 
     if breaking_changes:
-        update_cmd = "  cp {} {}".format(
-            os.path.abspath(args.current), os.path.abspath(args.golden))
-        if args.update_golden:
-            import subprocess
-            subprocess.run(update_cmd.split())
-        else:
-            print(
-                "These changes are incompatible with API level {}:".format(
-                    args.api_level))
-            for breaking_change in breaking_changes:
-                print(" - " + breaking_change)
-            print()
-            print("If possible, please make a soft transition instead.")
-            print("To allow a hard transition please run:")
-            print(update_cmd)
-            print()
-            return 1
+        print("These changes are incompatible with API level " + args.api_level)
+        for breaking_change in breaking_changes:
+            print(" - " + breaking_change)
+        print()
+        print("If possible, please make a soft transition instead.")
+        print("To allow a hard transition please run:")
+        print("  " + update_cmd(args.current, args.golden))
+        print()
+        return 1
 
-    with open(args.stamp, 'w') as stamp_file:
-        stamp_file.write('Golden!\n')
+    # Make the developer acknowledge a stale golden file.
+    return fail_on_changes(args)
 
+
+def fail_on_changes(args):
+    """Fails if current and golden aren't identical"""
+    if not filecmp.cmp(args.golden, args.current):
+        print("Warning: Golden file mismatch")
+        print("Please acknowledge this change by updating the golden.\n")
+        print("You can rebuild with `bless_goldens=true` in your GN args,")
+        print("or you can run this command:")
+        print("  " + update_cmd(args.current, args.golden))
+        return 1
     return 0
+
+
+def update_cmd(current, golden):
+    return "cp {} {}".format(os.path.abspath(current), os.path.abspath(golden))
 
 
 if __name__ == '__main__':

@@ -11,6 +11,16 @@ template("fidl_api_compatibility_test") {
   assert(defined(invoker.golden_summary_json),
          "golden_summary_json is required")
 
+  policy = "no_breaking_changes"
+  if (defined(invoker.policy)) {
+    policy = invoker.policy
+  }
+
+  # Let command-line build args override values from target declarations.
+  if (bless_goldens) {
+    policy = "update_golden"
+  }
+
   target_api_level = invoker.target_api_level
   fidlc_target_name = "${target_name}_fidlc"
   json_representation = "$target_gen_dir/$target_name.fidl.json"
@@ -77,11 +87,10 @@ template("fidl_api_compatibility_test") {
       rebase_path(stamp_file, root_build_dir),
       "--fidl_api_diff_path",
       rebase_path("$root_build_dir/host_x64/fidl_api_diff", root_build_dir),
+      "--policy",
+      policy,
     ]
 
-    if (bless_goldens) {
-      args += [ "--update_golden" ]
-    }
     deps += [
       ":$summarization_target_name",
       "//tools/fidl/fidl_api_diff:host",
