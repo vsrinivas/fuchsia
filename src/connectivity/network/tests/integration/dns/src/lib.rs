@@ -227,14 +227,14 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
 
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
     let expect = [
+        fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
+            address: DHCP_DNS_SERVER,
+            port: DEFAULT_DNS_PORT,
+        }),
         fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
             address: NDP_DNS_SERVER,
             port: DEFAULT_DNS_PORT,
             zone_index: 0,
-        }),
-        fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
-            address: DHCP_DNS_SERVER,
-            port: DEFAULT_DNS_PORT,
         }),
     ];
 

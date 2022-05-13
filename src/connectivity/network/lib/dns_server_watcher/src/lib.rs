@@ -108,19 +108,24 @@ impl DnsServers {
 
     /// Returns the ordering of [`DnsServer_`]s.
     ///
-    /// The ordering in greatest to least order is NDP, DHCPv6, DHCP, then Static, with the goal of
-    /// maintaining a protocol preference for autoconfigured networks. Without this, clients behind
-    /// different routers on the same upstream network might vary in preference between IPv4 and
-    /// IPv6 nameservers depending on whether their router served RDNSS in an RA or served DHCPv6.
+    /// The ordering from most to least preferred is is DHCP, NDP, DHCPv6, then Static. Preference
+    /// is currently informed by a goal of keeping servers discovered via the same internet
+    /// protocol together and preferring network-supplied configurations over product-supplied
+    /// ones.
+    ///
+    /// TODO(https://fxbug.dev/48868): We currently prioritize IPv4 servers over IPv6 as our DHCPv6
+    /// client does not yet support stateful address assignment. This can result in situations
+    /// where we can discover v6 nameservers that can't be reached as we've not discovered a global
+    /// address.
     ///
     /// An unspecified source will be treated as a static address.
     fn ordering(a: &DnsServer_, b: &DnsServer_) -> Ordering {
         let ordering = |source| match source {
-            Some(&DnsServerSource::Ndp(NdpDnsServerSource { source_interface: _, .. })) => 0,
+            Some(&DnsServerSource::Dhcp(DhcpDnsServerSource { source_interface: _, .. })) => 0,
+            Some(&DnsServerSource::Ndp(NdpDnsServerSource { source_interface: _, .. })) => 1,
             Some(&DnsServerSource::Dhcpv6(Dhcpv6DnsServerSource {
                 source_interface: _, ..
-            })) => 1,
-            Some(&DnsServerSource::Dhcp(DhcpDnsServerSource { source_interface: _, .. })) => 2,
+            })) => 2,
             Some(&DnsServerSource::StaticSource(StaticDnsServerSource { .. })) | None => 3,
         };
         let a = ordering(a.source.as_ref());
@@ -186,10 +191,10 @@ mod tests {
         assert_eq!(
             servers.consolidated(),
             vec![
+                DHCP_SOURCE_SOCKADDR,
                 NDP_SOURCE_SOCKADDR,
                 DHCPV6_SOURCE_SOCKADDR1,
                 DHCPV6_SOURCE_SOCKADDR2,
-                DHCP_SOURCE_SOCKADDR,
                 STATIC_SOURCE_SOCKADDR,
             ],
         );
@@ -216,13 +221,13 @@ mod tests {
         let () = loosly_assert_servers(
             servers.consolidated(),
             vec![
+                DHCP_SOURCE_SOCKADDR,
                 DHCPV6_SOURCE_SOCKADDR1,
                 DHCPV6_SOURCE_SOCKADDR2,
-                DHCP_SOURCE_SOCKADDR,
                 STATIC_SOURCE_SOCKADDR,
                 NDP_SOURCE_SOCKADDR,
             ],
-            0..2,
+            1..3,
         );
 
         // Deduplication and sorting of same address across different sources.
@@ -250,12 +255,12 @@ mod tests {
             netstack: vec![dhcpv6_with_ndp_address(), DHCP_SERVER, NDP_SERVER, STATIC_SERVER],
             dhcpv6,
         };
-        let expected_servers = vec![NDP_SERVER, DHCPV6_SERVER1, DHCP_SERVER, STATIC_SERVER];
+        let expected_servers = vec![DHCP_SERVER, NDP_SERVER, DHCPV6_SERVER1, STATIC_SERVER];
         assert_eq!(servers.consolidate_filter_map(Some), expected_servers);
         let expected_sockaddrs = vec![
+            DHCP_SOURCE_SOCKADDR,
             NDP_SOURCE_SOCKADDR,
             DHCPV6_SOURCE_SOCKADDR1,
-            DHCP_SOURCE_SOCKADDR,
             STATIC_SOURCE_SOCKADDR,
         ];
         assert_eq!(servers.consolidated(), expected_sockaddrs);
@@ -289,12 +294,12 @@ mod tests {
             dhcpv6,
         };
         let expected_servers =
-            vec![ndp_with_dhcpv6_sockaddr1(), DHCPV6_SERVER2, DHCP_SERVER, STATIC_SERVER];
+            vec![DHCP_SERVER, ndp_with_dhcpv6_sockaddr1(), DHCPV6_SERVER2, STATIC_SERVER];
         assert_eq!(servers.consolidate_filter_map(Some), expected_servers);
         let expected_sockaddrs = vec![
+            DHCP_SOURCE_SOCKADDR,
             DHCPV6_SOURCE_SOCKADDR1,
             DHCPV6_SOURCE_SOCKADDR2,
-            DHCP_SOURCE_SOCKADDR,
             STATIC_SOURCE_SOCKADDR,
         ];
         assert_eq!(servers.consolidated(), expected_sockaddrs);
@@ -319,7 +324,7 @@ mod tests {
         );
 
         let servers =
-            [NDP_SERVER, DHCPV6_SERVER1, DHCP_SERVER, STATIC_SERVER, UNSPECIFIED_SOURCE_SERVER];
+            [DHCP_SERVER, NDP_SERVER, DHCPV6_SERVER1, STATIC_SERVER, UNSPECIFIED_SOURCE_SERVER];
         // We don't compare the last two servers in the list because their ordering is equal
         // w.r.t. eachother.
         for (i, a) in servers[..servers.len() - 2].iter().enumerate() {
@@ -330,6 +335,6 @@ mod tests {
 
         let mut servers = vec![DHCPV6_SERVER1, DHCP_SERVER, STATIC_SERVER, NDP_SERVER];
         servers.sort_by(DnsServers::ordering);
-        assert_eq!(servers, vec![NDP_SERVER, DHCPV6_SERVER1, DHCP_SERVER, STATIC_SERVER]);
+        assert_eq!(servers, vec![DHCP_SERVER, NDP_SERVER, DHCPV6_SERVER1, STATIC_SERVER]);
     }
 }
