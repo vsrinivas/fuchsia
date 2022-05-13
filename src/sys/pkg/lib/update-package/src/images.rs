@@ -182,6 +182,14 @@ pub struct ImagePackage<Images> {
     url: PinnedPkgUrl,
 }
 
+impl<Images> ImagePackage<Images> {
+    /// Returns an immutable borrow of the pinned fuchsia-pkg URI of package containing these
+    /// images.
+    pub fn url(&self) -> &PinnedPkgUrl {
+        &self.url
+    }
+}
+
 /// Metadata for artifacts unique to an A/B/R boot slot.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(deny_unknown_fields)]
@@ -194,6 +202,13 @@ pub struct BootSlot {
     vbmeta: Option<ImageMetadata>,
 }
 
+impl BootSlot {
+    /// Returns an immutable borrow to the ZBI designated in this boot slot.
+    pub fn zbi(&self) -> &ImageMetadata {
+        &self.zbi
+    }
+}
+
 /// Metadata necessary to determine if a payload matches an image without needing to have the
 /// actual image.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
@@ -202,11 +217,17 @@ pub struct ImageMetadata {
     /// The size of the image, in bytes.
     size: u64,
 
-    /// The sha256 hash of the image.
+    /// The sha256 hash of the image. Note this is not the merkle root of a
+    /// `fuchsia_merkle::MerkleTree`. It is the content hash of the image.
     hash: Hash,
 }
 
 impl ImageMetadata {
+    /// Returns new image metadata that designates the given `size` and `hash`.
+    pub fn new(size: u64, hash: Hash) -> Self {
+        Self { size, hash }
+    }
+
     /// Returns the size of the image, in bytes.
     pub fn size(&self) -> u64 {
         self.size
@@ -294,10 +315,18 @@ impl ImagePackagesManifest {
             _ => Ok(()),
         }
     }
+
+    /// Returns an immutable borrow to the boot slot image package designated as "fuchsia" in this
+    /// image packages manifest.
+    pub fn fuchsia(&self) -> Option<&BootSlotImagePackage> {
+        self.fuchsia.as_ref()
+    }
 }
 
 /// Returns structured `images.json` data based on raw file contents.
-fn parse_image_packages_json(contents: &[u8]) -> Result<ImagePackagesManifest, ImagePackagesError> {
+pub fn parse_image_packages_json(
+    contents: &[u8],
+) -> Result<ImagePackagesManifest, ImagePackagesError> {
     let manifest = match serde_json::from_slice(contents).map_err(ImagePackagesError::Parse)? {
         VersionedImagePackagesManifest::Version1(manifest) => manifest,
     };
@@ -562,12 +591,10 @@ mod tests {
 
         assert_eq!(
             ImageMetadata::for_path(&path).unwrap(),
-            ImageMetadata {
-                size: 0,
-                hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                    .parse()
-                    .unwrap(),
-            },
+            ImageMetadata::new(
+                0,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".parse().unwrap(),
+            ),
         );
     }
 
@@ -581,12 +608,10 @@ mod tests {
 
         assert_eq!(
             ImageMetadata::for_path(&path).unwrap(),
-            ImageMetadata {
-                size: 8192 + 4096,
-                hash: "f3cc103136423a57975750907ebc1d367e2985ac6338976d4d5a439f50323f4a"
-                    .parse()
-                    .unwrap(),
-            },
+            ImageMetadata::new(
+                8192 + 4096,
+                "f3cc103136423a57975750907ebc1d367e2985ac6338976d4d5a439f50323f4a".parse().unwrap(),
+            ),
         );
     }
 
@@ -619,20 +644,20 @@ mod tests {
         let actual = ImagePackagesManifest::builder()
             .fuchsia_package(
                 "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
-                ImageMetadata { size: 1, hash: hash(1) },
-                Some(ImageMetadata { size: 2, hash: hash(2) }),
+                ImageMetadata::new(1, hash(1)),
+                Some(ImageMetadata::new(2, hash(2))),
             )
             .recovery_package(
                 "fuchsia-pkg://fuchsia.com/update-images-recovery/0?hash=000000000000000000000000000000000000000000000000000000000000000b".parse().unwrap(),
-                ImageMetadata { size: 3, hash: hash(3) },
+                ImageMetadata::new(3, hash(3)),
                 None,
             )
             .firmware_package(
 
                     "fuchsia-pkg://fuchsia.com/update-images-firmware/0?hash=000000000000000000000000000000000000000000000000000000000000000c".parse().unwrap(),
                     btreemap! {
-                        "".to_owned() => ImageMetadata { size: 5, hash: hash(5) },
-                        "2bl".to_owned() => ImageMetadata { size: 6, hash: hash(6) },
+                        "".to_owned() => ImageMetadata::new(5, hash(5)),
+                        "2bl".to_owned() => ImageMetadata::new(6, hash(6)),
                     },
                 )
             .clone()
@@ -643,22 +668,22 @@ mod tests {
                 fuchsia: Some(BootSlotImagePackage {
                     url: "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
                     images: BootSlot {
-                        zbi: ImageMetadata { size: 1, hash: hash(1) },
-                        vbmeta: Some(ImageMetadata { size: 2, hash: hash(2) }),
+                        zbi: ImageMetadata::new(1, hash(1)),
+                        vbmeta: Some(ImageMetadata::new(2, hash(2))),
                     },
                 }),
                 recovery: Some(BootSlotImagePackage {
                     url: "fuchsia-pkg://fuchsia.com/update-images-recovery/0?hash=000000000000000000000000000000000000000000000000000000000000000b".parse().unwrap(),
                     images: BootSlot {
-                        zbi: ImageMetadata { size: 3, hash: hash(3) },
+                        zbi: ImageMetadata::new(3, hash(3)),
                         vbmeta: None,
                     },
                 }),
                 firmware: Some(FirmwareImagePackage {
                     url: "fuchsia-pkg://fuchsia.com/update-images-firmware/0?hash=000000000000000000000000000000000000000000000000000000000000000c".parse().unwrap(),
                     images: btreemap! {
-                        "".to_owned() => ImageMetadata { size: 5, hash: hash(5) },
-                        "2bl".to_owned() => ImageMetadata { size: 6, hash: hash(6) },
+                        "".to_owned() => ImageMetadata::new(5, hash(5)),
+                        "2bl".to_owned() => ImageMetadata::new(6, hash(6)),
                     },
                 }),
             })
@@ -719,22 +744,22 @@ mod tests {
                 fuchsia: Some(BootSlotImagePackage {
                     url: "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
                     images: BootSlot {
-                        zbi: ImageMetadata { size: 1, hash: hash(1) },
-                        vbmeta: Some(ImageMetadata { size: 2, hash: hash(2) }),
+                        zbi: ImageMetadata::new(1, hash(1)),
+                        vbmeta: Some(ImageMetadata::new(2, hash(2))),
                     },
                 }),
                 recovery: Some(BootSlotImagePackage {
                     url: "fuchsia-pkg://fuchsia.com/update-images-recovery/0?hash=000000000000000000000000000000000000000000000000000000000000000b".parse().unwrap(),
                     images: BootSlot {
-                        zbi: ImageMetadata { size: 3, hash: hash(3) },
-                        vbmeta: Some(ImageMetadata { size: 4, hash: hash(4) }),
+                        zbi: ImageMetadata::new(3, hash(3)),
+                        vbmeta: Some(ImageMetadata::new(4, hash(4))),
                     },
                 }),
                 firmware: Some(FirmwareImagePackage {
                     url: "fuchsia-pkg://fuchsia.com/update-images-firmware/0?hash=000000000000000000000000000000000000000000000000000000000000000c".parse().unwrap(),
                     images: btreemap! {
-                        "".to_owned() => ImageMetadata { size: 5, hash: hash(5) },
-                        "2bl".to_owned() => ImageMetadata { size: 6, hash: hash(6) },
+                        "".to_owned() => ImageMetadata::new(5, hash(5)),
+                        "2bl".to_owned() => ImageMetadata::new(6, hash(6)),
                     },
                 }),
             }
@@ -747,7 +772,7 @@ mod tests {
             fuchsia: Some(BootSlotImagePackage {
                 url: "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
                 images: BootSlot {
-                    zbi: ImageMetadata { size: 1, hash: hash(1) },
+                    zbi: ImageMetadata::new(1, hash(1)),
                     vbmeta: None,
                 },
             }),
@@ -768,7 +793,7 @@ mod tests {
             fuchsia: Some(BootSlotImagePackage {
                 url: "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
                 images: BootSlot {
-                    zbi: ImageMetadata { size: 1, hash: hash(1) },
+                    zbi: ImageMetadata::new(1, hash(1)),
                     vbmeta: None,
                 },
             }),
@@ -826,5 +851,27 @@ mod tests {
             image_packages(&proxy).await.unwrap(),
             ImagePackagesManifest { fuchsia: None, recovery: None, firmware: None }
         );
+    }
+
+    #[fuchsia::test]
+    fn accessors() {
+        let fuchsia = BootSlotImagePackage {
+            url: "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
+            images: BootSlot {
+                zbi: ImageMetadata::new(1, hash(1)),
+                vbmeta: Some(ImageMetadata::new(2, hash(2))),
+            },
+        };
+
+        let mut builder = ImagePackagesManifest::builder();
+        builder.fuchsia_package(
+            "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
+            ImageMetadata::new(1, hash(1)),
+            Some(ImageMetadata::new(2, hash(2))),
+        );
+        let versioned_manifest = builder.build();
+
+        let VersionedImagePackagesManifest::Version1(manifest) = versioned_manifest;
+        assert_eq!(manifest.fuchsia(), Some(&fuchsia));
     }
 }

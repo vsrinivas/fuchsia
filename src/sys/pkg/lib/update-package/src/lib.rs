@@ -22,9 +22,9 @@ pub use crate::{
     hash::HashError,
     image::{Image, ImageClass, ImageType, OpenImageError},
     images::{
-        BootSlot, BootSlotImagePackage, FirmwareImagePackage, ImageMetadata, ImagePackage,
-        ImagePackagesError, ImagePackagesManifest, ImagePackagesManifestBuilder,
-        VersionedImagePackagesManifest,
+        parse_image_packages_json, BootSlot, BootSlotImagePackage, FirmwareImagePackage,
+        ImageMetadata, ImagePackage, ImagePackagesError, ImagePackagesManifest,
+        ImagePackagesManifestBuilder, VersionedImagePackagesManifest,
     },
     images::{ImageList, ResolveImagesError, UnverifiedImageList},
     name::VerifyNameError,
