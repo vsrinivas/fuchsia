@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::{anyhow, Result},
     errors::ffx_bail,
     ffx_config::file,
     ffx_core::ffx_plugin,
@@ -11,7 +11,6 @@ use {
     ffx_flash_args::FlashCommand,
     fidl_fuchsia_developer_ffx::FastbootProxy,
     std::io::{stdout, Write},
-    std::path::Path,
 };
 
 const SSH_OEM_COMMAND: &str = "add-staged-bootloader-file ssh.authorized_keys";
@@ -28,14 +27,22 @@ pub async fn flash_plugin_impl<W: Write>(
 ) -> Result<()> {
     match cmd.authorized_keys.as_ref() {
         Some(ssh) => {
-            let ssh_file = Path::new(ssh);
-            if !ssh_file.is_file() {
-                ffx_bail!("SSH key \"{}\" is not a file.", ssh);
-            }
+            let ssh_file = match std::fs::canonicalize(ssh) {
+                Ok(path) => path,
+                Err(err) => {
+                    ffx_bail!("Cannot find SSH key \"{}\": {}", ssh, err);
+                }
+            };
             if cmd.oem_stage.iter().find(|f| f.command() == SSH_OEM_COMMAND).is_some() {
                 ffx_bail!("Both the SSH key and the SSH OEM Stage flags were set. Only use one.");
             }
-            cmd.oem_stage.push(OemFile::new(SSH_OEM_COMMAND.to_string(), ssh.to_string()));
+            cmd.oem_stage.push(OemFile::new(
+                SSH_OEM_COMMAND.to_string(),
+                ssh_file
+                    .into_os_string()
+                    .into_string()
+                    .map_err(|s| anyhow!("Cannot convert OsString \"{:?}\" to String", s))?,
+            ));
         }
         None => {
             if cmd.oem_stage.iter().find(|f| f.command() == SSH_OEM_COMMAND).is_none() {
