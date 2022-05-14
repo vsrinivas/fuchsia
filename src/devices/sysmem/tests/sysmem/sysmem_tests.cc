@@ -2120,10 +2120,16 @@ TEST(Sysmem, MultipleParticipantsColorspaceRanking) {
 TEST(Sysmem, MultipleParticipants_TwoImageFormatConstraintsSamePixelFormat_CompatibleColorspaces) {
   // Multiple iterations to try to repro fxbug.dev/60895, in case it comes back.  This should be
   // at least 2 to check both orderings with two clients.
-  const uint32_t kNumIterations = 10;
-  for (uint32_t iteration = 0; iteration < kNumIterations; ++iteration) {
-    if ((iteration + 1) % 100 == 0) {
-      printf("iteration count: %u\n", iteration + 1);
+  std::atomic<uint32_t> clean_failure_seen_count = 0;
+  const uint32_t kCleanFailureSeenGoal = 15;
+  const uint32_t kMaxIterations = 500;
+  uint32_t iteration;
+  for (iteration = 0;
+       iteration < kMaxIterations && clean_failure_seen_count.load() < kCleanFailureSeenGoal;
+       ++iteration) {
+    if (iteration % 100 == 0) {
+      printf("starting iteration: %u clean_failure_seen_count: %u\n", iteration,
+             clean_failure_seen_count.load());
     }
     const uint32_t kNumClients = 2;
     std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> clients =
@@ -2163,41 +2169,61 @@ TEST(Sysmem, MultipleParticipants_TwoImageFormatConstraintsSamePixelFormat_Compa
       return constraints;
     };
 
-    static constexpr std::optional<uint64_t> kForcedSeed{};
-    std::random_device random_device;
-    std::uint_fast64_t seed{kForcedSeed ? *kForcedSeed : random_device()};
-    std::mt19937_64 prng{seed};
-    std::uniform_int_distribution<uint32_t> uint32_distribution(
-        0, std::numeric_limits<uint32_t>::max());
-
-    std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> clients_with_constraints;
-    for (uint32_t i = 0; i < kNumClients; ++i) {
-      // The first kNumClients iterations will deterministically check doing the corresponding
-      // client first.
-      uint32_t which_client =
-          (iteration < clients.size()) ? iteration : (uint32_distribution(prng) % clients.size());
-      auto result =
-          clients[which_client]->SetConstraints(true, build_constraints(which_client % 2 == 0));
-      ZX_ASSERT(result.ok());
-      clients_with_constraints.emplace_back(std::move(clients[which_client]));
-      clients.erase(clients.begin() + which_client);
-      // Try to force constraints reception ordering at server without slowing down too much.
-      zx::nanosleep(zx::deadline_after(zx::msec(20)));
-    }
-
     // Both collections should yield the same results
     auto check_allocation_results =
-        [](const ::fidl::WireResult<::fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>
-               allocation_result) {
-          // Two image_format_constraints from one client are not allowed, so this should fail
-          // regardless of ordering.
-          ASSERT_NOT_OK(allocation_result);
+        [&](const ::fidl::WireResult<::fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>&
+                allocation_result) {
+          zx_status_t status = allocation_result.value().status;
+          ZX_ASSERT_MSG(ZX_ERR_NOT_SUPPORTED == status, "status: %d", status);
+          ++clean_failure_seen_count;
         };
 
+    std::vector<std::thread> client_threads;
+    std::atomic<uint32_t> ready_thread_count = 0;
+    std::atomic<bool> step_0 = false;
     for (uint32_t i = 0; i < kNumClients; ++i) {
-      check_allocation_results(clients_with_constraints[0]->WaitForBuffersAllocated());
+      client_threads.emplace_back([&, which_client = i] {
+        std::random_device random_device;
+        std::uint_fast64_t seed{random_device()};
+        std::mt19937_64 prng{seed};
+        std::uniform_int_distribution<uint32_t> uint32_distribution(
+            0, std::numeric_limits<uint32_t>::max());
+        ++ready_thread_count;
+        while (!step_0.load()) {
+          // spin-wait
+        }
+        // randomize the continuation timing
+        zx::nanosleep(zx::deadline_after(zx::usec(uint32_distribution(prng) % 50)));
+        auto set_constraints_result =
+            clients[which_client]->SetConstraints(true, build_constraints(which_client % 2 == 0));
+        ZX_ASSERT(set_constraints_result.ok() || set_constraints_result.is_peer_closed());
+        if (!set_constraints_result.ok()) {
+          return;
+        }
+        // randomize the continuation timing
+        zx::nanosleep(zx::deadline_after(zx::usec(uint32_distribution(prng) % 50)));
+        auto wait_result = clients[which_client]->WaitForBuffersAllocated();
+        ZX_ASSERT(wait_result.ok() || wait_result.is_peer_closed());
+        if (!wait_result.ok()) {
+          return;
+        }
+        check_allocation_results(wait_result);
+      });
+    }
+
+    while (ready_thread_count.load() != kNumClients) {
+      // spin wait
+    }
+
+    step_0.store(true);
+
+    for (auto& thread : client_threads) {
+      thread.join();
     }
   }
+
+  printf("iterations: %u clean_failure_seen_count: %u\n", iteration,
+         clean_failure_seen_count.load());
 }
 
 TEST(Sysmem, DuplicateSync) {
