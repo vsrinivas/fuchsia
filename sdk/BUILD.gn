@@ -565,20 +565,6 @@ sdk_molecule("ddk_host_tools") {
   }
 }
 
-sdk_molecule("banjo") {
-  visibility = [ ":*" ]
-  deps = [
-    "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_sdk($fidl_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_sdk($fidl_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.serialimpl:fuchsia.hardware.serialimpl_sdk($fidl_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_sdk($fidl_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.wlan.associnfo:fuchsia.hardware.wlan.associnfo_sdk($fidl_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.wlan.phyinfo:fuchsia.hardware.wlan.phyinfo_sdk($fidl_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_sdk($fidl_toolchain)",
-    "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_sdk($fidl_toolchain)",
-  ]
-}
-
 sdk_molecule("bind") {
   visibility = [ ":*" ]
   deps = [
@@ -625,12 +611,6 @@ sdk("ddk") {
     "//sdk/lib/sys/component/llcpp:llcpp_sdk",
     "//src/devices/lib/mmio:mmio_sdk",
     "//zircon/system/ulib/hwreg:hwreg_sdk_sdk",
-
-    # V1 APIs, to be removed before updating category to partner:
-    ":banjo",
-    "//src/devices/usb/lib/usb:usb_sdk",
-    "//src/lib/ddk:ddk_sdk",
-    "//src/lib/ddktl:ddktl_sdk",
   ]
 }
 
