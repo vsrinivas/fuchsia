@@ -10,8 +10,7 @@ use {
     },
     ffx_core::ffx_plugin,
     ffx_sdk_args::{
-        ListCommand, ListSubCommand, SdkCommand, SetCommand, SetRootCommand, SetSubCommand,
-        SubCommand,
+        ListCommand, SdkCommand, SetCommand, SetRootCommand, SetSubCommand, SubCommand,
     },
     std::io::{stdout, Write},
 };
@@ -50,20 +49,10 @@ async fn exec_set(cmd: &SetCommand) -> Result<()> {
 }
 
 /// Execute the `list` sub-command.
-async fn exec_list<W: Write + Sync>(writer: &mut W, _sdk: Sdk, cmd: &ListCommand) -> Result<()> {
+async fn exec_list<W: Write + Sync>(_writer: &mut W, _sdk: Sdk, cmd: &ListCommand) -> Result<()> {
     match &cmd.sub {
-        ListSubCommand::ProductBundles(_) => exec_list_pbms(writer).await,
+        _ => todo!("Add list features."),
     }
-}
-
-/// Execute `list product-bundles`.
-///
-/// The list will be written to `writer`.
-async fn exec_list_pbms<W: Write + Sync>(writer: &mut W) -> Result<()> {
-    // TODO(fxbug.dev/99678): Removed this after some reasonable cooling period.
-    writeln!(writer, "[Deprecated]")?;
-    writeln!(writer, "Please use `ffx product-bundle list` instead.")?;
-    Ok(())
 }
 
 #[cfg(test)]

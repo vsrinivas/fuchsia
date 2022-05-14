@@ -54,14 +54,4 @@ pub struct ListCommand {
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum ListSubCommand {
-    ProductBundles(ProductBundlesCommand),
-}
-
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(
-    subcommand,
-    name = "product-bundles",
-    description = "List product bundles located in the SDK"
-)]
-pub struct ProductBundlesCommand {}
+pub enum ListSubCommand {}
