@@ -1,3 +1,7 @@
+// HACK: Temporary workaround for the StarFive VisionFive which has a different
+// register size and alignment as the NS16550a in QEMU-virt:
+// #define STARFIVE_VISIONFIVE_HACK
+
 // Copyright 2020 The Fuchsia Authors
 //
 // Use of this source code is governed by a MIT-style
@@ -40,7 +44,11 @@
 #define UART_DLM   (0x1)
 // clang-format on
 
+#ifdef STARFIVE_VISIONFIVE_HACK
+#define UARTREG(base, reg) (*REG32((base) + ((reg) << 2)))
+#else
 #define UARTREG(base, reg) (*REG8((base) + (reg)))
+#endif
 
 #define RXBUF_SIZE 128
 
