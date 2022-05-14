@@ -25,25 +25,10 @@ impl From<TimeUnit> for zx::Duration {
     }
 }
 
-impl From<TimeUnit> for i64 {
-    fn from(tu: TimeUnit) -> i64 {
-        tu.0 as i64
-    }
-}
-
-impl From<TimeUnit> for u16 {
-    fn from(tu: TimeUnit) -> u16 {
-        tu.0
-    }
-}
-
-impl<T> ops::Add<T> for TimeUnit
-where
-    T: Into<u16>,
-{
+impl ops::Add<TimeUnit> for TimeUnit {
     type Output = Self;
-    fn add(self, tus: T) -> Self {
-        Self(self.0 + tus.into())
+    fn add(self, other_time_unit: TimeUnit) -> Self {
+        Self(self.0.saturating_add(other_time_unit.0))
     }
 }
 
@@ -52,13 +37,14 @@ where
     T: Into<u16>,
 {
     type Output = Self;
-    fn mul(self, tus: T) -> Self {
-        Self(self.0 * tus.into())
+    fn mul(self, k: T) -> Self {
+        Self(self.0.saturating_mul(k.into()))
     }
 }
 
 impl TimeUnit {
     pub const DEFAULT_BEACON_INTERVAL: Self = Self(100);
+    pub const MAX: Self = Self(std::u16::MAX);
 
     pub const fn into_micros(&self) -> i64 {
         (self.0 as i64) * 1024
@@ -100,17 +86,17 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn time_unit_multiplication_with_other_time_unit() {
-        assert_eq!(TimeUnit(100) * TimeUnit(20), TimeUnit(2000));
-    }
-
-    #[fuchsia::test]
-    fn time_unit_addition_with_integer() {
-        assert_eq!(TimeUnit(100) + 20_u16, TimeUnit(120));
-    }
-
-    #[fuchsia::test]
     fn time_unit_addition_with_other_time_unit() {
         assert_eq!(TimeUnit(100) + TimeUnit(20), TimeUnit(120));
+    }
+
+    #[fuchsia::test]
+    fn time_unit_addition_saturation() {
+        assert_eq!(TimeUnit(1) + TimeUnit::MAX, TimeUnit::MAX);
+    }
+
+    #[fuchsia::test]
+    fn time_unit_multiplication_saturation() {
+        assert_eq!(TimeUnit::MAX * 2u16, TimeUnit::MAX);
     }
 }

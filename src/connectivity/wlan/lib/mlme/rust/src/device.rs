@@ -558,8 +558,7 @@ impl DeviceInterface {
         tim_ele_offset: usize,
         beacon_interval: TimeUnit,
     ) -> Result<(), zx::Status> {
-        let status =
-            (self.enable_beaconing)(self.device, buf, tim_ele_offset, beacon_interval.into());
+        let status = (self.enable_beaconing)(self.device, buf, tim_ele_offset, beacon_interval.0);
         zx::ok(status)
     }
 

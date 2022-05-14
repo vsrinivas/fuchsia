@@ -46,7 +46,7 @@ pub fn construct_bss_description(
     Ok(fidl_internal::BssDescription {
         bssid: bssid.0,
         bss_type,
-        beacon_period: beacon_interval.into(),
+        beacon_period: beacon_interval.0,
         capability_info: capability_info.raw(),
         ies: ies.to_vec(),
         channel,
