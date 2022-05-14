@@ -74,6 +74,10 @@ zx_status_t utf16_to_utf8(const uint16_t* src, size_t src_len, uint8_t* dst, siz
                           uint32_t flags);
 #endif
 
+// Convert UTF8 to UTF16.  Note that while src_len is in bytes, dst_len is
+// in 16-bit units.
+zx_status_t utf8_to_utf16(const uint8_t* src, size_t src_len, uint16_t* dst, size_t* dst_len);
+
 __END_CDECLS
 
 #endif  // SRC_LIB_UTF_CONVERSION_UTF_CONVERSION_H_

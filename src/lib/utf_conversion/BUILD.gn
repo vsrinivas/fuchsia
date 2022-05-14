@@ -23,6 +23,7 @@ test("utf_conversion_test") {
   deps = [
     ":utf_conversion",
     "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zxtest",
@@ -33,6 +34,7 @@ group("tests") {
   testonly = true
   deps = [
     ":utf_conversion_fuzzers",
+    ":utf_conversion_test($host_toolchain)",
     ":utf_conversion_test_pkg",
   ]
 }
@@ -43,6 +45,7 @@ fuzzer("utf_conversion_fuzzer") {
 }
 
 fuzzers_package("utf_conversion_fuzzers") {
+  fuzz_host = true
   cpp_fuzzers = [ ":utf_conversion_fuzzer" ]
 }
 

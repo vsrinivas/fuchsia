@@ -153,9 +153,51 @@ source_set("protocol") {
   }
 }
 
+source_set("file") {
+  public = [ "include/phys/efi/file.h" ]
+  public_deps = [
+    "//zircon/kernel/lib/efi",
+    "//zircon/system/ulib/zxc",
+  ]
+  if (is_kernel) {
+    public_deps += [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+  public_configs = [ ":includes" ]
+
+  sources = [ "file.cc" ]
+  deps = [
+    ":main",
+    ":protocol",
+    "//src/lib/utf_conversion",
+    "//zircon/system/ulib/fbl",
+  ]
+  include_dirs = [ "//" ]  # utf_conversion isn't a proper library.
+
+  if (is_kernel) {
+    deps += [ "..:symbolize" ]
+  }
+}
+
+efi_executable("efi-zbi") {
+  sources = [ "efi-zbi.cc" ]
+  deps = [
+    ":file",
+    "..:symbolize",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/libc",
+    "//zircon/system/ulib/zbitl",
+  ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":efi-unittests($host_toolchain)" ]
+  deps = [
+    ":efi-unittests($host_toolchain)",
+    ":efi-zbi",
+  ]
 }
 
 test("efi-unittests") {

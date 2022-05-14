@@ -107,6 +107,7 @@ void SetEfiStdout(efi_system_table* sys) {
     // TODO(mcgrathr): in headless qemu/ovmf, ConOut is also the serial console
     // so enabling both double-prints everything.  Need a way to figure out if
     // ConOut is actually serial and skip serial if so.
+    return;
   }
 
   void* serial_ptr;

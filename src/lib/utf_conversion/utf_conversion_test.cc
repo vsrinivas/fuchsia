@@ -4,7 +4,7 @@
 
 #include "src/lib/utf_conversion/utf_conversion.h"
 
-#include <endian.h>
+#include <lib/stdcompat/bit.h>
 #include <stdio.h>
 
 #include <iterator>
@@ -12,13 +12,14 @@
 #include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
 
-#if (BYTE_ORDER == BIG_ENDIAN)
-static constexpr uint32_t HOST_ENDIAN_FLAG = UTF_CONVERT_FLAG_FORCE_BIG_ENDIAN;
-static constexpr uint32_t INVERT_ENDIAN_FLAG = UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN;
-#else
-static constexpr uint32_t HOST_ENDIAN_FLAG = UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN;
-static constexpr uint32_t INVERT_ENDIAN_FLAG = UTF_CONVERT_FLAG_FORCE_BIG_ENDIAN;
-#endif
+namespace {
+
+constexpr uint32_t HOST_ENDIAN_FLAG = cpp20::endian::native == cpp20::endian::big
+                                          ? UTF_CONVERT_FLAG_FORCE_BIG_ENDIAN
+                                          : UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN;
+constexpr uint32_t INVERT_ENDIAN_FLAG = cpp20::endian::native == cpp20::endian::big
+                                            ? UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN
+                                            : UTF_CONVERT_FLAG_FORCE_BIG_ENDIAN;
 
 #define ASSERT_UTF8_EQ(expected, expected_len, actual, actual_bytes, enc_len, msg) \
   do {                                                                             \
@@ -26,6 +27,10 @@ static constexpr uint32_t INVERT_ENDIAN_FLAG = UTF_CONVERT_FLAG_FORCE_BIG_ENDIAN
     ASSERT_EQ(expected_len, enc_len, "%s", msg);                                   \
     ASSERT_BYTES_EQ(expected, actual, expected_len, "%s", msg);                    \
   } while (false)
+
+constexpr uint16_t ByteSwap(uint16_t x) {
+  return static_cast<uint16_t>(((x & 0xff00) >> 8) | ((x & 0x00ff) << 8));
+}
 
 TEST(UTF16To8TestCase, BadArgs) {
   uint16_t src;
@@ -62,26 +67,26 @@ TEST(UTF16To8TestCase, BadArgs) {
 
 TEST(UTF16To8TestCase, EmptySource) {
   uint16_t src;
-  static const uint8_t expected[] = {0xA1, 0xB2, 0xC3, 0xD4};
-  uint8_t actual[sizeof(expected)];
+  static constexpr uint8_t kExpected[] = {0xA1, 0xB2, 0xC3, 0xD4};
+  uint8_t actual[sizeof(kExpected)];
   size_t dst_len;
   zx_status_t res;
 
   // Check to make sure that attempting to encode a zero length source results
   // in a length of zero and no changes to the destination buffer.
-  memcpy(actual, expected, sizeof(actual));
+  memcpy(actual, kExpected, sizeof(actual));
   dst_len = sizeof(actual);
   res = utf16_to_utf8(&src, 0, actual, &dst_len);
   ASSERT_OK(res, "zero length string conversion failed");
   ASSERT_EQ(0, dst_len, "dst_len should be zero after zero length string conversion");
-  ASSERT_BYTES_EQ(expected, actual, sizeof(actual),
+  ASSERT_BYTES_EQ(kExpected, actual, sizeof(actual),
                   "dst buffer modified after zero length string conversion");
 
   dst_len = sizeof(actual);
   res = utf16_to_utf8(nullptr, 1, actual, &dst_len);
   ASSERT_OK(res, "null source string conversion failed");
   ASSERT_EQ(0, dst_len, "dst_len should be zero after null source string conversion");
-  ASSERT_BYTES_EQ(expected, actual, sizeof(actual),
+  ASSERT_BYTES_EQ(kExpected, actual, sizeof(actual),
                   "dst buffer modified after null source string conversion");
 }
 
@@ -247,11 +252,11 @@ TEST(UTF16To8TestCase, EndiannessAndBom) {
     bool host_order;
   } SOURCES[] = {{{0xFEFF, 'T', 'e', 's', 't'}, true},
                  {{
-                      __bswap16(0xFEFF),
-                      __bswap16('T'),
-                      __bswap16('e'),
-                      __bswap16('s'),
-                      __bswap16('t'),
+                      ByteSwap(0xFEFF),
+                      ByteSwap('T'),
+                      ByteSwap('e'),
+                      ByteSwap('s'),
+                      ByteSwap('t'),
                   },
                   false}};
 
@@ -311,3 +316,59 @@ TEST(UTF16To8TestCase, EndiannessAndBom) {
     }
   }
 }
+
+TEST(UTF8To16TestCase, SimpleCodepoints) {
+  // Only one-byte code points are currently handled.
+  constexpr uint8_t kExpected[] = {0x00, 0x01, 0x7f};
+  for (const uint8_t expected : kExpected) {
+    uint16_t actual[16];
+    size_t encoded_len = std::size(actual);
+    ASSERT_OK(utf8_to_utf16(&expected, 1, actual, &encoded_len));
+    ASSERT_EQ(encoded_len, 1);
+    ASSERT_EQ(actual[0], static_cast<uint16_t>(expected));
+  }
+}
+
+TEST(UTF8To16TestCase, BufferLengths) {
+  const uint8_t src[] = {'T', 'e', 's', 't'};
+  const uint16_t expected[] = {'T', 'e', 's', 't'};
+  uint16_t actual[16];
+
+  // Perform a conversion, but test three cases.
+  //
+  // 1) The destination buffer size is exactly what is required.
+  // 2) The destination buffer size is more than what is required.
+  // 3) The destination buffer size is less than what is required.
+  constexpr size_t DST_LENGTHS[] = {std::size(expected), std::size(actual),
+                                    std::size(expected) >> 1};
+  for (const auto& d : DST_LENGTHS) {
+    char case_id[64];
+    size_t encoded_len = d;
+    zx_status_t res;
+
+    snprintf(case_id, sizeof(case_id), "case id [needed %zu, provided %zu]", sizeof(expected), d);
+    ::memset(actual, 0xAB, sizeof(actual));
+
+    ASSERT_LE(encoded_len, sizeof(actual), "%s", case_id);
+    res = utf8_to_utf16(src, std::size(src), actual, &encoded_len);
+
+    ASSERT_OK(res, "%s", case_id);
+
+    if (d < std::size(expected)) {
+      ASSERT_LE(encoded_len, d, "%s", case_id);
+    } else {
+      ASSERT_EQ(std::size(expected), encoded_len, "%s", case_id);
+    }
+    static_assert(sizeof(expected) <= sizeof(actual),
+                  "'actual' buffer must be large enough to hold 'expected' result");
+    ASSERT_BYTES_EQ(expected, actual, std::min(d, encoded_len) * sizeof(uint16_t), "%s", case_id);
+
+    if (d < std::size(actual)) {
+      uint16_t pattern[sizeof(actual)];
+      ::memset(pattern, 0xAB, sizeof(pattern));
+      ASSERT_BYTES_EQ(actual + d, pattern, sizeof(actual) - (d * sizeof(uint16_t)), "%s", case_id);
+    }
+  }
+}
+
+}  // namespace

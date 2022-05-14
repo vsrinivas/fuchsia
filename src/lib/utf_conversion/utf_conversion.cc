@@ -131,9 +131,23 @@ zx_status_t Utf16ToUtf8(const uint16_t* src, size_t src_len, uint8_t* dst, size_
   return ret;
 }
 
-}  // namespace
+// If there is space to do so, encode the Unicode code point provided as UTF16.
+// No matter what, return the number of 16-bit characters that the encoded code
+// point would take.
+//
+// If the input is an invalid Unicode codepoint, signal this by returning 0.
+// Input length is in bytes.  Output length is in 16-bit units.
+uint32_t EncodeUtf16CodePoint(uint32_t code_point, uint16_t* tgt, size_t tgt_len, size_t offset) {
+  if (code_point > kMaxUnicodeCodePoint || tgt_len <= offset) {
+    return 0;
+  }
 
-extern "C" {
+  // TODO: this only works with single-byte UTF8 characters.
+  tgt[offset] = static_cast<uint16_t>(code_point);
+  return 1;
+}
+
+}  // namespace
 
 zx_status_t utf16_to_utf8(const uint16_t* src, size_t src_len, uint8_t* dst, size_t* dst_len,
                           uint32_t flags) {
@@ -187,4 +201,18 @@ zx_status_t utf16_to_utf8(const uint16_t* src, size_t src_len, uint8_t* dst, siz
   }
 }
 
-}  // extern "C"
+zx_status_t utf8_to_utf16(const uint8_t* src, size_t src_len, uint16_t* dst, size_t* dst_len) {
+  zx_status_t ret = ZX_OK;
+  size_t rd = 0;
+  size_t wr = 0;
+
+  while (rd < src_len) {
+    uint32_t code_point = src[rd++];
+
+    // TODO: should correctly process multibyte characters here.
+    wr += EncodeUtf16CodePoint(code_point, dst, *dst_len, wr);
+  }
+
+  *dst_len = wr;
+  return ret;
+}
