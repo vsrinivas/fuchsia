@@ -29,7 +29,7 @@ use {
     },
     anyhow::{bail, Context, Result},
     fms::Entries,
-    futures::TryStreamExt as _,
+    futures_lite::stream::StreamExt,
     std::{
         io::Write,
         path::{Path, PathBuf},

@@ -73,8 +73,8 @@ where
             return Err(anyhow!("unsupported scheme {}", blob_repo_url));
         }
 
-        // `Url::join()` treats urls with a trailing slash as a directory, and without as a file. In
-        // the latter case, it will strip off the last segment before joining paths. Since the
+        // `URL.join` treats urls with a trailing slash as a directory, and without as a file.
+        // In the latter case, it will strip off the last segment before joining paths. Since the
         // metadata and blob url are directories, make sure they have a trailing slash.
         if !metadata_repo_url.path().ends_with('/') {
             metadata_repo_url.set_path(&format!("{}/", metadata_repo_url.path()));
