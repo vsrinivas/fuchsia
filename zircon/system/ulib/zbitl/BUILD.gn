@@ -14,6 +14,7 @@ zx_library("zbitl") {
   sources = [
     "checking.cc",
     "cpu-topology.cc",
+    "efi.cc",
     "item.cc",
   ]
   deps = [
@@ -34,6 +35,9 @@ zx_library("zbitl") {
 
     # <lib/zbitl/view.h> has #include <lib/fitx/result.h>.
     "//zircon/system/ulib/zxc:headers",
+
+    # <lib/zbitl/efi.h> has #include <efi/protocol/file.h>.
+    "//zircon/kernel/lib/efi:headers",
   ]
 
   if (is_kernel) {

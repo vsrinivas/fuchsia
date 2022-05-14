@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "array-tests.h"
+#include "efi-tests.h"
 #include "fd-tests.h"
 #include "span-tests.h"
 #include "stdio-tests.h"

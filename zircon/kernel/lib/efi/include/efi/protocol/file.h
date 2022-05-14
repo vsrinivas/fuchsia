@@ -82,7 +82,7 @@ typedef struct efi_file_protocol {
 
   efi_status (*Read)(struct efi_file_protocol* self, size_t* len, void* buf) EFIAPI;
 
-  efi_status (*Write)(struct efi_file_protocol* self, size_t* len, void* buf) EFIAPI;
+  efi_status (*Write)(struct efi_file_protocol* self, size_t* len, const void* buf) EFIAPI;
 
   efi_status (*GetPosition)(struct efi_file_protocol* self, uint64_t* position) EFIAPI;
 

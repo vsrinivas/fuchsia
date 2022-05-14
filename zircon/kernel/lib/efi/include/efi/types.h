@@ -27,6 +27,8 @@ __BEGIN_CDECLS
 // calls allowed.
 #if defined(__x86_64__)
 #define EFIAPI __attribute__((ms_abi))
+#elif defined(__i386__)
+#define EFIAPI __attribute__((regparm(0)))
 #elif defined(__aarch64__)
 // ARM64 doesn't need the ABI tag
 #define EFIAPI
@@ -34,9 +36,9 @@ __BEGIN_CDECLS
 #define EFIAPI EFI_FUNCTION_UNAVAILABLE("EFI API functions undefined for this architecture.")
 #endif
 
-#define EFI_ERROR_MASK 0x8000000000000000
-#define EFI_ERR(x) (EFI_ERROR_MASK | x)
-#define EFI_ERROR(x) (((int64_t)x) < 0)
+#define EFI_ERROR_MASK ((uintptr_t)INTPTR_MAX + 1)
+#define EFI_ERR(x) (EFI_ERROR_MASK | (x))
+#define EFI_ERROR(x) (((intptr_t)(x)) < 0)
 
 #define EFI_SUCCESS 0u
 #define EFI_LOAD_ERROR EFI_ERR(1)

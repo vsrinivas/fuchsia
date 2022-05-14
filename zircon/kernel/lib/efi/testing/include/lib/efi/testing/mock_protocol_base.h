@@ -43,27 +43,27 @@ namespace efi {
 template <typename Derived, typename Protocol>
 class MockProtocolBase {
  public:
-  explicit MockProtocolBase(Protocol protocol)
-      : wrapper_{.protocol = protocol, .mock = static_cast<Derived*>(this)} {}
+  explicit MockProtocolBase(const Protocol& protocol)
+      : wrapper_{protocol, static_cast<Derived*>(this)} {}
+
   virtual ~MockProtocolBase() = default;
 
-  Protocol* protocol() { return &wrapper_.protocol; }
+  Protocol* protocol() { return &wrapper_; }
 
  protected:
   // Wraps the C protocol struct with a pointer to our C++ object so we can
   // locate the mock object from the C protocol pointer.
-  struct Wrapper {
-    Protocol protocol;
-    Derived* mock;
+  struct Wrapper : public Protocol {
+    constexpr explicit Wrapper(const Protocol& protocol, Derived* mock)
+        : Protocol(protocol), mock_(mock) {}
+
+    Derived* mock_ = nullptr;
   };
 
   // Bounces the EFI C function pointer into the mock function..
-  template <auto func, typename... Args>
+  template <auto Method, typename... Args>
   EFIAPI static efi_status Bounce(Protocol* self, Args... args) {
-    // We can cast here because &wrapper_ == &wrapper_.protocol.
-    static_assert(std::is_standard_layout_v<Wrapper> && offsetof(Wrapper, protocol) == 0,
-                  "Fix wrapper");
-    return (reinterpret_cast<Wrapper*>(self)->mock->*func)(args...);
+    return (static_cast<Wrapper*>(self)->mock_->*Method)(args...);
   }
 
   Wrapper wrapper_;

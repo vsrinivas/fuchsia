@@ -48,6 +48,7 @@ src_storage_types = [
   "String",
   "ByteSpan",
   "FblByteArray",
+  "Efi",
   "Fd",
   "Stdio",
 ]
@@ -75,6 +76,7 @@ foreach(src, src_storage_types) {
       deps = [
         "//src/zircon/lib/zircon",
         "//third_party/googletest:gtest",
+        "//zircon/kernel/lib/efi/testing",
         "//zircon/system/ulib/zbitl",
       ]
       defines = [
@@ -91,6 +93,7 @@ test("zbitl-unittests") {
     "array-tests.cc",
     "checking-tests.cc",
     "cpu-topology-tests.cc",
+    "efi-tests.cc",
     "fd-tests.cc",
     "json-tests.cc",
     "mem-config-test.cc",
@@ -105,7 +108,7 @@ test("zbitl-unittests") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
-    "//zircon/kernel/lib/efi",
+    "//zircon/kernel/lib/efi/testing",
     "//zircon/system/ulib/zbitl",
   ]
   deps += copy_test_deps

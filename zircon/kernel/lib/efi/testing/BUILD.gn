@@ -12,6 +12,7 @@ source_set("testing") {
 
   sources = [
     "fake_disk_io_protocol.cc",
+    "stdio_file_protocol.cc",
     "stub_boot_services.cc",
   ]
   public_configs = [ ":testing_config" ]
