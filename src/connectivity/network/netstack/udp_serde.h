@@ -115,19 +115,21 @@ FXL_EXPORT extern const uint32_t kRxUdpPreludeSize;
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/stdcompat/span.h>
 
+namespace fsocket = fuchsia_posix_socket;
+
 // Utility for serializing a SendMsgMeta into the provided buffer using the LLCPP
 // bindings.
 //
 // On success, returns true. On failure, returns false.
-FXL_EXPORT bool serialize_send_msg_meta(fuchsia_posix_socket::wire::SendMsgMeta& meta,
+FXL_EXPORT bool serialize_send_msg_meta(fsocket::wire::SendMsgMeta& meta,
                                         cpp20::span<uint8_t> out_buf);
 
 // Utility for deserializing a RecvMsgMeta from the provided buffer.
 //
 // Returns a DecodedMessage<RecvMsgPayload>. On success, the DecodedMessage will
 // be have `ok() == true`. On failure, the DecodedMessage will have `ok() == false`.
-FXL_EXPORT fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta>
-deserialize_recv_msg_meta(cpp20::span<uint8_t> buf);
+FXL_EXPORT fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> deserialize_recv_msg_meta(
+    cpp20::span<uint8_t> buf);
 
 #endif  // __cplusplus
 

@@ -12,6 +12,8 @@
 
 #include <gtest/gtest.h>
 
+namespace fnet = fuchsia_net;
+
 namespace {
 constexpr uint16_t kPort = 80;
 constexpr size_t kIPv4AddrLen = 4;
@@ -83,29 +85,29 @@ class UdpSerdeTest : public ::testing::TestWithParam<AddrKind> {};
 
 TEST_P(UdpSerdeTest, SendSerializeThenDeserialize) {
   fidl::Arena alloc;
-  fidl::WireTableBuilder<fuchsia_posix_socket::wire::SendMsgMeta> meta_builder =
-      fuchsia_posix_socket::wire::SendMsgMeta::Builder(alloc);
-  fuchsia_net::wire::SocketAddress socket_addr;
+  fidl::WireTableBuilder<fsocket::wire::SendMsgMeta> meta_builder =
+      fsocket::wire::SendMsgMeta::Builder(alloc);
+  fnet::wire::SocketAddress socket_addr;
   IpAddrType expected_addr_type;
   const uint8_t* expected_addr;
   switch (GetParam().Kind()) {
     case AddrKind::Kind::V4: {
-      fuchsia_net::wire::Ipv4Address ipv4_addr;
+      fnet::wire::Ipv4Address ipv4_addr;
       ipv4_addr.addr = kIPv4Addr;
-      fuchsia_net::wire::Ipv4SocketAddress ipv4_socket_addr;
+      fnet::wire::Ipv4SocketAddress ipv4_socket_addr;
       ipv4_socket_addr.address = ipv4_addr;
       ipv4_socket_addr.port = kPort;
-      socket_addr = fuchsia_net::wire::SocketAddress::WithIpv4(alloc, ipv4_socket_addr);
+      socket_addr = fnet::wire::SocketAddress::WithIpv4(alloc, ipv4_socket_addr);
       expected_addr_type = IpAddrType::Ipv4;
       expected_addr = kIPv4Addr.data();
     } break;
     case AddrKind::Kind::V6: {
-      fuchsia_net::wire::Ipv6Address ipv6_addr;
+      fnet::wire::Ipv6Address ipv6_addr;
       ipv6_addr.addr = kIPv6Addr;
-      fuchsia_net::wire::Ipv6SocketAddress ipv6_socket_addr;
+      fnet::wire::Ipv6SocketAddress ipv6_socket_addr;
       ipv6_socket_addr.address = ipv6_addr;
       ipv6_socket_addr.port = kPort;
-      socket_addr = fuchsia_net::wire::SocketAddress::WithIpv6(alloc, ipv6_socket_addr);
+      socket_addr = fnet::wire::SocketAddress::WithIpv6(alloc, ipv6_socket_addr);
       expected_addr_type = IpAddrType::Ipv6;
       expected_addr = kIPv6Addr.data();
     }
@@ -113,7 +115,7 @@ TEST_P(UdpSerdeTest, SendSerializeThenDeserialize) {
   meta_builder.to(socket_addr);
 
   uint8_t kBuf[kTxUdpPreludeSize];
-  fuchsia_posix_socket::wire::SendMsgMeta meta = meta_builder.Build();
+  fsocket::wire::SendMsgMeta meta = meta_builder.Build();
   ASSERT_TRUE(serialize_send_msg_meta(meta, cpp20::span<uint8_t>(kBuf, kTxUdpPreludeSize)));
 
   const Buffer in_buf = {
@@ -180,39 +182,37 @@ TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
                 },
                 addr_buf, out_buf),
             SerializeRecvMsgMetaErrorNone);
-  fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta> decoded =
+  fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> decoded =
       deserialize_recv_msg_meta(cpp20::span<uint8_t>(out_buf.buf, out_buf.buf_size));
   ASSERT_TRUE(decoded.ok());
 
-  const fuchsia_posix_socket::wire::RecvMsgMeta& recv_meta = *decoded.PrimaryObject();
+  const fsocket::wire::RecvMsgMeta& recv_meta = *decoded.PrimaryObject();
 
   ASSERT_TRUE(recv_meta.has_control());
-  const fuchsia_posix_socket::wire::DatagramSocketRecvControlData& control = recv_meta.control();
+  const fsocket::wire::DatagramSocketRecvControlData& control = recv_meta.control();
 
   ASSERT_TRUE(control.has_network());
-  const fuchsia_posix_socket::wire::NetworkSocketRecvControlData& network_control =
-      control.network();
+  const fsocket::wire::NetworkSocketRecvControlData& network_control = control.network();
 
   ASSERT_TRUE(network_control.has_socket());
-  const fuchsia_posix_socket::wire::SocketRecvControlData& socket_control =
-      network_control.socket();
+  const fsocket::wire::SocketRecvControlData& socket_control = network_control.socket();
 
   ASSERT_TRUE(socket_control.has_timestamp());
   EXPECT_EQ(socket_control.timestamp().nanoseconds(), cmsg_set.timestamp_nanos);
 
   ASSERT_TRUE(recv_meta.has_from());
-  const fuchsia_net::wire::SocketAddress& from = recv_meta.from();
+  const fnet::wire::SocketAddress& from = recv_meta.from();
 
   switch (GetParam().Kind()) {
     case AddrKind::Kind::V4: {
-      ASSERT_EQ(from.Which(), fuchsia_net::wire::SocketAddress::Tag::kIpv4);
+      ASSERT_EQ(from.Which(), fnet::wire::SocketAddress::Tag::kIpv4);
       EXPECT_EQ(from.ipv4().port, kPort);
       const span found_addr(from.ipv4().address.addr.data(), from.ipv4().address.addr.size());
       const span expected_addr(kIPv4Addr.data(), kIPv4Addr.size());
       EXPECT_EQ(found_addr, expected_addr);
 
       ASSERT_TRUE(network_control.has_ip());
-      const fuchsia_posix_socket::wire::IpRecvControlData& ip_control = network_control.ip();
+      const fsocket::wire::IpRecvControlData& ip_control = network_control.ip();
 
       ASSERT_TRUE(ip_control.has_tos());
       EXPECT_EQ(ip_control.tos(), cmsg_set.ip_tos);
@@ -223,14 +223,14 @@ TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
       EXPECT_FALSE(network_control.has_ipv6());
     } break;
     case AddrKind::Kind::V6: {
-      ASSERT_EQ(from.Which(), fuchsia_net::wire::SocketAddress::Tag::kIpv6);
+      ASSERT_EQ(from.Which(), fnet::wire::SocketAddress::Tag::kIpv6);
       EXPECT_EQ(from.ipv6().port, kPort);
       const span found_addr(from.ipv6().address.addr.data(), from.ipv6().address.addr.size());
       const span expected_addr(kIPv6Addr.data(), kIPv6Addr.size());
       EXPECT_EQ(found_addr, expected_addr);
 
       ASSERT_TRUE(recv_meta.control().network().has_ipv6());
-      const fuchsia_posix_socket::wire::Ipv6RecvControlData& ipv6_control = network_control.ipv6();
+      const fsocket::wire::Ipv6RecvControlData& ipv6_control = network_control.ipv6();
 
       ASSERT_TRUE(ipv6_control.has_tclass());
       EXPECT_EQ(ipv6_control.tclass(), cmsg_set.ipv6_tclass);
@@ -250,13 +250,13 @@ TEST_P(UdpSerdeTest, DeserializeRecvErrors) {
   memset(kBuf, 0, kRxUdpPreludeSize);
 
   // Buffer too short.
-  fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta> buffer_too_short =
+  fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> buffer_too_short =
       deserialize_recv_msg_meta(cpp20::span<uint8_t>(kBuf, 0));
   EXPECT_FALSE(buffer_too_short.ok());
 
   // Nonzero prelude.
   memset(kBuf, 1, kRxUdpPreludeSize);
-  fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta> nonzero_prelude =
+  fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> nonzero_prelude =
       deserialize_recv_msg_meta(cpp20::span<uint8_t>(kBuf, kRxUdpPreludeSize));
   EXPECT_FALSE(nonzero_prelude.ok());
 
@@ -264,13 +264,13 @@ TEST_P(UdpSerdeTest, DeserializeRecvErrors) {
   memset(kBuf, 0, kRxUdpPreludeSize);
   uint16_t meta_size = std::numeric_limits<uint16_t>::max();
   memcpy(kBuf, &meta_size, sizeof(meta_size));
-  fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta> meta_exceeds_buf =
+  fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> meta_exceeds_buf =
       deserialize_recv_msg_meta(cpp20::span<uint8_t>(kBuf, static_cast<uint64_t>(meta_size - 1)));
   EXPECT_FALSE(meta_exceeds_buf.ok());
 
   // Failed to decode.
   memset(kBuf, 0, kRxUdpPreludeSize);
-  fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta> failed_to_decode =
+  fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> failed_to_decode =
       deserialize_recv_msg_meta(cpp20::span<uint8_t>(kBuf, kRxUdpPreludeSize));
   EXPECT_FALSE(failed_to_decode.ok());
 }
@@ -320,7 +320,7 @@ TEST_P(UdpSerdeTest, DeserializeSendErrors) {
 }
 
 TEST_P(UdpSerdeTest, SerializeSendErrors) {
-  fuchsia_posix_socket::wire::SendMsgMeta meta;
+  fsocket::wire::SendMsgMeta meta;
   uint8_t kBuf[kTxUdpPreludeSize];
   EXPECT_FALSE(serialize_send_msg_meta(meta, cpp20::span<uint8_t>(kBuf, 0)));
 }

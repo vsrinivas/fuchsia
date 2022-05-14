@@ -108,14 +108,14 @@ bool can_serialize_into(const cpp20::span<uint8_t>& buf, uint16_t meta_size) {
 }  // namespace
 
 // Size occupied by the prelude bytes in a Tx message.
-const uint32_t kTxUdpPreludeSize = fidl::MaxSizeInChannel<fuchsia_posix_socket::wire::SendMsgMeta,
-                                                          fidl::MessageDirection::kSending>() +
-                                   kSumOfSegmentSizes;
+const uint32_t kTxUdpPreludeSize =
+    fidl::MaxSizeInChannel<fsocket::wire::SendMsgMeta, fidl::MessageDirection::kSending>() +
+    kSumOfSegmentSizes;
 
 // Size occupied by the prelude bytes in an Rx message.
-const uint32_t kRxUdpPreludeSize = fidl::MaxSizeInChannel<fuchsia_posix_socket::wire::RecvMsgMeta,
-                                                          fidl::MessageDirection::kSending>() +
-                                   kSumOfSegmentSizes;
+const uint32_t kRxUdpPreludeSize =
+    fidl::MaxSizeInChannel<fsocket::wire::RecvMsgMeta, fidl::MessageDirection::kSending>() +
+    kSumOfSegmentSizes;
 
 DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
   DeserializeSendMsgMetaResult res;
@@ -137,7 +137,7 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
     res.err = DeserializeSendMsgMetaErrorInputBufferTooSmall;
     return res;
   }
-  fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::SendMsgMeta> decoded(
+  fidl::unstable::DecodedMessage<fsocket::wire::SendMsgMeta> decoded(
       fidl::internal::WireFormatVersion::kV2, span.begin(), static_cast<uint32_t>(meta_size));
 
   if (!decoded.ok()) {
@@ -145,7 +145,7 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
     return res;
   }
 
-  fuchsia_posix_socket::wire::SendMsgMeta& meta = *decoded.PrimaryObject();
+  fsocket::wire::SendMsgMeta& meta = *decoded.PrimaryObject();
 
   if (meta.has_to()) {
     res.has_addr = true;
@@ -176,9 +176,8 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
   return res;
 }
 
-bool serialize_send_msg_meta(fuchsia_posix_socket::wire::SendMsgMeta& meta,
-                             cpp20::span<uint8_t> out_buf) {
-  fidl::unstable::OwnedEncodedMessage<fuchsia_posix_socket::wire::SendMsgMeta> encoded(
+bool serialize_send_msg_meta(fsocket::wire::SendMsgMeta& meta, cpp20::span<uint8_t> out_buf) {
+  fidl::unstable::OwnedEncodedMessage<fsocket::wire::SendMsgMeta> encoded(
       fidl::internal::WireFormatVersion::kV2, &meta);
   if (!encoded.ok()) {
     return false;
@@ -194,35 +193,35 @@ bool serialize_send_msg_meta(fuchsia_posix_socket::wire::SendMsgMeta& meta,
   return true;
 }
 
-fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta> deserialize_recv_msg_meta(
+fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> deserialize_recv_msg_meta(
     cpp20::span<uint8_t> buf) {
   if (buf.size() < kSumOfSegmentSizes) {
-    return fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta>(nullptr, 0);
+    return fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>(nullptr, 0);
   }
   uint16_t meta_size = consume_meta_size_segment_unchecked(buf);
   if (!consume_versioning_segment_unchecked(buf)) {
-    return fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta>(nullptr, 0);
+    return fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>(nullptr, 0);
   }
 
   if (meta_size > buf.size()) {
-    return fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta>(nullptr, 0);
+    return fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>(nullptr, 0);
   }
 
-  return fidl::unstable::DecodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta>(
+  return fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>(
       fidl::internal::WireFormatVersion::kV2, buf.data(), static_cast<uint32_t>(meta_size));
 }
 
 SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_addr,
                                                   Buffer out_buf) {
-  fidl::Arena<fidl::MaxSizeInChannel<fuchsia_posix_socket::wire::RecvMsgMeta,
-                                     fidl::MessageDirection::kSending>()>
+  fidl::Arena<
+      fidl::MaxSizeInChannel<fsocket::wire::RecvMsgMeta, fidl::MessageDirection::kSending>()>
       alloc;
-  fidl::WireTableBuilder<fuchsia_posix_socket::wire::RecvMsgMeta> meta_builder =
-      fuchsia_posix_socket::wire::RecvMsgMeta::Builder(alloc);
+  fidl::WireTableBuilder<fsocket::wire::RecvMsgMeta> meta_builder =
+      fsocket::wire::RecvMsgMeta::Builder(alloc);
 
-  fuchsia_net::wire::SocketAddress socket_addr;
-  fuchsia_net::wire::Ipv4SocketAddress ipv4_socket_addr;
-  fuchsia_net::wire::Ipv6SocketAddress ipv6_socket_addr;
+  fnet::wire::SocketAddress socket_addr;
+  fnet::wire::Ipv4SocketAddress ipv4_socket_addr;
+  fnet::wire::Ipv6SocketAddress ipv6_socket_addr;
   switch (meta.from_addr_type) {
     case IpAddrType::Ipv4: {
       if (from_addr.buf == nullptr) {
@@ -255,14 +254,13 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_
   }
   meta_builder.from(socket_addr);
 
-  fidl::WireTableBuilder<fuchsia_posix_socket::wire::NetworkSocketRecvControlData>
-      net_control_builder =
-          fuchsia_posix_socket::wire::NetworkSocketRecvControlData::Builder(alloc);
+  fidl::WireTableBuilder<fsocket::wire::NetworkSocketRecvControlData> net_control_builder =
+      fsocket::wire::NetworkSocketRecvControlData::Builder(alloc);
   bool net_control_set = false;
 
   {
-    fidl::WireTableBuilder<fuchsia_posix_socket::wire::IpRecvControlData> ip_control_builder =
-        fuchsia_posix_socket::wire::IpRecvControlData::Builder(alloc);
+    fidl::WireTableBuilder<fsocket::wire::IpRecvControlData> ip_control_builder =
+        fsocket::wire::IpRecvControlData::Builder(alloc);
     bool ip_control_set = false;
     if (meta.cmsg_set.has_ip_tos) {
       ip_control_set = true;
@@ -279,8 +277,8 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_
   }
 
   {
-    fidl::WireTableBuilder<fuchsia_posix_socket::wire::Ipv6RecvControlData> ipv6_control_builder =
-        fuchsia_posix_socket::wire::Ipv6RecvControlData::Builder(alloc);
+    fidl::WireTableBuilder<fsocket::wire::Ipv6RecvControlData> ipv6_control_builder =
+        fsocket::wire::Ipv6RecvControlData::Builder(alloc);
     bool ipv6_control_set = false;
     if (meta.cmsg_set.has_ipv6_hoplimit) {
       ipv6_control_set = true;
@@ -297,13 +295,13 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_
   }
 
   {
-    fidl::WireTableBuilder<fuchsia_posix_socket::wire::SocketRecvControlData> sock_control_builder =
-        fuchsia_posix_socket::wire::SocketRecvControlData::Builder(alloc);
+    fidl::WireTableBuilder<fsocket::wire::SocketRecvControlData> sock_control_builder =
+        fsocket::wire::SocketRecvControlData::Builder(alloc);
     bool sock_control_set = false;
     if (meta.cmsg_set.has_timestamp_nanos) {
       sock_control_set = true;
-      sock_control_builder.timestamp(fuchsia_posix_socket::wire::Timestamp::WithNanoseconds(
-          alloc, meta.cmsg_set.timestamp_nanos));
+      sock_control_builder.timestamp(
+          fsocket::wire::Timestamp::WithNanoseconds(alloc, meta.cmsg_set.timestamp_nanos));
     }
     if (sock_control_set) {
       net_control_set = true;
@@ -312,18 +310,17 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_
   }
 
   if (net_control_set) {
-    fidl::WireTableBuilder<fuchsia_posix_socket::wire::DatagramSocketRecvControlData>
-        datagram_control_builder =
-            fuchsia_posix_socket::wire::DatagramSocketRecvControlData::Builder(alloc);
+    fidl::WireTableBuilder<fsocket::wire::DatagramSocketRecvControlData> datagram_control_builder =
+        fsocket::wire::DatagramSocketRecvControlData::Builder(alloc);
     datagram_control_builder.network(net_control_builder.Build());
     meta_builder.control(datagram_control_builder.Build());
   }
 
   meta_builder.payload_len(meta.payload_size);
 
-  fuchsia_posix_socket::wire::RecvMsgMeta fsocket_meta = meta_builder.Build();
+  fsocket::wire::RecvMsgMeta fsocket_meta = meta_builder.Build();
 
-  fidl::unstable::OwnedEncodedMessage<fuchsia_posix_socket::wire::RecvMsgMeta> encoded(
+  fidl::unstable::OwnedEncodedMessage<fsocket::wire::RecvMsgMeta> encoded(
       fidl::internal::WireFormatVersion::kV2, &fsocket_meta);
   if (!encoded.ok()) {
     return SerializeRecvMsgMetaErrorFailedToEncode;
