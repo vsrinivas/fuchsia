@@ -133,7 +133,6 @@ group("core_base_packages") {
     "//src/connectivity/telephony/telephony-snooper:telephony-snooper",
     "//src/connectivity/telephony/tests:telephony-tests",
     "//src/developer/debug/debug_agent",
-    "//src/developer/forensics:copy-pkg",
     "//src/developer/shell/interpreter:shell_server",
     "//src/diagnostics/archivist:archivist-for-embedding",
     "//src/diagnostics/validator/logs/encoding/puppet/dart:log-validator-dart-puppet",

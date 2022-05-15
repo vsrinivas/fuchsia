@@ -50,45 +50,16 @@ group("user_configs") {
 ###############################################################################
 # PACKAGES
 ###############################################################################
-# We use a template to keep the real and copy packages in sync.
-template("forensics_package") {
-  fuchsia_package(target_name) {
-    package_name = invoker.package_name
-
-    deps = [
-      ":crash_reports",
-      ":exceptions",
-      ":feedback",
-      ":feedback_data",
-      ":feedback_v1",
-      ":last_reboot",
-    ]
-  }
-}
-
-# The real package.
-forensics_package("pkg") {
+fuchsia_package("pkg") {
   package_name = "forensics"
-}
 
-# A copy package for integration test purposes to make sure that:
-# * all the components used in the test are updated ephemerally, even if the real package
-#   is a base package.
-# * any config_data() for the real package does not impact any component used in the test.
-forensics_package("copy-pkg") {
-  package_name = "copy-forensics"
-}
-
-# A copy package for integration test purposes where we want a valid override config_data()
-# for crash_reports that only affects that copy package.
-forensics_package("copy-pkg-valid-crash-reports-override-config") {
-  package_name = "copy-forensics-valid-crash-reports-override-config"
-}
-
-# A copy package for integration test purposes where we want an invalid override config_data()
-# for crash_reports that only affects that copy package.
-forensics_package("copy-pkg-invalid-crash-reports-override-config") {
-  package_name = "copy-forensics-invalid-crash-reports-override-config"
+  deps = [
+    ":crash_reports",
+    ":exceptions",
+    ":feedback",
+    ":feedback_data",
+    ":last_reboot",
+  ]
 }
 
 ###############################################################################
@@ -110,15 +81,6 @@ fuchsia_component("exceptions") {
     ":exception_handler_exe",
     ":exceptions_exe",
   ]
-}
-
-# Needed for integration tests.
-fuchsia_component("feedback_v1") {
-  manifest = "feedback/meta/feedback.cmx"
-
-  component_name = "feedback"
-
-  deps = [ ":feedback_exe" ]
 }
 
 fuchsia_component("feedback") {
