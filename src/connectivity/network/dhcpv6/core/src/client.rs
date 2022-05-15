@@ -2099,9 +2099,9 @@ impl Requesting {
             v6::TimeValue::NonZero(t) => t,
         };
         // T2 must be >= T1, compute its value based on T1.
-        let t2 = match t2 {
+        // TODO(https://fxbug.dev/76766): set rebind timer.
+        let _t2 = match t2 {
             v6::TimeValue::Zero => compute_t(t1, T2_T1_RATIO),
-            // TODO(https://fxbug.dev/76766): set rebind timer.
             v6::TimeValue::NonZero(t2_val) => {
                 if t2_val < t1 {
                     compute_t(t1, T2_T1_RATIO)
@@ -2139,8 +2139,6 @@ impl Requesting {
                 client_id,
                 addresses,
                 server_id,
-                t1,
-                t2,
                 dns_servers: dns_servers.unwrap_or(Vec::new()),
                 solicit_max_rt,
             }),
@@ -2246,13 +2244,6 @@ struct AddressAssigned {
     ///
     /// [Server Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.3
     server_id: Vec<u8>,
-    /// The time interval after which the client contacts the server that
-    /// assigned addresses to the client, to extend the lifetimes of the
-    /// assigned addresses.
-    t1: v6::NonZeroTimeValue,
-    /// The time interval after which the client contacts any server to extend
-    /// the lifetimes of the assigned addresses.
-    t2: v6::NonZeroTimeValue,
     /// Stores the DNS servers received from the reply.
     dns_servers: Vec<Ipv6Addr>,
     /// The [SOL_MAX_RT](https://datatracker.ietf.org/doc/html/rfc8415#section-21.24)
@@ -2269,14 +2260,7 @@ impl AddressAssigned {
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
     ) -> Transition {
-        let Self { client_id, addresses, server_id, t1, t2, dns_servers, solicit_max_rt } = self;
-        let t1 = match t1 {
-            v6::NonZeroTimeValue::Finite(t1_val) => t1_val,
-            v6::NonZeroTimeValue::Infinity => {
-                // The renew timer is not set if T1 is Infinity.
-                std::unreachable!("addresses are not renewed for T1 Infinity.");
-            }
-        };
+        let Self { client_id, addresses, server_id, dns_servers, solicit_max_rt } = self;
         // Start renewing addresses, per RFC 8415, section 18.2.4:
         //
         //    At time T1, the client initiates a Renew/Reply message
@@ -2287,8 +2271,6 @@ impl AddressAssigned {
             addresses,
             server_id,
             options_to_request,
-            t1,
-            t2,
             dns_servers,
             solicit_max_rt,
             rng,
@@ -2307,13 +2289,6 @@ struct Renewing {
     /// [Server Identifier](https://datatracker.ietf.org/doc/html/rfc8415#section-21.2)
     /// of the server selected during server discovery.
     server_id: Vec<u8>,
-    /// The time interval after which the client contacts the server that
-    /// assigned addresses to the client, to extend the lifetimes of the
-    /// assigned addresses.
-    t1: v6::NonZeroOrMaxU32,
-    /// The time interval after which the client contacts any server to extend
-    /// the lifetimes of the assigned addresses.
-    t2: v6::NonZeroTimeValue,
     /// Stores the DNS servers received from the reply.
     dns_servers: Vec<Ipv6Addr>,
     /// [elapsed time](https://datatracker.ietf.org/doc/html/rfc8415#section-21.9).
@@ -2335,8 +2310,6 @@ impl Renewing {
         addresses: HashMap<v6::IAID, AddressEntry>,
         server_id: Vec<u8>,
         options_to_request: &[v6::OptionCode],
-        t1: v6::NonZeroOrMaxU32,
-        t2: v6::NonZeroTimeValue,
         dns_servers: Vec<Ipv6Addr>,
         solicit_max_rt: Duration,
         rng: &mut R,
@@ -2345,8 +2318,6 @@ impl Renewing {
             client_id,
             addresses,
             server_id,
-            t1,
-            t2,
             dns_servers,
             first_renew_time: None,
             retrans_timeout: Duration::default(),
@@ -2375,8 +2346,6 @@ impl Renewing {
             client_id,
             addresses,
             server_id,
-            t1,
-            t2,
             dns_servers,
             first_renew_time,
             retrans_timeout: prev_retrans_timeout,
@@ -2434,8 +2403,6 @@ impl Renewing {
                 client_id,
                 addresses,
                 server_id,
-                t1,
-                t2,
                 dns_servers,
                 first_renew_time: Some(start_time),
                 retrans_timeout,
@@ -2610,8 +2577,6 @@ impl ClientState {
                 client_id: _,
                 addresses: _,
                 server_id: _,
-                t1: _,
-                t2: _,
                 dns_servers,
                 solicit_max_rt: _,
             }) => dns_servers.clone(),
@@ -2639,8 +2604,6 @@ impl ClientState {
                 client_id: _,
                 addresses: _,
                 server_id: _,
-                t1: _,
-                t2: _,
                 dns_servers: _,
                 first_renew_time: _,
                 retrans_timeout: _,
@@ -3145,7 +3108,6 @@ pub(crate) mod testutil {
         client_id: [u8; CLIENT_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: &[Ipv6Addr],
-        expected_t1: v6::NonZeroTimeValue,
         rng: R,
     ) -> (ClientStateMachine<R>, Actions) {
         let server_id = v6::duid_uuid();
@@ -3226,16 +3188,11 @@ pub(crate) mod testutil {
                 client_id: got_client_id,
                 addresses,
                 server_id: got_server_id,
-                t1,
-                // TODO(https://fxbug.dev/76766) check T2 when Rebind is
-                // implemented.
-                t2: _,
                 dns_servers,
                 solicit_max_rt,
             })) if *got_client_id == client_id &&
                    *addresses == expected_addresses &&
                    *got_server_id == server_id &&
-                   *t1 == expected_t1 &&
                    dns_servers == expected_dns_servers &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
@@ -3357,34 +3314,31 @@ pub(crate) mod testutil {
     pub(crate) fn send_renew_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
-        expected_t1: v6::NonZeroTimeValue,
+        expected_t1_secs: v6::NonZeroOrMaxU32,
         rng: R,
     ) -> ClientStateMachine<R> {
         let (mut client, actions) = testutil::assign_addresses_and_assert(
             client_id.clone(),
             addresses_to_assign.clone(),
             &[],
-            expected_t1,
             rng,
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let old_transaction_id = *transaction_id;
-        let (expected_server_id, expected_t1, expected_t2) = assert_matches!(state,
+        let expected_server_id = assert_matches!(state,
             Some(ClientState::AddressAssigned(AddressAssigned {
                 client_id: _,
                 addresses: _,
                 server_id,
-                t1: v6::NonZeroTimeValue::Finite(t1_val),
-                t2,
                 dns_servers: _,
                 solicit_max_rt: _,
-            })) => (server_id.clone(), *t1_val, *t2));
+            })) => server_id.clone());
         assert_matches!(
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1)
-            ] if *t1 == Duration::from_secs(expected_t1.get().into())
+            ] if *t1 == Duration::from_secs(expected_t1_secs.get().into())
         );
 
         // Renew timeout should trigger a transition to Renewing, send a renew
@@ -3406,16 +3360,12 @@ pub(crate) mod testutil {
                 client_id: got_client_id,
                 addresses: _,
                 server_id,
-                t1,
-                t2,
                 dns_servers,
                 first_renew_time: _,
                 retrans_timeout: _,
                 solicit_max_rt,
             })) if *got_client_id == client_id &&
                    *server_id == expected_server_id &&
-                   *t1 == expected_t1 &&
-                   *t2 == expected_t2 &&
                    *dns_servers == Vec::<Ipv6Addr>::new() &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
@@ -4342,8 +4292,6 @@ mod tests {
                 client_id: _,
                 addresses,
                 server_id,
-                t1: _,
-                t2: _,
                 dns_servers: _,
                 solicit_max_rt: _,
             }) if server_id == vec![1, 2, 3] &&
@@ -4418,8 +4366,6 @@ mod tests {
                         client_id: _,
                         addresses: _,
                         server_id: _,
-                        t1: _,
-                        t2: _,
                         dns_servers: _,
                         solicit_max_rt: _,
                     })
@@ -4462,7 +4408,9 @@ mod tests {
             (ia1_preferred_lifetime, ia1_valid_lifetime, ia1_t1, ia1_t2),
             (ia2_preferred_lifetime, ia2_valid_lifetime, ia2_t1, ia2_t2),
             expected_t1,
-            expected_t2,
+            // TODO(https://fxbug.dev/76766) check T2 when Rebind is
+            // implemented.
+            _expected_t2,
         ) in vec![
             // If T1/T2 are 0, they should be computed as as 0.5 * minimum
             // preferred lifetime, and 0.8 * minimum preferred lifetime
@@ -4543,7 +4491,7 @@ mod tests {
             builder.serialize(&mut buf);
             let mut buf = &buf[..]; // Implements BufferView.
             let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-            let Transition { state, actions: _, transaction_id: _ } =
+            let Transition { state, actions, transaction_id: _ } =
                 state.reply_message_received(&[], &mut rng, msg);
             assert_matches!(
                 state,
@@ -4551,13 +4499,27 @@ mod tests {
                     client_id: _,
                     addresses: _,
                     server_id: _,
-                    t1,
-                    t2,
                     dns_servers: _,
                     solicit_max_rt: _,
-                }) if t1 == expected_t1.into() &&
-                      t2 == expected_t2.into()
+                })
             );
+            match expected_t1 {
+                v6::NonZeroTimeValue::Finite(t1_val) => {
+                    assert_matches!(
+                        &actions[..],
+                        [
+                            Action::CancelTimer(ClientTimerType::Retransmission),
+                            Action::ScheduleTimer(ClientTimerType::Renew, t1)
+                        ] if *t1 == Duration::from_secs(t1_val.get().into())
+                    );
+                }
+                v6::NonZeroTimeValue::Infinity => {
+                    assert_matches!(
+                        &actions[..],
+                        [Action::CancelTimer(ClientTimerType::Retransmission)]
+                    );
+                }
+            };
         }
     }
 
@@ -4795,7 +4757,6 @@ mod tests {
                 ),
             ],
             &[],
-            v6::NonZeroTimeValue::Finite(t1),
             StepRng::new(std::u64::MAX / 2, 0),
         );
 
@@ -4807,11 +4768,9 @@ mod tests {
                 client_id: _,
                 addresses: _,
                 server_id: _,
-                t1: _,
-                t2: got_t2,
                 dns_servers: _,
                 solicit_max_rt: _,
-            })) if *got_t2 == v6::NonZeroTimeValue::Finite(t2)
+            }))
         );
         assert_matches!(
             &actions[..],
@@ -4837,7 +4796,6 @@ mod tests {
                 v6::NonZeroOrMaxU32::new(90).expect("90 is non-zero or u32::MAX"),
             )],
             &dns_servers,
-            v6::NonZeroTimeValue::Finite(t1),
             StepRng::new(std::u64::MAX / 2, 0),
         );
         assert_matches!(
@@ -4971,8 +4929,6 @@ mod tests {
                     client_id: _,
                     addresses: _,
                     server_id: _,
-                    t1: _,
-                    t2: _,
                     dns_servers:_,
                     solicit_max_rt,
             }) if *solicit_max_rt == Duration::from_secs(received_sol_max_rt.into())
@@ -5003,7 +4959,7 @@ mod tests {
                     t2,
                 ),
             ],
-            v6::NonZeroTimeValue::Finite(t1),
+            t1,
             StepRng::new(std::u64::MAX / 2, 0),
         );
     }
@@ -5011,7 +4967,6 @@ mod tests {
     #[test]
     fn do_not_renew_for_t1_infinity() {
         let client_id = v6::duid_uuid();
-        let expected_t1 = v6::NonZeroTimeValue::Infinity;
         let (client, actions) = testutil::assign_addresses_and_assert(
             client_id.clone(),
             vec![TestIdentityAssociation {
@@ -5028,21 +4983,19 @@ mod tests {
                 t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
             }],
             &[],
-            expected_t1,
             StepRng::new(std::u64::MAX / 2, 0),
         );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        assert_matches!(state,
+        assert_matches!(
+            state,
             Some(ClientState::AddressAssigned(AddressAssigned {
-                    client_id: _,
-                    addresses: _,
-                    server_id: _,
-                    t1,
-                    t2: _,
-                    dns_servers:_,
-                    solicit_max_rt: _,
-            })) if *t1 == expected_t1
+                client_id: _,
+                addresses: _,
+                server_id: _,
+                dns_servers: _,
+                solicit_max_rt: _,
+            }))
         );
         // Asserts that the actions do not include scheduling the renew timer.
         assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission)]);
@@ -5055,7 +5008,6 @@ mod tests {
         let t2 = v6::NonZeroOrMaxU32::new(90).expect("90 is not zero or u32::MAX");
         let preferred_lifetime = v6::NonZeroOrMaxU32::new(90).expect("90 is not zero or u32::MAX");
         let valid_lifetime = v6::NonZeroOrMaxU32::new(120).expect("120 is not zero or u32::MAX");
-        let t1_time_value = v6::NonZeroTimeValue::Finite(t1);
         let addresses_to_assign = vec![
             TestIdentityAssociation::new_nonzero_finite(
                 std_ip_v6!("::ffff:c00a:123"),
@@ -5075,24 +5027,22 @@ mod tests {
         let mut client = testutil::send_renew_and_assert(
             client_id.clone(),
             addresses_to_assign.clone(),
-            t1_time_value,
+            t1,
             StepRng::new(std::u64::MAX / 2, 0),
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let expected_transaction_id = *transaction_id;
-        let (expected_server_id, expected_t2) = assert_matches!(
+        let expected_server_id = assert_matches!(
            state,
            Some(ClientState::Renewing(Renewing {
                client_id: _,
                addresses: _,
                server_id,
-               t1: _,
-               t2,
                dns_servers: _,
                first_renew_time: _,
                retrans_timeout: _,
                solicit_max_rt: _,
-           })) => (server_id.clone(), *t2)
+           })) => server_id.clone()
         );
 
         // Assert renew is retransmitted on retransmission timeout.
@@ -5113,16 +5063,12 @@ mod tests {
                 client_id: got_client_id,
                 addresses: _,
                 server_id,
-                t1: got_t1,
-                t2,
                 dns_servers,
                 first_renew_time: _,
                 retrans_timeout: _,
                 solicit_max_rt,
             })) if *got_client_id == client_id &&
                    *server_id == expected_server_id &&
-                   *got_t1 == t1 &&
-                   *t2 == expected_t2 &&
                    *dns_servers == Vec::<Ipv6Addr>::new() &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
@@ -5285,9 +5231,6 @@ mod tests {
     #[test_case(ClientTimerType::Retransmission)]
     #[should_panic(expected = "received unexpected")]
     fn address_assiged_unexpected_timeout_is_unreachable(timeout: ClientTimerType) {
-        let expected_t1 = v6::NonZeroTimeValue::Finite(
-            v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values"),
-        );
         let (mut client, _actions) = testutil::assign_addresses_and_assert(
             v6::duid_uuid(),
             vec![TestIdentityAssociation {
@@ -5300,14 +5243,16 @@ mod tests {
                     v6::NonZeroOrMaxU32::new(120)
                         .expect("should succeed for non-zero or u32::MAX values"),
                 )),
-                t1: v6::TimeValue::NonZero(expected_t1),
+                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(60)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                )),
                 t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                     v6::NonZeroOrMaxU32::new(90)
                         .expect("should succeed for non-zero or u32::MAX values"),
                 )),
             }],
             &[],
-            expected_t1,
             StepRng::new(std::u64::MAX / 2, 0),
         );
 
@@ -5329,7 +5274,7 @@ mod tests {
                 t1,
                 v6::NonZeroOrMaxU32::new(60).expect("60 is non-zero or u32::MAX"),
             )],
-            v6::NonZeroTimeValue::Finite(t1),
+            t1,
             StepRng::new(std::u64::MAX / 2, 0),
         );
 
