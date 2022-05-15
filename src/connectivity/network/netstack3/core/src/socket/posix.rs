@@ -6,14 +6,15 @@
 //! of [`SocketMapSpec`] that can be used to implement multiple types of
 //! sockets.
 
-use core::{fmt::Debug, hash::Hash};
+use alloc::vec::Vec;
+use core::{fmt::Debug, hash::Hash, num::NonZeroUsize};
 
 use derivative::Derivative;
 use net_types::{ip::IpAddress, SpecifiedAddr};
 
 use crate::{
-    data_structures::socketmap::{IterShadows, Tagged},
-    socket::SocketMapSpec,
+    data_structures::socketmap::{IterShadows, SocketMap, Tagged},
+    socket::{Bound, InsertError, RemoveResult, SocketMapAddrStateSpec, SocketMapSpec},
 };
 
 /// Describes the data types associated with types of network POSIX sockets.
@@ -31,13 +32,13 @@ pub(crate) trait PosixSocketMapSpec {
     type DeviceId: Clone + Debug + Hash + PartialEq;
 
     /// An identifier for a listening socket.
-    type ListenerId: Clone + Into<usize> + From<usize> + Debug;
+    type ListenerId: Clone + Into<usize> + From<usize> + Debug + PartialEq;
     /// An identifier for a connected socket.
-    type ConnId: Clone + Into<usize> + From<usize> + Debug;
+    type ConnId: Clone + Into<usize> + From<usize> + Debug + PartialEq;
 
-    /// The state for a listening socket;
+    /// The state for a listening socket.
     type ListenerState;
-    /// The state for a connected socket;
+    /// The state for a connected socket.
     type ConnState;
 }
 
@@ -283,13 +284,26 @@ impl<P: PosixSocketMapSpec> IterShadows for PosixAddrVec<P> {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub(crate) struct PosixId<T>(T);
+#[derive(Debug)]
+pub(crate) enum PosixAddrState<T> {
+    Exclusive(T),
+    ExclusiveDevice(T),
+}
 
-impl<T> Tagged for PosixId<T> {
-    type Tag = ();
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum PosixAddrVecTag {
+    Exclusive,
+    ExclusiveDevice,
+}
 
-    fn tag(&self) -> Self::Tag {}
+impl<T> Tagged for PosixAddrState<T> {
+    type Tag = PosixAddrVecTag;
+    fn tag(&self) -> Self::Tag {
+        match self {
+            PosixAddrState::Exclusive(_) => PosixAddrVecTag::Exclusive,
+            PosixAddrState::ExclusiveDevice(_) => PosixAddrVecTag::ExclusiveDevice,
+        }
+    }
 }
 
 impl<P: PosixSocketMapSpec> SocketMapSpec for P {
@@ -298,6 +312,7 @@ impl<P: PosixSocketMapSpec> SocketMapSpec for P {
     type ConnAddr = ConnAddr<P>;
 
     type AddrVec = PosixAddrVec<Self>;
+    type AddrVecTag = PosixAddrVecTag;
 
     type ListenerId = P::ListenerId;
 
@@ -306,4 +321,105 @@ impl<P: PosixSocketMapSpec> SocketMapSpec for P {
     type ListenerState = P::ListenerState;
 
     type ConnState = P::ConnState;
+
+    type ListenerAddrState = PosixAddrState<P::ListenerId>;
+
+    type ConnAddrState = PosixAddrState<P::ConnId>;
+}
+
+impl<A, St, I, P> SocketMapAddrStateSpec<A, St, I, P> for PosixAddrState<I>
+where
+    P: PosixSocketMapSpec,
+    A: Clone + Into<PosixAddrVec<P>>,
+    I: PartialEq,
+{
+    fn check_for_conflicts(
+        _new_state: &St,
+        addr: &A,
+        socketmap: &SocketMap<PosixAddrVec<P>, Bound<P>>,
+    ) -> Result<(), InsertError> {
+        let dest = addr.clone().into();
+        // Having a value present at a shadowed address is immediately
+        // disqualifying.
+        if dest.iter_shadows().any(|a| socketmap.get(&a).is_some()) {
+            return Err(InsertError::ShadowAddrExists);
+        }
+
+        // Likewise, the presence of a value that shadows the target address is
+        // disqualifying.
+        match &dest {
+            PosixAddrVec::Connected(ConnAddr { ip: _, device: None })
+            | PosixAddrVec::Listener(_) => {
+                if socketmap.descendant_counts(&dest).len() != 0 {
+                    return Err(InsertError::ShadowerExists);
+                }
+            }
+            PosixAddrVec::Connected(ConnAddr { ip: _, device: Some(_) }) => {
+                // No need to check shadows here because there are no addresses
+                // that shadow a ConnAddr with a device.
+                debug_assert_eq!(socketmap.descendant_counts(&dest).len(), 0)
+            }
+        }
+
+        // Listener addresses with devices present an extra complication: they
+        // can conflict with entries at other addresses even though there's no
+        // direct shadowing relationship. This can happen, for example, if a
+        // connected socket with no device is present, and the target is the
+        // same IP/port with a device specified.
+        match dest {
+            PosixAddrVec::Listener(ListenerAddr { ip, device: Some(_device) }) => {
+                let to_check = ListenerAddr { ip, device: None }.into();
+                if socketmap.descendant_counts(&to_check).any(|(tag, _): &(_, NonZeroUsize)| {
+                    match tag {
+                        PosixAddrVecTag::Exclusive => true,
+                        PosixAddrVecTag::ExclusiveDevice => false,
+                    }
+                }) {
+                    return Err(InsertError::ShadowerExists);
+                }
+            }
+            PosixAddrVec::Listener(ListenerAddr { ip: _, device: None }) => (),
+            PosixAddrVec::Connected(_) => (),
+        }
+        Ok(())
+    }
+
+    fn try_get_dest<'a, 'b>(&'b mut self, _new_state: &'a St) -> Result<&'b mut Vec<I>, ()> {
+        match self {
+            PosixAddrState::Exclusive(_) | PosixAddrState::ExclusiveDevice(_) => Err(()),
+        }
+    }
+
+    fn new_addr_state(_new_state: &St, addr: &A, id: I) -> Self {
+        let device = match addr.clone().into() {
+            PosixAddrVec::Connected(ConnAddr { ip: _, device }) => device,
+            PosixAddrVec::Listener(ListenerAddr { ip: _, device }) => device,
+        };
+        match device {
+            Some(_) => Self::ExclusiveDevice(id),
+            None => Self::Exclusive(id),
+        }
+    }
+
+    fn for_new_addr(self, new_addr: &A) -> Self {
+        let new_device = match new_addr.clone().into() {
+            PosixAddrVec::Connected(ConnAddr { ip: _, device }) => device,
+            PosixAddrVec::Listener(ListenerAddr { ip: _, device }) => device,
+        };
+        match (self, new_device) {
+            (PosixAddrState::Exclusive(s), Some(_))
+            | (PosixAddrState::ExclusiveDevice(s), Some(_)) => PosixAddrState::ExclusiveDevice(s),
+            (PosixAddrState::Exclusive(s), None) | (PosixAddrState::ExclusiveDevice(s), None) => {
+                PosixAddrState::Exclusive(s)
+            }
+        }
+    }
+
+    fn remove_by_id(&mut self, _id: I) -> RemoveResult {
+        match self {
+            PosixAddrState::Exclusive(_) | PosixAddrState::ExclusiveDevice(_) => {
+                RemoveResult::IsLast
+            }
+        }
+    }
 }

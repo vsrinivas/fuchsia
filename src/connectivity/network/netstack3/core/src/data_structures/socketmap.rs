@@ -154,19 +154,9 @@ where
     where
         A: Clone,
     {
-        let Self { map, len } = self;
-        match map.entry(key.clone()) {
-            hash_map::Entry::Vacant(_) => return None,
-            hash_map::Entry::Occupied(mut o) => {
-                let MapValue { descendant_counts, value } = o.get_mut();
-                let value = value.take()?;
-                if descendant_counts.is_empty() {
-                    let _: MapValue<V> = o.remove();
-                }
-                Self::decrement_descendant_counts(map, key.iter_shadows(), value.tag());
-                *len -= 1;
-                Some(value)
-            }
+        match self.entry(key.clone()) {
+            Entry::Vacant(_) => return None,
+            Entry::Occupied(o) => Some(o.remove()),
         }
     }
 
@@ -222,7 +212,6 @@ where
         }
     }
 
-    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     fn update_descendant_counts(
         map: &mut HashMap<A, MapValue<V>>,
         shadows: A::IterShadows,
@@ -257,7 +246,6 @@ where
     }
 }
 
-#[todo_unused::todo_unused("https://fxbug.dev/96320")]
 impl<'a, K: Eq + Hash + IterShadows, V: Tagged> OccupiedEntry<'a, K, V> {
     /// Retrieves the value referenced by this entry.
     #[todo_unused::todo_unused("https://fxbug.dev/96320")]
@@ -274,7 +262,6 @@ impl<'a, K: Eq + Hash + IterShadows, V: Tagged> OccupiedEntry<'a, K, V> {
     /// Runs the provided callback on the value referenced by this entry.
     ///
     /// Returns the result of the callback.
-    #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     pub(crate) fn map_mut<R>(&mut self, apply: impl FnOnce(&mut V) -> R) -> R {
         let Self(SocketMap { map, len: _ }, key) = self;
         // unwrap() calls are guaranteed safe by OccupiedEntry invariant.
@@ -286,6 +273,26 @@ impl<'a, K: Eq + Hash + IterShadows, V: Tagged> OccupiedEntry<'a, K, V> {
         let new_tag = value.tag();
         SocketMap::update_descendant_counts(map, key.iter_shadows(), old_tag, new_tag);
         r
+    }
+
+    /// Removes the value from the map and returns it.
+    pub(crate) fn remove(self) -> V {
+        let Self(SocketMap { map, len }, key) = self;
+        let shadows = key.iter_shadows();
+        let mut entry = match map.entry(key) {
+            hash_map::Entry::Occupied(o) => o,
+            hash_map::Entry::Vacant(_) => unreachable!("OccupiedEntry not occupied"),
+        };
+        let MapValue { descendant_counts, value } = entry.get_mut();
+        // unwrap() is guaranteed safe by OccupiedEntry invariant.
+        let value =
+            value.take().expect("OccupiedEntry invariant violated: expected Some, found None");
+        if descendant_counts.is_empty() {
+            let _: MapValue<V> = entry.remove();
+        }
+        SocketMap::decrement_descendant_counts(map, shadows, value.tag());
+        *len -= 1;
+        value
     }
 }
 
@@ -536,6 +543,34 @@ mod tests {
 
         assert_matches!(map.entry(ABC(16, 'c', 8)), Entry::Vacant(v) => v.insert(TV(3, 111)));
         assert_eq!(map.map_mut(&ABC(16, 'c', 8), |TV(_, _)| 1845859), Some(1845859));
+    }
+
+    #[test]
+    fn entry_remove_no_shadows() {
+        let mut map = TestSocketMap::default();
+
+        assert_matches!(map.entry(ABC(16, 'c', 8)), Entry::Vacant(v) => v.insert(TV(3, 111)));
+
+        let entry = assert_matches!(map.entry(ABC(16, 'c', 8)), Entry::Occupied(o) => o);
+        assert_eq!(entry.remove(), TV(3, 111));
+        let TestSocketMap { map, len } = map;
+        assert_eq!(len, 0);
+        assert_eq!(map.len(), 0);
+    }
+
+    #[test]
+    fn entry_remove_with_shadows() {
+        let mut map = TestSocketMap::default();
+
+        assert_matches!(map.entry(ABC(16, 'c', 8)), Entry::Vacant(v) => v.insert(TV(2, 112)));
+        assert_matches!(map.entry(AB(16, 'c')), Entry::Vacant(v) => v.insert(TV(1, 111)));
+        assert_matches!(map.entry(A(16)), Entry::Vacant(v) => v.insert(TV(0, 110)));
+
+        let entry = assert_matches!(map.entry(AB(16, 'c')), Entry::Occupied(o) => o);
+        assert_eq!(entry.remove(), TV(1, 111));
+        let TestSocketMap { map, len } = map;
+        assert_eq!(len, 2);
+        assert_eq!(map.len(), 3);
     }
 
     #[test]

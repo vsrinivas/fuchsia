@@ -46,10 +46,10 @@ use crate::{
     },
     socket::{
         posix::{
-            ConnAddr, ConnIpAddr, ListenerAddr, ListenerIpAddr, PosixAddrVec, PosixAddrVecIter,
-            PosixSocketMapSpec,
+            ConnAddr, ConnIpAddr, ListenerAddr, ListenerIpAddr, PosixAddrState, PosixAddrVec,
+            PosixAddrVecIter, PosixSocketMapSpec,
         },
-        BoundSocketMap, InsertConnError, InsertListenerError,
+        BoundSocketMap, InsertError,
     },
     BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
 };
@@ -143,6 +143,12 @@ fn iter_receiving_addrs<I: Ip, D: IpDeviceId, S>(
     PosixAddrVecIter::with_device(addr, device)
 }
 
+#[derive(Debug, Eq, PartialEq)]
+struct ListenerState {}
+
+#[derive(Debug, Eq, PartialEq)]
+struct ConnState<S>(S);
+
 impl<I: Ip, D: IpDeviceId, S> PosixSocketMapSpec for Udp<I, D, S> {
     type IpAddress = I::Addr;
     type DeviceId = D;
@@ -150,13 +156,22 @@ impl<I: Ip, D: IpDeviceId, S> PosixSocketMapSpec for Udp<I, D, S> {
     type LocalIdentifier = NonZeroU16;
     type ListenerId = UdpListenerId<I>;
     type ConnId = UdpConnId<I>;
-    type ListenerState = ();
-    type ConnState = S;
+
+    type ListenerState = ListenerState;
+    type ConnState = ConnState<S>;
 }
 
-enum LookupResult<I: Ip, D: IpDeviceId, S> {
-    Conn(UdpConnId<I>, ConnAddr<Udp<I, D, S>>),
-    Listener(UdpListenerId<I>, ListenerAddr<Udp<I, D, S>>),
+enum LookupResult<'a, I: Ip, D: IpDeviceId, S> {
+    Conn(&'a PosixAddrState<UdpConnId<I>>, ConnAddr<Udp<I, D, S>>),
+    Listener(&'a PosixAddrState<UdpListenerId<I>>, ListenerAddr<Udp<I, D, S>>),
+}
+
+impl<T> PosixAddrState<T> {
+    fn select_receiver(&self) -> &T {
+        match self {
+            PosixAddrState::Exclusive(id) | PosixAddrState::ExclusiveDevice(id) => id,
+        }
+    }
 }
 
 impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
@@ -167,7 +182,7 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
         local_port: NonZeroU16,
         remote_port: NonZeroU16,
         device: D,
-    ) -> Option<LookupResult<I, D, S>> {
+    ) -> Option<LookupResult<'_, I, D, S>> {
         let Self { bound } = self;
         iter_receiving_addrs(
             ConnIpAddr { local_ip, local_identifier: local_port, remote: (remote_ip, remote_port) },
@@ -175,10 +190,10 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
         )
         .find_map(|addr| match addr {
             PosixAddrVec::Listener(l) => {
-                bound.get_listener_by_addr(&l).map(|id| LookupResult::Listener(*id, l))
+                bound.get_listener_by_addr(&l).map(|state| LookupResult::Listener(state, l))
             }
             PosixAddrVec::Connected(c) => {
-                bound.get_conn_by_addr(&c).map(|id| LookupResult::Conn(*id, c))
+                bound.get_conn_by_addr(&c).map(|state| LookupResult::Conn(state, c))
             }
         })
     }
@@ -722,14 +737,14 @@ impl<I: IpExt, C: UdpStateContext<I>> IpTransportContext<I, C> for UdpIpTranspor
         if let (Some(src_ip), Some(src_port), Some(dst_port)) =
             (src_ip, udp_packet.src_port(), udp_packet.dst_port())
         {
-            if let Some(socket) = sync_ctx
+            if let Some(lookup_result) = sync_ctx
                 .get_first_state()
                 .conn_state
                 .lookup(src_ip, dst_ip, src_port, dst_port, device)
             {
-                let id = match socket {
-                    LookupResult::Conn(id, _) => id.into(),
-                    LookupResult::Listener(id, _) => id.into(),
+                let id = match lookup_result {
+                    LookupResult::Conn(state, _) => (*state.select_receiver()).into(),
+                    LookupResult::Listener(state, _) => (*state.select_receiver()).into(),
                 };
                 sync_ctx.receive_icmp_error(id, err);
             } else {
@@ -764,15 +779,16 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
 
         let state = sync_ctx.get_first_state();
 
-        if let Some(socket) = SpecifiedAddr::new(src_ip)
+        if let Some(lookup_result) = SpecifiedAddr::new(src_ip)
             .and_then(|src_ip| packet.src_port().map(|src_port| (src_ip, src_port)))
             .and_then(|(src_ip, src_port)| {
-                state.conn_state.lookup(dst_ip, src_ip, packet.dst_port(), src_port, device)
+                let dst_port = packet.dst_port();
+                state.conn_state.lookup(dst_ip, src_ip, dst_port, src_port, device)
             })
         {
-            match socket {
+            match lookup_result {
                 LookupResult::Conn(
-                    id,
+                    lookup_result,
                     ConnAddr {
                         ip:
                             ConnIpAddr {
@@ -783,10 +799,12 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
                         device: _,
                     },
                 ) => {
+                    let id = *lookup_result.select_receiver();
                     mem::drop(packet);
                     sync_ctx.receive_udp_from_conn(id, remote_ip.get(), remote_port, buffer)
                 }
-                LookupResult::Listener(id, _) => {
+                LookupResult::Listener(lookup_result, _) => {
+                    let id = *lookup_result.select_receiver();
                     let src_port = packet.src_port();
                     mem::drop(packet);
                     sync_ctx.receive_udp_from_listen(id, src_ip, dst_ip.get(), src_port, buffer)
@@ -889,7 +907,7 @@ pub fn send_udp_conn<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
 ) -> Result<(), (B, IpSockSendError)> {
     let state = sync_ctx.get_first_state();
     let UdpConnectionState { ref bound } = state.conn_state;
-    let (sock, addr) = bound.get_conn_by_id(&conn).expect("no such connection");
+    let (ConnState(sock), addr) = bound.get_conn_by_id(&conn).expect("no such connection");
     let sock = sock.clone();
     let ConnAddr {
         ip: ConnIpAddr { local_ip, local_identifier: local_port, remote: (remote_ip, remote_port) },
@@ -951,7 +969,7 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
     let state = sync_ctx.get_first_state();
     let UdpConnectionState { ref bound } = state.conn_state;
     let (
-        (),
+        ListenerState {},
         ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device },
     ) = *bound.get_listener_by_id(&listener).expect("specified listener not found");
 
@@ -1086,8 +1104,8 @@ fn create_udp_conn<I: IpExt, C: UdpStateContext<I>>(
         device,
     };
     bound
-        .try_insert_conn(c, ip_sock)
-        .map_err(|_: InsertConnError| UdpSockCreationError::SockAddrConflict)
+        .try_insert_conn(c, ConnState(ip_sock))
+        .map_err(|_: InsertError| UdpSockCreationError::SockAddrConflict)
 }
 
 /// Sets the device to be bound to for an unbound socket.
@@ -1222,9 +1240,9 @@ pub fn listen_udp<I: IpExt, C: UdpStateContext<I>>(
     let listener = bound
         .try_insert_listener(
             ListenerAddr { ip: ListenerIpAddr { addr, identifier: port }, device: *device },
-            (),
+            ListenerState {},
         )
-        .map_err(|_: InsertListenerError| LocalAddressError::AddressInUse)?;
+        .map_err(|_: InsertError| LocalAddressError::AddressInUse)?;
 
     let _: UnboundSocketState<_> = unbound_entry.remove();
     Ok(listener)
@@ -1259,7 +1277,7 @@ pub fn get_udp_listener_info<I: IpExt, C: UdpStateContext<I>>(
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
     let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
-    let ((), addr) = bound.get_listener_by_id(&id).expect("UDP listener not found");
+    let (ListenerState {}, addr) = bound.get_listener_by_id(&id).expect("UDP listener not found");
     addr.clone().into()
 }
 
@@ -2894,9 +2912,9 @@ mod tests {
         let conn_state =
             &DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&ctx).conn_state;
         let wildcard_port = assert_matches!(conn_state.bound.get_listener_by_id(&wildcard_list),
-            Some(((), ListenerAddr{ ip: ListenerIpAddr {identifier, addr: None}, device: None})) => identifier);
+            Some((ListenerState {}, ListenerAddr{ ip: ListenerIpAddr {identifier, addr: None}, device: None})) => identifier);
         let specified_port = assert_matches!(conn_state.bound.get_listener_by_id(&specified_list),
-            Some(((), ListenerAddr{ ip: ListenerIpAddr {identifier, addr: _}, device: None})) => identifier);
+            Some((ListenerState {}, ListenerAddr{ ip: ListenerIpAddr {identifier, addr: _}, device: None})) => identifier);
         assert!(UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
             .contains(&wildcard_port.get()));
         assert!(UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
