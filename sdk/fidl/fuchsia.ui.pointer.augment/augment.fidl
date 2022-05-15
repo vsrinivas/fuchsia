@@ -124,6 +124,7 @@ type ErrorForLocalHit = resource struct {
 
 /// A method for a client to upgrade its touch event protocol to additionally
 /// receive local-hit data for touch events.
+@discoverable
 protocol LocalHit {
     /// An exchange from an `original` touch protocol endpoint to an `augmented`
     /// touch protocol endpoint. If successful, `error` is empty, `original` is
