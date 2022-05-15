@@ -47,6 +47,12 @@ template("product_assembly_configuration") {
     target_name = target_name
 
     assembly_config = "${target_name}_product_assembly_config.json"
+
+    # This is a publicly visible, test-only target, that allows the assembly
+    # config to be used without needing the deps used create it.
+    assembly_config_for_validation =
+        "${target_name}_product_assembly_config.json.for_validation"
+
     base_package_set = "${target_name}_base_packages"
     cache_package_set = "${target_name}_cache_packages"
 
@@ -130,8 +136,10 @@ template("product_assembly_configuration") {
   #
   generated_file(labels.assembly_config) {
     forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":${labels.target_name}" ]
-
+    visibility = [
+      ":${labels.assembly_config_for_validation}",
+      ":${labels.target_name}",
+    ]
     outputs = [ files.assembly_config_file ]
     output_conversion = "json"
     contents = _assembly_config
@@ -202,5 +210,13 @@ template("product_assembly_configuration") {
       ":${labels.base_package_set}",
       ":${labels.cache_package_set}",
     ]
+  }
+
+  # A testonly group with no visibilty restrictions, that allows the use of the
+  # generated product assembly config file in validation actions that don't
+  # require the existence of the packages and binaries that it points to.
+  group(labels.assembly_config_for_validation) {
+    testonly = true
+    public_deps = [ ":${labels.assembly_config}" ]
   }
 }
