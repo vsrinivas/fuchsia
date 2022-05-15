@@ -3072,7 +3072,7 @@ pub(crate) mod testutil {
             &mut buf,
             v6::MessageType::Request,
             &client_id,
-            Some(&server_id.to_vec()),
+            Some(&server_id),
             &options_to_request,
             &configured_addresses,
         );
@@ -3106,11 +3106,11 @@ pub(crate) mod testutil {
     /// `assign_addresses_and_assert` panics if address assignment fails.
     pub(crate) fn assign_addresses_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
+        server_id: [u8; CLIENT_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: &[Ipv6Addr],
         rng: R,
     ) -> (ClientStateMachine<R>, Actions) {
-        let server_id = v6::duid_uuid();
         let (mut client, transaction_id) = testutil::request_addresses_and_assert(
             client_id.clone(),
             server_id.clone(),
@@ -3222,7 +3222,7 @@ pub(crate) mod testutil {
         mut buf: &[u8],
         expected_msg_type: v6::MessageType,
         expected_client_id: &[u8; CLIENT_ID_LEN],
-        expected_server_id: Option<&Vec<u8>>,
+        expected_server_id: Option<&[u8; CLIENT_ID_LEN]>,
         expected_oro: &[v6::OptionCode],
         expected_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
     ) {
@@ -3313,26 +3313,30 @@ pub(crate) mod testutil {
     /// sending a renew fails.
     pub(crate) fn send_renew_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
+        server_id: [u8; CLIENT_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_t1_secs: v6::NonZeroOrMaxU32,
         rng: R,
     ) -> ClientStateMachine<R> {
         let (mut client, actions) = testutil::assign_addresses_and_assert(
             client_id.clone(),
+            server_id.clone(),
             addresses_to_assign.clone(),
             &[],
             rng,
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let old_transaction_id = *transaction_id;
-        let expected_server_id = assert_matches!(state,
+        assert_matches!(
+            state,
             Some(ClientState::AddressAssigned(AddressAssigned {
                 client_id: _,
                 addresses: _,
-                server_id,
+                server_id: _,
                 dns_servers: _,
                 solicit_max_rt: _,
-            })) => server_id.clone());
+            }))
+        );
         assert_matches!(
             &actions[..],
             [
@@ -3359,13 +3363,13 @@ pub(crate) mod testutil {
             Some(ClientState::Renewing(Renewing {
                 client_id: got_client_id,
                 addresses: _,
-                server_id,
+                server_id: got_server_id,
                 dns_servers,
                 first_renew_time: _,
                 retrans_timeout: _,
                 solicit_max_rt,
             })) if *got_client_id == client_id &&
-                   *server_id == expected_server_id &&
+                   *got_server_id == server_id &&
                    *dns_servers == Vec::<Ipv6Addr>::new() &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
@@ -3385,7 +3389,7 @@ pub(crate) mod testutil {
             &mut buf,
             v6::MessageType::Renew,
             &client_id,
-            Some(&expected_server_id),
+            Some(&server_id),
             &[],
             &expected_addresses_to_renew,
         );
@@ -4740,6 +4744,7 @@ mod tests {
         let t2 = v6::NonZeroOrMaxU32::new(80).expect("80 is non-zero or u32::MAX");
         let (client, actions) = testutil::assign_addresses_and_assert(
             v6::duid_uuid(),
+            v6::duid_uuid(),
             vec![
                 TestIdentityAssociation::new_nonzero_finite(
                     std_ip_v6!("::ffff:c00a:1ff"),
@@ -4787,6 +4792,7 @@ mod tests {
         let t1_secs = 70;
         let t1 = v6::NonZeroOrMaxU32::new(t1_secs).expect("70 is non-zero or u32::MAX");
         let (client, actions) = testutil::assign_addresses_and_assert(
+            v6::duid_uuid(),
             v6::duid_uuid(),
             vec![TestIdentityAssociation::new_nonzero_finite(
                 std_ip_v6!("::ffff:c00a:102"),
@@ -4943,6 +4949,7 @@ mod tests {
         let valid_lifetime = v6::NonZeroOrMaxU32::new(110).expect("110 is not zero or u32::MAX");
         let _client = testutil::send_renew_and_assert(
             v6::duid_uuid(),
+            v6::duid_uuid(),
             vec![
                 TestIdentityAssociation::new_nonzero_finite(
                     std_ip_v6!("::ffff:c00a:123"),
@@ -4966,9 +4973,9 @@ mod tests {
 
     #[test]
     fn do_not_renew_for_t1_infinity() {
-        let client_id = v6::duid_uuid();
         let (client, actions) = testutil::assign_addresses_and_assert(
-            client_id.clone(),
+            v6::duid_uuid(),
+            v6::duid_uuid(),
             vec![TestIdentityAssociation {
                 address: std_ip_v6!("::ffff:c00a:1ff"),
                 preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
@@ -5004,6 +5011,7 @@ mod tests {
     #[test]
     fn retransmit_renew() {
         let client_id = v6::duid_uuid();
+        let server_id = v6::duid_uuid();
         let t1 = v6::NonZeroOrMaxU32::new(70).expect("70 is not zero or u32::MAX");
         let t2 = v6::NonZeroOrMaxU32::new(90).expect("90 is not zero or u32::MAX");
         let preferred_lifetime = v6::NonZeroOrMaxU32::new(90).expect("90 is not zero or u32::MAX");
@@ -5026,23 +5034,24 @@ mod tests {
         ];
         let mut client = testutil::send_renew_and_assert(
             client_id.clone(),
+            server_id.clone(),
             addresses_to_assign.clone(),
             t1,
             StepRng::new(std::u64::MAX / 2, 0),
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let expected_transaction_id = *transaction_id;
-        let expected_server_id = assert_matches!(
-           state,
-           Some(ClientState::Renewing(Renewing {
-               client_id: _,
-               addresses: _,
-               server_id,
-               dns_servers: _,
-               first_renew_time: _,
-               retrans_timeout: _,
-               solicit_max_rt: _,
-           })) => server_id.clone()
+        assert_matches!(
+            state,
+            Some(ClientState::Renewing(Renewing {
+                client_id: _,
+                addresses: _,
+                server_id: _,
+                dns_servers: _,
+                first_renew_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+            }))
         );
 
         // Assert renew is retransmitted on retransmission timeout.
@@ -5062,13 +5071,13 @@ mod tests {
             Some(ClientState::Renewing(Renewing {
                 client_id: got_client_id,
                 addresses: _,
-                server_id,
+                server_id: got_server_id,
                 dns_servers,
                 first_renew_time: _,
                 retrans_timeout: _,
                 solicit_max_rt,
             })) if *got_client_id == client_id &&
-                   *server_id == expected_server_id &&
+                   *got_server_id == server_id &&
                    *dns_servers == Vec::<Ipv6Addr>::new() &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
@@ -5088,7 +5097,7 @@ mod tests {
             &mut buf,
             v6::MessageType::Renew,
             &client_id,
-            Some(&expected_server_id),
+            Some(&server_id),
             &[],
             &expected_addresses_to_renew,
         );
@@ -5233,6 +5242,7 @@ mod tests {
     fn address_assiged_unexpected_timeout_is_unreachable(timeout: ClientTimerType) {
         let (mut client, _actions) = testutil::assign_addresses_and_assert(
             v6::duid_uuid(),
+            v6::duid_uuid(),
             vec![TestIdentityAssociation {
                 address: std_ip_v6!("::ffff:c00a:1ff"),
                 preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
@@ -5266,6 +5276,7 @@ mod tests {
     fn renewing_refresh_timeout_is_unreachable() {
         let t1 = v6::NonZeroOrMaxU32::new(40).expect("40 is non-zero or u32::MAX");
         let mut client = testutil::send_renew_and_assert(
+            v6::duid_uuid(),
             v6::duid_uuid(),
             vec![TestIdentityAssociation::new_nonzero_finite(
                 std_ip_v6!("::ffff:c00a:111"),
