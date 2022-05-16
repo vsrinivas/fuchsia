@@ -37,13 +37,16 @@ action("gen_fidl_project") {
   script = "//scripts/generate-fidl-project.py"
   deps = [ "//:generated_sources" ]
 
-  inputs = [ "$root_build_dir/generated_sources.json" ]
-  outputs = [ "$root_build_dir/fidl_project.json" ]
+  _input = "$root_build_dir/generated_sources.json"
+  _output = "$root_build_dir/fidl_project.json"
+
+  inputs = [ _input ]
+  outputs = [ _output ]
 
   args = [
-    rebase_path("//"),
-    rebase_path("$root_build_dir/generated_sources.json"),
-    rebase_path("$root_build_dir/fidl_project.json"),
+    rebase_path("//", root_build_dir),
+    rebase_path(_input, root_build_dir),
+    rebase_path(_output, root_build_dir),
   ]
 }
 
