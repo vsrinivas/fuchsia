@@ -153,7 +153,7 @@ class Dispatcher {
   }
 
   // Returns the options set for this dispatcher.
-  std::optional<uint32_t> options(fdf_dispatcher_t* dispatcher) {
+  std::optional<uint32_t> options() const {
     return dispatcher_ ? std::optional(fdf_dispatcher_get_options(dispatcher_)) : std::nullopt;
   }
 

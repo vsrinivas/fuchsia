@@ -34,6 +34,11 @@ type DriverStartArgs = resource table {
     ///      specifying whether the driver should be colocated in the same
     ///      driver host as the driver that added |node|. If not specified, the
     ///      driver will be launched in a new driver host.
+    ///   3. "default_dispatcher_opts" (optional): an array of strings specifying
+    ///      the options for creating the default dispatcher. A string can be one
+    ///      of the following:
+    ///      * `allow_sync_calls`: allows synchronous calls to be done on the
+    ///      default dispatcher's thread.
     4: program fuchsia.data.Dictionary;
 
     /// Incoming namespace provided to the driver.

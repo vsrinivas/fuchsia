@@ -63,6 +63,11 @@ import("//tools/cmc/build/cmc.gni")
 #     nodes, and the driver's CML file will accept capabilities from each.
 #     Type: array of strings
 #     Default: []
+#   default_dispatcher_opts (optional)
+#     If this is set, then the default dispatcher for the driver will be
+#     created with these options.
+#     Type: array of strings
+#     Default: []
 #   info (mandatory for //src and //zircon)
 #     Name of the file containing the driver information file.
 #     Type: file
@@ -136,6 +141,13 @@ template("fuchsia_driver_component") {
         if (defined(invoker.composite_nodes)) {
           args += [ "--composite" ]
           args += invoker.composite_nodes
+        }
+
+        # TODO(fxbug.dev/99310): set allow_sync_calls for v1 drivers
+        # if they did not specify any opts.
+        if (defined(invoker.default_dispatcher_opts)) {
+          args += [ "--default_dispatcher_opts" ]
+          args += invoker.default_dispatcher_opts
         }
       }
 

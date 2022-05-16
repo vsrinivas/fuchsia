@@ -58,6 +58,12 @@ def main():
         nargs="*",
         help='A space separated list of composite parents',
     )
+    parser.add_argument(
+        '--default_dispatcher_opts',
+        nargs="*",
+        help=
+        'A space separated list of options for creating the default dispatcher',
+    )
 
     args = parser.parse_args()
 
@@ -155,6 +161,9 @@ def main():
             {'protocol': "fuchsia.scheduler.ProfileProvider"})
     if args.sysmem:
         manifest['use'].append({'protocol': "fuchsia.sysmem.Allocator"})
+    if args.default_dispatcher_opts:
+        manifest["program"][
+            "default_dispatcher_opts"] = args.default_dispatcher_opts
 
     json_manifest = json.dumps(manifest)
     args.output.write(json_manifest)

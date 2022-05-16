@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework runtime dispatcher integration test root driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

@@ -40,6 +40,36 @@ TEST(StartArgsTest, ProgramValue) {
   EXPECT_EQ(ZX_ERR_NOT_FOUND, driver::ProgramValue(empty_program, "").error_value());
 }
 
+TEST(StartArgsTest, ProgramValueAsVector) {
+  fidl::Arena arena;
+  fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(arena, 2);
+  program_entries[0].key.Set(arena, "key-for-str");
+  program_entries[0].value = fdata::wire::DictionaryValue::WithStr(arena, "value-for-str");
+
+  fidl::StringView strs[]{
+      fidl::StringView{"test"},
+      fidl::StringView{"test2"},
+  };
+  program_entries[1].key.Set(arena, "key-for-strvec");
+  program_entries[1].value = fdata::wire::DictionaryValue::WithStrVec(
+      arena, fidl::VectorView<fidl::StringView>::FromExternal(strs));
+
+  fdata::wire::Dictionary program(arena);
+  program.set_entries(arena, std::move(program_entries));
+
+  auto values = driver::ProgramValueAsVector(program, "key-for-strvec");
+  EXPECT_EQ(2lu, values->size());
+  std::sort(values->begin(), values->end());
+  EXPECT_EQ("test", (*values)[0]);
+  EXPECT_EQ("test2", (*values)[1]);
+
+  EXPECT_EQ(ZX_ERR_WRONG_TYPE, driver::ProgramValueAsVector(program, "key-for-str").error_value());
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, driver::ProgramValueAsVector(program, "key-unkown").error_value());
+
+  fdata::wire::Dictionary empty_program;
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, driver::ProgramValueAsVector(empty_program, "").error_value());
+}
+
 TEST(StartArgsTest, NsValue) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(ZX_OK, endpoints.status_value());

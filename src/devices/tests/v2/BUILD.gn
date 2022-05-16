@@ -13,6 +13,7 @@ group("tests") {
     "driver-runner-integration:tests",
     "dynamic_offers:tests",
     "interop:tests",
+    "runtime-dispatcher:tests",
     "services:tests",
   ]
 }
@@ -31,6 +32,8 @@ group("drivers") {
     "interop:leaf",
     "interop:root",
     "interop:v1",
+    "runtime-dispatcher:leaf",
+    "runtime-dispatcher:root",
     "services:root",
   ]
 }

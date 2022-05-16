@@ -138,6 +138,22 @@ zx::status<> DriverHost::PublishDriverHost(component::OutgoingDirectory& outgoin
   return status;
 }
 
+uint32_t DriverHost::ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& program) {
+  auto default_dispatcher_opts = driver::ProgramValueAsVector(program, "default_dispatcher_opts");
+
+  uint32_t opts = 0;
+  if (default_dispatcher_opts.is_ok()) {
+    for (auto opt : *default_dispatcher_opts) {
+      if (opt == "allow_sync_calls") {
+        opts |= FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
+      } else {
+        LOGF(WARNING, "Ignoring unknown default_dispatcher_opt: %s", opt.c_str());
+      }
+    }
+  }
+  return opts;
+}
+
 void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer) {
   if (!request->start_args.has_url()) {
     LOGF(ERROR, "Failed to start driver, missing 'url' argument");
@@ -204,6 +220,8 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
     return;
   }
 
+  uint32_t default_dispatcher_opts = ExtractDefaultDispatcherOpts(request->start_args.program());
+
   // Once we receive the VMO from the call to GetBuffer, we can load the driver
   // into this driver host. We move the storage and encoded for start_args into
   // this callback to extend its lifetime.
@@ -211,7 +229,8 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
                               std::make_unique<FileEventHandler>(url));
   auto callback = [this, request = std::move(request->driver), completer = completer.ToAsync(),
                    url = std::move(url), converted_message = std::move(converted_message),
-                   wire_format_metadata, _ = file.Clone()](
+                   wire_format_metadata,
+                   default_dispatcher_opts = std::move(default_dispatcher_opts), _ = file.Clone()](
                       fidl::WireUnownedResult<fio::File::GetBackingMemory>& result) mutable {
     if (!result.ok()) {
       LOGF(ERROR, "Failed to start driver '%s', could not get library VMO: %s", url.data(),
@@ -263,18 +282,18 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       //
       // We do not destroy the dispatcher in the shutdown callback, to prevent crashes that
       // would happen if the driver attempts to access the dispatcher in its Stop hook.
-      uint32_t options = 0;
+      uint32_t options = default_dispatcher_opts;
 
       // TODO(fxbug.dev/99310): When we can parse CMLs to get this information,
       // please delete these.
       if (url == "fuchsia-boot:///#meta/intel-i2c-dfv2.cm") {
-        options = FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
+        options |= FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
       }
       if (url == "fuchsia-boot:///#meta/i2c.cm") {
-        options = FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
+        options |= FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
       }
       if (url == "fuchsia-boot:///#meta/i2c-hid-dfv2.cm") {
-        options = FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
+        options |= FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
       }
       auto dispatcher =
           fdf::Dispatcher::Create(options, [driver_ref = *driver](fdf_dispatcher_t* dispatcher) {});

@@ -68,6 +68,11 @@ class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost>
   void GetProcessKoid(GetProcessKoidRequestView request,
                       GetProcessKoidCompleter::Sync& completer) override;
 
+  // Extracts the default_dispatcher_opts from |program| and converts it to
+  // the options value expected by |fdf::Dispatcher::Create|.
+  // Returns zero if no options were specified.
+  uint32_t ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& program);
+
   async::Loop& loop_;
   std::mutex mutex_;
   fbl::DoublyLinkedList<fbl::RefPtr<Driver>> drivers_ __TA_GUARDED(mutex_);

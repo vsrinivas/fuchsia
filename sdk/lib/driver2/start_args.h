@@ -10,6 +10,8 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/zx/status.h>
 
+#include <vector>
+
 namespace driver {
 
 template <typename T>
@@ -49,6 +51,29 @@ inline zx::status<std::string> ProgramValue(const fuchsia_data::wire::Dictionary
       }
       auto& value = entry.value.str();
       return zx::ok(std::string{value.data(), value.size()});
+    }
+  }
+  return zx::error(ZX_ERR_NOT_FOUND);
+}
+
+// Returns the list of values for |key| as a vector of strings.
+inline zx::status<std::vector<std::string>> ProgramValueAsVector(
+    const fuchsia_data::wire::Dictionary& program, std::string_view key) {
+  if (program.has_entries()) {
+    for (auto& entry : program.entries()) {
+      if (!std::equal(key.begin(), key.end(), entry.key.begin())) {
+        continue;
+      }
+      if (!entry.value.is_str_vec()) {
+        return zx::error(ZX_ERR_WRONG_TYPE);
+      }
+      auto& values = entry.value.str_vec();
+      std::vector<std::string> result;
+      result.reserve(values.count());
+      for (auto& value : values) {
+        result.emplace_back(std::string{value.data(), value.size()});
+      }
+      return zx::ok(result);
     }
   }
   return zx::error(ZX_ERR_NOT_FOUND);

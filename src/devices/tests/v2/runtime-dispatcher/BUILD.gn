@@ -1,0 +1,116 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":runtime-dispatcher-leaf-bind_test",
+    ":runtime-dispatcher-test",
+  ]
+}
+
+fidl("fuchsia.runtime.test") {
+  testonly = true
+  sources = [ "runtime.test.fidl" ]
+}
+
+driver_bind_rules("root-bind") {
+  disable_autobind = true
+  bind_output = "root.bindbc"
+}
+
+fuchsia_driver("root-driver") {
+  testonly = true
+  output_name = "runtime-dispatcher-root"
+  sources = [ "root-driver.cc" ]
+  deps = [
+    ":fuchsia.runtime.test_llcpp",
+    ":root-bind",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
+    "//sdk/lib/driver2:llcpp",
+    "//sdk/lib/sys/component/llcpp",
+    "//src/devices/bind/fuchsia.test:bind.fuchsia.test",
+    "//src/devices/lib/driver:driver_runtime",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_driver_component("root") {
+  testonly = true
+  manifest = "meta/root.cml"
+  deps = [ ":root-driver" ]
+  info = "root-info.json"
+}
+
+driver_bind_rules("runtime-dispatcher-leaf-bind") {
+  rules = "leaf.bind"
+  bind_output = "leaf.bindbc"
+  tests = "leaf.bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("leaf-driver") {
+  testonly = true
+  output_name = "runtime-dispatcher-leaf"
+  sources = [ "leaf-driver.cc" ]
+  deps = [
+    ":fuchsia.runtime.test_llcpp",
+    ":runtime-dispatcher-leaf-bind",
+    "//sdk/lib/driver2:llcpp",
+    "//src/devices/lib/driver:driver_runtime",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
+fuchsia_driver_component("leaf") {
+  testonly = true
+  manifest = "meta/leaf.cml"
+  deps = [ ":leaf-driver" ]
+  info = "leaf-info.json"
+}
+
+rustc_test("bin") {
+  testonly = true
+  output_name = "runtime-dispatcher-bin"
+  source_root = "test.rs"
+  sources = [ "test.rs" ]
+  deps = [
+    ":fuchsia.runtime.test-rustc",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+cmc_merge("realm.cml") {
+  sources = [
+    "//sdk/lib/driver_test_realm/meta/driver_test_realm.cml",
+    "meta/realm.shard.cml",
+  ]
+}
+
+fuchsia_test_component("realm") {
+  manifest = "${target_out_dir}/realm.cml"
+  restricted_features = [ "dynamic_offers" ]
+  manifest_deps = [ ":realm.cml" ]
+}
+
+fuchsia_unittest_package("runtime-dispatcher-test") {
+  deps = [
+    ":bin",
+    ":leaf",
+    ":realm",
+    ":root",
+    "//src/devices/bin/driver_host2:component",
+  ]
+}
