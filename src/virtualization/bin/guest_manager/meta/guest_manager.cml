@@ -1,0 +1,110 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/guest_manager_v2",
+    },
+    children: [
+        {
+            name: "vmm",
+            url: "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cm",
+        },
+        {
+            name: "host_vsock",
+            url: "fuchsia-pkg://fuchsia.com/host_vsock#meta/host_vsock.cm",
+        },
+    ],
+    capabilities: [
+        {
+            protocol: [ "fuchsia.virtualization.GuestConfigProvider" ],
+        },
+        {
+            protocol: [ "fuchsia.virtualization.GuestManager" ],
+        },
+    ],
+    use: [
+        {
+            directory: "pkg",
+            from: "#guest_pkg",
+            rights: [ "r*" ],
+            path: "/guest_pkg",
+        },
+        {
+            protocol: [
+                "fuchsia.virtualization.BalloonController",
+                "fuchsia.virtualization.Guest",
+            ],
+            from: "#vmm",
+        },
+        {
+            protocol: "fuchsia.virtualization.HostVsockEndpoint",
+            from: "#host_vsock",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#guest_pkg" ],
+        },
+        {
+            protocol: [
+                "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.IrqResource",
+                "fuchsia.kernel.MmioResource",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
+                "fuchsia.net.virtualization.Control",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#vmm",
+        },
+        {
+            directory: [
+                "dev-class-ethernet",
+                "dev-gpu",
+            ],
+            from: "parent",
+            to: "#vmm",
+        },
+        {
+            // TODO(fxbug.dev/72386): Refactor vmm to have Start function which takes config directly and remove this circular dependency
+            protocol: "fuchsia.virtualization.GuestConfigProvider",
+            from: "self",
+            to: "#vmm",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#host_vsock",
+        },
+        {
+            protocol: "fuchsia.virtualization.GuestVsockEndpoint",
+            from: "#vmm",
+            to: "#host_vsock",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.virtualization.GuestManager" ],
+            from: "self",
+        },
+    ],
+}

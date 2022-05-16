@@ -1,0 +1,32 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.virtualization;
+using zx;
+
+@discoverable
+protocol GuestManager {
+    /// Launch a new guest instance
+    ///
+    /// Returns ZX_ERR_ALREADY_EXISTS if the guest already launched
+    /// Returns ZX_ERR_INVALID_ARGS if failed to parse config from the guest package
+    LaunchGuest(resource struct {
+        guest_config GuestConfig;
+        controller server_end:Guest;
+    }) -> (struct {}) error zx.status;
+
+    /// Connect to a currently running guest
+    ConnectToGuest(resource struct {
+        controller server_end:Guest;
+    });
+
+    /// Connect to the memory balloon of a currently running guest
+    ConnectToBalloon(resource struct {
+        controller server_end:BalloonController;
+    });
+
+    /// Returns an interface that can be used to access the host vsock endpoint.
+    GetHostVsockEndpoint(resource struct {
+        endpoint server_end:HostVsockEndpoint;
+    });
+};

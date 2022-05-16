@@ -4,6 +4,20 @@
 
 import("//build/components.gni")
 
+group("packages") {
+  deps = [
+    ":debian_guest_manager",
+    ":guest_manager",
+    ":termina_guest_manager",
+    ":zircon_guest_manager",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":guest_manager_test" ]
+}
+
 source_set("lib") {
   visibility = [ ":*" ]
 
@@ -42,4 +56,83 @@ executable("bin") {
 fuchsia_package_with_single_component("guest_manager") {
   manifest = "meta/guest_manager.cmx"
   deps = [ ":bin" ]
+}
+
+source_set("lib_v2") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "guest_manager.cc",
+    "guest_manager.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/virtualization/lib/guest_config",
+  ]
+}
+
+executable("bin_v2") {
+  output_name = "guest_manager_v2"
+
+  sources = [ "guest_manager_main.cc" ]
+
+  deps = [
+    ":lib_v2",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_package_with_single_component("zircon_guest_manager") {
+  manifest = "meta/zircon_guest_manager.cml"
+  deps = [ ":bin_v2" ]
+}
+
+fuchsia_package_with_single_component("debian_guest_manager") {
+  manifest = "meta/debian_guest_manager.cml"
+  deps = [ ":bin_v2" ]
+}
+
+fuchsia_package_with_single_component("termina_guest_manager") {
+  manifest = "meta/termina_guest_manager.cml"
+  deps = [ ":bin_v2" ]
+}
+
+executable("guest_manager_test_bin") {
+  testonly = true
+
+  sources = [ "guest_manager_test.cc" ]
+
+  deps = [
+    ":lib_v2",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/testing/fidl:placeholders",
+  ]
+}
+
+resource("test_configs") {
+  sources = [
+    "test_files/bad_schema_invalid_field.cfg",
+    "test_files/valid_guest.cfg",
+  ]
+
+  outputs = [ "data/configs/{{source_file_part}}" ]
+}
+
+fuchsia_unittest_package("guest_manager_test") {
+  deps = [
+    ":guest_manager_test_bin",
+    ":test_configs",
+  ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

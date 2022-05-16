@@ -65,9 +65,8 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
   void TestThread() {
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-    fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint =
-        this->GetEnclosedGuest()
-            .template ConnectToRealmSync<fuchsia::virtualization::HostVsockEndpoint>();
+    fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
+    this->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
     fidl::Binding<fuchsia::virtualization::HostVsockAcceptor> binding{this};
 

@@ -130,6 +130,11 @@
             from: "parent",
             to: "#virtio_magma_devices",
         },
+        {
+            protocol: [ "fuchsia.vulkan.loader.Loader" ],
+            from: "parent",
+            to: "#virtio_magma_devices",
+        },
     ],
     expose: [
         {

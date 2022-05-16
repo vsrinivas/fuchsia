@@ -44,10 +44,13 @@
 
 namespace {
 
-constexpr char kZirconGuestUrl[] = "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx";
-constexpr char kDebianGuestUrl[] = "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx";
+constexpr char kZirconGuestUrl[] =
+    "fuchsia-pkg://fuchsia.com/zircon_guest_manager#meta/zircon_guest_manager.cm";
+constexpr char kDebianGuestUrl[] =
+    "fuchsia-pkg://fuchsia.com/debian_guest_manager#meta/debian_guest_manager.cm";
 constexpr char kTerminaGuestUrl[] =
-    "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
+    "fuchsia-pkg://fuchsia.com/termina_guest_manager#meta/termina_guest_manager.cm";
+
 // TODO(fxbug.dev/12589): Use consistent naming for the test utils here.
 constexpr char kFuchsiaTestUtilsUrl[] = "fuchsia-pkg://fuchsia.com/virtualization-test-utils";
 constexpr char kDebianTestUtilDir[] = "/test_utils";
@@ -159,57 +162,24 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   using component_testing::RealmRoot;
   using component_testing::Route;
 
-#if defined(USE_VMM_CFV1)
-  constexpr auto kVmmComponentUrl = "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx";
-#else
-  constexpr auto kVmmComponentUrl = "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cm";
-#endif
-
-  constexpr auto kVmmComponentName = "vmm";
-  constexpr auto kGuestConfigProviderComponentName = "guest_config_provider";
   constexpr auto kFakeNetstackComponentName = "fake_netstack";
-  constexpr auto kHostVsockComponentName = "host_vsock";
-  constexpr auto kHostVsockComponentUrl = "fuchsia-pkg://fuchsia.com/host_vsock#meta/host_vsock.cm";
   constexpr auto kFakeScenicComponentName = "fake_scenic";
-#if not defined(USE_VMM_CFV1)
-  constexpr auto kDevGpuDirectory = "dev-gpu";
-#endif
 
   fuchsia::virtualization::GuestConfig cfg;
-  std::string url;
-  zx_status_t status = LaunchInfo(&url, &cfg);
+  std::string guest_manager_url;
+  zx_status_t status = LaunchInfo(&guest_manager_url, &cfg);
 
-  const char* package_dir_name;
-  if (url == kDebianGuestUrl) {
-    package_dir_name = "/debian_guest_pkg";
-  } else if (url == kTerminaGuestUrl) {
-    package_dir_name = "/termina_guest_pkg";
-  } else if (url == kZirconGuestUrl) {
-    package_dir_name = "/zircon_guest_pkg";
-  } else {
-    FX_LOGS(ERROR) << "Invalid package dir name " << url;
-    return ZX_ERR_INVALID_ARGS;
-  }
+  constexpr auto kDevGpuDirectory = "dev-gpu";
+  constexpr auto kGuestManagerName = "guest_manager";
 
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failure launching guest image: ";
     return status;
   }
-  local_guest_config_provider_ = std::make_unique<LocalGuestConfigProvider>(
-      loop_.dispatcher(), package_dir_name, std::move(cfg));
-
   auto realm_builder = RealmBuilder::Create();
-#if defined(USE_VMM_CFV1)
-  realm_builder.AddLegacyChild(kVmmComponentName, kVmmComponentUrl);
-#else
-  realm_builder.AddChild(kVmmComponentName, kVmmComponentUrl);
-#endif
-
-  realm_builder.AddLocalChild(kGuestConfigProviderComponentName,
-                              local_guest_config_provider_.get());
+  realm_builder.AddChild(kGuestManagerName, guest_manager_url);
   realm_builder.AddLocalChild(kFakeNetstackComponentName, &fake_netstack_);
   realm_builder.AddLocalChild(kFakeScenicComponentName, &fake_scenic_);
-  realm_builder.AddChild(kHostVsockComponentName, kHostVsockComponentUrl);
 
   realm_builder
       .AddRoute(Route{.capabilities =
@@ -219,68 +189,44 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
                               Protocol{fuchsia::kernel::IrqResource::Name_},
                               Protocol{fuchsia::kernel::MmioResource::Name_},
                               Protocol{fuchsia::kernel::VmexResource::Name_},
-                              Protocol{fuchsia::sys::Environment::Name_},
                               Protocol{fuchsia::sysinfo::SysInfo::Name_},
-                              Protocol{fuchsia::sys::Launcher::Name_},
                               Protocol{fuchsia::sysmem::Allocator::Name_},
                               Protocol{fuchsia::tracing::provider::Registry::Name_},
                               Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-#if not defined(USE_VMM_CFV1)
                               Directory{.name = kDevGpuDirectory,
                                         .rights = fuchsia::io::R_STAR_DIR,
                                         .path = "/dev/class/gpu"},
-#endif
                           },
                       .source = {ParentRef()},
-                      .targets = {ChildRef{kVmmComponentName}}})
-      .AddRoute(Route{.capabilities =
-                          {
-                              Protocol{fuchsia::logger::LogSink::Name_},
-                          },
-                      .source = {ParentRef()},
-                      .targets = {ChildRef{kHostVsockComponentName}}})
+                      .targets = {ChildRef{kGuestManagerName}}})
       .AddRoute(Route{.capabilities =
                           {
                               Protocol{fuchsia::net::virtualization::Control::Name_},
                           },
                       .source = {ChildRef{kFakeNetstackComponentName}},
-                      .targets = {ChildRef{kVmmComponentName}}})
+                      .targets = {ChildRef{kGuestManagerName}}})
       .AddRoute(Route{.capabilities =
                           {
                               Protocol{fuchsia::ui::scenic::Scenic::Name_},
                           },
                       .source = {ChildRef{kFakeScenicComponentName}},
-                      .targets = {ChildRef{kVmmComponentName}}})
+                      .targets = {ChildRef{kGuestManagerName}}})
       .AddRoute(Route{.capabilities =
                           {
-                              Protocol{fuchsia::virtualization::GuestVsockEndpoint::Name_},
+                              Protocol{fuchsia::virtualization::GuestManager::Name_},
                           },
-                      .source = {ChildRef{kVmmComponentName}},
-                      .targets = {ChildRef{kHostVsockComponentName}}})
-      .AddRoute(Route{.capabilities =
-                          {
-                              Protocol{fuchsia::virtualization::HostVsockEndpoint::Name_},
-                          },
-                      .source = {ChildRef{kHostVsockComponentName}},
-                      .targets = {ParentRef()}})
-      .AddRoute(Route{.capabilities =
-                          {
-                              Protocol{fuchsia::virtualization::GuestConfigProvider::Name_},
-                          },
-                      .source = {ChildRef{kGuestConfigProviderComponentName}},
-                      .targets = {ChildRef{kVmmComponentName}}})
-      .AddRoute(Route{.capabilities =
-                          {
-                              Protocol{fuchsia::virtualization::Guest::Name_},
-                              Protocol{fuchsia::virtualization::GuestVsockEndpoint::Name_},
-                              Protocol{fuchsia::virtualization::BalloonController::Name_},
-                          },
-                      .source = ChildRef{kVmmComponentName},
+                      .source = ChildRef{kGuestManagerName},
                       .targets = {ParentRef()}});
 
   realm_root_ = std::make_unique<RealmRoot>(realm_builder.Build(loop_.dispatcher()));
-  guest_ = realm_root_->Connect<fuchsia::virtualization::Guest>();
 
+  guest_manager_ = realm_root_->ConnectSync<fuchsia::virtualization::GuestManager>();
+  fuchsia::virtualization::GuestManager_LaunchGuest_Result res;
+  status = guest_manager_->LaunchGuest(std::move(cfg), guest_.NewRequest(), &res);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failure launching guest " << guest_manager_url;
+    return status;
+  }
   guest_cid_ = fuchsia::virtualization::DEFAULT_GUEST_CID;
 
   status = SetupVsockServices(deadline);
@@ -370,6 +316,16 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
 
   ready_ = true;
   return ZX_OK;
+}
+
+void EnclosedGuest::ConnectToBalloon(
+    ::fidl::InterfaceRequest<::fuchsia::virtualization::BalloonController> controller) {
+  guest_manager_->ConnectToBalloon(std::move(controller));
+}
+
+void EnclosedGuest::GetHostVsockEndpoint(
+    ::fidl::InterfaceRequest<::fuchsia::virtualization::HostVsockEndpoint> endpoint) {
+  guest_manager_->GetHostVsockEndpoint(std::move(endpoint));
 }
 
 zx_status_t EnclosedGuest::Stop(zx::time deadline) {
@@ -649,7 +605,13 @@ std::vector<std::string> DebianEnclosedGuest::GetTestUtilCommand(
 
 zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
                                              fuchsia::virtualization::GuestConfig* cfg) {
-  *url = kTerminaGuestUrl;
+  if (UsingCFv1()) {
+    constexpr auto kTerminaGuestUrlCFv1 =
+        "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
+    *url = kTerminaGuestUrlCFv1;
+  } else {
+    *url = kTerminaGuestUrl;
+  }
   cfg->set_virtio_gpu(false);
   cfg->set_magma_device(fuchsia::virtualization::MagmaDevice());
 
@@ -723,8 +685,8 @@ zx_status_t TerminaEnclosedGuest::SetupVsockServices(zx::time deadline) {
     GetHostVsockEndpointV1(vsock_.NewRequest());
     GetHostVsockEndpointV1(grpc_endpoint.NewRequest());
   } else {
-    vsock_ = ConnectToRealm<fuchsia::virtualization::HostVsockEndpoint>();
-    grpc_endpoint = ConnectToRealm<fuchsia::virtualization::HostVsockEndpoint>();
+    GetHostVsockEndpoint(vsock_.NewRequest());
+    GetHostVsockEndpoint(grpc_endpoint.NewRequest());
   }
   GrpcVsockServerBuilder builder(std::move(grpc_endpoint));
   builder.AddListenPort(kTerminaStartupListenerPort);
@@ -802,7 +764,7 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
   if (UsingCFv1()) {
     GetHostVsockEndpointV1(endpoint.NewRequest());
   } else {
-    endpoint = ConnectToRealm<fuchsia::virtualization::HostVsockEndpoint>();
+    GetHostVsockEndpoint(endpoint.NewRequest());
   }
 
   command_runner_ =

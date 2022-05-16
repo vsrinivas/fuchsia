@@ -106,15 +106,11 @@ class EnclosedGuest {
 
   virtual GuestKernel GetGuestKernel() = 0;
 
-  template <typename T>
-  ::fidl::SynchronousInterfacePtr<T> ConnectToRealmSync() {
-    return realm_root_->ConnectSync<T>();
-  }
+  void ConnectToBalloon(
+      ::fidl::InterfaceRequest<::fuchsia::virtualization::BalloonController> controller);
 
-  template <typename T>
-  ::fidl::InterfacePtr<T> ConnectToRealm() {
-    return realm_root_->Connect<T>();
-  }
+  void GetHostVsockEndpoint(
+      ::fidl::InterfaceRequest<::fuchsia::virtualization::HostVsockEndpoint> endpoint);
 
   uint32_t GetGuestCid() const { return guest_cid_; }
 
@@ -154,6 +150,8 @@ class EnclosedGuest {
   fuchsia::virtualization::GuestPtr guest_;
   FakeScenic fake_scenic_;
   FakeNetstack fake_netstack_;
+
+  fuchsia::virtualization::GuestManagerSyncPtr guest_manager_;
 
   std::optional<SocketLogger> serial_logger_;
   std::optional<GuestConsole> console_;
