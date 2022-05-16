@@ -397,6 +397,31 @@ fn shared_ioctl(
             }
             Ok(SUCCESS)
         }
+        TCGETS => {
+            // N.B. TCGETS on the main terminal actually returns the configuration of the replica
+            // end.
+            current_task
+                .mm
+                .write_object(UserRef::<uapi::termios>::new(user_addr), &terminal.read().termios)?;
+            Ok(SUCCESS)
+        }
+        TCSETS => {
+            // N.B. TCSETS on the main terminal actually affects the configuration of the replica
+            // end.
+            current_task.mm.read_object(
+                UserRef::<uapi::termios>::new(user_addr),
+                &mut terminal.write().termios,
+            )?;
+            Ok(SUCCESS)
+        }
+        TCSETSW => {
+            // TODO(qsr): This should drain the output queue first.
+            current_task.mm.read_object(
+                UserRef::<uapi::termios>::new(user_addr),
+                &mut terminal.write().termios,
+            )?;
+            Ok(SUCCESS)
+        }
         _ => {
             tracing::error!(
                 "{} received unknown ioctl request 0x{:08x}",

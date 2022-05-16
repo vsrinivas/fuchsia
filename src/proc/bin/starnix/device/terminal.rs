@@ -59,6 +59,9 @@ pub struct TerminalMutableState {
     /// Terminal size.
     pub window_size: uapi::winsize,
 
+    /// Replica terminal configuration.
+    pub termios: uapi::termios,
+
     /// The controlling sessions for the main side of the terminal.
     main_controlling_session: Option<ControllingSession>,
 
@@ -89,6 +92,7 @@ impl Terminal {
             mutable_state: RwLock::new(TerminalMutableState {
                 locked: true,
                 window_size: Default::default(),
+                termios: get_default_replica_termios(),
                 main_controlling_session: None,
                 replica_controlling_session: None,
             }),
@@ -150,6 +154,63 @@ impl ControllingSession {
     }
 }
 
+// Returns the ASCII representation of the given char. This will assert if the character is not
+// ascii.
+fn get_ascii(c: char) -> u8 {
+    let mut dest: [u8; 1] = [0];
+    c.encode_utf8(&mut dest);
+    dest[0]
+}
+
+// Returns the control character associated with the given letter.
+fn get_control_character(c: char) -> cc_t {
+    get_ascii(c) - get_ascii('A') + 1
+}
+
+// Returns the default control characters of a terminal.
+fn get_default_control_characters() -> [cc_t; 19usize] {
+    [
+        get_control_character('C'),  // VINTR = ^C
+        get_control_character('\\'), // VQUIT = ^\
+        get_ascii('\x7f'),           // VERASE = DEL
+        get_control_character('U'),  // VKILL = ^U
+        get_control_character('D'),  // VEOF = ^D
+        0,                           // VTIME
+        1,                           // VMIN
+        0,                           // VSWTC
+        get_control_character('Q'),  // VSTART = ^Q
+        get_control_character('S'),  // VSTOP = ^S
+        get_control_character('Z'),  // VSUSP = ^Z
+        0,                           // VEOL
+        get_control_character('R'),  // VREPRINT = ^R
+        get_control_character('O'),  // VDISCARD = ^O
+        get_control_character('W'),  // VWERASE = ^W
+        get_control_character('V'),  // VLNEXT = ^V
+        0,                           // VEOL2
+        0,                           // Remaining data in the array,
+        0,                           // Remaining data in the array,
+    ]
+}
+
+// Returns the default replica terminal configuration.
+fn get_default_replica_termios() -> uapi::termios {
+    uapi::termios {
+        c_iflag: uapi::ICRNL | uapi::IXON,
+        c_oflag: uapi::OPOST | uapi::ONLCR,
+        c_cflag: uapi::B38400 | uapi::CS8 | uapi::CREAD,
+        c_lflag: uapi::ISIG
+            | uapi::ICANON
+            | uapi::ECHO
+            | uapi::ECHOE
+            | uapi::ECHOK
+            | uapi::ECHOCTL
+            | uapi::ECHOKE
+            | uapi::IEXTEN,
+        c_line: 0,
+        c_cc: get_default_control_characters(),
+    }
+}
+
 #[derive(Debug)]
 struct PtsIdsSet {
     pts_count: u32,
@@ -183,5 +244,26 @@ impl PtsIdsSet {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[::fuchsia::test]
+    fn test_ascii_conversion() {
+        assert_eq!(get_ascii(' '), 32);
+    }
+
+    #[::fuchsia::test]
+    fn test_control_character() {
+        assert_eq!(get_control_character('C'), 3);
+    }
+
+    #[::fuchsia::test]
+    #[should_panic]
+    fn test_invalid_ascii_conversion() {
+        get_ascii('é');
     }
 }
