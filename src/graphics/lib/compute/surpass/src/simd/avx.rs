@@ -297,7 +297,7 @@ impl u32x8 {
 
 impl From<f32x8> for u32x8 {
     fn from(val: f32x8) -> Self {
-        // Sets negative value to 0 to prevent _mm256_cvttps_epi32 from 
+        // Sets negative value to 0 to prevent _mm256_cvttps_epi32 from
         // returning negative values.
         Self(unsafe { _mm256_cvttps_epi32(val.max(f32x8::splat(0.0)).0) })
     }

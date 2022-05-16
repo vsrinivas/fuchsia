@@ -477,18 +477,16 @@ impl Texture {
         let pixels = offsets.to_array().map(|o| unsafe { data.get_unchecked(o as usize) });
 
         let get_channel = |c: usize| {
-            f32x8::from_array(
-                [
-                    pixels[0][c].to_f32(),
-                    pixels[1][c].to_f32(),
-                    pixels[2][c].to_f32(),
-                    pixels[3][c].to_f32(),
-                    pixels[4][c].to_f32(),
-                    pixels[5][c].to_f32(),
-                    pixels[6][c].to_f32(),
-                    pixels[7][c].to_f32(),
-                ]              
-            )
+            f32x8::from_array([
+                pixels[0][c].to_f32(),
+                pixels[1][c].to_f32(),
+                pixels[2][c].to_f32(),
+                pixels[3][c].to_f32(),
+                pixels[4][c].to_f32(),
+                pixels[5][c].to_f32(),
+                pixels[6][c].to_f32(),
+                pixels[7][c].to_f32(),
+            ])
         };
         [get_channel(0), get_channel(1), get_channel(2), get_channel(3)]
     }
