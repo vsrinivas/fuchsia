@@ -398,8 +398,9 @@ where
     (realm, fs)
 }
 
-async fn with_netsvc_and_netstack_bind_port<E, F, Fut, A, V>(
+async fn with_netsvc_and_netstack_bind_port<E, F, Fut, A, V, P>(
     port: u16,
+    avoid_ports: P,
     name: &str,
     args: V,
     test: F,
@@ -409,6 +410,7 @@ async fn with_netsvc_and_netstack_bind_port<E, F, Fut, A, V>(
     A: Into<String>,
     V: IntoIterator<Item = A>,
     E: netemul::Endpoint,
+    P: IntoIterator<Item = u16>,
 {
     let netsvc_name = format!("{}-netsvc", name);
     let ns_name = format!("{}-netstack", name);
@@ -453,6 +455,26 @@ async fn with_netsvc_and_netstack_bind_port<E, F, Fut, A, V>(
     .await
     .expect("wait ll address");
 
+    // Bind to the specified ports to avoid later binding to an unspecified port
+    // that ends up matching these. Used by tests to avoid receiving unexpected
+    // traffic.
+    let _captive_ports_socks = futures::stream::iter(avoid_ports.into_iter())
+        .then(|port| {
+            fuchsia_async::net::UdpSocket::bind_in_realm(
+                &netstack_realm,
+                std::net::SocketAddrV6::new(
+                    std::net::Ipv6Addr::UNSPECIFIED,
+                    port,
+                    /* flowinfo */ 0,
+                    /* scope id */ 0,
+                )
+                .into(),
+            )
+            .map(move |r| r.unwrap_or_else(|e| panic!("bind in realm with {port}: {:?}", e)))
+        })
+        .collect::<Vec<_>>()
+        .await;
+
     let sock = fuchsia_async::net::UdpSocket::bind_in_realm(
         &netstack_realm,
         std::net::SocketAddrV6::new(
@@ -490,8 +512,10 @@ where
     Fut: futures::Future<Output = ()>,
     E: netemul::Endpoint,
 {
-    with_netsvc_and_netstack_bind_port::<E, _, _, _, _>(
+    with_netsvc_and_netstack_bind_port::<E, _, _, _, _, _>(
         /* unspecified port */ 0,
+        // Avoid the multicast ports, which will cause test flakes.
+        [debuglog::MULTICAST_PORT.get(), netboot::ADVERT_PORT.get()],
         name,
         DEFAULT_NETSVC_ARGS,
         test,
@@ -716,8 +740,9 @@ async fn debuglog_inner(sock: fuchsia_async::net::UdpSocket, _scope_id: u32) {
 
 #[variants_test]
 async fn debuglog<E: netemul::Endpoint>(name: &str) {
-    with_netsvc_and_netstack_bind_port::<E, _, _, _, _>(
+    with_netsvc_and_netstack_bind_port::<E, _, _, _, _, _>(
         debuglog::MULTICAST_PORT.get(),
+        [],
         name,
         DEFAULT_NETSVC_ARGS,
         debuglog_inner,
@@ -1014,8 +1039,9 @@ async fn pave_image<E: netemul::Endpoint>(name: &str, image: &str) {
 
 #[variants_test]
 async fn advertises<E: netemul::Endpoint>(name: &str) {
-    let () = with_netsvc_and_netstack_bind_port::<E, _, _, _, _>(
+    let () = with_netsvc_and_netstack_bind_port::<E, _, _, _, _, _>(
         netsvc_proto::netboot::ADVERT_PORT.get(),
+        [],
         name,
         IntoIterator::into_iter(DEFAULT_NETSVC_ARGS).chain(["--advertise"]),
         |sock, scope| async move {
