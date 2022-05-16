@@ -10,10 +10,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_macro.gni")
 import("//src/storage/fs_test/suite.gni")
 
-# Set to true to enable tracing.  For now this cannot be enabled by default due to
-# https://fxbug.dev/66819#c88.  Enabling it trips an LSAN bug that is triggered by the
-# implementation of trace_provider_create_with_fdio.
-tracing_enabled = false
+tracing_enabled = true
 
 fxfs_deps = [
   ":fxfs_macros",
