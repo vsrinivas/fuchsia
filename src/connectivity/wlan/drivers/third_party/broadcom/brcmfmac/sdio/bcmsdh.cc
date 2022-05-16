@@ -727,17 +727,34 @@ static void brcmf_sdiod_host_fixup(struct mmc_host* host) {
 }
 #endif  // POWER_MANAGEMENT
 
+static zx_status_t brcmf_sdiod_set_block_size(sdio_protocol_t* proto, sdio_func* func,
+                                              uint16_t block_size) {
+  zx_status_t ret = sdio_update_block_size(proto, block_size, false);
+  if (ret != ZX_OK) {
+    BRCMF_ERR("Failed to update block size: %s", zx_status_get_string(ret));
+    return ret;
+  }
+  // Cache the block size so we don't have to request it every time we do alignment calculations.
+  ret = sdio_get_block_size(proto, &func->blocksize);
+  if (ret != ZX_OK) {
+    BRCMF_ERR("Failed to get block size: %s", zx_status_get_string(ret));
+    return ret;
+  }
+  ZX_ASSERT(func->blocksize == block_size);
+  return ZX_OK;
+}
+
 static zx_status_t brcmf_sdiod_probe(struct brcmf_sdio_dev* sdiodev) {
   zx_status_t ret = ZX_OK;
 
-  ret = sdio_update_block_size(&sdiodev->sdio_proto_fn1, SDIO_FUNC1_BLOCKSIZE, false);
+  ret = brcmf_sdiod_set_block_size(&sdiodev->sdio_proto_fn1, sdiodev->func1, SDIO_FUNC1_BLOCKSIZE);
   if (ret != ZX_OK) {
-    BRCMF_ERR("Failed to set F1 blocksize");
+    BRCMF_ERR("Failed to set F1 blocksize: %s", zx_status_get_string(ret));
     goto out;
   }
-  ret = sdio_update_block_size(&sdiodev->sdio_proto_fn2, SDIO_FUNC2_BLOCKSIZE, false);
+  ret = brcmf_sdiod_set_block_size(&sdiodev->sdio_proto_fn2, sdiodev->func2, SDIO_FUNC2_BLOCKSIZE);
   if (ret != ZX_OK) {
-    BRCMF_ERR("Failed to set F2 blocksize");
+    BRCMF_ERR("Failed to set F2 blocksize: %s", zx_status_get_string(ret));
     goto out;
   }
 
@@ -872,7 +889,6 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
       err = ZX_ERR_INTERNAL;
       goto fail;
     }
-    sdio_get_block_size(&sdio_proto_fn1, &func1->blocksize);
   }
   func2 = static_cast<decltype(func2)>(calloc(1, sizeof(struct sdio_func)));
   if (!func2) {
@@ -885,7 +901,6 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
       err = ZX_ERR_INTERNAL;
       goto fail;
     }
-    sdio_get_block_size(&sdio_proto_fn2, &func2->blocksize);
   }
   sdiodev = new brcmf_sdio_dev{};
   if (!sdiodev) {
