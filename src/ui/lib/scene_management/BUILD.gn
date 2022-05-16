@@ -51,6 +51,5 @@ rustc_library("scene_management") {
 }
 
 fuchsia_unittest_package("scene_management_tests") {
-  manifest = "meta/scene_management_lib_test.cmx"
   deps = [ ":scene_management_test" ]
 }

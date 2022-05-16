@@ -1,7 +1,0 @@
-{
-    use: [
-        {
-            protocol: [ "fuchsia.settings.Keyboard" ],
-        },
-    ],
-}

@@ -2,16 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-
-group("tests") {
+executable("unittests") {
   testonly = true
-
-  deps = [ ":focus_unittests" ]
-}
-
-executable("focus_test_bin") {
-  testonly = true
+  output_name = "focus_unittests"
   sources = [
     "focus_manager_unittest.cc",
     "view_focuser_registry_unittest.cc",
@@ -28,8 +21,4 @@ executable("focus_test_bin") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-}
-
-fuchsia_unittest_package("focus_unittests") {
-  deps = [ ":focus_test_bin" ]
 }

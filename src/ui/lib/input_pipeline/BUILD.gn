@@ -108,7 +108,6 @@ rustc_library("input_pipeline") {
 }
 
 fuchsia_unittest_package("input_pipeline_lib_tests") {
-  manifest = "meta/input_pipeline_lib_test.cmx"
   deps = [ ":input_pipeline_test" ]
   test_specs = {
     log_settings = {

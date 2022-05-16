@@ -13,15 +13,18 @@ group("tests") {
   ]
 }
 
-fuchsia_component("focus_dispatcher_unittests") {
-  testonly = true
+fuchsia_unittest_component("focus_dispatcher_unittests") {
   deps = [ ":focus_dispatcher_unittests_bin" ]
-  manifest = "meta/focus_dispatcher_unittests.cmx"
 }
 
 fuchsia_unittest_component("root_presenter_unittests") {
-  deps = [ ":root_presenter_unittests_bin" ]
-  manifest = "meta/root_presenter_unittests.cmx"
+  deps = [
+    ":root_presenter_unittests_bin",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/scenic:component_v2",
+  ]
+  manifest = "meta/root_presenter_unittests.cml"
 }
 
 fuchsia_test_package("root_presenter_tests") {

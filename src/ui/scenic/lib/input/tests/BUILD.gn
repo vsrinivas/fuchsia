@@ -2,12 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
-  testonly = true
-  public_deps = [ ":unittests" ]
-  deps = [ "fuzzers" ]
-}
-
 executable("unittests") {
   testonly = true
   output_name = "input_unittests"

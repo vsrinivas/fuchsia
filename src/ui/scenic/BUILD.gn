@@ -47,27 +47,20 @@ group("tests") {
     ":flatland_engine_unittests",
     ":flatland_renderer_unittests",
     ":flatland_unittests",
+    ":focus_unittests",
     ":fuzzers",
+    ":geometry_provider_unittests",
     ":gfx_apptests",
     ":gfx_swapchain_tests",
     ":gfx_unittests",
     ":gfx_util_unittests",
     ":input_unittests",
     ":scenic_unittests",
+    ":scenic_util_tests",
     ":scheduling_unittests",
     ":screen_capture_unittests",
-    "lib/focus/tests",
-    "lib/gfx/tests",
-    "lib/scenic/util/tests",
-    "lib/view_tree:geometry_provider",
-    "lib/view_tree:observer_registry",
-    "lib/view_tree/tests",
+    ":view_tree_unittests",
     "tests",
-
-    # These are included in //src/ui/bin:tests, but I don't see that included anywhere.
-    # If these tests fail, then other Scenic tests are likely to fail, so we want to guarantee that
-    # they are always run whenever Scenic tests are.
-    "//src/ui/bin/hardware_display_controller_provider:tests",
   ]
 }
 
@@ -235,6 +228,10 @@ fuchsia_unittest_package("gfx_util_unittests") {
   deps = [ "lib/gfx/util/tests:unittests" ] + scenic_test_deps
 }
 
+fuchsia_unittest_package("focus_unittests") {
+  deps = [ "lib/focus/tests:unittests" ]
+}
+
 fuchsia_unittest_package("input_unittests") {
   manifest = "meta/input_unittests.cml"
   deps = [ "lib/input/tests:unittests" ] + scenic_test_deps
@@ -258,6 +255,11 @@ fuchsia_unittest_package("scenic_unittests") {
   }
 }
 
+fuchsia_unittest_package("scenic_util_tests") {
+  manifest = "meta/scenic_util_tests.cml"
+  deps = [ "lib/scenic/util/tests:unittests" ]
+}
+
 fuchsia_unittest_package("scheduling_unittests") {
   deps = [ "lib/scheduling/tests:unittests" ] + scenic_test_deps
 }
@@ -270,6 +272,14 @@ fuchsia_unittest_package("screen_capture_unittests") {
       max_severity = "ERROR"
     }
   }
+}
+
+fuchsia_unittest_package("geometry_provider_unittests") {
+  deps = [ "lib/view_tree/tests:geometry_provider_test_bin" ]
+}
+
+fuchsia_unittest_package("view_tree_unittests") {
+  deps = [ "lib/view_tree/tests:view_tree_test_bin" ]
 }
 
 # For migration purposes only.  To be moved to src/ui/scenic/bin:scenic

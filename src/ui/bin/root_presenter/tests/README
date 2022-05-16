@@ -2,5 +2,5 @@ To run tests, make sure to include the following tests package in your build:
 //src/ui/bin/root_presenter:tests
 
 After building, presenter tests can be run as follows:
-fx test root_presenter_apptests
-fx test root_presenter_unittests
+fx test run "fuchsia-pkg://fuchsia.com/root_presenter_tests#meta/focus_dispatcher_unittests.cm"
+fx test run "fuchsia-pkg://fuchsia.com/root_presenter_tests#meta/root_presenter_unittests.cm"

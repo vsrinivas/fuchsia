@@ -1,0 +1,104 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+// TDOO(fxb.dev/98336): Replace with use of scenic_only shard
+{
+    include: [
+        "//src/lib/vulkan/vulkan-test.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/root_presenter_unittests",
+    },
+    children: [
+        {
+            name: "fake_display_provider",
+            url: "#meta/hdcp.cm",
+        },
+        {
+            name: "mock_cobalt",
+            url: "#meta/mock_cobalt.cm",
+        },
+        {
+            name: "scenic",
+            url: "#meta/scenic.cm",
+        },
+    ],
+    use: [
+        {
+            // Isolated persistent storage, used by FactoryResetManager tests.
+            storage: "data",
+            path: "/data",
+        },
+        {
+            // Scenic protocols used from the parent - these are not offered to
+            // RealmBuilder by default, and they are not required for correct
+            // Scenic operation.  If a test wishes to provide these protocols,
+            // it can fake them and explicitly route the fake(s) to the Scenic
+            // realm.
+            //
+            // fuchsia.scheduler.ProfileProvider: Required to change the scheduling
+            // profile used by scenic's main thread (e.g. deadline scheduling).
+            //
+            // fuchsia.stash.Store: Required to inject stash configuration for
+            // flags like `i_can_haz_display` and `i_can_haz_flatland`.
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.stash.Store",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.InputDeviceRegistry",
+                "fuchsia.ui.keyboard.focus.Controller",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#scenic",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#fake_display_provider",
+                "#mock_cobalt",
+                "#scenic",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.stash.Store",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#fake_display_provider" ],
+        },
+        {
+            protocol: [ "fuchsia.hardware.display.Provider" ],
+            from: "#fake_display_provider",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#mock_cobalt",
+            to: [ "#scenic" ],
+        },
+    ],
+}

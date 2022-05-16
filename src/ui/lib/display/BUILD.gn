@@ -74,7 +74,7 @@ test("get_hardware_display_controller_test") {
 fuchsia_unittest_package("test") {
   package_name = "get_hardware_display_controller_test"
   deps = [ ":get_hardware_display_controller_test" ]
-  manifest = "tests/meta/get_hardware_display_controller_test.cmx"
+  manifest = "tests/meta/get_hardware_display_controller_test.cml"
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
@@ -97,9 +97,12 @@ test("get_hardware_display_controller_inject_services_test") {
 
 fuchsia_unittest_package("inject_service_test") {
   package_name = "get_hardware_display_controller_inject_services_test"
-  deps = [ ":get_hardware_display_controller_inject_services_test" ]
+  deps = [
+    ":get_hardware_display_controller_inject_services_test",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+  ]
   manifest =
-      "tests/meta/get_hardware_display_controller_inject_services_test.cmx"
+      "tests/meta/get_hardware_display_controller_inject_services_test.cml"
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

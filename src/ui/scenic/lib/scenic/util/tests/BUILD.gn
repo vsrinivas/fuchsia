@@ -2,14 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-
-group("tests") {
-  testonly = true
-  public_deps = [ ":scenic_util_tests_pkg" ]
-}
-
-executable("scenic_util_tests_bin") {
+executable("unittests") {
   testonly = true
   output_name = "scenic_util_tests"
   sources = [ "util_tests.cc" ]
@@ -18,10 +11,4 @@ executable("scenic_util_tests_bin") {
     "//src/ui/scenic/lib/scenic/util",
     "//third_party/googletest:gtest",
   ]
-}
-
-fuchsia_unittest_package("scenic_util_tests_pkg") {
-  package_name = "scenic_util_tests"
-  manifest = "meta/scenic_util_tests.cmx"
-  deps = [ ":scenic_util_tests_bin" ]
 }

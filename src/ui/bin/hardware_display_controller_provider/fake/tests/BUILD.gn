@@ -31,6 +31,6 @@ executable("unittests") {
 }
 
 fuchsia_unittest_package("fake_hdcp_tests") {
-  manifest = "meta/fake_hdcp_unittests.cmx"
+  manifest = "meta/fake_hdcp_unittests.cml"
   deps = [ ":unittests" ]
 }
