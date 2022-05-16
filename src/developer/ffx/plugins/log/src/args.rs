@@ -141,6 +141,11 @@ pub struct LogCommand {
     #[argh(switch)]
     pub show_metadata: bool,
 
+    /// shows the full moniker in log output. By default this is false and only the last segment
+    /// of the moniker is printed.
+    #[argh(switch)]
+    pub show_full_moniker: bool,
+
     /// how to display log timestamps.
     /// Options are "utc", "local", or "monotonic" (i.e. nanos since target boot).
     /// Default is monotonic.

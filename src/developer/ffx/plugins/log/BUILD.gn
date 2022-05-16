@@ -35,6 +35,7 @@ ffx_plugin("ffx_log") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
+    "//src/sys/lib/moniker",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:blocking",

@@ -19,6 +19,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, RemoteControlProxy},
     fidl_fuchsia_diagnostics::LogSettingsProxy,
     fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::{iter::Iterator, time::SystemTime},
     termion::{color, style},
 };
@@ -178,6 +179,7 @@ pub struct TextDisplayOptions {
     color: bool,
     time_format: TimeFormat,
     show_metadata: bool,
+    show_full_moniker: bool,
     show_tags: bool,
     show_file: bool,
 }
@@ -378,12 +380,21 @@ impl<'a> DefaultLogFormatter<'a> {
             String::default()
         };
 
+        let moniker = if options.show_full_moniker {
+            data.moniker
+        } else {
+            AbsoluteMoniker::parse_str(&format!("/{}", data.moniker))
+                .ok()
+                .and_then(|moniker| moniker.path().last().map(|s| s.to_string()))
+                .unwrap_or(data.moniker)
+        };
+
         let severity_str = &format!("{}", data.metadata.severity)[..1];
         format!(
             "[{}]{}[{}]{}[{}{}{}]{} {}{}{}{}",
             ts,
             process_info_str,
-            data.moniker,
+            moniker,
             tags_str,
             color_str,
             severity_str,
@@ -467,6 +478,7 @@ pub async fn log_impl<W: std::io::Write>(
                     color: should_color(config_color, cmd.no_color),
                     time_format: cmd.clock.clone(),
                     show_metadata: cmd.show_metadata,
+                    show_full_moniker: cmd.show_full_moniker,
                 })
             },
         },
@@ -711,24 +723,25 @@ mod test {
 
     fn empty_log_command() -> LogCommand {
         LogCommand {
-            filter: vec![],
-            exclude: vec![],
-            tags: vec![],
-            exclude_tags: vec![],
-            hide_tags: false,
-            hide_file: false,
             clock: TimeFormat::Monotonic,
-            no_color: false,
+            exclude: vec![],
+            exclude_tags: vec![],
+            filter: vec![],
+            hide_file: false,
+            hide_tags: false,
             kernel: false,
-            severity: Severity::Info,
-            show_metadata: false,
+            no_color: false,
             no_symbols: false,
+            select: vec![],
+            severity: Severity::Info,
+            show_full_moniker: false,
+            show_metadata: false,
             since: None,
             since_monotonic: None,
+            sub_command: None,
+            tags: vec![],
             until: None,
             until_monotonic: None,
-            sub_command: None,
-            select: vec![],
         }
     }
 
@@ -769,10 +782,11 @@ mod test {
         fn default() -> Self {
             Self {
                 color: Default::default(),
-                time_format: TimeFormat::Monotonic,
+                show_file: Default::default(),
+                show_full_moniker: Default::default(),
                 show_metadata: Default::default(),
                 show_tags: Default::default(),
-                show_file: Default::default(),
+                time_format: TimeFormat::Monotonic,
             }
         }
     }
@@ -1551,7 +1565,7 @@ mod test {
             DisplayOption::Text(options) => {
                 assert_eq!(
                     formatter.format_target_log_data(&options, logs_data(), None),
-                    "[1615535969.000][some/moniker][W] message"
+                    "[1615535969.000][moniker][W] message"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -1597,7 +1611,7 @@ mod test {
                 // Before setting the boot timestamp, it should use monotonic time.
                 assert_eq!(
                     formatter.format_target_log_data(&options, logs_data(), None),
-                    "[1615535969.000][some/moniker][W] message"
+                    "[1615535969.000][moniker][W] message"
                 );
 
                 formatter.set_boot_timestamp(1);
@@ -1606,7 +1620,7 @@ mod test {
                 // the output *did* change.
                 assert_ne!(
                     formatter.format_target_log_data(&options, logs_data(), None),
-                    "[1615535969.000][some/moniker][W] message"
+                    "[1615535969.000][moniker][W] message"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -1631,13 +1645,13 @@ mod test {
                 // Before setting the boot timestamp, it should use monotonic time.
                 assert_eq!(
                     formatter.format_target_log_data(&options, logs_data(), None),
-                    "[1615535969.000][some/moniker][W] message"
+                    "[1615535969.000][moniker][W] message"
                 );
 
                 formatter.set_boot_timestamp(1);
                 assert_eq!(
                     formatter.format_target_log_data(&options, logs_data(), None),
-                    "[2021-03-12 07:59:29.000][some/moniker][W] message"
+                    "[2021-03-12 07:59:29.000][moniker][W] message"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -1660,7 +1674,7 @@ mod test {
             DisplayOption::Text(options) => {
                 assert_eq!(
                     formatter.format_target_log_data(&options, logs_data(), None),
-                    "[1615535969.000][some/moniker][\u{1b}[38;5;3mW\u{1b}[m] \u{1b}[38;5;3mmessage\u{1b}[m"
+                    "[1615535969.000][moniker][\u{1b}[38;5;3mW\u{1b}[m] \u{1b}[38;5;3mmessage\u{1b}[m"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -1684,7 +1698,7 @@ mod test {
             DisplayOption::Text(options) => {
                 assert_eq!(
                     formatter.format_target_log_data(&options, logs_data(), None),
-                    "[1615535969.000][1][2][some/moniker][W] message"
+                    "[1615535969.000][1][2][moniker][W] message"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -1705,7 +1719,7 @@ mod test {
                         logs_data(),
                         Some("symbolized".to_string())
                     ),
-                    "[1615535969.000][some/moniker][W] symbolized"
+                    "[1615535969.000][moniker][W] symbolized"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -1726,7 +1740,7 @@ mod test {
                         logs_data(),
                         Some("symbolized".to_string())
                     ),
-                    "[1615535969.000][some/moniker][W] message"
+                    "[1615535969.000][moniker][W] message"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -1749,7 +1763,7 @@ mod test {
             DisplayOption::Text(options) => {
                 assert_eq!(
                     formatter.format_target_log_data(options, logs_data(), None),
-                    "[1615535969.000][some/moniker][tag1,tag2][W] message"
+                    "[1615535969.000][moniker][tag1,tag2][W] message"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -1773,7 +1787,7 @@ mod test {
             DisplayOption::Text(options) => {
                 assert_eq!(
                     formatter.format_target_log_data(&options, logs_data_builder().build(), None),
-                    "[1615535969.000][some/moniker][][W] <missing message>"
+                    "[1615535969.000][moniker][][W] <missing message>"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -1800,7 +1814,7 @@ mod test {
                         logs_data_builder().set_message("multi\nline\nmessage").build(),
                         None
                     ),
-                    "[1615535969.000][some/moniker][][W] multi\nline\nmessage"
+                    "[1615535969.000][moniker][][W] multi\nline\nmessage"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -1835,7 +1849,7 @@ mod test {
                             .build(),
                         None
                     ),
-                    "[1615535969.000][1][2][some/moniker][W] my message bar=baz foo=2"
+                    "[1615535969.000][1][2][moniker][W] my message bar=baz foo=2"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -1865,7 +1879,7 @@ mod test {
                 message_with_file_and_line.clone(),
                 None
             ),
-            "[1615535969.000][some/moniker][W]: [path/to/file.cc:123] my message"
+            "[1615535969.000][moniker][W]: [path/to/file.cc:123] my message"
         );
 
         assert_eq!(
@@ -1877,13 +1891,36 @@ mod test {
                     .build(),
                 None
             ),
-            "[1615535969.000][some/moniker][W]: [path/to/file.cc] my message"
+            "[1615535969.000][moniker][W]: [path/to/file.cc] my message"
         );
 
         display_options.show_file = false;
         assert_eq!(
             formatter.format_target_log_data(&display_options, message_with_file_and_line, None),
-            "[1615535969.000][some/moniker][W] my message"
+            "[1615535969.000][moniker][W] my message"
         );
+    }
+
+    #[fuchsia::test]
+    fn display_full_moniker() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let options = LogFormatterOptions {
+            display: DisplayOption::Text(TextDisplayOptions {
+                show_full_moniker: true,
+                ..TextDisplayOptions::default()
+            }),
+            no_symbols: false,
+        };
+        let formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
+        match &options.display {
+            DisplayOption::Text(options) => {
+                assert_eq!(
+                    formatter.format_target_log_data(options, logs_data(), None),
+                    "[1615535969.000][some/moniker][W] message"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
     }
 }
