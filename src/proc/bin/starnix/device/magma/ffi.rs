@@ -20,7 +20,17 @@ pub fn device_import(
     response: &mut virtio_magma_device_import_resp_t,
 ) -> Result<zx::Channel, Errno> {
     let (client_channel, server_channel) = zx::Channel::create().map_err(|_| errno!(EINVAL))?;
-    fdio::service_connect(&"/dev/class/gpu/000", server_channel).map_err(|_| errno!(EINVAL))?;
+    // TODO(fxbug.dev/100454): This currently picks the first available device, but multiple devices should
+    // probably be exposed to clients.
+    let entry = std::fs::read_dir("/dev/class/gpu")
+        .map_err(|_| errno!(EINVAL))?
+        .next()
+        .ok_or(errno!(EINVAL))?
+        .map_err(|_| errno!(EINVAL))?;
+
+    let path = entry.path().into_os_string().into_string().map_err(|_| errno!(EINVAL))?;
+
+    fdio::service_connect(&path, server_channel).map_err(|_| errno!(EINVAL))?;
 
     // TODO(fxbug.dev/12731): The device import should take ownership of the channel, at which point
     // this can be converted to `into_raw()`, and the return value of this function can be changed
