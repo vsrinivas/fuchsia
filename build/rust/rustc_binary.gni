@@ -11,16 +11,11 @@ import("//build/rust/rustc_test.gni")
 #
 #   output_name (optional)
 #     Name of the output file. Also used as the crate name of the binary,
-#     except the crate name has dashes replaced with underscores.
-#
-#     Defaults to an underscore-translated version of target name
-#     (see http://fxbug.dev/64100).
+#     except the crate name has dashes replaced with underscores. If not
+#     specified, it defaults to the target name.
 #
 #   name (optional, deprecated)
-#     Deprecated version of output_name.  If not specified, it is
-#     assumed to be the same as the target name.  Unlike output_name, all
-#     dashes will be replaced with underscores in both the output file name
-#     and the crate name.
+#     Deprecated version of output_name.
 #
 #   output_dir (optional)
 #     Directory that the resulting binary should be placed in.
@@ -73,8 +68,8 @@ import("//build/rust/rustc_test.gni")
 #
 #   with_unit_tests (optional)
 #     Builds unit tests associated with the binary. This will create a
-#     `<name_underscored>_bin_test` test file in the output directory, and a
-#     new GN target called <name>_test.
+#     `<output_name_underscored>_bin_test` test file in the output directory,
+#     and a new GN target called <name>_test.
 #     Equivalent to adding a `rustc_test` target with that name and the same
 #     source_root.
 #
@@ -155,29 +150,21 @@ template("rustc_binary") {
   # use the target name unless another name is specified
   assert(!(defined(invoker.output_name) && defined(invoker.name)),
          "Only one of output_name and name may be specified.")
-  package_name = target_name
+  _output_name = target_name
   if (defined(invoker.output_name)) {
-    package_name = invoker.output_name
+    _output_name = invoker.output_name
   } else if (defined(invoker.name)) {
-    package_name = invoker.name
+    _output_name = invoker.name
   }
 
   # rustc does not support dashes in crate names
-  _crate_name = string_replace(package_name, "-", "_")
-  if (defined(invoker.output_name)) {
-    _output_name = invoker.output_name
-  } else {
-    assert(
-        _crate_name == package_name,
-        "rustc_binary will soon change to allow binaries with `-` in the name. To disambiguate in the meantime, please set output_name fxbug.dev/64100")
-    _output_name = _crate_name
-  }
+  _crate_name = string_replace(_output_name, "-", "_")
 
   # if "with_unit_tests" is set to true, generate an additional rust test target
   # TODO(https://fxbug.dev/72931): accept a string.
   if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
     rustc_test_internal("${target_name}_test") {
-      output_name = "${package_name}_bin_test"
+      output_name = "${_output_name}_bin_test"
 
       if (defined(invoker.test_args)) {
         args = invoker.test_args
