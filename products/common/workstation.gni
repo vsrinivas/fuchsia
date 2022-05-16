@@ -92,6 +92,7 @@ legacy_base_package_labels += [
   "//src/session",
   "//src/ui/bin/terminal",
   "//src/ui/scenic",
+  "//examples/fortune:fortune_teller",
 
   # Starnix
   "//src/proc/bundles:starnix",

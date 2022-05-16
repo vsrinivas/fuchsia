@@ -1,15 +1,9 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
+import("//build/packages/prebuilt_package.gni")
 
-executable("bin") {
-  output_name = "fortune"
-
-  sources = [ "fortune.c" ]
-}
-
-fuchsia_shell_package("fortune") {
-  deps = [ ":bin" ]
+prebuilt_package("fortune_teller") {
+  archive = "//prebuilt/sdk-samples/fortune-teller/fortune_teller"
 }
