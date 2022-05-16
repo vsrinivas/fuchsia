@@ -141,6 +141,7 @@ template("fuchsia_structured_config_values") {
                              [
                                "deps",
                                "testonly",
+                               "visibility",
                              ])
       cm = compiled_manifest
       value_file = _value_file
@@ -165,7 +166,11 @@ template("fuchsia_structured_config_values") {
   } else {
     # need to have a nop target that can be depended upon by host toolchain targets
     group(target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       deps = [ ":$target_name($default_toolchain)" ]
     }
     not_needed(invoker, "*")
@@ -325,7 +330,11 @@ template("fuchsia_structured_config_rust_lib") {
   # generate the wrapper Rust library
   rustc_library(target_name) {
     name = rust_library_name
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     edition = "2018"
     sources = [ rust_source_file ]
     source_root = rust_source_file
@@ -500,7 +509,11 @@ template("fuchsia_structured_config_cpp_elf_lib") {
 
   # generate the wrapper C++ library
   source_set(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     sources = [ cpp_elf_cc_source_file ]
     deps = [
       ":${fidl_library_target}_llcpp",
@@ -685,7 +698,11 @@ template("fuchsia_structured_config_cpp_driver_lib") {
 
   # generate the wrapper C++ library
   source_set(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     sources = [ cpp_driver_cc_source_file ]
     deps = [
       ":${fidl_library_target}_llcpp",
