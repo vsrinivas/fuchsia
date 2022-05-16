@@ -88,7 +88,10 @@ ffx_action("verify_size_budget_blobfs") {
     _size_budgets_blobfs_file,
     _blobs_config,
   ]
-  outputs = [ "$target_out_dir/size_report_blobfs.json" ]
+  outputs = [
+    "$target_out_dir/size_report_blobfs.json",
+    "$target_out_dir/verbose_output_blobfs.json",
+  ]
   testonly = true
   args = [
     "--config",
@@ -103,6 +106,8 @@ ffx_action("verify_size_budget_blobfs") {
     "deprecated_padded",
     "--gerrit-output",
     rebase_path("$target_out_dir/size_report_blobfs.json", root_build_dir),
+    "--verbose-json-output",
+    rebase_path("$target_out_dir/verbose_output_blobfs.json", root_build_dir),
   ]
 }
 
@@ -139,7 +144,10 @@ ffx_action("verify_size_budget_non_blobfs") {
     _size_budgets_non_blobfs_file,
     "$root_build_dir/obj/build/images/fuchsia/update/update_package_manifest.json",
   ]
-  outputs = [ "$target_out_dir/size_report_non_blobfs.json" ]
+  outputs = [
+    "$target_out_dir/size_report_non_blobfs.json",
+    "$target_out_dir/verbose_output_non_blobfs.json",
+  ]
   testonly = true
   args = [
     "--config",
@@ -152,6 +160,21 @@ ffx_action("verify_size_budget_non_blobfs") {
     "deprecated_padded",
     "--gerrit-output",
     rebase_path("$target_out_dir/size_report_non_blobfs.json", root_build_dir),
+    "--verbose-json-output",
+    rebase_path("$target_out_dir/verbose_output_non_blobfs.json",
+                root_build_dir),
+  ]
+}
+
+json_merge("verbose_output.json") {
+  sources = [
+    "$target_out_dir/verbose_output_blobfs.json",
+    "$target_out_dir/verbose_output_non_blobfs.json",
+  ]
+  testonly = true
+  deps = [
+    ":verify_size_budget_blobfs",
+    ":verify_size_budget_non_blobfs",
   ]
 }
 
@@ -162,6 +185,7 @@ json_merge("size_report.json") {
   ]
   testonly = true
   deps = [
+    ":verbose_output.json",
     ":verify_size_budget_blobfs",
     ":verify_size_budget_non_blobfs",
   ]

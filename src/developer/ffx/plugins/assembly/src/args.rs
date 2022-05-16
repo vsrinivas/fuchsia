@@ -184,6 +184,9 @@ pub struct SizeCheckArgs {
     /// regardless of whether the component exceeded its budget.
     #[argh(switch, short = 'v')]
     pub verbose: bool,
+    /// path where to write the verbose JSON output.
+    #[argh(option)]
+    pub verbose_json_output: Option<PathBuf>,
 }
 
 fn default_blobfs_layout() -> BlobFSLayout {
