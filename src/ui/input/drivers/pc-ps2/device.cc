@@ -6,7 +6,6 @@
 
 #include <fidl/fuchsia.hardware.input/cpp/wire.h>
 #include <fidl/fuchsia.hardware.input/cpp/wire_types.h>
-#include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/ddk/driver.h>
 #include <zircon/syscalls.h>
 
@@ -17,7 +16,6 @@
 
 #include "src/ui/input/drivers/pc-ps2/commands.h"
 #include "src/ui/input/drivers/pc-ps2/controller.h"
-#include "src/ui/input/drivers/pc-ps2/descriptors.h"
 #include "src/ui/input/drivers/pc-ps2/keymap.h"
 
 #ifdef PS2_TEST
@@ -33,6 +31,7 @@ namespace {
 constexpr uint16_t kIrqPort1 = 0x1;
 constexpr uint16_t kIrqPort2 = 0xc;
 
+constexpr uint8_t kMouseButtonCount = 3;
 constexpr uint8_t kMouseAlwaysOne = (1 << 3);
 constexpr uint8_t kMouseButtonMask = 0x7;
 
@@ -60,12 +59,48 @@ __UNUSED constexpr PortInfo kPortInfo[2] = {
     },
 };
 
-constexpr hid_boot_kbd_report_t kRolloverReport = {.modifier = 1, .usage = {1, 1, 1, 1, 1, 1}};
-bool IsKeyboardModifier(uint8_t usage) {
-  return (usage >= HID_USAGE_KEY_LEFT_CTRL && usage <= HID_USAGE_KEY_RIGHT_GUI);
-}
-
 }  // namespace
+
+void PS2InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
+                                       fidl::AnyArena& allocator) {
+  if (type == fuchsia_hardware_input::BootProtocol::kKbd) {
+    ZX_ASSERT(std::holds_alternative<PS2KbdInputReport>(report));
+    auto kbd = std::get<PS2KbdInputReport>(report);
+    fidl::VectorView<fuchsia_input::wire::Key> keys3(allocator, kbd.num_pressed_keys_3);
+    size_t idx = 0;
+    for (const auto& key : kbd.pressed_keys_3) {
+      keys3[idx++] = key;
+    }
+
+    auto kbd_input_rpt = fuchsia_input_report::wire::KeyboardInputReport(allocator);
+    kbd_input_rpt.set_pressed_keys3(allocator, keys3);
+
+    input_report.set_keyboard(allocator, kbd_input_rpt);
+  } else if (type == fuchsia_hardware_input::BootProtocol::kMouse) {
+    ZX_ASSERT(std::holds_alternative<PS2MouseInputReport>(report));
+    auto mouse = std::get<PS2MouseInputReport>(report);
+    std::vector<uint8_t> pressed_buttons;
+    for (uint8_t i = 0; i < kMouseButtonCount; i++) {
+      if (mouse.buttons & (1 << i)) {
+        pressed_buttons.push_back(i + 1);
+      }
+    }
+    fidl::VectorView<uint8_t> buttons(allocator, pressed_buttons.size());
+    size_t idx = 0;
+    for (const auto& button : pressed_buttons) {
+      buttons[idx++] = button;
+    }
+
+    auto mouse_input_rpt = fuchsia_input_report::wire::MouseInputReport(allocator);
+    mouse_input_rpt.set_pressed_buttons(allocator, buttons);
+    mouse_input_rpt.set_movement_x(allocator, mouse.rel_x);
+    mouse_input_rpt.set_movement_y(allocator, mouse.rel_y);
+
+    input_report.set_mouse(allocator, mouse_input_rpt);
+  }
+
+  input_report.set_event_time(allocator, event_time.get());
+}
 
 zx_status_t I8042Device::Bind(Controller* parent, Port port) {
   auto dev = std::make_unique<I8042Device>(parent, port);
@@ -86,6 +121,12 @@ zx_status_t I8042Device::Bind() {
   }
 
   protocol_ = *identity;
+  if (protocol_ == fuchsia_hardware_input::BootProtocol::kKbd) {
+    report_.report = PS2KbdInputReport{};
+  } else if (protocol_ == fuchsia_hardware_input::BootProtocol::kMouse) {
+    report_.report = PS2MouseInputReport{};
+  }
+
 #ifndef PS2_TEST
   // Map interrupt. We should get this from ACPI eventually.
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
@@ -98,6 +139,11 @@ zx_status_t I8042Device::Bind() {
   irq_ = GetInterrupt(kPortInfo[port_].irq);
   zx_status_t status;
 #endif
+
+  status = loop_.StartThread("i8042-reader-thread");
+  if (status != ZX_OK) {
+    return status;
+  }
 
   status = DdkAdd(ddk::DeviceAddArgs(kPortInfo[port_].devname));
   if (status != ZX_OK) {
@@ -181,61 +227,111 @@ zx::status<finput::BootProtocol> I8042Device::Identify() {
   return zx::ok(proto);
 }
 
-zx_status_t I8042Device::HidbusQuery(uint32_t options, hid_info_t* out_info) {
-  out_info->dev_num = static_cast<uint8_t>(protocol_);
-  out_info->device_class = static_cast<hid_device_class_t>(protocol_);
-  out_info->boot_device = true;
-  return ZX_OK;
-}
-
-zx_status_t I8042Device::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
+void I8042Device::GetInputReportsReader(GetInputReportsReaderRequestView request,
+                                        GetInputReportsReaderCompleter::Sync& completer) {
   std::scoped_lock lock(hid_lock_);
-  if (ifc_.is_valid()) {
-    return ZX_ERR_ALREADY_BOUND;
+  zx_status_t status =
+      input_report_readers_.CreateReader(loop_.dispatcher(), std::move(request->reader));
+  if (status == ZX_OK) {
+#ifdef PS2_TEST
+    sync_completion_signal(&next_reader_wait_);
+#endif
   }
-  ifc_ = ddk::HidbusIfcProtocolClient(ifc);
-  return ZX_OK;
 }
 
-void I8042Device::HidbusStop() {
-  std::scoped_lock lock(hid_lock_);
-  ifc_.clear();
-}
+void I8042Device::GetDescriptor(GetDescriptorRequestView request,
+                                GetDescriptorCompleter::Sync& completer) {
+  fidl::Arena allocator;
+  auto descriptor = fuchsia_input_report::wire::DeviceDescriptor(allocator);
 
-zx_status_t I8042Device::HidbusGetDescriptor(hid_description_type_t desc_type,
-                                             uint8_t* out_data_buffer, size_t data_size,
-                                             size_t* out_data_actual) {
-  if (out_data_buffer == NULL || out_data_actual == NULL) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+  fuchsia_input_report::wire::DeviceInfo device_info;
+  device_info.vendor_id = static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle);
 
-  if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
-    return ZX_ERR_NOT_FOUND;
-  }
+  if (protocol_ == fuchsia_hardware_input::BootProtocol::kKbd) {
+    device_info.product_id =
+        static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::kPcPs2Keyboard);
+    std::vector<fuchsia_input::wire::Key> keys3;
+    // Add usual HID keys
+    for (const auto& key : kSet1UsageMap) {
+      if (key) {
+        keys3.push_back(key.value());
+      }
 
-  const uint8_t* buf;
-  size_t buflen = 0;
-  if (protocol_ == finput::BootProtocol::kKbd) {
-    buf = kKeyboardHidDescriptor;
-    buflen = sizeof(kKeyboardHidDescriptor);
-  } else if (protocol_ == finput::BootProtocol::kMouse) {
-    buf = kMouseHidDescriptor;
-    buflen = sizeof(kMouseHidDescriptor);
-  } else {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+      if (keys3.size() >= fuchsia_input_report::wire::kKeyboardMaxNumKeys) {
+        zxlogf(ERROR, "Too many keys!");
+        completer.Reply({});
+        return;
+      }
+    }
+    for (const auto& key : kSet1ExtendedUsageMap) {
+      if (key) {
+        keys3.push_back(key.value());
+      }
 
-  *out_data_actual = buflen;
-  if (data_size < buflen) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
+      if (keys3.size() >= fuchsia_input_report::wire::kKeyboardMaxNumKeys) {
+        zxlogf(ERROR, "Too many keys!");
+        completer.Reply({});
+        return;
+      }
+    }
+
+    fidl::VectorView<fuchsia_input::wire::Key> fidl_keys3(allocator, keys3.size());
+    size_t idx = 0;
+    for (const auto& key : keys3) {
+      fidl_keys3[idx++] = key;
+    }
+
+    auto kbd_in_desc = fuchsia_input_report::wire::KeyboardInputDescriptor(allocator);
+    kbd_in_desc.set_keys3(allocator, fidl_keys3);
+
+    fidl::VectorView<fuchsia_input_report::wire::LedType> leds(allocator, 5);
+    leds[0] = fuchsia_input_report::wire::LedType::kNumLock;
+    leds[1] = fuchsia_input_report::wire::LedType::kCapsLock;
+    leds[2] = fuchsia_input_report::wire::LedType::kScrollLock;
+    leds[3] = fuchsia_input_report::wire::LedType::kCompose;
+    leds[4] = fuchsia_input_report::wire::LedType::kKana;
+    auto kbd_out_desc = fuchsia_input_report::wire::KeyboardOutputDescriptor(allocator);
+    kbd_out_desc.set_leds(allocator, leds);
+
+    auto kbd_descriptor = fuchsia_input_report::wire::KeyboardDescriptor(allocator);
+    kbd_descriptor.set_input(allocator, kbd_in_desc);
+    kbd_descriptor.set_output(allocator, kbd_out_desc);
+    descriptor.set_keyboard(allocator, kbd_descriptor);
+  } else if (protocol_ == fuchsia_hardware_input::BootProtocol::kMouse) {
+    device_info.product_id =
+        static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::kPcPs2Mouse);
+    fidl::VectorView<uint8_t> buttons(allocator, kMouseButtonCount);
+    buttons[0] = 0x01;
+    buttons[1] = 0x02;
+    buttons[2] = 0x03;
+
+    constexpr fuchsia_input_report::wire::Axis movement_x{
+        .range = {.min = -127, .max = 127},
+        .unit = {.type = fuchsia_input_report::wire::UnitType::kNone, .exponent = 0},
+    };
+    constexpr fuchsia_input_report::wire::Axis movement_y{
+        .range = {.min = -127, .max = 127},
+        .unit = {.type = fuchsia_input_report::wire::UnitType::kNone, .exponent = 0},
+    };
+
+    auto mouse_in_desc = fuchsia_input_report::wire::MouseInputDescriptor(allocator);
+    mouse_in_desc.set_buttons(allocator, buttons);
+    mouse_in_desc.set_movement_x(allocator, movement_x);
+    mouse_in_desc.set_movement_y(allocator, movement_y);
+
+    auto mouse_descriptor = fuchsia_input_report::wire::MouseDescriptor(allocator);
+    mouse_descriptor.set_input(allocator, mouse_in_desc);
+    descriptor.set_mouse(allocator, mouse_descriptor);
   }
-  memcpy(out_data_buffer, buf, buflen);
-  return ZX_OK;
+  descriptor.set_device_info(allocator, device_info);
+
+  completer.Reply(descriptor);
 }
 
 void I8042Device::IrqThread() {
   while (true) {
-    zx_status_t status = irq_.wait(nullptr);
+    zx::time timestamp;
+    zx_status_t status = irq_.wait(&timestamp);
     if (status != ZX_OK) {
       break;
     }
@@ -249,9 +345,9 @@ void I8042Device::IrqThread() {
         retry = true;
         uint8_t data = controller_->ReadData();
         if (protocol_ == finput::BootProtocol::kKbd) {
-          ProcessScancode(data);
+          ProcessScancode(timestamp, data);
         } else if (protocol_ == finput::BootProtocol::kMouse) {
-          ProcessMouse(data);
+          ProcessMouse(timestamp, data);
         }
       }
     } while (retry);
@@ -263,99 +359,70 @@ void I8042Device::IrqThread() {
   unbind_->Reply();
 }
 
-void I8042Device::ProcessScancode(uint8_t code) {
+void I8042Device::ProcessScancode(zx::time timestamp, uint8_t code) {
+  report_.event_time = timestamp;
+  report_.type = fuchsia_hardware_input::wire::BootProtocol::kKbd;
+
   bool multi = (last_code_ == kExtendedScancode);
   last_code_ = code;
 
   bool key_up = !!(code & kKeyUp);
   code &= kScancodeMask;
 
-  uint8_t usage;
+  std::optional<fuchsia_input::wire::Key> key;
   if (multi) {
-    usage = kSet1ExtendedUsageMap[code];
+    key = kSet1ExtendedUsageMap[code];
   } else {
-    usage = kSet1UsageMap[code];
+    key = kSet1UsageMap[code];
   }
+  if (!key)
+    return;
 
-  bool rollover = false;
-  if (IsKeyboardModifier(usage)) {
-    switch (ModifierKey(usage, !key_up)) {
-      case ModStatus::kExists:
-        return;
-      case ModStatus::kRollover:
-        rollover = true;
-        break;
-      case ModStatus::kSet:
-      default:
-        break;
-    }
-  } else if (key_up) {
-    RemoveKey(usage);
+  if (key_up) {
+    RemoveKey(*key);
   } else {
-    AddKey(usage);
+    AddKey(*key);
   }
-
-  const hid_boot_kbd_report_t* report = rollover ? &kRolloverReport : &keyboard_report();
 
   {
     std::scoped_lock lock(hid_lock_);
-    if (ifc_.is_valid()) {
-      ifc_.IoQueue(reinterpret_cast<const uint8_t*>(report), sizeof(*report),
-                   zx_clock_get_monotonic());
-    }
+    input_report_readers_.SendReportToAllReaders(report_);
   }
 }
 
-ModStatus I8042Device::ModifierKey(uint8_t usage, bool down) {
-  int bit = usage - HID_USAGE_KEY_LEFT_CTRL;
-  if (bit < 0 || bit > 7)
-    return ModStatus::kRollover;
-  if (down) {
-    if (keyboard_report().modifier & 1 << bit) {
-      return ModStatus::kExists;
-    }
-    keyboard_report().modifier |= 1 << bit;
-
-  } else {
-    keyboard_report().modifier &= ~(1 << bit);
-  }
-  return ModStatus::kSet;
-}
-
-KeyStatus I8042Device::AddKey(uint8_t usage) {
-  for (unsigned char& key : keyboard_report().usage) {
-    if (key == usage) {
+KeyStatus I8042Device::AddKey(fuchsia_input::wire::Key key) {
+  for (size_t i = 0; i < keyboard_report().num_pressed_keys_3; i++) {
+    if (keyboard_report().pressed_keys_3[i] == key) {
       return KeyStatus::kKeyExists;
     }
-    if (key == 0) {
-      key = usage;
-      return KeyStatus::kKeyAdded;
-    }
   }
-  return KeyStatus::kKeyRollover;
+  keyboard_report().pressed_keys_3[keyboard_report().num_pressed_keys_3++] = key;
+  return KeyStatus::kKeyAdded;
 }
 
-KeyStatus I8042Device::RemoveKey(uint8_t usage) {
-  ssize_t idx = -1;
-  for (size_t i = 0; i < sizeof(keyboard_report().usage); i++) {
-    if (keyboard_report().usage[i] == usage) {
+KeyStatus I8042Device::RemoveKey(fuchsia_input::wire::Key key) {
+  size_t idx = -1;
+  for (size_t i = 0; i < keyboard_report().num_pressed_keys_3; i++) {
+    if (keyboard_report().pressed_keys_3[i] == key) {
       idx = i;
       break;
     }
   }
 
-  if (idx == -1) {
+  if (idx == -1UL) {
     return KeyStatus::kKeyNotFound;
   }
 
-  for (size_t i = idx; i < sizeof(keyboard_report().usage) - 1; i++) {
-    keyboard_report().usage[i] = keyboard_report().usage[i + 1];
+  for (size_t i = idx; i < keyboard_report().num_pressed_keys_3 - 1; i++) {
+    keyboard_report().pressed_keys_3[i] = keyboard_report().pressed_keys_3[i + 1];
   }
-  keyboard_report().usage[sizeof(keyboard_report().usage) - 1] = 0;
+  keyboard_report().num_pressed_keys_3--;
   return KeyStatus::kKeyRemoved;
 }
 
-void I8042Device::ProcessMouse(uint8_t code) {
+void I8042Device::ProcessMouse(zx::time timestamp, uint8_t code) {
+  report_.type = fuchsia_hardware_input::wire::BootProtocol::kMouse;
+  report_.event_time = timestamp;
   // PS/2 mouse reports span 3 bytes. last_code_ tracks which byte we're up to.
   switch (last_code_) {
     case 0:
@@ -379,12 +446,8 @@ void I8042Device::ProcessMouse(uint8_t code) {
       mouse_report().buttons &= kMouseButtonMask;
 
       std::scoped_lock lock(hid_lock_);
-      if (ifc_.is_valid()) {
-        ifc_.IoQueue(reinterpret_cast<const uint8_t*>(&mouse_report()), sizeof(mouse_report()),
-                     zx_clock_get_monotonic());
-      }
-
-      memset(&mouse_report(), 0, sizeof(mouse_report()));
+      input_report_readers_.SendReportToAllReaders(report_);
+      report_.Reset();
       break;
     }
   }

@@ -6,18 +6,60 @@
 #define SRC_UI_INPUT_DRIVERS_PC_PS2_DEVICE_H_
 
 #include <fidl/fuchsia.hardware.input/cpp/wire.h>
-#include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <fidl/fuchsia.input.report/cpp/wire.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/interrupt.h>
 
 #include <condition_variable>
 
 #include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/unbind-txn.h>
 #include <hid/boot.h>
 
 #include "src/ui/input/drivers/pc-ps2/controller.h"
+#include "src/ui/input/lib/input-report-reader/reader.h"
 
 namespace i8042 {
+
+struct PS2KbdInputReport {
+  size_t num_pressed_keys_3 = 0;
+  fuchsia_input::wire::Key pressed_keys_3[fuchsia_input_report::wire::kKeyboardMaxNumKeys];
+
+  void Reset() { num_pressed_keys_3 = 0; }
+};
+
+struct PS2MouseInputReport {
+  uint8_t buttons;
+  int8_t rel_x;
+  int8_t rel_y;
+
+  void Reset() {
+    buttons = 0;
+    rel_x = 0;
+    rel_y = 0;
+  }
+};
+
+struct PS2InputReport {
+  zx::time event_time;
+  fuchsia_hardware_input::BootProtocol type;
+  std::variant<PS2KbdInputReport, PS2MouseInputReport> report;
+
+  void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
+                         fidl::AnyArena& allocator);
+  void Reset() {
+    event_time = {};
+    type = fuchsia_hardware_input::BootProtocol::kNone;
+    if (std::holds_alternative<PS2KbdInputReport>(report)) {
+      std::get<PS2KbdInputReport>(report).Reset();
+    } else if (std::holds_alternative<PS2MouseInputReport>(report)) {
+      std::get<PS2MouseInputReport>(report).Reset();
+    }
+  }
+};
+
 enum ModStatus {
   kSet = 1,
   kExists = 2,
@@ -34,13 +76,19 @@ enum KeyStatus {
 constexpr uint8_t kAck = 0xfa;
 
 class I8042Device;
-using DeviceType = ddk::Device<I8042Device, ddk::Unbindable>;
-class I8042Device : public DeviceType, public ddk::HidbusProtocol<I8042Device, ddk::base_protocol> {
+using DeviceType = ddk::Device<I8042Device, ddk::Unbindable,
+                               ddk::Messageable<fuchsia_input_report::InputDevice>::Mixin>;
+class I8042Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
   explicit I8042Device(Controller* parent, Port port)
-      : DeviceType(parent->zxdev()), controller_(parent), port_(port) {
-    memset(&reports_, 0, sizeof(reports_));
-  }
+      : DeviceType(parent->zxdev()),
+        controller_(parent),
+        port_(port),
+        loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        report_({
+            .event_time = {},
+            .type = fuchsia_hardware_input::BootProtocol::kNone,
+        }) {}
 
   static zx_status_t Bind(Controller* parent, Port port);
   zx_status_t Bind();
@@ -51,23 +99,36 @@ class I8042Device : public DeviceType, public ddk::HidbusProtocol<I8042Device, d
   }
   void DdkUnbind(ddk::UnbindTxn txn);
 
-  // Hid bus ops
-  zx_status_t HidbusQuery(uint32_t options, hid_info_t* out_info);
-  zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc);
-  void HidbusStop();
-  zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, uint8_t* out_data_buffer,
-                                  size_t data_size, size_t* out_data_actual);
-  zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, uint8_t* data, size_t len,
-                              size_t* out_len) {
-    return ZX_ERR_NOT_SUPPORTED;
+  void GetInputReportsReader(GetInputReportsReaderRequestView request,
+                             GetInputReportsReaderCompleter::Sync& completer) override;
+  void GetDescriptor(GetDescriptorRequestView request,
+                     GetDescriptorCompleter::Sync& completer) override;
+  void SendOutputReport(SendOutputReportRequestView request,
+                        SendOutputReportCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const uint8_t* data, size_t len) {
-    return ZX_ERR_NOT_SUPPORTED;
+  void GetFeatureReport(GetFeatureReportRequestView request,
+                        GetFeatureReportCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration) { return ZX_OK; }
-  zx_status_t HidbusGetProtocol(uint8_t* protocol) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
+  void SetFeatureReport(SetFeatureReportRequestView request,
+                        SetFeatureReportCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void GetInputReport(GetInputReportRequestView request,
+                      GetInputReportCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+
+#ifdef PS2_TEST
+  zx_status_t WaitForNextReader(zx::duration timeout) {
+    zx_status_t status = sync_completion_wait(&next_reader_wait_, timeout.get());
+    if (status == ZX_OK) {
+      sync_completion_reset(&next_reader_wait_);
+    }
+    return status;
+  }
+#endif
 
  private:
   Controller* controller_;
@@ -80,25 +141,31 @@ class I8042Device : public DeviceType, public ddk::HidbusProtocol<I8042Device, d
   std::optional<ddk::UnbindTxn> unbind_ __TA_GUARDED(unbind_lock_);
 
   std::mutex hid_lock_;
-  ddk::HidbusIfcProtocolClient ifc_ __TA_GUARDED(hid_lock_);
+  input::InputReportReaderManager<PS2InputReport> input_report_readers_ __TA_GUARDED(hid_lock_);
+#ifdef PS2_TEST
+  sync_completion_t next_reader_wait_;
+#endif
+  async::Loop loop_;
 
   uint8_t last_code_ = 0;
-  union {
-    hid_boot_kbd_report_t keyboard_report;
-    hid_boot_mouse_report_t mouse_report;
-  } reports_;
-  hid_boot_kbd_report_t& keyboard_report() { return reports_.keyboard_report; }
-  hid_boot_mouse_report_t& mouse_report() { return reports_.mouse_report; }
+  PS2InputReport report_;
+  PS2KbdInputReport& keyboard_report() {
+    ZX_ASSERT(std::holds_alternative<PS2KbdInputReport>(report_.report));
+    return std::get<PS2KbdInputReport>(report_.report);
+  }
+  PS2MouseInputReport& mouse_report() {
+    ZX_ASSERT(std::holds_alternative<PS2MouseInputReport>(report_.report));
+    return std::get<PS2MouseInputReport>(report_.report);
+  }
 
   zx::status<fuchsia_hardware_input::wire::BootProtocol> Identify();
   void IrqThread();
   // Keyboard input
-  void ProcessScancode(uint8_t code);
-  ModStatus ModifierKey(uint8_t usage, bool down);
-  KeyStatus AddKey(uint8_t usage);
-  KeyStatus RemoveKey(uint8_t usage);
+  void ProcessScancode(zx::time timestamp, uint8_t code);
+  KeyStatus AddKey(fuchsia_input::wire::Key key);
+  KeyStatus RemoveKey(fuchsia_input::wire::Key key);
   // Mouse input
-  void ProcessMouse(uint8_t code);
+  void ProcessMouse(zx::time timestamp, uint8_t code);
 };
 
 }  // namespace i8042

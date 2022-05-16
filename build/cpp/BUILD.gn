@@ -386,6 +386,8 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//src/ui/input/drivers/gt6853:gt6853-test",
     "//src/ui/input/drivers/hid-input-report:driver-internals",
     "//src/ui/input/drivers/hid-input-report:hid-input-report-test-bin",
+    "//src/ui/input/drivers/pc-ps2:pc-ps2-driver",
+    "//src/ui/input/drivers/pc-ps2:pc-ps2-tests-bin",
     "//src/ui/input/drivers/virtio:virtio-input-test",
     "//src/ui/input/lib/hid-input-report",
     "//src/ui/input/lib/hid-input-report:lib-hid-input-report-test",

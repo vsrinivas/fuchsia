@@ -233,6 +233,8 @@ enum/member fuchsia.input.report/VendorGoogleProductId.FOCALTECH_TOUCHSCREEN 655
 enum/member fuchsia.input.report/VendorGoogleProductId.GOLDFISH_ACCELERATION_SENSOR 2417819649
 enum/member fuchsia.input.report/VendorGoogleProductId.GOLDFISH_GYROSCOPE_SENSOR 2417819650
 enum/member fuchsia.input.report/VendorGoogleProductId.GOLDFISH_RGBC_LIGHT_SENSOR 2417819651
+enum/member fuchsia.input.report/VendorGoogleProductId.PC_PS2_KEYBOARD 65539
+enum/member fuchsia.input.report/VendorGoogleProductId.PC_PS2_MOUSE 65540
 strict enum fuchsia.input.report/VendorGoogleProductId uint32
 enum/member fuchsia.input.report/VendorId.GOOGLE 6353
 strict enum fuchsia.input.report/VendorId uint32

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/interrupt.h>
@@ -11,7 +12,6 @@
 #include <condition_variable>
 
 #include <hid/boot.h>
-#include <hid/usages.h>
 #include <zxtest/zxtest.h>
 
 #include "src/devices/testing/mock-ddk/mock-device.h"
@@ -179,7 +179,7 @@ zx::interrupt GetInterrupt(uint32_t irq_no) {
   return clone;
 }
 
-class ControllerTest : public zxtest::Test, public ddk::HidbusIfcProtocol<ControllerTest> {
+class ControllerTest : public zxtest::Test {
  public:
   void SetUp() override {
     root_ = MockDevice::FakeRootParent();
@@ -187,6 +187,8 @@ class ControllerTest : public zxtest::Test, public ddk::HidbusIfcProtocol<Contro
     ASSERT_OK(status);
 
     controller_dev_ = root_->GetLatestChild();
+
+    loop_.StartThread("pc-ps2-test-thread");
   }
 
   void TearDown() override {
@@ -200,73 +202,185 @@ class ControllerTest : public zxtest::Test, public ddk::HidbusIfcProtocol<Contro
     ASSERT_OK(controller_dev_->InitReplyCallStatus());
     sync_completion_wait(&controller_dev_->GetDeviceContext<i8042::Controller>()->added_children(),
                          ZX_TIME_INFINITE);
-  }
 
-  void HidbusIfcIoQueue(const uint8_t* buf_buffer, size_t buf_size, zx_time_t timestamp) {
-    std::scoped_lock lock(buf_lock_);
-    last_buffer_.resize(buf_size);
-    memcpy(last_buffer_.data(), buf_buffer, buf_size);
-    received_ = true;
-    received_event_.notify_all();
-  }
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputDevice>();
+    ASSERT_OK(endpoints.status_value());
 
-  std::vector<uint8_t> WaitForIo() {
-    std::scoped_lock lock(buf_lock_);
-    received_event_.wait(buf_lock_, [this]() { return received_; });
-    received_ = false;
-    auto ret = std::move(last_buffer_);
-    last_buffer_ = {};
-    return ret;
+    binding_ =
+        fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server),
+                         controller_dev_->GetLatestChild()->GetDeviceContext<i8042::I8042Device>());
+    client_.Bind(std::move(endpoints->client));
   }
 
  protected:
   Fake8042 i8042_;
   std::shared_ptr<MockDevice> root_;
   zx_device* controller_dev_;
-  std::mutex buf_lock_;
-  std::condition_variable_any received_event_;
-  std::vector<uint8_t> last_buffer_ __TA_GUARDED(buf_lock_);
-  bool received_ = false;
 
-  const hidbus_ifc_protocol_t proto_{
-      .ops = &hidbus_ifc_protocol_ops_,
-      .ctx = this,
-  };
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client_;
+
+ private:
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  std::optional<fidl::ServerBindingRef<fuchsia_input_report::InputDevice>> binding_;
 };
+
+TEST_F(ControllerTest, GetKbdDescriptorTest) {
+  InitDevices();
+
+  auto response = client_->GetDescriptor();
+
+  ASSERT_TRUE(response.ok());
+  ASSERT_TRUE(response->descriptor.has_device_info());
+  EXPECT_EQ(response->descriptor.device_info().vendor_id,
+            static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle));
+  EXPECT_EQ(
+      response->descriptor.device_info().product_id,
+      static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::kPcPs2Keyboard));
+
+  ASSERT_TRUE(response->descriptor.has_keyboard());
+  ASSERT_TRUE(response->descriptor.keyboard().has_input());
+  ASSERT_TRUE(response->descriptor.keyboard().input().has_keys3());
+  ASSERT_EQ(response->descriptor.keyboard().input().keys3().count(), 104);
+
+  ASSERT_TRUE(response->descriptor.keyboard().has_output());
+  ASSERT_TRUE(response->descriptor.keyboard().output().has_leds());
+  ASSERT_EQ(response->descriptor.keyboard().output().leds().count(), 5);
+  const auto& leds = response->descriptor.keyboard().output().leds();
+  EXPECT_EQ(leds[0], fuchsia_input_report::wire::LedType::kNumLock);
+  EXPECT_EQ(leds[1], fuchsia_input_report::wire::LedType::kCapsLock);
+  EXPECT_EQ(leds[2], fuchsia_input_report::wire::LedType::kScrollLock);
+  EXPECT_EQ(leds[3], fuchsia_input_report::wire::LedType::kCompose);
+  EXPECT_EQ(leds[4], fuchsia_input_report::wire::LedType::kKana);
+}
 
 TEST_F(ControllerTest, KeyboardPressTest) {
   InitDevices();
   zx_device* dev = controller_dev_->GetLatestChild();
   auto keyboard = dev->GetDeviceContext<i8042::I8042Device>();
-  ASSERT_OK(keyboard->HidbusStart(&proto_));
-  i8042_.SendDataAndIrq(false, 0x2);
 
-  hid_boot_kbd_report_t report;
-  auto buf = WaitForIo();
-  memcpy(&report, buf.data(), sizeof(report));
-  ASSERT_EQ(report.usage[0], HID_USAGE_KEY_1);
+  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
+  {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_OK(endpoints.status_value());
+    auto result = client_->GetInputReportsReader(std::move(endpoints->server));
+    ASSERT_OK(result.status());
+    reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
+        std::move(endpoints->client));
+    ASSERT_OK(keyboard->WaitForNextReader(zx::duration::infinite()));
+  }
+  {
+    i8042_.SendDataAndIrq(false, 0x2);
 
-  i8042_.SendDataAndIrq(false, i8042::kKeyUp | 0x2);
-  buf = WaitForIo();
-  memcpy(&report, buf.data(), sizeof(report));
-  ASSERT_EQ(report.usage[0], 0);
+    auto result = reader->ReadInputReports();
+    ASSERT_OK(result.status());
+    ASSERT_FALSE(result->result.is_err());
+    auto& reports = result->result.response().reports;
+
+    ASSERT_EQ(1, reports.count());
+
+    auto& report = reports[0];
+    ASSERT_TRUE(report.has_event_time());
+    ASSERT_TRUE(report.has_keyboard());
+    auto& keyboard_report = report.keyboard();
+
+    ASSERT_TRUE(keyboard_report.has_pressed_keys3());
+    ASSERT_EQ(keyboard_report.pressed_keys3().count(), 1);
+    EXPECT_EQ(keyboard_report.pressed_keys3()[0], fuchsia_input::wire::Key::kKey1);
+  }
+  {
+    i8042_.SendDataAndIrq(false, i8042::kKeyUp | 0x2);
+
+    auto result = reader->ReadInputReports();
+    ASSERT_OK(result.status());
+    ASSERT_FALSE(result->result.is_err());
+    auto& reports = result->result.response().reports;
+
+    ASSERT_EQ(1, reports.count());
+
+    auto& report = reports[0];
+    ASSERT_TRUE(report.has_event_time());
+    ASSERT_TRUE(report.has_keyboard());
+    auto& keyboard_report = report.keyboard();
+
+    ASSERT_TRUE(keyboard_report.has_pressed_keys3());
+    EXPECT_EQ(keyboard_report.pressed_keys3().count(), 0);
+  }
+}
+
+TEST_F(ControllerTest, GetMouseDescriptorTest) {
+  i8042_.EnablePort2();
+  InitDevices();
+
+  auto response = client_->GetDescriptor();
+
+  ASSERT_TRUE(response.ok());
+  ASSERT_TRUE(response->descriptor.has_device_info());
+  EXPECT_EQ(response->descriptor.device_info().vendor_id,
+            static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle));
+  EXPECT_EQ(response->descriptor.device_info().product_id,
+            static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::kPcPs2Mouse));
+
+  ASSERT_TRUE(response->descriptor.has_mouse());
+  ASSERT_TRUE(response->descriptor.mouse().has_input());
+  ASSERT_TRUE(response->descriptor.mouse().input().has_buttons());
+  ASSERT_EQ(response->descriptor.mouse().input().buttons().count(), 3);
+  EXPECT_EQ(response->descriptor.mouse().input().buttons()[0], 0x01);
+  EXPECT_EQ(response->descriptor.mouse().input().buttons()[1], 0x02);
+  EXPECT_EQ(response->descriptor.mouse().input().buttons()[2], 0x03);
+
+  ASSERT_TRUE(response->descriptor.mouse().input().has_movement_x());
+  EXPECT_EQ(response->descriptor.mouse().input().movement_x().range.min, -127);
+  EXPECT_EQ(response->descriptor.mouse().input().movement_x().range.max, 127);
+  EXPECT_EQ(response->descriptor.mouse().input().movement_x().unit.type,
+            fuchsia_input_report::wire::UnitType::kNone);
+  EXPECT_EQ(response->descriptor.mouse().input().movement_x().unit.exponent, 0);
+
+  ASSERT_TRUE(response->descriptor.mouse().input().has_movement_y());
+  EXPECT_EQ(response->descriptor.mouse().input().movement_y().range.min, -127);
+  EXPECT_EQ(response->descriptor.mouse().input().movement_y().range.max, 127);
+  EXPECT_EQ(response->descriptor.mouse().input().movement_y().unit.type,
+            fuchsia_input_report::wire::UnitType::kNone);
+  EXPECT_EQ(response->descriptor.mouse().input().movement_y().unit.exponent, 0);
 }
 
 TEST_F(ControllerTest, MouseMoveTest) {
   i8042_.EnablePort2();
   InitDevices();
-
   zx_device* dev = controller_dev_->GetLatestChild();
   auto mouse = dev->GetDeviceContext<i8042::I8042Device>();
-  ASSERT_OK(mouse->HidbusStart(&proto_));
+
+  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
+  {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_OK(endpoints.status_value());
+    auto result = client_->GetInputReportsReader(std::move(endpoints->server));
+    ASSERT_OK(result.status());
+    reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
+        std::move(endpoints->client));
+    ASSERT_OK(mouse->WaitForNextReader(zx::duration::infinite()));
+  }
+
   i8042_.SendData(0x09 /* button_left | always_one */);
   i8042_.SendData(0x70) /* rel_x */;
   i8042_.SendDataAndIrq(true, 0x10 /* rel_y */);
 
-  hid_boot_mouse_report_t report;
-  auto buf = WaitForIo();
-  memcpy(&report, buf.data(), sizeof(report));
-  ASSERT_EQ(report.buttons, 0x1);
-  ASSERT_EQ(report.rel_x, 0x70);
-  ASSERT_EQ(report.rel_y, -16);
+  auto result = reader->ReadInputReports();
+  ASSERT_OK(result.status());
+  ASSERT_FALSE(result->result.is_err());
+  auto& reports = result->result.response().reports;
+
+  ASSERT_EQ(1, reports.count());
+
+  auto& report = reports[0];
+  ASSERT_TRUE(report.has_event_time());
+  ASSERT_TRUE(report.has_mouse());
+  auto& mouse_report = report.mouse();
+
+  ASSERT_TRUE(mouse_report.has_pressed_buttons());
+  ASSERT_EQ(mouse_report.pressed_buttons().count(), 1);
+  EXPECT_EQ(mouse_report.pressed_buttons()[0], 0x1);
+  ASSERT_TRUE(mouse_report.has_movement_x());
+  EXPECT_EQ(mouse_report.movement_x(), 0x70);
+  ASSERT_TRUE(mouse_report.has_movement_y());
+  EXPECT_EQ(mouse_report.movement_y(), -16);
 }
