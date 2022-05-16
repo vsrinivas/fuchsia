@@ -35,11 +35,11 @@ sdk://pkg/driver_runtime
 sdk://pkg/driver_runtime_cpp
 sdk://pkg/fdio
 sdk://pkg/fidl
-sdk://pkg/fidl-llcpp-experimental-driver-only
+sdk://pkg/fidl-llcpp
 sdk://pkg/fidl_base
 sdk://pkg/fit
 sdk://pkg/fit-promise
-sdk://pkg/fitx-experimental-driver-only
+sdk://pkg/fitx
 sdk://pkg/hwreg
 sdk://pkg/mmio
 sdk://pkg/mmio-ptr
@@ -50,8 +50,8 @@ sdk://pkg/sys_component_llcpp
 sdk://pkg/syslog_structured_backend
 sdk://pkg/trace-engine
 sdk://pkg/zx
-sdk://pkg/zx-experimental-driver-only
-sdk://pkg/zxc-experimental-driver-only
+sdk://pkg/zx-status
+sdk://pkg/zxc
 sdk://tools/arm64/bindc
 sdk://tools/arm64/fidlgen_banjo
 sdk://tools/arm64/fidlgen_llcpp_experimental_driver_only_toolchain

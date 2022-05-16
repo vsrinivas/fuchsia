@@ -32,7 +32,7 @@ zx_library("fasync") {
   sdk = "source"
 
   sdk_publishable = false
-  sdk_name = "fasync-experimental-driver-only"
+  sdk_name = "fasync"
   sdk_headers = [
     "lib/fasync/internal/bridge.h",
     "lib/fasync/internal/compiler.h",
@@ -66,7 +66,7 @@ zx_library("fexecutor") {
   sdk = "source"
 
   sdk_publishable = false
-  sdk_name = "fasync-fexecutor-experimental-driver-only"
+  sdk_name = "fasync-fexecutor"
   sdk_headers = [ "lib/fasync/fexecutor.h" ]
 
   sources = [ "fexecutor.cc" ]

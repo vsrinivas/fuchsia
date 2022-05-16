@@ -12,7 +12,7 @@ group("tests") {
 zx_library("usb") {
   sdk = "source"
   sdk_publishable = "experimental"
-  sdk_name = "usb-experimental-driver-only"
+  sdk_name = "usb"
   sdk_headers = [
     "usb/request-cpp.h",
     "usb/usb-request.h",

@@ -16,7 +16,7 @@ config("include") {
 
 sdk_source_set("ddktl") {
   category = "experimental"  # due to //zircon/system/ulib/fidl:fidl-llcpp
-  sdk_name = "ddktl-experimental-driver-only"
+  sdk_name = "ddktl"
   sources = [
     "include/ddktl/device-internal.h",
     "include/ddktl/device.h",

@@ -5,8 +5,8 @@
 import("//build/zircon/migrated_targets.gni")
 
 sdk_source_set("fitx") {
-  category = "partner"
-  sdk_name = "fitx-experimental-driver-only"
+  category = "experimental"
+  sdk_name = "fitx"
   sources = [
     "include/lib/fitx/internal/compiler.h",
     "include/lib/fitx/internal/result.h",
@@ -15,8 +15,8 @@ sdk_source_set("fitx") {
 }
 
 sdk_source_set("zx") {
-  category = "partner"
-  sdk_name = "zx-experimental-driver-only"
+  category = "experimental"
+  sdk_name = "zx-status"
   sources = [ "include/lib/zx/status.h" ]
   public_deps = [ ":fitx" ]
   if (zircon_toolchain != false) {
@@ -27,8 +27,7 @@ sdk_source_set("zx") {
 zx_library("zxc") {
   sdk = "source"
 
-  sdk_publishable = true
-  sdk_name = "zxc-experimental-driver-only"
+  sdk_publishable = "experimental"
   sdk_headers = [
     "lib/fitx/internal/compiler.h",
     "lib/fitx/internal/result.h",
