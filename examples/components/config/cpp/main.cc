@@ -16,7 +16,7 @@
 int main(int argc, const char* argv[], char* envp[]) {
   // [START get_config]
   // Retrieve configuration
-  auto c = example_config::Config::from_args();
+  auto c = example_config::Config::TakeFromStartupHandle();
   // [END get_config]
 
   // Print greeting to the log
@@ -28,7 +28,8 @@ int main(int argc, const char* argv[], char* envp[]) {
   // Record configuration to inspect
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   sys::ComponentInspector inspector(context.get());
-  c.record_to_inspect(inspector.inspector());
+  inspect::Node config_node = inspector.root().CreateChild("config");
+  c.RecordInspect(&config_node);
   // [END inspect]
 
   loop.Run();

@@ -11,7 +11,7 @@
 namespace cpp_driver_config_lib {
 struct Config {
  public:
-  static Config from_args(
+  static Config TakeFromStartArgs(
       fuchsia_driver_framework::wire::DriverStartArgs& start_args) noexcept;
 
  private:
@@ -24,7 +24,7 @@ struct Config {
   Config() = default;
 #pragma clang diagnostic pop
 
-  void record_to_inspect(inspect::Inspector* inspector);
+  void RecordInspect(inspect::Node* node);
 
   const bool& my_flag() const { return storage_.my_flag; }
   bool& my_flag() { return storage_.my_flag; }

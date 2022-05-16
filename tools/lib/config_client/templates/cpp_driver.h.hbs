@@ -11,7 +11,7 @@
 namespace {{cpp_namespace}} {
 struct Config {
 public:
-  static Config from_args(fuchsia_driver_framework::wire::DriverStartArgs& start_args) noexcept;
+  static Config TakeFromStartArgs(fuchsia_driver_framework::wire::DriverStartArgs& start_args) noexcept;
 
   {{> typedef }}
 };

@@ -10,7 +10,7 @@
 namespace {{cpp_namespace}} {
 struct Config {
 public:
-  static Config from_args() noexcept;
+  static Config TakeFromStartupHandle() noexcept;
 
   {{> typedef }}
 };

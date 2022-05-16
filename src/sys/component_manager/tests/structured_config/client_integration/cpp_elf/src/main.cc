@@ -47,13 +47,14 @@ class PuppetImpl : public test::structuredconfig::receiver::ConfigReceiverPuppet
 };
 
 int main(int argc, const char** argv) {
-  auto c = receiver_config::Config::from_args();
+  auto c = receiver_config::Config::TakeFromStartupHandle();
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   sys::ComponentInspector inspector(context.get());
-  c.record_to_inspect(inspector.inspector());
+  inspect::Node inspect_config = inspector.root().CreateChild("config");
+  c.RecordInspect(&inspect_config);
 
   PuppetImpl impl(c);
   fidl::Binding<test::structuredconfig::receiver::ConfigReceiverPuppet> binding(&impl);

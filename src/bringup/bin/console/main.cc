@@ -79,7 +79,7 @@ int main(int argc, const char** argv) {
   const auto boot_args_client = fidl::BindSyncClient(*std::move(boot_args));
 
   Options opts;
-  status = ParseArgs(console_config::Config::from_args(), boot_args_client, &opts);
+  status = ParseArgs(console_config::Config::TakeFromStartupHandle(), boot_args_client, &opts);
   if (status != ZX_OK) {
     return status;
   }

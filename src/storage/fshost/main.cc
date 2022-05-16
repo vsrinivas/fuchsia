@@ -160,7 +160,7 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
   auto boot_args = FshostBootArgs::Create();
   auto config = DefaultConfig();
   if (!ignore_component_config) {
-    config = fshost_config::Config::from_args();
+    config = fshost_config::Config::TakeFromStartupHandle();
   }
   ApplyBootArgsToConfig(config, *boot_args);
 

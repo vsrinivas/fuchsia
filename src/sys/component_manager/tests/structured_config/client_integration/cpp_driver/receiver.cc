@@ -82,7 +82,7 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
                                                            fidl::WireSharedClient<fdf::Node> node,
                                                            driver::Namespace ns,
                                                            driver::Logger logger) {
-    auto config = receiver_config::Config::from_args(start_args);
+    auto config = receiver_config::Config::TakeFromStartArgs(start_args);
     auto driver =
         std::make_unique<ReceiverDriver>(dispatcher->async_dispatcher(), std::move(node),
                                          std::move(ns), std::move(logger), std::move(config));
@@ -110,7 +110,9 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
     ZX_ASSERT(result.is_ok());
 
     // Serve the inspect data
-    config_.record_to_inspect(&inspector_);
+    auto config_node = inspector_.GetRoot().CreateChild("config");
+    config_.RecordInspect(&config_node);
+    inspector_.emplace(std::move(config_node));
     auto exposed_inspector = driver::ExposedInspector::Create(dispatcher_, inspector_, outgoing_);
     ZX_ASSERT(exposed_inspector.is_ok());
     exposed_inspector_ = std::move(exposed_inspector.value());

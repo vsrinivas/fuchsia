@@ -10,7 +10,7 @@
 namespace cpp_elf_config_lib {
 struct Config {
  public:
-  static Config from_args() noexcept;
+  static Config TakeFromStartupHandle() noexcept;
 
  private:
   struct Storage_;
@@ -22,7 +22,7 @@ struct Config {
   Config() = default;
 #pragma clang diagnostic pop
 
-  void record_to_inspect(inspect::Inspector* inspector);
+  void RecordInspect(inspect::Node* node);
 
   const bool& my_flag() const { return storage_.my_flag; }
   bool& my_flag() { return storage_.my_flag; }

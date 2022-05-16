@@ -1,28 +1,25 @@
-void Config::record_to_inspect(inspect::Inspector* inspector) {
-  inspect::Node inspect_config = inspector->GetRoot().CreateChild("config");
+void Config::RecordInspect(inspect::Node* node) {
   {{#each fields}}
     {{#if (is_string_vector type_)}}
-      auto {{ident}} = inspect_config.CreateStringArray("{{ident}}", this->{{ident}}().size());
+      auto {{ident}}_array_ = node->CreateStringArray("{{ident}}", this->{{ident}}().size());
       for (size_t i = 0; i < this->{{ident}}().size(); i++) {
         auto ref = std::string_view(this->{{ident}}()[i].data());
-        {{ident}}.Set(i, ref);
+        {{ident}}_array_.Set(i, ref);
       }
-      inspector->emplace(std::move({{ident}}));
+      node->Record(std::move({{ident}}_array_));
     {{else}}
       {{#if (is_vector type_)}}
-        auto {{ident}} =
-          inspect_config.Create{{(inspect_type type_)}}Array("{{ident}}", this->{{ident}}().size());
+        auto {{ident}}_array_ =
+          node->Create{{(inspect_type type_)}}Array("{{ident}}", this->{{ident}}().size());
         for (size_t i = 0; i < this->{{ident}}().size(); i++) {
-            {{ident}}.Set(i, this->{{ident}}()[i]);
+            {{ident}}_array_.Set(i, this->{{ident}}()[i]);
         }
-        inspector->emplace(std::move({{ident}}));
+        node->Record(std::move({{ident}}_array_));
       {{else}}
-        inspect_config.Create{{(inspect_type type_)}}("{{ident}}", this->{{ident}}(), inspector);
+        node->Record{{(inspect_type type_)}}("{{ident}}", this->{{ident}}());
       {{/if}}
     {{/if}}
-
   {{/each}}
-  inspector->emplace(std::move(inspect_config));
 }
 
 std::ostream& operator<<(std::ostream& os, const Config& c) {

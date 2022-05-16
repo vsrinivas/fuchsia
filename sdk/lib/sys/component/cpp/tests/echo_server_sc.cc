@@ -93,7 +93,7 @@ class EchoServer : public test::placeholders::Echo {
 };
 
 int main(int argc, const char** argv) {
-  auto c = echo_server_config_lib::Config::from_args();
+  auto c = echo_server_config_lib::Config::TakeFromStartupHandle();
   std::cout << "Starting echo server." << std::endl;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto startup = sys::ComponentContext::CreateAndServeOutgoingDirectory();
