@@ -7,10 +7,7 @@ import("//build/test.gni")
 
 group("test") {
   testonly = true
-  if (!is_coverage) {
-    # TODO(https://fxbug.dev/100208): Re-enable this test once it is fixed on coverage bot.
-    deps = [ ":fastboot-test-package" ]
-  }
+  deps = [ ":fastboot-test-package" ]
 }
 
 test("fastboot-test") {
