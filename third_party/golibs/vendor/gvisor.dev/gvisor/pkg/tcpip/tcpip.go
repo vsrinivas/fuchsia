@@ -71,9 +71,9 @@ type MonotonicTime struct {
 	nanoseconds int64
 }
 
-// Nanoseconds returns the monotonic time in nanoseconds.
-func (mt MonotonicTime) Nanoseconds() int64 {
-	return mt.nanoseconds
+// String implements Stringer.
+func (mt MonotonicTime) String() string {
+	return strconv.FormatInt(mt.nanoseconds, 10)
 }
 
 // Before reports whether the monotonic clock reading mt is before u.
@@ -2102,6 +2102,13 @@ type NICStats struct {
 
 	// Tx contains statistics about transmitted packets.
 	Tx NICPacketStats
+
+	// TxPacketsDroppedNoBufferSpace is the number of packets dropepd due to the
+	// NIC not having enough buffer space to send the packet.
+	//
+	// Packets may be dropped with a no buffer space error when the device TX
+	// queue is full.
+	TxPacketsDroppedNoBufferSpace *StatCounter
 
 	// Rx contains statistics about received packets.
 	Rx NICPacketStats

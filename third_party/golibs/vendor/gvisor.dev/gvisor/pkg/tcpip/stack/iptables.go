@@ -273,6 +273,13 @@ type checkTable struct {
 //
 // If IPTables should not be skipped, tables will be updated with the
 // specified table.
+//
+// This is called in the hot path even when iptables are disabled, so we ensure
+// it does not allocate. We check recursively for heap allocations, but not for:
+//   - Stack splitting, which can allocate.
+//   - Calls to interfaces, which can allocate.
+//   - Calls to dynamic functions, which can allocate.
+// +checkescape:hard
 func (it *IPTables) shouldSkipOrPopulateTables(tables []checkTable, pkt *PacketBuffer) bool {
 	switch pkt.NetworkProtocolNumber {
 	case header.IPv4ProtocolNumber, header.IPv6ProtocolNumber:
@@ -303,14 +310,19 @@ func (it *IPTables) shouldSkipOrPopulateTables(tables []checkTable, pkt *PacketB
 // must be dropped if false is returned.
 //
 // Precondition: The packet's network and transport header must be set.
+//
+// This is called in the hot path even when iptables are disabled, so we ensure
+// that it does not allocate. Note that called functions (e.g.
+// getConnAndUpdate) can allocate.
+// +checkescape
 func (it *IPTables) CheckPrerouting(pkt *PacketBuffer, addressEP AddressableEndpoint, inNicName string) bool {
 	tables := [...]checkTable{
 		{
-			fn:      it.check,
+			fn:      check,
 			tableID: MangleID,
 		},
 		{
-			fn:      it.checkNAT,
+			fn:      checkNAT,
 			tableID: NATID,
 		},
 	}
@@ -322,7 +334,7 @@ func (it *IPTables) CheckPrerouting(pkt *PacketBuffer, addressEP AddressableEndp
 	pkt.tuple = it.connections.getConnAndUpdate(pkt)
 
 	for _, table := range tables {
-		if !table.fn(table.table, Prerouting, pkt, nil /* route */, addressEP, inNicName, "" /* outNicName */) {
+		if !table.fn(it, table.table, Prerouting, pkt, nil /* route */, addressEP, inNicName, "" /* outNicName */) {
 			return false
 		}
 	}
@@ -336,14 +348,19 @@ func (it *IPTables) CheckPrerouting(pkt *PacketBuffer, addressEP AddressableEndp
 // must be dropped if false is returned.
 //
 // Precondition: The packet's network and transport header must be set.
+//
+// This is called in the hot path even when iptables are disabled, so we ensure
+// that it does not allocate. Note that called functions (e.g.
+// getConnAndUpdate) can allocate.
+// +checkescape
 func (it *IPTables) CheckInput(pkt *PacketBuffer, inNicName string) bool {
 	tables := [...]checkTable{
 		{
-			fn:      it.checkNAT,
+			fn:      checkNAT,
 			tableID: NATID,
 		},
 		{
-			fn:      it.check,
+			fn:      check,
 			tableID: FilterID,
 		},
 	}
@@ -353,7 +370,7 @@ func (it *IPTables) CheckInput(pkt *PacketBuffer, inNicName string) bool {
 	}
 
 	for _, table := range tables {
-		if !table.fn(table.table, Input, pkt, nil /* route */, nil /* addressEP */, inNicName, "" /* outNicName */) {
+		if !table.fn(it, table.table, Input, pkt, nil /* route */, nil /* addressEP */, inNicName, "" /* outNicName */) {
 			return false
 		}
 	}
@@ -371,10 +388,15 @@ func (it *IPTables) CheckInput(pkt *PacketBuffer, inNicName string) bool {
 // must be dropped if false is returned.
 //
 // Precondition: The packet's network and transport header must be set.
+//
+// This is called in the hot path even when iptables are disabled, so we ensure
+// that it does not allocate. Note that called functions (e.g.
+// getConnAndUpdate) can allocate.
+// +checkescape
 func (it *IPTables) CheckForward(pkt *PacketBuffer, inNicName, outNicName string) bool {
 	tables := [...]checkTable{
 		{
-			fn:      it.check,
+			fn:      check,
 			tableID: FilterID,
 		},
 	}
@@ -384,7 +406,7 @@ func (it *IPTables) CheckForward(pkt *PacketBuffer, inNicName, outNicName string
 	}
 
 	for _, table := range tables {
-		if !table.fn(table.table, Forward, pkt, nil /* route */, nil /* addressEP */, inNicName, outNicName) {
+		if !table.fn(it, table.table, Forward, pkt, nil /* route */, nil /* addressEP */, inNicName, outNicName) {
 			return false
 		}
 	}
@@ -398,18 +420,23 @@ func (it *IPTables) CheckForward(pkt *PacketBuffer, inNicName, outNicName string
 // must be dropped if false is returned.
 //
 // Precondition: The packet's network and transport header must be set.
+//
+// This is called in the hot path even when iptables are disabled, so we ensure
+// that it does not allocate. Note that called functions (e.g.
+// getConnAndUpdate) can allocate.
+// +checkescape
 func (it *IPTables) CheckOutput(pkt *PacketBuffer, r *Route, outNicName string) bool {
 	tables := [...]checkTable{
 		{
-			fn:      it.check,
+			fn:      check,
 			tableID: MangleID,
 		},
 		{
-			fn:      it.checkNAT,
+			fn:      checkNAT,
 			tableID: NATID,
 		},
 		{
-			fn:      it.check,
+			fn:      check,
 			tableID: FilterID,
 		},
 	}
@@ -421,7 +448,7 @@ func (it *IPTables) CheckOutput(pkt *PacketBuffer, r *Route, outNicName string) 
 	pkt.tuple = it.connections.getConnAndUpdate(pkt)
 
 	for _, table := range tables {
-		if !table.fn(table.table, Output, pkt, r, nil /* addressEP */, "" /* inNicName */, outNicName) {
+		if !table.fn(it, table.table, Output, pkt, r, nil /* addressEP */, "" /* inNicName */, outNicName) {
 			return false
 		}
 	}
@@ -435,14 +462,19 @@ func (it *IPTables) CheckOutput(pkt *PacketBuffer, r *Route, outNicName string) 
 // must be dropped if false is returned.
 //
 // Precondition: The packet's network and transport header must be set.
+//
+// This is called in the hot path even when iptables are disabled, so we ensure
+// that it does not allocate. Note that called functions (e.g.
+// getConnAndUpdate) can allocate.
+// +checkescape
 func (it *IPTables) CheckPostrouting(pkt *PacketBuffer, r *Route, addressEP AddressableEndpoint, outNicName string) bool {
 	tables := [...]checkTable{
 		{
-			fn:      it.check,
+			fn:      check,
 			tableID: MangleID,
 		},
 		{
-			fn:      it.checkNAT,
+			fn:      checkNAT,
 			tableID: NATID,
 		},
 	}
@@ -452,7 +484,7 @@ func (it *IPTables) CheckPostrouting(pkt *PacketBuffer, r *Route, addressEP Addr
 	}
 
 	for _, table := range tables {
-		if !table.fn(table.table, Postrouting, pkt, r, addressEP, "" /* inNicName */, outNicName) {
+		if !table.fn(it, table.table, Postrouting, pkt, r, addressEP, "" /* inNicName */, outNicName) {
 			return false
 		}
 	}
@@ -464,7 +496,13 @@ func (it *IPTables) CheckPostrouting(pkt *PacketBuffer, r *Route, addressEP Addr
 	return true
 }
 
-type checkTableFn func(table Table, hook Hook, pkt *PacketBuffer, r *Route, addressEP AddressableEndpoint, inNicName, outNicName string) bool
+// Note: this used to omit the *IPTables parameter, but doing so caused
+// unnecessary allocations.
+type checkTableFn func(it *IPTables, table Table, hook Hook, pkt *PacketBuffer, r *Route, addressEP AddressableEndpoint, inNicName, outNicName string) bool
+
+func checkNAT(it *IPTables, table Table, hook Hook, pkt *PacketBuffer, r *Route, addressEP AddressableEndpoint, inNicName, outNicName string) bool {
+	return it.checkNAT(table, hook, pkt, r, addressEP, inNicName, outNicName)
+}
 
 // checkNAT runs the packet through the NAT table.
 //
@@ -505,6 +543,10 @@ func (it *IPTables) checkNAT(table Table, hook Hook, pkt *PacketBuffer, r *Route
 	}
 
 	return true
+}
+
+func check(it *IPTables, table Table, hook Hook, pkt *PacketBuffer, r *Route, addressEP AddressableEndpoint, inNicName, outNicName string) bool {
+	return it.check(table, hook, pkt, r, addressEP, inNicName, outNicName)
 }
 
 // check runs the packet through the rules in the specified table for the

@@ -233,6 +233,7 @@ async fn inspect_nic() {
                    Bytes: 0u64,
                    Packets: 0u64,
                 },
+                TxPacketsDroppedNoBufferSpace: 0u64,
                 Rx: {
                     Bytes: 0u64,
                     Packets: 0u64,
@@ -283,6 +284,7 @@ async fn inspect_nic() {
                    Bytes: AnyProperty,
                    Packets: AnyProperty,
                 },
+                TxPacketsDroppedNoBufferSpace: AnyProperty,
                 Rx: {
                     Bytes: AnyProperty,
                     Packets: AnyProperty,
@@ -354,6 +356,7 @@ async fn inspect_nic() {
                    Bytes: AnyProperty,
                    Packets: AnyProperty,
                 },
+                TxPacketsDroppedNoBufferSpace: AnyProperty,
                 Rx: {
                     Bytes: AnyProperty,
                     Packets: AnyProperty,
@@ -862,6 +865,7 @@ async fn inspect_stat_counters() {
                 Bytes: AnyProperty,
                 Packets: AnyProperty,
             },
+            TxPacketsDroppedNoBufferSpace: AnyProperty,
             UnknownL3ProtocolRcvdPacketCounts: {
                 Total: {
                     Count: "0"
