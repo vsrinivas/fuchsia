@@ -31,11 +31,6 @@ pub struct m32x4(__m128i);
 pub struct m32x8(__m256i);
 
 impl m32x8 {
-    pub fn splat(val: u32) -> Self {
-        // Casting between two integers of the same size is a no-op.
-        // It preserves the binary representation.
-        Self(unsafe { _mm256_set1_epi32(val as i32) })
-    }
     pub fn all(self) -> bool {
         unsafe { _mm256_movemask_epi8(_mm256_cmpeq_epi32(self.0, _mm256_setzero_si256())) == 0 }
     }

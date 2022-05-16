@@ -136,6 +136,23 @@ impl u32x8 {
     pub fn splat(val: u32) -> Self {
         Self([u32x4_splat(val), u32x4_splat(val)])
     }
+
+    pub fn to_array(self) -> [u32; 8] {
+        unsafe { mem::transmute(self.0) }
+    }
+
+    pub fn mul_add(self, a: Self, b: Self) -> Self {
+        Self([
+            u32x4_add(u32x4_mul(self.0[0], a.0[0]), b.0[0]),
+            u32x4_add(u32x4_mul(self.0[1], a.0[1]), b.0[1]),
+        ])
+    }
+}
+
+impl From<f32x8> for u32x8 {
+    fn from(val: f32x8) -> Self {
+        Self([f32x4_convert_u32x4(val.0[0]), f32x4_convert_u32x4(val.0[1])])
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -354,6 +371,7 @@ impl f32x8 {
         ])
     }
 
+    #[cfg(test)]
     pub fn to_array(self) -> [f32; 8] {
         unsafe { mem::transmute(self.0) }
     }
@@ -391,10 +409,6 @@ impl f32x8 {
 
     pub fn clamp(self, min: Self, max: Self) -> Self {
         self.min(max).max(min)
-    }
-
-    pub fn floor(self) -> Self {
-        Self([f32x4_floor(self.0[0]), f32x4_floor(self.0[1])])
     }
 
     pub fn sqrt(self) -> Self {
