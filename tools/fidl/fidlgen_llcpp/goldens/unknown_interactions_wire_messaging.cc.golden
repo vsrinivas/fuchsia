@@ -640,7 +640,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_unknowninteractions::Example>*>(
               interface)
               ->StrictOneWay(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -659,7 +659,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_unknowninteractions::Example>*>(
               interface)
               ->FlexibleOneWay(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -677,7 +677,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_unknowninteractions::Example>*>(
               interface)
               ->StrictTwoWay(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -696,7 +696,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_unknowninteractions::Example>*>(
               interface)
               ->FlexibleTwoWay(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

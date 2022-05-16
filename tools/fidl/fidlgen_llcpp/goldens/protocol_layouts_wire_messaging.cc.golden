@@ -2703,7 +2703,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::OneWayAnonComposed>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2713,7 +2713,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->OneWayAnonComposed(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2726,7 +2726,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2736,7 +2736,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->TwoWayAnonComposed(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2751,7 +2751,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                       TwoWayAnonComposedWithError>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_protocollayouts::MainProtocol::
@@ -2761,7 +2761,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->TwoWayAnonComposedWithError(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2774,7 +2774,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::OneWayNamedComposed>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2784,7 +2784,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->OneWayNamedComposed(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2797,7 +2797,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2807,7 +2807,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->TwoWayNamedComposed(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2822,7 +2822,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                       TwoWayNamedComposedWithError>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2832,7 +2832,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->TwoWayNamedComposedWithError(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2845,7 +2845,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::OneWayImport>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2855,7 +2855,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->OneWayImport(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2868,7 +2868,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::TwoWayImport>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2878,7 +2878,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->TwoWayImport(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2891,7 +2891,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::TwoWayImportWithError>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2901,7 +2901,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->TwoWayImportWithError(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2914,7 +2914,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::OneWayLocal>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2924,7 +2924,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->OneWayLocal(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2937,7 +2937,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::TwoWayLocal>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2947,7 +2947,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->TwoWayLocal(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2960,7 +2960,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2970,7 +2970,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->TwoWayLocalWithError(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -2983,7 +2983,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::OneWayAnon>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -2993,7 +2993,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->OneWayAnon(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -3006,7 +3006,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::TwoWayAnon>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -3016,7 +3016,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->TwoWayAnon(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -3029,7 +3029,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -3039,7 +3039,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_protocollayouts::MainProtocol>*>(
               interface)
               ->TwoWayAnonWithError(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

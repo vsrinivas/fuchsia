@@ -61,7 +61,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_driveroneway::OneWaySendRequest>(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_driveroneway::OneWay::Send> request =
               ::fidl::internal::NaturalMessageConverter<
@@ -71,7 +71,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_driveroneway::OneWay::Send>::Sync completer(txn);
           static_cast<::fdf::Server<::test_driveroneway::OneWay>*>(interface)
               ->Send(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

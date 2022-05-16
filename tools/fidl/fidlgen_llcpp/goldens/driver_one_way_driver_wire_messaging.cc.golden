@@ -120,7 +120,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_driveroneway::OneWay::Send>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -130,7 +130,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           reinterpret_cast<::fdf::WireServer<::test_driveroneway::OneWay>*>(
               interface)
               ->Send(primary, arena, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

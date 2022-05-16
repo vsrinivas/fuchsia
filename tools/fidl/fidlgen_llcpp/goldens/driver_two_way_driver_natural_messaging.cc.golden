@@ -101,7 +101,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_drivertwoway::TwoWayAddRequest>(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_drivertwoway::TwoWay::Add> request =
               ::fidl::internal::NaturalMessageConverter<
@@ -111,7 +111,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_drivertwoway::TwoWay::Add>::Sync completer(txn);
           static_cast<::fdf::Server<::test_drivertwoway::TwoWay>*>(interface)
               ->Add(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

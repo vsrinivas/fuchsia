@@ -179,7 +179,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           reinterpret_cast<::fidl::WireServer<::test_service::SecondProtocol>*>(
               interface)
               ->MethodOnSecond(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };
@@ -401,7 +401,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           reinterpret_cast<::fidl::WireServer<::test_service::FirstProtocol>*>(
               interface)
               ->MethodOnFirst(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

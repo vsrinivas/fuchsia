@@ -95,14 +95,14 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_versions::Protocol::Foo> request;
           ::fidl::internal::NaturalCompleter<
               ::test_versions::Protocol::Foo>::Sync completer(txn);
           static_cast<::fidl::Server<::test_versions::Protocol>*>(interface)
               ->Foo(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

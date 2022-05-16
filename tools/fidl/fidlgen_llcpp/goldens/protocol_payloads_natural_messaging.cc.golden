@@ -936,7 +936,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_protocolpayloads_imported::ImportStructPayload>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>
               request =
@@ -949,7 +949,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->OneWayComposed(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -961,7 +961,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_protocolpayloads_imported::ImportStructPayload>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>
               request =
@@ -974,7 +974,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->TwoWayComposed(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -986,7 +986,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_protocolpayloads_imported::ImportStructPayload>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<
               ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
@@ -1000,7 +1000,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->TwoWayComposedWithError(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -1011,7 +1011,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocolpayloads::LocalStructPayload>(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>
               request =
@@ -1024,7 +1024,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->OneWayLocal(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -1035,7 +1035,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocolpayloads::LocalStructPayload>(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>
               request =
@@ -1048,7 +1048,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->TwoWayLocal(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -1059,7 +1059,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_protocolpayloads::LocalStructPayload>(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<
               ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
@@ -1073,7 +1073,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->TwoWayLocalWithError(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -1085,7 +1085,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_protocolpayloads_imported::ImportStructPayload>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport>
               request =
@@ -1098,7 +1098,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->OneWayImport(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -1110,7 +1110,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_protocolpayloads_imported::ImportStructPayload>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>
               request =
@@ -1123,7 +1123,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->TwoWayImport(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -1135,7 +1135,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_protocolpayloads_imported::ImportStructPayload>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<
               ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
@@ -1149,7 +1149,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->TwoWayImportWithError(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -1161,7 +1161,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_protocolpayloads::MainProtocolOneWayAnonRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>
               request =
@@ -1174,7 +1174,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->OneWayAnon(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -1186,7 +1186,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_protocolpayloads::MainProtocolTwoWayAnonRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>
               request =
@@ -1199,7 +1199,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->TwoWayAnon(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -1211,7 +1211,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<
               ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
@@ -1225,7 +1225,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_protocolpayloads::MainProtocol>*>(
               interface)
               ->TwoWayAnonWithError(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

@@ -412,7 +412,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                       RequestStrictResponseFlexible>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -422,7 +422,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_requestflexibleenvelope::Protocol>*>(
               interface)
               ->RequestStrictResponseFlexible(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -437,7 +437,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                       RequestFlexibleResponseStrict>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -447,7 +447,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_requestflexibleenvelope::Protocol>*>(
               interface)
               ->RequestFlexibleResponseStrict(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

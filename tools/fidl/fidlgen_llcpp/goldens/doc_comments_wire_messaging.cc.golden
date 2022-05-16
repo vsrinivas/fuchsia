@@ -219,7 +219,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           reinterpret_cast<::fidl::WireServer<::test_doccomments::Interface>*>(
               interface)
               ->Method(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

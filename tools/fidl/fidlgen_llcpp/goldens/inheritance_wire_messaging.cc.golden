@@ -203,7 +203,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_inheritance::Super::Foo>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritance::Super::Foo>::Sync
@@ -211,7 +211,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           reinterpret_cast<::fidl::WireServer<::test_inheritance::Super>*>(
               interface)
               ->Foo(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };
@@ -496,7 +496,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_inheritance::Sub::Foo>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritance::Sub::Foo>::Sync
@@ -504,7 +504,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           reinterpret_cast<::fidl::WireServer<::test_inheritance::Sub>*>(
               interface)
               ->Foo(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

@@ -363,7 +363,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_emptystruct::EmptyProtocol::Send>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -371,7 +371,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           reinterpret_cast<
               ::fidl::WireServer<::test_emptystruct::EmptyProtocol>*>(interface)
               ->Send(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -384,7 +384,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_emptystruct::EmptyProtocol::SendAndReceive>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -393,7 +393,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           reinterpret_cast<
               ::fidl::WireServer<::test_emptystruct::EmptyProtocol>*>(interface)
               ->SendAndReceive(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

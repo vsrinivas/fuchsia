@@ -249,7 +249,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_anonymous::SomeProtocol::SomeMethod>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -257,7 +257,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           reinterpret_cast<::fidl::WireServer<::test_anonymous::SomeProtocol>*>(
               interface)
               ->SomeMethod(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

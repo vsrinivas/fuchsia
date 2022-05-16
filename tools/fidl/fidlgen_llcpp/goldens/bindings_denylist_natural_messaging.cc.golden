@@ -126,7 +126,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                               LibfuzzerNeedsNonemptyProtocol>
@@ -138,7 +138,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>*>(
               interface)
               ->LibfuzzerNeedsNonemptyProtocol(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };
@@ -287,7 +287,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<
               ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
@@ -299,7 +299,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>*>(
               interface)
               ->Unattributed(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -311,7 +311,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::
                               AlwaysAppearsInImportingLibrary>
@@ -323,7 +323,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>*>(
               interface)
               ->AlwaysAppearsInImportingLibrary(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };
@@ -632,7 +632,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
@@ -647,7 +647,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>*>(
               interface)
               ->OnlyDenyDart(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -659,7 +659,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
               request =
@@ -673,7 +673,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>*>(
               interface)
               ->OnlyDenyGo(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -685,7 +685,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
@@ -700,7 +700,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>*>(
               interface)
               ->OnlyDenyLibfuzzer(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -712,7 +712,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
@@ -727,7 +727,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>*>(
               interface)
               ->OnlyDenyRust(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -739,7 +739,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
@@ -754,7 +754,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_bindingsdenylist::DenyEachBinding>*>(
               interface)
               ->OnlyDenySyzkaller(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

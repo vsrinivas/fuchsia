@@ -136,7 +136,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_union::TestProtocol::
                               StrictXUnionHenceResponseMayBeStackAllocated>
@@ -148,7 +148,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_union::TestProtocol>*>(interface)
               ->StrictXUnionHenceResponseMayBeStackAllocated(request,
                                                              completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -160,7 +160,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>
@@ -172,7 +172,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_union::TestProtocol>*>(interface)
               ->FlexibleXUnionHenceResponseMustBeHeapAllocated(request,
                                                                completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

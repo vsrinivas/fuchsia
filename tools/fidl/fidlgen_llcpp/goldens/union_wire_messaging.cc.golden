@@ -402,7 +402,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               interface)
               ->StrictXUnionHenceResponseMayBeStackAllocated(primary,
                                                              completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -424,7 +424,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               interface)
               ->FlexibleXUnionHenceResponseMustBeHeapAllocated(primary,
                                                                completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

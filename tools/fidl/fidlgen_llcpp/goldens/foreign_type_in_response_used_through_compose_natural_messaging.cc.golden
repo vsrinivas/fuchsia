@@ -78,7 +78,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<
               ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
@@ -89,7 +89,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<
               ::test_foreigntypeinresponseusedthroughcompose::Top>*>(interface)
               ->GetFoo(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

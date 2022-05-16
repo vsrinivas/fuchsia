@@ -38,7 +38,7 @@ constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::e
         {{- if .RequestArgs }}
         ::fidl::unstable::DecodedMessage<{{ .WireTransactionalRequest }}> decoded{std::move(msg)};
         if (unlikely(!decoded.ok())) {
-          return decoded.status();
+          return ::fidl::Status{decoded};
         }
         auto* primary = &decoded.PrimaryObject()->body;
         {{- else }}
@@ -54,7 +54,7 @@ constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::e
         reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
             primary, completer);
           {{- end }}
-        return ZX_OK;
+        return ::fidl::Status::Ok();
       },
     },
   {{- end }}
@@ -120,7 +120,7 @@ constexpr ::fidl::internal::MethodEntry {{ .NaturalServerDispatcher.NoLeading }}
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage
             {{- if .HasRequestPayload }}<{{ .RequestPayload }}>{{ end }}(std::move(msg));
         if (decoded.is_error()) {
-          return decoded.error_value().status();
+          return decoded.error_value();
         }
         {{ .NaturalRequest }} request
         {{- if .HasRequestPayload }}
@@ -129,7 +129,7 @@ constexpr ::fidl::internal::MethodEntry {{ .NaturalServerDispatcher.NoLeading }}
         {{ .NaturalCompleter }}::Sync completer(txn);
         static_cast<{{ $.NaturalServer }}*>(interface)->{{ .Name }}(
             request, completer);
-        return ZX_OK;
+        return ::fidl::Status::Ok();
       },
     },
   {{- end }}

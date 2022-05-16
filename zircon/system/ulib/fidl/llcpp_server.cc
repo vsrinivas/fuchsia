@@ -22,11 +22,11 @@ namespace internal {
   auto* hdr = msg.header();
   while (begin < end) {
     if (hdr->ordinal == begin->ordinal) {
-      zx_status_t decode_status =
+      fidl::Status decode_status =
           begin->dispatch(impl, std::move(msg), std::move(transport_context), txn);
-      if (unlikely(decode_status != ZX_OK)) {
-        txn->InternalError(UnbindInfo{fidl::Status::DecodeError(decode_status)},
-                           fidl::ErrorOrigin::kReceive);
+      if (unlikely(!decode_status.ok())) {
+        ZX_DEBUG_ASSERT(decode_status.reason() == fidl::Reason::kDecodeError);
+        txn->InternalError(UnbindInfo{decode_status}, fidl::ErrorOrigin::kReceive);
       }
       return ::fidl::DispatchResult::kFound;
     }

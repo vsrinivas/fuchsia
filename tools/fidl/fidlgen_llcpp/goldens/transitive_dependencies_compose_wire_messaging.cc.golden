@@ -227,7 +227,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fidl::WireServer<::test_transitivedependenciescompose::Top>*>(
               interface)
               ->GetFoo(primary, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

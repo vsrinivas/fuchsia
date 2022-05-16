@@ -158,7 +158,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_emptystruct::EmptyProtocolSendRequest>(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> request =
               ::fidl::internal::NaturalMessageConverter<
@@ -169,7 +169,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_emptystruct::EmptyProtocol>*>(
               interface)
               ->Send(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -181,7 +181,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>
               request =
@@ -194,7 +194,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_emptystruct::EmptyProtocol>*>(
               interface)
               ->SendAndReceive(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

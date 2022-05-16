@@ -64,9 +64,9 @@ struct MethodEntry {
   //
   // The function must consume the handles in |msg|.
   // The function should perform decoding, and return the decoding status.
-  zx_status_t (*dispatch)(void* interface, ::fidl::IncomingMessage&& msg,
-                          internal::IncomingTransportContext transport_context,
-                          ::fidl::Transaction* txn);
+  ::fidl::Status (*dispatch)(void* interface, ::fidl::IncomingMessage&& msg,
+                             internal::IncomingTransportContext transport_context,
+                             ::fidl::Transaction* txn);
 };
 
 // The compiler generates an array of MethodEntry for each protocol.

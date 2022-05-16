@@ -61,7 +61,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::test_placementofattributes::ExampleProtocolMethodRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
               request =
@@ -75,7 +75,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_placementofattributes::ExampleProtocol>*>(
               interface)
               ->Method(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

@@ -80,7 +80,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_anonymous::SomeProtocolSomeMethodRequest>(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request =
               ::fidl::internal::NaturalMessageConverter<
@@ -91,7 +91,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_anonymous::SomeProtocol>*>(
               interface)
               ->SomeMethod(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

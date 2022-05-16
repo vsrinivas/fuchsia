@@ -74,7 +74,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_error::ExampleFooRequest>(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_error::Example::Foo> request =
               ::fidl::internal::NaturalMessageConverter<
@@ -84,7 +84,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               completer(txn);
           static_cast<::fidl::Server<::test_error::Example>*>(interface)->Foo(
               request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

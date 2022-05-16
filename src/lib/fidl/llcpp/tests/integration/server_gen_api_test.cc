@@ -1151,14 +1151,22 @@ class NotImplementedServer : public fidl::testing::WireTestBase<fidl_test_coding
 template <typename Protocol>
 class UnbindObserver {
  public:
-  UnbindObserver(fidl::Reason expected_reason, zx_status_t expected_status)
-      : expected_reason_(expected_reason), expected_status_(expected_status) {}
+  UnbindObserver(fidl::Reason expected_reason, zx_status_t expected_status,
+                 std::string expected_message_substring = "")
+      : expected_reason_(expected_reason), expected_status_(expected_status) {
+    if (!expected_message_substring.empty()) {
+      expected_message_substring_.emplace(std::move(expected_message_substring));
+    }
+  }
 
   fidl::OnUnboundFn<fidl::WireServer<Protocol>> GetCallback() {
     fidl::OnUnboundFn<fidl::WireServer<Protocol>> on_unbound =
         [this](fidl::WireServer<Protocol>*, fidl::UnbindInfo info, fidl::ServerEnd<Protocol>) {
           EXPECT_EQ(expected_reason_, info.reason());
           EXPECT_EQ(expected_status_, info.status());
+          if (expected_message_substring_.has_value()) {
+            EXPECT_SUBSTR(info.FormatDescription().c_str(), expected_message_substring_->c_str());
+          }
           completion_.Signal();
         };
     return on_unbound;
@@ -1171,8 +1179,47 @@ class UnbindObserver {
  private:
   fidl::Reason expected_reason_;
   zx_status_t expected_status_;
+  std::optional<std::string> expected_message_substring_;
   libsync::Completion completion_;
 };
+
+TEST(BindServerTestCase, UnbindInfoDecodeError) {
+  auto server = std::make_unique<NotImplementedServer>();
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+
+  zx::status endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  // Error message should contain the word "presence", because the presence
+  // marker is invalid. Only checking for "presence" allows the error message to
+  // evolve slightly without breaking tests.
+  UnbindObserver<Example> observer(fidl::Reason::kDecodeError, ZX_ERR_INVALID_ARGS, "presence");
+  fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
+
+  // Make a call with an intentionally crafted wrong message.
+  // To trigger a decode error, here we use a string with an invalid presence marker.
+  fidl::internal::TransactionalRequest<Example::TwoWay> request;
+  request.body.in = fidl::StringView::FromExternal(
+      reinterpret_cast<const char*>(0x1234123412341234),  // invalid presence marker
+      0                                                   // size
+  );
+  const zx_channel_call_args_t args{
+      .wr_bytes = &request,
+      .wr_handles = nullptr,
+      .rd_bytes = nullptr,
+      .rd_handles = nullptr,
+      .wr_num_bytes = sizeof(request),
+      .wr_num_handles = 0,
+      .rd_num_bytes = 0,
+      .rd_num_handles = 0,
+  };
+  EXPECT_STATUS(ZX_ERR_PEER_CLOSED,
+                local.channel().call(0, zx::time::infinite(), &args, nullptr, nullptr));
+
+  ASSERT_OK(observer.completion().Wait());
+}
 
 TEST(BindServerTestCase, UnbindInfoDispatcherBeginsShutdownDuringMessageHandling) {
   struct WorkingServer : fidl::WireServer<Example> {

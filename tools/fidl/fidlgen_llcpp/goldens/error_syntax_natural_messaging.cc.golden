@@ -146,7 +146,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
                   ParentUsesErrorSyntaxComposedCallWhichMayFailRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::
                               ComposedCallWhichMayFail>
@@ -161,7 +161,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>*>(
               interface)
               ->ComposedCallWhichMayFail(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
     {
@@ -174,7 +174,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
                   ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(
               std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<
               ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
@@ -189,7 +189,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>*>(
               interface)
               ->CallWhichMayFail(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

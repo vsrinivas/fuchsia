@@ -77,7 +77,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded =
               ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo>
               request;
@@ -88,7 +88,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
               ::fidl::Server<::test_transitivedependenciescompose::Top>*>(
               interface)
               ->GetFoo(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

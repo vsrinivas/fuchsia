@@ -132,7 +132,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
                   ::test_driverhandle::HandlesInProtocol::SendHandles>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
-            return decoded.status();
+            return ::fidl::Status{decoded};
           }
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
@@ -144,7 +144,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::fdf::WireServer<::test_driverhandle::HandlesInProtocol>*>(
               interface)
               ->SendHandles(primary, arena, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };

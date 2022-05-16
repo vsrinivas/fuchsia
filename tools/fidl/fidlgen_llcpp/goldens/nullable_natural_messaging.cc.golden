@@ -77,7 +77,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<
               ::test_nullable::SimpleProtocolAddRequest>(std::move(msg));
           if (decoded.is_error()) {
-            return decoded.error_value().status();
+            return decoded.error_value();
           }
           ::fidl::Request<::test_nullable::SimpleProtocol::Add> request =
               ::fidl::internal::NaturalMessageConverter<
@@ -88,7 +88,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           static_cast<::fidl::Server<::test_nullable::SimpleProtocol>*>(
               interface)
               ->Add(request, completer);
-          return ZX_OK;
+          return ::fidl::Status::Ok();
         },
     },
 };
