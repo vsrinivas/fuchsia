@@ -4,8 +4,8 @@
 
 use {
     anyhow::Error, fidl::endpoints::ProtocolMarker, fidl_fidl_examples_routing_echo as fecho,
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsys,
-    fuchsia_component::client::connect_to_protocol, futures::StreamExt,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_sys as fsys, fuchsia_component::client::connect_to_protocol, futures::StreamExt,
     vfs::execution_scope::ExecutionScope,
 };
 
@@ -27,14 +27,14 @@ async fn launch_echo_component(
 }
 
 async fn call_echo(
-    echo_str: &str,
+    echo_str: Option<&str>,
     dir_proxy: &fio::DirectoryProxy,
 ) -> Result<Option<String>, Error> {
     let echo = fuchsia_component::client::connect_to_named_protocol_at_dir_root::<fecho::EchoMarker>(
         &dir_proxy,
         format!("svc/{}", fecho::EchoMarker::DEBUG_NAME).as_str(),
     )?;
-    echo.echo_string(Some(echo_str)).await.map_err(|e| e.into())
+    echo.echo_string(echo_str).await.map_err(|e| e.into())
 }
 
 #[fuchsia::test]
@@ -49,7 +49,7 @@ async fn test_legacy_echo() {
     let _component =
         launch_echo_component(start_info, "test_legacy_echo", execution_scope).await.unwrap();
     const ECHO_STRING: &str = "Hello, world!";
-    let out = call_echo(ECHO_STRING, &dir_proxy).await.expect("echo failed");
+    let out = call_echo(Some(ECHO_STRING), &dir_proxy).await.expect("echo failed");
     assert_eq!(ECHO_STRING, out.unwrap());
 }
 
@@ -73,7 +73,7 @@ async fn test_legacy_echo_stop() {
 
     // make sure echo is running
     const ECHO_STRING: &str = "Hello, world!";
-    let out = call_echo(ECHO_STRING, &dir_proxy).await.expect("echo failed");
+    let out = call_echo(Some(ECHO_STRING), &dir_proxy).await.expect("echo failed");
     assert_eq!(ECHO_STRING, out.unwrap());
 
     proxy.stop().unwrap();
@@ -83,7 +83,7 @@ async fn test_legacy_echo_stop() {
     while let Some(_) = stream.next().await {}
 
     // make sure echo fails
-    call_echo(ECHO_STRING, &dir_proxy).await.expect_err("echo should fail");
+    call_echo(Some(ECHO_STRING), &dir_proxy).await.expect_err("echo should fail");
 }
 
 #[fuchsia::test]
@@ -106,7 +106,7 @@ async fn test_legacy_echo_kill() {
 
     // make sure echo is running
     const ECHO_STRING: &str = "Hello, world!";
-    let out = call_echo(ECHO_STRING, &dir_proxy).await.expect("echo failed");
+    let out = call_echo(Some(ECHO_STRING), &dir_proxy).await.expect("echo failed");
     assert_eq!(ECHO_STRING, out.unwrap());
 
     proxy.kill().unwrap();
@@ -116,5 +116,29 @@ async fn test_legacy_echo_kill() {
     while let Some(_) = stream.next().await {}
 
     // make sure echo fails
-    call_echo(ECHO_STRING, &dir_proxy).await.expect_err("echo should fail");
+    call_echo(Some(ECHO_STRING), &dir_proxy).await.expect_err("echo should fail");
+}
+
+#[fuchsia::test]
+async fn test_legacy_echo_with_args() {
+    const TEST_VALUE: &str = "TEST";
+
+    let execution_scope = ExecutionScope::new();
+    let mut start_info = fcrunner::ComponentStartInfo::EMPTY;
+    start_info.ns = Some(vec![]);
+    start_info.program = Some(fdata::Dictionary {
+        entries: Some(vec![fdata::DictionaryEntry {
+            key: "args".to_string(),
+            value: Some(Box::new(fdata::DictionaryValue::StrVec(vec![TEST_VALUE.to_string()]))),
+        }]),
+        ..fdata::Dictionary::EMPTY
+    });
+
+    let (dir_proxy, dir_end) = fidl::endpoints::create_proxy().unwrap();
+    start_info.outgoing_dir = Some(dir_end);
+
+    let _component =
+        launch_echo_component(start_info, "test_legacy_echo_args", execution_scope).await.unwrap();
+    let out = call_echo(None, &dir_proxy).await.expect("echo failed");
+    assert_eq!(TEST_VALUE.to_string(), out.unwrap());
 }

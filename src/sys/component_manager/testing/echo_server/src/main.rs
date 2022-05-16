@@ -34,8 +34,15 @@ async fn main() -> Result<(), anyhow::Error> {
 
 // Handler for incoming service requests
 async fn handle_echo_request(mut stream: EchoRequestStream) {
+    let default_reply = match std::env::args().skip(1).next() {
+        Some(user_specified_reply) => user_specified_reply,
+        None => "UNSET".to_string(),
+    };
+
     while let Some(event) = stream.try_next().await.expect("failed to serve echo service") {
         let EchoRequest::EchoString { value, responder } = event;
-        responder.send(value.as_ref().map(|s| &**s)).expect("failed to send echo response");
+        responder
+            .send(Some(value.unwrap_or(default_reply.to_string())).as_ref().map(|s| &**s))
+            .expect("failed to send echo response");
     }
 }

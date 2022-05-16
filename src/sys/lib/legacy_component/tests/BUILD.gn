@@ -12,6 +12,7 @@ rustc_test("legacy_component_lib_tests_bin") {
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fidl/rust/fidl",
