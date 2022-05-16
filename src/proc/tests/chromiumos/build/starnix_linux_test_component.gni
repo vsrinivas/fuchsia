@@ -2,9 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("starnix_toolchain_test_component.gni")
 
-# Defines a Fuchsia component that contains a host test.
+# Defines a Fuchsia component that contains a test binary built for linux_x64.
 #
 # This template expects to find a CML file named "meta/${test_name}.cml" where
 # "test_name" is the name of this target. This file is used as the component
@@ -18,11 +19,8 @@ import("starnix_toolchain_test_component.gni")
 #     Type: GN label
 #
 #   The remaining parameters are forwarded to the fuchsia_component template.
-# TODO(fxbug.dev/100002): This should be removed once all our tests can be built
-#                         using the explicit linux toolchain
-template("starnix_host_test_component") {
-  assert(host_os == "linux")
-  test_toolchain = "$host_toolchain"
+template("starnix_linux_test_component") {
+  test_toolchain = "//build/toolchain:linux_x64"
   starnix_toolchain_test_component(target_name) {
     forward_variables_from(invoker, "*")
   }
