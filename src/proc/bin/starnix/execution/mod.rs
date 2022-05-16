@@ -11,5 +11,6 @@ mod shared;
 pub use component_runner::*;
 #[cfg(not(feature = "restricted_mode"))]
 pub use exception_executor::*;
+pub use galaxy::*;
 pub use serve_protocols::*;
 pub use shared::*;

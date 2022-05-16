@@ -4,6 +4,8 @@
 
 use anyhow::{anyhow, Context, Error};
 use fidl_fuchsia_io as fio;
+use fuchsia_async as fasync;
+use fuchsia_async::DurationExt;
 use fuchsia_zircon as zx;
 use starnix_runner_config::Config;
 use std::ffi::CString;
@@ -29,16 +31,6 @@ fn to_cstr(str: &String) -> CString {
 }
 
 pub struct Galaxy {
-    /// The initial task in the galaxy, if one was specified in the galaxy's CONFIGuration file.
-    ///
-    /// This task is executed prior to running any other tasks in the galaxy.
-    pub init_task: Option<CurrentTask>,
-
-    /// A path to a file in the `init_task`'s filesystem. If this file is `Some`, then the runner
-    /// machinery will wait for the file to exist before executing any other tasks in the galaxy
-    /// (`init_task` is started, since it is expected to create this file).
-    pub startup_file_path: Option<String>,
-
     /// The `Kernel` object that is associated with the galaxy.
     pub kernel: Arc<Kernel>,
 
@@ -53,13 +45,7 @@ pub struct Galaxy {
 ///
 /// If a `startup_file_path` is also returned, the caller should wait to start any other tasks
 /// until the file at `startup_file_path` exists.
-///
-/// # Parameters
-/// - `outgoing_dir`: The outgoing directory of the component to run in the galaxy. This is used
-///                   to serve protocols on behalf of the component.
-pub fn create_galaxy(
-    outgoing_dir: &mut Option<fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>>,
-) -> Result<Galaxy, Error> {
+pub async fn create_galaxy() -> Result<Galaxy, Error> {
     const COMPONENT_PKG_PATH: &'static str = "/pkg";
 
     let (server, client) = zx::Channel::create().context("failed to create channel pair")?;
@@ -72,7 +58,6 @@ pub fn create_galaxy(
     let pkg_dir_proxy = fio::DirectorySynchronousProxy::new(client);
     let mut kernel = Kernel::new(&to_cstr(&CONFIG.name), &CONFIG.features)?;
     kernel.cmdline = CONFIG.kernel_cmdline.as_bytes().to_vec();
-    *kernel.outgoing_dir.lock() = outgoing_dir.take().map(|server_end| server_end.into_channel());
     let kernel = Arc::new(kernel);
 
     let fs_context = create_fs_context(&kernel, &pkg_dir_proxy)?;
@@ -84,32 +69,41 @@ pub fn create_galaxy(
     // TODO(tbodt): Remove once apexd works.
     mount_apexes(&init_task)?;
 
-    // Run all the features (e.g., wayland) that were specified in the .cml.
+    // Run all common features that were specified in the .cml.
     run_features(&CONFIG.features, &init_task)
         .map_err(|e| anyhow!("Failed to initialize features: {:?}", e))?;
     // TODO: This should probably be part of the "feature" CONFIGuration.
     let kernel = init_task.kernel().clone();
 
     let root_fs = init_task.fs.clone();
-    // Only return an init task if there was an init binary path. The task struct is still used
-    // to initialize the system up until this point, regardless of whether or not there is an
-    // actual init to be run.
-    let init_task = if CONFIG.init.is_empty() {
-        // A task must have an exit status, so set it here to simulate the init task having run.
-        init_task.write().exit_status = Some(ExitStatus::Exit(0));
-        None
-    } else {
-        let argv: Vec<_> = CONFIG.init.iter().map(to_cstr).collect();
-        init_task.exec(argv[0].clone(), argv.clone(), vec![])?;
-        Some(init_task)
-    };
 
     let startup_file_path = if CONFIG.startup_file_path.is_empty() {
         None
     } else {
         Some(CONFIG.startup_file_path.clone())
     };
-    Ok(Galaxy { init_task, startup_file_path, kernel, root_fs })
+
+    // If there is an init binary path, run it, optionally waiting for the
+    // startup_file_path to be created. The task struct is still used
+    // to initialize the system up until this point, regardless of whether
+    // or not there is an actual init to be run.
+    if CONFIG.init.is_empty() {
+        // A task must have an exit status, so set it here to simulate the init task having run.
+        init_task.write().exit_status = Some(ExitStatus::Exit(0));
+    } else {
+        let argv: Vec<_> = CONFIG.init.iter().map(to_cstr).collect();
+        init_task.exec(argv[0].clone(), argv.clone(), vec![])?;
+        execute_task(init_task, |result| {
+            tracing::info!("Finished running init process: {:?}", result);
+        });
+        if let Some(startup_file_path) = startup_file_path {
+            let init_wait_task = create_init_task(&kernel, &fs_context)?;
+            wait_for_init_file(&startup_file_path, &init_wait_task).await?;
+            init_wait_task.write().exit_status = Some(ExitStatus::Exit(0));
+        }
+    };
+
+    Ok(Galaxy { kernel, root_fs })
 }
 
 fn create_fs_context(
@@ -185,4 +179,89 @@ fn mount_filesystems(
         mount_point.mount(child_fs, MountFlags::empty())?;
     }
     Ok(())
+}
+
+async fn wait_for_init_file(
+    startup_file_path: &str,
+    current_task: &CurrentTask,
+) -> Result<(), Error> {
+    // TODO(fxb/96299): Use inotify machinery to wait for the file.
+    loop {
+        fasync::Timer::new(fasync::Duration::from_millis(100).after_now()).await;
+        let root = current_task.fs.namespace_root();
+        let mut context = LookupContext::default();
+        match current_task.lookup_path(&mut context, root, startup_file_path.as_bytes()) {
+            Ok(_) => break,
+            Err(error) if error == ENOENT => continue,
+            Err(error) => return Err(anyhow::Error::new(error)),
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::wait_for_init_file;
+    use crate::fs::FdNumber;
+    use crate::testing::create_kernel_and_task;
+    use crate::types::*;
+    use fuchsia_async as fasync;
+    use futures::{SinkExt, StreamExt};
+
+    #[fuchsia::test]
+    async fn test_init_file_already_exists() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let (mut sender, mut receiver) = futures::channel::mpsc::unbounded();
+
+        let path = "/path";
+        current_task
+            .open_file_at(
+                FdNumber::AT_FDCWD,
+                &path.as_bytes(),
+                OpenFlags::CREAT,
+                FileMode::default(),
+            )
+            .expect("Failed to create file");
+
+        fasync::Task::local(async move {
+            wait_for_init_file(&path, &current_task).await.expect("failed to wait for file");
+            sender.send(()).await.expect("failed to send message");
+        })
+        .detach();
+
+        // Wait for the file creation to have been detected.
+        assert!(receiver.next().await.is_some());
+    }
+
+    #[fuchsia::test]
+    async fn test_init_file_wait_required() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let (mut sender, mut receiver) = futures::channel::mpsc::unbounded();
+
+        let init_task = current_task.clone_task_for_test(CLONE_FS as u64);
+        let path = "/path";
+
+        fasync::Task::local(async move {
+            sender.send(()).await.expect("failed to send message");
+            wait_for_init_file(&path, &init_task).await.expect("failed to wait for file");
+            sender.send(()).await.expect("failed to send message");
+        })
+        .detach();
+
+        // Wait for message that file check has started.
+        assert!(receiver.next().await.is_some());
+
+        // Create the file that is being waited on.
+        current_task
+            .open_file_at(
+                FdNumber::AT_FDCWD,
+                &path.as_bytes(),
+                OpenFlags::CREAT,
+                FileMode::default(),
+            )
+            .expect("Failed to create file");
+
+        // Wait for the file creation to be detected.
+        assert!(receiver.next().await.is_some());
+    }
 }

@@ -9,9 +9,40 @@ use crate::device::{
 use crate::fs::{devtmpfs::dev_tmp_fs, SpecialNode};
 use crate::task::CurrentTask;
 use crate::types::*;
+use std::collections::HashSet;
 
-/// Parses and runs the features from the provided "program strvec."
+/// Parses and runs the features from the provided "program strvec.". Some features,
+/// such as Wayland, should be enabled on a per-component basis. We run this when we first
+/// make the Galaxy. When we start the component, we run the run_component_features
+/// function.
 pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) -> Result<(), Errno> {
+    for entry in entries {
+        match entry.as_str() {
+            // Wayland is enabled on a per-component basis and so skipped here.
+            "wayland" => {}
+            "binder" => {
+                // Creates the various binder drivers (/dev/binder, /dev/hwbinder, /dev/vndbinder).
+                create_binders(current_task.kernel())?;
+            }
+            "logd" => {
+                // Creates a socket at /dev/socket/logdw logs anything written to it.
+                create_socket_and_start_server(current_task.kernel());
+            }
+            "selinux_enabled" => {}
+            feature => {
+                tracing::warn!("Unsupported feature: {:?}", feature);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Runs features requested by individual components
+pub fn run_component_features<'a>(
+    entries: &'a HashSet<String>,
+    current_task: &CurrentTask,
+    outgoing_dir: &mut Option<fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>>,
+) -> Result<(), Errno> {
     for entry in entries {
         match entry.as_str() {
             "wayland" => {
@@ -30,16 +61,12 @@ pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) ->
                     current_task,
                     b"/data/tmp/wayland-0".to_vec(),
                     b"/data/tmp/wayland-1".to_vec(),
+                    outgoing_dir,
                 )?;
             }
-            "binder" => {
-                // Creates the various binder drivers (/dev/binder, /dev/hwbinder, /dev/vndbinder).
-                create_binders(current_task.kernel())?;
-            }
-            "logd" => {
-                // Creates a socket at /dev/socket/logdw logs anything written to it.
-                create_socket_and_start_server(current_task.kernel());
-            }
+            "binder" => {}
+            "logd" => {}
+            "selinux_enabled" => {}
             feature => {
                 tracing::warn!("Unsupported feature: {:?}", feature);
             }
