@@ -60,7 +60,7 @@ template("fidl_api_compatibility_test") {
 
   # Run the test.
   action(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker, "*", [ "policy" ])
 
     script = "//sdk/cts/build/scripts/fidl_api_compatibility_test.py"
     stamp_file = "$target_gen_dir/$target_name.verified"
