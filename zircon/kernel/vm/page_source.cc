@@ -17,8 +17,8 @@
 #define LOCAL_TRACE 0
 
 PageSource::PageSource(fbl::RefPtr<PageProvider>&& page_provider)
-    : page_provider_(ktl::move(page_provider)),
-      page_provider_properties_(page_provider_->properties()) {
+    : page_provider_properties_(page_provider->properties()),
+      page_provider_(ktl::move(page_provider)) {
   LTRACEF("%p\n", this);
 }
 

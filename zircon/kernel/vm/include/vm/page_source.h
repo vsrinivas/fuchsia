@@ -342,6 +342,8 @@ class PageSource final : public PageRequestInterface {
   mutable DECLARE_MUTEX(PageSource) page_source_mtx_;
   bool detached_ TA_GUARDED(page_source_mtx_) = false;
   bool closed_ TA_GUARDED(page_source_mtx_) = false;
+  // We cache the immutable page_provider_->properties() to avoid many virtual calls.
+  const PageSourceProperties page_provider_properties_;
 
   // Trees of outstanding requests which have been sent to the PageProvider, one for each supported
   // page request type. These lists are keyed by the end offset of the requests (not the start
@@ -357,8 +359,6 @@ class PageSource final : public PageRequestInterface {
   // PageProvider instance that will provide pages asynchronously (e.g. a userspace pager, see
   // PagerProxy for details).
   const fbl::RefPtr<PageProvider> page_provider_;
-  // We cache the immutable page_provider_->properties() to avoid many virtual calls.
-  const PageSourceProperties page_provider_properties_;
 
   // Helper that adds page at |offset| to |request| and potentially forwards it to the provider.
   // |request| must already be initialized. |offset| must be page-aligned.
