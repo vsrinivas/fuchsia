@@ -1726,7 +1726,6 @@ mod tests {
                                     blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())
                                 }
                             },
-                            update_package_url: format!("{:?}", fuchsia_config.update_package_url()),
                         }
                     },
                     stats: {
@@ -1824,7 +1823,6 @@ mod tests {
                                     blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())
                                 }
                             },
-                            update_package_url: format!("{:?}", config.update_package_url()),
                         }
                     },
                 }

@@ -87,7 +87,6 @@ async fn adding_repo_updates_inspect_state() {
                     "example.com": {
                         root_keys: {},
                         mirrors: {},
-                        update_package_url: format!("{:?}", config.update_package_url()),
                     },
                 },
             },
@@ -133,7 +132,6 @@ async fn resolving_package_updates_inspect_state() {
                             blob_mirror_url: format!("{:?}", config.mirrors()[0].blob_mirror_url())
                           }
                         },
-                        update_package_url: format!("{:?}", config.update_package_url()),
                     }
                 },
                 repos: {

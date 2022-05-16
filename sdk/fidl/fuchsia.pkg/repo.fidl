@@ -89,10 +89,7 @@ type RepositoryConfig = table {
     /// The repository mirrors that serve the package contents. Required.
     3: mirrors vector<MirrorConfig>;
 
-    /// The package URL of the system update package. Optional.
-    ///
-    /// Only used for the fuchsia-pkg://fuchsia.com/ repo.
-    4: update_package_url string;
+    4: reserved; // Formerly update_package_url string;
 
     /// The initial trusted root metadata version. Optional, if absent presumed
     /// to be 1.

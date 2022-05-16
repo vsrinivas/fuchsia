@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_pkg_ext::{MirrorConfig, RepositoryConfig},
-    fuchsia_inspect::{self as inspect, NumericProperty, Property, StringReference},
+    fuchsia_inspect::{self as inspect, NumericProperty, StringReference},
     fuchsia_inspect_contrib::inspectable::{Inspectable, Watch},
     std::sync::Arc,
 };
@@ -17,7 +17,6 @@ pub struct InspectableRepositoryConfigWatcher {
     _mirror_configs_states: Vec<MirrorConfigInspectState>,
     root_keys_node: inspect::Node,
     _root_keys_properties: Vec<inspect::StringProperty>,
-    update_package_url_property: inspect::StringProperty,
     _node: inspect::Node,
 }
 
@@ -33,8 +32,6 @@ impl Watch<Arc<RepositoryConfig>> for InspectableRepositoryConfigWatcher {
             _root_keys_properties: vec![],
             mirror_configs_node: repo_config_node.create_child("mirrors"),
             _mirror_configs_states: vec![],
-            update_package_url_property: repo_config_node
-                .create_string("update_package_url", format!("{:?}", config.update_package_url())),
             _node: repo_config_node,
         };
         ret.watch(config);
@@ -42,7 +39,6 @@ impl Watch<Arc<RepositoryConfig>> for InspectableRepositoryConfigWatcher {
     }
 
     fn watch(&mut self, config: &Arc<RepositoryConfig>) {
-        self.update_package_url_property.set(&format!("{:?}", config.update_package_url()));
         self._root_keys_properties = config
             .root_keys()
             .iter()
@@ -142,7 +138,6 @@ mod test_inspectable_repository_config {
                         blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())
                     }
                   },
-                  update_package_url: format!("{:?}", inspectable.update_package_url()),
                 }
             }
         );
@@ -182,7 +177,6 @@ mod test_inspectable_repository_config {
                         blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())
                     }
                   },
-                  update_package_url: format!("{:?}", inspectable.update_package_url()),
                 }
             }
         );

@@ -29,7 +29,7 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_hyper_test_support::{handler::StaticResponse, TestServer},
-    fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
+    fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::Status,
     futures::prelude::*,
     http::Uri,
@@ -510,9 +510,6 @@ fn make_test_repo_config() -> RepositoryConfig {
         .add_root_key(RepositoryKey::Ed25519(vec![0u8]))
         .add_mirror(
             MirrorConfigBuilder::new("http://example.org".parse::<Uri>().unwrap()).unwrap().build(),
-        )
-        .update_package_url(
-            PkgUrl::parse("fuchsia-pkg://update.example.com/update").expect("valid PkgUrl"),
         )
         .build()
 }
