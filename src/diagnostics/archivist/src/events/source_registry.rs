@@ -7,7 +7,7 @@ use {
         events::{error::EventError, types::*},
         identity::ComponentIdentity,
     },
-    fuchsia_inspect::{self as inspect, NumericProperty},
+    fuchsia_inspect::{self as inspect, NumericProperty, StringReference},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     futures::{
         channel::{mpsc, oneshot},
@@ -21,6 +21,11 @@ use {
         task::{Context, Poll},
     },
 };
+
+lazy_static! {
+    static ref EVENT: StringReference<'static> = "event".into();
+    static ref MONIKER: StringReference<'static> = "moniker".into();
+}
 
 /// Tracks all event sources and listens to events coming from them pushing them into an MPSC
 /// channel.
@@ -209,8 +214,8 @@ impl EventStreamLogger {
 
     fn log_inspect(&mut self, event_name: &str, identity: &ComponentIdentity) {
         inspect_log!(self.component_log_node,
-            event: event_name,
-            moniker: match &identity.instance_id {
+            &*EVENT => event_name,
+            &*MONIKER => match &identity.instance_id {
                 Some(instance_id) => format!("{}:{}", identity.relative_moniker, instance_id),
                 None => identity.relative_moniker.to_string(),
             }

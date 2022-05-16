@@ -20,7 +20,7 @@ use {
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
-    fuchsia_inspect::Node as InspectNode,
+    fuchsia_inspect::{Node as InspectNode, StringReference},
     fuchsia_inspect_contrib::{
         auto_persist::{self, AutoPersist},
         inspect_insert, inspect_log,
@@ -221,7 +221,7 @@ impl InternalBss<'_> {
     }
 }
 impl<'a> WriteInspect for InternalBss<'a> {
-    fn write_inspect(&self, writer: &InspectNode, key: &str) {
+    fn write_inspect<'b>(&self, writer: &InspectNode, key: impl Into<StringReference<'b>>) {
         inspect_insert!(writer, var key: {
             ssid_hash: self.hasher.hash_ssid(&self.saved_network_info.network_id.ssid),
             bssid_hash: self.hasher.hash_mac_addr(&self.scanned_bss.bssid.0),

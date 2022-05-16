@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {super::WriteInspect, fuchsia_inspect::Node, std::convert::AsRef};
+use {
+    super::WriteInspect,
+    fuchsia_inspect::{Node, StringReference},
+    std::convert::AsRef,
+};
 
 /// Wrapper to log bytes in an `inspect_log!` or `inspect_insert!` macro.
 ///
@@ -12,7 +16,7 @@ use {super::WriteInspect, fuchsia_inspect::Node, std::convert::AsRef};
 pub struct InspectBytes<T: AsRef<[u8]>>(pub T);
 
 impl<T: AsRef<[u8]>> WriteInspect for InspectBytes<T> {
-    fn write_inspect(&self, writer: &Node, key: &str) {
+    fn write_inspect<'a>(&self, writer: &Node, key: impl Into<StringReference<'a>>) {
         writer.record_bytes(key, self.0.as_ref());
     }
 }
@@ -39,7 +43,7 @@ impl<'a, T> WriteInspect for InspectList<'a, T>
 where
     T: WriteInspect,
 {
-    fn write_inspect(&self, writer: &Node, key: &str) {
+    fn write_inspect<'b>(&self, writer: &Node, key: impl Into<StringReference<'b>>) {
         let child = writer.create_child(key);
         for (i, val) in self.0.iter().enumerate() {
             val.write_inspect(&child, &i.to_string());
@@ -77,7 +81,7 @@ impl<'a, T, F> WriteInspect for InspectListClosure<'a, T, F>
 where
     F: Fn(&Node, &str, &T),
 {
-    fn write_inspect(&self, writer: &Node, key: &str) {
+    fn write_inspect<'b>(&self, writer: &Node, key: impl Into<StringReference<'b>>) {
         let child = writer.create_child(key);
         for (i, val) in self.0.iter().enumerate() {
             self.1(&child, &i.to_string(), val);

@@ -36,10 +36,7 @@ pub trait WriteInspect {
     /// Write a *single* value (property or child node) to |node| with the specified |key|.
     /// If multiple properties need to be written, consider creating a single child
     /// node with those properties.
-    ///
-    /// If the same key is used to write values multiple times, then there will be multiple
-    /// values with the same name in the underlying VMO.
-    fn write_inspect(&self, writer: &Node, key: &str);
+    fn write_inspect<'a>(&self, writer: &Node, key: impl Into<StringReference<'a>>);
 }
 
 /// Macro to log a new entry to a bounded list node with the specified key-value pairs. Each value
@@ -148,6 +145,11 @@ macro_rules! inspect_insert {
         inspect_insert!(@internal $node_writer, var key?: $($rest)+);
     }};
 
+    (@internal $node_writer:expr, $key:expr => $($rest:tt)+) => {{
+        let key: StringReference<'_> = $key.into();
+        inspect_insert!(@internal $node_writer, var key: $($rest)+);
+    }};
+
     // Entry point: from inspect_log! (mainly to allow empty event)
     (@internal_inspect_log $node_writer:expr, { $($args:tt)* }) => {{
         // User may specify an empty event, so `WriteInspect` may not always
@@ -203,14 +205,14 @@ macro_rules! inspect_insert {
 macro_rules! make_inspect_loggable {
     ($($args:tt)+) => {{
         use $crate::inspect_insert;
-        use fuchsia_inspect::Node;
+        use fuchsia_inspect::{Node, StringReference};
         struct WriteInspectClosure<F>(F);
-        impl<F> WriteInspect for WriteInspectClosure<F> where F: Fn(&Node, &str) {
-            fn write_inspect(&self, writer: &Node, key: &str) {
-                self.0(writer, key);
+        impl<F> WriteInspect for WriteInspectClosure<F> where F: Fn(&Node, StringReference<'_>) {
+            fn write_inspect<'a>(&self, writer: &Node, key: impl Into<StringReference<'a>>) {
+                self.0(writer, key.into());
             }
         }
-        let f = WriteInspectClosure(move |writer: &Node, key: &str| {
+        let f = WriteInspectClosure(move |writer: &Node, key: StringReference<'_>| {
             let child = writer.create_child(key);
             inspect_insert!(child, $($args)+);
             writer.record(child);
@@ -497,6 +499,31 @@ mod tests {
                     "@time": 12345i64,
                     point: { x: 10i64, y: 50i64 },
                 },
+            }
+        });
+    }
+
+    #[fuchsia::test]
+    fn test_log_inspect_string_reference() {
+        let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
+        executor.set_fake_time(fasync::Time::from_nanos(12345));
+        let (inspector, mut node) = inspector_and_list_node();
+
+        lazy_static! {
+            static ref FOO: StringReference<'static> = "foo".into();
+        };
+
+        inspect_log!(node, &*FOO => "foo_1");
+        inspect_log!(node, &*FOO => "foo_2");
+        inspect_log!(node, &*FOO => "foo_3");
+        inspect_log!(node, &*FOO => "foo_4");
+
+        assert_data_tree!(inspector, root: {
+            list_node: {
+                "0": { "@time": 12345i64, foo: "foo_1" },
+                "1": { "@time": 12345i64, foo: "foo_2" },
+                "2": { "@time": 12345i64, foo: "foo_3" },
+                "3": { "@time": 12345i64, foo: "foo_4" },
             }
         });
     }
