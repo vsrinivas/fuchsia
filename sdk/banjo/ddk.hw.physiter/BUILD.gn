@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("ddk.hw.physiter") {
-  sdk_category = "partner"
+  sdk_category = "internal"
   sources = [ "phys-iter.fidl" ]
   excluded_checks = [ "wrong-prefix-for-platform-source-library" ]
 }

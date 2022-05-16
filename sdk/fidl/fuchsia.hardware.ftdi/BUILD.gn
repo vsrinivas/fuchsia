@@ -5,6 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.ftdi") {
-  sdk_category = "partner"
+  sdk_category = "internal"
   sources = [ "ftdi.fidl" ]
 }

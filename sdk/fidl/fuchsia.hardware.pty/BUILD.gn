@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.pty") {
-  sdk_category = "partner"
+  sdk_category = "internal"
   api = "fuchsia.hardware.pty.api"
   public_deps = [
     "//sdk/fidl/fuchsia.device",

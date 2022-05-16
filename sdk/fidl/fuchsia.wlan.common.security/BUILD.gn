@@ -8,7 +8,7 @@ fidl("fuchsia.wlan.common.security") {
   # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "disallowed-library-name-component" ]
 
-  sdk_category = "partner"
+  sdk_category = "internal"
 
   sources = [ "security.fidl" ]
 }

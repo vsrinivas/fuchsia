@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.ui.display.singleton") {
-  sdk_category = "partner"
+  sdk_category = "internal"
 
   sources = [ "info.fidl" ]
 

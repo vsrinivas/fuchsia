@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.block") {
-  sdk_category = "partner"
+  sdk_category = "internal"
   api = "fuchsia.hardware.block.api"
   sources = [
     "block.fidl",

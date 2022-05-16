@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.serialimpl") {
-  sdk_category = "partner"
+  sdk_category = "internal"
   sources = [ "serial-impl.fidl" ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.serial",
