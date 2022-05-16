@@ -136,20 +136,6 @@ executable("fidl_provider_unittest_exe") {
   ]
 }
 
-executable("inspect_exe") {
-  testonly = true
-
-  sources = [ "inspect_exe.cc" ]
-
-  deps = [
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/fxl",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
 executable("last_reboot_unittest_exe") {
   testonly = true
 
@@ -334,14 +320,6 @@ fuchsia_unittest_component("feedback_data_unittest") {
 
 fuchsia_unittest_component("fidl_provider_unittest") {
   deps = [ ":fidl_provider_unittest_exe" ]
-}
-
-fuchsia_component("inspect_test_app") {
-  testonly = true
-
-  manifest = "meta/inspect_test_app.cmx"
-
-  deps = [ ":inspect_exe" ]
 }
 
 fuchsia_unittest_component("last_reboot_unittest") {
