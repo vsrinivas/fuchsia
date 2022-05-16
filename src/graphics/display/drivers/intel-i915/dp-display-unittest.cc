@@ -49,7 +49,7 @@ class TestDpllManager : public i915::DisplayPllManager {
 
   std::optional<i915::DpllState> LoadState(registers::Ddi ddi) final {
     i915::DpllState state = i915::DpDpllState{
-        .dp_rate = registers::DpllControl1::LinkRate::k2700Mhz,
+        .dp_bit_rate_mhz = 5400,
     };
     return std::make_optional(state);
   }
@@ -202,7 +202,7 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInitWithDpllState) {
   ASSERT_NE(nullptr, display);
 
   i915::DpllState dpll_state = i915::DpDpllState{
-      .dp_rate = registers::DpllControl1::LinkRate::k2160Mhz,
+      .dp_bit_rate_mhz = 4320u,
   };
   display->InitWithDpllState(&dpll_state);
   EXPECT_EQ(4320u, display->link_rate_mhz());

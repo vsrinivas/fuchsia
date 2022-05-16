@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 
+#include <optional>
 #include <variant>
 
 #include "src/graphics/display/drivers/intel-i915/intel-i915.h"
@@ -40,7 +41,7 @@ bool CompareDpllStates(const DpllState& a, const DpllState& b) {
 
     const auto& dp_a = std::get<DpDpllState>(a);
     const auto& dp_b = std::get<DpDpllState>(b);
-    return dp_a.dp_rate == dp_b.dp_rate;
+    return dp_a.dp_bit_rate_mhz == dp_b.dp_bit_rate_mhz;
   }
 
   if (std::holds_alternative<HdmiDpllState>(a)) {
@@ -58,6 +59,45 @@ bool CompareDpllStates(const DpllState& a, const DpllState& b) {
 
   ZX_DEBUG_ASSERT_MSG(false, "Comparing unsupported DpllState");
   return false;
+}
+
+std::optional<registers::DpllControl1::LinkRate> DpBitRateMhzToSklLinkRate(
+    uint32_t dp_bit_rate_mhz) {
+  switch (dp_bit_rate_mhz) {
+    case 5400:
+      return registers::DpllControl1::LinkRate::k2700Mhz;
+    case 2700:
+      return registers::DpllControl1::LinkRate::k1350Mhz;
+    case 1620:
+      return registers::DpllControl1::LinkRate::k810Mhz;
+    case 3240:
+      return registers::DpllControl1::LinkRate::k1620Mhz;
+    case 2160:
+      return registers::DpllControl1::LinkRate::k1080Mhz;
+    case 4320:
+      return registers::DpllControl1::LinkRate::k2160Mhz;
+    default:
+      return std::nullopt;
+  }
+}
+
+std::optional<uint32_t> SklLinkRateToDpBitRateMhz(registers::DpllControl1::LinkRate link_rate) {
+  switch (link_rate) {
+    case registers::DpllControl1::LinkRate::k2700Mhz:
+      return 5400;
+    case registers::DpllControl1::LinkRate::k1350Mhz:
+      return 2700;
+    case registers::DpllControl1::LinkRate::k810Mhz:
+      return 1620;
+    case registers::DpllControl1::LinkRate::k1620Mhz:
+      return 3240;
+    case registers::DpllControl1::LinkRate::k1080Mhz:
+      return 2160;
+    case registers::DpllControl1::LinkRate::k2160Mhz:
+      return 4320;
+    default:
+      return std::nullopt;
+  }
 }
 
 }  // namespace
@@ -139,7 +179,12 @@ bool SklDpll::EnableDp(const DpDpllState& dp_state) {
   auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space_);
   dpll_ctrl1.dpll_hdmi_mode(dpll()).set(0);
   dpll_ctrl1.dpll_ssc_enable(dpll()).set(0);
-  dpll_ctrl1.SetLinkRate(dpll(), dp_state.dp_rate);
+  auto dp_rate = DpBitRateMhzToSklLinkRate(dp_state.dp_bit_rate_mhz);
+  if (!dp_rate.has_value()) {
+    zxlogf(ERROR, "Invalid DP bit rate: %u MHz", dp_state.dp_bit_rate_mhz);
+    return false;
+  }
+  dpll_ctrl1.SetLinkRate(dpll(), *dp_rate);
   dpll_ctrl1.dpll_override(dpll()).set(1);
   dpll_ctrl1.WriteTo(mmio_space_);
   dpll_ctrl1.ReadFrom(mmio_space_);  // Posting read
@@ -286,8 +331,14 @@ std::optional<DpllState> SklDpllManager::LoadState(registers::Ddi ddi) {
         .cf = static_cast<uint8_t>(dpll_cfg2.central_freq()),
     };
   } else {
+    auto dp_bit_rate_mhz = SklLinkRateToDpBitRateMhz(dpll_ctrl1.GetLinkRate(dpll));
+    if (!dp_bit_rate_mhz.has_value()) {
+      zxlogf(ERROR, "Invalid DPLL link rate from DPLL %d", dpll);
+      return std::nullopt;
+    }
+
     new_state = DpDpllState{
-        dpll_ctrl1.GetLinkRate(dpll),
+        .dp_bit_rate_mhz = *dp_bit_rate_mhz,
     };
   }
 

@@ -21,7 +21,8 @@
 namespace i915 {
 
 struct DpDpllState {
-  registers::DpllControl1::LinkRate dp_rate;
+  // Bit rate (Mbps / MHz) of one DP lane.
+  uint32_t dp_bit_rate_mhz;
 };
 
 struct HdmiDpllState {

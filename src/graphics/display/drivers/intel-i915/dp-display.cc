@@ -167,54 +167,6 @@ enum {
   DP_REPLY_I2C_DEFER = 8,
 };
 
-// Conversions from DPLL Control register supported link rates and corresponding DisplayPort link
-// clock frequencies. |link_clock| is a numeric value expressed in Mbps/MHz.
-//
-// Only a limited set of discrete |link_lock| values are supported. Returns an error result if the
-// value is not supported.
-
-fpromise::result<registers::DpllControl1::LinkRate> LinkClockToDpllLinkRate(uint32_t link_clock) {
-  using LinkRate = registers::DpllControl1::LinkRate;
-  switch (link_clock) {
-    case 5400:
-      return fpromise::ok(LinkRate::k2700Mhz);
-    case 2700:
-      return fpromise::ok(LinkRate::k1350Mhz);
-    case 1620:
-      return fpromise::ok(LinkRate::k810Mhz);
-    case 3240:
-      return fpromise::ok(LinkRate::k1620Mhz);
-    case 2160:
-      return fpromise::ok(LinkRate::k1080Mhz);
-    case 4320:
-      return fpromise::ok(LinkRate::k2160Mhz);
-    default:
-      break;
-  }
-  return fpromise::error();
-}
-
-fpromise::result<uint32_t> DpllLinkRateToLinkClock(registers::DpllControl1::LinkRate link_rate) {
-  using LinkRate = registers::DpllControl1::LinkRate;
-  switch (link_rate) {
-    case LinkRate::k2700Mhz:
-      return fpromise::ok(5400);
-    case LinkRate::k1350Mhz:
-      return fpromise::ok(2700);
-    case LinkRate::k810Mhz:
-      return fpromise::ok(1620);
-    case LinkRate::k1620Mhz:
-      return fpromise::ok(3240);
-    case LinkRate::k1080Mhz:
-      return fpromise::ok(2160);
-    case LinkRate::k2160Mhz:
-      return fpromise::ok(4320);
-    default:
-      break;
-  }
-  return fpromise::error();
-}
-
 std::string DpcdRevisionToString(dpcd::Revision rev) {
   switch (rev) {
     case dpcd::Revision::k1_0:
@@ -1200,14 +1152,8 @@ bool DpDisplay::InitDdi() {
     }
   }
 
-  auto dpll_link_rate = LinkClockToDpllLinkRate(dp_link_rate_mhz_);
-  if (dpll_link_rate.is_error()) {
-    zxlogf(ERROR, "Unsupported DP link clock: %u", dp_link_rate_mhz_);
-    return false;
-  }
-
   DpllState state = DpDpllState{
-      .dp_rate = dpll_link_rate.value(),
+      .dp_bit_rate_mhz = dp_link_rate_mhz_,
   };
 
   DisplayPll* dpll = controller()->dpll_manager()->Map(ddi(), is_edp, state);
@@ -1247,26 +1193,17 @@ void DpDisplay::InitWithDpllState(const DpllState* dpll_state) {
   // Some display (e.g. eDP) may have already been configured by the bootloader with a
   // link clock. Assign the link rate based on the already enabled DPLL.
   if (dp_link_rate_mhz_ == 0) {
-    fpromise::result<uint32_t> link_rate = DpllLinkRateToLinkClock(dp_state->dp_rate);
-    if (link_rate.is_ok()) {
-      zxlogf(INFO, "Selected pre-configured DisplayPort link rate: %u Mbps/lane",
-             link_rate.value());
-      SetLinkRate(link_rate.value());
-    } else {
-      zxlogf(ERROR, "Invalid DPLL link rate value: %u", static_cast<uint8_t>(dp_state->dp_rate));
-    }
+    // Since the link rate is read from the register directly, we can guarantee
+    // that it is always valid.
+    zxlogf(INFO, "Selected pre-configured DisplayPort link rate: %u Mbps/lane",
+           dp_state->dp_bit_rate_mhz);
+    SetLinkRate(dp_state->dp_bit_rate_mhz);
   }
 }
 
 bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) {
-  auto dpll_link_rate = LinkClockToDpllLinkRate(dp_link_rate_mhz_);
-  if (dpll_link_rate.is_error()) {
-    zxlogf(ERROR, "Unsupported DP link clock: %u", dp_link_rate_mhz_);
-    return false;
-  }
-
   *config = DpDpllState{
-      .dp_rate = dpll_link_rate.value(),
+      .dp_bit_rate_mhz = dp_link_rate_mhz_,
   };
   return true;
 }
