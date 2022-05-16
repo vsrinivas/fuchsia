@@ -5,6 +5,7 @@
 group("settings") {
   testonly = true
   deps = [
+    ":tests",
     "config",
     "service",
   ]
