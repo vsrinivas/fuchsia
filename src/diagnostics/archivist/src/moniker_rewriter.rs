@@ -25,6 +25,10 @@ lazy_static! {
             legacy_str: "omaha-client-service.cmx",
             modern_str: "core/omaha-client-service",
         },
+        MonikerRewritePair {
+            legacy_str: "cobalt_system_metrics.cmx",
+            modern_str: "core/cobalt_system_metrics"
+        }
     ];
 }
 

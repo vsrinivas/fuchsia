@@ -71,13 +71,8 @@ executable("system-metrics") {
 }
 
 fuchsia_package_with_single_component("cobalt_system_metrics") {
-  manifest = "meta/cobalt_system_metrics.cmx"
-  deps = [
-    ":system-metrics",
-
-    # Configure sysmgr to start cobalt_system_metrics.cmx
-    "//src/sys/sysmgr:cobalt_system_metrics_config",
-  ]
+  manifest = "meta/cobalt_system_metrics.cml"
+  deps = [ ":system-metrics" ]
 }
 
 executable("cobalt_system_metrics_unittests") {

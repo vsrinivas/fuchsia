@@ -83,10 +83,6 @@ template("cfg") {
   }
 }
 
-cfg("cobalt_system_metrics_config") {
-  name = "cobalt_system_metrics.config"
-}
-
 cfg("services_config") {
   name = "services.config"
 }

@@ -32,7 +32,7 @@
     {
         id: 107,
         label: "Cobalt Sys Metrics",
-        moniker: "cobalt_system_metrics.cmx",
+        moniker: "core/cobalt_system_metrics",
     },
     {
         id: 108,

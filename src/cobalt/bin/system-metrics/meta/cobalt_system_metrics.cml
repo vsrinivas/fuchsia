@@ -1,0 +1,44 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/cobalt_system_metrics",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.kernel.Stats",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.activity.Provider",
+            ],
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            directory: "dev-thermal",
+            rights: [ "r*" ],
+            path: "/dev/class/thermal",
+        },
+        {
+            directory: "dev-misc",
+            rights: [ "r*" ],
+            path: "/dev/misc",
+        },
+    ],
+}

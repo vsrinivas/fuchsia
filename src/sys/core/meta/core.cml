@@ -56,6 +56,11 @@
             name: "text_manager",
             url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
         },
+        {
+            name: "cobalt_system_metrics",
+            url: "fuchsia-pkg://fuchsia.com/cobalt_system_metrics#meta/cobalt_system_metrics.cm",
+            startup: "eager",
+        },
 
         // Children below this line may be present on some but not all product configurations.
         // Children above this line are expected to be present on all configs that include
@@ -226,7 +231,10 @@
                 "fuchsia.ui.activity.Tracker",
             ],
             from: "#activity",
-            to: [ "#cobalt" ],
+            to: [
+                "#cobalt",
+                "#cobalt_system_metrics",
+            ],
         },
         {
             directory: "dev",
@@ -238,7 +246,10 @@
         {
             protocol: "fuchsia.tracing.provider.Registry",
             from: "self",
-            to: "#sysmem_connector",
+            to: [
+                "#cobalt_system_metrics",
+                "#sysmem_connector",
+            ],
             dependency: "weak_for_migration",
         },
         {
@@ -419,6 +430,7 @@
                 "#bluetooth-core",
                 "#brightness_manager",
                 "#cobalt",
+                "#cobalt_system_metrics",
                 "#debug_serial",
                 "#detect",
                 "#device_settings",
@@ -605,7 +617,10 @@
         {
             protocol: "fuchsia.kernel.Stats",
             from: "parent",
-            to: "#system-metrics-logger",
+            to: [
+                "#cobalt_system_metrics",
+                "#system-metrics-logger",
+            ],
         },
         {
             protocol: "fuchsia.process.Launcher",
@@ -688,6 +703,20 @@
             subdir: "class/power-sensor",
         },
         {
+            directory: "dev",
+            from: "parent",
+            as: "dev-thermal",
+            to: "#cobalt_system_metrics",
+            subdir: "class/thermal",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-misc",
+            to: [ "#cobalt_system_metrics" ],
+            subdir: "misc",
+        },
+        {
             directory: "root-ssl-certificates",
             from: "parent",
             to: [
@@ -732,6 +761,12 @@
             from: "parent",
             to: "#cobalt",
             subdir: "cobalt",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#cobalt_system_metrics",
+            subdir: "cobalt_system_metrics",
         },
         {
             protocol: [
@@ -953,6 +988,7 @@
             protocol: "fuchsia.cobalt.LoggerFactory",
             from: "#cobalt",
             to: [
+                "#cobalt_system_metrics",
                 "#pkg-resolver",
                 "#sampler",
 
@@ -987,12 +1023,18 @@
                 "fuchsia.sysinfo.SysInfo",
             ],
             from: "parent",
-            to: "#cobalt",
+            to: [
+                "#cobalt",
+                "#cobalt_system_metrics",
+            ],
         },
         {
             storage: "data",
             from: "self",
-            to: "#cobalt",
+            to: [
+                "#cobalt",
+                "#cobalt_system_metrics",
+            ],
         },
         {
             protocol: [
