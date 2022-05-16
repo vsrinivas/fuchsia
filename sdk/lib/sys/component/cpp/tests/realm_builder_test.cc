@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/component/decl/cpp/fidl.h>
+#include <fuchsia/data/cpp/fidl.h>
 #include <fuchsia/examples/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
@@ -17,6 +18,7 @@
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/component/cpp/tests/utils.h>
@@ -432,6 +434,55 @@ TEST_F(RealmBuilderTest, RoutesReadOnlyDirectory) {
 
   ASSERT_TRUE(file_reader.HasStarted());
   EXPECT_EQ(file_reader.GetContentsAt(kDirectoryName, kFilename), kContent);
+}
+
+// This test is similar to RealmBuilderTest.RoutesProtocolFromChild except
+// that its setup is done by mutating the realm's root's decl. This is to
+// assert that invoking |ReplaceRealmDecl| works as expected.
+TEST_F(RealmBuilderTest, RealmDeclCanBeReplaced) {
+  static constexpr char kEchoServer[] = "echo_server";
+
+  auto realm_builder = RealmBuilder::Create();
+  realm_builder.AddChild(kEchoServer, kEchoServerUrl);
+
+  auto decl = realm_builder.GetRealmDecl();
+  fdecl::ExposeProtocol expose_protocol;
+  expose_protocol.set_source(fdecl::Ref::WithChild(fdecl::ChildRef{.name = "echo_server"}));
+  expose_protocol.set_target(fdecl::Ref::WithParent(fdecl::ParentRef{}));
+  expose_protocol.set_source_name("test.placeholders.Echo");
+  expose_protocol.set_target_name("test.placeholders.Echo");
+  decl.mutable_exposes()->emplace_back(fdecl::Expose::WithProtocol(std::move(expose_protocol)));
+  realm_builder.ReplaceRealmDecl(std::move(decl));
+  auto realm = realm_builder.Build(dispatcher());
+
+  auto echo = realm.ConnectSync<test::placeholders::Echo>();
+  fidl::StringPtr response;
+  ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
+  EXPECT_EQ(response, fidl::StringPtr("hello"));
+}
+
+TEST_F(RealmBuilderTest, ForwardsArgsToLegacyComponent) {
+  static constexpr char kEchoServer[] = "echo_server";
+  static constexpr char kExpectedReply[] = "test";
+
+  auto realm_builder = RealmBuilder::Create();
+  realm_builder.AddLegacyChild(kEchoServer, kEchoServerLegacyUrl);
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{test::placeholders::Echo::Name_}},
+                               .source = ChildRef{kEchoServer},
+                               .targets = {ParentRef()}});
+  auto decl = realm_builder.GetComponentDecl(kEchoServer);
+  fuchsia::data::DictionaryEntry args;
+  auto value = std::make_unique<fuchsia::data::DictionaryValue>(
+      fuchsia::data::DictionaryValue::WithStrVec({kExpectedReply}));
+  args.key = "args", args.value = std::move(value);
+  decl.mutable_program()->mutable_info()->mutable_entries()->emplace_back(std::move(args));
+  realm_builder.ReplaceComponentDecl(kEchoServer, std::move(decl));
+
+  auto realm = realm_builder.Build(dispatcher());
+  auto echo = realm.ConnectSync<test::placeholders::Echo>();
+  fidl::StringPtr response;
+  ASSERT_EQ(echo->EchoString(cpp17::nullopt, &response), ZX_OK);
+  EXPECT_EQ(response, fidl::StringPtr(kExpectedReply));
 }
 
 // This test is similar to RealmBuilderTest.RoutesProtocolFromChild except

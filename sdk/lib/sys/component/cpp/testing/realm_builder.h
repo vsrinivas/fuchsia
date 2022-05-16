@@ -153,6 +153,13 @@ class Realm final {
   /// Replaces the value of a given configuration field
   Realm& ReplaceConfigValue(const std::string& name, const std::string& key, ConfigValue value);
 
+  /// Updates the Component decl of the given child.
+  void ReplaceComponentDecl(const std::string& child_name,
+                            fuchsia::component::decl::Component decl);
+
+  /// Updates the Component decl of this Realm.
+  void ReplaceRealmDecl(fuchsia::component::decl::Component decl);
+
   /// Fetches the Component decl of the given child.
   fuchsia::component::decl::Component GetComponentDecl(const std::string& child_name);
 
@@ -224,6 +231,13 @@ class RealmBuilder final {
   /// Replaces the value of a given configuration field for the root realm.
   RealmBuilder& ReplaceConfigValue(const std::string& name, const std::string& key,
                                    ConfigValue value);
+
+  /// Updates the Component decl of the given child of the root realm.
+  void ReplaceComponentDecl(const std::string& child_name,
+                            fuchsia::component::decl::Component decl);
+
+  /// Updates the Component decl of this root realm.
+  void ReplaceRealmDecl(fuchsia::component::decl::Component decl);
 
   /// Fetches the Component decl of the given child of the root realm.
   fuchsia::component::decl::Component GetComponentDecl(const std::string& child_name);

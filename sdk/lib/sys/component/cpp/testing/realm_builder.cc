@@ -137,6 +137,20 @@ Realm& Realm::ReplaceConfigValue(const std::string& name, const std::string& key
   return *this;
 }
 
+void Realm::ReplaceComponentDecl(const std::string& child_name,
+                                 fuchsia::component::decl::Component decl) {
+  fuchsia::component::test::Realm_ReplaceComponentDecl_Result result;
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
+      "Realm/ReplaceComponentDecl",
+      realm_proxy_->ReplaceComponentDecl(child_name, std::move(decl), &result), result);
+}
+
+void Realm::ReplaceRealmDecl(fuchsia::component::decl::Component decl) {
+  fuchsia::component::test::Realm_ReplaceRealmDecl_Result result;
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
+      "Realm/ReplaceRealmDecl", realm_proxy_->ReplaceRealmDecl(std::move(decl), &result), result);
+}
+
 fuchsia::component::decl::Component Realm::GetComponentDecl(const std::string& child_name) {
   fuchsia::component::test::Realm_GetComponentDecl_Result result;
   ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
@@ -266,6 +280,15 @@ RealmBuilder& RealmBuilder::ReplaceConfigValue(const std::string& name, const st
                                                ConfigValue value) {
   root_.ReplaceConfigValue(name, key, std::move(value));
   return *this;
+}
+
+void RealmBuilder::ReplaceComponentDecl(const std::string& child_name,
+                                        fuchsia::component::decl::Component decl) {
+  root_.ReplaceComponentDecl(child_name, std::move(decl));
+}
+
+void RealmBuilder::ReplaceRealmDecl(fuchsia::component::decl::Component decl) {
+  root_.ReplaceRealmDecl(std::move(decl));
 }
 
 fuchsia::component::decl::Component RealmBuilder::GetComponentDecl(const std::string& child_name) {
