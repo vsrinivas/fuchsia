@@ -35,7 +35,7 @@ inline constexpr int32_t kFloatToInt24 = -kMinInt24;
 inline constexpr double kInt24ToFloat = 1.0 / kFloatToInt24;
 inline constexpr int64_t kFloatToInt24In32 = -static_cast<int64_t>(kMinInt24In32);
 
-// Template to convert a sample s `SampleType` from/to a normalized 32-bit float format.
+// Template to convert a sample of `SampleType` from/to a normalized 32-bit float format.
 template <typename SampleType, typename Trait = void>
 struct SampleConverter;
 

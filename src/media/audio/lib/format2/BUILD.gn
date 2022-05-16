@@ -11,6 +11,7 @@ group("tests") {
 
 source_set("format2") {
   sources = [
+    "channel_mapper.h",
     "format.cc",
     "format.h",
     "sample_converter.h",
@@ -34,6 +35,7 @@ executable("unittest-bin") {
   output_name = "audio-libformat2-unittests"
 
   sources = [
+    "channel_mapper_unittest.cc",
     "format_unittest.cc",
     "sample_converter_unittest.cc",
   ]

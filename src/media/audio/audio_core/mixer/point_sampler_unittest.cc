@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
+#include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/format2/sample_converter.h"
 #include "src/media/audio/lib/processing/gain.h"
 
@@ -395,7 +396,7 @@ TEST_F(PointSamplerRechannelTest, QuadToMono) {
   // Express expected values as "int24" (not int32) to clearly show fractional and min/max values.
   auto accum = std::vector<float>(source.size() / 4);
   std::vector<float> expect;
-  if constexpr (kResampler4ChannelWorkaround) {
+  if constexpr (media_audio::kEnable4ChannelWorkaround) {
     // For now, 4->1 just ignores channels 2 & 3.
     // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
     expect = {
@@ -445,7 +446,7 @@ TEST_F(PointSamplerRechannelTest, QuadToStereo) {
 
   // Express expected values as "int24" (not int32) to clearly show fractional and min/max values.
   std::vector<float> expect;
-  if constexpr (kResampler4ChannelWorkaround) {
+  if constexpr (media_audio::kEnable4ChannelWorkaround) {
     // For now, 4->2 just ignores channels 2 & 3.
     // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
     expect = {1, -1, -0x800000, 0x7FFFFF, 0x7FFFFF, 0};

@@ -18,6 +18,7 @@
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/lib/format/constants.h"
+#include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
@@ -583,6 +584,20 @@ class Mixer {
   virtual void EagerlyPrepare() {}
 
  protected:
+  // Template to read normalized source samples, and combine channels if required.
+  template <typename SourceSampleType, size_t SourceChanCount, size_t DestChanCount,
+            typename Enable = void>
+  class SourceReader {
+   public:
+    static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
+      return mapper_.Map(source_ptr, dest_chan);
+    }
+
+   private:
+    static inline media_audio::ChannelMapper<SourceSampleType, SourceChanCount, DestChanCount>
+        mapper_;
+  };
+
   Mixer(Fixed pos_filter_width, Fixed neg_filter_width, Gain::Limits gain_limits);
 
  private:
