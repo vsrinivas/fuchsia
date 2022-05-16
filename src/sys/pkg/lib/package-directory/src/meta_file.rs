@@ -201,7 +201,7 @@ impl vfs::file::File for MetaFile {
             mode: fio::MODE_TYPE_FILE
                 | vfs::common::rights_to_posix_mode_bits(
                     true,  // read
-                    false, // write
+                    true, // write
                     false, // execute
                 ),
             id: 1,
@@ -528,7 +528,7 @@ mod tests {
         assert_eq!(
             File::get_attrs(&meta_file).await,
             Ok(fio::NodeAttributes {
-                mode: fio::MODE_TYPE_FILE | 0o400,
+                mode: fio::MODE_TYPE_FILE | 0o600,
                 id: 1,
                 content_size: meta_file.location.length,
                 storage_size: meta_file.location.length,

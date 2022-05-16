@@ -138,7 +138,7 @@ impl vfs::directory::entry_container::Directory for MetaAsDir {
             mode: fio::MODE_TYPE_DIRECTORY
                 | vfs::common::rights_to_posix_mode_bits(
                     true,  // read
-                    false, // write
+                    true, // write
                     true,  // execute
                 ),
             id: 1,
@@ -373,7 +373,7 @@ mod tests {
         assert_eq!(
             Directory::get_attrs(&meta_as_dir).await.unwrap(),
             fio::NodeAttributes {
-                mode: fio::MODE_TYPE_DIRECTORY | 0o500,
+                mode: fio::MODE_TYPE_DIRECTORY | 0o700,
                 id: 1,
                 content_size: 4,
                 storage_size: 4,

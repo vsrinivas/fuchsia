@@ -154,10 +154,6 @@
             environment: "#full-resolver-env",
         },
         {
-            name: "pkg-cache",
-            url: "fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cm",
-        },
-        {
             name: "pkg-resolver",
             url: "fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cm",
         },
@@ -351,32 +347,11 @@
             to: "#universe-resolver",
         },
         {
-            directory: [
-                "blob",
-                "pkgfs",
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.pkg.PackageCache",
             ],
             from: "parent",
-            to: "#pkg-cache",
-        },
-        {
-            protocol: [ "fuchsia.boot.Arguments" ],
-            from: "parent",
-            to: "#pkg-cache",
-        },
-        {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "self",
-            to: "#pkg-cache",
-            dependency: "weak_for_migration",
-        },
-        {
-            protocol: "fuchsia.update.CommitStatusProvider",
-            from: "#system-update-committer",
-            to: "#pkg-cache",
-        },
-        {
-            protocol: [ "fuchsia.boot.Arguments" ],
-            from: "parent",
             to: "#pkg-resolver",
         },
         {
@@ -384,11 +359,6 @@
             from: "self",
             to: "#pkg-resolver",
             dependency: "weak_for_migration",
-        },
-        {
-            protocol: [ "fuchsia.pkg.PackageCache" ],
-            from: "#pkg-cache",
-            to: "#pkg-resolver",
         },
         {
             storage: "data",
@@ -464,7 +434,6 @@
                 "#metrics-logger",
                 "#network",
                 "#overnetstack",
-                "#pkg-cache",
                 "#pkg-resolver",
                 "#regulatory_region",
                 "#remote-control",
@@ -984,7 +953,6 @@
             protocol: "fuchsia.cobalt.LoggerFactory",
             from: "#cobalt",
             to: [
-                "#pkg-cache",
                 "#pkg-resolver",
                 "#sampler",
 
@@ -1143,6 +1111,10 @@
         {
             protocol: [ "fuchsia.exception.Handler" ],
             from: "#exceptions",
+        },
+        {
+            protocol: "fuchsia.update.CommitStatusProvider",
+            from: "#system-update-committer",
         },
     ],
     environments: [

@@ -5,16 +5,13 @@
 use {
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_io as fio, fuchsia_async as fasync,
-    isolated_swd::{cache::Cache, omaha, pkgfs::Pkgfs, resolver::Resolver, updater::Updater},
+    isolated_swd::{cache::Cache, omaha, resolver::Resolver, updater::Updater},
     std::sync::Arc,
     thiserror::Error,
 };
 
 #[derive(Debug, Error)]
 pub enum UpdateError {
-    #[error("error launching pkgfs")]
-    PkgfsLaunchError(#[source] anyhow::Error),
-
     #[error("error launching pkg-cache")]
     PkgCacheLaunchError(#[source] anyhow::Error),
 
@@ -76,21 +73,12 @@ pub async fn download_and_apply_update(
             .map_err(|e| UpdateError::FidlError(fidl::Error::AsyncChannel(e)))?,
     );
 
-    let pkgfs =
-        Pkgfs::launch(clone_blobfs(&blobfs_proxy)?).map_err(UpdateError::PkgfsLaunchError)?;
     let cache = Arc::new(
-        Cache::launch(&pkgfs, clone_blobfs(&blobfs_proxy)?)
-            .map_err(UpdateError::PkgCacheLaunchError)?,
+        Cache::launch(clone_blobfs(&blobfs_proxy)?).map_err(UpdateError::PkgCacheLaunchError)?,
     );
     let resolver = Arc::new(
-        Resolver::launch(
-            &pkgfs,
-            Arc::clone(&cache),
-            repository_config_file,
-            channel_name,
-            ssl_cert_dir,
-        )
-        .map_err(UpdateError::PkgResolverLaunchError)?,
+        Resolver::launch(Arc::clone(&cache), repository_config_file, channel_name, ssl_cert_dir)
+            .map_err(UpdateError::PkgResolverLaunchError)?,
     );
 
     let blobfs_clone = clone_blobfs(&blobfs_proxy)?;

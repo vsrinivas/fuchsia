@@ -232,25 +232,6 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
   return ZX_OK;
 }
 
-void FilesystemMounter::TryMountPkgfs() {
-  // Pkgfs waits for Blobfs to mount before initializing. Pkgfs is launched from blobfs, so this is
-  // a hard requirement.
-  //
-  // TODO(fxbug.dev/38621): In the future, this mechanism may be replaced with a feed-forward
-  // design to the mounted filesystems.
-  if (!blob_mounted_ || pkgfs_mounted_) {
-    return;
-  }
-
-  // Historically we don't retry if pkgfs fails to launch, which seems reasonable since the
-  // cause of a launch failure is unlikely to be transient.
-  // TODO(fxbug.dev/58363): fshost should handle failures to mount critical filesystems better.
-  if (zx::status status = LaunchPkgfs(this); status.is_error()) {
-    FX_PLOGS(ERROR, status.status_value()) << "failed to launch pkgfs";
-  }
-  pkgfs_mounted_ = true;
-}
-
 void FilesystemMounter::ReportDataPartitionCorrupted() {
   fshost_.mutable_metrics()->LogDataCorruption();
   fshost_.FlushMetrics();

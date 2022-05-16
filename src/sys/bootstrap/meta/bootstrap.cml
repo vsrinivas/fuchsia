@@ -99,6 +99,10 @@
             url: "fuchsia-boot:///#meta/base-resolver.cm",
         },
         {
+            name: "pkg_cache_resolver",
+            url: "fuchsia-boot:///#meta/pkg-cache-resolver.cm",
+        },
+        {
             name: "power_manager",
             url: "fuchsia-boot:///#meta/power-manager.cm",
         },
@@ -113,6 +117,11 @@
             name: "full_resolver",
             url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
             environment: "#base-resolver-env",
+        },
+        {
+            name: "pkg-cache",
+            url: "fuchsia-pkg-cache:///#meta/pkg-cache.cm",
+            environment: "#pkg-cache-env",
         },
     ],
     collections: [
@@ -552,11 +561,18 @@
         {
             directory: [
                 "bin",
+                "pkgfs",
+                "system",
+            ],
+            from: "#pkg-cache",
+            to: "#console-launcher",
+            dependency: "weak_for_migration",
+        },
+        {
+            directory: [
                 "blob",
                 "minfs",
                 "mnt",
-                "pkgfs",
-                "system",
             ],
             from: "#fshost",
             to: [ "#console-launcher" ],
@@ -564,7 +580,7 @@
         },
         {
             directory: "system",
-            from: "#fshost",
+            from: "#pkg-cache",
             to: "#driver_manager",
             dependency: "weak_for_migration",
         },
@@ -739,6 +755,7 @@
                 "#live_usb",
                 "#netsvc",
                 "#pkg-drivers",
+                "#pkg_cache_resolver",
                 "#power_manager",
                 "#pwrbtn-monitor",
                 "#svchost",
@@ -811,7 +828,7 @@
         },
         {
             directory: "pkgfs",
-            from: "#fshost",
+            from: "#pkg-cache",
             to: "#driver_manager",
             dependency: "weak_for_migration",
         },
@@ -881,12 +898,45 @@
         // -- End Archivist offers --
         {
             directory: "pkgfs-packages",
-            from: "#fshost",
+            from: "#pkg-cache",
             to: "#base_resolver",
         },
         {
-            directory: "pkgfs-packages",
+            protocol: "fuchsia.boot.Arguments",
+            from: "parent",
+            to: "#pkg_cache_resolver",
+        },
+        {
+            directory: "blob-exec",
             from: "#fshost",
+            to: [
+                "#pkg-cache",
+                "#pkg_cache_resolver",
+            ],
+        },
+        {
+            protocol: "fuchsia.boot.Arguments",
+            from: "parent",
+            to: "#pkg-cache",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "#archivist",
+            to: "#pkg-cache",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.update.CommitStatusProvider",
+            ],
+            from: "parent",
+            to: "#pkg-cache",
+            dependency: "weak",
+        },
+        {
+            directory: "pkgfs-packages",
+            from: "#pkg-cache",
             to: "#driver_index",
             dependency: "weak_for_migration",
         },
@@ -910,22 +960,27 @@
     ],
     expose: [
         {
+            directory: [
+                "bin",
+                "build-info",
+                "config-data",
+                "pkgfs",
+                "root-ssl-certificates",
+                "system",
+            ],
+            from: "#pkg-cache",
+        },
+        {
             directory: "dev",
             from: "#driver_manager",
         },
         {
             directory: [
-                "bin",
                 "blob",
-                "build-info",
-                "config-data",
                 "durable",
                 "factory",
                 "minfs",
                 "mnt",
-                "pkgfs",
-                "root-ssl-certificates",
-                "system",
                 "tmp",
             ],
             from: "#fshost",
@@ -1038,6 +1093,14 @@
             protocol: "fuchsia.nand.flashmap.Manager",
             from: "#flashmap",
         },
+        {
+            protocol: [
+                "fuchsia.pkg.PackageCache",
+                "fuchsia.pkg.RetainedPackages",
+                "fuchsia.space.Manager",
+            ],
+            from: "#pkg-cache",
+        },
     ],
     environments: [
         {
@@ -1131,6 +1194,17 @@
 
             // 1 second
             __stop_timeout_ms: 1000,
+        },
+        {
+            name: "pkg-cache-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "pkg_cache_resolver",
+                    from: "#pkg_cache_resolver",
+                    scheme: "fuchsia-pkg-cache",
+                },
+            ],
         },
     ],
 }

@@ -60,17 +60,11 @@ class FilesystemMounter {
   zx_status_t MountFactoryFs(zx::channel block_device_client,
                              const fs_management::MountOptions& options);
 
-  // Attempts to mount pkgfs if all preconditions have been met:
-  // - Pkgfs has not previously been mounted
-  // - Blobfs has been mounted
-  void TryMountPkgfs();
-
   std::shared_ptr<FshostBootArgs> boot_args() { return fshost_.boot_args(); }
   void ReportDataPartitionCorrupted();
 
   bool BlobMounted() const { return blob_mounted_; }
   bool DataMounted() const { return data_mounted_; }
-  bool PkgfsMounted() const { return pkgfs_mounted_; }
   bool FactoryMounted() const { return factory_mounted_; }
   bool DurableMounted() const { return durable_mounted_; }
 
@@ -110,7 +104,6 @@ class FilesystemMounter {
   bool data_mounted_ = false;
   bool durable_mounted_ = false;
   bool blob_mounted_ = false;
-  bool pkgfs_mounted_ = false;
   bool factory_mounted_ = false;
   fidl::ClientEnd<fuchsia_io::Directory> crypt_outgoing_directory_;
 };

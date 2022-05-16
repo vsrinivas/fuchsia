@@ -105,7 +105,7 @@
         // Attempt to access packages via the `pkgfs` APIs.
         {
             directory: "pkgfs",
-            from: "#fshost",
+            from: "#pkg-cache",
             rights: [ "rx*" ],
             path: "/pkgfs",
         },
@@ -136,8 +136,9 @@
     ],
     offer: [
         {
-            directory: "blob",
+            directory: "blob-exec",
             from: "parent",
+            as: "blob",
             to: "#pkg_server",
         },
         {
@@ -146,10 +147,7 @@
             to: "#pkg_server",
         },
         {
-            directory: [
-                "blob",
-                "pkgfs",
-            ],
+            directory: "blob-exec",
             from: "#fshost",
             to: "#pkg-cache",
         },
@@ -165,38 +163,30 @@
             ],
         },
         {
-            directory: "pkgfs",
-            from: "#fshost",
+            directory: "system",
+            from: "#pkg-cache",
             as: "pkgfs-system",
-            to: [
-                "#pkg-resolver",
-                "#system-updater",
-            ],
-            subdir: "system",
+            to: "#system-updater",
         },
         {
-            directory: "pkgfs",
-            from: "#fshost",
-            as: "config-data",
+            directory: "config-data",
+            from: "#pkg-cache",
             to: "#pkg-resolver",
-            subdir: "packages/config-data/0/meta/data/pkg-resolver",
+            subdir: "pkg-resolver",
         },
         {
-            directory: "pkgfs",
-            from: "#fshost",
-            as: "config-data",
+            directory: "config-data",
+            from: "#pkg-cache",
             to: "#system-update-committer",
-            subdir: "packages/config-data/0/meta/data/system-update-committer",
+            subdir: "system-update-committer",
         },
         {
-            directory: "pkgfs",
-            from: "#fshost",
-            as: "root-ssl-certificates",
+            directory: "root-ssl-certificates",
+            from: "#pkg-cache",
             to: [
                 "#pkg-resolver",
                 "#pkg_server",
             ],
-            subdir: "packages/root_ssl_certificates/0/data",
         },
         {
             storage: "data",
@@ -280,11 +270,9 @@
             ],
         },
         {
-            directory: "pkgfs",
-            from: "#fshost",
-            as: "build-info",
+            directory: "build-info",
+            from: "#pkg-cache",
             to: "#system-updater",
-            subdir: "packages/build-info/0/data",
         },
         {
             protocol: "fuchsia.cobalt.LoggerFactory",
@@ -299,6 +287,12 @@
             protocol: "fuchsia.update.CommitStatusProvider",
             from: "#system-update-committer",
             to: "#pkg-cache",
+
+            // system-update-committer depends on pkg-cache for config-data, which forms a cycle.
+            // pkg-cache does not need fuchsia.update.CommitStatusProvider to provide config-data,
+            // so this edge is marked weak to break the cycle. This mirrors the production
+            // configuration in bootstrap.cml
+            dependency: "weak",
         },
         {
             protocol: [ "fuchsia.hardware.power.statecontrol.Admin" ],

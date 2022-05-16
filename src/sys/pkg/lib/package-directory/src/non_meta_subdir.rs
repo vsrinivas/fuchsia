@@ -144,7 +144,7 @@ impl vfs::directory::entry_container::Directory for NonMetaSubdir {
             mode: fio::MODE_TYPE_DIRECTORY
                 | vfs::common::rights_to_posix_mode_bits(
                     true,  // read
-                    false, // write
+                    true, // write
                     true,  // execute
                 ),
             id: 1,
@@ -202,7 +202,7 @@ mod tests {
         assert_eq!(
             sub_dir.get_attrs().await.unwrap(),
             fio::NodeAttributes {
-                mode: fio::MODE_TYPE_DIRECTORY | 0o500,
+                mode: fio::MODE_TYPE_DIRECTORY | 0o700,
                 id: 1,
                 content_size: 0,
                 storage_size: 0,

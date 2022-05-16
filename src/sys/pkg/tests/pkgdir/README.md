@@ -201,11 +201,10 @@ pkgfs does not support `Clone()` on meta-as-file. pkgfs will not respond to any
 messages on the cloned channel and isn't even guaranteed to close its end of the
 channel.
 
-### mode protection write bit and group and other bytes not set
+### mode protection group and other bytes not set
 
-When `GetAttrs()` is called, package-directory always returns `0o500` for
-directories and `0o400` for files (directories can be read and traversed, files
-can be read, and
+When `GetAttrs()` is called, package-directory always returns `0o700` for
+directories and `0o500` for files (
 [zxio only uses the USR byte](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/zxio/remote.cc;l=339;drc=e3ffcb20a4605ae4299ce5888fce6becabe2f8a9))
 for the
 [mode protection bits](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/directory.fidl;l=97;drc=1cc9164ebb39d1c4b070e23f3808216403fcb526)

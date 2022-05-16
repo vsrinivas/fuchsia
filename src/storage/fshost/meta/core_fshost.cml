@@ -9,46 +9,6 @@
             startup: "eager",
         },
     ],
-    capabilities: [
-        {
-            directory: "pkgfs",
-            rights: [
-                "execute",
-                "rw*",
-            ],
-            path: "/fs/pkgfs",
-        },
-        {
-            directory: "pkgfs-packages",
-            rights: [ "rx*" ],
-            path: "/fs/pkgfs/packages",
-        },
-        {
-            directory: "system",
-            rights: [ "rx*" ],
-            path: "/fs/pkgfs/system",
-        },
-        {
-            directory: "bin",
-            rights: [ "rx*" ],
-            path: "/fs/pkgfs/packages/shell-commands/0/bin",
-        },
-        {
-            directory: "config-data",
-            rights: [ "r*" ],
-            path: "/fs/pkgfs/packages/config-data/0/meta/data",
-        },
-        {
-            directory: "root-ssl-certificates",
-            rights: [ "r*" ],
-            path: "/fs/pkgfs/packages/root_ssl_certificates/0/data",
-        },
-        {
-            directory: "build-info",
-            rights: [ "r*" ],
-            path: "/fs/pkgfs/packages/build-info/0/data",
-        },
-    ],
     use: [
         {
             protocol: [
@@ -98,16 +58,8 @@
             as: "blob",
         },
         {
-            directory: [
-                "bin",
-                "build-info",
-                "config-data",
-                "pkgfs",
-                "pkgfs-packages",
-                "root-ssl-certificates",
-                "system",
-            ],
-            from: "self",
+            directory: "blob-exec",
+            from: "#blobfs",
         },
         {
             protocol: "fuchsia.update.verify.BlobfsVerifier",

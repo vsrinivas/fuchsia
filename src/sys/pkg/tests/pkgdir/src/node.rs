@@ -88,8 +88,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
             open_flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             expected_mode: fio::MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
-                    // "mode protection write bit and group and other bytes not set"
-                    0o500
+                    // "mode protection group and other bytes not set"
+                    0o700
                 } else {
                     0o755
                 },
@@ -109,8 +109,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         Args {
             expected_mode: fio::MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
-                    // "mode protection write bit and group and other bytes not set"
-                    0o500
+                    // "mode protection group and other bytes not set"
+                    0o700
                 } else {
                     0o755
                 },
@@ -145,8 +145,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
             open_mode: fio::MODE_TYPE_FILE,
             expected_mode: fio::MODE_TYPE_FILE
                 | if source.is_pkgdir() {
-                    // "mode protection write bit and group and other bytes not set"
-                    0o400
+                    // "mode protection group and other bytes not set"
+                    0o600
                 } else {
                     0o644
                 },
@@ -169,8 +169,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
             open_mode: fio::MODE_TYPE_DIRECTORY,
             expected_mode: fio::MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
-                    // "mode protection write bit and group and other bytes not set"
-                    0o500
+                    // "mode protection group and other bytes not set"
+                    0o700
                 } else {
                     0o755
                 },
@@ -192,8 +192,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         Args {
             expected_mode: fio::MODE_TYPE_DIRECTORY
                 | if source.is_pkgdir() {
-                    // "mode protection write bit and group and other bytes not set"
-                    0o500
+                    // "mode protection group and other bytes not set"
+                    0o700
                 } else {
                     0o755
                 },
@@ -215,8 +215,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         Args {
             expected_mode: fio::MODE_TYPE_FILE
                 | if source.is_pkgdir() {
-                    // "mode protection write bit and group and other bytes not set"
-                    0o400
+                    // "mode protection group and other bytes not set"
+                    0o600
                 } else {
                     0o644
                 },
