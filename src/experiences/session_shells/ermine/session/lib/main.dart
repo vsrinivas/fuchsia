@@ -7,9 +7,6 @@ import 'package:fidl_fuchsia_component_decl/fidl_async.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:fidl_fuchsia_session_scene/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_keyboard_focus/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as shortcut;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
@@ -48,44 +45,9 @@ void main(List args) async {
     Incoming.fromSvcPath().connectToService(viewRefInstalled);
     await viewRefInstalled.watch(viewRef.duplicate());
 
-    // Hook up focus chain to IME and shortcut manager.
-    final focusChainRegistry = FocusChainListenerRegistryProxy();
-    Incoming.fromSvcPath().connectToService(focusChainRegistry,
-        name: 'fuchsia.ui.focus.FocusChainListenerRegistry-workstation');
-    await focusChainRegistry
-        .register(FocusChainListenerBinding().wrap(_FocusChainListener()));
     // ignore: avoid_catches_without_on_clauses
   } catch (e) {
     log.severe('Caught exception during workstation session setup: $e');
-  }
-}
-
-/// Listens to focus chain updates and forwards them to [shortcut.Manager] and
-/// IME [Controller].
-class _FocusChainListener extends FocusChainListener {
-  final _ime = ControllerProxy();
-  final _shortcutManager = shortcut.ManagerProxy();
-
-  _FocusChainListener() {
-    Incoming.fromSvcPath().connectToService(_ime);
-    Incoming.fromSvcPath().connectToService(_shortcutManager);
-  }
-
-  @override
-  Future<void> onFocusChange(FocusChain focusChain) async {
-    final chain = focusChain.focusChain;
-    if (chain == null || chain.isEmpty) {
-      return;
-    }
-
-    try {
-      final viewRef = chain.last.duplicate();
-      await _ime.notify(viewRef);
-      await _shortcutManager.handleFocusChange(focusChain);
-      // ignore: avoid_catches_without_on_clauses
-    } catch (e) {
-      log.severe('Caught exception updating focus chain: $e');
-    }
   }
 }
 
