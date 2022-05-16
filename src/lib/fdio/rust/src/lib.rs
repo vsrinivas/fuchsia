@@ -4,14 +4,14 @@
 
 //! Bindings for the Zircon fdio library
 
-#[allow(bad_style)]
-pub mod fdio_sys;
+mod fdio_sys;
 
 mod spawn_builder;
+
 pub use spawn_builder::{Error as SpawnBuilderError, SpawnBuilder};
 
 use {
-    ::bitflags::bitflags,
+    bitflags::bitflags,
     fidl_fuchsia_device::ControllerSynchronousProxy,
     fidl_fuchsia_io as fio,
     fuchsia_zircon::{
@@ -23,6 +23,7 @@ use {
         ffi::{self, CStr, CString},
         fs::File,
         marker::PhantomData,
+        mem::MaybeUninit,
         os::{
             raw,
             unix::{
@@ -160,31 +161,49 @@ pub fn open_fd_at(dir: &File, path: &str, flags: fio::OpenFlags) -> Result<File,
     }
 }
 
-pub fn transfer_fd(file: std::fs::File) -> Result<zx::Handle, zx::Status> {
-    unsafe {
-        let mut fd_handle = zx::sys::ZX_HANDLE_INVALID;
-        let status = fdio_sys::fdio_fd_transfer(
-            file.into_raw_fd(),
-            &mut fd_handle as *mut zx::sys::zx_handle_t,
-        );
-        if status != zx::sys::ZX_OK {
-            return Err(zx::Status::from_raw(status));
-        }
-        Ok(zx::Handle::from_raw(fd_handle))
-    }
+/// Clones an object's underlying handle.
+pub fn clone_fd<F: AsRawFd>(f: F) -> Result<zx::Handle, zx::Status> {
+    let fd = f.as_raw_fd();
+    let mut handle = MaybeUninit::uninit();
+    let status = {
+        let handle = handle.as_mut_ptr();
+        unsafe { fdio_sys::fdio_fd_clone(fd, handle) }
+    };
+    let () = zx::Status::ok(status)?;
+    let handle = unsafe { handle.assume_init() };
+    let handle = unsafe { zx::Handle::from_raw(handle) };
+    Ok(handle)
 }
 
-/// Create a open file descriptor from a Handle.
+/// Removes an object from the file descriptor table and returns its underlying handle.
+pub fn transfer_fd<F: AsRawFd>(f: F) -> Result<zx::Handle, zx::Status> {
+    let fd = f.as_raw_fd();
+    let mut handle = MaybeUninit::uninit();
+    let status = {
+        let handle = handle.as_mut_ptr();
+        unsafe { fdio_sys::fdio_fd_transfer(fd, handle) }
+    };
+    let () = zx::Status::ok(status)?;
+    let handle = unsafe { handle.assume_init() };
+    let handle = unsafe { zx::Handle::from_raw(handle) };
+    Ok(handle)
+}
+
+/// Create an object from a handle.
 ///
 /// Afterward, the handle is owned by fdio, and will close with `F`.
 /// See `transfer_fd` for a way to get it back.
 pub fn create_fd<F: FromRawFd>(handle: zx::Handle) -> Result<F, zx::Status> {
-    unsafe {
-        let mut raw_fd = -1;
-        let status = fdio_sys::fdio_fd_create(handle.into_raw(), &mut raw_fd);
-        zx::Status::ok(status)?;
-        Ok(F::from_raw_fd(raw_fd))
-    }
+    let handle = handle.into_raw();
+    let mut fd = MaybeUninit::uninit();
+    let status = {
+        let fd = fd.as_mut_ptr();
+        unsafe { fdio_sys::fdio_fd_create(handle, fd) }
+    };
+    let () = zx::Status::ok(status)?;
+    let fd = unsafe { fd.assume_init() };
+    let f = unsafe { F::from_raw_fd(fd) };
+    Ok(f)
 }
 
 /// Bind a handle to a specific file descriptor.
@@ -328,6 +347,8 @@ pub fn spawn(
 pub struct SpawnAction<'a>(fdio_sys::fdio_spawn_action_t, PhantomData<&'a ()>);
 
 impl<'a> SpawnAction<'a> {
+    pub const USE_FOR_STDIO: i32 = fdio_sys::FDIO_FLAG_USE_FOR_STDIO as i32;
+
     /// Clone a file descriptor into the new process.
     ///
     /// `local_fd`: File descriptor within the current process.

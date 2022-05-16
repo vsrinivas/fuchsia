@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    fdio::fdio_sys,
     fuchsia_zircon::{self as zx, AsHandleRef, ObjectType},
     lazy_static::lazy_static,
     std::fmt,
     std::{panic, sync::Once},
 };
 
-const STDOUT_FD: i32 = 1;
 const MAX_LOG_LEVEL: log::Level = log::Level::Info;
 
 lazy_static! {
@@ -25,15 +23,7 @@ pub struct KernelLogger {
 
 impl KernelLogger {
     fn new() -> KernelLogger {
-        let debuglog = unsafe {
-            let mut raw_debuglog = zx::sys::ZX_HANDLE_INVALID;
-            let status = fdio_sys::fdio_fd_clone(STDOUT_FD, &mut raw_debuglog);
-            if let Err(s) = zx::Status::ok(status) {
-                // Panic as this failure means that there's no logger initialized.
-                panic!("Unable to get debuglog handle from stdout fd: {}", s);
-            }
-            fuchsia_zircon::Handle::from_raw(raw_debuglog)
-        };
+        let debuglog = fdio::clone_fd(std::io::stdout()).expect("get handle from stdout");
 
         assert_eq!(debuglog.basic_info().unwrap().object_type, ObjectType::LOG);
         KernelLogger { debuglog: debuglog.into() }
@@ -158,6 +148,8 @@ mod tests {
     // manager now uses to retrieve the debuglog handle. To simulate that, we need to bind
     // a handle before calling KernelLogger::init().
     fn init() {
+        const STDOUT_FD: i32 = 1;
+
         let resource = zx::Resource::from(zx::Handle::invalid());
         let debuglog = zx::DebugLog::create(&resource, zx::DebugLogOpts::empty())
             .context("Failed to create debuglog object")

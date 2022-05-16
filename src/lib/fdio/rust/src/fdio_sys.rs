@@ -5,6 +5,10 @@
 // This file was generated with bindgen, then modified to consume already bound
 // types and remove various bindgen-isms that we don't want.
 
+#![allow(dead_code)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
 // TODO(https://github.com/rust-lang/rust-bindgen/issues/1651): Remove once bindgen is fixed.
 #![cfg_attr(test, allow(deref_nullptr))]
 
@@ -18,22 +22,18 @@ impl<T> __IncompleteArrayField<T> {
     pub fn new() -> Self {
         __IncompleteArrayField(::std::marker::PhantomData)
     }
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99069)
     #[inline]
     pub unsafe fn as_ptr(&self) -> *const T {
         ::std::mem::transmute(self)
     }
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99069)
     #[inline]
     pub unsafe fn as_mut_ptr(&mut self) -> *mut T {
         ::std::mem::transmute(self)
     }
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99069)
     #[inline]
     pub unsafe fn as_slice(&self, len: usize) -> &[T] {
         ::std::slice::from_raw_parts(self.as_ptr(), len)
     }
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99069)
     #[inline]
     pub unsafe fn as_mut_slice(&mut self, len: usize) -> &mut [T] {
         ::std::slice::from_raw_parts_mut(self.as_mut_ptr(), len)

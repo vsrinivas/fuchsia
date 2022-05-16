@@ -223,10 +223,7 @@ impl Pty {
             command,
             argv,
             environ,
-            &mut [fdio::SpawnAction::transfer_fd(
-                client_pty,
-                fdio::fdio_sys::FDIO_FLAG_USE_FOR_STDIO as i32,
-            )],
+            &mut [fdio::SpawnAction::transfer_fd(client_pty, fdio::SpawnAction::USE_FOR_STDIO)],
         )
         .map_err(|e| format_err!("failed to spawn shell: {:?}", e))?;
 
