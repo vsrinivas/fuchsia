@@ -72,7 +72,7 @@ template("core_realm") {
   generated_file(generated_file_target) {
     deps = shard_deps
     data_keys = [ "shard_files" ]
-    outputs = [ "$target_out_dir/core_shard_list" ]
+    outputs = [ "$target_out_dir/${target_name}_core_shard_list" ]
   }
   core_shard_list = get_target_outputs(":$generated_file_target")
 

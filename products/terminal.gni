@@ -90,10 +90,3 @@ legacy_universe_package_labels += [
   # Only for products in which Flutter is supported.
   "//src/tests/intl/timezone:tests-for-flutter",
 ]
-
-# TODO(fxbug.dev/90440): delete the below after sshd-host.cml is used everywhere
-import("//src/developer/sshd-host/fxbug_dev_90440.gni")
-sshd_host_component = "cml"
-
-# TODO(fxbug.dev/90440): move this to core.gni
-core_realm_shards += [ "//src/developer/sshd-host:core_shard" ]

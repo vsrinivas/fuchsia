@@ -20,6 +20,11 @@ template("assemble_network_conformance_system") {
   core_realm("core") {
     testonly = true
 
+    deps = [
+      # Need ssh to test the system
+      "//src/developer/sshd-host:core_shard",
+    ]
+
     package_name = core_name
     restrict_persistent_storage = false
     restrict_full_resolver_to_base = false

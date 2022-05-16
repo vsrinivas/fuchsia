@@ -5,7 +5,6 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//src/sys/core/build/core_shard.gni")
-import("fxbug_dev_90440.gni")
 
 group("tests") {
   testonly = true
@@ -42,48 +41,20 @@ executable("bin") {
   ]
 }
 
-fuchsia_component("cmx") {
-  component_name = "sshd-host"
-  manifest = "meta/sshd-host.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_component("cml") {
-  component_name = "sshd-host"
+fuchsia_package_with_single_component("sshd-host") {
   manifest = "meta/sshd-host.cml"
-  deps = [ ":bin" ]
-
-  # TODO(fxbug.dev/97903): remove the below after removing svc_from_sys from
-  # sshd-host.cml.
-  check_includes = false
-}
-
-fuchsia_package("sshd-host") {
   deps = [
     # Ensure this isn't included in production
     "//build/validate:non_production_tag",
 
     # Used by programs that need to load ICU locale data, such as tz-util.
+    ":bin",
     "//src/intl:icudtl",
     "//third_party/openssh-portable:hostkeygen",
     "//third_party/openssh-portable:scp",
     "//third_party/openssh-portable:sftp-server",
     "//third_party/openssh-portable:sshd",
   ]
-
-  # TODO(fxbug.dev/90440): delete the below after we use cml everywhere
-  if (sshd_host_component == "cmx") {
-    deps += [
-      ":cmx",
-
-      # Configure sysmgr to start sshd-host.cmx
-      "//src/sys/sysmgr:sshd_host_config",
-    ]
-  } else if (sshd_host_component == "cml") {
-    deps += [ ":cml" ]
-  } else {
-    assert(false, "Invalid value sshd_host_component = $sshd_host_component")
-  }
 }
 
 core_shard("core_shard") {
