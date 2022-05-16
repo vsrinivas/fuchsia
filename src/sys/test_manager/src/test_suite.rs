@@ -216,7 +216,7 @@ impl TestRunBuilder {
 }
 
 // max events to send so that we don't cross fidl limits.
-// TODO(anmittal): Use tape measure to calculate limit.
+// TODO(fxbug.dev/100462): Use tape measure to calculate limit.
 const EVENTS_THRESHOLD: usize = 50;
 
 impl Suite {

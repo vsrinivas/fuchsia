@@ -221,7 +221,7 @@ fn assert_artifacts(
     expected_artifacts: &ArtifactMetadataToAssertionMap,
     entity_context: EntityContext<'_>,
 ) {
-    // TODO(satsukiu): add options so that the test author can explicitly declare whether
+    // TODO(fxbug.dev/100463): add options so that the test author can explicitly declare whether
     // artifacts should be an exact match, should contain (and may contain more) artifacts,
     // or any number of artifacts is accesptable.
     // This skips artifact assertion for the typical case where verifying artifacts isn't

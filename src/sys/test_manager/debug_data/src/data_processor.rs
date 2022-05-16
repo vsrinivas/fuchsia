@@ -11,7 +11,7 @@ use futures::stream::{Stream, StreamExt};
 
 /// Max VMOs to send at once. This is limited primarily by the max handles in a channel
 /// write, although we may encounter the max byte limit too.
-/// TODO(satsukiu): Use tape measure instead
+/// TODO(fxbug.dev/100462): Use tape measure instead
 const VMO_CHUNK_SIZE: usize = 32;
 
 /// Processes a stream of |DebugData| VMOs and places the results in |dir_path|.
