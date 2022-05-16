@@ -2479,9 +2479,7 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint64_t ordinal, const void* d
   // serialized anyway, so there is no danger of collision.
   static ldmsg_req_t req;
   // TODO(38643) use fidl_init_txn_header once it is inline
-  memset(&req.header, 0, sizeof(req.header));
-  req.header.ordinal = ordinal;
-  req.header.magic_number = kFidlWireFormatMagicNumberInitial;
+  ldmsg_req_init_txn_header(&req, ordinal);
 
   size_t req_len;
   zx_status_t status = ldmsg_req_encode(&req, &req_len, (const char*)data, len);

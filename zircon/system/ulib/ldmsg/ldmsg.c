@@ -13,6 +13,14 @@ static uint64_t FidlAlign(uint32_t offset) {
   return (offset + alignment_mask) & ~alignment_mask;
 }
 
+void ldmsg_req_init_txn_header(ldmsg_req_t* req, uint64_t ordinal) {
+  req->header = (fidl_message_header_t){
+    .ordinal = ordinal,
+    .magic_number = kFidlWireFormatMagicNumberInitial,
+    .at_rest_flags = { FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2 },
+  };
+}
+
 zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out, const char* data, size_t len) {
   size_t offset = 0;
   switch (req->header.ordinal) {

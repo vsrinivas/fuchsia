@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LDMSG_LDMSG_H_
+#define LDMSG_LDMSG_H_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -71,6 +72,11 @@ struct ldmsg_rsp {
   zx_handle_t object;
 };
 
+// Initialize the FIDL transaction header stored within ldmsg_req.
+//
+// TODO(38643) replace with fidl_init_txn_header once it is inline
+void ldmsg_req_init_txn_header(ldmsg_req_t* req, uint64_t ordinal);
+
 // Encode the message in |req|.
 //
 // The format of the message will be determined by the ordinal in the message's
@@ -109,3 +115,5 @@ zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len, const char** data
 size_t ldmsg_rsp_get_size(ldmsg_rsp_t* rsp);
 
 __END_CDECLS
+
+#endif  // LDMSG_LDMSG_H_

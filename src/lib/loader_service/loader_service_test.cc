@@ -253,9 +253,8 @@ TEST_F(LoaderServiceTest, InvalidConfig) {
 void LoadObjectLdmsg(fidl::UnownedClientEnd<fldsvc::Loader> client, const char* object_name,
                      zx::status<> expected) {
   size_t req_len;
-  ldmsg_req_t req = {};
-  req.header.ordinal = LDMSG_OP_LOAD_OBJECT;
-  req.header.magic_number = kFidlWireFormatMagicNumberInitial;
+  ldmsg_req_t req;
+  ldmsg_req_init_txn_header(&req, LDMSG_OP_LOAD_OBJECT);
   zx_status_t status = ldmsg_req_encode(&req, &req_len, object_name, strlen(object_name));
   ASSERT_OK(status);
 
