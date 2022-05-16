@@ -3207,4 +3207,392 @@ TEST(PagerWriteback, ResizeWritebackInterleavedWriteWithMapping) {
   }
 }
 
+// Test that OP_ZERO writes zeros in a pager-backed VMO.
+TEST(PagerWriteback, OpZero) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, ZX_VMO_RESIZABLE, &vmo));
+  // Supply only one page and let the other be faulted in.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Verify VMO contents for the supplied page.
+  std::vector<uint8_t> expected(4 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // Verify that no pages are dirty.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Zero both the pages.
+  TestThread t([vmo]() -> bool {
+    return vmo->vmo().op_range(ZX_VMO_OP_ZERO, 0, 2 * zx_system_get_page_size(), nullptr, 0) ==
+           ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // We should see a read request for the second page.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
+  ASSERT_TRUE(t.Wait());
+
+  // Verify that the contents are zero.
+  memset(expected.data(), 0, 2 * zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+
+  // Verify that zero content is dirty.
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 2, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Resize the VMO up.
+  ASSERT_TRUE(vmo->Resize(4));
+
+  // Zero the tail end of the VMO that was newly extended. This should be a no-op as it is already
+  // zero.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_ZERO, 2 * zx_system_get_page_size(),
+                                2 * zx_system_get_page_size(), nullptr, 0));
+
+  // Only the first two pages that we supplied previously should be committed in the VMO.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+
+  // Verify dirty ranges and VMO contents.
+  zx_vmo_dirty_range_t ranges[] = {{0, 2, 0}, {2, 2, ZX_VMO_DIRTY_RANGE_IS_ZERO}};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 4, expected.data(), true));
+
+  // No more page requests seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
+// Test OP_ZERO on a pager-backed VMO created with ZX_VMO_TRAP_DIRTY.
+TEST(PagerWriteback, OpZeroTrapDirty) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_RESIZABLE | ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Verify VMO contents.
+  std::vector<uint8_t> expected(3 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // Verify that no pages are dirty.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Zero the page.
+  TestThread t([vmo]() -> bool {
+    return vmo->vmo().op_range(ZX_VMO_OP_ZERO, 0, zx_system_get_page_size(), nullptr, 0) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // We should see a dirty request for the page as the zero'ing is equivalent to a VMO write.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  ASSERT_TRUE(t.Wait());
+
+  // Verify that the contents are zero.
+  memset(expected.data(), 0, zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // Verify that zero content is dirty.
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Resize the VMO up.
+  ASSERT_TRUE(vmo->Resize(3));
+
+  // Zero the tail end of the VMO that was newly extended. This should be a no-op as it is already
+  // zero.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_ZERO, zx_system_get_page_size(),
+                                2 * zx_system_get_page_size(), nullptr, 0));
+
+  // Only the first page that we supplied previously should be committed in the VMO.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+
+  // Verify dirty ranges and VMO contents.
+  zx_vmo_dirty_range_t ranges[] = {{0, 1, 0}, {1, 2, ZX_VMO_DIRTY_RANGE_IS_ZERO}};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+
+  // No more page requests seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
+// Test that OP_ZERO is a no-op over a newly extended (but not written back yet) uncommitted range.
+TEST(PagerWriteback, OpZeroTail) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_RESIZABLE, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Resize the VMO up.
+  ASSERT_TRUE(vmo->Resize(3));
+
+  // Verify VMO contents and dirty pages.
+  std::vector<uint8_t> expected(3 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 1, .length = 2, .options = ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Only the single page we supplied previously should be committed.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+
+  // Zero the newly extended range.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_ZERO, zx_system_get_page_size(),
+                                2 * zx_system_get_page_size(), nullptr, 0));
+
+  // This should be a no-op and not alter the VMO's pages.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Only the single page we supplied previously should be committed.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+}
+
+// Test that OP_ZERO can decommit committed pages in a newly extended (but not written back yet)
+// range.
+TEST(PagerWriteback, OpZeroDecommit) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_RESIZABLE, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Resize the VMO up.
+  ASSERT_TRUE(vmo->Resize(3));
+
+  // Verify VMO contents and dirty pages.
+  std::vector<uint8_t> expected(3 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 1, .length = 2, .options = ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Write to a page in the newly extended range leaving a gap
+  uint8_t data = 0xaa;
+  ASSERT_OK(vmo->vmo().write(&data, 2 * zx_system_get_page_size(), sizeof(data)));
+
+  // Verify VMO contents and dirty pages.
+  memset(expected.data() + 2 * zx_system_get_page_size(), data, sizeof(data));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+  zx_vmo_dirty_range_t ranges[] = {{1, 1, ZX_VMO_DIRTY_RANGE_IS_ZERO}, {2, 1, 0}};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
+
+  // Check that two pages are committed.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+
+  // Now zero the VMO.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_ZERO, 0, 3 * zx_system_get_page_size(), nullptr, 0));
+
+  // Verify that the VMO is now all zeros.
+  memset(expected.data(), 0, 3 * zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+
+  // We should have been able to decommit the newly extended page.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+
+  // Verify dirty ranges.
+  ranges[0] = {0, 1, 0};
+  ranges[1] = {1, 2, ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
+}
+
+// Test OP_ZERO on a clone of a pager-backed VMO.
+TEST(PagerWriteback, OpZeroClone) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, ZX_VMO_TRAP_DIRTY, &vmo));
+  // Supply one page.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
+
+  // Create a clone and zero it entirely.
+  auto clone1 = vmo->Clone();
+  ASSERT_NOT_NULL(clone1);
+  ASSERT_OK(clone1->vmo().op_range(ZX_VMO_OP_ZERO, 0, 2 * zx_system_get_page_size(), nullptr, 0));
+
+  // No page requests were seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+  // Verify that the clone reads zeros.
+  std::vector<uint8_t> expected(2 * zx_system_get_page_size(), 0);
+  ASSERT_TRUE(check_buffer_data(clone1.get(), 0, 2, expected.data(), true));
+
+  // Verify that the parent is unaltered. Only one page should have been committed as we supplied
+  // that previously. Zero'ing the other page in the clone should have proceeded without committing
+  // the page in the parent.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+  vmo->GenerateBufferContents(expected.data() + zx_system_get_page_size(), 1, 1);
+  ASSERT_TRUE(check_buffer_data(vmo, 1, 1, expected.data(), true));
+
+  // No pages should be dirty in the parent.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The clone does not support dirty pages.
+  ASSERT_FALSE(pager.VerifyDirtyRanges(clone1.get(), nullptr, 0));
+
+  // Create another clone and this time only zero a portion of it - an unsupplied page.
+  auto clone2 = vmo->Clone();
+  ASSERT_NOT_NULL(clone2);
+  ASSERT_OK(clone2->vmo().op_range(ZX_VMO_OP_ZERO, 0, zx_system_get_page_size(), nullptr, 0));
+
+  // No page requests were seen.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+  // Verify that the clone reads the zeroed page as zero but is still able to see the other page
+  // from the parent.
+  ASSERT_TRUE(check_buffer_data(clone2.get(), 0, 2, expected.data(), true));
+
+  // Verify that the parent is unaltered.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+  ASSERT_TRUE(check_buffer_data(vmo, 1, 1, expected.data(), true));
+
+  // No pages should be dirty in the parent.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The clone does not support dirty pages.
+  ASSERT_FALSE(pager.VerifyDirtyRanges(clone2.get(), nullptr, 0));
+
+  // Supply the remaining page in the parent.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Create another clone and zero only a portion of it - a supplied page this time.
+  auto clone3 = vmo->Clone();
+  ASSERT_NOT_NULL(clone3);
+  ASSERT_OK(clone3->vmo().op_range(ZX_VMO_OP_ZERO, 0, zx_system_get_page_size(), nullptr, 0));
+
+  // No page requests were seen.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+  // Verify that the clone reads the zeroed page as zero but is still able to see the other page
+  // from the parent.
+  ASSERT_TRUE(check_buffer_data(clone3.get(), 0, 2, expected.data(), true));
+
+  // Verify the parent's contents.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+
+  // No pages should be dirty in the parent.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The clone does not support dirty pages.
+  ASSERT_FALSE(pager.VerifyDirtyRanges(clone3.get(), nullptr, 0));
+}
+
+// Test OP_ZERO that conflicts with a simultaneous resize.
+TEST(PagerWriteback, OpZeroResize) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, ZX_VMO_RESIZABLE, &vmo));
+  // Supply only one page and let the other be faulted in.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Verify VMO contents for the supplied page.
+  std::vector<uint8_t> expected(2 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // Verify that no pages are dirty.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Zero both the pages.
+  TestThread t([vmo]() -> bool {
+    zx_status_t status =
+        vmo->vmo().op_range(ZX_VMO_OP_ZERO, 0, 2 * zx_system_get_page_size(), nullptr, 0);
+    return status == ZX_ERR_OUT_OF_RANGE;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // We should see a read request for the second page.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
+
+  // While the thread is blocked on the read request, shrink the VMO. This should unblock the
+  // waiting thread and the OP_ZERO should fail with ZX_ERR_OUT_OF_RANGE.
+  ASSERT_TRUE(vmo->Resize(1));
+  ASSERT_TRUE(t.Wait());
+
+  // Verify VMO contents for the remaining page.
+  memset(expected.data(), 0, zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+}
+
+// Test OP_ZERO on partial pages.
+TEST(PagerWriteback, OpZeroPartialPage) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_RESIZABLE, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Verify VMO contents and dirty pages.
+  std::vector<uint8_t> expected(2 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Resize the VMO up.
+  ASSERT_TRUE(vmo->Resize(2));
+
+  // Verify VMO contents and dirty pages.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 1, .length = 1, .options = ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Zero a few bytes in the middle of first page.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_ZERO, sizeof(uint64_t), sizeof(uint64_t), nullptr, 0));
+
+  // Verify VMO contents.
+  memset(expected.data() + sizeof(uint64_t), 0, sizeof(uint64_t));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+
+  // The first page should also be dirty now.
+  zx_vmo_dirty_range_t ranges[] = {{0, 1, 0}, {1, 1, ZX_VMO_DIRTY_RANGE_IS_ZERO}};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
+
+  // Zero a range starting partway into the first page and ending before the end of the second page.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_ZERO, zx_system_get_page_size() - sizeof(uint64_t),
+                                zx_system_get_page_size(), nullptr, 0));
+
+  // Verify VMO contents.
+  memset(expected.data() + zx_system_get_page_size() - sizeof(uint64_t), 0, sizeof(uint64_t));
+  // Verify dirty ranges.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
+}
+
 }  // namespace pager_tests

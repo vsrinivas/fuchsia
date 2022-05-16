@@ -846,8 +846,9 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len) {
   return status;
 }
 
-zx_status_t VmObjectPaged::ZeroPartialPage(uint64_t page_base_offset, uint64_t zero_start_offset,
-                                           uint64_t zero_end_offset, Guard<Mutex>* guard) {
+zx_status_t VmObjectPaged::ZeroPartialPageLocked(uint64_t page_base_offset,
+                                                 uint64_t zero_start_offset,
+                                                 uint64_t zero_end_offset, Guard<Mutex>* guard) {
   DEBUG_ASSERT(zero_start_offset <= zero_end_offset);
   DEBUG_ASSERT(zero_end_offset <= PAGE_SIZE);
   DEBUG_ASSERT(IS_PAGE_ALIGNED(page_base_offset));
@@ -897,9 +898,9 @@ zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
 
   // Helper that checks and establishes our invariants. We use this after calling functions that
   // may have temporarily released the lock.
-  auto establish_invariants = [this, end]() TA_REQ(lock_) {
+  auto establish_invariants = [this, &end]() TA_REQ(lock_) {
     if (end > size_locked()) {
-      return ZX_ERR_BAD_STATE;
+      return ZX_ERR_OUT_OF_RANGE;
     }
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
       return ZX_ERR_BAD_STATE;
@@ -913,11 +914,11 @@ zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
   if (unlikely(start_page_base != start)) {
     // Need to handle the case were end is unaligned and on the same page as start
     if (unlikely(start_page_base == end_page_base)) {
-      return ZeroPartialPage(start_page_base, start - start_page_base, end - start_page_base,
-                             &guard);
+      return ZeroPartialPageLocked(start_page_base, start - start_page_base, end - start_page_base,
+                                   &guard);
     }
     zx_status_t status =
-        ZeroPartialPage(start_page_base, start - start_page_base, PAGE_SIZE, &guard);
+        ZeroPartialPageLocked(start_page_base, start - start_page_base, PAGE_SIZE, &guard);
     if (status == ZX_OK) {
       status = establish_invariants();
     }
@@ -928,7 +929,7 @@ zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
   }
 
   if (unlikely(end_page_base != end)) {
-    zx_status_t status = ZeroPartialPage(end_page_base, 0, end - end_page_base, &guard);
+    zx_status_t status = ZeroPartialPageLocked(end_page_base, 0, end - end_page_base, &guard);
     if (status == ZX_OK) {
       status = establish_invariants();
     }
@@ -952,14 +953,40 @@ zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
 #if DEBUG_ASSERT_IMPLEMENTED
   uint64_t page_count_before = is_contiguous() ? cow_pages_locked()->DebugGetPageCountLocked() : 0;
 #endif
-  zx_status_t result = cow_pages_locked()->ZeroPagesLocked(start, end);
+
+  // We might need a page request if the VMO is backed by a page source.
+  __UNINITIALIZED LazyPageRequest page_request;
+  while (start < end) {
+    uint64_t zeroed_len = 0;
+    zx_status_t status =
+        cow_pages_locked()->ZeroPagesLocked(start, end, &page_request, &zeroed_len);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      guard.CallUnlocked([&status, &page_request]() { status = page_request->Wait(); });
+      if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
+          DumpLocked(0, false);
+        }
+        return status;
+      }
+      // We dropped the lock while waiting. Check the invariants again.
+      status = establish_invariants();
+      if (status != ZX_OK) {
+        return status;
+      }
+    } else if (status != ZX_OK) {
+      return status;
+    }
+    // Advance over pages that had already been zeroed.
+    start += zeroed_len;
+  }
+
 #if DEBUG_ASSERT_IMPLEMENTED
   if (is_contiguous()) {
     uint64_t page_count_after = cow_pages_locked()->DebugGetPageCountLocked();
     DEBUG_ASSERT(page_count_after == page_count_before);
   }
 #endif
-  return result;
+  return ZX_OK;
 }
 
 zx_status_t VmObjectPaged::Resize(uint64_t s) {

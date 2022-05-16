@@ -379,8 +379,18 @@ class VmCowPages final
   // After successful completion the range of pages will all read as zeros. The mechanism used to
   // achieve this is not guaranteed to decommit, but it will try to.
   // |page_start_base| and |page_end_base| must be page aligned offsets within the range of the
-  // object.
-  zx_status_t ZeroPagesLocked(uint64_t page_start_base, uint64_t page_end_base) TA_REQ(lock_);
+  // object. |zeroed_len_out| will contain the length (in bytes) starting at |page_start_base| that
+  // was successfully zeroed.
+  //
+  // Returns one of the following:
+  //  ZX_OK => The whole range was successfully zeroed.
+  //  ZX_ERR_SHOULD_WAIT => The caller needs to wait on the |page_request| and then retry the
+  //  operation. |zeroed_len_out| will contain the range that was partially zeroed, so the caller
+  //  can advance the start offset before retrying.
+  //  Any other error code indicates a failure to zero a part of the range or the whole range.
+  zx_status_t ZeroPagesLocked(uint64_t page_start_base, uint64_t page_end_base,
+                              LazyPageRequest* page_request, uint64_t* zeroed_len_out)
+      TA_REQ(lock_);
 
   // Attempts to commit a range of pages. This has three kinds of return status
   //  ZX_OK => The whole range was successfully committed and |len| will be written to

@@ -127,10 +127,6 @@ zx_status_t AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr,
   return ZX_OK;
 }
 
-bool SlotHasPinnedPage(VmPageOrMarker* slot) {
-  return slot && slot->IsPage() && slot->Page()->object.pin_count > 0;
-}
-
 inline uint64_t CheckedAdd(uint64_t a, uint64_t b) {
   uint64_t result;
   bool overflow = add_overflow(a, b, &result);
@@ -2797,6 +2793,12 @@ bool VmCowPages::PageWouldReadZeroLocked(uint64_t page_offset) {
     // This is already considered zero as there's a marker.
     return true;
   }
+  if (is_source_preserving_page_content_locked() && page_offset >= supply_zero_offset_) {
+    // Uncommitted pages beyond supply_zero_offset_ are supplied as zeros by the kernel.
+    if (!slot || slot->IsEmpty()) {
+      return true;
+    }
+  }
   // If we don't have a committed page we need to check our parent.
   if (!slot || !slot->IsPage()) {
     VmCowPages* page_owner;
@@ -2810,21 +2812,36 @@ bool VmCowPages::PageWouldReadZeroLocked(uint64_t page_offset) {
   return false;
 }
 
-zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_end_base) {
+zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_end_base,
+                                        LazyPageRequest* page_request, uint64_t* zeroed_len_out) {
   canary_.Assert();
 
   DEBUG_ASSERT(page_start_base <= page_end_base);
   DEBUG_ASSERT(page_end_base <= size_);
   DEBUG_ASSERT(IS_PAGE_ALIGNED(page_start_base));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(page_end_base));
+  ASSERT(zeroed_len_out);
 
   // Forward any operations on slices up to the original non slice parent.
   if (is_slice_locked()) {
     uint64_t parent_offset;
     VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
-    return parent->ZeroPagesLocked(page_start_base + parent_offset, page_end_base + parent_offset);
+    return parent->ZeroPagesLocked(page_start_base + parent_offset, page_end_base + parent_offset,
+                                   page_request, zeroed_len_out);
   }
+
+  // This function tries to zero pages as optimally as possible for most cases, so we attempt
+  // increasingly expensive actions only if certain preconditions do not allow us to perform the
+  // cheaper action. Broadly speaking, the sequence of actions that are attempted are as follows.
+  //  1) Try to decommit the entire range at once if the VMO allows it.
+  //  2) Otherwise, try to decommit each page if the VMO allows it and doing so doesn't expose
+  //  content in the parent (if any) that shouldn't be visible.
+  //  3) Otherwise, if this is a child VMO and there is no committed page yet, allocate a zero page.
+  //  4) Otherwise, look up the page, faulting it in if necessary, and zero the page. If the page
+  //  source needs to supply or dirty track the page, a page request is initialized and we return
+  //  early with ZX_ERR_SHOULD_WAIT. The caller is expected to wait on the page request, and then
+  //  retry. On the retry, we should be able to look up the page successfully and zero it.
 
   // First try and do the more efficient decommit. We prefer/ decommit as it performs work in the
   // order of the number of committed pages, instead of work in the order of size of the range. An
@@ -2837,6 +2854,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   if (can_decommit_zero_pages_locked()) {
     zx_status_t status = DecommitRangeLocked(page_start_base, page_end_base - page_start_base);
     if (status == ZX_OK) {
+      *zeroed_len_out = page_end_base - page_start_base;
       return ZX_OK;
     }
 
@@ -2860,17 +2878,14 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   });
 
   // Give us easier names for our range.
-  uint64_t start = page_start_base;
-  uint64_t end = page_end_base;
+  const uint64_t start = page_start_base;
+  const uint64_t end = page_end_base;
 
   // If we're zeroing at the end of our parent range we can update to reflect this similar to a
   // resize. This does not work if we are a slice, but we checked for that earlier. Whilst this does
   // not actually zero the range in question, it makes future zeroing of the range far more
   // efficient, which is why we do it first.
-  // parent_limit_ is a page aligned offset and so we can only reduce it to a rounded up value of
-  // start.
-  uint64_t rounded_start = ROUNDUP_PAGE_SIZE(start);
-  if (rounded_start < parent_limit_ && end >= parent_limit_) {
+  if (start < parent_limit_ && end >= parent_limit_) {
     bool hidden_parent = false;
     if (parent_) {
       AssertHeld(parent_->lock_ref());
@@ -2880,14 +2895,15 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       // Release any COW pages that are no longer necessary. This will also
       // update the parent limit.
       __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
-      ReleaseCowParentPagesLocked(rounded_start, parent_limit_, &page_remover);
+      ReleaseCowParentPagesLocked(start, parent_limit_, &page_remover);
       page_remover.Flush();
     } else {
-      parent_limit_ = rounded_start;
+      parent_limit_ = start;
     }
   }
 
-  for (uint64_t offset = start; offset < end; offset += PAGE_SIZE) {
+  *zeroed_len_out = 0;
+  for (uint64_t offset = start; offset < end; offset += PAGE_SIZE, *zeroed_len_out += PAGE_SIZE) {
     VmPageOrMarker* slot = page_list_.Lookup(offset);
 
     DEBUG_ASSERT(!direct_source_supplies_zero_pages_locked() || (!slot || !slot->IsMarker()));
@@ -2899,6 +2915,28 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       // zeroes.
       continue;
     }
+
+    // If the source preserves page content, offsets beyond supply_zero_offset_ are implicitly zero.
+    // If there isn't a committed page at this offset, there is nothing more to be done.
+    if (is_source_preserving_page_content_locked() && offset >= supply_zero_offset_) {
+      if (!slot || slot->IsEmpty()) {
+        continue;
+      }
+      // We cannot have clean pages beyond supply_zero_offset_.
+      ASSERT(slot->IsPage());
+      ASSERT(is_page_dirty_tracked(slot->Page()));
+      ASSERT(!is_page_clean(slot->Page()));
+      DEBUG_ASSERT(!pmm_is_loaned(slot->Page()));
+    }
+
+    // If there's already a marker then we can avoid any second guessing and leave the marker alone.
+    if (slot && slot->IsMarker()) {
+      continue;
+    }
+
+    // If the VMO is directly backed by a page source that preserves content, it should be the root
+    // VMO of the hierarchy.
+    DEBUG_ASSERT(!is_source_preserving_page_content_locked() || !parent_);
 
     const bool can_see_parent = parent_ && offset < parent_limit_;
 
@@ -2949,18 +2987,33 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       }
     };
 
-    // If there's already a marker then we can avoid any second guessing and leave the marker alone.
-    if (slot && slot->IsMarker()) {
-      continue;
-    }
+    // In the ideal case we can zero by making there be an Empty slot in our page list. This is true
+    // when we're not specifically avoiding decommit on zero and there is nothing pinned.
+    // Additionally, if the page source is preserving content, an empty slot at this offset should
+    // imply zero, and this is only true for offsets starting at supply_zero_offset_. For offsets
+    // preceding supply_zero_offset_ an empty slot signifies absent content that has not yet been
+    // supplied by the page source.
+    //
+    // Note that this lambda is only checking for pre-conditions in *this* VMO which allow us to
+    // represent zeros with an empty slot. We will combine this check with additional checks for
+    // contents visible through the parent, if applicable.
+    //
+    // This is a lambda instead of a bool that is computed once, because slot gets recomputed below.
+    auto can_decommit_slot = [this, offset](VmPageOrMarker* slot) TA_REQ(lock_) {
+      if (!can_decommit_zero_pages_locked() ||
+          (slot && slot->IsPage() && slot->Page()->object.pin_count > 0)) {
+        return false;
+      }
+      return !is_source_preserving_page_content_locked() || offset >= supply_zero_offset_;
+    };
 
-    // In the ideal case we can zero by making there be an Empty slot in our page list, so first
-    // see if we can do that. This is true when we're not specifically avoiding decommit on zero and
-    // there is nothing pinned and either:
-    //  * This offset does not relate to our parent
+    // First see if we can simply get done with an empty slot in the page list. This VMO should
+    // allow decommitting a page at this offset when zeroing. Additionally, one of the following
+    // conditions should hold w.r.t. to the parent:
+    //  * This offset does not relate to our parent, or we don't have a parent.
     //  * This offset does relate to our parent, but our parent is immutable and is currently zero
     //    at this offset.
-    if (can_decommit_zero_pages_locked() && !SlotHasPinnedPage(slot) &&
+    if (can_decommit_slot(slot) &&
         (!can_see_parent || (parent_immutable() && !parent_has_content()))) {
       if (slot && slot->IsPage()) {
         vm_page_t* page = page_list_.RemovePage(offset).ReleasePage();
@@ -2970,9 +3023,9 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       }
       continue;
     }
-    // The only time we would reach here and *not* have a parent is if the page is pinned, or if we
-    // specifically don't want to decommit a page when zeroing.
-    DEBUG_ASSERT((SlotHasPinnedPage(slot) || !can_decommit_zero_pages_locked()) || parent_);
+    // The only time we would reach here and *not* have a parent is if we could not decommit a
+    // page at this offset when zeroing.
+    DEBUG_ASSERT(!can_decommit_slot(slot) || parent_);
 
     // Now we know that we need to do something active to make this zero, either through a marker or
     // a page. First make sure we have a slot to modify.
@@ -2986,32 +3039,65 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // Ideally we will use a marker, but we can only do this if we can point to a committed page
     // to justify the allocation of the marker (i.e. we cannot allocate infinite markers with no
     // committed pages). A committed page in this case exists if the parent has any content.
-    if (!can_decommit_zero_pages_locked() || SlotHasPinnedPage(slot) || !parent_has_content()) {
-      if (slot->IsPage()) {
-        // Zero the existing page.
-        ZeroPage(slot->Page());
+    // Otherwise, we'll need to zero an actual page.
+    if (!can_decommit_slot(slot) || !parent_has_content()) {
+      // We might allocate a new page below. Free any pages we've accumulated first.
+      free_any_pages();
+
+      // If we're here because of !parent_has_content() and slot doesn't have a page, we can simply
+      // allocate a zero page to replace the empty slot. Otherwise, we'll have to look up the page
+      // and zero it.
+      //
+      // We could technically fall through to LookupPagesLocked even for an empty slot and let
+      // LookupPagesLocked allocate a new page and zero it, but we want to avoid having to
+      // redundantly zero a newly forked zero page after LookupPagesLocked.
+      if (slot->IsEmpty() && can_see_parent && !parent_has_content()) {
+        // We could only have ended up here if the parent was mutable, otherwise we should have been
+        // able to treat an empty slot as zero (decommit a committed page) and return early above.
+        DEBUG_ASSERT(!parent_immutable());
+        // We will try to insert a new zero page below. Note that at this point we know that this is
+        // not a contiguous VMO (which cannot have arbitrary zero pages inserted into it). We
+        // checked for can_see_parent just now and contiguous VMOs do not support (non-slice)
+        // clones. Besides, if the slot was empty we should have moved on at the top of the loop as
+        // the contiguous page source zeroes supplied pages by default.
+        DEBUG_ASSERT(!debug_is_contiguous());
+
+        // Allocate a new page, it will be zeroed in the process.
+        vm_page_t* p;
+        // Do not pass our freed_list here as this takes an |alloc_list| list to allocate from.
+        zx_status_t status =
+            AllocateCopyPage(pmm_alloc_flags_, vm_get_zero_page_paddr(), nullptr, &p);
+        if (status != ZX_OK) {
+          DEBUG_ASSERT(status == ZX_ERR_NO_MEMORY);
+          return ZX_ERR_NO_MEMORY;
+        }
+        VmPageOrMarker new_page = VmPageOrMarker::Page(p);
+        status = AddPageLocked(&new_page, offset, CanOverwriteContent::Zero, nullptr,
+                               /*do_range_update=*/false);
+        // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY, but that failure can only
+        // occur if we had to allocate a slot in the page list. Since we allocated a slot above, we
+        // know that can't be the case.
+        DEBUG_ASSERT(status == ZX_OK);
         continue;
       }
-      // Re. contiguous VMOs, we've already peeled off !slot above, and slot->IsPage() just above,
-      // and there are no other possible page states for contiguous VMOs, so we know we're not
-      // handling a contiguous VMO at this point.
-      //
-      // Allocate a new page, it will be zeroed in the process.
-      vm_page_t* p;
-      free_any_pages();
-      // Do not pass our freed_list here as this takes an |alloc_list| list to allocate from.
-      zx_status_t alloc_status =
-          AllocateCopyPage(pmm_alloc_flags_, vm_get_zero_page_paddr(), nullptr, &p);
-      if (alloc_status != ZX_OK) {
-        DEBUG_ASSERT(alloc_status == ZX_ERR_NO_MEMORY);
-        return ZX_ERR_NO_MEMORY;
+
+      // Lookup the page which will potentially fault it in via the page source. Zeroing is
+      // equivalent to a VMO write with zeros, so simulate a write fault.
+      __UNINITIALIZED LookupInfo lookup_page;
+      zx_status_t status = LookupPagesLocked(offset, VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE,
+                                             VmObject::DirtyTrackingAction::DirtyAllPagesOnWrite, 1,
+                                             nullptr, page_request, &lookup_page);
+      if (status != ZX_OK) {
+        return status;
       }
-      DEBUG_ASSERT(!page_source_ || page_source_->DebugIsPageOk(p, offset));
-      SetNotWiredLocked(p, offset);
-      *slot = VmPageOrMarker::Page(p);
+
+      // Zero the page we looked up.
+      DEBUG_ASSERT(lookup_page.num_pages == 1);
+      ZeroPage(lookup_page.paddrs[0]);
       continue;
     }
     DEBUG_ASSERT(parent_ && parent_has_content());
+    DEBUG_ASSERT(!debug_is_contiguous());
 
     // We are able to insert a marker, but if our page content is from a hidden owner we need to
     // perform slightly more complex cow forking.
@@ -3027,15 +3113,23 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       continue;
     }
 
-    // Remove any page that could be hanging around in the slot before we make it a marker.
-    if (slot->IsPage()) {
-      vm_page_t* page = slot->ReleasePage();
+    // Remove any page that could be hanging around in the slot and replace it with a marker.
+    VmPageOrMarker new_marker = VmPageOrMarker::Marker();
+    ktl::optional<vm_page_t*> released_page = ktl::nullopt;
+    zx_status_t status = AddPageLocked(&new_marker, offset, CanOverwriteContent::NonZero,
+                                       &released_page, /*do_range_update=*/false);
+    // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY, but that failure can only
+    // occur if we had to allocate a slot in the page list. Since we allocated a slot above, we know
+    // that can't be the case.
+    DEBUG_ASSERT(status == ZX_OK);
+    // Free the old page.
+    if (released_page.has_value()) {
+      vm_page_t* page = released_page.value();
       DEBUG_ASSERT(page->object.pin_count == 0);
       pmm_page_queues()->Remove(page);
       DEBUG_ASSERT(!list_in_list(&page->queue_node));
       list_add_tail(&freed_list, &page->queue_node);
     }
-    *slot = VmPageOrMarker::Marker();
   }
 
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());

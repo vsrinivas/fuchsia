@@ -318,8 +318,8 @@ class VmObjectPaged final : public VmObject {
   // is looked up using page_base_offset, and will be committed if needed. The range of
   // [zero_start_offset, zero_end_offset) is relative to the page and so [0, PAGE_SIZE) would zero
   // the entire page.
-  zx_status_t ZeroPartialPage(uint64_t page_base_offset, uint64_t zero_start_offset,
-                              uint64_t zero_end_offset, Guard<Mutex>* guard) TA_REQ(lock_);
+  zx_status_t ZeroPartialPageLocked(uint64_t page_base_offset, uint64_t zero_start_offset,
+                                    uint64_t zero_end_offset, Guard<Mutex>* guard) TA_REQ(lock_);
 
   // Internal implementations that assume lock is already held.
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock_);
