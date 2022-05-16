@@ -219,8 +219,7 @@ VmCowPages::VmCowPages(ktl::unique_ptr<VmCowPagesContainer> cow_container,
       pmm_alloc_flags_(pmm_alloc_flags),
       page_source_(ktl::move(page_source)) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
-  // TODO(dustingreen): Apply PMM_ALLOC_FLAG_CAN_BORROW based on can_borrow_locked(), in
-  // PmmAllocFlags(bool pin).
+  DEBUG_ASSERT(!(pmm_alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW));
 }
 
 void VmCowPages::fbl_recycle() {
@@ -2369,6 +2368,10 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       return status;
     }
 
+    // The general pmm_alloc_flags_ are not allowed to contain the BORROW option, and this is relied
+    // upon below to assume the page allocated cannot be loaned.
+    DEBUG_ASSERT(!(pmm_alloc_flags_ & PMM_ALLOC_FLAG_CAN_BORROW));
+
     // If the vmo isn't hidden, we can't move the page. If the page is the zero
     // page, there's no need to try to move the page. In either case, we need to
     // allocate a writable page for this vmo.
@@ -2389,19 +2392,8 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       // This object directly owns the page.
       DEBUG_ASSERT(page_owner == this);
 
-      // If the forked page is loaned, replace it with a non-loaned one before marking it dirty.
-      // Loaned pages are reclaimed by eviction, and we cannot evict dirty pages.
-      if (pmm_is_loaned(res_page)) {
-        // Free the loaned page.
-        FreePage(insert.ReleasePage());
-        // Find a non-loaned page for the replacement.
-        zx_status_t status =
-            pmm_alloc_page(pmm_alloc_flags_ & ~PMM_ALLOC_FLAG_CAN_BORROW, &res_page);
-        if (status != ZX_OK) {
-          return status;
-        }
-        insert = VmPageOrMarker::Page(res_page);
-      }
+      // The forked page was just allocated, and so cannot be a loaned page.
+      DEBUG_ASSERT(!pmm_is_loaned(res_page));
 
       // Mark the forked page dirty.
       UpdateDirtyStateLocked(res_page, offset, DirtyState::Dirty, /*is_pending_add=*/true);
