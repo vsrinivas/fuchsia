@@ -624,7 +624,8 @@ static zx_handle_t vmo = 0;
 
 static int usb_ums_thread(void* ctx) {
   usb_ums_t* ums = (usb_ums_t*)ctx;
-  while (1) {
+  ZX_ASSERT(ums->active);
+  while (ums->active) {
     mtx_lock(&ums->mtx);
     if (!(ums->cbw_req_complete || ums->csw_req_complete || ums->data_req_complete ||
           (!ums->active))) {
