@@ -1,0 +1,11 @@
+{
+    // TODO(https://fxbug.dev/97805) remove this shard once the empty binary doesn't need it
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/empty_bin",
+    },
+    config: {
+        foo: { type: "bool" },
+    },
+}

@@ -1,0 +1,8 @@
+{
+    program: {
+        runner: "fake_runner",
+    },
+    config: {
+        foo: { type: "bool" },
+    },
+}

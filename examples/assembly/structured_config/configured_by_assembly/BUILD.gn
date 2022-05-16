@@ -3,10 +3,17 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  output_name = "to_configure"
+  sources = [ "src/main.rs" ]
+}
 
 fuchsia_component("to_configure") {
   manifest = "meta/to_configure.cml"
   restricted_features = [ "structured_config" ]
+  deps = [ ":bin" ]
 }
 
 # NOTE: this should not be included in build graphs except when product assembly is configured

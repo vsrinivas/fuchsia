@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    // TODO(https://fxbug.dev/97805) remove this shard once the empty binary doesn't need it
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/to_configure",
+    },
     config: {
         not_from_package: { type: "uint8" },
     },

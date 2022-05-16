@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
 if (is_host) {
@@ -24,85 +22,9 @@ if (is_host) {
       "//tools/lib/config_value_file",
     ]
   }
-}
-
-fuchsia_component("pass_with_config") {
-  manifest = "meta/test_with_config.cml"
-  restricted_features = [ "structured_config" ]
-}
-
-fuchsia_structured_config_values("pass_with_config_values") {
-  cm_label = ":pass_with_config"
-  values_source = "meta/test_with_config_values.json5"
-}
-
-fuchsia_component("fail_missing_config") {
-  manifest = "meta/test_with_config.cml"
-  restricted_features = [ "structured_config" ]
-}
-
-fuchsia_component("pass_without_config") {
-  manifest = "meta/test_without_config.cml"
-}
-
-# this package should only be depended upon by the test below, including it in a system image
-# should cause product validation to fail
-fuchsia_package("validate_structured_config_packaging") {
-  deps = [
-    ":fail_missing_config",
-    ":pass_with_config",
-    ":pass_with_config_values",
-    ":pass_without_config",
-  ]
-
-  # This package intentionally includes invalidly configured components for testing purposes.
-  validate_structured_config = false
-}
-
-if (is_host) {
-  package_out_dir = get_label_info(
-          ":validate_structured_config_packaging($default_toolchain)",
-          "target_out_dir")
-  test_package_manifest_path = "$package_out_dir/validate_structured_config_packaging/package_manifest.json"
-  test_meta_far_path =
-      "$package_out_dir/validate_structured_config_packaging/meta.far"
-
-  rustc_test("structured_config_test") {
-    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
-    sources = [ "src/test.rs" ]
-    source_root = "src/test.rs"
-    deps = [
-      ":structured_config",
-      "//src/lib/assembly/validate_product",
-      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-      "//src/sys/pkg/lib/fuchsia-pkg",
-      "//third_party/rust_crates:maplit",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:tempfile",
-    ]
-    non_rust_deps = [ ":test_asset_data" ]
-    configs += [ ":test_asset_paths" ]
-  }
-
-  host_test_data("test_asset_data") {
-    sources = [
-      test_meta_far_path,
-      test_package_manifest_path,
-    ]
-    deps = [ ":validate_structured_config_packaging($default_toolchain)" ]
-  }
-
-  config("test_asset_paths") {
-    # host tests are run with cwd=out/default
-    rustenv = [
-      "TEST_META_FAR=" + rebase_path(test_meta_far_path, root_build_dir),
-      "TEST_MANIFEST_PATH=" +
-          rebase_path(test_package_manifest_path, root_build_dir),
-    ]
-  }
 
   group("host_tests") {
     testonly = true
-    deps = [ ":structured_config_test" ]
+    deps = [ "tests:host_tests" ]
   }
 }

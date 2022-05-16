@@ -102,10 +102,15 @@ pub enum RepackageError {
     BuildPackage(#[source] anyhow::Error),
 }
 
+/// The list of runners currently supported by structured config.
+static SUPPORTED_RUNNERS: &[&str] = &["driver", "elf"];
+
 /// Validate a component manifest given access to the contents of its `/pkg` directory.
 ///
 /// Ensures that if a component has a `config` stanza it can be paired with the specified
 /// value file and that together they can produce a valid configuration for the component.
+///
+/// Also ensures that the component is using a runner which supports structured config.
 pub fn validate_component<Ns: PkgNamespace>(
     manifest_path: &str,
     reader: &mut Ns,
@@ -119,7 +124,20 @@ pub fn validate_component<Ns: PkgNamespace>(
 
     // check for config
     if let Some(config_decl) = manifest.config {
-        // it's required, so find out where it's stored
+        // make sure the component has a runner that will deliver config before finding values
+        let runner = manifest
+            .program
+            .as_ref()
+            .ok_or(ValidationError::ProgramMissing)?
+            .runner
+            .as_ref()
+            .ok_or(ValidationError::RunnerMissing)?
+            .str();
+        if !SUPPORTED_RUNNERS.contains(&runner) {
+            return Err(ValidationError::UnsupportedRunner(runner.to_owned()));
+        }
+
+        // config is required, so find out where it's stored
         let cm_rust::ConfigValueSource::PackagePath(path) = &config_decl.value_source;
         let config_bytes = reader.read_file(&path).map_err(|source| {
             ValidationError::ConfigValuesMissing { path: path.to_owned(), source }
@@ -153,6 +171,12 @@ pub enum ValidationError<NamespaceError: Debug + Error + 'static> {
     ParseConfig(#[source] PersistentFidlError),
     #[error("Couldn't resolve config.")]
     ResolveConfig(#[source] config_encoder::ResolutionError),
+    #[error("Component manifest does not specify `program`.")]
+    ProgramMissing,
+    #[error("Component manifest does not specify `program.runner`.")]
+    RunnerMissing,
+    #[error("{:?} is not a supported runner. (allowed: {:?})", _0, SUPPORTED_RUNNERS)]
+    UnsupportedRunner(String),
 }
 
 /// Parse bytes as a FIDL type, passing it to a `cm_fidl_validator` function before converting

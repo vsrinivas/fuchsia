@@ -1,0 +1,110 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("empty_bin") {
+  source_root = "empty_bin.rs"
+  sources = [ "empty_bin.rs" ]
+  visibility = [ ":*" ]
+}
+
+fuchsia_component("pass_with_config") {
+  manifest = "meta/test_with_config.cml"
+  restricted_features = [ "structured_config" ]
+  deps = [ ":empty_bin" ]
+  visibility = [ ":*" ]
+}
+
+fuchsia_structured_config_values("pass_with_config_values") {
+  cm_label = ":pass_with_config"
+  values_source = "meta/test_with_config_values.json5"
+  visibility = [ ":*" ]
+}
+
+fuchsia_component("fail_missing_config") {
+  manifest = "meta/test_with_config.cml"
+  restricted_features = [ "structured_config" ]
+  deps = [ ":empty_bin" ]
+  visibility = [ ":*" ]
+}
+
+fuchsia_component("pass_without_config") {
+  manifest = "meta/test_without_config.cml"
+  visibility = [ ":*" ]
+}
+
+# this package should only be depended upon by the test below, including it in a system image
+# should cause product validation to fail
+_package_name = "validate_structured_config_repackaging"
+fuchsia_package(_package_name) {
+  testonly = true
+  deps = [
+    ":fail_missing_config",
+    ":pass_with_config",
+    ":pass_with_config_values",
+    ":pass_without_config",
+  ]
+  visibility = [ ":*" ]
+
+  # This package intentionally includes invalidly configured components for testing purposes.
+  validate_structured_config = false
+}
+
+_archive_name = "${_package_name}_archive"
+fuchsia_package_archive(_archive_name) {
+  testonly = true
+  package = ":$_package_name"
+  visibility = [ ":*" ]
+}
+
+if (is_host) {
+  _archive_out_dir =
+      get_label_info(":$_archive_name($default_toolchain)", "target_out_dir")
+  _test_package_archive_path = "$_archive_out_dir/$_package_name.far"
+
+  host_test_data("test_asset_data") {
+    sources = [ _test_package_archive_path ]
+    deps = [ ":$_archive_name($default_toolchain)" ]
+    visibility = [ ":*" ]
+  }
+
+  config("test_asset_paths") {
+    # host tests are run with cwd=out/default
+    rustenv = [ "TEST_PACKAGE_FAR=" +
+                rebase_path(_test_package_archive_path, root_build_dir) ]
+    visibility = [ ":*" ]
+  }
+
+  rustc_test("structured_config_repackaging_test") {
+    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
+    sources = [ "repackaging.rs" ]
+    source_root = "repackaging.rs"
+    deps = [
+      "//src/lib/assembly/structured_config",
+      "//src/lib/assembly/validate_product",
+      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+      "//src/sys/pkg/lib/fuchsia-pkg",
+      "//third_party/rust_crates:maplit",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:tempfile",
+    ]
+    non_rust_deps = [ ":test_asset_data" ]
+    configs += [ ":test_asset_paths" ]
+    visibility = [ ":*" ]
+  }
+
+  group("host_tests") {
+    testonly = true
+    deps = [ ":structured_config_repackaging_test" ]
+
+    # Prevent this group from leaking packages into system images if incorrectly dep'd from target.
+    metadata = {
+      distribution_entries_barrier = []
+      package_barrier = []
+    }
+  }
+}

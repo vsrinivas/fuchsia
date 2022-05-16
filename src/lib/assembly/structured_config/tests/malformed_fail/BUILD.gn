@@ -1,0 +1,77 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/host.gni")
+import("//build/rust/rustc_test.gni")
+
+fuchsia_component("fail_missing_program") {
+  manifest = "meta/test_without_program.cml"
+  restricted_features = [ "structured_config" ]
+  visibility = [ ":*" ]
+}
+
+fuchsia_component("fail_bad_runner") {
+  manifest = "meta/test_with_fake_runner.cml"
+  restricted_features = [ "structured_config" ]
+  visibility = [ ":*" ]
+}
+
+# this package should only be depended upon by the test below, including it in a system image
+# should cause product validation to fail
+fuchsia_package("malformed_for_validation_fail") {
+  deps = [
+    ":fail_bad_runner",
+    ":fail_missing_program",
+  ]
+
+  # This package intentionally includes invalidly configured components for testing purposes.
+  validate_structured_config = false
+  visibility = [ ":*" ]
+}
+
+if (is_host) {
+  package_out_dir =
+      get_label_info(":malformed_for_validation_fail($default_toolchain)",
+                     "target_out_dir")
+  test_meta_far_path = "$package_out_dir/malformed_for_validation_fail/meta.far"
+
+  host_test_data("test_asset_data") {
+    sources = [ test_meta_far_path ]
+    deps = [ ":malformed_for_validation_fail($default_toolchain)" ]
+    visibility = [ ":*" ]
+  }
+
+  config("test_asset_paths") {
+    # host tests are run with cwd=out/default
+    rustenv =
+        [ "TEST_META_FAR=" + rebase_path(test_meta_far_path, root_build_dir) ]
+    visibility = [ ":*" ]
+  }
+
+  rustc_test("structured_config_malformed_test") {
+    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
+    sources = [ "malformed.rs" ]
+    source_root = "malformed.rs"
+    deps = [
+      "//src/lib/assembly/structured_config",
+      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+      "//third_party/rust_crates:serde_json",
+    ]
+    non_rust_deps = [ ":test_asset_data" ]
+    configs += [ ":test_asset_paths" ]
+    visibility = [ ":*" ]
+  }
+
+  group("host_tests") {
+    testonly = true
+    deps = [ ":structured_config_malformed_test" ]
+
+    # Prevent this group from leaking packages into system images if incorrectly dep'd from target.
+    metadata = {
+      distribution_entries_barrier = []
+      package_barrier = []
+    }
+  }
+}

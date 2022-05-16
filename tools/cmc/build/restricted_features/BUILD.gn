@@ -74,7 +74,7 @@ group("structured_config") {
     "//vendor/google/sessions:*",
 
     # tests
-    "//src/lib/assembly/structured_config:*",
+    "//src/lib/assembly/structured_config/tests/*:*",
     "//src/lib/component_hub/tests:*",
     "//src/lib/fuchsia-component-test/tests/echo_client_sc:*",
     "//src/sys/component_manager/tests/hub:*",

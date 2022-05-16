@@ -88,14 +88,6 @@ async fn show() {
         &resolved.incoming_capabilities
     );
 
-    assert_eq!(resolved.config.len(), 2);
-    let field1 = &resolved.config[0];
-    let field2 = &resolved.config[1];
-    assert_eq!(field1.key, "my_string");
-    assert_eq!(field1.value, "\"hello, world!\"");
-    assert_eq!(field2.key, "my_uint8");
-    assert_eq!(field2.value, "255");
-
     // We do not verify the contents of the execution, because they are largely dependent on
     // the Rust Test Runner
     assert!(component.execution.is_some());
@@ -107,8 +99,18 @@ async fn show() {
     assert_eq!(component.moniker, AbsoluteMoniker::parse_str("/foo").unwrap());
     assert_eq!(component.url, "#meta/foo.cm");
     assert_eq!(component.component_type, "CML static component");
-    assert!(component.resolved.is_none());
     assert!(component.execution.is_none());
+
+    // check foo's config
+    let resolved_foo =
+        component.resolved.as_ref().expect("foo is eager, should have been resolved");
+    assert_eq!(resolved_foo.config.len(), 2);
+    let field1 = &resolved_foo.config[0];
+    let field2 = &resolved_foo.config[1];
+    assert_eq!(field1.key, "my_string");
+    assert_eq!(field1.value, "\"hello, world!\"");
+    assert_eq!(field2.key, "my_uint8");
+    assert_eq!(field2.value, "255");
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
