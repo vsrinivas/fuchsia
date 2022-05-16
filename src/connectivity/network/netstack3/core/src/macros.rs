@@ -23,10 +23,6 @@ macro_rules! log_unimplemented {
             $nocrash
         }
     }};
-
-    ($nocrash:expr, $fmt:expr $(,$arg:expr)*,) =>{
-        log_unimplemented!($nocrash, $fmt $(,$arg)*)
-    };
 }
 
 macro_rules! increment_counter {

@@ -31,9 +31,6 @@ macro_rules! assert_gmp_state {
     ($ctx:expr, $group:expr, Delaying) => {
         assert_gmp_state!(@inner $ctx, $group, MemberState::Delaying(_));
     };
-    ($ctx:expr, $group:expr, Idle) => {
-        assert_gmp_state!(@inner $ctx, $group, MemberState::Idle(_));
-    };
     (@inner $ctx:expr, $group:expr, $pattern:pat) => {
         assert!(matches!($ctx.get_ref().groups.get($group).unwrap().0.inner.as_ref().unwrap(), $pattern))
     };
