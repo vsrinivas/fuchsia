@@ -95,7 +95,6 @@ rustc_binary("bin") {
 fuchsia_component_manifest("wlanstack-manifest") {
   component_name = "wlanstack"
   manifest = "meta/wlanstack.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("wlanstack-comp") {

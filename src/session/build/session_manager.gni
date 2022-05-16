@@ -27,7 +27,6 @@ template("session_manager_package") {
 
   fuchsia_component_manifest(manifest_target) {
     manifest = "//src/session/bin/session_manager/meta/session_manager.cml"
-    restricted_features = [ "structured_config" ]
     component_name = "session_manager"
   }
 

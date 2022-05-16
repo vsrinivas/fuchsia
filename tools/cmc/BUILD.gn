@@ -99,7 +99,6 @@ fuchsia_component_manifest("example_component_manifest") {
   restricted_features = [
     "services",
     "dynamic_offers",
-    "structured_config",
     "allow_long_names",
   ]
   component_name = "example"

@@ -24,7 +24,6 @@ fuchsia_component_manifest("manifest") {
   testonly = true
   component_name = "cpp_elf_receiver"
   manifest = "meta/receiver.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_structured_config_cpp_elf_lib("config_lib") {

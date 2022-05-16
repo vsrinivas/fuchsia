@@ -33,7 +33,6 @@ fuchsia_component_manifest("receiver_manifest") {
   testonly = true
   component_name = "receiver"
   manifest = "//src/sys/component_manager/tests/structured_config/client_integration/rust/meta/receiver.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("receiver_component") {

@@ -12,7 +12,6 @@ rustc_binary("bin") {
 
 fuchsia_component("to_configure") {
   manifest = "meta/to_configure.cml"
-  restricted_features = [ "structured_config" ]
   deps = [ ":bin" ]
 }
 

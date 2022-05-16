@@ -71,7 +71,6 @@ fuchsia_unittest_package("sampler-tests") {
 fuchsia_component_manifest("sampler-manifest") {
   component_name = "sampler"
   manifest = "meta/sampler.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("sampler-component") {

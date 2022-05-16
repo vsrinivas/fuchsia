@@ -421,7 +421,6 @@ fuchsia_component_manifest("test-fshost-manifest") {
   manifest_outputs = get_target_outputs(":test-fshost.cml")
   manifest = manifest_outputs[0]
   deps = [ ":test-fshost.cml" ]
-  restricted_features = [ "structured_config" ]
 }
 
 # This is a test version of fshost, not a component with fshost tests.
@@ -460,7 +459,6 @@ fuchsia_component_manifest("test-fshost-no-watcher-manifest") {
   manifest_outputs = get_target_outputs(":test-fshost-no-watcher.cml")
   manifest = manifest_outputs[0]
   deps = [ ":test-fshost-no-watcher.cml" ]
-  restricted_features = [ "structured_config" ]
 }
 
 # This is a test version of fshost with no block watcher.
@@ -556,7 +554,6 @@ fuchsia_component_manifest("fshost_manifest") {
   manifest = get_target_outputs(":fshost.cml")
   manifest = manifest[0]
   deps = [ ":fshost.cml" ]
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_structured_config_cpp_elf_lib("fshost_config") {

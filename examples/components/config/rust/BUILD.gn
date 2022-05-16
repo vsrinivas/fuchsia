@@ -41,7 +41,6 @@ rustc_binary("bin") {
 fuchsia_component_manifest("manifest") {
   component_name = "config_example"
   manifest = "meta/config_example.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("component") {

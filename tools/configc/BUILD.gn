@@ -48,7 +48,6 @@ install_host_tools("install") {
 cm("config_manifest") {
   manifest = "goldens/config_manifest.cml"
   output_name = "config_manifest.cm"
-  restricted_features = [ "structured_config" ]
   config_values_package_path = "goldens/config_values.json5"
 }
 

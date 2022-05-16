@@ -182,13 +182,11 @@ archivist_optimized_binary("bin") {
 fuchsia_component_manifest("root-manifest") {
   manifest = "meta/archivist.cml"
   component_name = "archivist"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component_manifest("archivist-for-embedding-v2-manifest") {
   manifest = "meta/archivist-for-embedding.cml"
   component_name = "archivist-for-embedding"
-  restricted_features = [ "structured_config" ]
 }
 
 # fxbug.dev/83213 Retain this component while out of tree tests depend on it

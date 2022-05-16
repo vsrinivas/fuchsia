@@ -72,7 +72,6 @@ rustc_binary("bin") {
 fuchsia_component_manifest("manifest") {
   component_name = "password-authenticator"
   manifest = "meta/password-authenticator.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("component") {

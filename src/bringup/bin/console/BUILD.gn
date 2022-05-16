@@ -8,7 +8,6 @@ import("//build/test.gni")
 fuchsia_component_manifest("manifest") {
   component_name = "console"
   manifest = "meta/console.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_structured_config_cpp_elf_lib("console_config") {

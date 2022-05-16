@@ -30,63 +30,8 @@ group("dynamic_offers") {
 }
 
 # The allowlist of components that can use the "structured_config" feature in CML.
-# This allowlist is temporary and will be removed once the interfaces between structured
-# configuration clients and the framework is mature. Clients in this list may need some
-# refactoring as structured configuration is fully productionized.
 group("structured_config") {
-  visibility = [
-    # components
-    "//examples/assembly/structured_config/*",
-    "//examples/components/config/cpp:*",
-    "//examples/components/config/rust:*",
-    "//sdk/lib/sys/component/cpp/tests:*",
-    "//src/bringup/bin/console:*",
-    "//src/connectivity/wlan/wlanstack:*",
-    "//src/diagnostics/archivist:*",
-    "//src/diagnostics/archivist/tests/v2:*",
-    "//src/diagnostics/detect:*",
-    "//src/diagnostics/sampler:*",
-    "//src/identity/bin/password_authenticator:*",
-    "//src/proc/bin/galaxies/stardroid:*",
-    "//src/proc/bin/galaxies/stardroid_test:*",
-    "//src/proc/bin/galaxies/starless:*",
-    "//src/proc/bin/galaxies/starmium:*",
-    "//src/proc/bin/galaxies/starmium_test:*",
-    "//src/proc/bin/starnix:*",
-    "//src/session/bin/session_manager:*",
-    "//src/storage/fshost:*",
-    "//src/ui/bin/brightness_manager:*",
-
-    # locations where assemble_system() (transitively) invokes generated_fshost_config()
-    # (generating an fshost configuration file requires access to a compiled manifest, which
-    # must be defined in the same file as the generated values)
-    "//build/images/*",
-    "//src/security/ffx_test:*",
-    "//src/security/pkg_test/tests:*",
-    "//third_party/network-conformance/images:*",
-    "//vendor/google/build/pre_migration:*",
-    "//vendor/google/build/recovery:*",
-    "//vendor/google/build/reverse_migration:*",
-
-    # locations where session_manager_package() is invoked:
-    "//src/experiences/session_shells/ermine/session:*",
-    "//src/session/examples/hello-world-session:*",
-    "//vendor/google/sessions:*",
-
-    # tests
-    "//src/lib/assembly/structured_config/tests/*:*",
-    "//src/lib/component_hub/tests:*",
-    "//src/lib/fuchsia-component-test/tests/echo_client_sc:*",
-    "//src/sys/component_manager/tests/hub:*",
-    "//src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:*",
-    "//src/sys/component_manager/tests/structured_config/client_integration/cpp_elf:*",
-    "//src/sys/component_manager/tests/structured_config/client_integration/rust:*",
-    "//src/sys/component_manager/tests/structured_config/different_values:*",
-    "//src/sys/pkg/bin/omaha-client:*",
-    "//src/tests/assembly/structured_config/*",
-    "//tools/cmc:*",
-    "//tools/configc:*",
-  ]
+  # Available to all components in fuchsia.git
 }
 
 # The allowlist of components that can use the "hub" feature in CML.

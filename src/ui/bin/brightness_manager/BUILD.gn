@@ -172,7 +172,6 @@ fuchsia_unittest_package("test-helpers-tests") {
 fuchsia_component_manifest("brightness_manager_manifest") {
   component_name = "brightness_manager"
   manifest = "meta/brightness_manager.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("brightness_manager_component") {

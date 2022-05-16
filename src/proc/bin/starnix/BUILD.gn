@@ -243,7 +243,6 @@ if (target_cpu == "x64") {
   # The starnix runner manifest, used by all galaxies.
   fuchsia_component_manifest("starnix_runner_manifest") {
     manifest = "meta/starnix_runner.cml"
-    restricted_features = [ "structured_config" ]
   }
 
   # The starnix runner configuration library, used by the Rust binary to parse configuration.

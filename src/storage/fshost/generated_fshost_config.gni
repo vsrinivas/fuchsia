@@ -97,7 +97,6 @@ template("generated_fshost_config") {
   fuchsia_component_manifest(_manifest_target) {
     component_name = _component_name
     manifest = "//src/storage/fshost/meta/config.cml"
-    restricted_features = [ "structured_config" ]
     metadata = {
       # we don't want this in the packaged output, it's just to give cmc something to work with
       distribution_entries_barrier = []

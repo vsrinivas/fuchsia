@@ -74,7 +74,6 @@ fuchsia_component_manifest("structured_config_reporter_manifest") {
   testonly = true
   component_name = "structured_config_reporter"
   manifest = "components/structured_config/meta/reporter.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("structured_config_reporter") {

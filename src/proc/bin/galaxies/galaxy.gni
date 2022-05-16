@@ -30,7 +30,6 @@ template("starnix_galaxy_package") {
   fuchsia_component_manifest(manifest_target) {
     component_name = "starnix_runner"
     manifest = "//src/proc/bin/starnix/meta/starnix_runner.cml"
-    restricted_features = [ "structured_config" ]
   }
 
   fuchsia_component(component_target) {

@@ -1,10 +1,5 @@
 # Structured Configuration
 
-Caution: Structured configuration is an experimental, allowlisted feature. Its behavior and APIs
-are subject to change. The allowlist will be removed when the feature does not require active
-guidance from the Component Framework team. Follow [this bug][remove-allowlist-bug] for updates.
-If you encounter bugs, please file them against our [Monorail component][file-monorail-bug]!
-
 Structured configuration allows C++/Rust components to declare configuration schemas directly in
 their manifest. Benefits of using structured configuration include:
 
@@ -13,6 +8,7 @@ their manifest. Benefits of using structured configuration include:
 * Components read their configuration with statically-typed libraries.
 * Component Framework only starts components with valid configuration.
 * Configuration can be viewed at runtime with `ffx` tooling.
+* Values can be set at runtime in tests with RealmBuilder.
 
 To use structured configuration in your component, you must update build rules, declare a schema,
 define values, and generate a client library.
@@ -20,16 +16,12 @@ define values, and generate a client library.
 ## Update build rules
 
 To prevent cyclic dependencies when generating client libraries, define a
-`fuchsia_component_manifest` rule that compiles the component manifest. Add `structured_config` as
-a restricted feature for this manifest. Pass this compiled manifest GN label into the
-`fuchsia_component` rule.
+`fuchsia_component_manifest` rule that compiles the component manifest. Pass this compiled manifest
+GN label into the `fuchsia_component` rule.
 
 ```gn
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/config/cpp/BUILD.gn" region_tag="component" adjust_indentation="auto" %}
 ```
-
-Because structured config is an [experimental feature][restricted-features],
-these GN build rules must be added to the allowlist in [`//tools/cmc/build/restricted_features/BUILD.gn`][restricted-features-build-gn]
 
 ## Declare configuration schema
 
@@ -234,9 +226,5 @@ a component.
 
 Realm Builder validates the replaced value against the component's configuration schema.
 
-[remove-allowlist-bug]: https://fxbug.dev/95369
-[file-monorail-bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/entry?components=ComponentFramework%3EStructuredConfig&labels=ComponentFeedback
-[restricted-features]: /docs/development/components/build.md#restricted-features
-[restricted-features-build-gn]: https://cs.opensource.google/fuchsia/fuchsia/+/main:/tools/cmc/build/restricted_features/BUILD.gn
 [cml-ref-doc]: https://fuchsia.dev/reference/cml#config
 [rb-feature-matrix]: /docs/development/testing/components/realm_builder.md#language-feature-matrix

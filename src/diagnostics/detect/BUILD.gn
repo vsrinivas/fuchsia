@@ -69,7 +69,6 @@ rustc_library("lib") {
 fuchsia_component_manifest("triage-detect-manifest") {
   manifest = "meta/triage-detect.cml"
   component_name = "triage-detect"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_structured_config_values("triage-detect-prod-config") {

@@ -40,10 +40,7 @@ fuchsia_component_manifest("receiver_manifest") {
   testonly = true
   component_name = "cpp_driver_receiver"
   manifest = "meta/receiver.cml"
-  restricted_features = [
-    "structured_config",
-    "services",
-  ]
+  restricted_features = [ "services" ]
 }
 
 fuchsia_driver_component("receiver_component") {

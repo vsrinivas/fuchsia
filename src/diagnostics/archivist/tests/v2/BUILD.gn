@@ -86,7 +86,6 @@ rustc_test("integration_tests_bin") {
 fuchsia_component_manifest("with-log-connector-manifest") {
   manifest = "meta/archivist_for_integration_with_log_connector.cml"
   component_name = "archivist_with_log_connector"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("archivist-for-integration-with-log-connector") {
@@ -98,7 +97,6 @@ fuchsia_component("archivist-for-integration-with-log-connector") {
 fuchsia_component_manifest("with-klog-manifest") {
   manifest = "meta/archivist_with_klog.cml"
   component_name = "archivist_with_klog"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("archivist-with-klog") {
@@ -110,7 +108,6 @@ fuchsia_component("archivist-with-klog") {
 fuchsia_component_manifest("for-integration-manifest") {
   manifest = "meta/archivist_for_integration.cml"
   component_name = "archivist"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("archivist-for-integration") {
@@ -122,7 +119,6 @@ fuchsia_component("archivist-for-integration") {
 fuchsia_component_manifest("small-caches-manifest") {
   manifest = "meta/archivist-with-small-caches.cml"
   component_name = "archivist-with-small-caches"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("archivist-with-small-caches") {
@@ -134,7 +130,6 @@ fuchsia_component("archivist-with-small-caches") {
 fuchsia_component_manifest("with-feedback-filtering-manifest") {
   manifest = "meta/archivist_for_integration.cml"
   component_name = "archivist-with-feedback-filtering"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("archivist-with-feedback-filtering") {
@@ -146,7 +141,6 @@ fuchsia_component("archivist-with-feedback-filtering") {
 fuchsia_component_manifest("with-legacy-metrics-filtering-manifest") {
   manifest = "meta/archivist_for_integration.cml"
   component_name = "archivist-with-legacy-metrics-filtering"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("archivist-with-legacy-metrics-filtering") {
@@ -158,7 +152,6 @@ fuchsia_component("archivist-with-legacy-metrics-filtering") {
 fuchsia_component_manifest("with-feedback-filtering-disabled-manifest") {
   manifest = "meta/archivist_for_integration.cml"
   component_name = "archivist-with-feedback-filtering-disabled"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("archivist-with-feedback-filtering-disabled") {

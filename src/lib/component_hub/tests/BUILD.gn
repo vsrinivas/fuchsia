@@ -37,7 +37,6 @@ fuchsia_component_manifest("foo_manifest") {
   testonly = true
   component_name = "foo"
   manifest = "meta/foo.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("foo") {

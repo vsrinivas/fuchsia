@@ -129,7 +129,6 @@ fuchsia_component_manifest("echo_server_sc_manifest") {
   testonly = true
   component_name = "echo_server_sc"
   manifest = "meta/echo_server_sc.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("echo_server_sc") {
