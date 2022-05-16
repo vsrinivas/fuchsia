@@ -30,28 +30,6 @@ executable("archive_accessor_ptr_unittest_exe") {
   ]
 }
 
-executable("channel_provider_unittest_exe") {
-  testonly = true
-
-  sources = [ "channel_provider_unittest.cc" ]
-
-  deps = [
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/annotations:channel_provider",
-    "//src/developer/forensics/feedback_data/annotations:types",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:channel_control",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
 executable("config_unittest_exe") {
   testonly = true
 
@@ -375,14 +353,6 @@ fuchsia_unittest_component("archive_accessor_ptr_unittest") {
   deps = [ ":archive_accessor_ptr_unittest_exe" ]
 }
 
-fuchsia_component("channel_provider_unittest") {
-  testonly = true
-
-  manifest = "meta/channel_provider_unittest.cml"
-
-  deps = [ ":channel_provider_unittest_exe" ]
-}
-
 fuchsia_unittest_component("config_unittest") {
   deps = [
     ":config_unittest_exe",
@@ -480,7 +450,6 @@ fuchsia_unittest_component("timezone_provider_unittest") {
 fuchsia_test_package("feedback-data-tests") {
   test_components = [
     ":archive_accessor_ptr_unittest",
-    ":channel_provider_unittest",
     ":config_unittest",
     ":data_provider_unittest",
     ":data_provider_controller_unittest",

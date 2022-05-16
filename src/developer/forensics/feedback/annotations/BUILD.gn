@@ -113,6 +113,19 @@ source_set("product_info_provider") {
   ]
 }
 
+source_set("target_channel_provider") {
+  sources = [
+    "target_channel_provider.cc",
+    "target_channel_provider.h",
+  ]
+
+  public_deps = [
+    ":fidl_provider",
+    "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//src/developer/forensics/feedback/annotations",
+  ]
+}
+
 source_set("time_provider") {
   sources = [
     "time_provider.cc",

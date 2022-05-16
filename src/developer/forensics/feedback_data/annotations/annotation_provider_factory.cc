@@ -9,7 +9,6 @@
 #include <memory>
 #include <vector>
 
-#include "src/developer/forensics/feedback_data/annotations/channel_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/timezone_provider.h"
 #include "src/developer/forensics/feedback_data/constants.h"
@@ -27,15 +26,6 @@ std::vector<std::unique_ptr<AnnotationProvider>> GetReusableProviders(
 
   providers.push_back(std::make_unique<DeviceIdProviderClient>(device_id_provider));
   providers.push_back(std::make_unique<TimezoneProvider>(dispatcher, services));
-
-  return providers;
-}
-
-std::vector<std::unique_ptr<AnnotationProvider>> GetSingleUseProviders(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services) {
-  std::vector<std::unique_ptr<AnnotationProvider>> providers;
-
-  providers.push_back(std::make_unique<ChannelProvider>(dispatcher, services));
 
   return providers;
 }

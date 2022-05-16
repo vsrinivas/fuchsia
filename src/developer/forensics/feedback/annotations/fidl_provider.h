@@ -49,6 +49,34 @@ class StaticSingleFidlMethodAnnotationProvider : public StaticAsyncAnnotationPro
   fxl::WeakPtrFactory<StaticSingleFidlMethodAnnotationProvider> ptr_factory_{this};
 };
 
+// Dynamic async annotation provider that handles calling a single FIDL method and
+// returning the result of the call as Annotations when the method completes.
+//
+// |Interface| is the FIDL protocol being interacted with.
+// |method| is the method being called on |Interface|.
+// |Convert| is a function object type for converting the results of |method| to Annotations.
+template <typename Interface, auto method, typename Convert>
+class DynamicSingleFidlMethodAnnotationProvider : public DynamicAsyncAnnotationProvider {
+ public:
+  DynamicSingleFidlMethodAnnotationProvider(async_dispatcher_t* dispatcher,
+                                            std::shared_ptr<sys::ServiceDirectory> services,
+                                            std::unique_ptr<backoff::Backoff> backoff);
+
+  void Get(::fit::callback<void(Annotations)> callback) override;
+
+ private:
+  void CleanupCompleted();
+
+  async_dispatcher_t* dispatcher_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
+  std::unique_ptr<backoff::Backoff> backoff_;
+  Convert convert_;
+
+  ::fidl::InterfacePtr<Interface> ptr_;
+  std::vector<::fit::callback<void(Annotations)>> callbacks_;
+  fxl::WeakPtrFactory<DynamicSingleFidlMethodAnnotationProvider> ptr_factory_{this};
+};
+
 template <typename Interface, auto method, typename Convert>
 StaticSingleFidlMethodAnnotationProvider<Interface, method, Convert>::
     StaticSingleFidlMethodAnnotationProvider(async_dispatcher_t* dispatcher,
@@ -85,6 +113,64 @@ void StaticSingleFidlMethodAnnotationProvider<Interface, method, Convert>::Call(
     callback_(convert_(result...));
     ptr_.Unbind();
   });
+}
+
+template <typename Interface, auto method, typename Convert>
+DynamicSingleFidlMethodAnnotationProvider<Interface, method, Convert>::
+    DynamicSingleFidlMethodAnnotationProvider(async_dispatcher_t* dispatcher,
+                                              std::shared_ptr<sys::ServiceDirectory> services,
+                                              std::unique_ptr<backoff::Backoff> backoff)
+    : dispatcher_(dispatcher), services_(std::move(services)), backoff_(std::move(backoff)) {
+  services_->Connect(ptr_.NewRequest(dispatcher_));
+
+  ptr_.set_error_handler([this](const zx_status_t status) {
+    FX_LOGS(WARNING) << "Lost connection to " << Interface::Name_;
+
+    // Complete any outstanding callbacks with a connection error.
+    for (auto& callback : callbacks_) {
+      if (callback != nullptr) {
+        callback(convert_(Error::kConnectionError));
+      }
+    }
+
+    CleanupCompleted();
+
+    async::PostDelayedTask(
+        dispatcher_,
+        [self = ptr_factory_.GetWeakPtr()] {
+          if (self) {
+            self->services_->Connect(self->ptr_.NewRequest(self->dispatcher_));
+          }
+        },
+        backoff_->GetNext());
+  });
+}
+
+template <typename Interface, auto method, typename Convert>
+void DynamicSingleFidlMethodAnnotationProvider<Interface, method, Convert>::Get(
+    ::fit::callback<void(Annotations)> callback) {
+  // A reconnection is in progress.
+  if (!ptr_.is_bound()) {
+    callback(convert_(Error::kConnectionError));
+    return;
+  }
+
+  callbacks_.push_back(callback.share());
+  ((*ptr_).*method)([this, callback = std::move(callback)](auto&&... result) mutable {
+    if (callback != nullptr) {
+      callback(convert_(result...));
+    }
+    CleanupCompleted();
+  });
+}
+
+template <typename Interface, auto method, typename Convert>
+void DynamicSingleFidlMethodAnnotationProvider<Interface, method, Convert>::CleanupCompleted() {
+  callbacks_.erase(std::remove_if(callbacks_.begin(), callbacks_.end(),
+                                  [](const ::fit::callback<void(Annotations)>& callback) {
+                                    return callback == nullptr;
+                                  }),
+                   callbacks_.end());
 }
 
 }  // namespace forensics::feedback

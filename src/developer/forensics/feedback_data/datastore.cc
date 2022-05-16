@@ -99,10 +99,6 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
     annotations.push_back(provider->GetAnnotations(timeout, annotation_allowlist_));
   }
 
-  for (auto& provider : GetSingleUseProviders(dispatcher_, services_)) {
-    annotations.push_back(provider->GetAnnotations(timeout, annotation_allowlist_));
-  }
-
   return ::fpromise::join_promise_vector(std::move(annotations))
       .and_then([this](std::vector<::fpromise::result<Annotations>>& annotations)
                     -> ::fpromise::result<Annotations> {

@@ -22,7 +22,6 @@ source_set("annotation_providers") {
   ]
 
   deps = [
-    ":channel_provider",
     ":timezone_provider",
     ":types",
     ":utils",
@@ -36,34 +35,6 @@ source_set("annotation_providers") {
     "//src/lib/fxl",
     "//src/lib/timekeeper",
     "//src/lib/timekeeper:system",
-  ]
-}
-
-# Exposed separately for unit test purposes.
-source_set("channel_provider") {
-  public = [ "channel_provider.h" ]
-
-  sources = [
-    "annotation_provider.h",
-    "channel_provider.cc",
-    "channel_provider.h",
-  ]
-
-  public_deps = [
-    ":types",
-    "//sdk/fidl/fuchsia.update.channel",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//zircon/system/ulib/async",
-    "//zircon/system/ulib/zx",
-  ]
-
-  deps = [
-    ":utils",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fidl:channel_provider_ptr",
-    "//src/developer/forensics/utils/fit",
   ]
 }
 

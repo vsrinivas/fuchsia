@@ -42,10 +42,10 @@ class MonotonicBackoff : public backoff::Backoff {
 using StaticSingleFidlMethodAnnotationProviderTest = UnitTestFixture;
 
 struct ConvertChannel {
-  Annotations operator()(const std::string& channel) { return {{kChannelKey, channel}}; }
+  Annotations operator()(const ErrorOr<std::string>& channel) { return {{kChannelKey, channel}}; }
 };
 
-class CurrentChannelProvider
+class StaticCurrentChannelProvider
     : public StaticSingleFidlMethodAnnotationProvider<
           fuchsia::update::channelcontrol::ChannelControl,
           &fuchsia::update::channelcontrol::ChannelControl::GetCurrent, ConvertChannel> {
@@ -56,7 +56,8 @@ class CurrentChannelProvider
 };
 
 TEST_F(StaticSingleFidlMethodAnnotationProviderTest, GetAll) {
-  CurrentChannelProvider provider(dispatcher(), services(), std::make_unique<MonotonicBackoff>());
+  StaticCurrentChannelProvider provider(dispatcher(), services(),
+                                        std::make_unique<MonotonicBackoff>());
 
   auto channel_server = std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
       .current = kChannelValue,
@@ -74,7 +75,8 @@ TEST_F(StaticSingleFidlMethodAnnotationProviderTest, GetAll) {
 }
 
 TEST_F(StaticSingleFidlMethodAnnotationProviderTest, Reconnects) {
-  CurrentChannelProvider provider(dispatcher(), services(), std::make_unique<MonotonicBackoff>());
+  StaticCurrentChannelProvider provider(dispatcher(), services(),
+                                        std::make_unique<MonotonicBackoff>());
 
   auto channel_server = std::make_unique<stubs::ChannelControlClosesFirstConnection>(
       stubs::ChannelControlBase::Params{
@@ -93,6 +95,74 @@ TEST_F(StaticSingleFidlMethodAnnotationProviderTest, Reconnects) {
 
   RunLoopFor(zx::sec(1));
   EXPECT_THAT(annotations, UnorderedElementsAreArray({Pair(kChannelKey, kChannelValue)}));
+  EXPECT_EQ(channel_server->NumConnections(), 0u);
+}
+
+using DynamicSingleFidlMethodAnnotationProviderTest = UnitTestFixture;
+
+class DynamicCurrentChannelProvider
+    : public DynamicSingleFidlMethodAnnotationProvider<
+          fuchsia::update::channelcontrol::ChannelControl,
+          &fuchsia::update::channelcontrol::ChannelControl::GetCurrent, ConvertChannel> {
+ public:
+  using DynamicSingleFidlMethodAnnotationProvider::DynamicSingleFidlMethodAnnotationProvider;
+
+  std::set<std::string> GetKeys() const override { return {kChannelKey}; }
+};
+
+TEST_F(DynamicSingleFidlMethodAnnotationProviderTest, Get) {
+  DynamicCurrentChannelProvider provider(dispatcher(), services(),
+                                         std::make_unique<MonotonicBackoff>());
+
+  auto channel_server = std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+      .current = kChannelValue,
+  });
+  InjectServiceProvider(channel_server.get());
+
+  RunLoopUntilIdle();
+
+  Annotations annotations;
+  provider.Get([&annotations](Annotations a) { annotations = std::move(a); });
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(annotations, UnorderedElementsAreArray({Pair(kChannelKey, kChannelValue)}));
+  EXPECT_EQ(channel_server->NumConnections(), 1u);
+}
+
+TEST_F(DynamicSingleFidlMethodAnnotationProviderTest, Reconnects) {
+  DynamicCurrentChannelProvider provider(dispatcher(), services(),
+                                         std::make_unique<MonotonicBackoff>());
+
+  auto channel_server = std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+      .current = kChannelValue,
+  });
+  InjectServiceProvider(channel_server.get());
+
+  RunLoopUntilIdle();
+  ASSERT_EQ(channel_server->NumConnections(), 1u);
+
+  channel_server->CloseAllConnections();
+
+  RunLoopUntilIdle();
+  ASSERT_EQ(channel_server->NumConnections(), 0u);
+
+  Annotations annotations;
+  provider.Get([&annotations](Annotations a) { annotations = std::move(a); });
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(annotations, UnorderedElementsAreArray({Pair(kChannelKey, Error::kConnectionError)}));
+
+  RunLoopFor(zx::sec(1));
+  EXPECT_EQ(channel_server->NumConnections(), 1u);
+
+  provider.Get([&annotations](Annotations a) { annotations = std::move(a); });
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(annotations, UnorderedElementsAreArray({Pair(kChannelKey, kChannelValue)}));
+
+  channel_server->CloseAllConnections();
+
+  RunLoopUntilIdle();
   EXPECT_EQ(channel_server->NumConnections(), 0u);
 }
 

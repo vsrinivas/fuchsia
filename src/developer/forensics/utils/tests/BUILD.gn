@@ -63,25 +63,6 @@ executable("caching_ptr_unittest_exe") {
   ]
 }
 
-executable("channel_provider_ptr_unittest_exe") {
-  testonly = true
-
-  sources = [ "channel_provider_ptr_unittest.cc" ]
-
-  deps = [
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:channel_control",
-    "//src/developer/forensics/utils/fidl:channel_provider_ptr",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
 executable("cobalt_unittest_exe") {
   testonly = true
 
@@ -282,10 +263,6 @@ fuchsia_unittest_component("caching_ptr_unittest") {
   deps = [ ":caching_ptr_unittest_exe" ]
 }
 
-fuchsia_unittest_component("channel_provider_ptr_unittest") {
-  deps = [ ":channel_provider_ptr_unittest_exe" ]
-}
-
 fuchsia_unittest_component("cobalt_unittest") {
   deps = [ ":cobalt_unittest_exe" ]
 }
@@ -361,7 +338,6 @@ fuchsia_test_package("feedback-utils-tests") {
     ":archive_unittest",
     ":bridge_unittest",
     ":caching_ptr_unittest",
-    ":channel_provider_ptr_unittest",
     ":cobalt_unittest",
     ":component_unittest",
     ":hanging_get_ptr_unittest",

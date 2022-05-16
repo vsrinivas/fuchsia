@@ -18,6 +18,7 @@
 #include "src/developer/forensics/feedback/annotations/current_channel_provider.h"
 #include "src/developer/forensics/feedback/annotations/data_register.h"
 #include "src/developer/forensics/feedback/annotations/product_info_provider.h"
+#include "src/developer/forensics/feedback/annotations/target_channel_provider.h"
 #include "src/developer/forensics/feedback/annotations/time_provider.h"
 
 namespace forensics::feedback {
@@ -42,6 +43,7 @@ class AnnotationProviders {
   BoardInfoProvider board_info_provider_;
   ProductInfoProvider product_info_provider_;
   CurrentChannelProvider current_channel_provider_;
+  TargetChannelProvider target_channel_provider_;
 
   AnnotationManager annotation_manager_;
 

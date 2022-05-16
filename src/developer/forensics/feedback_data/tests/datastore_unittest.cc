@@ -104,13 +104,6 @@ class DatastoreTest : public UnitTestFixture {
                                              inspect_data_budget_.get());
   }
 
-  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelControlBase> server) {
-    channel_provider_server_ = std::move(server);
-    if (channel_provider_server_) {
-      InjectServiceProvider(channel_provider_server_.get());
-    }
-  }
-
   void SetUpDeviceIdProviderServer(std::unique_ptr<stubs::DeviceIdProviderBase> server) {
     device_id_provider_server_ = std::move(server);
     if (device_id_provider_server_) {
@@ -188,7 +181,6 @@ class DatastoreTest : public UnitTestFixture {
   std::unique_ptr<InspectDataBudget> inspect_data_budget_;
 
   // Stubs servers.
-  std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
   std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
   std::unique_ptr<stubs::DiagnosticsArchiveBase> diagnostics_server_;
 };
@@ -249,28 +241,6 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
   GetStaticAttachments();
   GetAnnotations();
   GetAttachments();
-}
-
-TEST_F(DatastoreTest, GetAnnotations_TargetChannel) {
-  SetUpChannelProviderServer(
-      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params({
-          .current = "current-channel",
-          .target = "target-channel",
-      })));
-  SetUpDatastore(
-      {
-          kAnnotationSystemUpdateChannelTarget,
-      },
-      kDefaultAttachmentsToAvoidSpuriousLogs);
-
-  ::fpromise::result<Annotations> annotations = GetAnnotations();
-  ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(),
-              ElementsAreArray({
-                  Pair(kAnnotationSystemUpdateChannelTarget, "target-channel"),
-              }));
-
-  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
 }
 
 TEST_F(DatastoreTest, GetAnnotations_DeviceId) {

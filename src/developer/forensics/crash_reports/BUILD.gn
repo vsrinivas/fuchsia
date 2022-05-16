@@ -62,7 +62,6 @@ source_set("crash_register") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/utils/fidl:channel_provider_ptr",
     "//src/lib/files",
     "//src/lib/fostr/fidl/fuchsia.feedback",
   ]

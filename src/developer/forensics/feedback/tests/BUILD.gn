@@ -271,6 +271,20 @@ executable("startup_annotations_unittest_exe") {
   ]
 }
 
+executable("target_channel_provider_unittest_exe") {
+  testonly = true
+
+  sources = [ "target_channel_provider_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback/annotations:target_channel_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 ###############################################################################
 # COMPONENTS
 ###############################################################################
@@ -363,6 +377,10 @@ fuchsia_unittest_component("startup_annotations_unittest") {
   deps = [ ":startup_annotations_unittest_exe" ]
 }
 
+fuchsia_unittest_component("target_channel_provider_unittest") {
+  deps = [ ":target_channel_provider_unittest_exe" ]
+}
+
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -371,6 +389,7 @@ fuchsia_test_package("feedback-tests") {
     ":annotation_manager_unittest",
     ":board_info_provider_unittest",
     ":config_unittest",
+    ":target_channel_provider_unittest",
     ":current_channel_provider_unittest",
     ":data_register_unittest",
     ":device_id_provider_unittest",
