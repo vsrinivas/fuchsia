@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST2_DRIVER_HOST_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST2_DRIVER_HOST_H_
 
-#include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/driver2/record.h>
 #include <lib/fdf/cpp/dispatcher.h>
@@ -19,26 +19,23 @@
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
-class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
+class Driver : public fidl::Server<fuchsia_driver_framework::Driver>,
                public fbl::RefCounted<Driver>,
                public fbl::DoublyLinkedListable<fbl::RefPtr<Driver>> {
  public:
   static zx::status<fbl::RefPtr<Driver>> Load(std::string url, zx::vmo vmo);
 
   Driver(std::string url, void* library, const DriverRecordV1* record);
-  ~Driver();
+  ~Driver() override;
 
   const std::string& url() const { return url_; }
   void set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver> binding);
 
-  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
+  void Stop(StopRequest& request, StopCompleter::Sync& completer) override;
 
   // Starts the driver.
-  //
-  // The handles in `message` will be consumed.
-  zx::status<> Start(fidl::IncomingMessage& message,
-                     fidl_opaque_wire_format_metadata_t wire_format_metadata,
-                     fdf::Dispatcher driver_dispatcher);
+  zx::status<> Start(fuchsia_driver_framework::DriverStartArgs start_args,
+                     fdf::Dispatcher dispatcher);
 
  private:
   std::string url_;
@@ -52,7 +49,7 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
   fdf::Dispatcher initial_dispatcher_;
 };
 
-class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost> {
+class DriverHost : public fidl::Server<fuchsia_driver_framework::DriverHost> {
  public:
   // DriverHost does not take ownership of `loop`, and `loop` must outlive
   // DriverHost.
@@ -62,10 +59,10 @@ class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost>
   zx::status<> PublishDriverHost(component::OutgoingDirectory& outgoing_directory);
 
  private:
-  // fidl::WireServer<fuchsia_driver_framework::DriverHost>
-  void Start(StartRequestView request, StartCompleter::Sync& completer) override;
+  // fidl::Server<fuchsia_driver_framework::DriverHost>
+  void Start(StartRequest& request, StartCompleter::Sync& completer) override;
 
-  void GetProcessKoid(GetProcessKoidRequestView request,
+  void GetProcessKoid(GetProcessKoidRequest& request,
                       GetProcessKoidCompleter::Sync& completer) override;
 
   // Extracts the default_dispatcher_opts from |program| and converts it to
