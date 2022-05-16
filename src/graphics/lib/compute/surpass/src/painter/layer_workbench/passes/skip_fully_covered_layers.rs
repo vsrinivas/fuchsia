@@ -5,7 +5,9 @@
 use std::ops::ControlFlow;
 
 use crate::painter::{
-    layer_workbench::{passes::PassesSharedState, Context, LayerWorkbenchState, TileWriteOp},
+    layer_workbench::{
+        passes::PassesSharedState, Context, LayerWorkbenchState, OptimizerTileWriteOp,
+    },
     BlendMode, Color, Fill, Func, LayerProps, Style,
 };
 
@@ -13,7 +15,7 @@ pub fn skip_fully_covered_layers_pass<'w, 'c, P: LayerProps>(
     workbench: &'w mut LayerWorkbenchState,
     state: &'w mut PassesSharedState,
     context: &'c Context<'_, P>,
-) -> ControlFlow<TileWriteOp> {
+) -> ControlFlow<OptimizerTileWriteOp> {
     #[derive(Debug)]
     enum InterestingCover {
         Opaque(Color),
@@ -65,7 +67,7 @@ pub fn skip_fully_covered_layers_pass<'w, 'c, P: LayerProps>(
         Some(InterestingCover::Opaque(color)) => {
             // All visible layers are unchanged so we can skip drawing altogether.
             if visible_layers_are_unchanged {
-                return ControlFlow::Break(TileWriteOp::None);
+                return ControlFlow::Break(OptimizerTileWriteOp::None);
             }
 
             (1, color)
@@ -87,7 +89,7 @@ pub fn skip_fully_covered_layers_pass<'w, 'c, P: LayerProps>(
     });
 
     match color {
-        Some(color) => ControlFlow::Break(TileWriteOp::Solid(color)),
+        Some(color) => ControlFlow::Break(OptimizerTileWriteOp::Solid(color)),
         None => ControlFlow::Continue(()),
     }
 }

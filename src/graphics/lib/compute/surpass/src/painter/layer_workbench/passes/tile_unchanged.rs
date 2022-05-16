@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{mem, ops::ControlFlow};
+use std::ops::ControlFlow;
 
 use crate::painter::{
-    layer_workbench::{passes::PassesSharedState, Context, LayerWorkbenchState, TileWriteOp},
+    layer_workbench::{
+        passes::PassesSharedState, Context, LayerWorkbenchState, OptimizerTileWriteOp,
+    },
     LayerProps,
 };
 
@@ -13,26 +15,26 @@ pub fn tile_unchanged_pass<'w, 'c, P: LayerProps>(
     workbench: &'w mut LayerWorkbenchState,
     state: &'w mut PassesSharedState,
     context: &'c Context<'_, P>,
-) -> ControlFlow<TileWriteOp> {
+) -> ControlFlow<OptimizerTileWriteOp> {
     let clear_color_is_unchanged = context
-        .previous_clear_color
+        .cached_clear_color
         .map(|previous_clear_color| previous_clear_color == context.clear_color)
         .unwrap_or_default();
 
-    let tile_paint = context.previous_layers.take().and_then(|previous_layers| {
+    let tile_paint = context.cached_tile.as_ref().and_then(|cached_tile| {
         let layers = workbench.ids.len() as u32;
+        let previous_layers = cached_tile.update_layer_count(Some(layers));
 
-        let is_unchanged = if let Some(previous_layers) = previous_layers {
-            let old_layers = mem::replace(previous_layers, layers);
-            state.layers_were_removed = layers < old_layers;
+        let is_unchanged = previous_layers
+            .map(|previous_layers| {
+                state.layers_were_removed = layers < previous_layers;
 
-            old_layers == layers && workbench.ids.iter().all(|&id| context.props.is_unchanged(id))
-        } else {
-            *previous_layers = Some(layers);
-            false
-        };
+                previous_layers == layers
+                    && workbench.ids.iter().all(|&id| context.props.is_unchanged(id))
+            })
+            .unwrap_or_default();
 
-        (clear_color_is_unchanged && is_unchanged).then(|| TileWriteOp::None)
+        (clear_color_is_unchanged && is_unchanged).then(|| OptimizerTileWriteOp::None)
     });
 
     match tile_paint {

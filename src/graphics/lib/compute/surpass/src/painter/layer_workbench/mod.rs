@@ -12,8 +12,8 @@ use rustc_hash::FxHashMap;
 
 use crate::{
     painter::{
-        layer_workbench::passes::PassesSharedState, Color, Cover, CoverCarry, FillRule, Func,
-        LayerProps, Props, Style,
+        layer_workbench::passes::PassesSharedState, CachedTile, Channel, Color, Cover, CoverCarry,
+        FillRule, Func, LayerProps, Props, Style,
     },
     rasterizer::{self, PixelSegment},
     TILE_HEIGHT, TILE_WIDTH,
@@ -104,9 +104,15 @@ impl<A> Extend<A> for MaskedVec<A> {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum TileWriteOp {
+pub enum OptimizerTileWriteOp {
     None,
     Solid(Color),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TileWriteOp {
+    None,
+    Solid([u8; 4]),
     ColorBuffer,
 }
 
@@ -115,8 +121,9 @@ pub struct Context<'c, P: LayerProps> {
     pub tile_y: usize,
     pub segments: &'c [PixelSegment<TILE_WIDTH, TILE_HEIGHT>],
     pub props: &'c P,
-    pub previous_clear_color: Option<Color>,
-    pub previous_layers: Cell<Option<&'c mut Option<u32>>>,
+    pub cached_clear_color: Option<Color>,
+    pub channels: [Channel; 4],
+    pub cached_tile: Option<&'c CachedTile>,
     pub clear_color: Color,
 }
 
@@ -205,7 +212,7 @@ impl LayerWorkbench {
     fn optimization_passes<'c, P: LayerProps>(
         &mut self,
         context: &'c Context<'_, P>,
-    ) -> ControlFlow<TileWriteOp> {
+    ) -> ControlFlow<OptimizerTileWriteOp> {
         let state = &mut self.state;
         let passes_shared_state = &mut self.passes_shared_state;
 
@@ -250,7 +257,9 @@ impl LayerWorkbench {
     ) -> TileWriteOp {
         self.populate_layers(context);
 
-        if let ControlFlow::Break(tile_op) = self.optimization_passes(context) {
+        if let ControlFlow::Break(tile_op) =
+            CachedTile::convert_optimizer_op(self.optimization_passes(context), context)
+        {
             for &id in self.state.ids.iter() {
                 if let Some(cover_carry) = self.cover_carry(context, id) {
                     self.state.next_queue.push(cover_carry);
@@ -319,18 +328,52 @@ mod tests {
     use std::borrow::Cow;
 
     use crate::{
-        painter::{layer_workbench::passes, style::Color, BlendMode, Fill, Props},
+        painter::{layer_workbench::passes, style::Color, BlendMode, Fill, Props, RGBA},
         simd::{i8x16, Simd},
         PIXEL_WIDTH, TILE_HEIGHT,
     };
 
-    const WHITE: Color = Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
-    const BLACK: Color = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 };
-    const RED: Color = Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
+    const WHITEF: Color = Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
+    const BLACKF: Color = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 };
+    const REDF: Color = Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
+
+    const RED: [u8; 4] = [255, 0, 0, 255];
+    const WHITE: [u8; 4] = [255, 255, 255, 255];
 
     impl<T: PartialEq, const N: usize> PartialEq<[T; N]> for MaskedVec<T> {
         fn eq(&self, other: &[T; N]) -> bool {
             self.iter_masked().map(|(_, val)| val).eq(other.iter())
+        }
+    }
+
+    struct UnimplementedPainter;
+
+    impl LayerPainter for UnimplementedPainter {
+        fn clear_cells(&mut self) {
+            unimplemented!();
+        }
+
+        fn acc_segment(&mut self, _segment: PixelSegment<TILE_WIDTH, TILE_HEIGHT>) {
+            unimplemented!();
+        }
+
+        fn acc_cover(&mut self, _cover: Cover) {
+            unimplemented!();
+        }
+
+        fn clear(&mut self, _color: Color) {
+            unimplemented!();
+        }
+
+        fn paint_layer(
+            &mut self,
+            _tile_x: usize,
+            _tile_y: usize,
+            _layer_id: u32,
+            _props: &Props,
+            _apply_clip: bool,
+        ) -> Cover {
+            unimplemented!()
         }
     }
 
@@ -424,9 +467,10 @@ mod tests {
                 segment(5),
             ],
             props: &UnimplementedProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::default(),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: None,
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         workbench.populate_layers(&context);
@@ -469,16 +513,18 @@ mod tests {
             }
         }
 
-        let mut layers = Some(4);
+        let mut cached_tiles = CachedTile::default();
+        cached_tiles.update_layer_count(Some(4));
 
         let context = Context {
             tile_x: 0,
             tile_y: 0,
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::new(Some(&mut layers)),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: Some(&mut cached_tiles),
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         workbench.populate_layers(&context);
@@ -490,18 +536,19 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context
             ),
-            ControlFlow::Continue(())
+            ControlFlow::Continue(()),
         );
-        assert_eq!(layers, Some(5));
+        assert_eq!(cached_tiles.layer_count(), Some(5));
 
         let context = Context {
             tile_x: 0,
             tile_y: 0,
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::new(Some(&mut layers)),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: Some(&mut cached_tiles),
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         // Skip should occur because the previous pass updated the number of layers.
@@ -511,18 +558,19 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context
             ),
-            ControlFlow::Break(TileWriteOp::None)
+            ControlFlow::Break(OptimizerTileWriteOp::None),
         );
-        assert_eq!(layers, Some(5));
+        assert_eq!(cached_tiles.layer_count(), Some(5));
 
         let context = Context {
             tile_x: 0,
             tile_y: 0,
             segments: &[segment(1), segment(2), segment(3), segment(4), segment(5)],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::new(Some(&mut layers)),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: Some(&mut cached_tiles),
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         workbench.next_tile();
@@ -535,18 +583,19 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context
             ),
-            ControlFlow::Continue(())
+            ControlFlow::Continue(()),
         );
-        assert_eq!(layers, Some(5));
+        assert_eq!(cached_tiles.layer_count(), Some(5));
 
         let context = Context {
             tile_x: 0,
             tile_y: 0,
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::new(Some(&mut layers)),
-            clear_color: WHITE,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: Some(&mut cached_tiles),
+            channels: RGBA,
+            clear_color: WHITEF,
         };
 
         workbench.next_tile();
@@ -559,9 +608,9 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context
             ),
-            ControlFlow::Continue(())
+            ControlFlow::Continue(()),
         );
-        assert_eq!(layers, Some(5));
+        assert_eq!(cached_tiles.layer_count(), Some(5));
     }
 
     #[test]
@@ -598,9 +647,10 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::default(),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: None,
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         workbench.populate_layers(&context);
@@ -644,9 +694,10 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::default(),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: None,
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         workbench.populate_layers(&context);
@@ -691,9 +742,10 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::default(),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: None,
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         workbench.populate_layers(&context);
@@ -734,9 +786,10 @@ mod tests {
             tile_y: 0,
             segments: &[segment(3)],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::default(),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: None,
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         workbench.populate_layers(&context);
@@ -747,7 +800,7 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context,
             ),
-            ControlFlow::Continue(())
+            ControlFlow::Continue(()),
         );
 
         assert_eq!(workbench.state.ids, [2, 3]);
@@ -787,9 +840,10 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::default(),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: None,
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         workbench.populate_layers(&context);
@@ -800,12 +854,12 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context,
             ),
-            ControlFlow::Break(TileWriteOp::Solid(Color {
+            ControlFlow::Break(OptimizerTileWriteOp::Solid(Color {
                 r: 0.28125,
                 g: 0.28125,
                 b: 0.28125,
-                a: 0.75,
-            }))
+                a: 0.75
+            })),
         );
     }
 
@@ -839,9 +893,10 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
-            previous_clear_color: Some(WHITE),
-            previous_layers: Cell::default(),
-            clear_color: WHITE,
+            cached_clear_color: Some(WHITEF),
+            cached_tile: None,
+            channels: RGBA,
+            clear_color: WHITEF,
         };
 
         workbench.populate_layers(&context);
@@ -852,12 +907,12 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context,
             ),
-            ControlFlow::Break(TileWriteOp::Solid(Color {
+            ControlFlow::Break(OptimizerTileWriteOp::Solid(Color {
                 r: 0.5625,
                 g: 0.5625,
                 b: 0.5625,
-                a: 1.0,
-            }))
+                a: 1.0
+            })),
         );
     }
 
@@ -894,9 +949,10 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
-            previous_clear_color: Some(WHITE),
-            previous_layers: Cell::default(),
-            clear_color: WHITE,
+            cached_clear_color: Some(WHITEF),
+            cached_tile: None,
+            channels: RGBA,
+            clear_color: WHITEF,
         };
 
         workbench.populate_layers(&context);
@@ -907,7 +963,7 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context,
             ),
-            ControlFlow::Continue(())
+            ControlFlow::Continue(()),
         );
     }
 
@@ -938,37 +994,6 @@ mod tests {
             }
         }
 
-        struct UnimplementedPainter;
-
-        impl LayerPainter for UnimplementedPainter {
-            fn clear_cells(&mut self) {
-                unimplemented!();
-            }
-
-            fn acc_segment(&mut self, _segment: PixelSegment<TILE_WIDTH, TILE_HEIGHT>) {
-                unimplemented!();
-            }
-
-            fn acc_cover(&mut self, _cover: Cover) {
-                unimplemented!();
-            }
-
-            fn clear(&mut self, _color: Color) {
-                unimplemented!();
-            }
-
-            fn paint_layer(
-                &mut self,
-                _tile_x: usize,
-                _tile_y: usize,
-                _layer_id: u32,
-                _props: &Props,
-                _apply_clip: bool,
-            ) -> Cover {
-                unimplemented!()
-            }
-        }
-
         workbench.init([cover(0, CoverType::Partial), cover(1, CoverType::Full)]);
 
         let context = Context {
@@ -976,14 +1001,15 @@ mod tests {
             tile_y: 0,
             segments: &[],
             props: &TestProps,
-            previous_clear_color: Some(WHITE),
-            previous_layers: Cell::default(),
-            clear_color: WHITE,
+            cached_clear_color: Some(WHITEF),
+            cached_tile: None,
+            channels: RGBA,
+            clear_color: WHITEF,
         };
 
         assert_eq!(
             workbench.drive_tile_painting(&mut UnimplementedPainter, &context),
-            TileWriteOp::Solid(Color { r: 0.75, g: 0.75, b: 0.75, a: 1.0 })
+            TileWriteOp::Solid([224, 224, 224, 255]),
         );
     }
 
@@ -997,7 +1023,7 @@ mod tests {
             fn get(&self, layer_id: u32) -> Cow<'_, Props> {
                 if layer_id == 2 {
                     return Cow::Owned(Props {
-                        func: Func::Draw(Style { fill: Fill::Solid(RED), ..Default::default() }),
+                        func: Func::Draw(Style { fill: Fill::Solid(REDF), ..Default::default() }),
                         ..Default::default()
                     });
                 }
@@ -1016,16 +1042,18 @@ mod tests {
             cover(2, CoverType::Full),
         ]);
 
-        let mut layers = Some(3);
+        let mut cached_tiles = CachedTile::default();
+        cached_tiles.update_layer_count(Some(3));
 
         let context = Context {
             tile_x: 0,
             tile_y: 0,
             segments: &[],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::new(Some(&mut layers)),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: Some(&mut cached_tiles),
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         workbench.populate_layers(&context);
@@ -1037,7 +1065,7 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context
             ),
-            ControlFlow::Continue(())
+            ControlFlow::Continue(()),
         );
         // However, we can still skip drawing because everything visible is unchanged.
         assert_eq!(
@@ -1046,19 +1074,20 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context,
             ),
-            ControlFlow::Break(TileWriteOp::None)
+            ControlFlow::Break(OptimizerTileWriteOp::None),
         );
 
-        layers = Some(2);
+        cached_tiles.update_layer_count(Some(2));
 
         let context = Context {
             tile_x: 0,
             tile_y: 0,
             segments: &[],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::new(Some(&mut layers)),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: Some(&mut cached_tiles),
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         workbench.populate_layers(&context);
@@ -1070,7 +1099,7 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context
             ),
-            ControlFlow::Continue(())
+            ControlFlow::Continue(()),
         );
         // We can still skip the tile because any newly added layer is covered by an opaque layer.
         assert_eq!(
@@ -1079,19 +1108,20 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context,
             ),
-            ControlFlow::Break(TileWriteOp::None)
+            ControlFlow::Break(OptimizerTileWriteOp::None),
         );
 
-        layers = Some(4);
+        cached_tiles.update_layer_count(Some(4));
 
         let context = Context {
             tile_x: 0,
             tile_y: 0,
             segments: &[],
             props: &TestProps,
-            previous_clear_color: Some(BLACK),
-            previous_layers: Cell::new(Some(&mut layers)),
-            clear_color: BLACK,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: Some(&mut cached_tiles),
+            channels: RGBA,
+            clear_color: BLACKF,
         };
 
         workbench.populate_layers(&context);
@@ -1103,7 +1133,7 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context
             ),
-            ControlFlow::Continue(())
+            ControlFlow::Continue(()),
         );
         // This time we cannot skip because there might have been a visible layer
         // last frame that is now removed.
@@ -1113,7 +1143,93 @@ mod tests {
                 &mut workbench.passes_shared_state,
                 &context,
             ),
-            ControlFlow::Break(TileWriteOp::Solid(RED))
+            ControlFlow::Break(OptimizerTileWriteOp::Solid(REDF)),
+        );
+    }
+
+    #[test]
+    fn skip_solid_color_is_unchanged() {
+        let mut workbench = LayerWorkbench::default();
+
+        struct TestProps;
+
+        impl LayerProps for TestProps {
+            fn get(&self, _layer_id: u32) -> Cow<'_, Props> {
+                Cow::Owned(Props {
+                    func: Func::Draw(Style { fill: Fill::Solid(REDF), ..Default::default() }),
+                    ..Default::default()
+                })
+            }
+
+            fn is_unchanged(&self, _layer_id: u32) -> bool {
+                false
+            }
+        }
+
+        workbench.init([cover(0, CoverType::Full)]);
+
+        let context = Context {
+            tile_x: 0,
+            tile_y: 0,
+            segments: &[],
+            props: &TestProps,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: None,
+            channels: RGBA,
+            clear_color: BLACKF,
+        };
+
+        workbench.populate_layers(&context);
+
+        // We can't skip drawing because we don't have any cached tile.
+        assert_eq!(
+            workbench.drive_tile_painting(&mut UnimplementedPainter, &context),
+            TileWriteOp::Solid(RED),
+        );
+
+        let mut cached_tiles = CachedTile::default();
+        cached_tiles.update_layer_count(Some(0));
+        cached_tiles.update_solid_color(Some(WHITE));
+
+        let context = Context {
+            tile_x: 0,
+            tile_y: 0,
+            segments: &[],
+            props: &TestProps,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: Some(&mut cached_tiles),
+            channels: RGBA,
+            clear_color: BLACKF,
+        };
+
+        workbench.populate_layers(&context);
+
+        // We can't skip drawing because the tile solid color (RED) is different from the previous one (WHITE).
+        assert_eq!(
+            workbench.drive_tile_painting(&mut UnimplementedPainter, &context),
+            TileWriteOp::Solid(RED),
+        );
+
+        cached_tiles.update_layer_count(Some(0));
+        cached_tiles.update_solid_color(Some(RED));
+
+        let context = Context {
+            tile_x: 0,
+            tile_y: 0,
+            segments: &[],
+            props: &TestProps,
+            cached_clear_color: Some(BLACKF),
+            cached_tile: Some(&mut cached_tiles),
+            channels: RGBA,
+            clear_color: BLACKF,
+        };
+
+        workbench.populate_layers(&context);
+
+        // We can skip drawing because the tile solid color is unchanged.
+        assert_eq!(
+            workbench.drive_tile_painting(&mut UnimplementedPainter, &context),
+            TileWriteOp::None,
         );
     }
 }

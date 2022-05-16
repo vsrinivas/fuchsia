@@ -6,7 +6,9 @@ use std::{
     borrow::Cow,
     cell::{Cell, RefCell, RefMut},
     collections::BTreeMap,
+    convert::TryInto,
     mem,
+    ops::ControlFlow,
     ops::Range,
     slice::ChunksExactMut,
 };
@@ -15,7 +17,7 @@ use rayon::prelude::*;
 
 use crate::{
     layout::{Flusher, Layout, Slice, TileFill},
-    painter::layer_workbench::TileWriteOp,
+    painter::layer_workbench::{OptimizerTileWriteOp, TileWriteOp},
     rasterizer::{search_last_by_key, PixelSegment},
     simd::{f32x4, f32x8, i16x16, i32x8, i8x16, u32x4, u32x8, u8x32, Simd},
     PIXEL_DOUBLE_WIDTH, PIXEL_WIDTH, TILE_HEIGHT, TILE_WIDTH,
@@ -476,7 +478,7 @@ impl Painter {
         channels: [Channel; 4],
         clear_color: Color,
         previous_clear_color: Option<Color>,
-        mut previous_layers: Option<&mut [Option<u32>]>,
+        cached_tiles: Option<&[CachedTile]>,
         row: ChunksExactMut<'_, Slice<'_, u8>>,
         crop: &Option<Rect>,
         flusher: Option<&dyn Flusher>,
@@ -521,10 +523,9 @@ impl Painter {
                 tile_y,
                 segments: current_segments,
                 props,
-                previous_clear_color,
-                previous_layers: Cell::new(
-                    previous_layers.as_mut().map(|layers_per_tile| &mut layers_per_tile[tile_x]),
-                ),
+                cached_clear_color: previous_clear_color,
+                cached_tile: cached_tiles.map(|cached_tiles| &cached_tiles[tile_x]),
+                channels,
                 clear_color,
             };
 
@@ -532,10 +533,7 @@ impl Painter {
 
             match workbench.drive_tile_painting(self, &context) {
                 TileWriteOp::None => (),
-                TileWriteOp::Solid(color) => {
-                    let color = channels.map(|c| color.channel(c));
-                    L::write(slices, flusher, TileFill::Solid(to_srgb_bytes(color)))
-                }
+                TileWriteOp::Solid(color) => L::write(slices, flusher, TileFill::Solid(color)),
                 TileWriteOp::ColorBuffer => {
                     self.compute_srgb(channels);
                     let colors: &[[u8; 4]] = unsafe {
@@ -566,7 +564,7 @@ fn print_row<S: LayerProps, L: Layout>(
     j: usize,
     row: ChunksExactMut<'_, Slice<'_, u8>>,
     previous_clear_color: Option<Color>,
-    layers_per_tile: Option<&mut [Option<u32>]>,
+    cached_tiles: Option<&[CachedTile]>,
     flusher: Option<&dyn Flusher>,
 ) {
     if let Some(rect) = crop {
@@ -600,12 +598,98 @@ fn print_row<S: LayerProps, L: Layout>(
             channels,
             clear_color,
             previous_clear_color,
-            layers_per_tile,
+            cached_tiles,
             row,
             crop,
             flusher,
         );
     });
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct CachedTile {
+    // Bitfield used to store the existence of `layer_count` and `solid_color` values
+    tags: Cell<u8>,
+    // (0b0x)
+    layer_count: Cell<[u8; 3]>,
+    // (0bx0)
+    solid_color: Cell<[u8; 4]>,
+}
+
+impl CachedTile {
+    pub fn layer_count(&self) -> Option<u32> {
+        let layer_count = self.layer_count.get();
+        let layer_count = u32::from_le_bytes([layer_count[0], layer_count[1], layer_count[2], 0]);
+
+        match self.tags.get() {
+            0b10 | 0b11 => Some(layer_count),
+            _ => None,
+        }
+    }
+
+    pub fn solid_color(&self) -> Option<[u8; 4]> {
+        match self.tags.get() {
+            0b01 | 0b11 => Some(self.solid_color.get()),
+            _ => None,
+        }
+    }
+
+    pub fn update_layer_count(&self, layer_count: Option<u32>) -> Option<u32> {
+        let previous_layer_count = self.layer_count();
+        match layer_count {
+            None => {
+                self.tags.set(self.tags.get() & 0b01);
+            }
+            Some(layer_count) => {
+                self.tags.set(self.tags.get() | 0b10);
+                self.layer_count.set(layer_count.to_le_bytes()[..3].try_into().unwrap());
+            }
+        };
+        previous_layer_count
+    }
+
+    pub fn update_solid_color(&self, solid_color: Option<[u8; 4]>) -> Option<[u8; 4]> {
+        let previous_solid_color = self.solid_color();
+        match solid_color {
+            None => {
+                self.tags.set(self.tags.get() & 0b10);
+            }
+            Some(color) => {
+                self.tags.set(self.tags.get() | 0b01);
+                self.solid_color.set(color);
+            }
+        };
+        previous_solid_color
+    }
+
+    pub fn convert_optimizer_op<'c, P: LayerProps>(
+        tile_op: ControlFlow<OptimizerTileWriteOp>,
+        context: &'c Context<'_, P>,
+    ) -> ControlFlow<TileWriteOp> {
+        match tile_op {
+            ControlFlow::Break(OptimizerTileWriteOp::Solid(color)) => {
+                let color = to_srgb_bytes(context.channels.map(|c| color.channel(c)));
+                let color_is_unchanged = context
+                    .cached_tile
+                    .as_ref()
+                    .map(|cached_tile| cached_tile.update_solid_color(Some(color)) == Some(color))
+                    .unwrap_or_default();
+
+                if color_is_unchanged {
+                    ControlFlow::Break(TileWriteOp::None)
+                } else {
+                    ControlFlow::Break(TileWriteOp::Solid(color))
+                }
+            }
+            ControlFlow::Break(OptimizerTileWriteOp::None) => ControlFlow::Break(TileWriteOp::None),
+            _ => {
+                context.cached_tile.as_ref().map(|cached_tile| {
+                    cached_tile.update_solid_color(None);
+                });
+                ControlFlow::Continue(())
+            }
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -616,7 +700,7 @@ pub fn for_each_row<L: Layout, S: LayerProps>(
     channels: [Channel; 4],
     flusher: Option<&dyn Flusher>,
     previous_clear_color: Option<Color>,
-    layers_per_tile: Option<RefMut<'_, Vec<Option<u32>>>>,
+    cached_tiles: Option<RefMut<'_, Vec<CachedTile>>>,
     mut segments: &[PixelSegment<TILE_WIDTH, TILE_HEIGHT>],
     clear_color: Color,
     crop: &Option<Rect>,
@@ -631,12 +715,12 @@ pub fn for_each_row<L: Layout, S: LayerProps>(
     let row_of_tiles_len = width_in_tiles * layout.slices_per_tile();
     let mut slices = layout.slices(buffer);
 
-    if let Some(mut layers_per_tile) = layers_per_tile {
+    if let Some(mut cached_tiles) = cached_tiles {
         slices
             .par_chunks_mut(row_of_tiles_len)
-            .zip_eq(layers_per_tile.par_chunks_mut(width_in_tiles))
+            .zip_eq(cached_tiles.par_chunks_mut(width_in_tiles))
             .enumerate()
-            .for_each(|(j, (row_of_tiles, layers_per_tile))| {
+            .for_each(|(j, (row_of_tiles, cached_tiles))| {
                 print_row::<S, L>(
                     segments,
                     channels,
@@ -646,7 +730,7 @@ pub fn for_each_row<L: Layout, S: LayerProps>(
                     j,
                     row_of_tiles.chunks_exact_mut(row_of_tiles.len() / width_in_tiles),
                     previous_clear_color,
-                    Some(layers_per_tile),
+                    Some(cached_tiles),
                     flusher,
                 );
             });
@@ -806,8 +890,9 @@ mod tests {
             tile_y: 0,
             segments,
             props,
-            previous_clear_color: None,
-            previous_layers: Cell::new(None),
+            cached_clear_color: None,
+            cached_tile: None,
+            channels: RGBA,
             clear_color,
         };
 
@@ -1123,8 +1208,9 @@ mod tests {
             tile_y: 0,
             segments: &segments,
             props: &props,
-            previous_clear_color: None,
-            previous_layers: Cell::new(None),
+            cached_clear_color: None,
+            cached_tile: None,
+            channels: RGBA,
             clear_color: BLACK,
         };
 
@@ -1404,5 +1490,22 @@ mod tests {
         let buffer_layout = LinearLayout::new(width, width_stride, height);
 
         assert_eq!(buffer_layout.width_in_tiles() * buffer_layout.height_in_tiles(), 32);
+    }
+
+    #[test]
+    fn cached_tiles() {
+        const RED: [u8; 4] = [255, 0, 0, 255];
+
+        let cached_tile = CachedTile::default();
+
+        // Solid color
+        assert_eq!(cached_tile.solid_color(), None);
+        assert_eq!(cached_tile.update_solid_color(Some(RED)), None);
+        assert_eq!(cached_tile.solid_color(), Some(RED));
+
+        // Layer count
+        assert_eq!(cached_tile.layer_count(), None);
+        assert_eq!(cached_tile.update_layer_count(Some(2)), None);
+        assert_eq!(cached_tile.layer_count(), Some(2));
     }
 }

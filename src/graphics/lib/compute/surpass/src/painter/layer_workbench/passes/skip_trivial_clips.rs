@@ -6,7 +6,7 @@ use std::ops::ControlFlow;
 
 use crate::painter::{
     layer_workbench::{
-        passes::PassesSharedState, Context, Index, LayerWorkbenchState, TileWriteOp,
+        passes::PassesSharedState, Context, Index, LayerWorkbenchState, OptimizerTileWriteOp,
     },
     Func, LayerProps, Style,
 };
@@ -15,7 +15,7 @@ pub fn skip_trivial_clips_pass<'w, 'c, P: LayerProps>(
     workbench: &'w mut LayerWorkbenchState,
     state: &'w mut PassesSharedState,
     context: &'c Context<'_, P>,
-) -> ControlFlow<TileWriteOp> {
+) -> ControlFlow<OptimizerTileWriteOp> {
     struct Clip {
         is_full: bool,
         last_layer_id: u32,

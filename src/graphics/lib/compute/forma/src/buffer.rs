@@ -8,7 +8,7 @@ use std::{
 };
 
 pub use surpass::layout;
-use surpass::painter::Color;
+use surpass::painter::{CachedTile, Color};
 
 use layout::{Flusher, Layout};
 
@@ -98,9 +98,7 @@ impl Drop for IdDropper {
 #[derive(Debug)]
 pub struct CacheInner {
     pub clear_color: Option<Color>,
-    // Not `Option<Vec<u32>>` because the vector is split and sent to different
-    // threads.
-    pub layers: Vec<Option<u32>>,
+    pub tiles: Vec<CachedTile>,
     pub width: Option<usize>,
     pub height: Option<usize>,
     _id_dropper: IdDropper,
@@ -163,7 +161,7 @@ impl BufferLayerCache {
             id,
             cache: Rc::new(RefCell::new(CacheInner {
                 clear_color: None,
-                layers: Vec::new(),
+                tiles: Vec::new(),
                 width: None,
                 height: None,
                 _id_dropper: IdDropper { id, buffers_with_caches },
@@ -176,7 +174,7 @@ impl BufferLayerCache {
         let mut cache = self.cache.borrow_mut();
 
         cache.clear_color = None;
-        cache.layers.fill(None);
+        cache.tiles.fill(CachedTile::default());
     }
 }
 

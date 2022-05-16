@@ -11,7 +11,7 @@ use std::{
 use rustc_hash::FxHashMap;
 use surpass::{
     layout::Layout,
-    painter::{self, Channel, Color, LayerProps, Props, Rect},
+    painter::{self, CachedTile, Channel, Color, LayerProps, Props, Rect},
     rasterizer::Rasterizer,
     Order, TILE_HEIGHT, TILE_WIDTH,
 };
@@ -66,7 +66,7 @@ impl CpuRenderer {
             let tiles_len = buffer.layout.width_in_tiles() * buffer.layout.height_in_tiles();
             let cache = &layer_cache.cache;
 
-            cache.borrow_mut().layers.resize(tiles_len, None);
+            cache.borrow_mut().tiles.resize(tiles_len, CachedTile::default());
 
             if cache.borrow().width != Some(buffer.layout.width())
                 || cache.borrow().height != Some(buffer.layout.height())
@@ -155,8 +155,8 @@ impl CpuRenderer {
                 .as_ref()
                 .and_then(|layer_cache| layer_cache.cache.borrow().clear_color);
 
-            let layers_per_tile = buffer.layer_cache.as_ref().map(|layer_cache| {
-                RefMut::map(layer_cache.cache.borrow_mut(), |cache| &mut cache.layers)
+            let cached_tiles = buffer.layer_cache.as_ref().map(|layer_cache| {
+                RefMut::map(layer_cache.cache.borrow_mut(), |cache| &mut cache.tiles)
             });
 
             {
@@ -167,7 +167,7 @@ impl CpuRenderer {
                     channels,
                     buffer.flusher.as_deref(),
                     previous_clear_color,
-                    layers_per_tile,
+                    cached_tiles,
                     rasterizer.segments(),
                     clear_color,
                     &crop,
