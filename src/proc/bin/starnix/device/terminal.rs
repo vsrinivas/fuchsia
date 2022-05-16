@@ -56,6 +56,9 @@ pub struct TerminalMutableState {
     /// |true| is the terminal is locked.
     pub locked: bool,
 
+    /// Terminal size.
+    pub window_size: uapi::winsize,
+
     /// The controlling sessions for the main side of the terminal.
     main_controlling_session: Option<ControllingSession>,
 
@@ -85,6 +88,7 @@ impl Terminal {
             id,
             mutable_state: RwLock::new(TerminalMutableState {
                 locked: true,
+                window_size: Default::default(),
                 main_controlling_session: None,
                 replica_controlling_session: None,
             }),

@@ -4,7 +4,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include <sys/prctl.h>
+#include <sys/syscall.h>
 
 #include <gtest/gtest.h>
 
@@ -26,7 +28,25 @@ namespace {
 
 int received_signal = -1;
 
-void sig_hup(int signo) { received_signal = signo; }
+void record_signal(int signo) { received_signal = signo; }
+
+void ignore_signal(int signal) {
+  struct sigaction action;
+  action.sa_handler = SIG_IGN;
+  SAFE_SYSCALL(sigaction(signal, &action, nullptr));
+}
+
+void register_signal_handler(int signal) {
+  struct sigaction action;
+  action.sa_handler = record_signal;
+  SAFE_SYSCALL(sigaction(signal, &action, nullptr));
+}
+
+long sleep_ns(int count) {
+  struct timespec ts = {.tv_sec = 0, .tv_nsec = count};
+  // TODO(qsr): Use nanosleep when starnix implements clock_nanosleep
+  return syscall(SYS_nanosleep, &ts, nullptr);
+}
 
 int reap_children() {
   for (;;) {
@@ -62,9 +82,7 @@ TEST(JobControl, BackgroundProcessGroupDoNotUpdateOnDeath) {
   // Reap children.
   prctl(PR_SET_CHILD_SUBREAPER, 1);
 
-  struct sigaction action;
-  action.sa_handler = SIG_IGN;
-  SAFE_SYSCALL(sigaction(SIGTTOU, &action, nullptr));
+  ignore_signal(SIGTTOU);
 
   if (SAFE_SYSCALL(fork()) == 0) {
     SAFE_SYSCALL(setsid());
@@ -133,9 +151,7 @@ TEST(JobControl, OrphanedProcessGroupsReceivesSignal) {
         // Deepest child. Set a SIGHUP handler, stop ourself, and check that we
         // are restarted and received the expected SIGHUP when our immediate
         // parent dies
-        struct sigaction action;
-        action.sa_handler = sig_hup;
-        SAFE_SYSCALL(sigaction(SIGHUP, &action, nullptr));
+        register_signal_handler(SIGHUP);
         SAFE_SYSCALL(kill(getpid(), SIGTSTP));
         // At this point, a SIGHUP should have been received.
         // TODO(qsr): Remove the syscall that is there only because starnix
@@ -153,6 +169,59 @@ TEST(JobControl, OrphanedProcessGroupsReceivesSignal) {
     } else {
       // Wait for the child to die and check it exited normally.
       exit(reap_children());
+    }
+
+    // Ensure all forked process will exit and not reach back to gtest.
+    exit(0);
+  } else {
+    // Wait for all children to die.
+    ASSERT_EQ(0, reap_children());
+  }
+}
+
+TEST(Pty, SigWinch) {
+  // Reap children.
+  prctl(PR_SET_CHILD_SUBREAPER, 1);
+
+  if (SAFE_SYSCALL(fork()) == 0) {
+    // Create a new session here, and associate it with the new terminal.
+    SAFE_SYSCALL(setsid());
+    int main_terminal = open_main_terminal();
+    SAFE_SYSCALL(ioctl(main_terminal, TIOCSCTTY, 0));
+
+    // Register a signal handler for sigusr1.
+    register_signal_handler(SIGUSR1);
+    ignore_signal(SIGTTOU);
+
+    // fork a child, move it to its own process group and makes it the
+    // foreground one.
+    pid_t child_pid;
+    if ((child_pid = SAFE_SYSCALL(fork())) == 0) {
+      SAFE_SYSCALL(setpgid(0, 0));
+      SAFE_SYSCALL(tcsetpgrp(main_terminal, getpid()));
+
+      // Register a signal handler for sigwinch.
+      register_signal_handler(SIGWINCH);
+
+      // Send a SIGUSR1 to notify our parent.
+      SAFE_SYSCALL(kill(getppid(), SIGUSR1));
+
+      // Wait for a SIGWINCH
+      while (received_signal != SIGWINCH) {
+        sleep_ns(10e7);
+      }
+
+    } else {
+      // Wait for SIGUSR1
+      while (received_signal != SIGUSR1) {
+        sleep_ns(10e7);
+      }
+
+      // Resize the window, which must generate a SIGWINCH for the children.
+      struct winsize ws = {.ws_row = 10, .ws_col = 10};
+      SAFE_SYSCALL(ioctl(main_terminal, TIOCSWINSZ, &ws));
+
+      ASSERT_EQ(0, reap_children());
     }
 
     // Ensure all forked process will exit and not reach back to gtest.

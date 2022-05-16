@@ -368,6 +368,35 @@ fn shared_ioctl(
             )?;
             Ok(SUCCESS)
         }
+        TIOCGWINSZ => {
+            // Get the window size
+            current_task.mm.write_object(
+                UserRef::<uapi::winsize>::new(user_addr),
+                &terminal.read().window_size,
+            )?;
+            Ok(SUCCESS)
+        }
+        TIOCSWINSZ => {
+            // Set the window size
+            current_task.mm.read_object(
+                UserRef::<uapi::winsize>::new(user_addr),
+                &mut terminal.write().window_size,
+            )?;
+
+            // Send a SIGWINCH signal to the foreground process group.
+            let foreground_process_group_id = terminal
+                .read()
+                .get_controlling_session(is_main)
+                .as_ref()
+                .map(|cs| cs.foregound_process_group);
+            let process_group: Option<Arc<ProcessGroup>> = foreground_process_group_id
+                .map(|id| current_task.thread_group.kernel.pids.read().get_process_group(id))
+                .flatten();
+            if let Some(process_group) = process_group {
+                process_group.send_signals(&[SIGWINCH]);
+            }
+            Ok(SUCCESS)
+        }
         _ => {
             tracing::error!(
                 "{} received unknown ioctl request 0x{:08x}",
