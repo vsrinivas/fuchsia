@@ -4,10 +4,8 @@
 
 //! Buffer-layout-specific traits for user-defined behavior.
 //!
-//! The logic is split between two traits, the [`Layout`] and the [`TileWriter`]. [`Layout`]'s job
-//! is to split a buffer into sub-slices that will then be distributed to tile to be rendered, and
-//! to produces [`TileWriter`]s from some sub-range of the sub-slices. These writers can then write
-//! color data to these sub-slices.
+//! [`Layout`]'s job is to split a buffer into sub-slices that will then be distributed to tile to
+//! be rendered, and to write color data to these sub-slices.
 
 use std::fmt;
 
@@ -16,7 +14,7 @@ use rayon::prelude::*;
 use crate::{TILE_HEIGHT, TILE_HEIGHT_SHIFT, TILE_WIDTH, TILE_WIDTH_SHIFT};
 
 mod slice_cache;
-pub use slice_cache::{Ref, Slice, SliceCache, Span};
+pub use slice_cache::{Chunks, Ref, Slice, SliceCache, Span};
 
 /// Listener that gets called after every write to the buffer. Its main use is to flush freshly
 /// written memory slices.
@@ -65,7 +63,7 @@ pub trait Layout {
     /// ```
     fn height(&self) -> usize;
 
-    /// Number of buffer sub-slices that will be passes to [`Layout::writer`].
+    /// Number of buffer sub-slices that will be passes to [`Layout::write`].
     ///
     /// # Examples
     ///
