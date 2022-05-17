@@ -53,9 +53,6 @@
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
-
-                // TODO(fxbug.dev/95901): Remove once migration done.
-                "fuchsia.ui.focus.FocusChainListenerRegistry-workstation",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input.InputDeviceRegistry",
                 "fuchsia.ui.input.PointerCaptureListenerRegistry",
