@@ -206,21 +206,19 @@ class WiFiService implements TaskService {
             : policy.Credential.withPassword(
                 Uint8List.fromList(password.codeUnits));
 
-        policy.ScanResult? network = _scannedNetworks.firstWhereOrNull(
-            (network) =>
-                ssidFromScannedNetwork(network) == _targetNetwork.ssid);
-
-        if (network == null) {
+        if (_targetNetwork.networkIdentifier == null) {
           throw Exception(
-              '$targetNetwork network not found in scanned networks.');
+              '$targetNetwork network does not have network identifier needed to connect.');
         }
 
+        policy.NetworkIdentifier networkId = _targetNetwork.networkIdentifier!;
+
         final networkConfig =
-            policy.NetworkConfig(id: network.id, credential: credential);
+            policy.NetworkConfig(id: networkId, credential: credential);
 
         await _clientController?.saveNetwork(networkConfig);
 
-        final requestStatus = await _clientController?.connect(network.id!);
+        final requestStatus = await _clientController?.connect(networkId);
         if (requestStatus != RequestStatus.acknowledged) {
           throw Exception(
               'connecting to $targetNetwork rejected: $requestStatus.');
@@ -381,6 +379,8 @@ class NetworkInformation {
   // If network has a failed connection attempt due to bad credentials
   // Only set true if failed credentials found
   bool credentialsFailed = false;
+  // Network identifier (from scan results)
+  policy.NetworkIdentifier? _networkIdentifier;
 
   NetworkInformation();
 
@@ -407,6 +407,7 @@ class NetworkInformation {
 
   // Constructor for scan result
   NetworkInformation.fromScanResult(policy.ScanResult scanResult) {
+    _networkIdentifier = scanResult.id;
     _ssid = scanResult.id?.ssid;
     _name = scanResult.id?.ssid.toList() != null
         ? utf8.decode(scanResult.id!.ssid.toList())
@@ -442,4 +443,6 @@ class NetworkInformation {
 
   policy.SecurityType get securityType =>
       _securityType ?? policy.SecurityType.none;
+
+  policy.NetworkIdentifier? get networkIdentifier => _networkIdentifier;
 }
