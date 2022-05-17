@@ -11,9 +11,3 @@ legacy_base_package_labels -= [
   "//src/virtualization/packages/termina_guest",
   "//src/connectivity/wlan/drivers:iwlwifi",
 ]
-
-# TODO(fxbug.dev/99588): These limits are set in //products/common/workstation.gni and used in the
-# _userdebug builds, but they break workstation.qemu-x64. For now, set them to zero (no limit) to
-# unblock qemu.
-blobfs_maximum_runtime_bytes = 0
-minfs_maximum_runtime_bytes = 0

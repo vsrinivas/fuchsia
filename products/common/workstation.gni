@@ -142,18 +142,5 @@ include_account_in_fvm = true
 # Use Flatland as the default graphics protocol in Scenic.
 use_flatland_by_default = true
 
-# Storage is budgeted as follows:
-# FVM: 56GiB
-#   Guest partition: 40GiB (not enforced here)
-#   /blob: 4GiB
-#   /data: 4GiB
-#   <the rest is available for /account and future use>
-# These limits are intentionally conservative since we can increase them later, but it's hard to
-# decrease them (it requires resetting the disk state, which for /blob requires a re-pave).
-# We could be tying FVM's size to the actual disk size but the paver isn't smart enough to do that
-# yet.
-blobfs_maximum_runtime_bytes = 4294967296
-minfs_maximum_runtime_bytes = 4294967296
-
 # TODO(fxbug.dev/96494): Switch to Fxfs.
 data_filesystem_format = "minfs"
