@@ -179,21 +179,26 @@ void main() {
   });
 
   test('dm reboot', () async {
-    // Launch three instances of component.
-    await ermine.launchFromAppLauncher('Terminal');
-    await _waitForViews(componentUrl, 1, testForFocus: true);
-    await waitForPrompt();
+    try {
+      // Launch three instances of component.
+      await ermine.launchFromAppLauncher('Terminal');
+      await _waitForViews(componentUrl, 1, testForFocus: true);
+      await waitForPrompt();
 
-    // Inject 'dm reboot' + ENTER
-    await inject('dm reboot');
+      // Inject 'dm reboot' + ENTER
+      await inject('dm reboot');
 
-    // Now we wait for the sytem to reboot and reconnect. This logic is taken
-    // from `sl4f.reboot()`.
-    await sl4f.stopServer();
-    await Future.delayed(Duration(seconds: 3));
+      // Now we wait for the sytem to reboot and reconnect. This logic is taken
+      // from `sl4f.reboot()`.
+      await sl4f.stopServer();
+      await Future.delayed(Duration(seconds: 3));
 
-    // Try to restart SL4F
-    await sl4f.startServer();
-    expect(await sl4f.isRunning(), isTrue);
+      // Try to restart SL4F
+      await sl4f.startServer();
+      expect(await sl4f.isRunning(), isTrue);
+    } catch (e, s) {
+      print("exception: $e");
+      print("stack trace: $s");
+    }
   }, timeout: Timeout(Duration(minutes: 2)));
 }
