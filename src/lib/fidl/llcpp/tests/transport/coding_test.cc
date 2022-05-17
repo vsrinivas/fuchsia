@@ -5,6 +5,7 @@
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/wire_coding_traits.h>
 
 #include <zxtest/zxtest.h>
 
@@ -89,9 +90,25 @@ template <>
 struct fidl::TypeTraits<Input> {
   static constexpr const fidl_type_t* kType = &CodingTableStruct;
   static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+};
+
+template <bool IsRecursive>
+struct fidl::internal::WireCodingTraits<Input, fidl::internal::WireCodingConstraintEmpty,
+                                        IsRecursive> {
+  static constexpr size_t inline_size = 4;
+
+  static void Encode(fidl::internal::WireEncoder* encoder, Input* value, WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    encoder->EncodeHandle(value->h, {}, position, false);
+  }
+  static void Decode(fidl::internal::WireDecoder* decoder, WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    decoder->DecodeHandle(position, {}, false);
+  }
 };
 
 template <>

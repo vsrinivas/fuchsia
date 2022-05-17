@@ -379,8 +379,10 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictBitsUnknownBit:               "InvalidBitsValue",
 	gidlir.StrictEnumUnknownValue:             "InvalidEnumValue",
 	gidlir.StrictUnionUnknownField:            "UnknownUnionTag",
+	gidlir.StringCountExceeds32BitLimit:       "OutOfRange",
 	gidlir.StringNotUtf8:                      "Utf8Error",
 	gidlir.StringTooLong:                      "OutOfRange",
+	gidlir.TableCountExceeds32BitLimit:        "OutOfRange",
 	gidlir.TooFewBytes:                        "OutOfRange",
 	gidlir.TooFewBytesInPrimaryObject:         "OutOfRange",
 	gidlir.TooFewHandles:                      "OutOfRange",
@@ -388,6 +390,7 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.TooManyHandlesInMessage:            "ExtraHandles",
 	gidlir.UnionFieldNotSet:                   "UnknownUnionTag",
 	gidlir.UnexpectedOrdinal:                  "OutOfRange",
+	gidlir.VectorCountExceeds32BitLimit:       "OutOfRange",
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {

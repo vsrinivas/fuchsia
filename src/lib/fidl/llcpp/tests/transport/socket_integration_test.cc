@@ -11,6 +11,7 @@
 #include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/llcpp/wire_coding_traits.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -40,12 +41,26 @@ template <>
 struct fidl::TypeTraits<TwoWayRequest> {
   static constexpr const fidl_type_t* kType = &CodingTableStruct;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 24;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
   static constexpr bool kHasFlexibleEnvelope = false;
+};
+
+template <bool IsRecursive>
+struct fidl::internal::WireCodingTraits<TwoWayRequest, fidl::internal::WireCodingConstraintEmpty,
+                                        IsRecursive> {
+  static constexpr size_t inline_size = 24;
+
+  static void Encode(fidl::internal::WireEncoder* encoder, TwoWayRequest* value,
+                     WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    memcpy(position.As<TwoWayRequest>(), value, sizeof(TwoWayRequest));
+  }
+  static void Decode(fidl::internal::WireDecoder* decoder, WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
 };
 
 struct TwoWayResponse {
@@ -57,12 +72,27 @@ template <>
 struct fidl::TypeTraits<TwoWayResponse> {
   static constexpr const fidl_type_t* kType = &CodingTableStruct;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 24;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kResponse;
   static constexpr bool kHasFlexibleEnvelope = false;
+};
+
+template <bool IsRecursive>
+struct fidl::internal::WireCodingTraits<TwoWayResponse, fidl::internal::WireCodingConstraintEmpty,
+                                        IsRecursive> {
+  static constexpr size_t inline_size = 24;
+
+  static void Encode(fidl::internal::WireEncoder* encoder, TwoWayResponse* value,
+                     fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    memcpy(position.As<TwoWayResponse>(), value, sizeof(TwoWayResponse));
+  }
+  static void Decode(fidl::internal::WireDecoder* decoder, fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
 };
 
 template <>

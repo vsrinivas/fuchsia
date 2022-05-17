@@ -7,6 +7,7 @@
 
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/object_view.h>
+#include <lib/fidl/llcpp/wire_coding_traits.h>
 
 #include <algorithm>
 

@@ -113,7 +113,7 @@ class {{ .Name }} {
   static constexpr auto kMembers = std::make_tuple(
     {{- range $i, $m := .Members }}
       {{- if $i }}, {{ end -}}
-      ::fidl::internal::NaturalStructMember<Storage_, {{ $m.Type }}, {{ $m.Constraint }}>{
+      ::fidl::internal::NaturalStructMember<Storage_, {{ $m.Type }}, {{ $m.NaturalConstraint }}>{
         &Storage_::{{ $m.Name }}, {{ $m.OffsetV2 }}
       }
     {{- end -}}

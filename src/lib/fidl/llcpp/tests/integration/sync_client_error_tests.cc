@@ -43,7 +43,7 @@ TEST(SyncClientErrorTest, EncodeError) {
   EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
   EXPECT_EQ(
       "FIDL operation failed due to encode error, status: ZX_ERR_INVALID_ARGS (-10), "
-      "detail: not a valid enum member",
+      "detail: not a valid enum value",
       result.FormatDescription());
 }
 
@@ -80,7 +80,7 @@ TEST(SyncClientErrorTest, DecodeError) {
   EXPECT_EQ(fidl::Reason::kDecodeError, result.reason());
   EXPECT_EQ(
       "FIDL operation failed due to decode error, status: ZX_ERR_INVALID_ARGS (-10), "
-      "detail: not a valid enum member",
+      "detail: not a valid enum value",
       result.FormatDescription());
 }
 
@@ -118,6 +118,6 @@ TEST(SyncClientErrorTest, DecodeErrorWithErrorSyntax) {
   EXPECT_EQ(fidl::Reason::kDecodeError, result.reason());
   EXPECT_EQ(
       "FIDL operation failed due to decode error, status: ZX_ERR_INVALID_ARGS (-10), "
-      "detail: not a valid enum member",
+      "detail: not a valid enum value",
       result.FormatDescription());
 }

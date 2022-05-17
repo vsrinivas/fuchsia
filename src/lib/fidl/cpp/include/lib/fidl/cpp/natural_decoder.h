@@ -5,7 +5,6 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_DECODER_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_DECODER_H_
 
-#include <lib/fidl/cpp/natural_coding_errors.h>
 #include <lib/fidl/llcpp/message.h>
 #include <zircon/fidl.h>
 
@@ -50,7 +49,7 @@ class NaturalDecoder final {
     size_t next_unaligned = next_out_of_line_ + size;
     size_t next = FIDL_ALIGN(next_unaligned);
     if (next > body_.byte_actual()) {
-      SetError(kCodingErrorOutOfLineObjectExceedsMessageBounds);
+      SetError(kCodingErrorBackingBufferSizeExceeded);
       return false;
     }
 

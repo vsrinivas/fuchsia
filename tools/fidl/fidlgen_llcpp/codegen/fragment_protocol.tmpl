@@ -158,6 +158,7 @@ struct TypeTraits<{{ .WireTransactionalRequest }}> {
     nullptr;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Request.TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t kMaxDepth = {{ .Request.TypeShapeV2.Depth }};
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN({{ .Request.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN({{ .Request.TypeShapeV1.InlineSize }} + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = {{ .Request.TypeShapeV2.MaxOutOfLine }};
@@ -184,6 +185,7 @@ struct TypeTraits<{{ .WireRequest }}> {
     nullptr;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Request.TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t kMaxDepth = {{ .Request.TypeShapeV2.Depth }};
   static constexpr uint32_t kPrimarySize = {{ .Request.TypeShapeV2.InlineSize }};
   static constexpr uint32_t kPrimarySizeV1 = {{ .Request.TypeShapeV1.InlineSize }};
   static constexpr uint32_t kMaxOutOfLine = {{ .Request.TypeShapeV2.MaxOutOfLine }};
@@ -237,6 +239,7 @@ struct TypeTraits<{{ .WireTransactionalEvent }}> {
     nullptr;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t kMaxDepth = {{ .Response.TypeShapeV2.Depth }};
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN({{ .Response.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN({{ .Response.TypeShapeV1.InlineSize }} + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};
@@ -263,6 +266,7 @@ struct TypeTraits<{{ .WireEvent }}> {
     nullptr;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t kMaxDepth = {{ .Response.TypeShapeV2.Depth }};
   static constexpr uint32_t kPrimarySize = {{ .Response.TypeShapeV2.InlineSize }};
   static constexpr uint32_t kPrimarySizeV1 = {{ .Response.TypeShapeV1.InlineSize }};
   static constexpr uint32_t kMaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};
@@ -314,6 +318,7 @@ struct TypeTraits<{{ .WireTransactionalResponse }}> {
     nullptr;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t kMaxDepth = {{ .Response.TypeShapeV2.Depth }};
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN({{ .Response.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN({{ .Response.TypeShapeV1.InlineSize }} + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};
@@ -340,6 +345,7 @@ struct TypeTraits<{{ .WireResponse }}> {
     nullptr;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t kMaxDepth = {{ .Response.TypeShapeV2.Depth }};
   static constexpr uint32_t kPrimarySize = {{ .Response.TypeShapeV2.InlineSize }};
   static constexpr uint32_t kPrimarySizeV1 = {{ .Response.TypeShapeV1.InlineSize }};
   static constexpr uint32_t kMaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};

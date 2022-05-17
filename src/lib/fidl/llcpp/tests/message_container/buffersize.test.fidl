@@ -3,6 +3,13 @@
 // found in the LICENSE file.
 library fidl.llcpp.buffersize.test;
 
+type Array256Elements = struct {
+    value array<uint8, 256>;
+};
+type Array4096Elements = struct {
+    value array<uint8, 4096>;
+};
+
 protocol Protocol {
     RequestWith496ByteArray(struct {
         value array<byte, 496>;

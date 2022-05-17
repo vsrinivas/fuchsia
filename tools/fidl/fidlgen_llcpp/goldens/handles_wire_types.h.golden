@@ -153,9 +153,11 @@ struct IsResource<::test_handles::wire::Handles> : public std::true_type {};
 
 template <>
 struct TypeTraits<::test_handles::wire::Handles> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_handles::wire::test_handles_HandlesTable;
   static constexpr uint32_t kMaxNumHandles = 32;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 128;
   static constexpr uint32_t kPrimarySizeV1 = 128;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -207,6 +209,574 @@ static_assert(offsetof(::test_handles::wire::Handles, request_some_protocol) ==
               124);
 static_assert(sizeof(::test_handles::wire::Handles) ==
               TypeTraits<::test_handles::wire::Handles>::kPrimarySize);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_handles::wire::Handles, ::fidl::internal::WireCodingConstraintEmpty,
+    IsRecursive> {
+  static constexpr size_t inline_size = 128;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::handle,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::bti,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_BTI,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::channel,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::clock,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CLOCK,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::debuglog,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_LOG,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::event,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_EVENT,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::eventpair,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_EVENTPAIR,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::exception,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_EXCEPTION,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::fifo,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_FIFO,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::guest,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_GUEST,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::interrupt,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_INTERRUPT,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::iommu,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_IOMMU,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::job,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_JOB,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::pager,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_PAGER,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::pmt,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_PMT,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::port,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_PORT,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::process,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_PROCESS,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::profile,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_PROFILE,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::resource,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_RESOURCE,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::socket,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::suspend_token,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_SUSPEND_TOKEN,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::thread,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_THREAD,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::timer,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_TIMER,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::vcpu,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_VCPU,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::vmar,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_VMAR,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::vmo,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::vmo,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x5,
+                                                     false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::handle,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::vmo,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::zx::vmo,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x1,
+                                                     false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::fidl::ClientEnd<::test_handles::SomeProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::fidl::ServerEnd<::test_handles::SomeProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base =
+      WireStructCodingTraitsBase<::test_handles::wire::Handles,
+                                 ::fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_handles::wire::Handles* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value, sizeof(::test_handles::wire::Handles));
+    } else {
+      internal::WireCodingTraits<::zx::handle,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_NONE, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->plain_handle,
+                                                      position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::bti,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_BTI, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->bti_handle,
+                                                      position + 4,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::channel,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_CHANNEL, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->channel_handle,
+                                                      position + 8,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::clock,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_CLOCK, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->clock_handle,
+                                                      position + 12,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::debuglog,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_LOG, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->debuglog_handle,
+                                                      position + 16,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::event,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_EVENT, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->event_handle,
+                                                      position + 20,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::eventpair,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_EVENTPAIR, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->eventpair_handle,
+                                                      position + 24,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::exception,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_EXCEPTION, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->exception_handle,
+                                                      position + 28,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::fifo,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_FIFO, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->fifo_handle,
+                                                      position + 32,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::guest,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_GUEST, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->guest_handle,
+                                                      position + 36,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::interrupt,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_INTERRUPT, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->interrupt_handle,
+                                                      position + 40,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::iommu,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_IOMMU, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->iommu_handle,
+                                                      position + 44,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::job,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_JOB, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->job_handle,
+                                                      position + 48,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::pager,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_PAGER, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->pager_handle,
+                                                      position + 52,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::pmt,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_PMT, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->pmt_handle,
+                                                      position + 56,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::port,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_PORT, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->port_handle,
+                                                      position + 60,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::process,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_PROCESS, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->process_handle,
+                                                      position + 64,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::profile,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_PROFILE, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->profile_handle,
+                                                      position + 68,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::resource,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_RESOURCE, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->resource_handle,
+                                                      position + 72,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::socket,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_SOCKET, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->socket_handle,
+                                                      position + 76,
+                                                      recursion_depth);
+      internal::WireCodingTraits<
+          ::zx::suspend_token,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_SUSPEND_TOKEN,
+                                                     0x80000000, false>,
+          IsRecursive>::Encode(encoder, &value->suspendtoken_handle,
+                               position + 80, recursion_depth);
+      internal::WireCodingTraits<::zx::thread,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_THREAD, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->thread_handle,
+                                                      position + 84,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::timer,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_TIMER, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->timer_handle,
+                                                      position + 88,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::vcpu,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_VCPU, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->vcpu_handle,
+                                                      position + 92,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::vmar,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_VMAR, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->vmar_handle,
+                                                      position + 96,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::vmo,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_VMO, 0x80000000, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->vmo_handle,
+                                                      position + 100,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::vmo,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_VMO, 0x5, false>,
+                                 IsRecursive>::Encode(encoder,
+                                                      &value->rights_handle,
+                                                      position + 104,
+                                                      recursion_depth);
+      internal::WireCodingTraits<
+          ::zx::handle,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
+                                                     0x80000000, false>,
+          IsRecursive>::Encode(encoder, &value->aliased_plain_handle_field,
+                               position + 108, recursion_depth);
+      internal::WireCodingTraits<
+          ::zx::vmo,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_VMO,
+                                                     0x80000000, false>,
+          IsRecursive>::Encode(encoder, &value->aliased_subtype_handle_field,
+                               position + 112, recursion_depth);
+      internal::WireCodingTraits<
+          ::zx::vmo,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x1,
+                                                     false>,
+          IsRecursive>::Encode(encoder, &value->aliased_rights_handle_field,
+                               position + 116, recursion_depth);
+      internal::WireCodingTraits<
+          ::fidl::ClientEnd<::test_handles::SomeProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>::Encode(encoder, &value->some_protocol, position + 120,
+                               recursion_depth);
+      internal::WireCodingTraits<
+          ::fidl::ServerEnd<::test_handles::SomeProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>::Encode(encoder, &value->request_some_protocol,
+                               position + 124, recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<::zx::handle,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_NONE, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::bti,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_BTI, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 4,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::channel,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_CHANNEL, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 8,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::clock,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_CLOCK, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 12,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::debuglog,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_LOG, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 16,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::event,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_EVENT, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 20,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::eventpair,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_EVENTPAIR, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 24,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::exception,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_EXCEPTION, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 28,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::fifo,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_FIFO, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 32,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::guest,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_GUEST, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 36,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::interrupt,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_INTERRUPT, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 40,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::iommu,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_IOMMU, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 44,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::job,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_JOB, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 48,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::pager,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_PAGER, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 52,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::pmt,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_PMT, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 56,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::port,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_PORT, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 60,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::process,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_PROCESS, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 64,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::profile,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_PROFILE, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 68,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::resource,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_RESOURCE, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 72,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::socket,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_SOCKET, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 76,
+                                                      recursion_depth);
+      internal::WireCodingTraits<
+          ::zx::suspend_token,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_SUSPEND_TOKEN,
+                                                     0x80000000, false>,
+          IsRecursive>::Decode(decoder, position + 80, recursion_depth);
+      internal::WireCodingTraits<::zx::thread,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_THREAD, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 84,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::timer,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_TIMER, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 88,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::vcpu,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_VCPU, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 92,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::vmar,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_VMAR, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 96,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::vmo,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_VMO, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 100,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::vmo,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_VMO, 0x5, false>,
+                                 IsRecursive>::Decode(decoder, position + 104,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::handle,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_NONE, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 108,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::vmo,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_VMO, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 112,
+                                                      recursion_depth);
+      internal::WireCodingTraits<::zx::vmo,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_VMO, 0x1, false>,
+                                 IsRecursive>::Decode(decoder, position + 116,
+                                                      recursion_depth);
+      internal::WireCodingTraits<
+          ::fidl::ClientEnd<::test_handles::SomeProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>::Decode(decoder, position + 120, recursion_depth);
+      internal::WireCodingTraits<
+          ::fidl::ServerEnd<::test_handles::SomeProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>::Decode(decoder, position + 124, recursion_depth);
+    }
+  }
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -215,9 +785,11 @@ struct IsResource<::test_handles::wire::FdfHandles> : public std::true_type {};
 
 template <>
 struct TypeTraits<::test_handles::wire::FdfHandles> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_handles::wire::test_handles_FdfHandlesTable;
   static constexpr uint32_t kMaxNumHandles = 3;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 12;
   static constexpr uint32_t kPrimarySizeV1 = 12;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -238,6 +810,85 @@ static_assert(offsetof(::test_handles::wire::FdfHandles, server_end_driver) ==
               8);
 static_assert(sizeof(::test_handles::wire::FdfHandles) ==
               TypeTraits<::test_handles::wire::FdfHandles>::kPrimarySize);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_handles::wire::FdfHandles,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 12;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::fdf::Channel,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
+                                                     0x80000000, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::fdf::ClientEnd<::test_handles::DriverProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::fdf::ServerEnd<::test_handles::DriverProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base =
+      WireStructCodingTraitsBase<::test_handles::wire::FdfHandles,
+                                 ::fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_handles::wire::FdfHandles* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_handles::wire::FdfHandles));
+    } else {
+      internal::WireCodingTraits<
+          ::fdf::Channel,
+          fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL,
+                                                     0x80000000, false>,
+          IsRecursive>::Encode(encoder, &value->fdf_channel_handle,
+                               position + 0, recursion_depth);
+      internal::WireCodingTraits<
+          ::fdf::ClientEnd<::test_handles::DriverProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>::Encode(encoder, &value->client_end_driver, position + 4,
+                               recursion_depth);
+      internal::WireCodingTraits<
+          ::fdf::ServerEnd<::test_handles::DriverProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>::Encode(encoder, &value->server_end_driver, position + 8,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<::fdf::Channel,
+                                 fidl::internal::WireCodingConstraintHandle<
+                                     ZX_OBJ_TYPE_CHANNEL, 0x80000000, false>,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<
+          ::fdf::ClientEnd<::test_handles::DriverProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>::Decode(decoder, position + 4, recursion_depth);
+      internal::WireCodingTraits<
+          ::fdf::ServerEnd<::test_handles::DriverProtocol>,
+          fidl::internal::WireCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>,
+          IsRecursive>::Decode(decoder, position + 8, recursion_depth);
+    }
+  }
+};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

@@ -101,7 +101,7 @@ class {{ .Name }} {
   static constexpr auto kMembers = std::make_tuple(
     ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>()
     {{- range $i, $m := .Members }}
-      , ::fidl::internal::NaturalUnionMember<{{ $m.Constraint }}>()
+      , ::fidl::internal::NaturalUnionMember<{{ $m.NaturalConstraint }}>()
     {{- end -}}
   );
 

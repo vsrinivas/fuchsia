@@ -134,8 +134,9 @@ type Type struct {
 
 	InlineInEnvelope bool
 
-	// Used for natural type validation.
-	FieldConstraint string
+	// Used for type validation.
+	NaturalFieldConstraint string
+	WireFieldConstraint    string
 }
 
 // IsPrimitiveType returns true if this type is primitive.
@@ -487,7 +488,8 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.IsResource = t.IsResource
 		r.ElementType = &t
 		r.ElementCount = *val.ElementCount
-		r.FieldConstraint = t.FieldConstraint
+		r.NaturalFieldConstraint = t.NaturalFieldConstraint
+		r.WireFieldConstraint = t.WireFieldConstraint
 	case fidlgen.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.nameVariants.Unified = makeName("std::vector").template(t.Unified)
@@ -505,9 +507,11 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.IsResource = t.IsResource
 		r.ElementType = &t
 		if val.ElementCount != nil {
-			r.FieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintVector<%s, %d>", t.FieldConstraint, *val.ElementCount)
+			r.NaturalFieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintVector<%s, %d>", t.NaturalFieldConstraint, *val.ElementCount)
+			r.WireFieldConstraint = fmt.Sprintf("fidl::internal::WireCodingConstraintVector<%s, %t, %d>", t.WireFieldConstraint, val.Nullable, *val.ElementCount)
 		} else {
-			r.FieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintVector<%s>", t.FieldConstraint)
+			r.NaturalFieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintVector<%s>", t.NaturalFieldConstraint)
+			r.WireFieldConstraint = fmt.Sprintf("fidl::internal::WireCodingConstraintVector<%s, %t>", t.WireFieldConstraint, val.Nullable)
 		}
 	case fidlgen.StringType:
 		r.Unified = makeName("std::string")
@@ -522,9 +526,11 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.String
 		if val.ElementCount != nil {
-			r.FieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintString<%d>", *val.ElementCount)
+			r.NaturalFieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintString<%d>", *val.ElementCount)
+			r.WireFieldConstraint = fmt.Sprintf("fidl::internal::WireCodingConstraintString<%t, %d>", val.Nullable, *val.ElementCount)
 		} else {
-			r.FieldConstraint = "fidl::internal::NaturalCodingConstraintString<>"
+			r.NaturalFieldConstraint = "fidl::internal::NaturalCodingConstraintString<>"
+			r.WireFieldConstraint = fmt.Sprintf("fidl::internal::WireCodingConstraintString<%t>", val.Nullable)
 		}
 	case fidlgen.HandleType:
 		c.handleTypes[val.HandleSubtype] = struct{}{}
@@ -541,7 +547,8 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		if !ok {
 			panic(fmt.Sprintf("unknown handle type for const: %v", val))
 		}
-		r.FieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_%s, 0x%x, %t>", subtype, val.HandleRights, val.Nullable)
+		r.NaturalFieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_%s, 0x%x, %t>", subtype, val.HandleRights, val.Nullable)
+		r.WireFieldConstraint = fmt.Sprintf("fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_%s, 0x%x, %t>", subtype, val.HandleRights, val.Nullable)
 	case fidlgen.RequestType:
 		p := c.compileNameVariants(val.RequestSubtype)
 		if val.ProtocolTransport == "Driver" {
@@ -560,12 +567,14 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Request
 		r.IsResource = true
-		r.FieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, %t>", val.Nullable)
+		r.NaturalFieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, %t>", val.Nullable)
+		r.WireFieldConstraint = fmt.Sprintf("fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, %t>", val.Nullable)
 	case fidlgen.PrimitiveType:
 		r.nameVariants = NameVariantsForPrimitive(val.PrimitiveSubtype)
 		r.WireFamily = FamilyKinds.TrivialCopy
 		r.Kind = TypeKinds.Primitive
-		r.FieldConstraint = "fidl::internal::NaturalCodingConstraintEmpty"
+		r.NaturalFieldConstraint = "fidl::internal::NaturalCodingConstraintEmpty"
+		r.WireFieldConstraint = "fidl::internal::WireCodingConstraintEmpty"
 	case fidlgen.IdentifierType:
 		name := c.compileNameVariants(val.Identifier)
 		declInfo, ok := c.decls[val.Identifier]
@@ -590,35 +599,42 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 			r.NeedsDtor = true
 			r.Kind = TypeKinds.Protocol
 			r.IsResource = true
-			r.FieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, %t>", val.Nullable)
+			r.NaturalFieldConstraint = fmt.Sprintf("fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, %t>", val.Nullable)
+			r.WireFieldConstraint = fmt.Sprintf("fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, %t>", val.Nullable)
 		} else {
 			switch declType {
 			case fidlgen.BitsDeclType:
 				r.Kind = TypeKinds.Bits
 				r.WireFamily = FamilyKinds.TrivialCopy
+				r.WireFieldConstraint = "fidl::internal::WireCodingConstraintEmpty"
 			case fidlgen.EnumDeclType:
 				r.Kind = TypeKinds.Enum
 				r.WireFamily = FamilyKinds.TrivialCopy
+				r.WireFieldConstraint = "fidl::internal::WireCodingConstraintEmpty"
 			case fidlgen.ConstDeclType:
 				r.Kind = TypeKinds.Const
 				r.WireFamily = FamilyKinds.Reference
+				r.WireFieldConstraint = "fidl::internal::WireCodingConstraintEmpty"
 			case fidlgen.StructDeclType:
 				r.Kind = TypeKinds.Struct
 				r.DeclarationName = val.Identifier
 				r.WireFamily = FamilyKinds.Reference
 				r.WirePointer = val.Nullable
 				r.IsResource = declInfo.IsResourceType()
+				r.WireFieldConstraint = "fidl::internal::WireCodingConstraintEmpty"
 			case fidlgen.TableDeclType:
 				r.Kind = TypeKinds.Table
 				r.DeclarationName = val.Identifier
 				r.WireFamily = FamilyKinds.Reference
 				r.WirePointer = val.Nullable
 				r.IsResource = declInfo.IsResourceType()
+				r.WireFieldConstraint = "fidl::internal::WireCodingConstraintEmpty"
 			case fidlgen.UnionDeclType:
 				r.Kind = TypeKinds.Union
 				r.DeclarationName = val.Identifier
 				r.WireFamily = FamilyKinds.Reference
 				r.IsResource = declInfo.IsResourceType()
+				r.WireFieldConstraint = fmt.Sprintf("fidl::internal::WireCodingConstraintUnion<%t>", val.Nullable)
 			default:
 				panic(fmt.Sprintf("unknown declaration type: %v", declType))
 			}
@@ -636,7 +652,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 				r.nameVariants = name
 				r.NeedsDtor = true
 			}
-			r.FieldConstraint = "fidl::internal::NaturalCodingConstraintEmpty"
+			r.NaturalFieldConstraint = "fidl::internal::NaturalCodingConstraintEmpty"
 		}
 	default:
 		panic(fmt.Sprintf("unknown type kind: %v", val.Kind))

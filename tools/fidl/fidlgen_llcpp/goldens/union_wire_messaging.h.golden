@@ -91,6 +91,33 @@ struct ::fidl::internal::TransactionalRequest<
   void _InitHeader();
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_union::TestProtocol::
+                  StrictXUnionHenceResponseMayBeStackAllocated>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<
+          ::test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
+};
+
 template <>
 struct ::fidl::WireResponse<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
@@ -109,6 +136,42 @@ struct ::fidl::WireResponse<
             TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse{
                 .xu = std::move(xu)} {}
   WireResponse() = default;
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::WireResponse<::test_union::TestProtocol::
+                             StrictXUnionHenceResponseMayBeStackAllocated>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::WireResponse<
+              ::test_union::TestProtocol::
+                  StrictXUnionHenceResponseMayBeStackAllocated>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::WireResponse<::test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_union::wire::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_union::wire::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position, recursion_depth);
+  }
 };
 
 template <>
@@ -131,6 +194,47 @@ struct ::fidl::internal::TransactionalResponse<
 
  private:
   void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalResponse<
+        ::test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalResponse<
+              ::test_union::TestProtocol::
+                  StrictXUnionHenceResponseMayBeStackAllocated>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalResponse<
+          ::test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<
+        ::fidl::WireResponse<::test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>,
+        WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, &value->body,
+                             position + sizeof(fidl_message_header_t),
+                             recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<
+        ::fidl::WireResponse<::test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>,
+        WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position + sizeof(fidl_message_header_t),
+                             recursion_depth);
+  }
 };
 
 template <>
@@ -159,6 +263,33 @@ struct ::fidl::internal::TransactionalRequest<
   void _InitHeader();
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_union::TestProtocol::
+                  FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<
+          ::test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
+};
+
 template <>
 struct ::fidl::WireResponse<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
@@ -177,6 +308,42 @@ struct ::fidl::WireResponse<
             TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse{
                 .xu = std::move(xu)} {}
   WireResponse() = default;
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::WireResponse<::test_union::TestProtocol::
+                             FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::WireResponse<
+              ::test_union::TestProtocol::
+                  FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::WireResponse<::test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_union::wire::
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_union::wire::
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position, recursion_depth);
+  }
 };
 
 template <>
@@ -199,6 +366,50 @@ struct ::fidl::internal::TransactionalResponse<
 
  private:
   void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalResponse<
+        ::test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalResponse<
+              ::test_union::TestProtocol::
+                  FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalResponse<
+          ::test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<::fidl::WireResponse<
+                         ::test_union::TestProtocol::
+                             FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+                     WireCodingConstraintEmpty,
+                     IsRecursive>::Encode(encoder, &value->body,
+                                          position +
+                                              sizeof(fidl_message_header_t),
+                                          recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireResponse<
+                         ::test_union::TestProtocol::
+                             FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+                     WireCodingConstraintEmpty,
+                     IsRecursive>::Decode(decoder,
+                                          position +
+                                              sizeof(fidl_message_header_t),
+                                          recursion_depth);
+  }
 };
 
 #ifdef __Fuchsia__
@@ -284,6 +495,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -313,6 +525,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -347,6 +560,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<
       &::test_union::
           test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -382,6 +596,7 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_union::
           test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 32;
@@ -427,6 +642,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
         FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -457,6 +673,7 @@ struct TypeTraits<
                             FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -492,6 +709,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<
       &::test_union::
           test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -528,6 +746,7 @@ struct TypeTraits<
       &::test_union::
           test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 8;

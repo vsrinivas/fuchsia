@@ -31,6 +31,25 @@ struct {{ .WireResponse }} final {{- if .HasResponsePayload }} : public {{ .Resp
   {{ .WireResponse.Self }}() = default;
 };
 
+{{ if .HasResponsePayload }}
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<{{ .WireResponse }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+  : public WireStructCodingTraitsBase<{{ .WireResponse }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = {{ .Response.TypeShapeV2.InlineSize }};
+
+  static void Encode(
+    internal::WireEncoder* encoder, {{ .WireResponse }}* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<{{ .ResponsePayload }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+      encoder, value, position, recursion_depth);
+  }
+  static void Decode(
+    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<{{ .ResponsePayload }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+      decoder, position, recursion_depth);
+  }
+};
+{{- end }}
+
 template<>
 struct {{ .WireTransactionalResponse }} final {
   FIDL_ALIGNDECL
@@ -58,6 +77,26 @@ struct {{ .WireTransactionalResponse }} final {
   void _InitHeader();
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<{{ .WireTransactionalResponse }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+  : public WireStructCodingTraitsBase<{{ .WireTransactionalResponse }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = {{ .Response.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder, {{ .WireTransactionalResponse }}* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    {{- if .HasResponsePayload }}
+    WireCodingTraits<{{ .WireResponse }}, WireCodingConstraintEmpty, IsRecursive>::Encode(
+        encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
+    {{- end }}
+  }
+  static void Decode(
+    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    {{- if .HasResponsePayload }}
+    WireCodingTraits<{{ .WireResponse }}, WireCodingConstraintEmpty, IsRecursive>::Decode(
+        decoder, position + sizeof(fidl_message_header_t), recursion_depth);
+    {{- end }}
+  }
+};
 {{- if .Response.IsResource }}
 {{- EndifFuchsia -}}
 {{- end }}
@@ -74,6 +113,7 @@ struct {{ .WireTransactionalResponse }} final {
   void {{ .WireTransactionalResponse }}::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, {{ .OrdinalName }}, {{ .DynamicFlagsName }});
   }
+
 {{- if .Response.IsResource }}
 {{- EndifFuchsia -}}
 {{- end }}

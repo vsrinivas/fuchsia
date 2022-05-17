@@ -79,6 +79,37 @@ struct ::fidl::WireRequest<
   WireRequest() = default;
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::WireRequest<
+              ::test_placementofattributes::ExampleProtocol::Method>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 1;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::WireRequest<
+          ::test_placementofattributes::ExampleProtocol::Method>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_placementofattributes::wire::ExampleProtocolMethodRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_placementofattributes::wire::ExampleProtocolMethodRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position, recursion_depth);
+  }
+};
+
 template <>
 struct ::fidl::internal::TransactionalRequest<
     ::test_placementofattributes::ExampleProtocol::Method>
@@ -97,6 +128,45 @@ struct ::fidl::internal::TransactionalRequest<
 
  private:
   void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_placementofattributes::ExampleProtocol::Method>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_placementofattributes::ExampleProtocol::Method>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 1 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<
+          ::test_placementofattributes::ExampleProtocol::Method>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<::fidl::WireRequest<
+                         ::test_placementofattributes::ExampleProtocol::Method>,
+                     WireCodingConstraintEmpty,
+                     IsRecursive>::Encode(encoder, &value->body,
+                                          position +
+                                              sizeof(fidl_message_header_t),
+                                          recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireRequest<
+                         ::test_placementofattributes::ExampleProtocol::Method>,
+                     WireCodingConstraintEmpty,
+                     IsRecursive>::Decode(decoder,
+                                          position +
+                                              sizeof(fidl_message_header_t),
+                                          recursion_depth);
+  }
 };
 
 namespace fidl {
@@ -125,6 +195,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
       &::test_placementofattributes::
           test_placementofattributes_ExampleProtocolMethodRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(1 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -158,6 +229,7 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_placementofattributes::
           test_placementofattributes_ExampleProtocolMethodRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   static constexpr uint32_t kMaxOutOfLine = 0;

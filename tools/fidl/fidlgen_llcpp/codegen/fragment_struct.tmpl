@@ -66,8 +66,10 @@ struct IsResource<{{ . }}> : public std::true_type {};
 
 template<>
 struct TypeTraits<{{ . }}> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType = &{{ .CodingTableType }};
   static constexpr uint32_t kMaxNumHandles = {{ .TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t kMaxDepth = {{ .TypeShapeV2.Depth }};
   static constexpr uint32_t kPrimarySize = {{ .TypeShapeV2.InlineSize }};
   static constexpr uint32_t kPrimarySizeV1 = {{ .TypeShapeV1.InlineSize }};
   [[maybe_unused]]
@@ -86,6 +88,50 @@ static_assert(std::is_standard_layout_v<{{ . }}>);
 static_assert(offsetof({{ $struct }}, {{ .Name }}) == {{ .OffsetV2 }});
 {{- end }}
 static_assert(sizeof({{ . }}) == TypeTraits<{{ . }}>::kPrimarySize);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<{{ . }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = {{ .TypeShapeV2.InlineSize }};
+  static constexpr auto kMembers = std::make_tuple(
+    {{- range $i, $m := .Members }}
+      {{- if $i }}, {{ end -}}
+    ::fidl::internal::WireStructMemberCodingInfo<{{ $m.Type }}, {{ $m.WireConstraint }}, IsRecursive>()
+    {{- end }});
+  static constexpr bool kHasPadding = {{ or (gt (len .PaddingV1) 0) (gt (len .PaddingV2) 0) }};
+  using Base = WireStructCodingTraitsBase<{{ . }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+    internal::WireEncoder* encoder, {{ . }}* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value, sizeof({{ . }}));
+    } else {
+      {{- range .PaddingV2 }}
+      internal::WireZeroPadding<{{ .MaskType }}>(encoder, position + {{ .Offset }});
+      {{- end }}
+      {{- range .Members }}
+      internal::WireCodingTraits<{{ .Type }}, {{ .WireConstraint }}, IsRecursive>::Encode(encoder, &value->{{ . }}, position + {{ .OffsetV2 }}, recursion_depth);
+      {{- end }}
+    }
+  }
+  static void Decode(
+    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      {{- range .Members }}
+      internal::WireCodingTraits<{{ .Type }}, {{ .WireConstraint }}, IsRecursive>::Decode(
+        decoder, position + {{ .OffsetV2 }}, recursion_depth);
+      {{- end }}
+    }
+    {{- range .PaddingV2 }}
+    internal::WireCheckPadding<{{ .MaskType }}>(decoder, position + {{ .Offset }}, {{ .Mask }});
+    {{- end }}
+    {{- if .IsEmpty }}
+    if (*position.As<uint8_t>() != 0) {
+      decoder->SetError(kCodingErrorInvalidPaddingBytes);
+    }
+    {{- end }}
+  }
+};
 {{- if .IsResourceType }}
 {{- EndifFuchsia -}}
 {{- end }}

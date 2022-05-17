@@ -83,6 +83,37 @@ struct ::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::SendHandles>
   WireRequest() = default;
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::SendHandles>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::WireRequest<
+              ::test_driverhandle::HandlesInProtocol::SendHandles>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::SendHandles>*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position, recursion_depth);
+  }
+};
+
 template <>
 struct ::fidl::internal::TransactionalRequest<
     ::test_driverhandle::HandlesInProtocol::SendHandles>
@@ -101,6 +132,45 @@ struct ::fidl::internal::TransactionalRequest<
 
  private:
   void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_driverhandle::HandlesInProtocol::SendHandles>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_driverhandle::HandlesInProtocol::SendHandles>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<
+          ::test_driverhandle::HandlesInProtocol::SendHandles>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<::fidl::WireRequest<
+                         ::test_driverhandle::HandlesInProtocol::SendHandles>,
+                     WireCodingConstraintEmpty,
+                     IsRecursive>::Encode(encoder, &value->body,
+                                          position +
+                                              sizeof(fidl_message_header_t),
+                                          recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireRequest<
+                         ::test_driverhandle::HandlesInProtocol::SendHandles>,
+                     WireCodingConstraintEmpty,
+                     IsRecursive>::Decode(decoder,
+                                          position +
+                                              sizeof(fidl_message_header_t),
+                                          recursion_depth);
+  }
 };
 #endif  // __Fuchsia__
 
@@ -139,6 +209,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
       &::test_driverhandle::
           test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
   static constexpr uint32_t kMaxNumHandles = 2;
+  static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -170,6 +241,7 @@ struct TypeTraits<
       &::test_driverhandle::
           test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
   static constexpr uint32_t kMaxNumHandles = 2;
+  static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 16;

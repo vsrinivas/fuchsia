@@ -465,30 +465,3 @@ TEST(OutgoingMessage, GoodEncodeNoBody) {
   msg.Encode<Request>(fidl::internal::WireFormatVersion::kV2, &request);
   ASSERT_EQ(ZX_OK, msg.status());
 }
-
-TEST(OutgoingMessage, BadEncodeNoBodyBufferTooLarge) {
-  zx_channel_iovec_t iovecs[1];
-  uint8_t backing_buffer[24];  // Too large for body-less message
-  fidl::OutgoingMessage msg = fidl::OutgoingMessage::Create_InternalMayBreak(
-      fidl::OutgoingMessage::InternalIovecConstructorArgs{
-          .transport_vtable = &fidl::internal::ChannelTransport::VTable,
-          .iovecs = iovecs,
-          .iovec_capacity = std::size(iovecs),
-          .handles = nullptr,
-          .handle_metadata = nullptr,
-          .handle_capacity = 0u,
-          .backing_buffer = backing_buffer,
-          .backing_buffer_capacity = std::size(backing_buffer),
-      });
-
-  using Request = fidl::internal::TransactionalRequest<fidl_llcpp_empty_test::OnlyEmpty::Empty>;
-  Request request;
-  fidl::InitTxnHeader(
-      &request.header, 1,
-      ::fidl::internal::WireOrdinal<::fidl_llcpp_empty_test::OnlyEmpty::Empty>::value,
-      fidl::MessageDynamicFlags::kStrictMethod);
-
-  msg.Encode<Request>(fidl::internal::WireFormatVersion::kV2, &request);
-  ASSERT_FALSE(msg.ok());
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, msg.status());
-}

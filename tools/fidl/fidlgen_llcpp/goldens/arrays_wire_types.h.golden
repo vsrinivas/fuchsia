@@ -665,9 +665,11 @@ namespace fidl {
 
 template <>
 struct TypeTraits<::test_arrays::wire::StructSmallArray> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_arrays::wire::test_arrays_StructSmallArrayTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -686,11 +688,56 @@ static_assert(offsetof(::test_arrays::wire::StructSmallArray, a) == 0);
 static_assert(sizeof(::test_arrays::wire::StructSmallArray) ==
               TypeTraits<::test_arrays::wire::StructSmallArray>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_arrays::wire::StructSmallArray,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 8;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::fidl::Array<uint32_t, 2>, fidl::internal::WireCodingConstraintEmpty,
+          IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base =
+      WireStructCodingTraitsBase<::test_arrays::wire::StructSmallArray,
+                                 ::fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_arrays::wire::StructSmallArray* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_arrays::wire::StructSmallArray));
+    } else {
+      internal::WireCodingTraits<::fidl::Array<uint32_t, 2>,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<::fidl::Array<uint32_t, 2>,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<::test_arrays::wire::StructLargeArray> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_arrays::wire::test_arrays_StructLargeArrayTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 400;
   static constexpr uint32_t kPrimarySizeV1 = 400;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -709,11 +756,56 @@ static_assert(offsetof(::test_arrays::wire::StructLargeArray, a) == 0);
 static_assert(sizeof(::test_arrays::wire::StructLargeArray) ==
               TypeTraits<::test_arrays::wire::StructLargeArray>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_arrays::wire::StructLargeArray,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 400;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::fidl::Array<uint32_t, 100>,
+          fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base =
+      WireStructCodingTraitsBase<::test_arrays::wire::StructLargeArray,
+                                 ::fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_arrays::wire::StructLargeArray* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_arrays::wire::StructLargeArray));
+    } else {
+      internal::WireCodingTraits<::fidl::Array<uint32_t, 100>,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<::fidl::Array<uint32_t, 100>,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<::test_arrays::wire::TableSmallArray> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_arrays::wire::test_arrays_TableSmallArrayTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
@@ -728,11 +820,104 @@ template <>
 struct IsTable<::test_arrays::wire::TableSmallArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::TableSmallArray>);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_arrays::wire::TableSmallArray,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
+  using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_arrays::wire::TableSmallArray* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit ==
+        Base::PrepareForBodyEncode(encoder, value, position,
+                                   &vector_position)) {
+      return;
+    }
+
+    fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(value);
+    fidl_envelope_v2_t* envelopes = static_cast<fidl_envelope_v2_t*>(vec->data);
+    for (size_t i = 0; i < vec->count; i++) {
+      size_t inline_size = 0;
+      switch (i) {
+        case 0:
+          inline_size = ::fidl::internal::WireCodingTraits<
+              ::fidl::Array<uint32_t, 2>,
+              fidl::internal::WireCodingConstraintEmpty,
+              IsRecursive>::inline_size;
+          break;
+      }
+      ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
+      switch (i) {
+        case 0:
+          encode_fn = ::fidl::internal::MakeEncodeFn<
+              ::fidl::Array<uint32_t, 2>,
+              fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+      }
+      WirePosition envelope_position =
+          vector_position + i * sizeof(fidl_envelope_v2_t);
+      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i],
+                         envelope_position, inner_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 2);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit ==
+        Base::DecodePrework(decoder, position, &vector_position)) {
+      return;
+    }
+
+    fidl_vector_t* vec = position.As<fidl_vector_t>();
+    for (size_t i = 0; i < vec->count; i++) {
+      size_t inline_size = 0;
+      switch (i) {
+        case 0:
+          inline_size = ::fidl::internal::WireCodingTraits<
+              ::fidl::Array<uint32_t, 2>,
+              fidl::internal::WireCodingConstraintEmpty,
+              IsRecursive>::inline_size;
+          break;
+      }
+      DecodeFn<IsRecursive> decode_fn = nullptr;
+      switch (i) {
+        case 0:
+          decode_fn = ::fidl::internal::MakeDecodeFn<
+              ::fidl::Array<uint32_t, 2>,
+              fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+      }
+      ::fidl::internal::WireDecodeOptionalEnvelope(
+          inline_size, decode_fn, decoder,
+          vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<::test_arrays::wire::TableLargeArray> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_arrays::wire::test_arrays_TableLargeArrayTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 408;
@@ -747,11 +932,104 @@ template <>
 struct IsTable<::test_arrays::wire::TableLargeArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::TableLargeArray>);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_arrays::wire::TableLargeArray,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
+  using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_arrays::wire::TableLargeArray* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit ==
+        Base::PrepareForBodyEncode(encoder, value, position,
+                                   &vector_position)) {
+      return;
+    }
+
+    fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(value);
+    fidl_envelope_v2_t* envelopes = static_cast<fidl_envelope_v2_t*>(vec->data);
+    for (size_t i = 0; i < vec->count; i++) {
+      size_t inline_size = 0;
+      switch (i) {
+        case 0:
+          inline_size = ::fidl::internal::WireCodingTraits<
+              ::fidl::Array<uint32_t, 100>,
+              fidl::internal::WireCodingConstraintEmpty,
+              IsRecursive>::inline_size;
+          break;
+      }
+      ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
+      switch (i) {
+        case 0:
+          encode_fn = ::fidl::internal::MakeEncodeFn<
+              ::fidl::Array<uint32_t, 100>,
+              fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+      }
+      WirePosition envelope_position =
+          vector_position + i * sizeof(fidl_envelope_v2_t);
+      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i],
+                         envelope_position, inner_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 2);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit ==
+        Base::DecodePrework(decoder, position, &vector_position)) {
+      return;
+    }
+
+    fidl_vector_t* vec = position.As<fidl_vector_t>();
+    for (size_t i = 0; i < vec->count; i++) {
+      size_t inline_size = 0;
+      switch (i) {
+        case 0:
+          inline_size = ::fidl::internal::WireCodingTraits<
+              ::fidl::Array<uint32_t, 100>,
+              fidl::internal::WireCodingConstraintEmpty,
+              IsRecursive>::inline_size;
+          break;
+      }
+      DecodeFn<IsRecursive> decode_fn = nullptr;
+      switch (i) {
+        case 0:
+          decode_fn = ::fidl::internal::MakeDecodeFn<
+              ::fidl::Array<uint32_t, 100>,
+              fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+      }
+      ::fidl::internal::WireDecodeOptionalEnvelope(
+          inline_size, decode_fn, decoder,
+          vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<::test_arrays::wire::UnionSmallArray> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_arrays::wire::test_arrays_UnionSmallArrayTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
@@ -766,11 +1044,128 @@ template <>
 struct IsUnion<::test_arrays::wire::UnionSmallArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::UnionSmallArray>);
 
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionSmallArray,
+                                          Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_arrays::wire::UnionSmallArray* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_arrays::wire::UnionSmallArray::Tag::kA
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::fidl::Array<uint32_t, 2>,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_arrays::wire::UnionSmallArray::Tag::kA
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::fidl::Array<uint32_t, 2>,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_arrays::wire::UnionSmallArray::Tag tag =
+        *position.As<::test_arrays::wire::UnionSmallArray::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_arrays::wire::UnionSmallArray::Tag::kA:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::fidl::Array<uint32_t, 2>,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_arrays::wire::UnionSmallArray::Tag::kA:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::fidl::Array<uint32_t, 2>,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_arrays::wire::UnionSmallArray,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_arrays::wire::UnionSmallArray,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 template <>
 struct TypeTraits<::test_arrays::wire::UnionLargeArray> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_arrays::wire::test_arrays_UnionLargeArrayTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 400;
@@ -784,5 +1179,120 @@ struct IsFidlType<::test_arrays::wire::UnionLargeArray>
 template <>
 struct IsUnion<::test_arrays::wire::UnionLargeArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::UnionLargeArray>);
+
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_arrays::wire::UnionLargeArray,
+                                          Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_arrays::wire::UnionLargeArray* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_arrays::wire::UnionLargeArray::Tag::kA
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::fidl::Array<uint32_t, 100>,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_arrays::wire::UnionLargeArray::Tag::kA
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::fidl::Array<uint32_t, 100>,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_arrays::wire::UnionLargeArray::Tag tag =
+        *position.As<::test_arrays::wire::UnionLargeArray::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_arrays::wire::UnionLargeArray::Tag::kA:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::fidl::Array<uint32_t, 100>,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_arrays::wire::UnionLargeArray::Tag::kA:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::fidl::Array<uint32_t, 100>,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_arrays::wire::UnionLargeArray,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_arrays::wire::UnionLargeArray,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 }  // namespace fidl

@@ -123,7 +123,7 @@ decode_failure("VectorCountExceedsLimitByALot") {
             repeat(0xff):8, // presence marker
         ],
     },
-    err = COUNT_EXCEEDS_LIMIT,
+    err = VECTOR_COUNT_EXCEEDS_32_BIT_LIMIT,
 }
 
 // Test vector with a 2^32 count, exceeding the 32-bit limit from RFC-0059.
@@ -135,7 +135,7 @@ decode_failure("VectorCountExceedsLimitByOne") {
             repeat(0xff):8, // presence marker
         ],
     },
-    err = COUNT_EXCEEDS_LIMIT,
+    err = VECTOR_COUNT_EXCEEDS_32_BIT_LIMIT,
 }
 
 // Test vector with count that exceeds the total message size. Bindings should

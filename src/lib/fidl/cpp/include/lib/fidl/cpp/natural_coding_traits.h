@@ -5,7 +5,6 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_CODING_TRAITS_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_CODING_TRAITS_H_
 
-#include <lib/fidl/cpp/natural_coding_errors.h>
 #include <lib/fidl/cpp/natural_decoder.h>
 #include <lib/fidl/cpp/natural_encoder.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -128,7 +127,7 @@ constexpr bool NaturalIsMemcpyCompatible() {
 
 template <typename T>
 struct NaturalCodingTraits<T, NaturalCodingConstraintEmpty,
-                           typename std::enable_if<NaturalIsPrimitive<T>::value>::type> {
+                           typename std::enable_if<IsPrimitive<T>::value>::type> {
   static constexpr size_t inline_size_v2 = sizeof(T);
   static constexpr bool is_memcpy_compatible = true;
 

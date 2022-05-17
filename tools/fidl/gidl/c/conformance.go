@@ -272,7 +272,7 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 		}
 		handleDefs := libhlcpp.BuildHandleInfoDefs(decodeFailure.HandleDefs)
 		valueType := libllcpp.ConformanceType(decodeFailure.Type)
-		errorCode := libllcpp.LlcppErrorCode(decodeFailure.Err)
+		errorCode := cErrorCode(decodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
 		for _, encoding := range decodeFailure.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
@@ -332,4 +332,12 @@ func containsUnionOrTableInternal(decl gidlmixer.Declaration, depth int) bool {
 	default:
 		return false
 	}
+}
+
+func cErrorCode(code gidlir.ErrorCode) string {
+	if code == gidlir.TooFewBytesInPrimaryObject {
+		return "ZX_ERR_BUFFER_TOO_SMALL"
+	}
+	// TODO(fxbug.dev/35381) Implement different codes for different FIDL error cases.
+	return "ZX_ERR_INVALID_ARGS"
 }

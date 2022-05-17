@@ -75,4 +75,70 @@ constexpr uint16_t kAnswer = 42u;
 
 }  // namespace wire
 }  // namespace test_consts
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+template <bool IsRecursive>
+struct internal::WireCodingTraits<::test_consts::wire::BitsType,
+                                  ::fidl::internal::WireCodingConstraintEmpty,
+                                  IsRecursive> {
+  static constexpr size_t inline_size = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_consts::wire::BitsType* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if (unlikely(static_cast<uint32_t>(*value) & ~3ull)) {
+      encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
+    }
+    *position.As<::test_consts::wire::BitsType>() = *value;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_consts::wire::BitsType value =
+        *position.As<::test_consts::wire::BitsType>();
+    if (unlikely(static_cast<uint32_t>(value) & ~3ull)) {
+      decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
+    }
+  }
+};
+
+template <bool IsRecursive>
+struct internal::WireCodingTraits<::test_consts::wire::EnumType,
+                                  ::fidl::internal::WireCodingConstraintEmpty,
+                                  IsRecursive> {
+  static constexpr size_t inline_size = sizeof(int32_t);
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_consts::wire::EnumType* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    switch (*value) {
+      case ::test_consts::wire::EnumType::kValue:
+      case ::test_consts::wire::EnumType::kTrue:
+        break;
+      default:
+        encoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
+        return;
+    }
+    *position.As<::test_consts::wire::EnumType>() = *value;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    [[maybe_unused]] ::test_consts::wire::EnumType value =
+        *position.As<::test_consts::wire::EnumType>();
+    switch (value) {
+      case ::test_consts::wire::EnumType::kValue:
+      case ::test_consts::wire::EnumType::kTrue:
+        break;
+      default:
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
+        return;
+    }
+  }
+};
+
+}  // namespace fidl

@@ -65,6 +65,50 @@ struct fidl::internal::DisplayError<{{ . }}> {
 
 {{ end }}
 
+{{- define "Enum:Traits:WireTypesHeader" }}
+template <bool IsRecursive>
+struct internal::WireCodingTraits<{{ . }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = sizeof({{ .Type }});
+  static constexpr bool is_memcpy_compatible = {{ not .Strictness }};
+
+  static void Encode(internal::WireEncoder* encoder, {{ . }}* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    {{- if .Strictness }}
+    {{- $enumType := . }}
+    switch (*value) {
+      {{- range .Members }}
+      case {{ $enumType }}::{{ .Unified }}:
+      {{- end }}
+      {{- if .Members }}
+        break;
+      {{- end }}
+      default:
+        encoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
+        return;
+    }
+    {{- end }}
+    *position.As<{{ . }}>() = *value;
+  }
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    {{- if .Strictness }}
+    [[maybe_unused]] {{ . }} value = *position.As<{{ . }}>();
+    {{- $enumType := . }}
+    switch (value) {
+      {{- range .Members }}
+      case {{ $enumType }}::{{ .Unified }}:
+      {{- end }}
+      {{- if .Members }}
+        break;
+      {{- end }}
+      default:
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownEnumValue);
+        return;
+    }
+    {{- end }}
+  }
+};
+
+{{ end }}
+
 
 
 {{- define "Enum:CommonTypesSource" }}

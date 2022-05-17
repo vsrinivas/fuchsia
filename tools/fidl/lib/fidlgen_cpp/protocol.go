@@ -828,7 +828,8 @@ type Parameter struct {
 	OffsetV1          int
 	OffsetV2          int
 	HandleInformation *HandleInformation
-	Constraint        string
+	NaturalConstraint string
+	WireConstraint    string
 }
 
 func (p Parameter) NameAndType() (string, Type) {

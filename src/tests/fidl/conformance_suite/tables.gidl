@@ -278,7 +278,7 @@ decode_failure("TableCountExceedsLimitByALot") {
             repeat(0xff):8, // presence marker
         ],
     },
-    err = UNEXPECTED_ORDINAL,
+    err = TABLE_COUNT_EXCEEDS_32_BIT_LIMIT,
 }
 
 // Test table with a 2^32 count, exceeding the 32-bit limit from RFC-0059.
@@ -290,7 +290,7 @@ decode_failure("TableCountExceedsLimitByOne") {
             repeat(0xff):8, // presence marker
         ],
     },
-    err = UNEXPECTED_ORDINAL,
+    err = TABLE_COUNT_EXCEEDS_32_BIT_LIMIT,
 }
 
 // Test table with count that exceeds the total message size. Bindings should

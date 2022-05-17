@@ -11,6 +11,8 @@
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/status.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/wire_coding_traits.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/nullable.h>
 #include <lib/fitx/result.h>
 #include <zircon/assert.h>
@@ -43,6 +45,27 @@ constexpr WireFormatVersion kLLCPPWireFormatVersion = WireFormatVersion::kV2;
 // This enables iovec optimizations but requires the input objects to stay in scope until the
 // encoded result has been consumed.
 struct AllowUnownedInputRef {};
+
+template <typename Transport>
+class UnownedEncodedMessageBase;
+
+template <typename FidlType>
+bool ContainsEnvelope() {
+  // TODO(fxbug.dev/100320) Remove this usage of the coding tables.
+  const fidl_type_t* type = fidl::TypeTraits<FidlType>::kType;
+  if (type == nullptr) {
+    return false;
+  }
+  switch (type->type_tag()) {
+    case kFidlTypeTable:
+    case kFidlTypeXUnion:
+      return true;
+    case kFidlTypeStruct:
+      return type->coded_struct().contains_envelope;
+    default:
+      ZX_PANIC("unexpected top-level type");
+  }
+}
 
 }  // namespace internal
 
@@ -195,13 +218,16 @@ class OutgoingMessage : public ::fidl::Status {
   // Encodes the data.
   template <typename FidlType>
   void Encode(FidlType* data) {
-    Encode(fidl::internal::WireFormatVersion::kV2, fidl::TypeTraits<FidlType>::kType, data);
+    Encode(fidl::internal::WireFormatVersion::kV2, data);
   }
 
   template <typename FidlType>
   void Encode(fidl::internal::WireFormatVersion wire_format_version, FidlType* data) {
     is_transactional_ = fidl::IsFidlTransactionalMessage<FidlType>::value;
-    EncodeImpl(wire_format_version, fidl::TypeTraits<FidlType>::kType, data);
+
+    EncodeImpl(wire_format_version, fidl::TypeTraits<FidlType>::kType, data,
+               internal::TopLevelCodingTraits<FidlType>::inline_size,
+               internal::MakeTopLevelEncodeFn<FidlType>());
   }
 
   // Various helper functions for writing to other channel-like types.
@@ -229,6 +255,8 @@ class OutgoingMessage : public ::fidl::Status {
         result_handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
     CallImplForCallerProvidedBuffer(
         internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
+        internal::TopLevelCodingTraits<FidlType>::inline_size,
+        internal::ContainsEnvelope<FidlType>(), internal::MakeTopLevelDecodeFn<FidlType>(),
         fidl::TypeTraits<FidlType>::kType, result_bytes, result_byte_capacity, result_handles,
         reinterpret_cast<fidl_handle_metadata_t*>(result_handle_metadata),
         ZX_CHANNEL_MAX_MSG_HANDLES, std::move(options));
@@ -246,6 +274,8 @@ class OutgoingMessage : public ::fidl::Status {
             CallOptions options = {}) {
     CallImplForTransportProvidedBuffer(
         internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
+        internal::TopLevelCodingTraits<FidlType>::inline_size,
+        internal::ContainsEnvelope<FidlType>(), internal::MakeTopLevelDecodeFn<FidlType>(),
         fidl::TypeTraits<FidlType>::kType, out_bytes, out_num_bytes, std::move(options));
   }
 
@@ -267,7 +297,8 @@ class OutgoingMessage : public ::fidl::Status {
       : ::fidl::Status(::fidl::Status::Ok()), message_(msg), handle_capacity_(handle_capacity) {}
 
   void EncodeImpl(fidl::internal::WireFormatVersion wire_format_version,
-                  const fidl_type_t* message_type, void* data);
+                  const fidl_type_t* message_type, void* data, size_t inline_size,
+                  fidl::internal::TopLevelEncodeFn encode_fn);
 
   uint32_t iovec_capacity() const { return iovec_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
@@ -281,18 +312,23 @@ class OutgoingMessage : public ::fidl::Status {
   explicit OutgoingMessage(InternalByteBackedConstructorArgs args);
   explicit OutgoingMessage(const fidl_outgoing_msg_t* msg, bool is_transactional);
 
-  void DecodeImplForCall(const internal::CodingConfig& coding_config,
+  void DecodeImplForCall(size_t inline_size, bool contains_envelope,
+                         internal::TopLevelDecodeFn decode_fn,
+                         const internal::CodingConfig& coding_config,
                          const fidl_type_t* response_type, uint8_t* bytes,
                          uint32_t* in_out_num_bytes, fidl_handle_t* handles,
                          fidl_handle_metadata_t* handle_metadata, uint32_t num_handles);
 
-  void CallImplForCallerProvidedBuffer(internal::AnyUnownedTransport transport,
+  void CallImplForCallerProvidedBuffer(internal::AnyUnownedTransport transport, size_t inline_size,
+                                       bool contains_envelope, internal::TopLevelDecodeFn decode_fn,
                                        const fidl_type_t* response_type, uint8_t* result_bytes,
                                        uint32_t result_byte_capacity, fidl_handle_t* result_handles,
                                        fidl_handle_metadata_t* result_handle_metadata,
                                        uint32_t result_handle_capacity, CallOptions options);
 
   void CallImplForTransportProvidedBuffer(internal::AnyUnownedTransport transport,
+                                          size_t inline_size, bool contains_envelope,
+                                          internal::TopLevelDecodeFn decode_fn,
                                           const fidl_type_t* response_type, uint8_t** out_bytes,
                                           uint32_t* out_num_bytes, CallOptions options);
 
@@ -321,11 +357,13 @@ class OutgoingMessage : public ::fidl::Status {
   // rather than iovec, it is converted to a single-element iovec pointing to the bytes.
   zx_channel_iovec_t converted_byte_message_iovec_ = {};
   bool is_transactional_ = false;
+
+  template <typename>
+  friend class internal::UnownedEncodedMessageBase;
 };
 
 namespace internal {
 
-template <typename T>
 class DecodedMessageBase;
 
 class NaturalDecoder;
@@ -518,7 +556,6 @@ class IncomingMessage : public ::fidl::Status {
                   SkipMessageHeaderValidationTag);
 
   // Only |fidl::unstable::DecodedMessage<T>| instances may decode this message.
-  template <typename T>
   friend class internal::DecodedMessageBase;
 
   friend class internal::NaturalDecoder;
@@ -526,51 +563,14 @@ class IncomingMessage : public ::fidl::Status {
   // |OutgoingMessage| may create an |IncomingMessage| with a dynamic transport during a call.
   friend class OutgoingMessage;
 
-  // Decodes the message using |FidlType|. If this operation succeed, |status()| is ok and
-  // |bytes()| contains the decoded object.
-  //
-  // The first 16 bytes of the message must be the FIDL message header and are used for
-  // determining the wire format version for decoding.
-  //
-  // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
-  // If a buffer needs to be allocated during decode, |out_transformed_buffer| will contain that
-  // buffer. This buffer will be stored on DecodedMessageBase and stays in scope for the lifetime
-  // of the decoded message, which is responsible for freeing it.
-  //
-  // This method should be used after a read.
-  template <typename FidlType>
-  void Decode() {
-    ZX_ASSERT(is_transactional_);
-
-    // If this is an empty message, there is nothing to decode, so exit early.
-    if (fidl::TypeTraits<FidlType>::kType == nullptr) {
-      return;
-    }
-    Decode(fidl::TypeTraits<FidlType>::kType);
-  }
-
-  // Decodes the message using |FidlType| for the specified |wire_format_version|. If this
+  // Decodes the message using |decode_fn| for the specified |wire_format_version|. If this
   // operation succeed, |status()| is ok and |bytes()| contains the decoded object.
   //
   // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
   //
   // This method should be used after a read.
-  template <typename FidlType>
-  void Decode(internal::WireFormatVersion wire_format_version) {
-    ZX_ASSERT(!is_transactional_);
-    ZX_ASSERT(fidl::TypeTraits<FidlType>::kType != nullptr);
-    Decode(wire_format_version, fidl::TypeTraits<FidlType>::kType,
-           fidl::IsFidlTransactionalMessage<FidlType>::value);
-  }
-
-  // Decodes the message using |message_type| for the specified |wire_format_version|. If this
-  // operation succeed, |status()| is ok and |bytes()| contains the decoded object.
-  //
-  // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
-  //
-  // This method should be used after a read.
-  void Decode(internal::WireFormatVersion wire_format_version, const fidl_type_t* message_type,
-              bool is_transactional);
+  void Decode(size_t inline_size, internal::TopLevelDecodeFn decode_fn,
+              internal::WireFormatVersion wire_format_version, bool is_transactional);
 
   // Release the handle ownership after the message has been converted to its
   // decoded form. When used standalone and not as part of a |Decode|, this
@@ -584,7 +584,7 @@ class IncomingMessage : public ::fidl::Status {
     other.ReleaseHandles();
   }
 
-  // Decodes the message using |message_type|. If this operation succeed, |status()| is ok and
+  // Decodes the message using |decode_fn|. If this operation succeed, |status()| is ok and
   // |bytes()| contains the decoded object.
   //
   // The first 16 bytes of the message must be the FIDL message header and are used for
@@ -596,7 +596,7 @@ class IncomingMessage : public ::fidl::Status {
   // of the decoded message, which is responsible for freeing it.
   //
   // This method should be used after a read.
-  void Decode(const fidl_type_t* message_type);
+  void Decode(size_t inline_size, bool contains_envelope, internal::TopLevelDecodeFn decode_fn);
 
   // Performs basic transactional message header validation and sets the |fidl::Status| fields
   // accordingly.
@@ -641,32 +641,8 @@ namespace internal {
 // |DecodedMessageBase| should never be instantiated directly. Rather, a
 // subclass should be defined which adds the FIDL type-specific handle RAII
 // behavior.
-template <typename FidlType>
 class DecodedMessageBase : public ::fidl::Status {
  public:
-  // Creates an |DecodedMessageBase| by decoding the incoming message |msg|.
-  // Consumes |msg|.
-  //
-  // The first 16 bytes of the message are assumed to be the FIDL message header and are used
-  // for determining the wire format version for decoding.
-  explicit DecodedMessageBase(::fidl::IncomingMessage&& msg) {
-    static_assert(fidl::IsFidlTransactionalMessage<FidlType>::value);
-    msg.Decode<FidlType>();
-    bytes_ = msg.bytes();
-    SetStatus(msg);
-  }
-
-  // Creates an |DecodedMessageBase| by decoding the incoming message |msg| as the specified
-  // |wire_format_version|.
-  // Consumes |msg|.
-  explicit DecodedMessageBase(internal::WireFormatVersion wire_format_version,
-                              ::fidl::IncomingMessage&& msg) {
-    static_assert(!fidl::IsFidlTransactionalMessage<FidlType>::value);
-    msg.Decode<FidlType>(wire_format_version);
-    bytes_ = msg.bytes();
-    SetStatus(msg);
-  }
-
   // Creates an empty decoded message representing an error (e.g. failed to read
   // from a channel).
   //
@@ -677,6 +653,34 @@ class DecodedMessageBase : public ::fidl::Status {
   }
 
  protected:
+  template <bool IsTransactional_>
+  struct IsTransactional {};
+
+  // Creates an |DecodedMessageBase| by decoding the incoming message |msg|.
+  // Consumes |msg|.
+  //
+  // The first 16 bytes of the message are assumed to be the FIDL message header and are used
+  // for determining the wire format version for decoding.
+  explicit DecodedMessageBase(IsTransactional<true>, ::fidl::IncomingMessage&& msg,
+                              size_t inline_size, bool contains_envelope,
+                              fidl::internal::TopLevelDecodeFn decode_fn) {
+    msg.Decode(inline_size, contains_envelope, decode_fn);
+    bytes_ = msg.bytes();
+    SetStatus(msg);
+  }
+
+  // Creates an |DecodedMessageBase| by decoding the incoming message |msg| as the specified
+  // |wire_format_version|.
+  // Consumes |msg|.
+  explicit DecodedMessageBase(IsTransactional<false>,
+                              internal::WireFormatVersion wire_format_version,
+                              ::fidl::IncomingMessage&& msg, size_t inline_size,
+                              fidl::internal::TopLevelDecodeFn decode_fn) {
+    msg.Decode(inline_size, decode_fn, wire_format_version, false);
+    bytes_ = msg.bytes();
+    SetStatus(msg);
+  }
+
   DecodedMessageBase(const DecodedMessageBase&) = delete;
   DecodedMessageBase(DecodedMessageBase&&) = delete;
   DecodedMessageBase& operator=(const DecodedMessageBase&) = delete;
@@ -692,6 +696,81 @@ class DecodedMessageBase : public ::fidl::Status {
   uint8_t* bytes_ = nullptr;
 };
 
+// This type exists because of class initialization order.
+// If these are members of UnownedEncodedMessage, they will be initialized before
+// UnownedEncodedMessageBase
+template <typename FidlType, typename Transport>
+struct UnownedEncodedMessageHandleContainer {
+ protected:
+  static constexpr uint32_t kNumHandles =
+      fidl::internal::ClampedHandleCount<FidlType, fidl::MessageDirection::kSending>();
+  std::array<zx_handle_t, kNumHandles> handle_storage_;
+  std::array<typename Transport::HandleMetadata, kNumHandles> handle_metadata_storage_;
+};
+
+template <typename Transport>
+class UnownedEncodedMessageBase {
+ public:
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Status& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+  ::fidl::WireFormatMetadata wire_format_metadata() const {
+    return fidl::internal::WireFormatMetadataForVersion(wire_format_version_);
+  }
+
+  template <typename TransportObject>
+  void Write(TransportObject&& client, WriteOptions options = {}) {
+    message_.Write(std::forward<TransportObject>(client), std::move(options));
+  }
+
+ protected:
+  UnownedEncodedMessageBase(::fidl::internal::WireFormatVersion wire_format_version,
+                            uint32_t iovec_capacity,
+                            ::fitx::result<::fidl::Error, ::fidl::BufferSpan> backing_buffer,
+                            fidl_handle_t* handles, fidl_handle_metadata_t* handle_metadata,
+                            uint32_t handle_capacity, bool is_transactional, void* value,
+                            const fidl_type_t* fidl_type, size_t inline_size,
+                            TopLevelEncodeFn encode_fn)
+      : message_(backing_buffer.is_ok()
+                     ? ::fidl::OutgoingMessage::Create_InternalMayBreak(
+                           ::fidl::OutgoingMessage::InternalIovecConstructorArgs{
+                               .transport_vtable = &Transport::VTable,
+                               .iovecs = iovecs_,
+                               .iovec_capacity = iovec_capacity,
+                               .handles = handles,
+                               .handle_metadata = handle_metadata,
+                               .handle_capacity = handle_capacity,
+                               .backing_buffer = backing_buffer->data,
+                               .backing_buffer_capacity = backing_buffer->capacity,
+                               .is_transactional = is_transactional,
+                           })
+                     : ::fidl::OutgoingMessage{backing_buffer.error_value()}),
+        wire_format_version_(wire_format_version) {
+    if (message_.ok()) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+      message_.EncodeImpl(wire_format_version, fidl_type, value, inline_size, encode_fn);
+    }
+  }
+
+  UnownedEncodedMessageBase(const UnownedEncodedMessageBase&) = delete;
+  UnownedEncodedMessageBase(UnownedEncodedMessageBase&&) = delete;
+  UnownedEncodedMessageBase* operator=(const UnownedEncodedMessageBase&) = delete;
+  UnownedEncodedMessageBase* operator=(UnownedEncodedMessageBase&&) = delete;
+
+ private:
+  zx_channel_iovec_t iovecs_[Transport::kNumIovecs];
+  fidl::OutgoingMessage message_;
+  fidl::internal::WireFormatVersion wire_format_version_;
+};
+
 }  // namespace internal
 
 // TODO(fxbug.dev/82681): Re-introduce stable APIs for standalone use of the
@@ -703,7 +782,13 @@ namespace unstable {
 // uses that as the backing storage for the message. The buffer must outlive instances of this
 // class.
 template <typename FidlType, typename Transport = internal::ChannelTransport>
-class UnownedEncodedMessage final {
+class UnownedEncodedMessage final
+    : public fidl::internal::UnownedEncodedMessageHandleContainer<FidlType, Transport>,
+      public fidl::internal::UnownedEncodedMessageBase<Transport> {
+  using UnownedEncodedMessageHandleContainer =
+      fidl::internal::UnownedEncodedMessageHandleContainer<FidlType, Transport>;
+  using UnownedEncodedMessageBase = ::fidl::internal::UnownedEncodedMessageBase<Transport>;
+
  public:
   UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size, FidlType* response)
       : UnownedEncodedMessage(Transport::kNumIovecs, backing_buffer, backing_buffer_size,
@@ -736,60 +821,21 @@ class UnownedEncodedMessage final {
                         uint32_t iovec_capacity,
                         ::fitx::result<::fidl::Error, ::fidl::BufferSpan> backing_buffer,
                         FidlType* value)
-      : message_(backing_buffer.is_ok()
-                     ? ::fidl::OutgoingMessage::Create_InternalMayBreak(
-                           ::fidl::OutgoingMessage::InternalIovecConstructorArgs{
-                               .transport_vtable = &Transport::VTable,
-                               .iovecs = iovecs_,
-                               .iovec_capacity = iovec_capacity,
-                               .handles = handle_storage_.data(),
-                               .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(
-                                   handle_metadata_storage_.data()),
-                               .handle_capacity = kNumHandles,
-                               .backing_buffer = backing_buffer->data,
-                               .backing_buffer_capacity = backing_buffer->capacity,
-                           })
-                     : ::fidl::OutgoingMessage{backing_buffer.error_value()}),
-        wire_format_version_(wire_format_version) {
-    if (message_.ok()) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<FidlType>(wire_format_version, value);
-    }
-  }
+      : UnownedEncodedMessageBase(
+            wire_format_version, iovec_capacity, backing_buffer,
+            UnownedEncodedMessageHandleContainer::handle_storage_.data(),
+            reinterpret_cast<fidl_handle_metadata_t*>(
+                UnownedEncodedMessageHandleContainer::handle_metadata_storage_.data()),
+            UnownedEncodedMessageHandleContainer::kNumHandles,
+            fidl::IsFidlTransactionalMessage<FidlType>::value, value,
+            fidl::TypeTraits<FidlType>::kType,
+            internal::TopLevelCodingTraits<FidlType>::inline_size,
+            internal::MakeTopLevelEncodeFn<FidlType>()) {}
 
   UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
   UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
   UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
   UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif
-  bool ok() const { return message_.status() == ZX_OK; }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Status& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
-  ::fidl::WireFormatMetadata wire_format_metadata() const {
-    return fidl::internal::WireFormatMetadataForVersion(wire_format_version_);
-  }
-
-  template <typename TransportObject>
-  void Write(TransportObject&& client, WriteOptions options = {}) {
-    message_.Write(std::forward<TransportObject>(client), std::move(options));
-  }
-
- private:
-  static constexpr uint32_t kNumHandles =
-      fidl::internal::ClampedHandleCount<FidlType, fidl::MessageDirection::kSending>();
-  std::array<zx_handle_t, kNumHandles> handle_storage_;
-  std::array<typename Transport::HandleMetadata, kNumHandles> handle_metadata_storage_;
-  zx_channel_iovec_t iovecs_[Transport::kNumIovecs];
-  fidl::OutgoingMessage message_;
-  fidl::internal::WireFormatVersion wire_format_version_;
 };
 
 // This class owns a message of |FidlType| and encodes the message automatically upon construction
@@ -855,8 +901,8 @@ class DecodedMessage;
 template <typename FidlType, typename Transport>
 class DecodedMessage<FidlType, Transport,
                      std::void_t<decltype(fidl::TypeTraits<FidlType>::kMessageKind)>>
-    final : public ::fidl::internal::DecodedMessageBase<FidlType> {
-  using Base = ::fidl::internal::DecodedMessageBase<FidlType>;
+    final : public ::fidl::internal::DecodedMessageBase {
+  using Base = ::fidl::internal::DecodedMessageBase;
 
  public:
   using Base::DecodedMessageBase;
@@ -864,8 +910,12 @@ class DecodedMessage<FidlType, Transport,
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
                  typename Transport::HandleMetadata* handle_metadata = nullptr,
                  uint32_t handle_actual = 0)
-      : Base(::fidl::IncomingMessage::Create(bytes, byte_actual, handles, handle_metadata,
-                                             handle_actual)) {}
+      : DecodedMessage(::fidl::IncomingMessage::Create(bytes, byte_actual, handles, handle_metadata,
+                                                       handle_actual)) {}
+  explicit DecodedMessage(::fidl::IncomingMessage&& msg)
+      : Base(Base::template IsTransactional<IsFidlTransactionalMessage<FidlType>::value>(),
+             std::move(msg), internal::TopLevelCodingTraits<FidlType>::inline_size,
+             internal::ContainsEnvelope<FidlType>(), internal::MakeTopLevelDecodeFn<FidlType>()) {}
 
   ~DecodedMessage() {
     if constexpr (::fidl::IsResource<FidlType>::value) {
@@ -883,15 +933,15 @@ class DecodedMessage<FidlType, Transport,
   // Release the ownership of the decoded message. That means that the handles won't be closed
   // When the object is destroyed.
   // After calling this method, the |DecodedMessage| object should not be used anymore.
-  void ReleasePrimaryObject() { ::fidl::internal::DecodedMessageBase<FidlType>::ResetBytes(); }
+  void ReleasePrimaryObject() { Base::ResetBytes(); }
 };
 
 // Specialization for non-transactional types (tables, structs, unions).
 template <typename FidlType, typename Transport>
 class DecodedMessage<FidlType, Transport,
                      std::enable_if_t<::fidl::IsFidlObject<FidlType>::value, void>>
-    final : public ::fidl::internal::DecodedMessageBase<FidlType> {
-  using Base = ::fidl::internal::DecodedMessageBase<FidlType>;
+    final : public ::fidl::internal::DecodedMessageBase {
+  using Base = ::fidl::internal::DecodedMessageBase;
 
  public:
   using Base::DecodedMessageBase;
@@ -899,19 +949,24 @@ class DecodedMessage<FidlType, Transport,
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
                  typename Transport::HandleMetadata* handle_metadata = nullptr,
                  uint32_t handle_actual = 0)
-      : Base(::fidl::internal::WireFormatVersion::kV2,
-             ::fidl::IncomingMessage::Create(
-                 bytes, byte_actual, handles, handle_metadata, handle_actual,
-                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+      : DecodedMessage(::fidl::internal::WireFormatVersion::kV2, bytes, byte_actual, handles,
+                       handle_metadata, handle_actual) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
                  uint32_t byte_actual, zx_handle_t* handles = nullptr,
                  typename Transport::HandleMetadata* handle_metadata = nullptr,
                  uint32_t handle_actual = 0)
-      : Base(wire_format_version, ::fidl::IncomingMessage::Create(
-                                      bytes, byte_actual, handles, handle_metadata, handle_actual,
-                                      ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+      : DecodedMessage(wire_format_version,
+                       ::fidl::IncomingMessage::Create(
+                           bytes, byte_actual, handles, handle_metadata, handle_actual,
+                           IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  DecodedMessage(internal::WireFormatVersion wire_format_version, ::fidl::IncomingMessage&& msg)
+      : Base(Base::template IsTransactional<IsFidlTransactionalMessage<FidlType>::value>(),
+             wire_format_version, std::move(msg),
+             internal::TopLevelCodingTraits<FidlType>::inline_size,
+             internal::MakeTopLevelDecodeFn<FidlType>()) {}
 
   explicit DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(static_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes, c_msg->handles,

@@ -172,7 +172,7 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
   FIDL_ALIGNDECL uint8_t response_storage[512];
   // Do the call and decode the received response.
   encoded.GetOutgoingMessage()
-      .Call<fidl::WireResponse<basictypes::TestInterface::ConsumeSimpleStruct>>(
+      .Call<fidl::internal::TransactionalResponse<basictypes::TestInterface::ConsumeSimpleStruct>>(
           zx::unowned_channel(client.get()), response_storage, sizeof(response_storage));
 
   ASSERT_TRUE(encoded.ok());

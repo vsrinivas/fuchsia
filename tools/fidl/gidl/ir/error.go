@@ -29,8 +29,10 @@ const (
 	StrictBitsUnknownBit               ErrorCode = "STRICT_BITS_UNKNOWN_BIT"
 	StrictEnumUnknownValue             ErrorCode = "STRICT_ENUM_UNKNOWN_VALUE"
 	StrictUnionUnknownField            ErrorCode = "STRICT_UNION_UNKNOWN_FIELD"
+	StringCountExceeds32BitLimit       ErrorCode = "STRING_COUNT_EXCEEDS_32_BIT_LIMIT"
 	StringNotUtf8                      ErrorCode = "STRING_NOT_UTF8"
 	StringTooLong                      ErrorCode = "STRING_TOO_LONG"
+	TableCountExceeds32BitLimit        ErrorCode = "TABLE_COUNT_EXCEEDS_32_BIT_LIMIT"
 	TooFewBytes                        ErrorCode = "TOO_FEW_BYTES"
 	TooFewBytesInPrimaryObject         ErrorCode = "TOO_FEW_BYTES_IN_PRIMARY_OBJECT"
 	TooFewHandles                      ErrorCode = "TOO_FEW_HANDLES"
@@ -38,6 +40,7 @@ const (
 	TooManyHandlesInMessage            ErrorCode = "TOO_MANY_HANDLES_IN_MESSAGE"
 	UnexpectedOrdinal                  ErrorCode = "UNEXPECTED_ORDINAL"
 	UnionFieldNotSet                   ErrorCode = "UNION_FIELD_NOT_SET"
+	VectorCountExceeds32BitLimit       ErrorCode = "VECTOR_COUNT_EXCEEDS_32_BIT_LIMIT"
 )
 
 var AllErrorCodes = map[ErrorCode]struct{}{
@@ -63,8 +66,10 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	StrictBitsUnknownBit:               {},
 	StrictEnumUnknownValue:             {},
 	StrictUnionUnknownField:            {},
+	StringCountExceeds32BitLimit:       {},
 	StringNotUtf8:                      {},
 	StringTooLong:                      {},
+	TableCountExceeds32BitLimit:        {},
 	TooFewBytes:                        {},
 	TooFewBytesInPrimaryObject:         {},
 	TooFewHandles:                      {},
@@ -72,4 +77,5 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	TooManyHandlesInMessage:            {},
 	UnexpectedOrdinal:                  {},
 	UnionFieldNotSet:                   {},
+	VectorCountExceeds32BitLimit:       {},
 }

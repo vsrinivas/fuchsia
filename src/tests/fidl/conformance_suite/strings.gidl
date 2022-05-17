@@ -119,7 +119,7 @@ decode_failure("StringCountExceedsLimitByALot") {
             repeat(0xff):8, // presence marker
         ],
     },
-    err = STRING_TOO_LONG,
+    err = STRING_COUNT_EXCEEDS_32_BIT_LIMIT,
 }
 
 // Test string with a 2^32 count, exceeding the 32-bit limit from RFC-0059.
@@ -131,7 +131,7 @@ decode_failure("StringCountExceedsLimitByOne") {
             repeat(0xff):8, // presence marker
         ],
     },
-    err = STRING_TOO_LONG,
+    err = STRING_COUNT_EXCEEDS_32_BIT_LIMIT,
 }
 
 // Test string with count that exceeds the total message size. Bindings should

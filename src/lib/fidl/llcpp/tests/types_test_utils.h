@@ -107,8 +107,7 @@ void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handl
   ASSERT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS) << encoded.status_string();
 
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
-  EXPECT_EQ(std::string(encoded.lossy_description()), "Cannot encode unknown union or table")
-      << encoded.error();
+  EXPECT_EQ(std::string(encoded.lossy_description()), "unknown union tag") << encoded.error();
 }
 
 }  // namespace llcpp_types_test_utils

@@ -921,10 +921,12 @@ namespace fidl {
 template <>
 struct TypeTraits<::test_protocolpayloads::wire::
                       MainProtocolTwoWayImportWithErrorTopResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -952,13 +954,63 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::
                    MainProtocolTwoWayImportWithErrorTopResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorTopResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_protocolpayloads::wire::
+              MainProtocolTwoWayImportWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::
+          MainProtocolTwoWayImportWithErrorTopResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_protocolpayloads::wire::
+                         MainProtocolTwoWayImportWithErrorTopResponse* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::
+                        MainProtocolTwoWayImportWithErrorTopResponse));
+    } else {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::
+              MainProtocolTwoWayImportWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Encode(encoder, &value->result, position + 0,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::
+              MainProtocolTwoWayImportWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -991,13 +1043,70 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::
                    MainProtocolTwoWayAnonWithErrorResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 8;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::
+                        MainProtocolTwoWayAnonWithErrorResponse));
+    } else {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 4,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 4,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorTopResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
@@ -1025,13 +1134,60 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::
                    MainProtocolTwoWayAnonWithErrorTopResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorTopResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorTopResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorTopResponse*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::
+                        MainProtocolTwoWayAnonWithErrorTopResponse));
+    } else {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Encode(encoder, &value->result, position + 0,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1060,13 +1216,60 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::
                    MainProtocolOnImportWithErrorRequest>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::
+                        MainProtocolOnImportWithErrorRequest));
+    } else {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Encode(encoder, &value->result, position + 0,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1097,13 +1300,69 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::
                    MainProtocolOnAnonWithErrorResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 8;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResponse* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::
+                        MainProtocolOnAnonWithErrorResponse));
+    } else {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 4,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 4,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
@@ -1130,13 +1389,59 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::
                    MainProtocolOnAnonWithErrorRequest>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::
+                        MainProtocolOnAnonWithErrorRequest));
+    } else {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Encode(encoder, &value->result, position + 0,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1169,13 +1474,70 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::
                    MainProtocolTwoWayAnonWithErrorRequest>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 8;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::
+                        MainProtocolTwoWayAnonWithErrorRequest));
+    } else {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 4,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 4,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1205,13 +1567,69 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::
                    MainProtocolTwoWayAnonTopResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 8;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::
+                        MainProtocolTwoWayAnonTopResponse));
+    } else {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 4,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 4,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1238,13 +1656,69 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest>::
         kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 8;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(
+          position.As<void>(), value,
+          sizeof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest));
+    } else {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 4,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 4,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1271,12 +1745,68 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest>::
         kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 8;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(
+          position.As<void>(), value,
+          sizeof(::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest));
+    } else {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 4,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 4,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<::test_protocolpayloads::wire::MainProtocolOnAnonRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocolOnAnonRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1301,12 +1831,67 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::MainProtocolOnAnonRequest>::
         kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnAnonRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 8;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::MainProtocolOnAnonRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolOnAnonRequest* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::MainProtocolOnAnonRequest));
+    } else {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 4,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 4,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<::test_protocolpayloads::wire::LocalStructPayload> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1330,13 +1915,67 @@ static_assert(sizeof(::test_protocolpayloads::wire::LocalStructPayload) ==
               TypeTraits<::test_protocolpayloads::wire::LocalStructPayload>::
                   kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::LocalStructPayload,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 8;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(),
+      ::fidl::internal::WireStructMemberCodingInfo<
+          uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::LocalStructPayload,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_protocolpayloads::wire::LocalStructPayload* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::LocalStructPayload));
+    } else {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 4,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+      internal::WireCodingTraits<uint32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 4,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<::test_protocolpayloads::wire::
                       MainProtocolTwoWayLocalWithErrorTopResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
@@ -1364,13 +2003,60 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::
                    MainProtocolTwoWayLocalWithErrorTopResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorTopResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::
+          MainProtocolTwoWayLocalWithErrorTopResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_protocolpayloads::wire::
+                         MainProtocolTwoWayLocalWithErrorTopResponse* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::
+                        MainProtocolTwoWayLocalWithErrorTopResponse));
+    } else {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Encode(encoder, &value->result, position + 0,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
@@ -1398,13 +2084,59 @@ static_assert(
     TypeTraits<::test_protocolpayloads::wire::
                    MainProtocolOnLocalWithErrorRequest>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_protocolpayloads::wire::
+                        MainProtocolOnLocalWithErrorRequest));
+    } else {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Encode(encoder, &value->result, position + 0,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1424,13 +2156,157 @@ static_assert(
     std::is_standard_layout_v<::test_protocolpayloads::wire::
                                   MainProtocolTwoWayImportWithErrorResult>);
 
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult,
+    Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::Tag::kResponse
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads_imported::wire::ImportStructPayload,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::Tag::kErr
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::Tag::kResponse
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::test_protocolpayloads_imported::wire::ImportStructPayload,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::Tag::kErr
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::Tag
+        tag = *position.As<::test_protocolpayloads::wire::
+                               MainProtocolTwoWayImportWithErrorResult::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayImportWithErrorResult::Tag::kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads_imported::wire::ImportStructPayload,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayImportWithErrorResult::Tag::kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayImportWithErrorResult::Tag::kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::test_protocolpayloads_imported::wire::ImportStructPayload,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayImportWithErrorResult::Tag::kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::
+              MainProtocolTwoWayImportWithErrorResult,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
@@ -1450,13 +2326,160 @@ static_assert(
     std::is_standard_layout_v<
         ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult>);
 
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult,
+    Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::Tag::kResponse
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads::wire::
+                MainProtocolTwoWayAnonWithErrorResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::Tag::kErr
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::Tag::kResponse
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::test_protocolpayloads::wire::
+                MainProtocolTwoWayAnonWithErrorResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::Tag::kErr
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::Tag
+        tag = *position.As<::test_protocolpayloads::wire::
+                               MainProtocolTwoWayAnonWithErrorResult::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayAnonWithErrorResult::Tag::kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads::wire::
+                MainProtocolTwoWayAnonWithErrorResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayAnonWithErrorResult::Tag::kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayAnonWithErrorResult::Tag::kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::test_protocolpayloads::wire::
+                MainProtocolTwoWayAnonWithErrorResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayAnonWithErrorResult::Tag::kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocol_OnImportWithError_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1476,13 +2499,155 @@ static_assert(
     std::is_standard_layout_v<
         ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult>);
 
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult,
+    Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult::Tag::kResponse
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads_imported::wire::ImportStructPayload,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult::Tag::kErr
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult::Tag::kResponse
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::test_protocolpayloads_imported::wire::ImportStructPayload,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult::Tag::kErr
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult::Tag
+        tag = *position.As<::test_protocolpayloads::wire::
+                               MainProtocolOnImportWithErrorResult::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult::
+          Tag::kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads_imported::wire::ImportStructPayload,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult::
+          Tag::kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult::
+          Tag::kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::test_protocolpayloads_imported::wire::ImportStructPayload,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult::
+          Tag::kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocol_OnAnonWithError_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
@@ -1501,13 +2666,155 @@ static_assert(
     std::is_standard_layout_v<
         ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult>);
 
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult,
+    Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult::Tag::kResponse
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult::Tag::kErr
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult::Tag::kResponse
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult::Tag::kErr
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult::Tag tag =
+        *position.As<::test_protocolpayloads::wire::
+                         MainProtocolOnAnonWithErrorResult::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult::
+          Tag::kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult::
+          Tag::kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult::
+          Tag::kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult::
+          Tag::kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
@@ -1527,13 +2834,156 @@ static_assert(
     std::is_standard_layout_v<
         ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult>);
 
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult,
+    Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::Tag::kResponse
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads::wire::LocalStructPayload,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::Tag::kErr
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::Tag::kResponse
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::test_protocolpayloads::wire::LocalStructPayload,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::Tag::kErr
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::Tag
+        tag = *position.As<::test_protocolpayloads::wire::
+                               MainProtocolTwoWayLocalWithErrorResult::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayLocalWithErrorResult::Tag::kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads::wire::LocalStructPayload,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayLocalWithErrorResult::Tag::kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayLocalWithErrorResult::Tag::kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::test_protocolpayloads::wire::LocalStructPayload,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_protocolpayloads::wire::
+          MainProtocolTwoWayLocalWithErrorResult::Tag::kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 template <>
 struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
           test_protocolpayloads_MainProtocol_OnLocalWithError_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
@@ -1552,5 +3002,145 @@ struct IsUnion<
 static_assert(
     std::is_standard_layout_v<
         ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult>);
+
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult,
+    Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult::Tag::kResponse
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads::wire::LocalStructPayload,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult::Tag::kErr
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult::Tag::kResponse
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::test_protocolpayloads::wire::LocalStructPayload,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2:  // ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult::Tag::kErr
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult::Tag tag =
+        *position.As<::test_protocolpayloads::wire::
+                         MainProtocolOnLocalWithErrorResult::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult::
+          Tag::kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_protocolpayloads::wire::LocalStructPayload,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult::
+          Tag::kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult::
+          Tag::kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::test_protocolpayloads::wire::LocalStructPayload,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult::
+          Tag::kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 }  // namespace fidl

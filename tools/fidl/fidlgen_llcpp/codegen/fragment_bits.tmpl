@@ -109,6 +109,32 @@ constexpr inline void {{ .Name }}::operator^=(
 
 {{ end }}
 
+{{- define "Bits:Traits:WireTypesHeader" }}
+template <bool IsRecursive>
+struct internal::WireCodingTraits<{{ . }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = sizeof({{ .Type }});
+  static constexpr bool is_memcpy_compatible = {{ not .Strictness }};
+
+  static void Encode(internal::WireEncoder* encoder, {{ . }}* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    {{- if .Strictness }}
+    if (unlikely(static_cast<{{ .Type }}>(*value) & ~{{ .Mask }}ull)) {
+      encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
+    }
+    {{- end }}
+    *position.As<{{ . }}>() = *value;
+  }
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    {{- if .Strictness }}
+    {{ . }} value = *position.As<{{ . }}>();
+    if (unlikely(static_cast<{{ .Type }}>(value) & ~{{ .Mask }}ull)) {
+      decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
+    }
+    {{- end }}
+  }
+};
+
+{{ end }}
+
 {{- define "Bits:Traits:CommonTypesHeader" }}
 
 template <>
@@ -132,7 +158,7 @@ using {{ .Name }} = {{ .Unified }};
 
     static void Encode(internal::NaturalEncoder* encoder, {{ . }}* value, size_t offset, size_t recursion_depth) {
       {{- if .Strictness }}
-      if (static_cast<{{ .Type }}>(*value) & ~{{ .Mask }}ull) {
+      if (unlikely(static_cast<{{ .Type }}>(*value) & ~{{ .Mask }}ull)) {
         encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
       }
       {{- end }}
@@ -141,7 +167,7 @@ using {{ .Name }} = {{ .Unified }};
     static void Decode(internal::NaturalDecoder* decoder, {{ . }}* value, size_t offset, size_t recursion_depth) {
       *value = *decoder->template GetPtr<{{ . }}>(offset);
       {{- if .Strictness }}
-      if (static_cast<{{ .Type }}>(*value) & ~{{ .Mask }}ull) {
+      if (unlikely(static_cast<{{ .Type }}>(*value) & ~{{ .Mask }}ull)) {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
       }
       {{- end }}

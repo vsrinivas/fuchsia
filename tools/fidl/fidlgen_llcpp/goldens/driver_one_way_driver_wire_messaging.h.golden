@@ -68,6 +68,35 @@ struct ::fidl::WireRequest<::test_driveroneway::OneWay::Send> final
   WireRequest() = default;
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::WireRequest<::test_driveroneway::OneWay::Send>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_driveroneway::wire::OneWaySendRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_driveroneway::wire::OneWaySendRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position, recursion_depth);
+  }
+};
+
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>
     final {
@@ -84,6 +113,42 @@ struct ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>
 
  private:
   void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_driveroneway::OneWay::Send>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
+                     WireCodingConstraintEmpty,
+                     IsRecursive>::Encode(encoder, &value->body,
+                                          position +
+                                              sizeof(fidl_message_header_t),
+                                          recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
+                     WireCodingConstraintEmpty,
+                     IsRecursive>::Decode(decoder,
+                                          position +
+                                              sizeof(fidl_message_header_t),
+                                          recursion_depth);
+  }
 };
 
 namespace fidl {
@@ -110,6 +175,7 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_driveroneway::test_driveroneway_OneWaySendRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -138,6 +204,7 @@ struct TypeTraits<::fidl::WireRequest<::test_driveroneway::OneWay::Send>> {
   static constexpr const fidl_type_t* kType =
       &::test_driveroneway::test_driveroneway_OneWaySendRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;

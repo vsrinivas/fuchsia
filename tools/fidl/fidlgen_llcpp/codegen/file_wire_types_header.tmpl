@@ -63,6 +63,8 @@ fidl/{{ .LibraryDots }}/cpp/wire_types.h
 
   {{ EnsureNamespace "fidl" }}
 
+  {{ range .Bits }}{{ template "Bits:Traits:WireTypesHeader" . }}{{ end }}
+  {{ range .Enums }}{{ template "Enum:Traits:WireTypesHeader" . }}{{ end }}
   {{ range .Structs }}{{ template "Struct:Traits:WireTypesHeader" . }}{{ end }}
   {{ range .Tables }}{{ template "Table:Traits:WireTypesHeader" . }}{{ end }}
   {{ range .Unions }}{{ template "Union:Traits:WireTypesHeader" . }}{{ end }}

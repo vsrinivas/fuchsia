@@ -111,6 +111,30 @@ struct ::fidl::internal::TransactionalRequest<
   void _InitHeader();
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_unknowninteractions::Example::StrictOneWay>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_unknowninteractions::Example::StrictOneWay>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<
+          ::test_unknowninteractions::Example::StrictOneWay>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
+};
+
 template <>
 struct ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>
     final {
@@ -128,6 +152,30 @@ struct ::fidl::internal::TransactionalRequest<
 
  private:
   void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_unknowninteractions::Example::FlexibleOneWay>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_unknowninteractions::Example::FlexibleOneWay>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<
+          ::test_unknowninteractions::Example::FlexibleOneWay>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
 };
 
 template <>
@@ -149,6 +197,30 @@ struct ::fidl::internal::TransactionalRequest<
   void _InitHeader();
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_unknowninteractions::Example::StrictTwoWay>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_unknowninteractions::Example::StrictTwoWay>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<
+          ::test_unknowninteractions::Example::StrictTwoWay>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
+};
+
 template <>
 struct ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>
     final {
@@ -166,6 +238,30 @@ struct ::fidl::internal::TransactionalResponse<
 
  private:
   void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalResponse<
+        ::test_unknowninteractions::Example::StrictTwoWay>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalResponse<
+              ::test_unknowninteractions::Example::StrictTwoWay>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalResponse<
+          ::test_unknowninteractions::Example::StrictTwoWay>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
 };
 
 template <>
@@ -191,6 +287,30 @@ struct ::fidl::internal::TransactionalRequest<
   void _InitHeader();
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_unknowninteractions::Example::FlexibleTwoWay>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_unknowninteractions::Example::FlexibleTwoWay>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<
+          ::test_unknowninteractions::Example::FlexibleTwoWay>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
+};
+
 template <>
 struct ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>
     final : public ::test_unknowninteractions::wire::
@@ -206,6 +326,37 @@ struct ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>
       : ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse{
             .result = std::move(result)} {}
   WireResponse() = default;
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::WireResponse<
+              ::test_unknowninteractions::Example::FlexibleTwoWay>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position, recursion_depth);
+  }
 };
 
 template <>
@@ -229,6 +380,45 @@ struct ::fidl::internal::TransactionalResponse<
   void _InitHeader();
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalResponse<
+        ::test_unknowninteractions::Example::FlexibleTwoWay>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalResponse<
+              ::test_unknowninteractions::Example::FlexibleTwoWay>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalResponse<
+          ::test_unknowninteractions::Example::FlexibleTwoWay>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<::fidl::WireResponse<
+                         ::test_unknowninteractions::Example::FlexibleTwoWay>,
+                     WireCodingConstraintEmpty,
+                     IsRecursive>::Encode(encoder, &value->body,
+                                          position +
+                                              sizeof(fidl_message_header_t),
+                                          recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<::fidl::WireResponse<
+                         ::test_unknowninteractions::Example::FlexibleTwoWay>,
+                     WireCodingConstraintEmpty,
+                     IsRecursive>::Decode(decoder,
+                                          position +
+                                              sizeof(fidl_message_header_t),
+                                          recursion_depth);
+  }
+};
+
 template <>
 struct ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>
     final {
@@ -248,6 +438,30 @@ struct ::fidl::internal::TransactionalEvent<
   void _InitHeader();
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalEvent<
+        ::test_unknowninteractions::Example::StrictEvent>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalEvent<
+              ::test_unknowninteractions::Example::StrictEvent>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalEvent<
+          ::test_unknowninteractions::Example::StrictEvent>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
+};
+
 template <>
 struct ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>
     final {
@@ -265,6 +479,30 @@ struct ::fidl::internal::TransactionalEvent<
 
  private:
   void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalEvent<
+        ::test_unknowninteractions::Example::FlexibleEvent>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalEvent<
+              ::test_unknowninteractions::Example::FlexibleEvent>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalEvent<
+          ::test_unknowninteractions::Example::FlexibleEvent>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
 };
 
 #ifdef __Fuchsia__
@@ -341,6 +579,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_unknowninteractions::Example::StrictOneWay>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -367,6 +606,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -399,6 +639,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_unknowninteractions::Example::FlexibleOneWay>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -425,6 +666,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -457,6 +699,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_unknowninteractions::Example::StrictTwoWay>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -483,6 +726,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -515,6 +759,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<
     ::test_unknowninteractions::Example::StrictTwoWay>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -541,6 +786,7 @@ struct TypeTraits<
     ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -573,6 +819,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_unknowninteractions::Example::FlexibleTwoWay>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -599,6 +846,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -633,6 +881,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<
       &::test_unknowninteractions::
           test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -664,6 +913,7 @@ struct TypeTraits<
       &::test_unknowninteractions::
           test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -704,6 +954,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<
     ::test_unknowninteractions::Example::StrictEvent>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -730,6 +981,7 @@ struct TypeTraits<
     ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -762,6 +1014,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<
     ::test_unknowninteractions::Example::FlexibleEvent>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -788,6 +1041,7 @@ struct TypeTraits<
     ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;

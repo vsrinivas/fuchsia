@@ -7,7 +7,6 @@
 # It works on host and Fuchsia.
 source_set("cpp_base") {
   public = [
-    "include/lib/fidl/cpp/natural_coding_errors.h",
     "include/lib/fidl/cpp/natural_coding_traits.h",
     "include/lib/fidl/cpp/natural_decoder.h",
     "include/lib/fidl/cpp/natural_encoder.h",
@@ -15,7 +14,6 @@ source_set("cpp_base") {
     "include/lib/fidl/cpp/wire_natural_conversions.h",
   ]
   sources = [
-    "natural_coding_errors.cc",
     "natural_decoder.cc",
     "natural_encoder.cc",
   ]

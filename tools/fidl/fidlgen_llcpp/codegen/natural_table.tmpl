@@ -80,7 +80,7 @@ class {{ .Name }} {
   static constexpr auto kMembers = std::make_tuple(
     {{- range $i, $m := .Members }}
       {{- if $i }}, {{ end -}}
-      ::fidl::internal::NaturalTableMember<Storage_, {{ $m.Type }}, {{ $m.Constraint }}>{
+      ::fidl::internal::NaturalTableMember<Storage_, {{ $m.Type }}, {{ $m.NaturalConstraint }}>{
         {{ $m.Ordinal }}, &Storage_::{{ $m.Name }}
       }
     {{- end -}}

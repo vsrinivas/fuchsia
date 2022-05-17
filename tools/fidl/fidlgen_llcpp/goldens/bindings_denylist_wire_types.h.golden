@@ -861,10 +861,12 @@ namespace fidl {
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -892,13 +894,58 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    MemberOnlyAppearsInImportingLibrary>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 1;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          bool, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        MemberOnlyAppearsInImportingLibrary));
+    } else {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_OnlyAppearsInImportingLibraryTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -922,13 +969,60 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary>::
         kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 1;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary,
+          fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(
+          position.As<void>(), value,
+          sizeof(::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary));
+    } else {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary,
+          fidl::internal::WireCodingConstraintEmpty,
+          IsRecursive>::Encode(encoder,
+                               &value->member_only_appears_in_importing_library,
+                               position + 0, recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary,
+          fidl::internal::WireCodingConstraintEmpty,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -957,13 +1051,59 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenySyzkallerResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenySyzkallerResponse));
+    } else {
+      internal::WireCodingTraits<int32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<int32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<::test_bindingsdenylist::wire::
                       DenyEachBindingOnlyDenySyzkallerTopResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -991,13 +1131,60 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenySyzkallerTopResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult,
+          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::
+          DenyEachBindingOnlyDenySyzkallerTopResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_bindingsdenylist::wire::
+                         DenyEachBindingOnlyDenySyzkallerTopResponse* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenySyzkallerTopResponse));
+    } else {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Encode(encoder, &value->result, position + 0,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1025,13 +1212,58 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyRustResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenyRustResponse));
+    } else {
+      internal::WireCodingTraits<int32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<int32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1060,13 +1292,60 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyRustTopResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult,
+          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenyRustTopResponse));
+    } else {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Encode(encoder, &value->result, position + 0,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1095,13 +1374,59 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyLibfuzzerResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenyLibfuzzerResponse));
+    } else {
+      internal::WireCodingTraits<int32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<int32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<::test_bindingsdenylist::wire::
                       DenyEachBindingOnlyDenyLibfuzzerTopResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1129,13 +1454,60 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyLibfuzzerTopResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult,
+          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::
+          DenyEachBindingOnlyDenyLibfuzzerTopResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_bindingsdenylist::wire::
+                         DenyEachBindingOnlyDenyLibfuzzerTopResponse* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenyLibfuzzerTopResponse));
+    } else {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Encode(encoder, &value->result, position + 0,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1162,13 +1534,58 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyGoResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenyGoResponse));
+    } else {
+      internal::WireCodingTraits<int32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<int32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1197,13 +1614,60 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyGoTopResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult,
+          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenyGoTopResponse));
+    } else {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Encode(encoder, &value->result, position + 0,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1231,13 +1695,58 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyDartResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenyDartResponse));
+    } else {
+      internal::WireCodingTraits<int32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->b,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<int32_t,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1266,13 +1775,60 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyDartTopResponse>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult,
+          fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenyDartTopResponse));
+    } else {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Encode(encoder, &value->result, position + 0,
+                               recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult,
+          fidl::internal::WireCodingConstraintUnion<false>,
+          IsRecursive>::Decode(decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1301,13 +1857,59 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenySyzkallerRequest>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 1;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          bool, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenySyzkallerRequest));
+    } else {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1334,13 +1936,58 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyRustRequest>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 1;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          bool, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenyRustRequest));
+    } else {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1369,13 +2016,59 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyLibfuzzerRequest>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 1;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          bool, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenyLibfuzzerRequest));
+    } else {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1400,13 +2093,59 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyGoRequest>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 1;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          bool, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(
+          position.As<void>(), value,
+          sizeof(
+              ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest));
+    } else {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1433,11 +2172,56 @@ static_assert(
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyDartRequest>::kPrimarySize);
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 1;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::WireStructMemberCodingInfo<
+          bool, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest,
+      ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value,
+             sizeof(::test_bindingsdenylist::wire::
+                        DenyEachBindingOnlyDenyDartRequest));
+    } else {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Encode(encoder, &value->a,
+                                                      position + 0,
+                                                      recursion_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<bool,
+                                 fidl::internal::WireCodingConstraintEmpty,
+                                 IsRecursive>::Decode(decoder, position + 0,
+                                                      recursion_depth);
+    }
+  }
+};
+
 template <>
 struct TypeTraits<::test_bindingsdenylist::wire::OnlyLlcpp> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::test_bindingsdenylist_OnlyLlcppTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1454,13 +2238,126 @@ struct IsUnion<::test_bindingsdenylist::wire::OnlyLlcpp>
 static_assert(
     std::is_standard_layout_v<::test_bindingsdenylist::wire::OnlyLlcpp>);
 
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::OnlyLlcpp, Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_bindingsdenylist::wire::OnlyLlcpp* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::OnlyLlcpp::Tag::kX
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::OnlyLlcpp::Tag::kX
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_bindingsdenylist::wire::OnlyLlcpp::Tag tag =
+        *position.As<::test_bindingsdenylist::wire::OnlyLlcpp::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::OnlyLlcpp::Tag::kX:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::OnlyLlcpp::Tag::kX:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::OnlyLlcpp,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::OnlyLlcpp,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1480,13 +2377,160 @@ static_assert(
     std::is_standard_layout_v<
         ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult>);
 
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult,
+    Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::Tag::kResponse
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenySyzkallerResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::Tag::kErr
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::Tag::kResponse
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenySyzkallerResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::Tag::kErr
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::Tag
+        tag = *position.As<::test_bindingsdenylist::wire::
+                               DenyEachBindingOnlyDenySyzkallerResult::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::
+          DenyEachBindingOnlyDenySyzkallerResult::Tag::kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenySyzkallerResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case ::test_bindingsdenylist::wire::
+          DenyEachBindingOnlyDenySyzkallerResult::Tag::kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::
+          DenyEachBindingOnlyDenySyzkallerResult::Tag::kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenySyzkallerResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_bindingsdenylist::wire::
+          DenyEachBindingOnlyDenySyzkallerResult::Tag::kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1505,13 +2549,155 @@ static_assert(
     std::is_standard_layout_v<
         ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult>);
 
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult,
+    Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag::kResponse
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag::kErr
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag::kResponse
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag::kErr
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag tag =
+        *position.As<::test_bindingsdenylist::wire::
+                         DenyEachBindingOnlyDenyRustResult::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::
+          Tag::kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::
+          Tag::kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::
+          Tag::kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::
+          Tag::kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1531,13 +2717,160 @@ static_assert(
     std::is_standard_layout_v<
         ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult>);
 
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult,
+    Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kResponse
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenyLibfuzzerResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kErr
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kResponse
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenyLibfuzzerResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kErr
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::Tag
+        tag = *position.As<::test_bindingsdenylist::wire::
+                               DenyEachBindingOnlyDenyLibfuzzerResult::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::
+          DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenyLibfuzzerResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case ::test_bindingsdenylist::wire::
+          DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::
+          DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenyLibfuzzerResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_bindingsdenylist::wire::
+          DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1555,13 +2888,155 @@ struct IsUnion<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult>
 static_assert(std::is_standard_layout_v<
               ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult>);
 
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, Constraint,
+    IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::kResponse
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::kErr
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::kResponse
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::kErr
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag tag =
+        *position.As<::test_bindingsdenylist::wire::
+                         DenyEachBindingOnlyDenyGoResult::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::
+          kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::
+          kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::
+          kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::
+          kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
@@ -1579,5 +3054,145 @@ struct IsUnion<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult>
 static_assert(
     std::is_standard_layout_v<
         ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult>);
+
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult,
+    Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::Tag::kResponse
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::Tag::kErr
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::Tag::kResponse
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2:  // ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::Tag::kErr
+        encode_fn = ::fidl::internal::MakeEncodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope,
+                       position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::Tag tag =
+        *position.As<::test_bindingsdenylist::wire::
+                         DenyEachBindingOnlyDenyDartResult::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::
+          Tag::kResponse:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse,
+            fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::
+          Tag::kErr:
+        inline_size = ::fidl::internal::WireCodingTraits<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty,
+            IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::
+          Tag::kResponse:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse,
+            fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::
+          Tag::kErr:
+        decode_fn = ::fidl::internal::MakeDecodeFn<
+            uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(
+        inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t),
+        inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<
+          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult,
+          ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 }  // namespace fidl

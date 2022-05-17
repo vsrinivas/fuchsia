@@ -31,20 +31,25 @@ namespace fidl {
 namespace internal {
 // A type trait that indicates whether the given type is a primitive FIDL type.
 template <typename T>
-struct NaturalIsPrimitive : public std::false_type {};
+struct IsPrimitive : public std::false_type {};
+
+// Const-ness is not significant for determining IsPrimitive.
+template <typename T>
+struct IsPrimitive<const T> : public IsPrimitive<T> {};
 
 // clang-format off
-template <> struct NaturalIsPrimitive<bool> : public std::true_type {};
-template <> struct NaturalIsPrimitive<uint8_t> : public std::true_type {};
-template <> struct NaturalIsPrimitive<uint16_t> : public std::true_type {};
-template <> struct NaturalIsPrimitive<uint32_t> : public std::true_type {};
-template <> struct NaturalIsPrimitive<uint64_t> : public std::true_type {};
-template <> struct NaturalIsPrimitive<int8_t> : public std::true_type {};
-template <> struct NaturalIsPrimitive<int16_t> : public std::true_type {};
-template <> struct NaturalIsPrimitive<int32_t> : public std::true_type {};
-template <> struct NaturalIsPrimitive<int64_t> : public std::true_type {};
-template <> struct NaturalIsPrimitive<float> : public std::true_type {};
-template <> struct NaturalIsPrimitive<double> : public std::true_type {};
+template <> struct IsPrimitive<bool> : public std::true_type {};
+template <> struct IsPrimitive<char> : public std::true_type {};
+template <> struct IsPrimitive<uint8_t> : public std::true_type {};
+template <> struct IsPrimitive<uint16_t> : public std::true_type {};
+template <> struct IsPrimitive<uint32_t> : public std::true_type {};
+template <> struct IsPrimitive<uint64_t> : public std::true_type {};
+template <> struct IsPrimitive<int8_t> : public std::true_type {};
+template <> struct IsPrimitive<int16_t> : public std::true_type {};
+template <> struct IsPrimitive<int32_t> : public std::true_type {};
+template <> struct IsPrimitive<int64_t> : public std::true_type {};
+template <> struct IsPrimitive<float> : public std::true_type {};
+template <> struct IsPrimitive<double> : public std::true_type {};
 // clang-format on
 
 }  // namespace internal

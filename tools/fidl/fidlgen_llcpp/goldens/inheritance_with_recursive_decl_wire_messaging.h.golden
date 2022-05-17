@@ -82,6 +82,37 @@ struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
   WireRequest() = default;
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::WireRequest<
+              ::test_inheritancewithrecursivedecl::Parent::First>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position, recursion_depth);
+  }
+};
+
 template <>
 struct ::fidl::internal::TransactionalRequest<
     ::test_inheritancewithrecursivedecl::Parent::First>
@@ -102,6 +133,42 @@ struct ::fidl::internal::TransactionalRequest<
 
  private:
   void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_inheritancewithrecursivedecl::Parent::First>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_inheritancewithrecursivedecl::Parent::First>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<
+          ::test_inheritancewithrecursivedecl::Parent::First>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<
+        ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>,
+        WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, &value->body,
+                             position + sizeof(fidl_message_header_t),
+                             recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<
+        ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>,
+        WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position + sizeof(fidl_message_header_t),
+                             recursion_depth);
+  }
 };
 #endif  // __Fuchsia__
 
@@ -140,6 +207,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ParentFirstRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -171,6 +239,7 @@ struct TypeTraits<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ParentFirstRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -444,6 +513,37 @@ struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
   WireRequest() = default;
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::WireRequest<
+              ::test_inheritancewithrecursivedecl::Child::First>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position, recursion_depth);
+  }
+};
+
 template <>
 struct ::fidl::internal::TransactionalRequest<
     ::test_inheritancewithrecursivedecl::Child::First>
@@ -465,6 +565,42 @@ struct ::fidl::internal::TransactionalRequest<
  private:
   void _InitHeader();
 };
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_inheritancewithrecursivedecl::Child::First>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_inheritancewithrecursivedecl::Child::First>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<
+          ::test_inheritancewithrecursivedecl::Child::First>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<
+        ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>,
+        WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, &value->body,
+                             position + sizeof(fidl_message_header_t),
+                             recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<
+        ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>,
+        WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position + sizeof(fidl_message_header_t),
+                             recursion_depth);
+  }
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -482,6 +618,37 @@ struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
       : ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest{
             .request = std::move(request)} {}
   WireRequest() = default;
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::WireRequest<
+              ::test_inheritancewithrecursivedecl::Child::Second>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, value, position, recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    fidl::internal::WireCodingTraits<
+        ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest,
+        ::fidl::internal::WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position, recursion_depth);
+  }
 };
 
 template <>
@@ -504,6 +671,42 @@ struct ::fidl::internal::TransactionalRequest<
 
  private:
   void _InitHeader();
+};
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_inheritancewithrecursivedecl::Child::Second>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_inheritancewithrecursivedecl::Child::Second>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<
+          ::test_inheritancewithrecursivedecl::Child::Second>* value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+    WireCodingTraits<
+        ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>,
+        WireCodingConstraintEmpty,
+        IsRecursive>::Encode(encoder, &value->body,
+                             position + sizeof(fidl_message_header_t),
+                             recursion_depth);
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    WireCodingTraits<
+        ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>,
+        WireCodingConstraintEmpty,
+        IsRecursive>::Decode(decoder, position + sizeof(fidl_message_header_t),
+                             recursion_depth);
+  }
 };
 #endif  // __Fuchsia__
 
@@ -542,6 +745,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ParentFirstRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -573,6 +777,7 @@ struct TypeTraits<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ParentFirstRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -626,6 +831,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ChildSecondRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -657,6 +863,7 @@ struct TypeTraits<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ChildSecondRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;

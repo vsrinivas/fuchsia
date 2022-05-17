@@ -273,6 +273,8 @@ var commonTemplateFuncs = template.FuncMap{
 	"Eq":  func(a interface{}, b interface{}) bool { return a == b },
 	"NEq": func(a interface{}, b interface{}) bool { return a != b },
 	"Add": func(a int, b int) int { return a + b },
+	"Sub": func(a int, b int) int { return a - b },
+	"Mul": func(a int, b int) int { return a * b },
 
 	"Kinds":       func() interface{} { return Kinds },
 	"FamilyKinds": func() interface{} { return FamilyKinds },
@@ -286,6 +288,8 @@ var commonTemplateFuncs = template.FuncMap{
 
 	"SetTransport":   setTransport,
 	"UnsetTransport": unsetTransport,
+
+	"EnvelopeSize": func() int { return 8 },
 
 	// UseHLCPP sets the template engine to default to the "hlcpp" domain object
 	// namespace, when printing nameVariants.

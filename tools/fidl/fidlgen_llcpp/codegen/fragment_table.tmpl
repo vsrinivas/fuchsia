@@ -315,8 +315,10 @@ struct IsResource<{{ . }}> : public std::true_type {};
 
 template <>
 struct TypeTraits<{{ . }}> {
+  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType = &{{ .CodingTableType }};
   static constexpr uint32_t kMaxNumHandles = {{ .TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t kMaxDepth = {{ .TypeShapeV2.Depth }};
   static constexpr uint32_t kPrimarySize = {{ .TypeShapeV2.InlineSize }};
   static constexpr uint32_t kPrimarySizeV1 = {{ .TypeShapeV1.InlineSize }};
   [[maybe_unused]]
@@ -330,6 +332,85 @@ struct IsFidlType<{{ . }}> : public std::true_type {};
 template <>
 struct IsTable<{{ . }}> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ . }}>);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<{{ . }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+  : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
+  using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
+  static constexpr size_t inline_size = {{ .TypeShapeV2.InlineSize }};
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder, {{ . }}* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit ==
+      Base::PrepareForBodyEncode(encoder, value, position, &vector_position)) {
+      return;
+    }
+
+    fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(value);
+    fidl_envelope_v2_t* envelopes = static_cast<fidl_envelope_v2_t*>(vec->data);
+    for (size_t i = 0; i < vec->count; i++) {
+      {{/* Two switches here, so they are translated to lookup tables. */}}
+      size_t inline_size = 0;
+      switch (i) {
+        {{- range .Members }}
+        case {{ Sub .Ordinal 1 }}:
+          inline_size = ::fidl::internal::WireCodingTraits<{{ .Type }}, {{ .WireConstraint }}, IsRecursive>::inline_size;
+          break;
+        {{- end }}
+      }
+      ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
+      switch (i) {
+        {{- range .Members }}
+        case {{ Sub .Ordinal 1 }}:
+          encode_fn = ::fidl::internal::MakeEncodeFn<{{ .Type }}, {{ .WireConstraint }}, IsRecursive>();
+          break;
+        {{- end }}
+      }
+      WirePosition envelope_position = vector_position + i * sizeof(fidl_envelope_v2_t);
+      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i], envelope_position, inner_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 2);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit == Base::DecodePrework(decoder, position, &vector_position)) {
+      return;
+    }
+
+    fidl_vector_t* vec = position.As<fidl_vector_t>();
+    for (size_t i = 0; i < vec->count; i++) {
+      {{/* Two switches here, so they are translated to lookup tables. */}}
+      size_t inline_size = 0;
+      switch (i) {
+        {{- range .Members }}
+        case {{ Sub .Ordinal 1 }}:
+          inline_size = ::fidl::internal::WireCodingTraits<{{ .Type }}, {{ .WireConstraint }}, IsRecursive>::inline_size;
+          break;
+        {{- end }}
+      }
+      DecodeFn<IsRecursive> decode_fn = nullptr;
+      switch(i) {
+        {{- range .Members }}
+        case {{ Sub .Ordinal 1 }}:
+          decode_fn = ::fidl::internal::MakeDecodeFn<{{ .Type }}, {{ .WireConstraint }}, IsRecursive>();
+          break;
+        {{- end }}
+      }
+      ::fidl::internal::WireDecodeOptionalEnvelope(inline_size, decode_fn, decoder, vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
+    }
+  }
+};
+
 {{- if .IsResourceType }}
 {{- EndifFuchsia -}}
 {{- end }}

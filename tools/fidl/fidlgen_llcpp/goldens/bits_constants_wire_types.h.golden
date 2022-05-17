@@ -36,4 +36,33 @@ constexpr ::test_bitsconstants::wire::BitsType kConst1 =
 
 }  // namespace wire
 }  // namespace test_bitsconstants
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+template <bool IsRecursive>
+struct internal::WireCodingTraits<::test_bitsconstants::wire::BitsType,
+                                  ::fidl::internal::WireCodingConstraintEmpty,
+                                  IsRecursive> {
+  static constexpr size_t inline_size = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::test_bitsconstants::wire::BitsType* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    if (unlikely(static_cast<uint32_t>(*value) & ~131ull)) {
+      encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
+    }
+    *position.As<::test_bitsconstants::wire::BitsType>() = *value;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_bitsconstants::wire::BitsType value =
+        *position.As<::test_bitsconstants::wire::BitsType>();
+    if (unlikely(static_cast<uint32_t>(value) & ~131ull)) {
+      decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
+    }
+  }
+};
+
+}  // namespace fidl

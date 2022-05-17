@@ -93,7 +93,8 @@ type TableMember struct {
 	MethodClearName    string
 	ValueUnionName     string
 	HandleInformation  *HandleInformation
-	Constraint         string
+	NaturalConstraint  string
+	WireConstraint     string
 }
 
 func (tm TableMember) NameAndType() (string, Type) {
@@ -126,7 +127,8 @@ func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableM
 		MethodClearName:    fmt.Sprintf("clear_%s", val.Name),
 		ValueUnionName:     fmt.Sprintf("ValueUnion_%s", val.Name),
 		HandleInformation:  c.fieldHandleInformation(&val.Type),
-		Constraint:         t.FieldConstraint,
+		NaturalConstraint:  t.NaturalFieldConstraint,
+		WireConstraint:     t.WireFieldConstraint,
 	}
 }
 

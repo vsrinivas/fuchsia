@@ -227,22 +227,6 @@ struct NaturalStructMember final {
       : member_ptr(member_ptr), offset(offset) {}
 };
 
-struct TupleVisitor {
- public:
-  // Returns true iff the |func| is satified on all items of |tuple|.
-  //
-  // e.g. TupleVisitor::All(std::make_tuple(1, 2, 3), [](int v) { return v > 0; })
-  // returns true because 1, 2, 3 are all > 0.
-  template <typename Tuple, typename Fn, size_t I = 0>
-  static constexpr auto All(Tuple tuple, Fn func) {
-    if constexpr (I == std::tuple_size_v<Tuple>) {
-      return true;
-    } else {
-      return func(std::get<I>(tuple)) && All<Tuple, Fn, I + 1>(tuple, func);
-    }
-  }
-};
-
 template <typename MaskType>
 struct NaturalStructPadding final {
   // Offset within the struct (start of struct = 0).

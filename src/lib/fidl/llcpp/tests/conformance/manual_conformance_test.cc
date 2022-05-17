@@ -78,7 +78,7 @@ TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
       fidl::internal::WireFormatVersion::kV2, &input);
   EXPECT_FALSE(encoded.ok());
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
-  EXPECT_EQ(std::string(encoded.lossy_description()), "non-nullable xunion is absent");
+  EXPECT_EQ(std::string(encoded.lossy_description()), "non-nullable union is absent");
   EXPECT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS);
 }
 
@@ -102,7 +102,7 @@ TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
       static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
   EXPECT_FALSE(decoded.ok());
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
-  EXPECT_EQ(std::string(decoded.lossy_description()), "non-nullable xunion is absent");
+  EXPECT_EQ(std::string(decoded.lossy_description()), "non-nullable union is absent");
   EXPECT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
 }
 
@@ -127,7 +127,7 @@ TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
       static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
   EXPECT_FALSE(decoded.ok());
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
-  EXPECT_EQ(std::string(decoded.lossy_description()), "xunion with zero as ordinal must be empty");
+  EXPECT_EQ(std::string(decoded.lossy_description()), "non-nullable union is absent");
   EXPECT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
 }
 
@@ -269,7 +269,7 @@ TEST(InputExceeds64KiB, EncodeUnsupported) {
         fidl::internal::WireFormatVersion::kV2, &table};
     EXPECT_FALSE(encoded.ok());
     // TODO(fxbug.dev/74362): Consistently propagate ZX_ERR_BUFFER_TOO_SMALL.
-    EXPECT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS);
+    EXPECT_EQ(encoded.status(), ZX_ERR_BUFFER_TOO_SMALL);
     EXPECT_STREQ(encoded.lossy_description(), "backing buffer size exceeded");
   }
 }

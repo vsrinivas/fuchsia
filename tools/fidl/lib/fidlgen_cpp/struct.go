@@ -87,7 +87,8 @@ type StructMember struct {
 	OffsetV1          int
 	OffsetV2          int
 	HandleInformation *HandleInformation
-	Constraint        string
+	NaturalConstraint string
+	WireConstraint    string
 }
 
 var _ Member = (*StructMember)(nil)
@@ -99,7 +100,7 @@ func (sm StructMember) AsParameter() Parameter {
 		OffsetV1:          sm.OffsetV1,
 		OffsetV2:          sm.OffsetV2,
 		HandleInformation: sm.HandleInformation,
-		Constraint:        sm.Constraint,
+		WireConstraint:    sm.WireConstraint,
 	}
 }
 
@@ -165,7 +166,8 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 		OffsetV1:          val.FieldShapeV1.Offset,
 		OffsetV2:          val.FieldShapeV2.Offset,
 		HandleInformation: c.fieldHandleInformation(&val.Type),
-		Constraint:        t.FieldConstraint,
+		NaturalConstraint: t.NaturalFieldConstraint,
+		WireConstraint:    t.WireFieldConstraint,
 	}
 }
 

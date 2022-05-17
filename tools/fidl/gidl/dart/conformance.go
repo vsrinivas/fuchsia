@@ -380,8 +380,10 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictBitsUnknownBit:               "fidlInvalidBit",
 	gidlir.StrictEnumUnknownValue:             "fidlInvalidEnumValue",
 	gidlir.StrictUnionUnknownField:            "fidlStrictUnionUnknownField",
+	gidlir.StringCountExceeds32BitLimit:       "fidlStringTooLong",
 	gidlir.StringNotUtf8:                      "unknown",
 	gidlir.StringTooLong:                      "fidlStringTooLong",
+	gidlir.TableCountExceeds32BitLimit:        "fidlCountExceedsLimit",
 	gidlir.TooFewBytes:                        "fidlTooFewBytes",
 	gidlir.TooFewBytesInPrimaryObject:         "fidlTooFewBytes",
 	gidlir.TooFewHandles:                      "fidlTooFewHandles",
@@ -389,6 +391,7 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.TooManyHandlesInMessage:            "fidlTooManyHandles",
 	gidlir.UnionFieldNotSet:                   "unknown",
 	gidlir.UnexpectedOrdinal:                  "fidlCountExceedsLimit",
+	gidlir.VectorCountExceeds32BitLimit:       "fidlCountExceedsLimit",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {

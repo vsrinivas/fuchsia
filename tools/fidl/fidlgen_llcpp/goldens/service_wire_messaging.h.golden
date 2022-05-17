@@ -85,6 +85,29 @@ struct ::fidl::internal::TransactionalRequest<
   void _InitHeader();
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_service::SecondProtocol::MethodOnSecond>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_service::SecondProtocol::MethodOnSecond>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::fidl::internal::TransactionalRequest<
+                         ::test_service::SecondProtocol::MethodOnSecond>* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
+};
+
 namespace fidl {
 
 template <>
@@ -107,6 +130,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_service::SecondProtocol::MethodOnSecond>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -133,6 +157,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
@@ -365,6 +390,29 @@ struct ::fidl::internal::TransactionalRequest<
   void _InitHeader();
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<
+        ::test_service::FirstProtocol::MethodOnFirst>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_service::FirstProtocol::MethodOnFirst>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(internal::WireEncoder* encoder,
+                     ::fidl::internal::TransactionalRequest<
+                         ::test_service::FirstProtocol::MethodOnFirst>* value,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
+};
+
 namespace fidl {
 
 template <>
@@ -387,6 +435,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_service::FirstProtocol::MethodOnFirst>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -412,6 +461,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;

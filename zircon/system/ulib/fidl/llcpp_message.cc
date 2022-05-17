@@ -22,22 +22,6 @@
 #include <lib/fidl/llcpp/internal/transport_channel_host.h>
 #endif  // __Fuchsia__
 
-namespace {
-
-bool ContainsEnvelope(const fidl_type_t* type) {
-  switch (type->type_tag()) {
-    case kFidlTypeTable:
-    case kFidlTypeXUnion:
-      return true;
-    case kFidlTypeStruct:
-      return type->coded_struct().contains_envelope;
-    default:
-      ZX_PANIC("unexpected top-level type");
-  }
-}
-
-}  // namespace
-
 namespace fidl {
 
 OutgoingMessage OutgoingMessage::FromEncodedCMessage(const fidl_outgoing_msg_t* c_msg) {
@@ -186,7 +170,8 @@ bool OutgoingMessage::BytesMatch(const OutgoingMessage& other) const {
 }
 
 void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_version,
-                                 const fidl_type_t* message_type, void* data) {
+                                 const fidl_type_t* message_type, void* data, size_t inline_size,
+                                 fidl::internal::TopLevelEncodeFn encode_fn) {
   if (!ok()) {
     return;
   }
@@ -195,20 +180,17 @@ void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_v
     return;
   }
 
-  uint32_t num_iovecs_actual;
-  uint32_t num_handles_actual;
-
-  zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      *transport_vtable_->encoding_configuration, message_type, is_transactional(), data, iovecs(),
-      iovec_capacity(), handles(), message_.iovec.handle_metadata, handle_capacity(),
-      backing_buffer(), backing_buffer_capacity(), &num_iovecs_actual, &num_handles_actual,
-      error_address());
-  if (status != ZX_OK) {
-    SetStatus(fidl::Status::EncodeError(status, *error_address()));
+  fitx::result<fidl::Error, fidl::internal::WireEncoder::Result> result =
+      fidl::internal::WireEncode(inline_size, encode_fn, transport_vtable_->encoding_configuration,
+                                 data, iovecs(), iovec_capacity(), handles(),
+                                 message_.iovec.handle_metadata, handle_capacity(),
+                                 backing_buffer(), backing_buffer_capacity());
+  if (!result.is_ok()) {
+    SetStatus(result.error_value());
     return;
   }
-  iovec_message().num_iovecs = num_iovecs_actual;
-  iovec_message().num_handles = num_handles_actual;
+  iovec_message().num_iovecs = static_cast<uint32_t>(result.value().iovec_actual);
+  iovec_message().num_handles = static_cast<uint32_t>(result.value().handle_actual);
 
   if (is_transactional()) {
     ZX_ASSERT(iovec_actual() >= 1 && iovecs()[0].capacity >= sizeof(fidl_message_header_t));
@@ -231,13 +213,16 @@ void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOption
   }
 }
 
-void OutgoingMessage::DecodeImplForCall(const internal::CodingConfig& coding_config,
+void OutgoingMessage::DecodeImplForCall(size_t inline_size, bool contains_envelope,
+                                        internal::TopLevelDecodeFn decode_fn,
+                                        const internal::CodingConfig& coding_config,
                                         const fidl_type_t* response_type, uint8_t* bytes,
                                         uint32_t* in_out_num_bytes, fidl_handle_t* handles,
                                         fidl_handle_metadata_t* handle_metadata,
                                         uint32_t num_handles) {
   fidl_message_header_t& header = reinterpret_cast<fidl_message_header_t&>(*bytes);
   if (response_type == nullptr) {
+    // TODO(fxbug.dev/100320) Remove this usage of the coding tables.
     return;
   } else if (unlikely(*in_out_num_bytes <= sizeof(fidl_message_header_t))) {
     SetStatus(fidl::Status::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
@@ -249,35 +234,24 @@ void OutgoingMessage::DecodeImplForCall(const internal::CodingConfig& coding_con
   // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
   // contain envelopes and are compatible with V2.
   if ((header.at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) == 0 &&
-      ContainsEnvelope(response_type)) {
+      contains_envelope) {
     SetStatus(fidl::Status::DecodeError(
         ZX_ERR_INVALID_ARGS, "wire format v1 header received with unsupported envelope"));
     return;
   }
 
-  uint8_t* trimmed_result_bytes;
-  uint32_t trimmed_num_bytes;
-  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
-      bytes, *in_out_num_bytes, &trimmed_result_bytes, &trimmed_num_bytes, error_address());
-  if (trim_status != ZX_OK) {
-    SetStatus(fidl::Status::DecodeError(trim_status, *error_address()));
-    return;
-  }
-
-  zx_status_t status = internal::DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      coding_config, response_type, trimmed_result_bytes, trimmed_num_bytes, handles,
-      handle_metadata, num_handles, error_address());
-  if (status != ZX_OK) {
-    SetStatus(fidl::Status::DecodeError(status, *error_address()));
-    return;
+  fidl::Status decode_status =
+      internal::WireDecode(inline_size, decode_fn, transport_vtable_->encoding_configuration, bytes,
+                           *in_out_num_bytes, handles, handle_metadata, num_handles);
+  if (!decode_status.ok()) {
+    SetStatus(decode_status);
   }
 }
 
-void OutgoingMessage::CallImplForTransportProvidedBuffer(internal::AnyUnownedTransport transport,
-                                                         const fidl_type_t* response_type,
-                                                         uint8_t** out_bytes,
-                                                         uint32_t* out_num_bytes,
-                                                         CallOptions options) {
+void OutgoingMessage::CallImplForTransportProvidedBuffer(
+    internal::AnyUnownedTransport transport, size_t inline_size, bool contains_envelope,
+    internal::TopLevelDecodeFn decode_fn, const fidl_type_t* response_type, uint8_t** out_bytes,
+    uint32_t* out_num_bytes, CallOptions options) {
   if (status() != ZX_OK) {
     return;
   }
@@ -305,13 +279,15 @@ void OutgoingMessage::CallImplForTransportProvidedBuffer(internal::AnyUnownedTra
     return;
   }
 
-  DecodeImplForCall(*transport.vtable()->encoding_configuration, response_type, *out_bytes,
+  DecodeImplForCall(inline_size, contains_envelope, decode_fn,
+                    *transport.vtable()->encoding_configuration, response_type, *out_bytes,
                     out_num_bytes, result_handles, result_handle_metadata, result_num_handles);
 }
 
 void OutgoingMessage::CallImplForCallerProvidedBuffer(
-    internal::AnyUnownedTransport transport, const fidl_type_t* response_type,
-    uint8_t* result_bytes, uint32_t result_byte_capacity, fidl_handle_t* result_handles,
+    internal::AnyUnownedTransport transport, size_t inline_size, bool contains_envelope,
+    internal::TopLevelDecodeFn decode_fn, const fidl_type_t* response_type, uint8_t* result_bytes,
+    uint32_t result_byte_capacity, fidl_handle_t* result_handles,
     fidl_handle_metadata_t* result_handle_metadata, uint32_t result_handle_capacity,
     CallOptions options) {
   if (status() != ZX_OK) {
@@ -343,7 +319,8 @@ void OutgoingMessage::CallImplForCallerProvidedBuffer(
     return;
   }
 
-  DecodeImplForCall(*transport.vtable()->encoding_configuration, response_type, result_bytes,
+  DecodeImplForCall(inline_size, contains_envelope, decode_fn,
+                    *transport.vtable()->encoding_configuration, response_type, result_bytes,
                     &actual_num_bytes, result_handles, result_handle_metadata, actual_num_handles);
 }
 
@@ -464,46 +441,35 @@ IncomingMessage IncomingMessage::SkipTransactionHeader() {
                          ::fidl::IncomingMessage::kSkipMessageHeaderValidation);
 }
 
-void IncomingMessage::Decode(const fidl_type_t* message_type) {
+void IncomingMessage::Decode(size_t inline_size, bool contains_envelope,
+                             internal::TopLevelDecodeFn decode_fn) {
   ZX_ASSERT(is_transactional_);
   // Old versions of the C bindings will send wire format V1 payloads that are compatible
   // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
   // contain envelopes and are compatible with V2.
   // TODO(fxbug.dev/99738) Remove this logic.
-  ZX_DEBUG_ASSERT(
-      !ContainsEnvelope(message_type) ||
-      (header()->at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) != 0);
-  Decode(internal::WireFormatVersion::kV2, message_type, true);
+  ZX_DEBUG_ASSERT(!contains_envelope || (header()->at_rest_flags[0] &
+                                         FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) != 0);
+  Decode(inline_size, decode_fn, internal::WireFormatVersion::kV2, true);
 }
 
-void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
-                             const fidl_type_t* message_type, bool is_transactional) {
+void IncomingMessage::Decode(size_t inline_size, internal::TopLevelDecodeFn decode_fn,
+                             internal::WireFormatVersion wire_format_version,
+                             bool is_transactional) {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
   if (wire_format_version != internal::WireFormatVersion::kV2) {
     SetStatus(fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, "only wire format v2 supported"));
     return;
   }
 
-  uint8_t* trimmed_bytes = bytes();
-  uint32_t trimmed_num_bytes = byte_actual();
-  if (is_transactional) {
-    zx_status_t status = ::fidl::internal::fidl_exclude_header_bytes(
-        bytes(), byte_actual(), &trimmed_bytes, &trimmed_num_bytes, error_address());
-    if (status != ZX_OK) {
-      SetStatus(fidl::Status::DecodeError(status, *error_address()));
-      return;
-    }
-  }
+  fidl::Status decode_status = internal::WireDecode(
+      inline_size, decode_fn, transport_vtable_->encoding_configuration, bytes(), byte_actual(),
+      handles(), message_.handle_metadata, handle_actual());
 
-  fidl_trace(WillLLCPPDecode, message_type, trimmed_bytes, trimmed_num_bytes, handle_actual());
-  zx_status_t status = fidl::internal::DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      *transport_vtable_->encoding_configuration, message_type, trimmed_bytes, trimmed_num_bytes,
-      message_.handles, message_.handle_metadata, message_.num_handles, error_address());
-  fidl_trace(DidLLCPPDecode);
   // Now the caller is responsible for the handles contained in `bytes()`.
   ReleaseHandles();
-  if (status != ZX_OK) {
-    SetStatus(fidl::Status::DecodeError(status, *error_address()));
+  if (!decode_status.ok()) {
+    SetStatus(decode_status);
   }
 }
 

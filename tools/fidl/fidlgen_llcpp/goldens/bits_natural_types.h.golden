@@ -25,7 +25,7 @@ struct internal::NaturalCodingTraits<
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_bits::StrictBits* value, size_t offset,
                      size_t recursion_depth) {
-    if (static_cast<uint64_t>(*value) & ~9223372036854775809ull) {
+    if (unlikely(static_cast<uint64_t>(*value) & ~9223372036854775809ull)) {
       encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
     *encoder->template GetPtr<::test_bits::StrictBits>(offset) = *value;
@@ -34,7 +34,7 @@ struct internal::NaturalCodingTraits<
                      ::test_bits::StrictBits* value, size_t offset,
                      size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_bits::StrictBits>(offset);
-    if (static_cast<uint64_t>(*value) & ~9223372036854775809ull) {
+    if (unlikely(static_cast<uint64_t>(*value) & ~9223372036854775809ull)) {
       decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
   }
@@ -48,7 +48,7 @@ struct internal::NaturalCodingTraits<
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_bits::MyBits* value, size_t offset,
                      size_t recursion_depth) {
-    if (static_cast<uint32_t>(*value) & ~7ull) {
+    if (unlikely(static_cast<uint32_t>(*value) & ~7ull)) {
       encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
     *encoder->template GetPtr<::test_bits::MyBits>(offset) = *value;
@@ -57,7 +57,7 @@ struct internal::NaturalCodingTraits<
                      ::test_bits::MyBits* value, size_t offset,
                      size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_bits::MyBits>(offset);
-    if (static_cast<uint32_t>(*value) & ~7ull) {
+    if (unlikely(static_cast<uint32_t>(*value) & ~7ull)) {
       decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
   }

@@ -207,6 +207,29 @@ struct ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>
   void _InitHeader();
 };
 
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<
+    ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>,
+    ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public WireStructCodingTraitsBase<
+          ::fidl::internal::TransactionalRequest<
+              ::test_versions::Protocol::Foo>,
+          ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 0 + sizeof(fidl_message_header_t);
+
+  static void Encode(
+      internal::WireEncoder* encoder,
+      ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>*
+          value,
+      ::fidl::internal::WirePosition position,
+      RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<fidl_message_header_t>() = value->header;
+  }
+  static void Decode(internal::WireDecoder* decoder,
+                     ::fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
+};
+
 namespace fidl {
 
 template <>
@@ -230,6 +253,7 @@ struct TypeTraits<
     ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kPrimarySizeV1 =
@@ -255,6 +279,7 @@ template <>
 struct TypeTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 0;
   static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;

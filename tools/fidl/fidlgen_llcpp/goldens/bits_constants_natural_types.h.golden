@@ -38,7 +38,7 @@ struct internal::NaturalCodingTraits<
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_bitsconstants::BitsType* value, size_t offset,
                      size_t recursion_depth) {
-    if (static_cast<uint32_t>(*value) & ~131ull) {
+    if (unlikely(static_cast<uint32_t>(*value) & ~131ull)) {
       encoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
     *encoder->template GetPtr<::test_bitsconstants::BitsType>(offset) = *value;
@@ -47,7 +47,7 @@ struct internal::NaturalCodingTraits<
                      ::test_bitsconstants::BitsType* value, size_t offset,
                      size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_bitsconstants::BitsType>(offset);
-    if (static_cast<uint32_t>(*value) & ~131ull) {
+    if (unlikely(static_cast<uint32_t>(*value) & ~131ull)) {
       decoder->SetError(::fidl::internal::kCodingErrorUnknownBitSetInBitsValue);
     }
   }
