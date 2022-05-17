@@ -90,6 +90,7 @@ protocol HostVsockEndpoint {
 
     /// Similar to `HostVsockConnector.Connect` except the `src_cid` is
     /// `HOST_CID` and `src_port` is generated automatically.
+    @transitional
     Connect(resource struct {
         cid uint32;
         port uint32;
@@ -105,9 +106,6 @@ protocol HostVsockEndpoint {
     ///
     /// Other errors are related to socket creation, see
     /// [zx_socket_create](https://fuchsia.dev/fuchsia-src/reference/syscalls/socket_create.md)
-    ///
-    /// NOTE: This is currently non functional, see fxb/97355 for progress.
-    @transitional
     Connect2(struct {
         guest_port uint32;
     }) -> (resource struct {
