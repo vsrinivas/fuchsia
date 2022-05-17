@@ -106,6 +106,7 @@
                 "fuchsia.media.AudioCore",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.ProfileProvider",
+                "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memory.Monitor",
                 "fuchsia.memorypressure.Provider",
                 "fuchsia.net.interfaces.State",
