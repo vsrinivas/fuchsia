@@ -7,12 +7,7 @@ use assembly_config::{FileEntry, ImageAssemblyConfig};
 use assembly_validate_util::{BootfsContents, PkgNamespace};
 use fuchsia_pkg::PackageManifest;
 use rayon::iter::{ParallelBridge, ParallelIterator};
-use std::{
-    collections::BTreeMap,
-    fmt,
-    fs::File,
-    path::{Path, PathBuf},
-};
+use std::{collections::BTreeMap, fmt, fs::File, path::PathBuf};
 
 /// Validate a product config.
 pub fn validate_product(product: &ImageAssemblyConfig) -> Result<(), ProductValidationError> {
@@ -21,7 +16,10 @@ pub fn validate_product(product: &ImageAssemblyConfig) -> Result<(), ProductVali
     let packages: BTreeMap<_, _> = manifests
         .par_bridge()
         .filter_map(|package| {
-            if let Err(e) = validate_package(package) {
+            if let Err(e) = PackageManifest::try_load_from(&package)
+                .map_err(PackageValidationError::LoadPackageManifest)
+                .and_then(|m| validate_package(&m))
+            {
                 Some((package.to_owned(), e))
             } else {
                 None
@@ -64,22 +62,19 @@ fn validate_bootfs(bootfs_files: &[FileEntry]) -> Result<(), BootfsValidationErr
 ///
 /// Assumes that all component manifests will be in the `meta/` directory and have a `.cm` extension
 /// within the package namespace.
-pub fn validate_package(manifest_path: impl AsRef<Path>) -> Result<(), PackageValidationError> {
-    let manifest_path = manifest_path.as_ref();
-
-    // deserialize the manifest for the package
-    let manifest = PackageManifest::try_load_from(manifest_path)
-        .map_err(PackageValidationError::LoadPackageManifest)?;
-    let blobs = manifest.into_blobs();
+pub fn validate_package(manifest: &PackageManifest) -> Result<(), PackageValidationError> {
+    let blobs = manifest.blobs();
 
     // read meta.far contents
     let meta_far_info = blobs
         .into_iter()
         .find(|b| b.path == "meta/")
         .ok_or(PackageValidationError::MissingMetaFar)?;
-    let meta_far = File::open(&meta_far_info.source_path).map_err(|source| {
-        PackageValidationError::Open { source, path: PathBuf::from(meta_far_info.source_path) }
-    })?;
+    let meta_far =
+        File::open(&meta_far_info.source_path).map_err(|source| PackageValidationError::Open {
+            source,
+            path: PathBuf::from(meta_far_info.source_path.clone()),
+        })?;
     let mut reader =
         fuchsia_archive::Reader::new(meta_far).map_err(PackageValidationError::ReadArchive)?;
 

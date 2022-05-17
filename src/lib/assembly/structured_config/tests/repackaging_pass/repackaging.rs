@@ -43,10 +43,10 @@ fn test_meta_far() -> (Reader<Cursor<Vec<u8>>>, TempDir) {
 /// files.
 #[test]
 fn adding_config_makes_invalid_package_valid() {
-    let (original_manifest, unpacked_original) = test_package_manifest();
+    let (original_manifest, _unpacked_original) = test_package_manifest();
 
     // ensure that product validation will fail without us doing anything
-    match validate_package(unpacked_original.path().join("package_manifest.json")) {
+    match validate_package(&original_manifest) {
         Err(PackageValidationError::InvalidComponents(..)) => (),
         other => panic!("expected validation to fail with invalid components, got {:#?}", other),
     }
@@ -60,7 +60,8 @@ fn adding_config_makes_invalid_package_valid() {
     let new_manifest_path = repackager.build().unwrap();
 
     // ensure that the modified package is valid
-    validate_package(&new_manifest_path).expect("package must be valid after adding config");
+    let new_manifest = PackageManifest::try_load_from(new_manifest_path).unwrap();
+    validate_package(&new_manifest).expect("package must be valid after adding config");
 }
 
 /// Makes sure that the product assembly tooling never silently squashes an existing value file.

@@ -70,7 +70,10 @@ impl PkgNamespace for BootfsContents {
     }
 
     fn read_file(&mut self, path: &str) -> Result<Vec<u8>, Self::Err> {
-        self.files.get(path).map(|b| b.to_owned()).ok_or(BootfsContentsError::NoSuchFile)
+        self.files
+            .get(path)
+            .map(|b| b.to_owned())
+            .ok_or_else(|| BootfsContentsError::NoSuchFile(path.to_owned()))
     }
 }
 
@@ -82,6 +85,6 @@ pub enum BootfsContentsError {
         #[source]
         source: std::io::Error,
     },
-    #[error("No such file in bootfs.")]
-    NoSuchFile,
+    #[error("`{_0}` does not exist in bootfs.")]
+    NoSuchFile(String),
 }

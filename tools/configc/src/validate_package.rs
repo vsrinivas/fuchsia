@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{Context, Result};
+use fuchsia_pkg::PackageManifest;
 use std::path::PathBuf;
 
 /// validate that any components in the package which declare structured config are able to have
@@ -21,8 +22,10 @@ pub struct ValidatePackage {
 
 impl ValidatePackage {
     pub fn validate(self) -> Result<()> {
-        if let Err(e) = assembly_validate_product::validate_package(&self.package) {
-            anyhow::bail!("Failed to validate {}:{}", self.package.display(), e);
+        let package = PackageManifest::try_load_from(&self.package)
+            .with_context(|| format!("reading {}", self.package.display()))?;
+        if let Err(e) = assembly_validate_product::validate_package(&package) {
+            anyhow::bail!("Failed to validate package `{}`:{}", package.name(), e);
         }
         std::fs::write(&self.stamp, &[])
             .with_context(|| format!("writing stamp file to {}", self.stamp.display()))?;

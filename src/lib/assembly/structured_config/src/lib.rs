@@ -139,9 +139,7 @@ pub fn validate_component<Ns: PkgNamespace>(
 
         // config is required, so find out where it's stored
         let cm_rust::ConfigValueSource::PackagePath(path) = &config_decl.value_source;
-        let config_bytes = reader.read_file(&path).map_err(|source| {
-            ValidationError::ConfigValuesMissing { path: path.to_owned(), source }
-        })?;
+        let config_bytes = reader.read_file(&path).map_err(ValidationError::ConfigValuesMissing)?;
 
         // read and validate the config values
         let config_values: cm_rust::ValuesData =
@@ -161,12 +159,8 @@ pub enum ValidationError<NamespaceError: Debug + Error + 'static> {
     ManifestMissing(#[source] NamespaceError),
     #[error("Couldn't parse manifest.")]
     ParseManifest(#[source] PersistentFidlError),
-    #[error("Couldn't read config values from `{path}`.")]
-    ConfigValuesMissing {
-        path: String,
-        #[source]
-        source: NamespaceError,
-    },
+    #[error("Couldn't find component's config values in package.")]
+    ConfigValuesMissing(#[source] NamespaceError),
     #[error("Couldn't parse config values.")]
     ParseConfig(#[source] PersistentFidlError),
     #[error("Couldn't resolve config.")]
