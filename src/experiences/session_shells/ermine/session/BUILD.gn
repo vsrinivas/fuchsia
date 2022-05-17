@@ -5,7 +5,6 @@
 import("//build/components.gni")
 import("//build/dart/dart_component.gni")
 import("//build/dart/dart_library.gni")
-import("//src/session/build/session_manager.gni")
 
 dart_library("lib") {
   package_name = "workstation_session"
@@ -56,11 +55,6 @@ fuchsia_package("workstation_session_pkg") {
     ":session_component",
     ":workstation_routing",
   ]
-}
-
-session_manager_package("session_manager") {
-  config =
-      "//src/experiences/session_shells/ermine/session/session_config.json5"
 }
 
 group("session") {
