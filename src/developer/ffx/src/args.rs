@@ -23,7 +23,8 @@ pub struct Ffx {
     pub env: Option<String>,
 
     #[argh(option)]
-    /// produce output for a machine in the specified format; available formats: "json"
+    /// produce output for a machine in the specified format; available formats: "json",
+    /// "json-pretty"
     pub machine: Option<Format>,
 
     #[argh(option)]

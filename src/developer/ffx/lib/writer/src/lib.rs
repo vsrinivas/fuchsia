@@ -13,6 +13,7 @@ use {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Format {
     Json,
+    JsonPretty,
 }
 
 impl std::str::FromStr for Format {
@@ -20,6 +21,7 @@ impl std::str::FromStr for Format {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_ref() {
+            "json-pretty" => Ok(Format::JsonPretty),
             "json" | "j" => Ok(Format::Json),
             f => Err(anyhow!("Unknown format {}", f)),
         }
@@ -73,6 +75,9 @@ impl Writer {
         match self.format {
             Some(Format::Json) => {
                 serde_json::to_writer(self.inner(), output)?;
+            }
+            Some(Format::JsonPretty) => {
+                serde_json::to_writer_pretty(self.inner(), output)?;
             }
             _ => return Err(anyhow!("Unknown format")),
         }
@@ -282,5 +287,27 @@ mod test {
 
         assert_eq!(writer.test_output().unwrap(), "hello\n");
         assert_eq!(writer.test_error().unwrap(), "");
+    }
+
+    #[test]
+    fn test_machine_writes_pretty_json() {
+        let writer = Writer::new_test(Some(Format::JsonPretty));
+        let test_input = serde_json::json!({
+            "object1": {
+                "line1": "hello",
+                "line2": "foobar"
+            }
+        });
+        writer.machine(&test_input).unwrap();
+
+        assert_eq!(
+            writer.test_output().unwrap(),
+            r#"{
+  "object1": {
+    "line1": "hello",
+    "line2": "foobar"
+  }
+}"#
+        );
     }
 }
