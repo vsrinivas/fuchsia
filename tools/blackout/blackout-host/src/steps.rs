@@ -5,21 +5,20 @@
 //! test steps
 
 use {
-    crate::{BlackoutError, RebootError, Seed},
+    crate::{BlackoutError, CommandError, RebootError, Seed},
+    anyhow::{bail, ensure, Context},
     async_trait::async_trait,
     ffx_isolate,
+    serde_json::Value,
     std::{
         fs::OpenOptions,
         io::Write,
         path::{Path, PathBuf},
-        process::{Child, Command, Output, Stdio},
         sync::Arc,
         thread::sleep,
         time::Duration,
     },
 };
-
-const VERIFICATION_FAILURE_EXIT_CODE: i32 = 42;
 
 /// Type of reboot to perform.
 #[derive(Clone, Debug)]
@@ -44,24 +43,63 @@ fn hard_reboot(dev: impl AsRef<Path>) -> Result<(), RebootError> {
     Ok(())
 }
 
+async fn get_target(ffx: &ffx_isolate::Isolate) -> Result<String, anyhow::Error> {
+    if let Ok(name) = std::env::var("FUCHSIA_NODENAME") {
+        return Ok(name);
+    }
+
+    // ensure a daemon is spun up first, so we have a moment to discover targets.
+    let start = std::time::Instant::now();
+    loop {
+        let out = ffx.ffx(&["ffx", "target", "list"]).await?;
+        if out.stdout.len() > 10 {
+            break;
+        }
+        if start.elapsed() > std::time::Duration::from_secs(5) {
+            bail!("No targets found after 5s")
+        }
+    }
+
+    let out = ffx.ffx(&["target", "list", "-f", "j"]).await.context("getting target list")?;
+
+    ensure!(out.status.success(), "Looking up a target name failed: {:?}", out);
+
+    let targets: Value =
+        serde_json::from_str(&out.stdout).context("parsing output from target list")?;
+
+    let targets =
+        targets.as_array().ok_or(anyhow::anyhow!("expected target list ot return an array"))?;
+
+    let target = targets
+        .iter()
+        .find(|target| {
+            target["nodename"] != ""
+                && target["target_state"]
+                    .as_str()
+                    .map(|s| s.to_lowercase().contains("product"))
+                    .unwrap_or(false)
+        })
+        .ok_or(anyhow::anyhow!("did not find any named targets in a product state"))?;
+    target["nodename"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or(anyhow::anyhow!("expected product state target to have a nodename"))
+}
+
 #[async_trait]
 trait Runner: Send + Sync {
-    /// Run a subcommand of the originally provided binary on the target. The command is spawned as
-    /// a separate process, and a reference to the child process is returned. stdout and stderr are
-    /// piped (see [`std::process::Stdio::piped()`] for details).
-    fn run_spawn(&self, subc: &str) -> Result<Child, BlackoutError>;
-
-    /// Run a subcommand to completion and collect the output from the process.
-    async fn run_output(&self, subc: &str) -> Result<Output, BlackoutError>;
-
-    /// Run a subcommand to completion but throw out the output.
-    async fn run(&self, subc: &str) -> Result<(), BlackoutError>;
+    /// Call the Setup method on the client.
+    async fn setup(&self) -> Result<(), BlackoutError>;
+    /// Call the Load method on the client.
+    async fn test(&self) -> Result<(), BlackoutError>;
+    /// Call the verify method on the client.
+    async fn verify(&self) -> Result<(), BlackoutError>;
 }
 
 struct FfxRunner {
     ffx: Arc<ffx_isolate::Isolate>,
-    target: String,
-    bin: String,
+    package: String,
+    component: String,
     seed: Seed,
     block_device: String,
 }
@@ -69,64 +107,84 @@ struct FfxRunner {
 impl FfxRunner {
     fn new(
         ffx: Arc<ffx_isolate::Isolate>,
-        target: &str,
-        bin: &str,
+        package: &str,
+        component: &str,
         seed: Seed,
         block_device: &str,
     ) -> Arc<dyn Runner> {
         Arc::new(FfxRunner {
             ffx,
-            target: target.to_string(),
-            bin: bin.to_string(),
+            package: package.to_string(),
+            component: component.to_string(),
             seed,
             block_device: block_device.to_string(),
         })
     }
 
-    fn run_bin(&self) -> Command {
-        let mut command = self.ffx.ffx_cmd(&[]);
-        command
-            .arg("--target")
-            .arg(&self.target)
-            .arg("component")
-            .arg("run-legacy")
-            .arg(&self.bin)
-            .arg(self.seed.to_string())
-            .arg(&self.block_device);
-        command
+    async fn start_component(&self, target: &str) -> Result<(), BlackoutError> {
+        let run_output = self
+            .ffx
+            .ffx(&[
+                "--target",
+                target,
+                "component",
+                "run",
+                "--name",
+                "blackout-target",
+                "--recreate",
+                &format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cm", self.package, self.component),
+            ])
+            .await?;
+        if run_output.status.success() {
+            Ok(())
+        } else {
+            Err(BlackoutError::FfxError(run_output.into()))
+        }
+    }
+
+    async fn run_subcommand(&self, target: &str, command: &str) -> Result<(), CommandError> {
+        let output = self
+            .ffx
+            .ffx(&[
+                "--target",
+                target,
+                "--config",
+                "storage_dev=true",
+                "storage",
+                "blackout",
+                "step",
+                command,
+                &self.block_device,
+                &self.seed.get().to_string(),
+            ])
+            .await
+            .expect("failed to convert output");
+        if output.status.success() {
+            Ok(())
+        } else {
+            Err(output.into())
+        }
     }
 }
 
 #[async_trait]
 impl Runner for FfxRunner {
-    fn run_spawn(&self, subc: &str) -> Result<Child, BlackoutError> {
-        let child =
-            self.run_bin().arg(subc).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
-
-        Ok(child)
+    async fn setup(&self) -> Result<(), BlackoutError> {
+        let target = get_target(&self.ffx).await?;
+        self.start_component(&target).await?;
+        self.run_subcommand(&target, "setup").await.map_err(|e| BlackoutError::SetupError(e))
     }
 
-    async fn run_output(&self, subc: &str) -> Result<Output, BlackoutError> {
-        let mut cmd = self.run_bin();
-        cmd.arg(subc);
-        // std::process::Command is sync, so we need to get this off the main async thread.
-        // isolated_ffx has a function that does this but we need to do it ourselves so we can get
-        // at the exit code.
-        fuchsia_async::unblock(move || {
-            let out = cmd.output()?;
-            if out.status.success() {
-                Ok(out)
-            } else if out.status.code().unwrap() == VERIFICATION_FAILURE_EXIT_CODE {
-                Err(BlackoutError::Verification(out.into()))
-            } else {
-                Err(BlackoutError::TargetCommand(out.into()))
-            }
-        })
-        .await
+    async fn test(&self) -> Result<(), BlackoutError> {
+        let target = get_target(&self.ffx).await?;
+        self.start_component(&target).await?;
+        self.run_subcommand(&target, "test").await.map_err(|e| BlackoutError::FfxError(e))
     }
 
-    async fn run(&self, subc: &str) -> Result<(), BlackoutError> {
-        self.run_output(subc).await.map(|_| ())
+    async fn verify(&self) -> Result<(), BlackoutError> {
+        let target = get_target(&self.ffx).await?;
+        self.start_component(&target).await?;
+        self.run_subcommand(&target, "verify").await.map_err(|e| BlackoutError::Verification(e))
     }
 }
 
@@ -148,12 +206,12 @@ impl SetupStep {
     /// Create a new operation step.
     pub(crate) fn new(
         ffx: Arc<ffx_isolate::Isolate>,
-        target: &str,
-        bin: &str,
+        package: &str,
+        component: &str,
         seed: Seed,
         block_device: &str,
     ) -> Self {
-        Self { runner: FfxRunner::new(ffx, target, bin, seed, block_device) }
+        Self { runner: FfxRunner::new(ffx, package, component, seed, block_device) }
     }
 }
 
@@ -161,7 +219,7 @@ impl SetupStep {
 impl TestStep for SetupStep {
     async fn execute(&self) -> Result<(), BlackoutError> {
         println!("setting up test...");
-        self.runner.run("setup").await
+        self.runner.setup().await
     }
 }
 
@@ -176,13 +234,13 @@ impl LoadStep {
     /// Create a new test step.
     pub(crate) fn new(
         ffx: Arc<ffx_isolate::Isolate>,
-        target: &str,
-        bin: &str,
+        package: &str,
+        component: &str,
         seed: Seed,
         block_device: &str,
         duration: Duration,
     ) -> Self {
-        Self { runner: FfxRunner::new(ffx, target, bin, seed, block_device), duration }
+        Self { runner: FfxRunner::new(ffx, package, component, seed, block_device), duration }
     }
 }
 
@@ -190,62 +248,22 @@ impl LoadStep {
 impl TestStep for LoadStep {
     async fn execute(&self) -> Result<(), BlackoutError> {
         println!("generating filesystem load...");
-        let mut child = self.runner.run_spawn("test")?;
-
+        self.runner.test().await?;
         fuchsia_async::Timer::new(self.duration).await;
-
-        // make sure child process is still running
-        if let Some(_) = child.try_wait()? {
-            let out = child.wait_with_output()?;
-            return Err(BlackoutError::TargetCommand(out.into()));
-        }
-
         Ok(())
-    }
-}
-
-/// A test step for running an operation to completion. This executes the `test` subcommand and waits
-/// for completion, checking the result.
-pub struct OperationStep {
-    runner: Arc<dyn Runner>,
-}
-
-impl OperationStep {
-    /// Create a new operation step.
-    pub(crate) fn new(
-        ffx: Arc<ffx_isolate::Isolate>,
-        target: &str,
-        bin: &str,
-        seed: Seed,
-        block_device: &str,
-    ) -> Self {
-        Self { runner: FfxRunner::new(ffx, target, bin, seed, block_device) }
-    }
-}
-
-#[async_trait]
-impl TestStep for OperationStep {
-    async fn execute(&self) -> Result<(), BlackoutError> {
-        println!("running filesystem operation...");
-        self.runner.run("test").await
     }
 }
 
 /// A test step for rebooting the target machine. This uses the configured reboot mechanism.
 pub struct RebootStep {
     ffx: Arc<ffx_isolate::Isolate>,
-    target: String,
     reboot_type: RebootType,
 }
 
 impl RebootStep {
     /// Create a new reboot step.
-    pub(crate) fn new(
-        ffx: Arc<ffx_isolate::Isolate>,
-        target: &str,
-        reboot_type: &RebootType,
-    ) -> Self {
-        Self { ffx, target: target.to_string(), reboot_type: reboot_type.clone() }
+    pub(crate) fn new(ffx: Arc<ffx_isolate::Isolate>, reboot_type: &RebootType) -> Self {
+        Self { ffx, reboot_type: reboot_type.clone() }
     }
 }
 
@@ -255,8 +273,8 @@ impl TestStep for RebootStep {
         println!("rebooting device...");
         match &self.reboot_type {
             RebootType::Software => {
-                let _ =
-                    self.ffx.ffx_cmd(&["--target", &self.target, "target", "reboot"]).status()?;
+                let target = get_target(&self.ffx).await?;
+                let _ = self.ffx.ffx(&["--target", &target, "target", "reboot"]).await?;
             }
             RebootType::Hardware(relay) => hard_reboot(&relay)?,
         }
@@ -278,15 +296,15 @@ impl VerifyStep {
     /// each attempt.
     pub(crate) fn new(
         ffx: Arc<ffx_isolate::Isolate>,
-        target: &str,
-        bin: &str,
+        package: &str,
+        component: &str,
         seed: Seed,
         block_device: &str,
         num_retries: u32,
         retry_timeout: Duration,
     ) -> Self {
         Self {
-            runner: FfxRunner::new(ffx, target, bin, seed, block_device),
+            runner: FfxRunner::new(ffx, package, component, seed, block_device),
             num_retries,
             retry_timeout,
         }
@@ -300,15 +318,13 @@ impl TestStep for VerifyStep {
         let start_time = std::time::Instant::now();
         for i in 1..self.num_retries + 1 {
             println!("verifying device...(attempt #{})", i);
-            match self.runner.run("verify").await {
+            match self.runner.verify().await {
                 Ok(()) => {
                     println!("verification successful.");
                     return Ok(());
                 }
                 Err(e @ BlackoutError::Verification(..)) => return Err(e),
                 Err(e) => {
-                    // always print out the error so it doesn't get buried to help with debugging.
-                    println!("{}", e);
                     last_error = Err(e);
                     fuchsia_async::Timer::new(self.retry_timeout).await;
                 }
@@ -323,31 +339,37 @@ impl TestStep for VerifyStep {
 
 #[cfg(test)]
 mod tests {
-    use super::{OperationStep, Runner, SetupStep, TestStep, VerifyStep};
+    use super::{Runner, SetupStep, TestStep, VerifyStep};
     use crate::{BlackoutError, CommandError};
     use {
         async_trait::async_trait,
         fuchsia_async as fasync,
         std::{
             os::unix::process::ExitStatusExt,
-            process::{Child, ExitStatus, Output},
+            process::ExitStatus,
             sync::{Arc, Mutex},
             time::Duration,
         },
     };
 
+    #[derive(Debug, PartialEq, Clone, Copy)]
+    enum ExpectedCommand {
+        Setup,
+        Test,
+        Verify,
+    }
     struct FakeRunner<F>
     where
         F: Fn() -> Result<(), BlackoutError> + Send + Sync,
     {
-        command: &'static str,
+        command: ExpectedCommand,
         res: F,
     }
     impl<F> FakeRunner<F>
     where
         F: Fn() -> Result<(), BlackoutError> + Send + Sync,
     {
-        pub fn new(command: &'static str, res: F) -> FakeRunner<F> {
+        pub fn new(command: ExpectedCommand, res: F) -> FakeRunner<F> {
             FakeRunner { command, res }
         }
     }
@@ -356,21 +378,24 @@ mod tests {
     where
         F: Fn() -> Result<(), BlackoutError> + Send + Sync,
     {
-        fn run_spawn(&self, _subc: &str) -> Result<Child, BlackoutError> {
-            unimplemented!()
+        async fn setup(&self) -> Result<(), BlackoutError> {
+            assert_eq!(self.command, ExpectedCommand::Setup);
+            (self.res)()
         }
-        async fn run_output(&self, _subc: &str) -> Result<Output, BlackoutError> {
-            unimplemented!()
+        async fn test(&self) -> Result<(), BlackoutError> {
+            assert_eq!(self.command, ExpectedCommand::Test);
+            (self.res)()
         }
-        async fn run(&self, subc: &str) -> Result<(), BlackoutError> {
-            assert_eq!(subc, self.command);
+        async fn verify(&self) -> Result<(), BlackoutError> {
+            assert_eq!(self.command, ExpectedCommand::Verify);
             (self.res)()
         }
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn setup_success() {
-        let step = SetupStep { runner: Arc::new(FakeRunner::new("setup", || Ok(()))) };
+        let step =
+            SetupStep { runner: Arc::new(FakeRunner::new(ExpectedCommand::Setup, || Ok(()))) };
         match step.execute().await {
             Ok(()) => (),
             _ => panic!("setup step returned an error on a successful run"),
@@ -380,50 +405,24 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn setup_error() {
         let error = || {
-            Err(BlackoutError::TargetCommand(CommandError(
+            Err(BlackoutError::SetupError(CommandError(
                 ExitStatus::from_raw(1),
                 "(fake stdout)".into(),
                 "(fake stderr)".into(),
             )))
         };
-        let step = SetupStep { runner: Arc::new(FakeRunner::new("setup", error)) };
+        let step = SetupStep { runner: Arc::new(FakeRunner::new(ExpectedCommand::Setup, error)) };
         match step.execute().await {
-            Err(BlackoutError::TargetCommand(_)) => (),
+            Err(BlackoutError::SetupError(_)) => (),
             Ok(()) => panic!("setup step returned success when runner failed"),
             _ => panic!("setup step returned an unexpected error"),
         }
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn operation_success() {
-        let step = OperationStep { runner: Arc::new(FakeRunner::new("test", || Ok(()))) };
-        match step.execute().await {
-            Ok(()) => (),
-            _ => panic!("operation step returned an error on a successful run"),
-        }
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn operation_error() {
-        let error = || {
-            Err(BlackoutError::TargetCommand(CommandError(
-                ExitStatus::from_raw(1),
-                "(fake stdout)".into(),
-                "(fake stderr)".into(),
-            )))
-        };
-        let step = OperationStep { runner: Arc::new(FakeRunner::new("test", error)) };
-        match step.execute().await {
-            Err(BlackoutError::TargetCommand(_)) => (),
-            Ok(()) => panic!("operation step returned success when runner failed"),
-            _ => panic!("operation step returned an unexpected error"),
-        }
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn verify_success() {
         let step = VerifyStep {
-            runner: Arc::new(FakeRunner::new("verify", || Ok(()))),
+            runner: Arc::new(FakeRunner::new(ExpectedCommand::Verify, || Ok(()))),
             num_retries: 10,
             retry_timeout: Duration::from_secs(0),
         };
@@ -443,7 +442,7 @@ mod tests {
             )))
         };
         let step = VerifyStep {
-            runner: Arc::new(FakeRunner::new("verify", error)),
+            runner: Arc::new(FakeRunner::new(ExpectedCommand::Verify, error)),
             num_retries: 10,
             retry_timeout: Duration::from_secs(0),
         };
@@ -461,19 +460,19 @@ mod tests {
         let error = move || {
             let mut attempts = attempts.lock().unwrap();
             *attempts += 1;
-            Err(BlackoutError::TargetCommand(CommandError(
+            Err(BlackoutError::FfxError(CommandError(
                 ExitStatus::from_raw(255),
                 "(fake stdout)".into(),
                 "(fake stderr)".into(),
             )))
         };
         let step = VerifyStep {
-            runner: Arc::new(FakeRunner::new("verify", error)),
+            runner: Arc::new(FakeRunner::new(ExpectedCommand::Verify, error)),
             num_retries: 10,
             retry_timeout: Duration::from_secs(0),
         };
         match step.execute().await {
-            Err(BlackoutError::TargetCommand(..)) => (),
+            Err(BlackoutError::FfxError(..)) => (),
             Ok(()) => panic!("verify step returned success when runner failed"),
             _ => panic!("verify step returned an unexpected error"),
         }
@@ -489,7 +488,7 @@ mod tests {
             let mut attempts = attempts.lock().unwrap();
             *attempts += 1;
             if *attempts <= 5 {
-                Err(BlackoutError::TargetCommand(CommandError(
+                Err(BlackoutError::FfxError(CommandError(
                     ExitStatus::from_raw(255),
                     "(fake stdout)".into(),
                     "(fake stderr)".into(),
@@ -499,13 +498,13 @@ mod tests {
             }
         };
         let step = VerifyStep {
-            runner: Arc::new(FakeRunner::new("verify", error)),
+            runner: Arc::new(FakeRunner::new(ExpectedCommand::Verify, error)),
             num_retries: 10,
             retry_timeout: Duration::from_secs(0),
         };
         match step.execute().await {
             Ok(()) => (),
-            Err(BlackoutError::TargetCommand(..)) => {
+            Err(BlackoutError::FfxError(..)) => {
                 panic!("verify step returned error when runner succeeded")
             }
             _ => panic!("verify step returned an unexpected error"),

@@ -6,7 +6,10 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 
 group("blackout") {
   testonly = true
-  public_deps = [ "blobfs-checkerboard" ]
+  public_deps = [
+    "blobfs-checkerboard",
+    "minfs-fsck",
+  ]
 }
 
 ffx_plugin("ffx_storage_blackout") {
@@ -16,8 +19,10 @@ ffx_plugin("ffx_storage_blackout") {
   args_sources = [ "src/args.rs" ]
 
   plugin_deps = [
+    "blackout-host/ffx:ffx_storage_blackout_step",
     "blackout-integration:ffx_storage_blackout_integration",
     "blobfs-checkerboard:ffx_storage_blackout_blobfs_checkerboard",
+    "minfs-fsck:ffx_storage_blackout_minfs_fsck",
   ]
 }
 

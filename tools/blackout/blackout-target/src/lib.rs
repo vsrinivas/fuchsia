@@ -7,47 +7,97 @@
 #![deny(missing_docs)]
 
 use {
-    anyhow::Error,
+    anyhow::Result,
+    async_trait::async_trait,
+    fidl_fuchsia_blackout_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_device::ControllerMarker,
     files_async::readdir,
     fuchsia_component::client::connect_to_protocol_at_path,
-    fuchsia_zircon as zx, io_util,
+    fuchsia_component::server::{ServiceFs, ServiceObj},
+    fuchsia_zircon as zx,
+    futures::{StreamExt, TryFutureExt, TryStreamExt},
+    io_util,
     rand::{distributions, rngs::StdRng, Rng, SeedableRng},
-    structopt::StructOpt,
 };
 
 pub mod static_tree;
 
-/// The exit code a target command is expected to return if the error is related to verification of
-/// the underlying filesystem. This primarily indicates to the host framework that it shouldn't
-/// retry when running a verification step - that it actually failed instead of seeing a transient
-/// failure such as a communication failure with the target device.
-pub const VERIFICATION_FAILURE_EXIT_CODE: i32 = 42;
-
-/// Common options for the target test binary
-#[derive(Debug, StructOpt)]
-#[structopt(rename_all = "kebab-case")]
-pub struct CommonOpts {
-    /// A seed to use for all random operations. Tests are deterministic relative to the provided
-    /// seed.
-    pub seed: u64,
-    /// The block device on the target device to use for testing. WARNING: the test can (and likely
-    /// will!) format this device. Don't use a main system partition!
-    pub block_device: String,
+/// The three steps the target-side of a blackout test needs to implement.
+#[async_trait]
+pub trait Test {
+    /// Setup the test run on the given block_device.
+    async fn setup(&self, block_device: String, seed: u64) -> Result<()>;
+    /// Run the test body on the given block_device.
+    async fn test(&self, block_device: String, seed: u64) -> Result<()>;
+    /// Verify the consistency of the filesystem on the block_device.
+    async fn verify(&self, block_device: String, seed: u64) -> Result<()>;
 }
 
-/// A set of common subcommands for the target test binary
-#[derive(Debug, StructOpt)]
-pub enum CommonCommand {
-    /// Run the setup step.
-    #[structopt(name = "setup")]
-    Setup,
-    /// Run the test step.
-    #[structopt(name = "test")]
-    Test,
-    /// Run the verification step.
-    #[structopt(name = "verify")]
-    Verify,
+struct BlackoutController(ControllerRequestStream);
+
+/// A test server, which serves the fuchsia.blackout.test.Controller protocol.
+pub struct TestServer<'a, T> {
+    fs: ServiceFs<ServiceObj<'a, BlackoutController>>,
+    test: T,
+}
+
+impl<'a, T> TestServer<'a, T>
+where
+    T: Test + Copy,
+{
+    /// Create a new test server for this test.
+    pub fn new(test: T) -> Result<TestServer<'a, T>> {
+        let mut fs = ServiceFs::new();
+        fs.dir("svc").add_fidl_service(BlackoutController);
+        fs.take_and_serve_directory_handle()?;
+
+        Ok(TestServer { fs, test })
+    }
+
+    /// Start serving the outgoing directory. Blocks until all connections are closed.
+    pub async fn serve(self) {
+        const MAX_CONCURRENT: usize = 10_000;
+        let test = self.test;
+        self.fs
+            .for_each_concurrent(MAX_CONCURRENT, move |stream| {
+                handle_request(test, stream).unwrap_or_else(|e| log::error!("{}", e))
+            })
+            .await;
+    }
+}
+
+async fn handle_request<T: Test + Copy>(
+    test: T,
+    BlackoutController(mut stream): BlackoutController,
+) -> Result<()> {
+    while let Some(request) = stream.try_next().await? {
+        handle_controller(test, request).await?;
+    }
+
+    Ok(())
+}
+
+async fn handle_controller<T: Test + Copy>(test: T, request: ControllerRequest) -> Result<()> {
+    match request {
+        ControllerRequest::Setup { responder, device_path, seed } => {
+            let mut res = test.setup(device_path, seed).await.map_err(|e| {
+                log::error!("{}", e);
+                zx::Status::INTERNAL.into_raw()
+            });
+            responder.send(&mut res)?;
+        }
+        ControllerRequest::Test { device_path, seed, .. } => test.test(device_path, seed).await?,
+        ControllerRequest::Verify { responder, device_path, seed } => {
+            let mut res = test.verify(device_path, seed).await.map_err(|e| {
+                // The test tries failing on purpose, so only print errors as warnings.
+                log::warn!("{}", e);
+                zx::Status::BAD_STATE.into_raw()
+            });
+            responder.send(&mut res)?;
+        }
+    }
+
+    Ok(())
 }
 
 /// Generate a Vec<u8> of random bytes from a seed using a standard distribution.
@@ -60,7 +110,7 @@ pub fn generate_content(seed: u64) -> Vec<u8> {
 
 /// Find the device in /dev/class/block that represents a given topological path. Returns the full
 /// path of the device in /dev/class/block.
-pub async fn find_dev(dev: &str) -> Result<String, Error> {
+pub async fn find_dev(dev: &str) -> Result<String> {
     let dev_class_block = io_util::open_directory_in_namespace(
         "/dev/class/block",
         io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,

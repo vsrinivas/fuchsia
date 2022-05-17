@@ -4,47 +4,42 @@
 
 use {
     anyhow::Result,
-    blackout_target::{CommonCommand, CommonOpts},
-    fuchsia_async as fasync,
-    structopt::StructOpt,
+    async_trait::async_trait,
+    blackout_target::{Test, TestServer},
 };
 
-#[derive(StructOpt)]
-#[structopt(rename_all = "kebab-case")]
-struct Opts {
-    #[structopt(flatten)]
-    common: CommonOpts,
-    /// A particular step of the test to perform.
-    #[structopt(subcommand)]
-    commands: CommonCommand,
-}
+#[derive(Copy, Clone)]
+struct IntegrationTest;
 
-fn setup() -> Result<()> {
-    println!("setup called");
-    Ok(())
-}
-
-fn test() -> Result<()> {
-    println!("test called");
-    loop {}
-}
-
-fn verify() -> Result<()> {
-    println!("verify called");
-    Ok(())
-}
-
-#[fasync::run_singlethreaded]
-async fn main() -> Result<()> {
-    let opts = Opts::from_args();
-
-    println!("opts: {:?}", opts.common);
-
-    match opts.commands {
-        CommonCommand::Setup => setup()?,
-        CommonCommand::Test => test()?,
-        CommonCommand::Verify => verify()?,
+#[async_trait]
+impl Test for IntegrationTest {
+    async fn setup(&self, _block_device: String, _seed: u64) -> Result<()> {
+        log::info!("setup called");
+        Ok(())
     }
+
+    async fn test(&self, _block_device: String, _seed: u64) -> Result<()> {
+        log::info!("test called");
+        loop {}
+    }
+
+    async fn verify(&self, block_device: String, _seed: u64) -> Result<()> {
+        log::info!("verify called with {}", block_device);
+
+        // We use the block device path to pass an indicator to fail verification, to test the
+        // error propagation.
+        if block_device == "fail" {
+            Err(anyhow::anyhow!("verification failure"))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[fuchsia::main]
+async fn main() -> Result<()> {
+    let server = TestServer::new(IntegrationTest)?;
+    server.serve().await;
 
     Ok(())
 }

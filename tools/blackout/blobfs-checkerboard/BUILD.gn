@@ -25,13 +25,14 @@ rustc_binary("blackout-blobfs-checkerboard-target-bin") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:structopt",
     "//tools/blackout/blackout-target",
   ]
   data_deps = [ "//src/storage/bin/blobfs" ]
@@ -43,7 +44,7 @@ rustc_binary("blackout-blobfs-checkerboard-target-bin") {
 fuchsia_component("blackout-blobfs-checkerboard-target-component") {
   testonly = true
   deps = [ ":blackout-blobfs-checkerboard-target-bin" ]
-  manifest = "meta/blackout_blobfs_checkerboard_target.cmx"
+  manifest = "meta/blackout_blobfs_checkerboard_target.cml"
 }
 
 fuchsia_package("blackout-blobfs-checkerboard-target") {

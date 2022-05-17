@@ -11,11 +11,14 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 ffx_plugin("ffx_storage_blackout_integration") {
   version = "0.1.0"
   edition = "2018"
+
   args_sources = [ "src/args.rs" ]
+
   sources = [ "src/lib.rs" ]
   deps = [
     "//src/lib/fuchsia-async",
     "//tools/blackout/blackout-host",
+    "//tools/blackout/fidl/fuchsia.blackout.test:fuchsia.blackout.test-rustc",
   ]
 }
 
@@ -24,9 +27,10 @@ rustc_binary("blackout-integration-target-bin") {
   testonly = true
   edition = "2018"
   deps = [
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:log",
     "//tools/blackout/blackout-target",
   ]
   source_root = "src/target.rs"
@@ -37,36 +41,12 @@ rustc_binary("blackout-integration-target-bin") {
 fuchsia_component("blackout-integration-target-component") {
   testonly = true
   deps = [ ":blackout-integration-target-bin" ]
-  manifest = "meta/blackout_integration_target.cmx"
-}
-
-rustc_binary("blackout-integration-target-failure-bin") {
-  output_name = "blackout_integration_target_failure_bin"
-  testonly = true
-  edition = "2018"
-  deps = [
-    "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:structopt",
-    "//tools/blackout/blackout-target",
-  ]
-  source_root = "src/target_failure.rs"
-
-  sources = [ "src/target_failure.rs" ]
-}
-
-fuchsia_component("blackout-integration-target-failure-component") {
-  testonly = true
-  deps = [ ":blackout-integration-target-failure-bin" ]
-  manifest = "meta/blackout_integration_target_failure.cmx"
+  manifest = "meta/blackout_integration_target.cml"
 }
 
 fuchsia_package("blackout-integration-target") {
   testonly = true
-  deps = [
-    ":blackout-integration-target-component",
-    ":blackout-integration-target-failure-component",
-  ]
+  deps = [ ":blackout-integration-target-component" ]
 }
 
 if (is_host) {

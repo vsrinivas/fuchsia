@@ -6,8 +6,7 @@
 #[derive(argh::FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "integration", description = "Run a blackout e2e integration test")]
 pub struct BlackoutIntegrationCommand {
-    /// ghost arg, doesn't do anything. There doesn't seem to be a way to have a subcommand with no
-    /// options.
-    #[argh(switch)]
-    ghost: bool,
+    /// run the test N number of times, collecting statistics on the number of failures.
+    #[argh(option, short = 'i', long = "iterations")]
+    pub iterations: Option<u64>,
 }

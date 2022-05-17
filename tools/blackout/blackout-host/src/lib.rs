@@ -7,10 +7,8 @@
 #![deny(missing_docs)]
 
 use {
-    anyhow::{self, bail, ensure, Context},
     ffx_isolate,
     rand::random,
-    serde_json::Value,
     std::{
         fmt,
         path::PathBuf,
@@ -25,7 +23,7 @@ use {
 };
 
 pub mod steps;
-use steps::{LoadStep, OperationStep, RebootStep, RebootType, SetupStep, TestStep, VerifyStep};
+use steps::{LoadStep, RebootStep, RebootType, SetupStep, TestStep, VerifyStep};
 
 pub mod integration;
 
@@ -66,6 +64,12 @@ impl From<Output> for CommandError {
     }
 }
 
+impl From<ffx_isolate::CommandOutput> for CommandError {
+    fn from(out: ffx_isolate::CommandOutput) -> Self {
+        CommandError(out.status, out.stdout, out.stderr)
+    }
+}
+
 /// An error occurred while attempting to reboot the system.
 #[derive(Debug, Error)]
 pub enum RebootError {
@@ -85,11 +89,15 @@ pub enum RebootError {
 /// Error used for the host-side of the blackout library.
 #[derive(Debug, Error)]
 pub enum BlackoutError {
+    /// Something went wrong!
+    #[error("error: {}", _0)]
+    AnyhowError(#[from] anyhow::Error),
+
     /// We got an error when trying to reboot.
     #[error("failed to reboot: {:?}", _0)]
     Reboot(#[from] RebootError),
 
-    /// We failed to run the command on the host. Specifically, when the spawm or something fails,
+    /// We failed to run the command on the host. Specifically, when the spawn or something fails,
     /// not when the command itself returns a non-zero exit code.
     #[error("host command failed: {:?}", _0)]
     HostCommand(#[from] std::io::Error),
@@ -98,14 +106,17 @@ pub enum BlackoutError {
     #[error("no targets found after 5s: {:?}", _0)]
     TargetDiscoveryTimeout(CommandError),
 
-    /// The command run on the target device failed to run. Either it returned a non-zero exit code
-    /// or it exited when it shouldn't have.
-    #[error("target command failed: {}", _0)]
-    TargetCommand(CommandError),
+    /// We got an error from the ffx command.
+    #[error("failed to run an ffx command: {:?}", _0)]
+    FfxError(CommandError),
+
+    /// A failure in the setup step
+    #[error("failed to setup test: {:?}", _0)]
+    SetupError(CommandError),
 
     /// Specifically the verification step failed. This indicates an actual test failure as opposed
     /// to a failure of the test framework or environmental failure.
-    #[error("verification failed: {}", _0)]
+    #[error("verification failed: {:?}", _0)]
     Verification(CommandError),
 }
 
@@ -160,6 +171,13 @@ impl Seed {
             Seed::Variable(seed) => seed.store(random(), Ordering::Relaxed),
         }
     }
+
+    fn get(&self) -> u64 {
+        match self {
+            Seed::Constant(seed) => *seed,
+            Seed::Variable(seed) => seed.load(Ordering::Relaxed),
+        }
+    }
 }
 
 impl fmt::Display for Seed {
@@ -183,7 +201,8 @@ enum RunMode {
 /// Test definition. This contains all the information to make a test reproducible in a particular
 /// environment, and allows host binaries to configure the steps taken by the test.
 struct Test {
-    bin: String,
+    package: String,
+    component: String,
     seed: Seed,
     block_device: String,
     reboot_type: RebootType,
@@ -196,13 +215,19 @@ impl fmt::Display for Test {
         write!(
             f,
             "Test {{
-    bin: {:?},
+    package: {:?},
+    component: {:?},
     seed: {:?},
     block_device: {:?},
     reboot_type: {:?},
     run_mode: {:?},
 }}",
-            self.bin, self.seed, self.block_device, self.reboot_type, self.run_mode,
+            self.package,
+            self.component,
+            self.seed,
+            self.block_device,
+            self.reboot_type,
+            self.run_mode,
         )
     }
 }
@@ -212,9 +237,9 @@ impl Test {
     /// that will be present on the target device. The package should be callable with `run` from
     /// the command line.
     pub fn new_component(package: &'static str, component: &'static str, opts: CommonOpts) -> Test {
-        let bin = format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx", package, component);
         Test {
-            bin,
+            package: package.to_string(),
+            component: component.to_string(),
             seed: Seed::new(opts.seed),
             block_device: opts.block_device,
             reboot_type: match opts.relay {
@@ -251,25 +276,6 @@ impl Test {
         Ok(())
     }
 
-    /// Run the test once. Used either directly, or as the main test driver for the multi-run modes.
-    ///
-    /// This function is separated from run_test for rather silly technical reasons. In rust, we can
-    /// have a main function return a result, which rust automatically prints out on failure, setting
-    /// the error code to some non-zero value. However, it prints out the Debug version of the error,
-    /// which is rather hard to read, as it's smushed onto one line. Instead of requiring all the
-    /// test implementations to figure it out on their own, our implementation pretty-prints out any
-    /// errors we find for you! We continue to return the result so that the exit code is properly
-    /// set.
-    async fn run_once(&self) -> Result<(), BlackoutError> {
-        match self.run_test().await {
-            r @ Ok(..) => r,
-            Err(e) => {
-                println!("{}", e);
-                Err(e)
-            }
-        }
-    }
-
     async fn run_iterations(&self, iterations: u64) -> Result<(), BlackoutError> {
         let mut failures = 0u64;
         let mut flukes = 0u64;
@@ -277,7 +283,7 @@ impl Test {
         for runs in 1..iterations + 1 {
             println!("{}", box_message(format!("test run #{}", runs)));
 
-            match self.run_once().await {
+            match self.run_test().await {
                 Ok(()) => (),
                 Err(BlackoutError::Verification(_)) => failures += 1,
                 Err(_) => flukes += 1,
@@ -298,7 +304,7 @@ impl Test {
     async fn run_iterations_until_failure(&self, iterations: u64) -> Result<(), BlackoutError> {
         for runs in 1..iterations + 1 {
             println!("{}", box_message(format!("test run #{}", runs)));
-            match self.run_once().await {
+            match self.run_test().await {
                 Ok(()) => (),
                 Err(e @ BlackoutError::Verification(_)) => return Err(e),
                 Err(_) => (),
@@ -325,7 +331,7 @@ impl Test {
     ///    iterations, but quit early if there is a failure instead of aggregating the results.
     pub async fn run(self) -> Result<(), BlackoutError> {
         match self.run_mode {
-            RunMode::Once => self.run_once().await,
+            RunMode::Once => self.run_test().await,
             RunMode::Iterations(iterations) => self.run_iterations(iterations).await,
             RunMode::IterationsUntilFailure(iterations) => {
                 self.run_iterations_until_failure(iterations).await
@@ -334,61 +340,17 @@ impl Test {
     }
 }
 
-async fn get_target(isolate: Arc<ffx_isolate::Isolate>) -> Result<String, anyhow::Error> {
-    if let Ok(name) = std::env::var("FUCHSIA_NODENAME") {
-        return Ok(name);
-    }
-
-    // ensure a daemon is spun up first, so we have a moment to discover targets.
-    let start = std::time::Instant::now();
-    loop {
-        let out = isolate.ffx(&["ffx", "target", "list"]).await?;
-        if out.stdout.len() > 10 {
-            break;
-        }
-        if start.elapsed() > std::time::Duration::from_secs(5) {
-            bail!("No targets found after 5s")
-        }
-    }
-
-    let out = isolate.ffx(&["target", "list", "-f", "j"]).await.context("getting target list")?;
-
-    ensure!(out.status.success(), "Looking up a target name failed: {:?}", out);
-
-    let targets: Value =
-        serde_json::from_str(&out.stdout).context("parsing output from target list")?;
-
-    let targets =
-        targets.as_array().ok_or(anyhow::anyhow!("expected target list ot return an array"))?;
-
-    let target = targets
-        .iter()
-        .find(|target| {
-            target["nodename"] != ""
-                && target["target_state"]
-                    .as_str()
-                    .map(|s| s.to_lowercase().contains("product"))
-                    .unwrap_or(false)
-        })
-        .ok_or(anyhow::anyhow!("did not find any named targets in a product state"))?;
-    target["nodename"]
-        .as_str()
-        .map(|s| s.to_string())
-        .ok_or(anyhow::anyhow!("expected product state target to have a nodename"))
-}
-
 /// A test environment. This wraps a test configuration with the environmental context to run it,
 /// such as the isolated ffx instance.
 pub struct TestEnv {
     test: Test,
     isolated_ffx: Arc<ffx_isolate::Isolate>,
-    target: String,
 }
 
 impl TestEnv {
     /// Create a new test with the provided name. The name needs to match the associated package
     /// that will be present on the target device. The package should be callable with `ffx
-    /// component run-legacy` from the command line.
+    /// component run` from the command line.
     ///
     /// At this point, the test environment will also perform target discovery, selecting either a
     /// node specified by $FUCHSIA_NODENAME or whatever the first target that gets enumerated by
@@ -396,23 +358,14 @@ impl TestEnv {
     ///
     /// If either creating the isolated ffx instance or the target discovery fails, this function
     /// will panic.
-    pub async fn new_component(
-        package: &'static str,
-        component: &'static str,
-        opts: CommonOpts,
-    ) -> TestEnv {
+    pub async fn new(package: &'static str, component: &'static str, opts: CommonOpts) -> TestEnv {
         let isolate = Arc::new(
             ffx_isolate::Isolate::new("blackout-ffx")
                 .await
                 .expect("failed to make new isolated ffx"),
         );
-        let target = get_target(isolate.clone()).await.expect("failed to discover target");
 
-        TestEnv {
-            test: Test::new_component(package, component, opts),
-            isolated_ffx: isolate,
-            target,
-        }
+        TestEnv { test: Test::new_component(package, component, opts), isolated_ffx: isolate }
     }
 
     /// Add a test step for setting up the filesystem in the way we want it for the test. This
@@ -421,8 +374,8 @@ impl TestEnv {
     pub fn setup_step(&mut self) -> &mut Self {
         self.test.add_step(Box::new(SetupStep::new(
             self.isolated_ffx.clone(),
-            &self.target,
-            &self.test.bin,
+            &self.test.package,
+            &self.test.component,
             self.test.seed.clone(),
             &self.test.block_device,
         )));
@@ -435,8 +388,8 @@ impl TestEnv {
     pub fn load_step(&mut self, duration: Duration) -> &mut Self {
         self.test.add_step(Box::new(LoadStep::new(
             self.isolated_ffx.clone(),
-            &self.target,
-            &self.test.bin,
+            &self.test.package,
+            &self.test.component,
             self.test.seed.clone(),
             &self.test.block_device,
             duration,
@@ -444,26 +397,10 @@ impl TestEnv {
         self
     }
 
-    /// Add an operation step. This runs the `test` subcommand on the target binary to completion
-    /// and checks the result.
-    pub fn operation_step(&mut self) -> &mut Self {
-        self.test.add_step(Box::new(OperationStep::new(
-            self.isolated_ffx.clone(),
-            &self.target,
-            &self.test.bin,
-            self.test.seed.clone(),
-            &self.test.block_device,
-        )));
-        self
-    }
-
     /// Add a reboot step. This reboots the target machine using the configured reboot mechanism.
     pub fn reboot_step(&mut self) -> &mut Self {
-        self.test.add_step(Box::new(RebootStep::new(
-            self.isolated_ffx.clone(),
-            &self.target,
-            &self.test.reboot_type,
-        )));
+        self.test
+            .add_step(Box::new(RebootStep::new(self.isolated_ffx.clone(), &self.test.reboot_type)));
         self
     }
 
@@ -474,8 +411,8 @@ impl TestEnv {
     pub fn verify_step(&mut self, num_retries: u32, retry_timeout: Duration) -> &mut Self {
         self.test.add_step(Box::new(VerifyStep::new(
             self.isolated_ffx.clone(),
-            &self.target,
-            &self.test.bin,
+            &self.test.package,
+            &self.test.component,
             self.test.seed.clone(),
             &self.test.block_device,
             num_retries,
@@ -653,7 +590,7 @@ mod tests {
     async fn run_n_executes_steps_n_times_other_error() {
         let iterations = 10;
         let (step, runs) = FakeStep::new(|_| {
-            Err(BlackoutError::TargetCommand(CommandError(
+            Err(BlackoutError::FfxError(CommandError(
                 ExitStatus::from_raw(1),
                 "(fake stdout)".into(),
                 "(fake stderr)".into(),

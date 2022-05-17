@@ -1,0 +1,34 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.blackout.test;
+
+using zx;
+
+const MAX_DEVICE_PATH uint64 = 100;
+
+/// Protocol to control the target-side component of power failure tests for the filesystems.
+@discoverable
+protocol Controller {
+    /// Run the setup step for this test. Often, this involves formatting the filesystem of choice
+    /// onto the block device, and perhaps setting up a base of files to work with.
+    Setup(struct {
+        device_path string:MAX_DEVICE_PATH;
+        seed uint64;
+    }) -> (struct {}) error zx.status;
+
+    /// Run the test step for this test. This kicks off the load generation algorithm for this
+    /// test, which will run indefinitely. It's expected that this load will be interrupted by a
+    /// power cycle.
+    Test(struct {
+        device_path string:MAX_DEVICE_PATH;
+        seed uint64;
+    });
+
+    /// Run the verify step for this test. Most of the time it involves running fsck on the block
+    /// device and returning the result.
+    Verify(struct {
+        device_path string:MAX_DEVICE_PATH;
+        seed uint64;
+    }) -> (struct {}) error zx.status;
+};
