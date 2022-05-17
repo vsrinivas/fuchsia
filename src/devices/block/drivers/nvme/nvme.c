@@ -71,6 +71,8 @@ typedef struct {
   zx_handle_t irqh;
   zx_handle_t bti;
   uint32_t flags;
+  // Max IO queue length, zero-based.
+  uint16_t max_io_queue_len;
   mtx_t lock;
 
   // io queue doorbell registers
@@ -215,7 +217,7 @@ static zx_status_t nvme_io_cq_get(nvme_device_t* nvme, nvme_cpl_t* cpl) {
   *cpl = nvme->io_cq[nvme->io_cq_head];
 
   // advance the head pointer, wrapping and inverting toggle at max
-  uint16_t next = (nvme->io_cq_head + 1) & (CQMAX(zx_system_get_page_size()) - 1);
+  uint16_t next = (nvme->io_cq_head + 1) & (nvme->max_io_queue_len);
   if ((nvme->io_cq_head = next) == 0) {
     nvme->io_cq_toggle ^= 1;
   }
@@ -905,8 +907,14 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   cmd.cmd =
       NVME_CMD_CID(0) | NVME_CMD_PRP | NVME_CMD_NORMAL | NVME_CMD_OPC(NVME_ADMIN_OP_CREATE_IOCQ);
   cmd.dptr.prp[0] = nvme->iob.phys_list[IDX_IO_CQ];
-  cmd.u.raw[0] = ((CQMAX(kPageSize) - 1) << 16) | 1;  // queue size, queue id
-  cmd.u.raw[1] = (0 << 16) | 2 | 1;                   // irq vector, irq enable, phys contig
+  uint16_t queue_len = CQMAX(kPageSize) - 1;
+  if (queue_len > NVME_CAP_MQES(cap)) {
+    queue_len = NVME_CAP_MQES(cap);
+  }
+  nvme->max_io_queue_len = queue_len;
+  zxlogf(INFO, "Using maximum queue size of 0x%x", queue_len);
+  cmd.u.raw[0] = (queue_len << 16) | 1;  // queue size, queue id
+  cmd.u.raw[1] = (0 << 16) | 2 | 1;      // irq vector, irq enable, phys contig
 
   if (nvme_admin_txn(nvme, &cmd, NULL) != ZX_OK) {
     zxlogf(ERROR, "completion queue creation op failed");
