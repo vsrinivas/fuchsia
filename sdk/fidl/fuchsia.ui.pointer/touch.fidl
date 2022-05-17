@@ -45,7 +45,9 @@ protocol TouchSource {
     /// server. Responses for *previous* events are fed to the server on the
     /// *next* call of |Watch| [1]. Each element in the |responses| vector is
     /// interpreted as the pairwise response to the event in the previous
-    /// |events| vector; the vector lengths must match.
+    /// |events| vector; the vector lengths must match. Note that the client's
+    /// contract to respond to events starts as soon as it registers its
+    /// endpoint with scenic, NOT when it first calls `Watch()`.
     ///
     /// Initial response. The first call to |Watch| must be an empty vector.
     ///
