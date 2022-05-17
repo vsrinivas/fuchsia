@@ -5,6 +5,8 @@
 #include <lib/virtualization/testing/fake_guest_vsock.h>
 #include <lib/virtualization/testing/fake_host_vsock.h>
 
+#include "lib/fpromise/result.h"
+
 namespace guest {
 namespace testing {
 
@@ -33,6 +35,22 @@ void FakeGuestVsock::AcceptConnectionFromHost(
     zx_status_t status = it->second(std::move(handle));
     callback(status == ZX_OK ? HostVsockEndpoint_Connect_Result::WithResponse({})
                              : HostVsockEndpoint_Connect_Result::WithErr(std::move(status)));
+  }
+}
+
+void FakeGuestVsock::AcceptConnection2FromHost(
+    uint32_t port, zx::socket client, zx::socket guest,
+    fuchsia::virtualization::HostVsockEndpoint::Connect2Callback callback) {
+  auto it = listeners_.find(port);
+  if (it == listeners_.end()) {
+    callback(fpromise::error(ZX_ERR_CONNECTION_REFUSED));
+  } else {
+    zx_status_t status = it->second(std::move(guest));
+    if (status == ZX_OK) {
+      callback(fpromise::ok(std::move(client)));
+    } else {
+      callback(fpromise::error(status));
+    }
   }
 }
 

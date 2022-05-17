@@ -135,6 +135,42 @@ void HostVsockEndpoint::ConnectCallback(
   }
 }
 
+void HostVsockEndpoint::Connect2(
+    uint32_t port, fuchsia::virtualization::HostVsockEndpoint::Connect2Callback callback) {
+  fuchsia::virtualization::GuestVsockAcceptor* acceptor =
+      acceptor_provider_(fuchsia::virtualization::DEFAULT_GUEST_CID);
+  if (acceptor == nullptr) {
+    callback(fpromise::error(ZX_ERR_CONNECTION_REFUSED));
+    return;
+  }
+
+  uint32_t src_port;
+  zx_status_t status = AllocEphemeralPort(&src_port);
+  if (status != ZX_OK) {
+    callback(fpromise::error(status));
+    return;
+  }
+
+  zx::socket client, guest;
+  status = zx::socket::create(ZX_SOCKET_STREAM, &client, &guest);
+  if (status != ZX_OK) {
+    callback(fpromise::error(status));
+    return;
+  }
+
+  auto callback2 = [this, src_port, client = std::move(client), callback = std::move(callback)](
+                       fuchsia::virtualization::GuestVsockAcceptor_Accept_Result result) mutable {
+    if (result.is_response()) {
+      callback(fpromise::ok(std::move(client)));
+    } else {
+      FreeEphemeralPort(src_port);
+      callback(fpromise::error(result.err()));
+    }
+  };
+  acceptor->Accept(fuchsia::virtualization::HOST_CID, src_port, port, std::move(guest),
+                   std::move(callback2));
+}
+
 void HostVsockEndpoint::OnShutdown(uint32_t port) {
   // If there are no listeners for this port then it was ephemeral and should
   // free it.

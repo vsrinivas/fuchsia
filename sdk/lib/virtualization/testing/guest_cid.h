@@ -5,12 +5,14 @@
 #ifndef LIB_VIRTUALIZATION_TESTING_GUEST_CID_H_
 #define LIB_VIRTUALIZATION_TESTING_GUEST_CID_H_
 
+#include <fuchsia/virtualization/cpp/fidl.h>
+
 namespace guest {
 namespace testing {
 
-// This is typically '3' in production for the first guest. Use some alternate
-// value here to ensure we don't couple too tightly to that behavior.
-static constexpr uint32_t kGuestCid = 1234;
+// Only one guest is supported per (soon to be deprecated, see fxr/97355) host vsock, and it will
+// always use the default guest CID.
+constexpr uint32_t kGuestCid = fuchsia::virtualization::DEFAULT_GUEST_CID;
 
 }  // namespace testing
 }  // namespace guest

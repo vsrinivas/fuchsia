@@ -50,6 +50,8 @@ class HostVsockEndpoint : public fuchsia::virtualization::HostVsockConnector,
               ListenCallback callback) override;
   void Connect(uint32_t cid, uint32_t port, zx::socket socket,
                fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback) override;
+  void Connect2(uint32_t port,
+                fuchsia::virtualization::HostVsockEndpoint::Connect2Callback callback) override;
 
   void OnShutdown(uint32_t port);
 

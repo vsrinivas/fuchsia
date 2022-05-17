@@ -18,6 +18,7 @@ namespace {
 using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Response;
 using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Result;
 using ::fuchsia::virtualization::HostVsockConnector_Connect_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect2_Result;
 using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
 using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
 
@@ -85,10 +86,22 @@ struct TestConnectorConnection {
 
 struct TestEndpointConnection {
   zx_status_t status = ZX_ERR_BAD_STATE;
+  zx::socket socket;
 
   fuchsia::virtualization::HostVsockEndpoint::ConnectCallback connect_callback() {
     return [this](HostVsockEndpoint_Connect_Result result) {
       this->status = result.is_response() ? ZX_OK : result.err();
+    };
+  }
+
+  fuchsia::virtualization::HostVsockEndpoint::Connect2Callback connect2_callback() {
+    return [this](HostVsockEndpoint_Connect2_Result result) {
+      if (result.is_response()) {
+        this->status = ZX_OK;
+        this->socket = std::move(result.response().socket);
+      } else {
+        this->status = result.err();
+      }
     };
   }
 
@@ -178,6 +191,23 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuest) {
   EXPECT_EQ(ZX_OK, connection.status);
 }
 
+TEST_F(HostVsockEndpointTest, Connect2HostToGuest) {
+  TestEndpointConnection connection;
+  host_endpoint_.Connect2(22, connection.connect2_callback());
+
+  auto requests = guest_acceptor_.TakeRequests();
+  ASSERT_EQ(1u, requests.size());
+  EXPECT_EQ(fuchsia::virtualization::HOST_CID, requests[0].src_cid);
+  EXPECT_EQ(kFirstEphemeralPort, requests[0].src_port);
+  EXPECT_EQ(22u, requests[0].port);
+  EXPECT_TRUE(requests[0].socket.is_valid());
+
+  requests[0].callback(fpromise::ok());
+
+  EXPECT_EQ(ZX_OK, connection.status);
+  EXPECT_TRUE(connection.socket.is_valid());
+}
+
 TEST_F(HostVsockEndpointTest, ConnectHostToHost) {
   zx::socket h1, h2;
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
@@ -257,8 +287,6 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestMultipleTimes) {
   }
 }
 
-namespace {
-
 // Open a connection from the host to the given guest on the given port.
 zx::socket OpenConnectionToGuest(HostVsockEndpoint* host_endpoint, uint32_t cid, uint32_t port) {
   // Create a socket.
@@ -270,8 +298,6 @@ zx::socket OpenConnectionToGuest(HostVsockEndpoint* host_endpoint, uint32_t cid,
   host_endpoint->Connect(cid, port, std::move(guest_end), NoOpCallback);
   return host_end;
 }
-
-}  // namespace
 
 TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
   // Open two connections.

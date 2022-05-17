@@ -33,6 +33,17 @@ void FakeHostVsock::Connect(uint32_t cid, uint32_t port, zx::socket socket,
   guest_vsock_->AcceptConnectionFromHost(port, std::move(socket), std::move(callback));
 }
 
+void FakeHostVsock::Connect2(uint32_t port, Connect2Callback callback) {
+  zx::socket client, guest;
+  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &client, &guest);
+  if (status != ZX_OK) {
+    callback(fpromise::error(status));
+    return;
+  }
+  guest_vsock_->AcceptConnection2FromHost(port, std::move(client), std::move(guest),
+                                          std::move(callback));
+}
+
 zx_status_t FakeHostVsock::AcceptConnectionFromGuest(uint32_t port,
                                                      fit::function<void(zx::handle)> callback) {
   auto it = listeners_.find(port);
