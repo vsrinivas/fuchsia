@@ -1,0 +1,18 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+
+if (is_host) {
+  go_library("gopkg") {
+    sources = [ "main.go" ]
+    deps = [ "//tools/fidl/lib/fidlgen_cpp" ]
+  }
+
+  go_binary("clang-format-wrapper") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/clang-format-wrapper"
+    deps = [ ":gopkg" ]
+  }
+}  # is_host

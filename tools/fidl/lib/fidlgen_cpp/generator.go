@@ -39,18 +39,17 @@ func NewGenerator(flags *CmdlineFlags, templates fs.FS, extraFuncs template.Func
 		},
 	})
 
-	var formatter fidlgen.Formatter
-
-	if runtime.GOOS == "darwin" {
-		// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
-		formatter = fidlgen.NewFormatterWithSizeLimit(512*1024,
-			flags.clangFormatPath, clangFormatArgs...)
-	} else {
-		formatter = fidlgen.NewFormatter(flags.clangFormatPath, clangFormatArgs...)
-	}
-
+	formatter := NewFormatter(flags.clangFormatPath, clangFormatArgs)
 	gen.gen = fidlgen.NewGenerator(flags.name, templates, formatter, funcs)
 	return gen
+}
+
+func NewFormatter(clangFormatPath string, clangFormatArgs []string) fidlgen.Formatter {
+	if runtime.GOOS == "darwin" {
+		// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
+		return fidlgen.NewFormatterWithSizeLimit(512*1024, clangFormatPath, clangFormatArgs...)
+	}
+	return fidlgen.NewFormatter(clangFormatPath, clangFormatArgs...)
 }
 
 func (gen *Generator) ExperimentEnabled(experiment string) bool {
