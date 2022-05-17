@@ -28,6 +28,21 @@ namespace test_service {
 }  // namespace test_service
 #ifdef __Fuchsia__
 
+::fitx::result<::fidl::Error> fidl::internal::NaturalSyncClientImpl<
+    ::test_service::SecondProtocol>::MethodOnSecond() {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_service::kSecondProtocol_MethodOnSecond_Ordinal,
+      ::test_service::kSecondProtocol_MethodOnSecond_DynamicFlags};
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  msg.Write(_client_end().handle());
+  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 std::optional<::fidl::UnbindInfo> fidl::internal::
     NaturalEventDispatcher<::test_service::SecondProtocol>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
@@ -112,6 +127,21 @@ namespace test_service {
 #endif  // __Fuchsia__
 
 }  // namespace test_service
+#ifdef __Fuchsia__
+
+::fitx::result<::fidl::Error> fidl::internal::NaturalSyncClientImpl<
+    ::test_service::FirstProtocol>::MethodOnFirst() {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_service::kFirstProtocol_MethodOnFirst_Ordinal,
+      ::test_service::kFirstProtocol_MethodOnFirst_DynamicFlags};
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  msg.Write(_client_end().handle());
+  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
+}
+
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 std::optional<::fidl::UnbindInfo> fidl::internal::

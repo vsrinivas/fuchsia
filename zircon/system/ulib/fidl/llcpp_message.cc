@@ -347,6 +347,44 @@ void OutgoingMessage::CallImplForCallerProvidedBuffer(
                     &actual_num_bytes, result_handles, result_handle_metadata, actual_num_handles);
 }
 
+IncomingMessage OutgoingMessage::CallImpl(internal::AnyUnownedTransport transport,
+                                          internal::MessageStorageViewBase& storage,
+                                          CallOptions options) {
+  if (status() != ZX_OK) {
+    return IncomingMessage::Create(Status(*this));
+  }
+  ZX_ASSERT(transport_type() == transport.type());
+  ZX_ASSERT(is_transactional());
+
+  uint8_t* result_bytes;
+  fidl_handle_t* result_handles;
+  fidl_handle_metadata_t* result_handle_metadata;
+  uint32_t actual_num_bytes = 0u;
+  uint32_t actual_num_handles = 0u;
+  internal::CallMethodArgs args = {
+      .wr_data = iovecs(),
+      .wr_handles = handles(),
+      .wr_handle_metadata = message_.iovec.handle_metadata,
+      .wr_data_count = iovec_actual(),
+      .wr_handles_count = handle_actual(),
+      .out_rd_data = reinterpret_cast<void**>(&result_bytes),
+      .out_rd_handles = &result_handles,
+      .out_rd_handle_metadata = &result_handle_metadata,
+      .rd_view = &storage,
+  };
+
+  zx_status_t status =
+      transport.call(std::move(options), args, &actual_num_bytes, &actual_num_handles);
+  ReleaseHandles();
+  if (status != ZX_OK) {
+    SetStatus(fidl::Status::TransportError(status));
+    return IncomingMessage::Create(Status(*this));
+  }
+
+  return IncomingMessage(transport_vtable_, result_bytes, actual_num_bytes, result_handles,
+                         result_handle_metadata, actual_num_handles);
+}
+
 OutgoingMessage::CopiedBytes::CopiedBytes(const OutgoingMessage& msg) {
   uint32_t byte_count = 0;
   for (uint32_t i = 0; i < msg.iovec_actual(); ++i) {

@@ -36,6 +36,29 @@ namespace test_placementofattributes {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<
+    ::test_placementofattributes::ExampleProtocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_placementofattributes::ExampleProtocol>> {
+ public:
+  ::fitx::result<::fidl::Error> Method(
+      ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
+          request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::test_placementofattributes::ExampleProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_placementofattributes::ExampleProtocol> {
  public:

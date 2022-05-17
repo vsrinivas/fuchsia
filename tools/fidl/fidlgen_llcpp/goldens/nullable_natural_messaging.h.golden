@@ -80,6 +80,26 @@ namespace test_nullable {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_nullable::SimpleProtocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_nullable::SimpleProtocol>> {
+ public:
+  ::fidl::Result<::test_nullable::SimpleProtocol::Add> Add(
+      ::fidl::Request<::test_nullable::SimpleProtocol::Add> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_nullable::SimpleProtocol> {
  public:

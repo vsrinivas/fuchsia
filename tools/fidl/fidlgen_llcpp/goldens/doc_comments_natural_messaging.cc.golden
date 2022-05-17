@@ -34,6 +34,21 @@ namespace test_doccomments {
 }  // namespace test_doccomments
 #ifdef __Fuchsia__
 
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface>::Method() {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_doccomments::kInterface_Method_Ordinal,
+      ::test_doccomments::kInterface_Method_DynamicFlags};
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  msg.Write(_client_end().handle());
+  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 std::optional<::fidl::UnbindInfo> fidl::internal::
     NaturalEventDispatcher<::test_doccomments::Interface>::DispatchEvent(
         ::fidl::IncomingMessage& msg,

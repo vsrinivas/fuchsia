@@ -797,11 +797,42 @@ struct TypeTraits<
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
-
-}  // namespace fidl
-namespace test_unknowninteractions {
 #ifdef __Fuchsia__
-}  // namespace test_unknowninteractions
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_unknowninteractions::Example::StrictTwoWay>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_unknowninteractions::Example::StrictTwoWay>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_unknowninteractions::Example::FlexibleTwoWay>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_unknowninteractions::Example::FlexibleTwoWay>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_unknowninteractions::Example::StrictOneWay>
@@ -1463,11 +1494,8 @@ class ::fidl::WireServer<::test_unknowninteractions::Example>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_unknowninteractions {
-#endif  // __Fuchsia__
-
-}  // namespace test_unknowninteractions
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

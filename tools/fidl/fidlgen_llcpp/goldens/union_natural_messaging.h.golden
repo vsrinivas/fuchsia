@@ -168,6 +168,29 @@ namespace test_union {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_union::TestProtocol> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalSyncClientImpl<::test_union::TestProtocol>> {
+ public:
+  ::fidl::Result<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
+  StrictXUnionHenceResponseMayBeStackAllocated();
+
+  ::fidl::Result<::test_union::TestProtocol::
+                     FlexibleXUnionHenceResponseMustBeHeapAllocated>
+  FlexibleXUnionHenceResponseMustBeHeapAllocated();
+
+ private:
+  ::fidl::UnownedClientEnd<::test_union::TestProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_union::TestProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_union::TestProtocol> {
  public:

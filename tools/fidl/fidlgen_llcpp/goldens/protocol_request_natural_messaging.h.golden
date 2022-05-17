@@ -144,6 +144,34 @@ namespace test_protocolrequest {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocolrequest::Parent>> {
+ public:
+  ::fidl::Result<::test_protocolrequest::Parent::GetChild> GetChild();
+
+  ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest>
+  GetChildRequest();
+
+  ::fitx::result<::fidl::Error> TakeChild(
+      ::fidl::Request<::test_protocolrequest::Parent::TakeChild> request);
+
+  ::fitx::result<::fidl::Error> TakeChildRequest(
+      ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>
+          request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_protocolrequest::Parent> {
  public:
@@ -364,6 +392,22 @@ class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Child> final
     : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Child>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocolrequest::Child>> {
+ public:
+ private:
+  ::fidl::UnownedClientEnd<::test_protocolrequest::Child> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
 };
 #endif  // __Fuchsia__
 

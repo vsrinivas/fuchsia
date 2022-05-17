@@ -55,3 +55,76 @@ class {{ .WireSyncBufferClientImpl }} final :
 };
 {{- end }}
 
+
+
+{{- define "Protocol:Caller:NaturalMessagingHeader" }}
+{{- EnsureNamespace "" }}
+{{- IfdefFuchsia }}
+
+template <>
+class {{ .NaturalSyncClientImpl }} final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<{{ .NaturalSyncClientImpl }}> {
+ public:
+  {{ range .TwoWayMethods }}
+    {{ .Docs }}
+    {{ .NaturalResult }} {{ .Name }}({{ .NaturalRequestArg "request" }});
+
+  {{ end }}
+
+  {{ range .OneWayMethods }}
+    {{ .Docs }}
+    ::fitx::result<::fidl::Error> {{ .Name }}({{ .NaturalRequestArg "request" }});
+
+  {{ end }}
+
+ private:
+  ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> _client_end() const {
+    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(
+      _transport().get<{{ .Transport.Type }}>());
+  }
+};
+
+{{- EndifFuchsia }}
+{{- end }}
+
+
+
+{{- define "Protocol:Caller:NaturalMessagingSource" }}
+{{- EnsureNamespace "" }}
+{{- IfdefFuchsia }}
+
+{{ range .TwoWayMethods }}
+  {{ .NaturalResult }}
+  {{ $.NaturalSyncClientImpl.NoLeading }}::{{ .Name }}({{ .NaturalRequestArg "request" }}) {
+    ::fidl::internal::NaturalMessageEncoder encoder{
+        &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
+    {{- if .HasRequestPayload }}
+    encoder.EncodeBody(
+        {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)));
+    {{- end }}
+    ::fidl::OutgoingMessage msg = encoder.GetMessage();
+    {{ .IncomingMessageStorageForResponse }} response_storage;
+    return ::fidl::internal::DecodeResponseAndFoldError<{{ .Marker }}>(
+        msg.Call(_client_end().handle(), response_storage.view()), nullptr);
+  }
+
+{{ end }}
+
+{{ range .OneWayMethods }}
+  ::fitx::result<::fidl::Error>
+  {{ $.NaturalSyncClientImpl.NoLeading }}::{{ .Name }}({{ .NaturalRequestArg "request" }}) {
+    ::fidl::internal::NaturalMessageEncoder encoder{
+        &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
+    {{- if .HasRequestPayload }}
+    encoder.EncodeBody(
+        {{ .NaturalRequestConverter }}::IntoDomainObject(std::move(request)));
+    {{- end }}
+    ::fidl::OutgoingMessage msg = encoder.GetMessage();
+    msg.Write(_client_end().handle());
+    return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
+  }
+
+{{ end }}
+
+{{- EndifFuchsia }}
+{{- end }}

@@ -106,6 +106,7 @@ var (
 	NaturalClientCallback       = fidlNs.member("ClientCallback")
 	NaturalThenable             = internalNs.member("NaturalThenable")
 	NaturalAsyncEventHandler    = transportNs.member("AsyncEventHandler")
+	NaturalSyncClientImpl       = internalNs.member("NaturalSyncClientImpl")
 
 	// NaturalEventHandlerInterface is shared between sync and async event handling.
 	NaturalEventHandlerInterface = internalNs.member("NaturalEventHandlerInterface")
@@ -125,6 +126,7 @@ type unifiedMessagingDetails struct {
 	NaturalAsyncEventHandler     name
 	NaturalEventHandlerInterface name
 	NaturalEventDispatcher       name
+	NaturalSyncClientImpl        name
 	NaturalWeakEventSender       name
 	NaturalEventSender           name
 	NaturalServerDispatcher      name
@@ -138,6 +140,7 @@ func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol
 		NaturalAsyncEventHandler:     NaturalAsyncEventHandler.template(p),
 		NaturalEventHandlerInterface: NaturalEventHandlerInterface.template(p),
 		NaturalEventDispatcher:       NaturalEventDispatcher.template(p),
+		NaturalSyncClientImpl:        NaturalSyncClientImpl.template(p),
 		NaturalWeakEventSender:       NaturalWeakEventSender.template(p),
 		NaturalEventSender:           NaturalEventSender.template(p),
 		NaturalServerDispatcher:      NaturalServerDispatcher.template(p),
@@ -190,6 +193,9 @@ var (
 	WireOrdinal             = internalNs.member("WireOrdinal")
 	WireThenable            = internalNs.member("WireThenable")
 	WireBufferThenable      = internalNs.member("WireBufferThenable")
+
+	// Type related
+	IncomingMessageStorage = internalNs.member("IncomingMessageStorage")
 )
 
 type wireTypeNames struct {
@@ -549,6 +555,10 @@ type methodInner struct {
 	Marker       nameVariants
 	wireMethod
 	unifiedMethod
+
+	// IncomingMessageStorageForResponse is shared between wire and unified messaging.
+	IncomingMessageStorageForResponse name
+
 	baseCodingTableName string
 	requestTypeShapeV1  TypeShape
 	requestTypeShapeV2  TypeShape
@@ -909,20 +919,23 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			maybeResponsePayload = c.compileNameVariants(v.ResponsePayload.Identifier)
 		}
 
+		wireMethod := newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire)
+		unifiedMethod := newUnifiedMethod(methodMarker.Wire, unifiedMessaging)
 		method := newMethod(methodInner{
 			nameVariants: name,
 			protocolName: protocolName,
 			// Using the raw identifier v.Name instead of the name after
 			// reserved words logic, since that's the behavior in fidlc.
-			baseCodingTableName: codingTableName + string(v.Name),
-			Marker:              methodMarker,
-			requestTypeShapeV1:  TypeShape{requestTypeShapeV1},
-			requestTypeShapeV2:  TypeShape{requestTypeShapeV2},
-			responseTypeShapeV1: TypeShape{responseTypeShapeV1},
-			responseTypeShapeV2: TypeShape{responseTypeShapeV2},
-			wireMethod:          newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire),
-			unifiedMethod:       newUnifiedMethod(methodMarker.Wire, unifiedMessaging),
-			Attributes:          Attributes{v.Attributes},
+			baseCodingTableName:               codingTableName + string(v.Name),
+			Marker:                            methodMarker,
+			requestTypeShapeV1:                TypeShape{requestTypeShapeV1},
+			requestTypeShapeV2:                TypeShape{requestTypeShapeV2},
+			responseTypeShapeV1:               TypeShape{responseTypeShapeV1},
+			responseTypeShapeV2:               TypeShape{responseTypeShapeV2},
+			wireMethod:                        wireMethod,
+			unifiedMethod:                     unifiedMethod,
+			IncomingMessageStorageForResponse: IncomingMessageStorage.template(wireMethod.WireTransactionalResponse),
+			Attributes:                        Attributes{v.Attributes},
 			// TODO(fxbug.dev/84834): Use the functionality in //tools/fidl/lib/fidlgen/identifiers.go
 			FullyQualifiedName:        fmt.Sprintf("%s.%s", p.Name, v.Name),
 			Ordinal:                   v.Ordinal,

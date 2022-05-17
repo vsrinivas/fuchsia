@@ -46,6 +46,27 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_doccomments::Interface>> {
+ public:
+  /// method comment #1
+  ///
+  /// method comment #3
+  ::fitx::result<::fidl::Error> Method();
+
+ private:
+  ::fidl::UnownedClientEnd<::test_doccomments::Interface> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_doccomments::Interface>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_doccomments::Interface> {
  public:

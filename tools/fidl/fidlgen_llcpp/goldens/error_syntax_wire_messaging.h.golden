@@ -618,11 +618,46 @@ static_assert(
     offsetof(::fidl::WireResponse<
                  ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
              result) == 0);
-
-}  // namespace fidl
-namespace test_errorsyntax {
 #ifdef __Fuchsia__
-}  // namespace test_errorsyntax
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                            ComposedCallWhichMayFail>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                               ComposedCallWhichMayFail>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                            CallWhichMayFail>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
@@ -1394,11 +1429,8 @@ class ::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_errorsyntax {
-#endif  // __Fuchsia__
-
-}  // namespace test_errorsyntax
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

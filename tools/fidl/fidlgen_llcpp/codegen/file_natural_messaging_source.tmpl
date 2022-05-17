@@ -31,6 +31,8 @@ do not support them in the bindings. */}}
 {{ "" }}
   {{- template "Protocol:Client:NaturalMessagingSource" $protocol }}
 {{ "" }}
+  {{- template "Protocol:Caller:NaturalMessagingSource" $protocol }}
+{{ "" }}
   {{- template "Protocol:EventHandler:NaturalMessagingSource" $protocol }}
 {{ "" }}
   {{- template "Protocol:EventSender:NaturalMessagingSource" $protocol }}

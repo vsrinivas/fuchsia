@@ -120,6 +120,25 @@ namespace test_anonymous {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_anonymous::SomeProtocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_anonymous::SomeProtocol>> {
+ public:
+  ::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod> SomeMethod(
+      ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_anonymous::SomeProtocol> {
  public:

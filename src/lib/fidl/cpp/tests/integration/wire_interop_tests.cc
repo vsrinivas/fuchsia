@@ -694,4 +694,204 @@ TEST_F(WireClientToNaturalServerWithEventHandler, SendOnNodeEventOverServerBindi
   }
 }
 
+// Test fixture to simplify creating endpoints and a unified client to talk to
+// a wire domain object server.
+class UnifiedSyncClientToWireServer : public zxtest::Test, public MockData {
+ public:
+  UnifiedSyncClientToWireServer() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
+  void SetUp() final {
+    zx::status client_end =
+        fidl::CreateEndpoints<fidl_cpp_wire_interop_test::Interop>(&server_end_);
+    ASSERT_OK(client_end.status_value());
+    client_.Bind(std::move(*client_end));
+  }
+
+  async::Loop& loop() { return loop_; }
+  fidl::ServerEnd<fidl_cpp_wire_interop_test::Interop>& server_end() { return server_end_; }
+  fidl::SyncClient<fidl_cpp_wire_interop_test::Interop>& client() { return client_; }
+
+ private:
+  async::Loop loop_;
+  fidl::ServerEnd<fidl_cpp_wire_interop_test::Interop> server_end_;
+  fidl::SyncClient<fidl_cpp_wire_interop_test::Interop> client_;
+};
+
+// TODO: more sync client tests
+TEST_F(UnifiedSyncClientToWireServer, RoundTrip) {
+  class Server : public WireTestBase {
+   public:
+    void RoundTrip(RoundTripRequestView request, RoundTripCompleter::Sync& completer) final {
+      CheckWireFile(request->node);
+      num_calls++;
+      completer.Reply(request->node);
+    }
+
+    int num_calls = 0;
+  };
+  Server server;
+  fidl::BindServer(loop().dispatcher(), std::move(server_end()), &server);
+  ASSERT_OK(loop().StartThread());
+
+  {
+    // Test with natural domain objects.
+    auto node = MakeNaturalFile();
+    fidl_cpp_wire_interop_test::InteropRoundTripRequest request{std::move(node)};
+
+    fidl::Result<fidl_cpp_wire_interop_test::Interop::RoundTrip> result =
+        client()->RoundTrip(std::move(request));
+
+    ASSERT_TRUE(result.is_ok());
+    CheckNaturalFile(result->node());
+    EXPECT_EQ(1, server.num_calls);
+
+    // Check that `fidl::Call` works with this one test (since they delegate
+    // to the same implementation, we don't need to test `fidl::Call` everywhere).
+    static_assert(std::is_same_v<cpp20::remove_cvref_t<decltype(fidl::Call(client().client_end()))>,
+                                 cpp20::remove_cvref_t<decltype(client().operator->())>>,
+                  "fidl::Call and fidl::SyncClient exposes the same impl");
+    fidl::Result<fidl_cpp_wire_interop_test::Interop::RoundTrip> call_result =
+        fidl::Call(client().client_end())->RoundTrip({MakeNaturalFile()});
+    ASSERT_TRUE(call_result.is_ok());
+    CheckNaturalFile(call_result->node());
+    EXPECT_EQ(2, server.num_calls);
+  }
+
+  {
+    // Test with wire domain objects.
+    fidl::Arena arena;
+    auto node = MakeWireFile(arena);
+
+    fidl::WireResult<fidl_cpp_wire_interop_test::Interop::RoundTrip> result =
+        client().wire()->RoundTrip(node);
+
+    ASSERT_TRUE(result.ok(), "RoundTrip failed: %s", result.error().FormatDescription().c_str());
+    auto* response = result.Unwrap();
+    CheckWireFile(response->node);
+    EXPECT_EQ(3, server.num_calls);
+
+    // Check that `.wire().buffer()` exists with this one test
+    // (caller-allocating flavors extensively tested elsewhere).
+    fidl::WireUnownedResult<fidl_cpp_wire_interop_test::Interop::RoundTrip>
+        caller_allocating_result = client().wire().buffer(arena)->RoundTrip(node);
+    response = caller_allocating_result.Unwrap();
+    ASSERT_TRUE(caller_allocating_result.ok());
+    CheckWireFile(response->node);
+    ASSERT_OK(loop().RunUntilIdle());
+    EXPECT_EQ(4, server.num_calls);
+  }
+}
+
+TEST_F(UnifiedSyncClientToWireServer, TryRoundTrip) {
+  class Server : public WireTestBase {
+   public:
+    void TryRoundTrip(TryRoundTripRequestView request,
+                      TryRoundTripCompleter::Sync& completer) final {
+      CheckWireDir(request->node);
+      num_calls++;
+      if (reply_with_error.load()) {
+        completer.ReplyError(ZX_ERR_INVALID_ARGS);
+      } else {
+        completer.ReplySuccess(request->node);
+      }
+    }
+
+    std::atomic<bool> reply_with_error = false;
+    int num_calls = 0;
+  };
+  Server server;
+  fidl::BindServer(loop().dispatcher(), std::move(server_end()), &server);
+  ASSERT_OK(loop().StartThread());
+
+  {
+    // Test with natural domain objects, success case.
+    auto node = MakeNaturalDir();
+    fidl_cpp_wire_interop_test::InteropTryRoundTripRequest request{std::move(node)};
+    fidl::Result<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> result =
+        client()->TryRoundTrip(std::move(request));
+    ASSERT_TRUE(result.is_ok());
+    fidl_cpp_wire_interop_test::InteropTryRoundTripResponse payload = std::move(result.value());
+    {
+      fidl_cpp_wire_interop_test::Node node = payload.node();
+      CheckNaturalDir(node);
+      EXPECT_EQ(1, server.num_calls);
+    }
+  }
+
+  {
+    // Test with wire domain objects, success case.
+    fidl::Arena arena;
+    auto node = MakeWireDir(arena);
+    fidl::WireResult<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> result =
+        client().wire()->TryRoundTrip(node);
+    ASSERT_TRUE(result.ok(), "TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
+    auto* response = result.Unwrap();
+    ASSERT_TRUE(response->result.is_response());
+    CheckWireDir(response->result.response().node);
+    EXPECT_EQ(2, server.num_calls);
+  }
+
+  server.reply_with_error.store(true);
+
+  {
+    // Test with natural domain objects, error case.
+    auto node = MakeNaturalDir();
+    fidl_cpp_wire_interop_test::InteropTryRoundTripRequest request{std::move(node)};
+    fidl::Result<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> result =
+        client()->TryRoundTrip(std::move(request));
+    ASSERT_FALSE(result.is_ok());
+    ASSERT_TRUE(result.is_error());
+    fidl::AnyErrorIn<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> error =
+        result.error_value();
+    ASSERT_TRUE(error.is_application_error());
+    EXPECT_STATUS(ZX_ERR_INVALID_ARGS, error.application_error());
+    EXPECT_EQ(3, server.num_calls);
+  }
+
+  {
+    // Test with wire domain objects, error case.
+    fidl::Arena arena;
+    auto node = MakeWireDir(arena);
+    fidl::WireResult<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> result =
+        client().wire()->TryRoundTrip(node);
+    ASSERT_TRUE(result.ok(), "TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
+    auto* response = result.Unwrap();
+    ASSERT_TRUE(response->result.is_err());
+    EXPECT_STATUS(ZX_ERR_INVALID_ARGS, response->result.err());
+    EXPECT_EQ(4, server.num_calls);
+  }
+}
+
+// Test sending a one way call.
+TEST_F(UnifiedSyncClientToWireServer, OneWay) {
+  class Server : public WireTestBase {
+   public:
+    void OneWay(OneWayRequestView request, OneWayCompleter::Sync& completer) override {
+      CheckWireFile(request->node);
+      num_calls++;
+    }
+
+    int num_calls = 0;
+  };
+  Server server;
+  fidl::BindServer(loop().dispatcher(), std::move(server_end()), &server);
+  {
+    // Test with natural domain objects.
+    fitx::result<fidl::Error> result = client()->OneWay({MakeNaturalFile()});
+    ASSERT_TRUE(result.is_ok());
+    ASSERT_OK(loop().RunUntilIdle());
+    EXPECT_EQ(1, server.num_calls);
+  }
+  {
+    // Test with wire domain objects.
+    fidl::Arena arena;
+    fidl::Status status = client().wire()->OneWay(MakeWireFile(arena));
+    ASSERT_TRUE(status.ok());
+    ASSERT_OK(loop().RunUntilIdle());
+    EXPECT_EQ(2, server.num_calls);
+  }
+}
+
+// TODO(fxbug.dev/60240): Synchronous natural events handling.
+
 }  // namespace

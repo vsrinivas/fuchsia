@@ -30,6 +30,7 @@ template <typename FidlMethod>
 struct WireEvent;
 
 namespace internal {
+
 template <typename FidlMethod>
 struct TransactionalRequest;
 
@@ -38,6 +39,7 @@ struct TransactionalResponse;
 
 template <typename FidlMethod>
 struct TransactionalEvent;
+
 }  // namespace internal
 
 #ifdef __Fuchsia__
@@ -80,6 +82,19 @@ namespace internal {
 
 template <typename FidlMethod>
 struct WireOrdinal;
+
+// |IncomingMessageStorage| allocates the necessary storage for receiving a
+// transactional message of type |FidlType| from its corresponding transport.
+// The allocation is be inline if reasonably small. It is useful for allocating
+// bespoke amount of memory when the code path is certain what is the message
+// type, such as during synchronous calls.
+//
+// |FidlType| must be a specialization of |TransactionalResponse|.
+//
+// This class is shared between wire and natural types - both receive messages
+// of the same shapes and then perform their own decoding.
+template <typename FidlType>
+struct IncomingMessageStorage;
 
 #ifdef __Fuchsia__
 

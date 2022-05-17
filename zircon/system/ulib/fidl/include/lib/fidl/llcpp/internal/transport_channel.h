@@ -13,6 +13,7 @@
 #include <lib/async/wait.h>
 #include <lib/fidl/llcpp/internal/endpoints.h>
 #include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/llcpp/message_storage.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 
@@ -33,6 +34,8 @@ class Result;
 
 namespace internal {
 
+struct ChannelMessageStorageView;
+
 struct ChannelTransport {
   using OwnedType = zx::channel;
   using UnownedType = zx::unowned_channel;
@@ -51,6 +54,7 @@ struct ChannelTransport {
   using HandleMetadata = fidl_channel_handle_metadata_t;
   using IncomingTransportContextType = struct {};
   using OutgoingTransportContextType = struct {};
+  using MessageStorageView = ChannelMessageStorageView;
 
   static constexpr bool kTransportProvidesReadBuffer = false;
   // This is chosen for performance reasons. It should generally be the same as kIovecChunkSize in
@@ -114,6 +118,29 @@ class ChannelWaiter : private async_wait_t, public TransportWaiter {
   async_dispatcher_t* dispatcher_;
   TransportWaitSuccessHandler success_handler_;
   TransportWaitFailureHandler failure_handler_;
+};
+
+// A view into an object providing storage for messages read from a Zircon channel.
+struct ChannelMessageStorageView : public MessageStorageViewBase {
+  fidl::BufferSpan bytes;
+  zx_handle_t* handles;
+  fidl_channel_handle_metadata_t* handle_metadata;
+  uint32_t handle_capacity;
+};
+
+// Base class with common functionality for all storage classes backing messages
+// read from a Zircon channel.
+template <typename Derived>
+struct ChannelMessageStorageBase {
+  ChannelMessageStorageView view() {
+    auto* derived = static_cast<Derived*>(this);
+    return ChannelMessageStorageView{
+        .bytes = derived->bytes_.view(),
+        .handles = derived->handles_.data(),
+        .handle_metadata = derived->handle_metadata_.data(),
+        .handle_capacity = Derived::kNumHandles,
+    };
+  }
 };
 
 }  // namespace internal

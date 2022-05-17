@@ -81,6 +81,68 @@ namespace test_requestflexibleenvelope {
 }  // namespace test_requestflexibleenvelope
 #ifdef __Fuchsia__
 
+::fidl::Result<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
+fidl::internal::NaturalSyncClientImpl<
+    ::test_requestflexibleenvelope::Protocol>::
+    RequestStrictResponseFlexible(
+        ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexible>
+            request) {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestStrictResponseFlexible_Ordinal,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestStrictResponseFlexible_DynamicFlags};
+  encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<
+                     ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                                         RequestStrictResponseFlexible>>::
+                         IntoDomainObject(std::move(request)));
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  ::fidl::internal::IncomingMessageStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_requestflexibleenvelope::Protocol::
+              RequestStrictResponseFlexible>>
+      response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
+      msg.Call(_client_end().handle(), response_storage.view()), nullptr);
+}
+
+::fidl::Result<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
+fidl::internal::NaturalSyncClientImpl<
+    ::test_requestflexibleenvelope::Protocol>::
+    RequestFlexibleResponseStrict(
+        ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrict>
+            request) {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestFlexibleResponseStrict_Ordinal,
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestFlexibleResponseStrict_DynamicFlags};
+  encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<
+                     ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                                         RequestFlexibleResponseStrict>>::
+                         IntoDomainObject(std::move(request)));
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  ::fidl::internal::IncomingMessageStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_requestflexibleenvelope::Protocol::
+              RequestFlexibleResponseStrict>>
+      response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
+      msg.Call(_client_end().handle(), response_storage.view()), nullptr);
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
     ::test_requestflexibleenvelope::Protocol>::
     DispatchEvent(

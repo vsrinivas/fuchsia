@@ -108,6 +108,75 @@ namespace test_protocolrequest {
 }  // namespace test_protocolrequest
 #ifdef __Fuchsia__
 
+::fidl::Result<::test_protocolrequest::Parent::GetChild> fidl::internal::
+    NaturalSyncClientImpl<::test_protocolrequest::Parent>::GetChild() {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocolrequest::kParent_GetChild_Ordinal,
+      ::test_protocolrequest::kParent_GetChild_DynamicFlags};
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  ::fidl::internal::IncomingMessageStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolrequest::Parent::GetChild>>
+      response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<
+      ::test_protocolrequest::Parent::GetChild>(
+      msg.Call(_client_end().handle(), response_storage.view()), nullptr);
+}
+
+::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> fidl::internal::
+    NaturalSyncClientImpl<::test_protocolrequest::Parent>::GetChildRequest() {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
+      ::test_protocolrequest::kParent_GetChildRequest_DynamicFlags};
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  ::fidl::internal::IncomingMessageStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolrequest::Parent::GetChildRequest>>
+      response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<
+      ::test_protocolrequest::Parent::GetChildRequest>(
+      msg.Call(_client_end().handle(), response_storage.view()), nullptr);
+}
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChild(
+        ::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocolrequest::kParent_TakeChild_Ordinal,
+      ::test_protocolrequest::kParent_TakeChild_DynamicFlags};
+  encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<
+          ::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::
+          IntoDomainObject(std::move(request)));
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  msg.Write(_client_end().handle());
+  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
+}
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(
+        ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>
+            request) {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_protocolrequest::kParent_TakeChildRequest_Ordinal,
+      ::test_protocolrequest::kParent_TakeChildRequest_DynamicFlags};
+  encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<
+          ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>>::
+          IntoDomainObject(std::move(request)));
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  msg.Write(_client_end().handle());
+  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 std::optional<::fidl::UnbindInfo> fidl::internal::
     NaturalEventDispatcher<::test_protocolrequest::Parent>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
@@ -263,6 +332,10 @@ void fidl::Server<::test_protocolrequest::Parent>::dispatch_message(
                                                 std::move(transport_context),
                                                 txn);
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

@@ -35,6 +35,28 @@ namespace test_placementofattributes {
 }  // namespace test_placementofattributes
 #ifdef __Fuchsia__
 
+::fitx::result<::fidl::Error> fidl::internal::NaturalSyncClientImpl<
+    ::test_placementofattributes::ExampleProtocol>::
+    Method(
+        ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
+            request) {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_placementofattributes::kExampleProtocol_Method_Ordinal,
+      ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
+  encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+          ::test_placementofattributes::ExampleProtocol::Method>>::
+          IntoDomainObject(std::move(request)));
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  msg.Write(_client_end().handle());
+  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
     ::test_placementofattributes::ExampleProtocol>::
     DispatchEvent(

@@ -442,7 +442,7 @@ class WireSyncClient {
     return std::move(client_end_);
   }
 
-  // Returns a veneer object for making FIDL calls with managed memory.
+  // Returns an interface for making FIDL calls with managed memory.
   internal::SyncEndpointManagedVeneer<internal::WireSyncClientImpl<FidlProtocol>> operator->()
       const {
     ZX_ASSERT(is_valid());
@@ -450,7 +450,7 @@ class WireSyncClient {
         fidl::internal::MakeAnyUnownedTransport(client_end_.handle()));
   }
 
-  // Returns a veneer object which exposes the caller-allocating API, using
+  // Returns an interface which exposes the caller-allocating API, using
   // the provided |resource| to allocate buffers necessary for each call.
   // See documentation on |SyncEndpointVeneer::buffer| for detailed behavior.
   template <typename MemoryResource>

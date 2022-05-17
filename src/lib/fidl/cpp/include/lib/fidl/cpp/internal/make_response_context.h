@@ -9,8 +9,82 @@
 #include <lib/fidl/cpp/unified_messaging.h>
 #include <lib/fidl/llcpp/client_base.h>
 
+#include <optional>
+
 namespace fidl {
 namespace internal {
+
+// |DecodeResponseAndFoldError| decodes an incoming message |incoming| returns
+// a transport-specific result type (e.g. |fidl::Result| for Zircon channel
+// transport). In doing so it combines any FIDL application error from the error
+// syntax with transport errors.
+//
+// If a terminal error occurred which warrants unbinding, |out_maybe_unbind|
+// will be populated with a reason if not nullptr.
+template <typename FidlMethod>
+auto DecodeResponseAndFoldError(::fidl::IncomingMessage&& incoming,
+                                ::std::optional<::fidl::UnbindInfo>* out_maybe_unbind) {
+  using ResultType = typename FidlMethod::Protocol::Transport::template Result<FidlMethod>;
+  using NaturalResponse = ::fidl::Response<FidlMethod>;
+  constexpr bool HasApplicationError =
+      ::fidl::internal::NaturalMethodTypes<FidlMethod>::HasApplicationError;
+  constexpr bool IsAbsentBody = ::fidl::internal::NaturalMethodTypes<FidlMethod>::IsAbsentBody;
+
+  // Check error from the underlying transport.
+  if (!incoming.ok()) {
+    ResultType error = ::fitx::error(incoming.error());
+    if (out_maybe_unbind != nullptr) {
+      out_maybe_unbind->emplace(incoming.error());
+    }
+    return error;
+  }
+
+  ::fitx::result decoded = [&] {
+    if constexpr (IsAbsentBody) {
+      return DecodeTransactionalMessage(std::move(incoming));
+    } else {
+      using Body = typename MessageTraits<NaturalResponse>::Payload;
+      return DecodeTransactionalMessage<Body>(std::move(incoming));
+    }
+  }();
+
+  // Check decoding error.
+  if (decoded.is_error()) {
+    ResultType error = ::fitx::error(decoded.error_value());
+    if (out_maybe_unbind != nullptr) {
+      out_maybe_unbind->emplace(decoded.error_value());
+    }
+    return error;
+  }
+
+  if constexpr (IsAbsentBody) {
+    // Absent body.
+    ResultType value = ::fitx::success();
+    return value;
+  } else {
+    NaturalResponse response =
+        NaturalMessageConverter<NaturalResponse>::FromDomainObject(std::move(decoded.value()));
+    if constexpr (HasApplicationError) {
+      // Fold application error.
+      if (response.is_error()) {
+        ResultType error = response.take_error();
+        return error;
+      }
+      ZX_DEBUG_ASSERT(response.is_ok());
+      if constexpr (::fidl::internal::NaturalMethodTypes<FidlMethod>::IsEmptyStructPayload) {
+        // Omit empty structs.
+        ResultType value = ::fitx::success();
+        return value;
+      } else {
+        ResultType value = response.take_value();
+        return value;
+      }
+    } else {
+      ResultType value = ::fitx::ok(std::move(response));
+      return value;
+    }
+  }
+}
 
 // |MakeResponseContext| is a helper to create an adaptor from a |ResponseContext|
 // to a response/result callback. It returns a raw pointer which deletes itself
@@ -27,73 +101,14 @@ ResponseContext* MakeResponseContext(uint64_t ordinal,
         : ::fidl::internal::ResponseContext(ordinal), callback_(std::move(callback)) {}
 
    private:
-    ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
+    std::optional<::fidl::UnbindInfo> OnRawResult(
         ::fidl::IncomingMessage&& result,
         ::fidl::internal::IncomingTransportContext transport_context) override {
-      using NaturalResponse = ::fidl::Response<FidlMethod>;
-      constexpr bool HasApplicationError =
-          ::fidl::internal::NaturalMethodTypes<FidlMethod>::HasApplicationError;
-      constexpr bool IsAbsentBody = ::fidl::internal::NaturalMethodTypes<FidlMethod>::IsAbsentBody;
-
-      struct DeleteSelf {
-        ResponseContext* c;
-        ~DeleteSelf() { delete c; }
-      } delete_self{this};
-
-      // Check transport error.
-      if (!result.ok()) {
-        ResultType error = ::fitx::error(result.error());
-        callback_(error);
-        return cpp17::nullopt;
-      }
-
-      ::fitx::result decoded = [&] {
-        if constexpr (IsAbsentBody) {
-          return DecodeTransactionalMessage(std::move(result));
-        } else {
-          using Body = typename MessageTraits<NaturalResponse>::Payload;
-          return DecodeTransactionalMessage<Body>(std::move(result));
-        }
-      }();
-
-      // Check decoding error.
-      if (decoded.is_error()) {
-        ::fidl::UnbindInfo unbind_info = ::fidl::UnbindInfo(decoded.error_value());
-        ResultType error = ::fitx::error(decoded.error_value());
-        callback_(error);
-        return unbind_info;
-      }
-
-      if constexpr (IsAbsentBody) {
-        // Absent body.
-        ResultType value = ::fitx::success();
-        callback_(value);
-      } else {
-        NaturalResponse response =
-            NaturalMessageConverter<NaturalResponse>::FromDomainObject(std::move(decoded.value()));
-        if constexpr (HasApplicationError) {
-          // Fold application error.
-          if (response.is_error()) {
-            ResultType error = response.take_error();
-            callback_(error);
-          } else {
-            ZX_DEBUG_ASSERT(response.is_ok());
-            if constexpr (::fidl::internal::NaturalMethodTypes<FidlMethod>::IsEmptyStructPayload) {
-              // Omit empty structs.
-              ResultType value = ::fitx::success();
-              callback_(value);
-            } else {
-              ResultType value = response.take_value();
-              callback_(value);
-            }
-          }
-        } else {
-          ResultType value = ::fitx::ok(std::move(response));
-          callback_(value);
-        }
-      }
-
-      return cpp17::nullopt;
+      std::optional<fidl::UnbindInfo> maybe_unbind;
+      ResultType value = DecodeResponseAndFoldError<FidlMethod>(std::move(result), &maybe_unbind);
+      callback_(value);
+      delete this;
+      return maybe_unbind;
     }
 
     ::fidl::ClientCallback<FidlMethod> callback_;

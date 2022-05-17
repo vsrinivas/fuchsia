@@ -102,6 +102,11 @@ class OutgoingTransportContext final : public TransportContextBase {
       : TransportContextBase(vtable, data) {}
 };
 
+// |MessageStorageViewBase| is the base class of all storage view types, used
+// during synchronous calls to receive a message. Its purpose is to erase
+// the concrete message storage type that is specific to a transport.
+struct MessageStorageViewBase {};
+
 }  // namespace internal
 
 // Options passed from the user-facing write API to transport write().
@@ -141,6 +146,7 @@ struct CallMethodArgs {
   // Exactly one of rd_* or out_rd_* will be populated.
   // If Transport::TransportProvidesReadBuffer is true, the out_rd_* will be populated.
   // Otherwise, rd_* will be populated.
+  // TODO(fxbug.dev/100472): move |rd_*| and |out_rd_*| to |rd_view|.
 
   void* rd_data;
   fidl_handle_t* rd_handles;
@@ -151,6 +157,10 @@ struct CallMethodArgs {
   void** out_rd_data;
   fidl_handle_t** out_rd_handles;
   fidl_handle_metadata_t** out_rd_handle_metadata;
+
+  // TODO(fxbug.dev/100472): all callers should use this field.
+  // A transport-specific view into the storage for receiving the response of the call.
+  MessageStorageViewBase* rd_view = nullptr;
 };
 
 // Generic interface for waiting on a transport (for new messages, peer close, etc).

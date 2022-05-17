@@ -1456,11 +1456,87 @@ static_assert(
         ::fidl::WireEvent<
             ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>,
         ret) == 0);
-
-}  // namespace fidl
-namespace test_protocols {
 #ifdef __Fuchsia__
-}  // namespace test_protocols
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::WithAndWithoutRequestResponse::
+            NoRequestEmptyResponse>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::WithAndWithoutRequestResponse::
+                            NoRequestEmptyResponse>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
+                               NoRequestEmptyResponse>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::WithAndWithoutRequestResponse::
+                            NoRequestWithResponse>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
+                               NoRequestWithResponse>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::WithAndWithoutRequestResponse::
+            WithRequestEmptyResponse>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::WithAndWithoutRequestResponse::
+                            WithRequestEmptyResponse>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
+                               WithRequestEmptyResponse>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::WithAndWithoutRequestResponse::
+            WithRequestWithResponse>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::WithAndWithoutRequestResponse::
+                            WithRequestWithResponse>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
+                               WithRequestWithResponse>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
@@ -2649,9 +2725,11 @@ class ::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocols {
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
+namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
     test_protocols_TransitionalRequestRequestTable;
 __LOCAL extern "C" const fidl_type_t
@@ -3115,11 +3193,25 @@ static_assert(
         kPrimarySize);
 static_assert(offsetof(::fidl::WireEvent<::test_protocols::Transitional::Event>,
                        x) == 0);
-
-}  // namespace fidl
-namespace test_protocols {
 #ifdef __Fuchsia__
-}  // namespace test_protocols
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::Transitional::Request>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::Transitional::Request>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::Transitional::Request>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::Transitional::Request>
     final : public ::fidl::Status {
@@ -3538,9 +3630,11 @@ class ::fidl::WireServer<::test_protocols::Transitional>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocols {
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
+namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
     test_protocols_MethodWithUnionUnionMethodRequestTable;
 
@@ -3686,11 +3780,8 @@ static_assert(
     offsetof(
         ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>,
         u) == 0);
-
-}  // namespace fidl
-namespace test_protocols {
 #ifdef __Fuchsia__
-}  // namespace test_protocols
+}  // namespace fidl
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::MethodWithUnion::UnionMethod>
@@ -3858,9 +3949,11 @@ class ::fidl::WireServer<::test_protocols::MethodWithUnion>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocols {
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
+namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsClientEndsRequestTable;
 __LOCAL extern "C" const fidl_type_t
@@ -4744,10 +4837,61 @@ static_assert(
              out) == 0);
 #endif  // __Fuchsia__
 
-}  // namespace fidl
-namespace test_protocols {
 #ifdef __Fuchsia__
-}  // namespace test_protocols
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::WithProtocolEnds::ClientEnds>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::WithProtocolEnds::ClientEnds>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::WithProtocolEnds::ServerEnds>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::WithProtocolEnds::ServerEnds>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::WithProtocolEnds::StructContainingEnds>>
+    final
+    : public ::fidl::internal::ChannelMessageStorageBase<
+          ::fidl::internal::IncomingMessageStorage<
+              ::fidl::internal::TransactionalResponse<
+                  ::test_protocols::WithProtocolEnds::StructContainingEnds>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_protocols::WithProtocolEnds::StructContainingEnds>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<32> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::WithProtocolEnds::ClientEnds>
@@ -5693,9 +5837,11 @@ class ::fidl::WireServer<::test_protocols::WithProtocolEnds>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocols {
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
+namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
     test_protocols_ManyParametersFifteenRequestTable;
 
@@ -5896,11 +6042,8 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>,
              p15) == 14);
-
-}  // namespace fidl
-namespace test_protocols {
 #ifdef __Fuchsia__
-}  // namespace test_protocols
+}  // namespace fidl
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::ManyParameters::Fifteen>
@@ -6071,9 +6214,11 @@ class ::fidl::WireServer<::test_protocols::ManyParameters>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocols {
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
+namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
 
@@ -6664,10 +6809,27 @@ static_assert(
              h) == 0);
 #endif  // __Fuchsia__
 
-}  // namespace fidl
-namespace test_protocols {
 #ifdef __Fuchsia__
-}  // namespace test_protocols
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::HandleRightsProtocol::ResponseMethod>>
+    final
+    : public ::fidl::internal::ChannelMessageStorageBase<
+          ::fidl::internal::IncomingMessageStorage<
+              ::fidl::internal::TransactionalResponse<
+                  ::test_protocols::HandleRightsProtocol::ResponseMethod>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_protocols::HandleRightsProtocol::ResponseMethod>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::HandleRightsProtocol::NoResponseMethod>
@@ -7139,9 +7301,11 @@ class ::fidl::WireServer<::test_protocols::HandleRightsProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocols {
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
+namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
 
@@ -8097,10 +8261,76 @@ static_assert(
         result) == 0);
 #endif  // __Fuchsia__
 
-}  // namespace fidl
-namespace test_protocols {
 #ifdef __Fuchsia__
-}  // namespace test_protocols
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::WithErrorSyntax::ResponseAsStruct>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::WithErrorSyntax::ResponseAsStruct>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<64> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::WithErrorSyntax::ErrorAsEnum>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::WithErrorSyntax::ErrorAsEnum>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::WithErrorSyntax::HandleInResult>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::WithErrorSyntax::HandleInResult>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>
@@ -9331,10 +9561,10 @@ class ::fidl::WireServer<::test_protocols::WithErrorSyntax>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocols {
+namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace test_protocols
+}  // namespace fidl
 template <>
 struct ::fidl::internal::WireOrdinal<
     ::test_protocols::DiscoverableProtocol::Method>
@@ -9453,11 +9683,8 @@ struct TypeTraits<
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
-
-}  // namespace fidl
-namespace test_protocols {
 #ifdef __Fuchsia__
-}  // namespace test_protocols
+}  // namespace fidl
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::DiscoverableProtocol::Method>
@@ -9630,9 +9857,11 @@ class ::fidl::WireServer<::test_protocols::DiscoverableProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocols {
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
+namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMethodARequestTable;
 
@@ -10621,10 +10850,59 @@ static_assert(
         b) == 0);
 #endif  // __Fuchsia__
 
-}  // namespace fidl
-namespace test_protocols {
 #ifdef __Fuchsia__
-}  // namespace test_protocols
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::ChannelProtocol::MethodB>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::ChannelProtocol::MethodB>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::ChannelProtocol::TakeHandle>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::ChannelProtocol::TakeHandle>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocols::ChannelProtocol::MutateSocket>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocols::ChannelProtocol::MutateSocket>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_protocols::ChannelProtocol::MethodA>
@@ -11453,11 +11731,8 @@ class ::fidl::WireServer<::test_protocols::ChannelProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocols {
-#endif  // __Fuchsia__
-
-}  // namespace test_protocols
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

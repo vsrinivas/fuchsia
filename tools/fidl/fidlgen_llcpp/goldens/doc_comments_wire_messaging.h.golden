@@ -205,11 +205,8 @@ struct TypeTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> {
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
-
-}  // namespace fidl
-namespace test_doccomments {
 #ifdef __Fuchsia__
-}  // namespace test_doccomments
+}  // namespace fidl
 template <>
 class [[nodiscard]] ::fidl::WireResult<::test_doccomments::Interface::Method>
     final : public ::fidl::Status {
@@ -387,8 +384,11 @@ class ::fidl::WireServer<::test_doccomments::Interface>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_doccomments {
+namespace fidl {
 #endif  // __Fuchsia__
+
+}  // namespace fidl
+namespace test_doccomments {
 
 /// service comment #1
 ///

@@ -277,11 +277,9 @@ static_assert(
         ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>,
                        sum) == 0);
-
-}  // namespace fidl
-namespace test_drivertwoway {
 #ifdef __Fuchsia__
-}  // namespace test_drivertwoway
+}  // namespace fidl
+
 template <>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>
     final : public ::fidl::Status {
@@ -516,11 +514,8 @@ class ::fdf::WireServer<::test_drivertwoway::TwoWay>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_drivertwoway {
-#endif  // __Fuchsia__
-
-}  // namespace test_drivertwoway
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

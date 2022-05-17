@@ -85,6 +85,28 @@ namespace test_foreigntypeinresponseusedthroughcompose {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<
+    ::test_foreigntypeinresponseusedthroughcompose::Top>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_foreigntypeinresponseusedthroughcompose::Top>> {
+ public:
+  ::fidl::Result<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+  GetFoo();
+
+ private:
+  ::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::test_foreigntypeinresponseusedthroughcompose::Top>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_foreigntypeinresponseusedthroughcompose::Top> {
  public:

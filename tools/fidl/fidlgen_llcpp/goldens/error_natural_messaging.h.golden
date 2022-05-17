@@ -107,6 +107,24 @@ namespace test_error {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_error::Example> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalSyncClientImpl<::test_error::Example>> {
+ public:
+  ::fidl::Result<::test_error::Example::Foo> Foo(
+      ::fidl::Request<::test_error::Example::Foo> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_error::Example> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_error::Example>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<::test_error::Example> {
  public:
   NaturalEventHandlerInterface() = default;

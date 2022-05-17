@@ -603,11 +603,48 @@ static_assert(
     offsetof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                       RequestFlexibleResponseStrict>,
              f) == 0);
-
-}  // namespace fidl
-namespace test_requestflexibleenvelope {
 #ifdef __Fuchsia__
-}  // namespace test_requestflexibleenvelope
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_requestflexibleenvelope::Protocol::
+            RequestStrictResponseFlexible>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexible>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                               RequestStrictResponseFlexible>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_requestflexibleenvelope::Protocol::
+            RequestFlexibleResponseStrict>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrict>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                               RequestFlexibleResponseStrict>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
@@ -1333,11 +1370,8 @@ class ::fidl::WireServer<::test_requestflexibleenvelope::Protocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_requestflexibleenvelope {
-#endif  // __Fuchsia__
-
-}  // namespace test_requestflexibleenvelope
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

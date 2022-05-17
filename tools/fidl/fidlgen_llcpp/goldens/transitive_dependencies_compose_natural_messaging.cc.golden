@@ -36,6 +36,27 @@ namespace test_transitivedependenciescompose {
 }  // namespace test_transitivedependenciescompose
 #ifdef __Fuchsia__
 
+::fidl::Result<::test_transitivedependenciescompose::Top::GetFoo>
+fidl::internal::NaturalSyncClientImpl<
+    ::test_transitivedependenciescompose::Top>::GetFoo() {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal,
+      ::test_transitivedependenciescompose::kTop_GetFoo_DynamicFlags};
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  ::fidl::internal::IncomingMessageStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_transitivedependenciescompose::Top::GetFoo>>
+      response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<
+      ::test_transitivedependenciescompose::Top::GetFoo>(
+      msg.Call(_client_end().handle(), response_storage.view()), nullptr);
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
     ::test_transitivedependenciescompose::Top>::
     DispatchEvent(

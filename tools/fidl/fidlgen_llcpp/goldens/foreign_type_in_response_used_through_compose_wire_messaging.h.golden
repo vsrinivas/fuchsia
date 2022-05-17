@@ -287,11 +287,27 @@ static_assert(
     offsetof(::fidl::WireResponse<
                  ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
              foo) == 0);
-
-}  // namespace fidl
-namespace test_foreigntypeinresponseusedthroughcompose {
 #ifdef __Fuchsia__
-}  // namespace test_foreigntypeinresponseusedthroughcompose
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_foreigntypeinresponseusedthroughcompose::Top::
+                            GetFoo>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
@@ -706,11 +722,8 @@ class ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_foreigntypeinresponseusedthroughcompose {
-#endif  // __Fuchsia__
-
-}  // namespace test_foreigntypeinresponseusedthroughcompose
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

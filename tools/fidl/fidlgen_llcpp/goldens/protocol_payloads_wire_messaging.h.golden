@@ -3587,11 +3587,154 @@ static_assert(
     offsetof(::fidl::WireEvent<
                  ::test_protocolpayloads::MainProtocol::OnAnonWithError>,
              result) == 0);
-
-}  // namespace fidl
-namespace test_protocolpayloads {
 #ifdef __Fuchsia__
-}  // namespace test_protocolpayloads
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayComposed>>
+    final
+    : public ::fidl::internal::ChannelMessageStorageBase<
+          ::fidl::internal::IncomingMessageStorage<
+              ::fidl::internal::TransactionalResponse<
+                  ::test_protocolpayloads::MainProtocol::TwoWayComposed>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayComposed>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocolpayloads::MainProtocol::
+                            TwoWayComposedWithError>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocolpayloads::MainProtocol::TwoWayLocal>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocolpayloads::MainProtocol::
+                            TwoWayLocalWithError>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayImport>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocolpayloads::MainProtocol::TwoWayImport>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocolpayloads::MainProtocol::
+                            TwoWayImportWithError>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocolpayloads::MainProtocol::TwoWayAnon>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocolpayloads::MainProtocol::
+                            TwoWayAnonWithError>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_protocolpayloads::MainProtocol::OneWayComposed>
@@ -6400,11 +6543,8 @@ class ::fidl::WireServer<::test_protocolpayloads::MainProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocolpayloads {
-#endif  // __Fuchsia__
-
-}  // namespace test_protocolpayloads
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

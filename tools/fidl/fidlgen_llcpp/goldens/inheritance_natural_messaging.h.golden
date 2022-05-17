@@ -76,6 +76,24 @@ namespace test_inheritance {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Super> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Super>> {
+ public:
+  ::fidl::Result<::test_inheritance::Super::Foo> Foo(
+      ::fidl::Request<::test_inheritance::Super::Foo> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_inheritance::Super> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_inheritance::Super>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_inheritance::Super> {
  public:
@@ -246,6 +264,24 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritance::Sub> final
   using NaturalClientBase::NaturalClientBase;
   ::fidl::internal::NaturalThenable<::test_inheritance::Sub::Foo> Foo(
       ::fidl::Request<::test_inheritance::Sub::Foo> request) const;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Sub> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Sub>> {
+ public:
+  ::fidl::Result<::test_inheritance::Sub::Foo> Foo(
+      ::fidl::Request<::test_inheritance::Sub::Foo> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_inheritance::Sub> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_inheritance::Sub>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
 };
 #endif  // __Fuchsia__
 

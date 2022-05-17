@@ -37,6 +37,29 @@ namespace test_inheritance {
 }  // namespace test_inheritance
 #ifdef __Fuchsia__
 
+::fidl::Result<::test_inheritance::Super::Foo>
+fidl::internal::NaturalSyncClientImpl<::test_inheritance::Super>::Foo(
+    ::fidl::Request<::test_inheritance::Super::Foo> request) {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_inheritance::ksuper_foo_Ordinal,
+      ::test_inheritance::ksuper_foo_DynamicFlags};
+  encoder.EncodeBody(::fidl::internal::NaturalMessageConverter<
+                     ::fidl::Request<::test_inheritance::Super::Foo>>::
+                         IntoDomainObject(std::move(request)));
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  ::fidl::internal::IncomingMessageStorage<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>
+      response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<
+      ::test_inheritance::Super::Foo>(
+      msg.Call(_client_end().handle(), response_storage.view()), nullptr);
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 std::optional<::fidl::UnbindInfo> fidl::internal::
     NaturalEventDispatcher<::test_inheritance::Super>::DispatchEvent(
         ::fidl::IncomingMessage& msg,
@@ -142,6 +165,29 @@ namespace test_inheritance {
 #endif  // __Fuchsia__
 
 }  // namespace test_inheritance
+#ifdef __Fuchsia__
+
+::fidl::Result<::test_inheritance::Sub::Foo>
+fidl::internal::NaturalSyncClientImpl<::test_inheritance::Sub>::Foo(
+    ::fidl::Request<::test_inheritance::Sub::Foo> request) {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_inheritance::ksub_foo_Ordinal,
+      ::test_inheritance::ksub_foo_DynamicFlags};
+  encoder.EncodeBody(
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<
+          ::test_inheritance::Sub::Foo>>::IntoDomainObject(std::move(request)));
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  ::fidl::internal::IncomingMessageStorage<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>
+      response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<
+      ::test_inheritance::Sub::Foo>(
+      msg.Call(_client_end().handle(), response_storage.view()), nullptr);
+}
+
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 std::optional<::fidl::UnbindInfo>

@@ -59,10 +59,10 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed>
 };
 #endif  // __Fuchsia__
 
-namespace fidl {}  // namespace fidl
-namespace test_bindingsdenylist {
+namespace fidl {
+
 #ifdef __Fuchsia__
-}  // namespace test_bindingsdenylist
+}  // namespace fidl
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::test_bindingsdenylist::Allowed> {
@@ -164,10 +164,10 @@ class ::fidl::WireServer<::test_bindingsdenylist::Allowed>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_bindingsdenylist {
+namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace test_bindingsdenylist
+}  // namespace fidl
 template <>
 struct ::fidl::internal::WireOrdinal<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -410,11 +410,28 @@ struct TypeTraits<
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
-
-}  // namespace fidl
-namespace test_bindingsdenylist {
 #ifdef __Fuchsia__
-}  // namespace test_bindingsdenylist
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+            LibfuzzerNeedsNonemptyProtocol>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                            LibfuzzerNeedsNonemptyProtocol>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                               LibfuzzerNeedsNonemptyProtocol>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -682,10 +699,11 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_bindingsdenylist {
+namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace test_bindingsdenylist
+}  // namespace fidl
+namespace test_bindingsdenylist {}  // namespace test_bindingsdenylist
 #ifdef __Fuchsia__
 
 template <>
@@ -717,10 +735,10 @@ struct ::fidl::internal::WireServerDispatcher<
 };
 #endif  // __Fuchsia__
 
-namespace fidl {}  // namespace fidl
-namespace test_bindingsdenylist {
+namespace fidl {
+
 #ifdef __Fuchsia__
-}  // namespace test_bindingsdenylist
+}  // namespace fidl
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::test_bindingsdenylist::OnlyCppAndDeps> {
@@ -826,10 +844,10 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_bindingsdenylist {
+namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace test_bindingsdenylist
+}  // namespace fidl
 template <>
 struct ::fidl::internal::WireOrdinal<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
@@ -1042,11 +1060,8 @@ struct TypeTraits<
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
-
-}  // namespace fidl
-namespace test_bindingsdenylist {
 #ifdef __Fuchsia__
-}  // namespace test_bindingsdenylist
+}  // namespace fidl
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
@@ -1314,9 +1329,11 @@ class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_bindingsdenylist {
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
+namespace test_bindingsdenylist {
 __LOCAL extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
 __LOCAL extern "C" const fidl_type_t
@@ -2712,11 +2729,103 @@ static_assert(
     offsetof(::fidl::WireResponse<
                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
              result) == 0);
-
-}  // namespace fidl
-namespace test_bindingsdenylist {
 #ifdef __Fuchsia__
-}  // namespace test_bindingsdenylist
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+    final
+    : public ::fidl::internal::ChannelMessageStorageBase<
+          ::fidl::internal::IncomingMessageStorage<
+              ::fidl::internal::TransactionalResponse<
+                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+    final
+    : public ::fidl::internal::ChannelMessageStorageBase<
+          ::fidl::internal::IncomingMessageStorage<
+              ::fidl::internal::TransactionalResponse<
+                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_bindingsdenylist::DenyEachBinding::
+                            OnlyDenyLibfuzzer>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+    final
+    : public ::fidl::internal::ChannelMessageStorageBase<
+          ::fidl::internal::IncomingMessageStorage<
+              ::fidl::internal::TransactionalResponse<
+                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_bindingsdenylist::DenyEachBinding::
+                            OnlyDenySyzkaller>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
@@ -4407,11 +4516,8 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_bindingsdenylist {
-#endif  // __Fuchsia__
-
-}  // namespace test_bindingsdenylist
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

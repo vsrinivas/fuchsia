@@ -29,6 +29,24 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_service::SecondProtocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_service::SecondProtocol>> {
+ public:
+  ::fitx::result<::fidl::Error> MethodOnSecond();
+
+ private:
+  ::fidl::UnownedClientEnd<::test_service::SecondProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_service::SecondProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_service::SecondProtocol> {
  public:
@@ -144,6 +162,24 @@ class ::fidl::internal::NaturalClientImpl<::test_service::FirstProtocol> final
  public:
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> MethodOnFirst() const;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_service::FirstProtocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_service::FirstProtocol>> {
+ public:
+  ::fitx::result<::fidl::Error> MethodOnFirst();
+
+ private:
+  ::fidl::UnownedClientEnd<::test_service::FirstProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_service::FirstProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
 };
 #endif  // __Fuchsia__
 

@@ -1264,6 +1264,98 @@ namespace test_protocollayouts {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<
+    ::test_protocollayouts::MainProtocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocollayouts::MainProtocol>> {
+ public:
+  ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
+  TwoWayAnonComposed(
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
+          request);
+
+  ::fidl::Result<
+      ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
+  TwoWayAnonComposedWithError(
+      ::fidl::Request<
+          ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
+          request);
+
+  ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
+  TwoWayNamedComposed(
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
+          request);
+
+  ::fidl::Result<
+      ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
+  TwoWayNamedComposedWithError(
+      ::fidl::Request<
+          ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
+          request);
+
+  ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImport>
+  TwoWayImport(
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayImport>
+          request);
+
+  ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImportWithError>
+  TwoWayImportWithError(
+      ::fidl::Request<
+          ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
+          request);
+
+  ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocal> TwoWayLocal(
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayLocal>
+          request);
+
+  ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
+  TwoWayLocalWithError(
+      ::fidl::Request<
+          ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
+          request);
+
+  ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnon> TwoWayAnon(
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnon>
+          request);
+
+  ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
+  TwoWayAnonWithError(
+      ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
+          request);
+
+  ::fitx::result<::fidl::Error> OneWayAnonComposed(
+      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>
+          request);
+
+  ::fitx::result<::fidl::Error> OneWayNamedComposed(
+      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed>
+          request);
+
+  ::fitx::result<::fidl::Error> OneWayImport(
+      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>
+          request);
+
+  ::fitx::result<::fidl::Error> OneWayLocal(
+      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>
+          request);
+
+  ::fitx::result<::fidl::Error> OneWayAnon(
+      ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>
+          request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_protocollayouts::MainProtocol> {
  public:

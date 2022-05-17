@@ -111,8 +111,16 @@ class NaturalWeakEventSender;
 template <typename FidlProtocol>
 class NaturalEventSender;
 
-// |NaturalClientImpl| implements methods for making synchronous and
-// asynchronous FIDL calls with natural types.
+// |NaturalSyncClientImpl| implements methods for making synchronous
+// FIDL calls with natural types.
+//
+// All specializations of |NaturalSyncClientImpl| should inherit from
+// |fidl::internal::SyncEndpointManagedVeneer|.
+template <typename Protocol>
+class NaturalSyncClientImpl;
+
+// |NaturalClientImpl| implements methods for making asynchronous FIDL calls
+// with natural types.
 //
 // All specializations of |NaturalClientImpl| should inherit from
 // |fidl::internal::NaturalClientBase|.

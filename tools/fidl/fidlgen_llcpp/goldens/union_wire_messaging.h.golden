@@ -548,11 +548,48 @@ static_assert(offsetof(::fidl::WireResponse<
                            ::test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>,
                        xu) == 0);
-
-}  // namespace fidl
-namespace test_union {
 #ifdef __Fuchsia__
-}  // namespace test_union
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_union::TestProtocol::
+                            StrictXUnionHenceResponseMayBeStackAllocated>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<72> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_union::TestProtocol::
+                            FlexibleXUnionHenceResponseMustBeHeapAllocated>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
@@ -1284,11 +1321,8 @@ class ::fidl::WireServer<::test_union::TestProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_union {
-#endif  // __Fuchsia__
-
-}  // namespace test_union
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

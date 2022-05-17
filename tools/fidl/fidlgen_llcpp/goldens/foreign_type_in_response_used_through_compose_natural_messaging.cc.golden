@@ -36,6 +36,27 @@ namespace test_foreigntypeinresponseusedthroughcompose {
 }  // namespace test_foreigntypeinresponseusedthroughcompose
 #ifdef __Fuchsia__
 
+::fidl::Result<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+fidl::internal::NaturalSyncClientImpl<
+    ::test_foreigntypeinresponseusedthroughcompose::Top>::GetFoo() {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable,
+      ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal,
+      ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_DynamicFlags};
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  ::fidl::internal::IncomingMessageStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
+      response_storage;
+  return ::fidl::internal::DecodeResponseAndFoldError<
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+      msg.Call(_client_end().handle(), response_storage.view()), nullptr);
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
     ::test_foreigntypeinresponseusedthroughcompose::Top>::
     DispatchEvent(

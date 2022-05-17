@@ -191,10 +191,8 @@ static_assert(
         request) == 0);
 #endif  // __Fuchsia__
 
-}  // namespace fidl
-namespace test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
-}  // namespace test_inheritancewithrecursivedecl
+}  // namespace fidl
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_inheritancewithrecursivedecl::Parent::First>
@@ -374,9 +372,11 @@ class ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_inheritancewithrecursivedecl {
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
+namespace test_inheritancewithrecursivedecl {
 __LOCAL extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
@@ -677,10 +677,8 @@ static_assert(
         request) == 0);
 #endif  // __Fuchsia__
 
-}  // namespace fidl
-namespace test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
-}  // namespace test_inheritancewithrecursivedecl
+}  // namespace fidl
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_inheritancewithrecursivedecl::Child::First>
@@ -930,11 +928,8 @@ class ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_inheritancewithrecursivedecl {
-#endif  // __Fuchsia__
-
-}  // namespace test_inheritancewithrecursivedecl
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

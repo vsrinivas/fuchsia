@@ -163,6 +163,38 @@ namespace test_requestflexibleenvelope {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<
+    ::test_requestflexibleenvelope::Protocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_requestflexibleenvelope::Protocol>> {
+ public:
+  ::fidl::Result<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
+  RequestStrictResponseFlexible(
+      ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                          RequestStrictResponseFlexible>
+          request);
+
+  ::fidl::Result<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
+  RequestFlexibleResponseStrict(
+      ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                          RequestFlexibleResponseStrict>
+          request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_requestflexibleenvelope::Protocol> {
  public:

@@ -763,10 +763,42 @@ static_assert(
         r) == 0);
 #endif  // __Fuchsia__
 
-}  // namespace fidl
-namespace test_protocolrequest {
 #ifdef __Fuchsia__
-}  // namespace test_protocolrequest
+}  // namespace fidl
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocolrequest::Parent::GetChild>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocolrequest::Parent::GetChild>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingMessageStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_protocolrequest::Parent::GetChildRequest>>
+    final : public ::fidl::internal::ChannelMessageStorageBase<
+                ::fidl::internal::IncomingMessageStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_protocolrequest::Parent::GetChildRequest>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 template <>
 class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChild>
     final : public ::fidl::Status {
@@ -1518,10 +1550,11 @@ class ::fidl::WireServer<::test_protocolrequest::Parent>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocolrequest {
+namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace test_protocolrequest
+}  // namespace fidl
+namespace test_protocolrequest {}  // namespace test_protocolrequest
 #ifdef __Fuchsia__
 
 template <>
@@ -1550,10 +1583,10 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>
 };
 #endif  // __Fuchsia__
 
-namespace fidl {}  // namespace fidl
-namespace test_protocolrequest {
+namespace fidl {
+
 #ifdef __Fuchsia__
-}  // namespace test_protocolrequest
+}  // namespace fidl
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::test_protocolrequest::Child> {
@@ -1650,11 +1683,8 @@ class ::fidl::WireServer<::test_protocolrequest::Child>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_protocolrequest {
-#endif  // __Fuchsia__
-
-}  // namespace test_protocolrequest
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

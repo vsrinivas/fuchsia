@@ -189,10 +189,8 @@ static_assert(offsetof(::fidl::WireRequest<
                        t) == 0);
 #endif  // __Fuchsia__
 
-}  // namespace fidl
-namespace test_driverhandle {
 #ifdef __Fuchsia__
-}  // namespace test_driverhandle
+}  // namespace fidl
 template <>
 class [[nodiscard]] ::fdf::WireUnownedResult<
     ::test_driverhandle::HandlesInProtocol::SendHandles>
@@ -318,10 +316,11 @@ class ::fdf::WireServer<::test_driverhandle::HandlesInProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_driverhandle {
+namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace test_driverhandle
+}  // namespace fidl
+namespace test_driverhandle {}  // namespace test_driverhandle
 #ifdef __Fuchsia__
 
 template <>
@@ -353,10 +352,10 @@ struct ::fidl::internal::WireServerDispatcher<
 };
 #endif  // __Fuchsia__
 
-namespace fidl {}  // namespace fidl
-namespace test_driverhandle {
+namespace fidl {
+
 #ifdef __Fuchsia__
-}  // namespace test_driverhandle
+}  // namespace fidl
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::test_driverhandle::DriverProtocol> {
@@ -441,11 +440,8 @@ class ::fdf::WireServer<::test_driverhandle::DriverProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-namespace test_driverhandle {
-#endif  // __Fuchsia__
-
-}  // namespace test_driverhandle
 namespace fidl {
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl

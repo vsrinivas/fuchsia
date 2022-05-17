@@ -250,6 +250,38 @@ namespace test_errorsyntax {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_errorsyntax::ExampleUseOfErrorSyntax>> {
+ public:
+  ::fidl::Result<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+  ComposedCallWhichMayFail(
+      ::fidl::Request<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+          request);
+
+  ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+  CallWhichMayFail(
+      ::fidl::Request<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+          request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::test_errorsyntax::ExampleUseOfErrorSyntax>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_errorsyntax::ExampleUseOfErrorSyntax> {
  public:

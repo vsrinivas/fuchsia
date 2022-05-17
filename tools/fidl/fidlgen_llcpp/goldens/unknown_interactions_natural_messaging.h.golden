@@ -156,6 +156,34 @@ namespace test_unknowninteractions {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<
+    ::test_unknowninteractions::Example>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_unknowninteractions::Example>> {
+ public:
+  ::fidl::Result<::test_unknowninteractions::Example::StrictTwoWay>
+  StrictTwoWay();
+
+  ::fidl::Result<::test_unknowninteractions::Example::FlexibleTwoWay>
+  FlexibleTwoWay();
+
+  ::fitx::result<::fidl::Error> StrictOneWay();
+
+  ::fitx::result<::fidl::Error> FlexibleOneWay();
+
+ private:
+  ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_unknowninteractions::Example>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_unknowninteractions::Example> {
  public:

@@ -314,6 +314,54 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<
+    ::test_protocols::WithAndWithoutRequestResponse>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocols::WithAndWithoutRequestResponse>> {
+ public:
+  ::fidl::Result<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
+  NoRequestEmptyResponse();
+
+  ::fidl::Result<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
+  NoRequestWithResponse();
+
+  ::fidl::Result<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
+  WithRequestEmptyResponse(
+      ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
+                          WithRequestEmptyResponse>
+          request);
+
+  ::fidl::Result<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
+  WithRequestWithResponse(
+      ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
+                          WithRequestWithResponse>
+          request);
+
+  ::fitx::result<::fidl::Error> NoRequestNoResponse();
+
+  ::fitx::result<::fidl::Error> WithRequestNoResponse(
+      ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::
+                          WithRequestNoResponse>
+          request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::test_protocols::WithAndWithoutRequestResponse>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_protocols::WithAndWithoutRequestResponse> {
  public:
@@ -769,6 +817,28 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocols::Transitional>> {
+ public:
+  ::fidl::Result<::test_protocols::Transitional::Request> Request(
+      ::fidl::Request<::test_protocols::Transitional::Request> request);
+
+  ::fitx::result<::fidl::Error> OneWay(
+      ::fidl::Request<::test_protocols::Transitional::OneWay> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::Transitional> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocols::Transitional>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_protocols::Transitional> {
  public:
@@ -952,6 +1022,26 @@ namespace test_protocols {
 #endif  // __Fuchsia__
 
 }  // namespace test_protocols
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocols::MethodWithUnion>> {
+ public:
+  ::fitx::result<::fidl::Error> UnionMethod(
+      ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 template <>
@@ -1260,6 +1350,35 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<
+    ::test_protocols::WithProtocolEnds>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocols::WithProtocolEnds>> {
+ public:
+  ::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds> ClientEnds(
+      ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> request);
+
+  ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> ServerEnds(
+      ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> request);
+
+  ::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds>
+  StructContainingEnds(
+      ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>
+          request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_protocols::WithProtocolEnds> {
  public:
@@ -1498,6 +1617,26 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocols::ManyParameters>> {
+ public:
+  ::fitx::result<::fidl::Error> Fifteen(
+      ::fidl::Request<::test_protocols::ManyParameters::Fifteen> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_protocols::ManyParameters>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_protocols::ManyParameters> {
  public:
@@ -1717,6 +1856,33 @@ namespace test_protocols {
 #endif  // __Fuchsia__
 
 }  // namespace test_protocols
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<
+    ::test_protocols::HandleRightsProtocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocols::HandleRightsProtocol>> {
+ public:
+  ::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod>
+  ResponseMethod(
+      ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>
+          request);
+
+  ::fitx::result<::fidl::Error> NoResponseMethod(
+      ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>
+          request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 template <>
@@ -2266,6 +2432,34 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::WithErrorSyntax>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocols::WithErrorSyntax>> {
+ public:
+  ::fidl::Result<::test_protocols::WithErrorSyntax::ResponseAsStruct>
+  ResponseAsStruct();
+
+  ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+  ErrorAsPrimitive();
+
+  ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum> ErrorAsEnum();
+
+  ::fidl::Result<::test_protocols::WithErrorSyntax::HandleInResult>
+  HandleInResult();
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_protocols::WithErrorSyntax> {
  public:
@@ -2511,6 +2705,26 @@ class ::fidl::internal::NaturalClientImpl<
  public:
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> Method() const;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<
+    ::test_protocols::DiscoverableProtocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocols::DiscoverableProtocol>> {
+ public:
+  ::fitx::result<::fidl::Error> Method();
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
 };
 #endif  // __Fuchsia__
 
@@ -2826,6 +3040,35 @@ namespace test_protocols {
 #endif  // __Fuchsia__
 
 }  // namespace test_protocols
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_protocols::ChannelProtocol>> {
+ public:
+  ::fidl::Result<::test_protocols::ChannelProtocol::MethodB> MethodB(
+      ::fidl::Request<::test_protocols::ChannelProtocol::MethodB> request);
+
+  ::fidl::Result<::test_protocols::ChannelProtocol::TakeHandle> TakeHandle(
+      ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> request);
+
+  ::fidl::Result<::test_protocols::ChannelProtocol::MutateSocket> MutateSocket(
+      ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> request);
+
+  ::fitx::result<::fidl::Error> MethodA(
+      ::fidl::Request<::test_protocols::ChannelProtocol::MethodA> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 template <>

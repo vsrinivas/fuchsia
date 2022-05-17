@@ -214,6 +214,11 @@ class OutgoingMessage : public ::fidl::Status {
           std::move(options));
   }
 
+  // Makes a call on a transport that expects the caller to provide read
+  // buffers, then decodes them.
+  // TODO(fxbug.dev/60240): To support both wire and natural types using the
+  // same calling mechanism, decoding should be domain object family-specific
+  // and moved out of |Call|.
   template <typename FidlType, typename TransportObject,
             typename = std::enable_if_t<
                 !internal::AssociatedTransport<TransportObject>::kTransportProvidesReadBuffer>>
@@ -229,6 +234,11 @@ class OutgoingMessage : public ::fidl::Status {
         ZX_CHANNEL_MAX_MSG_HANDLES, std::move(options));
   }
 
+  // Makes a call on a transport whose messages read are associated with their
+  // own buffers, then decodes them.
+  // TODO(fxbug.dev/60240): To support both wire and natural types using the
+  // same calling mechanism, decoding should be domain object family-specific
+  // and moved out of |Call|.
   template <typename FidlType, typename TransportObject,
             typename = std::enable_if_t<
                 internal::AssociatedTransport<TransportObject>::kTransportProvidesReadBuffer>>
@@ -237,6 +247,17 @@ class OutgoingMessage : public ::fidl::Status {
     CallImplForTransportProvidedBuffer(
         internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
         fidl::TypeTraits<FidlType>::kType, out_bytes, out_num_bytes, std::move(options));
+  }
+
+  // Makes a call and returns the response read from the transport, without
+  // decoding.
+  // TODO(fxbug.dev/60240): Move every user to this overload of |Call|.
+  template <typename TransportObject>
+  auto Call(TransportObject&& transport,
+            typename internal::AssociatedTransport<TransportObject>::MessageStorageView storage,
+            CallOptions options = {}) {
+    return CallImpl(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
+                    static_cast<internal::MessageStorageViewBase&>(storage), std::move(options));
   }
 
   bool is_transactional() const { return is_transactional_; }
@@ -274,6 +295,9 @@ class OutgoingMessage : public ::fidl::Status {
   void CallImplForTransportProvidedBuffer(internal::AnyUnownedTransport transport,
                                           const fidl_type_t* response_type, uint8_t** out_bytes,
                                           uint32_t* out_num_bytes, CallOptions options);
+
+  fidl::IncomingMessage CallImpl(internal::AnyUnownedTransport transport,
+                                 internal::MessageStorageViewBase& storage, CallOptions options);
 
   fidl_outgoing_msg_iovec_t& iovec_message() {
     ZX_DEBUG_ASSERT(message_.type == FIDL_OUTGOING_MSG_TYPE_IOVEC);
@@ -498,6 +522,9 @@ class IncomingMessage : public ::fidl::Status {
   friend class internal::DecodedMessageBase;
 
   friend class internal::NaturalDecoder;
+
+  // |OutgoingMessage| may create an |IncomingMessage| with a dynamic transport during a call.
+  friend class OutgoingMessage;
 
   // Decodes the message using |FidlType|. If this operation succeed, |status()| is ok and
   // |bytes()| contains the decoded object.

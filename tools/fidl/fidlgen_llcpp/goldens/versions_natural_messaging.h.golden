@@ -28,6 +28,22 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_versions::OtherProtocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::NaturalSyncClientImpl<
+                    ::test_versions::OtherProtocol>> {
+ public:
+ private:
+  ::fidl::UnownedClientEnd<::test_versions::OtherProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_versions::OtherProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 class ::fidl::internal::NaturalEventHandlerInterface<
     ::test_versions::OtherProtocol> {
  public:
@@ -119,6 +135,23 @@ class ::fidl::internal::NaturalClientImpl<::test_versions::Protocol> final
  public:
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> Foo() const;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_versions::Protocol> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalSyncClientImpl<::test_versions::Protocol>> {
+ public:
+  ::fitx::result<::fidl::Error> Foo();
+
+ private:
+  ::fidl::UnownedClientEnd<::test_versions::Protocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_versions::Protocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
 };
 #endif  // __Fuchsia__
 
