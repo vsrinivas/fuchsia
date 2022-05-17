@@ -76,15 +76,12 @@ struct SerialArgs {
 struct ListArgs {}
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Create a socat connection on the specified port. Usage: guest socat env-id cid port
+/// Create a socat connection on the specified port. Usage: guest socat env-id port
 #[argh(subcommand, name = "socat")]
 struct SocatArgs {
     #[argh(positional)]
     /// environment id where guest lives.
     env_id: u32,
-    #[argh(positional)]
-    /// context id of guest.
-    cid: u32,
     #[argh(positional)]
     /// port for listeners to connect on.
     port: u32,
@@ -161,7 +158,7 @@ async fn main() -> Result<(), Error> {
         }
         SubCommands::Socat(socat_args) => {
             let vsock_endpoint = socat::connect_to_vsock_endpoint(socat_args.env_id).await?;
-            socat::handle_socat(vsock_endpoint, socat_args.cid, socat_args.port).await
+            socat::handle_socat(vsock_endpoint, socat_args.port).await
         }
         SubCommands::SocatListen(socat_listen_args) => {
             let vsock_endpoint = socat::connect_to_vsock_endpoint(socat_listen_args.env_id).await?;

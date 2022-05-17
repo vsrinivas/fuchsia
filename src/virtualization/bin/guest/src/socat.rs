@@ -54,18 +54,8 @@ pub async fn handle_socat_listen(
     io.run_with_stdio().await.map_err(From::from)
 }
 
-pub async fn handle_socat(
-    vsock_endpoint: HostVsockEndpointProxy,
-    cid: u32,
-    port: u32,
-) -> Result<(), Error> {
-    let (socket, remote_socket) = zx::Socket::create(zx::SocketOpts::STREAM)?;
-
-    vsock_endpoint
-        .connect(cid, port, remote_socket)
-        .await?
-        .map_err(|val| zx::Status::from_raw(val))?;
-
+pub async fn handle_socat(vsock_endpoint: HostVsockEndpointProxy, port: u32) -> Result<(), Error> {
+    let socket = vsock_endpoint.connect2(port).await?.map_err(|val| zx::Status::from_raw(val))?;
     let io = services::GuestConsole::new(socket)?;
     io.run_with_stdio().await.map_err(From::from)
 }
@@ -125,33 +115,6 @@ mod test {
         };
 
         let client = handle_socat_listen(proxy, 0);
-        let (_server_res, client_res) = join(server, client).await;
-        assert_matches!(
-            client_res.unwrap_err().downcast(),
-            Ok(zx_status::Status::CONNECTION_REFUSED)
-        );
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn socat_invalid_cid_returns_err() {
-        let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>().unwrap();
-        let server = async move {
-            let (cid, port, _handle, responder) = stream
-                .next()
-                .await
-                .expect("Failed to read from stream")
-                .expect("Failed to parse request")
-                .into_connect()
-                .expect("Unexpected call to Guest Proxy");
-            assert_eq!(cid, 0);
-            assert_eq!(port, 0);
-            responder
-                .send(&mut Err(zx_status::Status::CONNECTION_REFUSED.into_raw()))
-                .expect("Failed to send status code to client");
-        };
-
-        let client = handle_socat(proxy, 0, 0);
-
         let (_server_res, client_res) = join(server, client).await;
         assert_matches!(
             client_res.unwrap_err().downcast(),
