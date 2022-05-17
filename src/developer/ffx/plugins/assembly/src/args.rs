@@ -26,6 +26,7 @@ pub struct AssemblyCommand {
 pub enum OperationClass {
     CreateSystem(CreateSystemArgs),
     CreateUpdate(CreateUpdateArgs),
+    CreateFlashManifest(CreateFlashManifestArgs),
     ConfigData(ConfigDataArgs),
     Product(ProductArgs),
     SizeCheck(SizeCheckArgs),
@@ -139,6 +140,32 @@ pub struct CreateUpdateArgs {
     /// directory to write intermediate files.
     #[argh(option)]
     pub gendir: Option<PathBuf>,
+}
+
+/// construct a flash manifest.
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "create-flash-manifest")]
+pub struct CreateFlashManifestArgs {
+    /// path to a partitions config, which specifies where in the partition
+    /// table the images are put.
+    #[argh(option)]
+    pub partitions: PathBuf,
+
+    /// path to an images manifest, which specifies images to put in slot A.
+    #[argh(option)]
+    pub system_a: Option<PathBuf>,
+
+    /// path to an images manifest, which specifies images to put in slot B.
+    #[argh(option)]
+    pub system_b: Option<PathBuf>,
+
+    /// path to an images manifest, which specifies images to put in slot R.
+    #[argh(option)]
+    pub system_r: Option<PathBuf>,
+
+    /// directory to write the UpdatePackage.
+    #[argh(option)]
+    pub outdir: PathBuf,
 }
 
 /// Arguments for creating a new config data package based off an existing one.

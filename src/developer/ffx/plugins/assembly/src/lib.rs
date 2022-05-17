@@ -30,6 +30,10 @@ pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
         OperationClass::CreateUpdate(args) => {
             operations::create_update::create_update(args).context("Create Update Package")
         }
+        OperationClass::CreateFlashManifest(args) => {
+            operations::create_flash_manifest::create_flash_manifest(args)
+                .context("Create Flash Manifest")
+        }
         OperationClass::ConfigData(args) => {
             operations::config_data::create_config_data(args).context("Create Config Data")
         }

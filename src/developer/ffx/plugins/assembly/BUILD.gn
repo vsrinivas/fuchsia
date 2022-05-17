@@ -20,6 +20,7 @@ ffx_plugin("ffx_assembly") {
     "src/lib.rs",
     "src/operations.rs",
     "src/operations/config_data.rs",
+    "src/operations/create_flash_manifest.rs",
     "src/operations/create_system.rs",
     "src/operations/create_update.rs",
     "src/operations/product.rs",

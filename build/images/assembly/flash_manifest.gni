@@ -1,0 +1,132 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_action.gni")
+import("//src/developer/ffx/build/ffx_action.gni")
+
+# Generate a manifest that can be passed to 'ffx target flash' to flash
+# images to a target device.
+#
+# Arguments
+#   partitions (required)
+#     [path] The path to the partitions config.
+#
+#   system_a (optional)
+#     [path] The path to the images manifest that describes images intended
+#     for slot A.
+#
+#   system_b (optional)
+#     [path] The path to the images manifest that describes images intended
+#     for slot B.
+#
+#   system_r (optional)
+#     [path] The path to the images manifest that describes images intended
+#     for slot R.
+#
+template("flash_manifest") {
+  assert(defined(invoker.partitions), "Need to define partitions")
+
+  labels = {
+    hermetic_inputs = "${target_name}_hermetic_inputs"
+  }
+
+  files = {
+    hermetic_inputs = "${target_out_dir}/${target_name}_hermetic_inputs"
+    outdir = "$target_out_dir/$target_name"
+    flash_manifest = "$outdir/flash.json"
+  }
+
+  python_action(labels.hermetic_inputs) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    binary_label =
+        "//build/images/assembly:hermetic_inputs_for_update_and_flash"
+
+    inputs = [ invoker.partitions ]
+    outputs = [ files.hermetic_inputs ]
+
+    args = [
+      "--partitions",
+      rebase_path(invoker.partitions, root_build_dir),
+      "--output",
+      rebase_path(files.hermetic_inputs, root_build_dir),
+    ]
+
+    if (defined(invoker.system_a) || defined(invoker.system_b) ||
+        defined(invoker.system_r)) {
+      args += [ "--system" ]
+      if (defined(invoker.system_a)) {
+        args += [ rebase_path(invoker.system_a, root_build_dir) ]
+        inputs += [ invoker.system_a ]
+      }
+      if (defined(invoker.system_b)) {
+        args += [ rebase_path(invoker.system_b, root_build_dir) ]
+        inputs += [ invoker.system_b ]
+      }
+      if (defined(invoker.system_r)) {
+        args += [ rebase_path(invoker.system_r, root_build_dir) ]
+        inputs += [ invoker.system_r ]
+      }
+    }
+  }
+
+  ffx_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    hermetic_inputs_target = ":${labels.hermetic_inputs}"
+    hermetic_inputs_file = files.hermetic_inputs
+
+    args = [
+      "--config",
+      "assembly_enabled=true",
+      "assembly",
+      "create-flash-manifest",
+      "--partitions",
+      rebase_path(invoker.partitions, root_build_dir),
+      "--outdir",
+      rebase_path(files.outdir, root_build_dir),
+    ]
+
+    outputs = [ files.flash_manifest ]
+
+    inputs = [ invoker.partitions ]
+
+    if (defined(invoker.system_a)) {
+      args += [
+        "--system-a",
+        rebase_path(invoker.system_a, root_build_dir),
+      ]
+      inputs += [ invoker.system_a ]
+    }
+
+    if (defined(invoker.system_b)) {
+      args += [
+        "--system-b",
+        rebase_path(invoker.system_b, root_build_dir),
+      ]
+      inputs += [ invoker.system_b ]
+    }
+
+    if (defined(invoker.system_r)) {
+      args += [
+        "--system-r",
+        rebase_path(invoker.system_r, root_build_dir),
+      ]
+      inputs += [ invoker.system_r ]
+    }
+  }
+}
