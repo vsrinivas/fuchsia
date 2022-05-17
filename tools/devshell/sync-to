@@ -348,9 +348,13 @@ class SyncToCommand:
             raise Error(
                 f"Integration remote {remote!r} does not match local"
                 f" checkout remote {local_remote!r}."
-                "\nIf this is a public build, you may need to create a"
-                " separate public checkout for the public source code:"
-                "\nhttps://fuchsia.dev/fuchsia-src/get-started/get_fuchsia_source#download-the-fuchsia-source-code"
+                f"\nIf syncing to a public build ID, use a public checkout."
+                f" You can create a public checkout in a separate directory"
+                f" by following the directions here:"
+                f"\nhttps://fuchsia.dev/fuchsia-src/get-started/get_fuchsia_source#download-the-fuchsia-source-code"
+                f"\n"
+                f"\nThen cd into the public checkout directory and run:"
+                f"\n  ./scripts/fx sync-to {self.state}"
             )
 
     def assert_correct_integration_manifest(self, checkout_info: dict) -> None:
