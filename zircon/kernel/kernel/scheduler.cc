@@ -1484,20 +1484,35 @@ void Scheduler::Remove(Thread* thread) {
 
 inline void Scheduler::RescheduleMask(cpu_mask_t cpus_to_reschedule_mask) {
   PreemptionState& preemption_state = Thread::Current::Get()->preemption_state();
-  if (preemption_state.EagerReschedDisableCount() != 0) {
-    preemption_state.preempts_pending_ |= cpus_to_reschedule_mask;
-  } else {
+
+  // First deal with the remote CPUs.
+  if (preemption_state.EagerReschedDisableCount() == 0) {
+    // |mp_reschedule| will remove the local cpu from the mask for us.
     mp_reschedule(cpus_to_reschedule_mask, 0);
+  } else {
+    // EagerReschedDisabled implies that local preemption is also disabled.
+    DEBUG_ASSERT(!preemption_state.PreemptIsEnabled());
+    preemption_state.preempts_pending_.fetch_or(cpus_to_reschedule_mask);
+    return;
   }
-  if (preemption_state.PreemptIsEnabled() &&
-      cpus_to_reschedule_mask & cpu_num_to_mask(arch_curr_cpu_num())) {
-    // TODO(fxbug.dev/64884): Once spinlocks imply preempt disable, this if-else can be replaced
-    // with a call to Preempt().
-    if (arch_num_spinlocks_held() < 2 && !arch_blocking_disallowed()) {
-      Preempt();
-    } else {
-      preemption_state.preempts_pending_ |= cpu_num_to_mask(arch_curr_cpu_num());
+
+  // Does the local CPU need to be preempted?
+  const cpu_mask_t local_mask = cpu_num_to_mask(arch_curr_cpu_num());
+  const cpu_mask_t local_cpu = cpus_to_reschedule_mask & local_mask;
+  if (local_cpu != 0) {
+    // Can we do it here and now?
+    if (preemption_state.PreemptIsEnabled()) {
+      // TODO(fxbug.dev/64884): Once spinlocks imply preempt disable, this if-else can be replaced
+      // with a call to Preempt().
+      if (arch_num_spinlocks_held() < 2 && !arch_blocking_disallowed()) {
+        // Yes, do it.
+        Preempt();
+        return;
+      }
     }
+
+    // Nope, can't do it now.  Make a note for later.
+    preemption_state.preempts_pending_.fetch_or(local_cpu);
   }
 }
 
