@@ -285,7 +285,7 @@ class VmObject : public VmHierarchyBase,
   // Returns true if the VMO supports CloneType::PrivatePagerCopy.
   virtual bool is_private_pager_copy_supported() const { return false; }
   // Returns true if the VMO's pages require dirty bit tracking.
-  virtual bool is_dirty_tracked() const { return false; }
+  virtual bool is_dirty_tracked_locked() const TA_REQ(lock_) { return false; }
 
   // Returns true if the vmo is a hidden paged vmo.
   virtual bool is_hidden() const { return false; }

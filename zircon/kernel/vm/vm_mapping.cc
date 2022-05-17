@@ -597,11 +597,11 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit, bool ign
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Cache whether the object is dirty tracked, we need to know this when computing mmu flags later.
-  const bool dirty_tracked = object_->is_dirty_tracked();
-
   // grab the lock for the vmo
   Guard<Mutex> object_guard{object_->lock()};
+
+  // Cache whether the object is dirty tracked, we need to know this when computing mmu flags later.
+  const bool dirty_tracked = object_->is_dirty_tracked_locked();
 
   // set the currently faulting flag for any recursive calls the vmo may make back into us.
   DEBUG_ASSERT(!currently_faulting_);
@@ -817,6 +817,9 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
     return ZX_ERR_ACCESS_DENIED;
   }
 
+  // grab the lock for the vmo
+  Guard<Mutex> guard{object_->lock()};
+
   // Determine how far to the end of the page table so we do not cause extra allocations.
   const uint64_t next_pt_base = ArchVmAspace::NextUserPageTableOffset(va);
   // Find the minimum between the size of this protection range and the end of the page table.
@@ -831,13 +834,10 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
   // keep things simple by just looking up 1 page.
   // TODO(rashaeqbal): Revisit this decision if there are performance issues.
   const uint64_t max_pages =
-      (pf_flags & VMM_PF_FLAG_WRITE && object_->is_dirty_tracked())
+      (pf_flags & VMM_PF_FLAG_WRITE && object_->is_dirty_tracked_locked())
           ? 1
           : ktl::min((max_map - va) / PAGE_SIZE, VmObject::LookupInfo::kMaxPages);
   DEBUG_ASSERT(max_pages > 0);
-
-  // grab the lock for the vmo
-  Guard<Mutex> guard{object_->lock()};
 
   // set the currently faulting flag for any recursive calls the vmo may make back into us
   // The specific path we're avoiding is if the VMO calls back into us during
