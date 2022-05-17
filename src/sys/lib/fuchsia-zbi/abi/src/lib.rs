@@ -66,3 +66,17 @@ pub struct zbi_header_t {
     pub magic: U32<LittleEndian>,
     pub crc32: U32<LittleEndian>,
 }
+
+/// Define a container header that describes a container content length of `length`.
+pub fn zbi_container_header(length: u32) -> zbi_header_t {
+    zbi_header_t {
+        zbi_type: U32::<LittleEndian>::new(ZbiType::Container as u32),
+        length: U32::<LittleEndian>::new(length),
+        extra: U32::<LittleEndian>::new(ZBI_CONTAINER_MAGIC),
+        flags: U32::<LittleEndian>::new(ZBI_FLAG_VERSION),
+        reserved_0: U32::<LittleEndian>::new(0),
+        reserved_1: U32::<LittleEndian>::new(0),
+        magic: U32::<LittleEndian>::new(ZBI_ITEM_MAGIC),
+        crc32: U32::<LittleEndian>::new(ZBI_ITEM_NO_CRC32),
+    }
+}

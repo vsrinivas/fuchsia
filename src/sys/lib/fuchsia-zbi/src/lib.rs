@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod zbi_abi;
-
 use {
+    fuchsia_zbi_abi::{is_zbi_type_driver_metadata, ZBI_ALIGNMENT_BYTES, ZBI_FLAG_CRC32},
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
     log::info,
@@ -14,12 +13,12 @@ use {
         mem::size_of,
     },
     thiserror::Error,
-    zbi_abi::{is_zbi_type_driver_metadata, ZBI_ALIGNMENT_BYTES, ZBI_FLAG_CRC32},
     zerocopy::LayoutVerified,
 };
 
-pub use zbi_abi::{
-    zbi_header_t, ZbiType, ZBI_CONTAINER_MAGIC, ZBI_FLAG_VERSION, ZBI_ITEM_MAGIC, ZBI_ITEM_NO_CRC32,
+pub use fuchsia_zbi_abi::{
+    zbi_container_header, zbi_header_t, ZbiType, ZBI_CONTAINER_MAGIC, ZBI_FLAG_VERSION,
+    ZBI_ITEM_MAGIC, ZBI_ITEM_NO_CRC32,
 };
 
 const ZBI_HEADER_SIZE: usize = size_of::<zbi_header_t>();
@@ -460,13 +459,13 @@ impl ZbiParser {
         Ok(self)
     }
 }
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
         anyhow::Error,
         byteorder::LittleEndian,
+        fuchsia_zbi_abi::zbi_container_header,
         std::convert::TryInto,
         zerocopy::{byteorder::U32, AsBytes},
     };
@@ -579,6 +578,17 @@ mod tests {
                 status: zx::Status::OUT_OF_RANGE
             }
         );
+    }
+
+    #[fuchsia::test]
+    async fn zero_content_zbi() {
+        let (zbi, _builder) = ZbiBuilder::new()
+            .add_header(zbi_container_header(0))
+            .generate()
+            .expect("Failed to create ZBI");
+        let parser = ZbiParser::new(zbi).parse().expect("Failed to parse ZBI");
+
+        assert_eq!(parser.items.len(), 0);
     }
 
     #[fuchsia::test]
