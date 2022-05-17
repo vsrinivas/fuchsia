@@ -646,7 +646,7 @@ Do the following:
 5. In different terminal, run the tools component:
 
    Note:  In this new terminal, make sure that you change to the same work
-   directory (for instance, `cd /$HOME/drivers`).
+   directory (for instance, `cd $HOME/drivers`).
 
    ```posix-terminal
    bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
