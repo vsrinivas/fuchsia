@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/platform_version.gni")
-import("//build/fidl/fidl_summary.gni")
-import("//build/fidl/fidlc.gni")
+import("//build/fidl/fidl_ir.gni")
 import("//build/fidl/linting_exceptions.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
@@ -51,9 +50,6 @@ template("fidl_library") {
     experimental_flags = invoker.experimental_flags
   }
 
-  summarization_target_name = "${target_name}_api_summarize"
-  summarization_target_name_json = "${target_name}_api_summarize_json"
-
   is_sdk_publishable =
       defined(invoker.sdk_category) && invoker.sdk_category != "internal" &&
       invoker.sdk_category != "experimental" &&
@@ -87,18 +83,22 @@ template("fidl_library") {
     fidl_deps += invoker.public_deps
   }
 
-  fidlc(compilation_target_name) {
+  summary_file = "$target_gen_dir/$target_name.api_summary"
+  summary_file_json = "$target_gen_dir/$target_name.api_summary.json"
+  fidl_ir(compilation_target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "fidl_deps",
                              "json_representation",
-                             "library_name",
                              "public_deps",
                              "sources",
                              "testonly",
                            ])
     fidl_target_name = main_target_name
+    fidl_library_name = library_name
+    out_summary = summary_file
+    out_json_summary = summary_file_json
     deps += [ ":$lint_target_name" ] + non_fidl_deps
   }
 
@@ -192,36 +192,6 @@ template("fidl_library") {
     }
   }
 
-  summary_file = "${target_gen_dir}/${target_name}.api_summary"
-  fidl_summary(summarization_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":*" ]
-    inputs = [ json_representation ]
-    outputs = [ summary_file ]
-    deps = [ ":$compilation_target_name" ]
-  }
-
-  # JSON summary file
-  summary_file_json = "${summary_file}.json"
-  fidl_summary_json(summarization_target_name_json) {
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":*" ]
-    inputs = [ json_representation ]
-    outputs = [ summary_file_json ]
-    dest = "fidl"
-    deps = [ ":$compilation_target_name" ]
-    if (is_sdk_publishable) {
-      metadata = {
-        compatibility_testing_goldens = [
-          {
-            src = rebase_path(summary_file_json, root_build_dir)
-            dst = rebase_path("$library_name.api_summary.json", root_build_dir)
-          },
-        ]
-      }
-    }
-  }
-
   # Enforce compatibility checks for all published SDK FIDLs.
   if (is_sdk_publishable) {
     if (api_compatibility_testing) {
@@ -232,13 +202,13 @@ template("fidl_library") {
                                [
                                  "deps",
                                  "sources",
-                                 "library_name",
                                  "fidl_deps",
                                  "public_deps",
                                  "experimental_flags",
                                  "testonly",
                                ])
         fidl_target_name = main_target_name
+        fidl_library_name = library_name
         target_api_level = "HEAD"
         golden_summary_json = "$library_name.api_summary.json"
       }
@@ -255,8 +225,8 @@ template("fidl_library") {
         forward_variables_from(invoker, [ "testonly" ])
         warn_on_changes = lenient_api_summary
         golden = "$library_name.api_summary"
-        current = "$target_gen_dir/$library_name.api_summary"
-        deps = [ ":$summarization_target_name" ]
+        current = summary_file
+        deps = [ ":$compilation_target_name" ]
       }
 
       # TODO(99710): Add missing goldens for vendor APIs and uncomment.
@@ -291,8 +261,8 @@ template("fidl_library") {
     ]
 
     deps = [
+      ":$compilation_target_name",
       ":$verification_target_name",
-      ":${summarization_target_name}",
     ]
 
     # TODO(99710): Delete. See above comment with the same bug number.
@@ -412,7 +382,7 @@ template("fidl_library") {
         }
       }
 
-      non_sdk_deps = [ ":$summarization_target_name_json" ]
+      non_sdk_deps = [ ":$compilation_target_name" ]
     }
 
     sdk_atom("${target_name}_sdk") {
@@ -460,8 +430,6 @@ template("fidl_library") {
                        ":$api_normalize_target_name",
                        ":$compilation_target_name",
                        ":$meta_target_name",
-                       ":$summarization_target_name",
-                       ":$summarization_target_name_json",
                      ] + sdk_atom_deps
 
       deps = []
