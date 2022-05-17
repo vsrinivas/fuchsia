@@ -66,7 +66,7 @@ impl DevicePrinter for DFv1Device {
                     count,
                     prop.key,
                     match prop.value {
-                        fdm::PropertyValue::IntValue(value) => value.to_string(),
+                        fdm::PropertyValue::IntValue(value) => format!("{:#08x}", value),
                         fdm::PropertyValue::StrValue(ref value) => format!("{}", value),
                         fdm::PropertyValue::BoolValue(value) => value.to_string(),
                         fdm::PropertyValue::EnumValue(ref value) => format!("Enum({})", value),
@@ -121,7 +121,7 @@ impl DevicePrinter for DFv2Node {
                         .value
                         .as_ref()
                         .map(|value| match value {
-                            fdf::NodePropertyValue::IntValue(value) => value.to_string(),
+                            fdf::NodePropertyValue::IntValue(value) => format!("{:#08x}", value),
                             fdf::NodePropertyValue::StringValue(ref value) =>
                                 format!("\"{}\"", value),
                             fdf::NodePropertyValue::BoolValue(value) => value.to_string(),
