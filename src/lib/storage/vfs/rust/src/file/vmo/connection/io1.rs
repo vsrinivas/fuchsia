@@ -675,8 +675,6 @@ impl VmoFileConnection {
             error: "handle_read_at" => (zx::Status::INTERNAL, 0, vec![]);
             { vmo, size, .. } => {
                 if offset >= *size {
-                    // This should return Status::OUT_OF_RANGE but POSIX wants an OK.
-                    // See fxbug.dev/33425.
                     break (zx::Status::OK, 0, vec![]);
                 }
 

@@ -505,7 +505,6 @@ fn seek_valid_after_size_before_capacity() {
         |proxy| {
             async move {
                 assert_seek!(proxy, 7, Start);
-                // POSIX wants this to be a zero read. fxbug.dev/33425.
                 assert_read!(proxy, "");
                 assert_write!(proxy, " ext");
                 //      "Content ext"));
