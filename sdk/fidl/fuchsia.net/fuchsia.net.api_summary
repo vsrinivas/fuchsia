@@ -1,6 +1,3 @@
-union/member fuchsia.net/InterfaceAddress.ipv4 fuchsia.net/Ipv4AddressWithPrefix
-union/member fuchsia.net/InterfaceAddress.ipv6 fuchsia.net/Ipv6Address
-strict union fuchsia.net/InterfaceAddress
 union/member fuchsia.net/IpAddress.ipv4 fuchsia.net/Ipv4Address
 union/member fuchsia.net/IpAddress.ipv6 fuchsia.net/Ipv6Address
 strict union fuchsia.net/IpAddress

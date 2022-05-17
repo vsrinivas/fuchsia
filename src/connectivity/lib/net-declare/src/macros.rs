@@ -471,29 +471,6 @@ declare_macro!(fidl_socket_addr_v6, FidlGen, SocketAddrV6);
 declare_macro!(fidl_mac, FidlGen, MacAddress);
 declare_macro!(fidl_subnet, FidlGen, IpAddressWithPrefix<IpAddr>);
 
-/// Generator for `fuchsia.net.InterfaceAddress`
-enum FidlInterfaceAddressGen {}
-
-impl Generator<IpAddressWithPrefix<Ipv4Addr>> for FidlInterfaceAddressGen {
-    fn generate(input: IpAddressWithPrefix<Ipv4Addr>) -> TokenStream {
-        let v4_addr_with_prefix = FidlGen::generate(input);
-        quote! {
-            fidl_fuchsia_net::InterfaceAddress::Ipv4(#v4_addr_with_prefix)
-        }
-    }
-}
-
-impl Generator<Ipv6Addr> for FidlInterfaceAddressGen {
-    fn generate(input: Ipv6Addr) -> TokenStream {
-        let v6_addr = FidlGen::generate(input);
-        quote! {
-            fidl_fuchsia_net::InterfaceAddress::Ipv6(#v6_addr)
-        }
-    }
-}
-
-declare_macro!(fidl_if_addr, FidlInterfaceAddressGen, IpAddressWithPrefix<Ipv4Addr>, Ipv6Addr);
-
 #[derive(PartialEq, Debug)]
 /// Helper struct to parse Cidr addresses from string.
 struct StrictSubnet<A> {

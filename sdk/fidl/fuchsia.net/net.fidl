@@ -76,21 +76,6 @@ type Ipv6AddressWithPrefix = struct {
     prefix_len uint8;
 };
 
-/// An address that can be assigned to a network interface.
-type InterfaceAddress = strict union {
-    /// An IPv4 address with the prefix length.
-    ///
-    /// The prefix length is necessary to determine the subnet to which an
-    /// IPv4 address belongs so that the broadcast address can be inferred.
-    1: ipv4 Ipv4AddressWithPrefix;
-    /// An IPv6 address.
-    ///
-    /// Note that the prefix length is not included because on-link information
-    /// for IPv6 should be configured statically via a a route or be discovered
-    /// through NDP messages.
-    2: ipv6 Ipv6Address;
-};
-
 /// A MAC address used to identify a network interface on the data link layer within the network.
 type MacAddress = struct {
     octets array<uint8, 6>;

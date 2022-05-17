@@ -26,7 +26,6 @@ import (
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	fidlethernet "fidl/fuchsia/hardware/ethernet"
-	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/interfaces/admin"
 	"fidl/fuchsia/netstack"
 
@@ -534,26 +533,6 @@ func (ns *Netstack) onDefaultRouteChangeLocked(nicid tcpip.NICID, hasDefaultIPv4
 		hasDefaultIPv4Route: &hasDefaultIPv4Route,
 		hasDefaultIPv6Route: &hasDefaultIPv6Route,
 	}
-}
-
-func toNetInterfaceAddress(protocolAddr tcpip.ProtocolAddress) fidlnet.InterfaceAddress {
-	var ifAddr fidlnet.InterfaceAddress
-	switch protocolAddr.Protocol {
-	case header.IPv4ProtocolNumber:
-		var v4 fidlnet.Ipv4Address
-		copy(v4.Addr[:], protocolAddr.AddressWithPrefix.Address)
-		ifAddr.SetIpv4(fidlnet.Ipv4AddressWithPrefix{
-			PrefixLen: uint8(protocolAddr.AddressWithPrefix.PrefixLen),
-			Addr:      v4,
-		})
-	case header.IPv6ProtocolNumber:
-		var v6 fidlnet.Ipv6Address
-		copy(v6.Addr[:], protocolAddr.AddressWithPrefix.Address)
-		ifAddr.SetIpv6(v6)
-	default:
-		panic(fmt.Sprintf("protocol address %#v is not IPv4 or IPv6", protocolAddr))
-	}
-	return ifAddr
 }
 
 func (ns *Netstack) onAddressAddLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix, strict bool) {
