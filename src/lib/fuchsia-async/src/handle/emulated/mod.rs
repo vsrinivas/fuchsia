@@ -542,7 +542,7 @@ impl Socket {
     pub fn create(sock_opts: SocketOpts) -> Result<(Socket, Socket), zx_status::Status> {
         match sock_opts {
             SocketOpts::STREAM => {
-                let rights = Rights::TRANSFER | Rights::WRITE | Rights::READ;
+                let rights = Rights::TRANSFER | Rights::WRITE | Rights::READ | Rights::WAIT;
                 let (shard, slot) = STREAM_SOCKETS.new_handle_slot(rights);
                 let left = pack_handle(shard, slot, HdlType::StreamSocket, Side::Left);
                 let right = pack_handle(shard, slot, HdlType::StreamSocket, Side::Right);
@@ -992,6 +992,8 @@ bitflags! {
         const READ           = 1 << 2;
         /// Write right.
         const WRITE          = 1 << 3;
+        /// Wait right.
+        const WAIT           = 1 << 14;
         /// Same rights.
         const SAME_RIGHTS = 1 << 31;
         /// Rights of a new channel.
@@ -1612,6 +1614,26 @@ mod test {
         let mut buf = [0u8; 128];
         assert_eq!(b.read(&mut buf).unwrap(), 3);
         assert_eq!(&buf[0..3], &[1, 2, 3]);
+    }
+
+    /// Ensure streaming sockets are waitable by default
+    #[test]
+    fn socket_wait() {
+        let (a, b) = Socket::create(SocketOpts::STREAM).unwrap();
+        with_handle(a.0, |h, _| match h {
+            HdlRef::StreamSocket(obj) => {
+                assert_eq!((obj.rights.left & Rights::WAIT), Rights::WAIT);
+                assert_eq!((obj.rights.right & Rights::WAIT), Rights::WAIT);
+            }
+            _ => unreachable!(),
+        });
+        with_handle(b.0, |h, _| match h {
+            HdlRef::StreamSocket(obj) => {
+                assert_eq!((obj.rights.left & Rights::WAIT), Rights::WAIT);
+                assert_eq!((obj.rights.right & Rights::WAIT), Rights::WAIT);
+            }
+            _ => unreachable!(),
+        })
     }
 
     #[test]
