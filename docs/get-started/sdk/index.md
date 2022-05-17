@@ -42,43 +42,48 @@ This guide requires that your host machine meets the following criteria:
 
 ### Install dependencies {:#install-dependencies}
 
-1. **[Install Git][git-install]{:.external}**.
+`git` and `bazel` need to be installed on the host machine.
+You need Bazel 5.1 or higher.
 
-1. **[Install Bazel][bazel-install]{:.external}**. You need at least version
-   5.1. The easiest install option is to download the [Bazelisk
-   binary][bazelisk-download]{:.external} and rename it to `bazel` in a
+Note: You only need to complete these steps once on your host machine.
+
+Do the following:
+
+1. [Install Git][git-install]{:.external}.
+
+1. [Install Bazel][bazel-install]{:.external} – the easiest install option is
+   to download the [Bazelisk binary][bazelisk-download]{:.external} and rename it to `bazel` in a
    convenient place on your path.
-
-You only need to do these steps once on your host machine.
 
 ### Generate Fuchsia-specific SSH keys {:#generate-fuchsia-specific-ssh-keys}
 
-To be able to connect to a Fuchsia device (including a Fuchsia emulator instance),
-some `ffx` commands (such as `ffx log` and `ffx target show`) require that
-[Fuchsia-specific SSH keys][fuchsia-ssh-keys] are present on the host machine.
+The `ffx` tool requires that [Fuchsia-specific SSH keys][fuchsia-ssh-keys] are stored
+on the host machine for connecting to Fuchsia devices (including the Fuchsia emulator).
 
-To check if your host machine already has Fuchsia-specific SSH keys, run the following command:
+To check if your host machine already has Fuchsia SSH keys, do the following:
 
-```posix-terminal
-ls $HOME/.ssh | grep fuchsia
-```
+1. Scan the `$HOME/.ssh` directory for Fuchsia SSH keys:
 
-This command should print output displaying the `fuchsia_*` files, similar to the following:
+   ```posix-terminal
+   ls $HOME/.ssh | grep fuchsia
+   ```
 
-```none {:.devsite-disable-click-to-copy}
-$ ls $HOME/.ssh | grep fuchsia
-fuchsia_authorized_keys
-fuchsia_ed25519
-fuchsia_ed25519.pub
-```
+1. Verify that the following `fuchsia_*` files are present:
 
-**If you don’t see these files**, generate Fuchsia-specific SSH keys on the host machine:
+   ```none {:.devsite-disable-click-to-copy}
+   $ ls $HOME/.ssh | grep fuchsia
+   fuchsia_authorized_keys
+   fuchsia_ed25519
+   fuchsia_ed25519.pub
+   ```
 
-Note: These Fuchsia-specific SSH keys are only used to connect to Fuchsia
-devices during development. Generating these SSH keys won't alter your current
-SSH settings.
+**If you don’t see these files**, you need to generate Fuchsia SSH keys on the host machine:
 
 1. Generate a new private and public SSH key pair:
+
+   Note: These Fuchsia SSH keys are only used for connecting to Fuchsia
+   devices during development. Generating these SSH keys won't alter your current
+   SSH settings.
 
    ```posix-terminal
    [[ -f "${HOME}/.ssh/fuchsia_ed25519" ]] || ssh-keygen -P "" -t ed25519 -f "${HOME}/.ssh/fuchsia_ed25519" -C "${USER}@$(hostname -f) Shared SSH Key for Fuchsia"
@@ -90,7 +95,7 @@ SSH settings.
    [[ -f "${HOME}/.ssh/fuchsia_authorized_keys" ]] || ssh-keygen -y -f "${HOME}/.ssh/fuchsia_ed25519" > "${HOME}/.ssh/fuchsia_authorized_keys"
    ```
 
-1. Verify that Fuchsia-specific SSH keys are generated:
+1. Verify that Fuchsia SSH keys are generated:
 
    ```posix-terminal
    ls $HOME/.ssh | grep fuchsia
