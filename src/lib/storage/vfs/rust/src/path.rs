@@ -182,8 +182,6 @@ impl AsRef<str> for Path {
 mod tests {
     use super::*;
 
-    #[allow(unknown_lints)] // TODO(fxbug.dev/99424): remove this after toolchain roll when lint is known
-    #[allow(unused_macro_rules)] // TODO(fxbug.dev/100318): remove unused macro rules and re-enable
     macro_rules! simple_construction_test {
         (path: $str:expr, $path:ident => $body:block) => {
             match Path::validate_and_split($str) {

@@ -50,8 +50,6 @@ macro_rules! define_float_unit {
     };
 }
 
-#[allow(unknown_lints)] // TODO(fxbug.dev/99424): remove this after toolchain roll when lint is known
-#[allow(unused_macro_rules)] // TODO(fxbug.dev/100318): remove unused macro rules and re-enable
 /// Defines a measurement unit, with an underlying scalar type.
 macro_rules! define_unit {
     ( $unit_type:ident, f32 ) => {

@@ -14,8 +14,6 @@
 
 use std::fmt::Debug;
 
-#[allow(unknown_lints)] // TODO(fxbug.dev/99424): remove this after toolchain roll when lint is known
-#[allow(unused_macro_rules)] // TODO(fxbug.dev/100318): remove unused macro rules and re-enable
 macro_rules! assert_abort {
     ($cond:expr) => ({
         let cond = $cond;
@@ -32,8 +30,6 @@ macro_rules! assert_abort {
     });
 }
 
-#[allow(unknown_lints)] // TODO(fxbug.dev/99424): remove this after toolchain roll when lint is known
-#[allow(unused_macro_rules)] // TODO(fxbug.dev/100318): remove unused macro rules and re-enable
 macro_rules! assert_abort_eq {
     ($left:expr, $right:expr) => ({
         match (&$left, &$right) {
@@ -76,8 +72,6 @@ macro_rules! unreachable_abort {
     }};
 }
 
-#[allow(unknown_lints)] // TODO(fxbug.dev/99424): remove this after toolchain roll when lint is known
-#[allow(unused_macro_rules)] // TODO(fxbug.dev/100318): remove unused macro rules and re-enable
 macro_rules! panic_abort {
     () => ({
         panic_abort!("explicit panic")

@@ -226,8 +226,6 @@ macro_rules! __create_protocol_enum_inner {
     };
 }
 
-#[allow(unknown_lints)] // TODO(fxbug.dev/99424): remove this after toolchain roll when lint is known
-#[allow(unused_macro_rules)] // TODO(fxbug.dev/100318): remove unused macro rules and re-enable
 /// Create an enum representing a protocol number (such as IP protocol or
 /// EtherType).
 ///

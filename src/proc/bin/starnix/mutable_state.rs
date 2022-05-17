@@ -275,8 +275,6 @@ impl<'a, B, S> ops::DerefMut for WritableState<'a, B, S> {
     }
 }
 
-#[allow(unknown_lints)] // TODO(fxbug.dev/99424): remove this after toolchain roll when lint is known
-#[allow(unused_macro_rules)] // TODO(fxbug.dev/100318): remove unused macro rules and re-enable
 /// This macro matches the methods inside a `state_implementation!` macro depending on their
 /// visibility and mutability so that the `state_implementation!` might dispatch these to the right
 /// trait or implementation.
