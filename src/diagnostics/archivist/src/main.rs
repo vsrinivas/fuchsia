@@ -34,8 +34,6 @@ pub struct Args {
 pub enum ArchivistOptionV1 {
     /// Default mode for v1.
     Default,
-    /// Drain klog.
-    WithKlog,
     /// Don't connect to the LogConnector.
     NoLogConnector,
 }
@@ -46,7 +44,6 @@ impl FromStr for ArchivistOptionV1 {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "default" => Ok(ArchivistOptionV1::Default),
-            "with-klog" => Ok(ArchivistOptionV1::WithKlog),
             "no-log-connector" => Ok(ArchivistOptionV1::NoLogConnector),
             s => Err(format_err!("Invalid V1 flavor {}", s)),
         }
@@ -73,9 +70,6 @@ fn load_v1_config(options: Vec<ArchivistOptionV1>) -> Config {
     for option in options {
         match option {
             ArchivistOptionV1::Default => {}
-            ArchivistOptionV1::WithKlog => {
-                config.enable_klog = true;
-            }
             ArchivistOptionV1::NoLogConnector => {
                 config.enable_log_connector = false;
             }
