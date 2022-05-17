@@ -21,8 +21,9 @@ import("//build/toolchain/rbe.gni")
 #     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
 #
 #   edition (optional)
-#     Edition of the Rust language to be used.
-#     Options are "2015" and "2018". Defaults to "2018".
+#     Edition of the Rust language to be used. Defaults to "2018"
+#     See https://doc.rust-lang.org/edition-guide/editions/index.html for more
+#     info on rust editions.
 #
 #   enforce_source_listing (optional)
 #     When true, enforces that any source files used by the Rust compiler are
@@ -102,15 +103,12 @@ template("rustc_artifact") {
 
   _configs = invoker.configs
 
-  # in-tree default is 2018 edition
   if (defined(invoker.edition)) {
-    assert(invoker.edition == "2015" || invoker.edition == "2018",
-           "Only editions 2015 and 2018 are supported")
-
     # in-tree default is 2018 edition
-    if (invoker.edition == "2015") {
+    if (invoker.edition != "2018") {
+      _edition = invoker.edition
       _configs -= [ "//build/config/rust:edition_2018" ]
-      _configs += [ "//build/config/rust:edition_2015" ]
+      _configs += [ "//build/config/rust:edition_${_edition}" ]
     }
   }
 

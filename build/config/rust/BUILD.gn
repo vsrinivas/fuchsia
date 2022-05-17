@@ -46,6 +46,10 @@ config("analysis") {
   rustflags = [ "-Zsave-analysis" ]
 }
 
+config("edition_2021") {
+  rustflags = [ "--edition=2021" ]
+}
+
 config("edition_2018") {
   rustflags = [ "--edition=2018" ]
 }
