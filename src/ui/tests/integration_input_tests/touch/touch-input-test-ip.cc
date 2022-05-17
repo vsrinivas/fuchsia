@@ -135,6 +135,12 @@ using LegacyUrl = std::string;
 // Set this as low as you can that still works across all test platforms.
 constexpr zx::duration kTimeout = zx::min(5);
 
+// Maximum distance between two physical pixel coordinates so that they are considered equal.
+constexpr float kEpsilon = 0.5f;
+
+constexpr auto kTouchScreenMaxDim = 1000;
+constexpr auto kTouchScreenMinDim = -1000;
+
 // The type used to measure UTC time. The integer value here does not matter so
 // long as it differs from the ZX_CLOCK_MONOTONIC=0 defined by Zircon.
 using time_utc = zx::basic_time<1>;
@@ -142,6 +148,18 @@ using time_utc = zx::basic_time<1>;
 constexpr auto kMockResponseListener = "response_listener";
 
 enum class TapLocation { kTopLeft, kTopRight };
+
+enum class SwipeGesture {
+  UP = 1,
+  DOWN,
+  LEFT,
+  RIGHT,
+};
+
+struct ExpectedSwipeEvent {
+  double x = 0, y = 0;
+  zx::time injection_time;
+};
 
 // Combines all vectors in `vecs` into one.
 template <typename T>
@@ -151,6 +169,26 @@ std::vector<T> merge(std::initializer_list<std::vector<T>> vecs) {
     result.insert(result.end(), v.begin(), v.end());
   }
   return result;
+}
+
+// Checks whether all the coordinates in |expected_events| are contained in |actual_events|.
+void AssertSwipeEvents(const std::vector<test::touch::PointerData>& actual_events,
+                       const std::vector<ExpectedSwipeEvent>& expected_events) {
+  FX_DCHECK(actual_events.size() == expected_events.size());
+  for (size_t i = 0; i < actual_events.size(); i++) {
+    const auto& actual_x = actual_events[i].local_x();
+    const auto& actual_y = actual_events[i].local_y();
+    const auto& actual_time_received = actual_events[i].time_received();
+
+    const auto& [expected_x, expected_y, expected_time_received] = expected_events[i];
+
+    auto elapsed_time =
+        zx::basic_time<ZX_CLOCK_MONOTONIC>(actual_time_received) - expected_time_received;
+
+    EXPECT_NEAR(actual_x, expected_x, kEpsilon);
+    EXPECT_NEAR(actual_y, expected_y, kEpsilon);
+    EXPECT_TRUE(elapsed_time.get() > 0 && elapsed_time.get() != ZX_TIME_INFINITE);
+  }
 }
 
 // This component implements the test.touch.ResponseListener protocol
@@ -324,8 +362,8 @@ class TouchInputBase
     fuchsia::input::report::Axis axis;
     axis.unit.type = fuchsia::input::report::UnitType::NONE;
     axis.unit.exponent = 0;
-    axis.range.min = -1000;
-    axis.range.max = 1000;
+    axis.range.min = kTouchScreenMinDim;
+    axis.range.max = kTouchScreenMaxDim;
 
     fuchsia::input::report::ContactInputDescriptor contact;
     contact.set_position_x(axis);
@@ -395,6 +433,77 @@ class TouchInputBase
     ++injection_count_;
     FX_LOGS(INFO) << "*** Tap injected, count: " << injection_count_;
     return RealNow<TimeT>();
+  }
+
+  // Inject directly into Input Pipeline, using fuchsia.input.injection FIDLs. A swipe gesture is
+  // mimicked by injecting |swipe_length| touch events across the length of the display, with a
+  // delay of 10 msec. For the fake display used in this test, and swipe_length=N, this results in
+  // events separated by 50 pixels.
+  template <typename TimeT>
+  std::vector<TimeT> InjectSwipe(SwipeGesture direction, int swipe_length, int begin_x,
+                                 int begin_y) {
+    int x_dir = 0, y_dir = 0;
+    switch (direction) {
+      case SwipeGesture::UP:
+        y_dir = -1;
+        break;
+      case SwipeGesture::DOWN:
+        y_dir = 1;
+        break;
+      case SwipeGesture::LEFT:
+        x_dir = -1;
+        break;
+      case SwipeGesture::RIGHT:
+        x_dir = 1;
+        break;
+      default:
+        FX_NOTREACHED();
+    }
+
+    std::vector<TimeT> injection_times;
+
+    // Inject a series of input reports.
+    //
+    // The /config/data/display_rotation (90) specifies how many degrees to rotate the
+    // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
+    // the user observes the child view to rotate *clockwise* by that amount (90).
+    //
+    // Hence an upward swipe on the display is observed by the child view as a left swipe in its
+    // coordinate system.
+    std::vector<fuchsia::input::report::InputReport> input_reports;
+    auto touchscreen_width = kTouchScreenMaxDim - kTouchScreenMinDim;
+
+    // Note: The display start and end edges must be included.
+    for (auto i = 0; i <= swipe_length; i++) {
+      auto x = begin_x + x_dir * (touchscreen_width / swipe_length) * i;
+      auto y = begin_y + y_dir * (touchscreen_width / swipe_length) * i;
+
+      fuchsia::input::report::ContactInputReport contact_input_report;
+      contact_input_report.set_contact_id(1);
+      contact_input_report.set_position_x(x);
+      contact_input_report.set_position_y(y);
+
+      fuchsia::input::report::TouchInputReport touch_input_report;
+      auto contacts = touch_input_report.mutable_contacts();
+      contacts->push_back(std::move(contact_input_report));
+
+      fuchsia::input::report::InputReport input_report;
+      input_report.set_touch(std::move(touch_input_report));
+
+      input_reports.push_back(std::move(input_report));
+      injection_times.push_back(RealNow<TimeT>());
+
+      zx::nanosleep(zx::deadline_after(zx::msec(10)));
+      injection_count_++;
+    }
+
+    fuchsia::input::report::TouchInputReport remove_touch_input_report;
+    fuchsia::input::report::InputReport remove_input_report;
+    remove_input_report.set_touch(std::move(remove_touch_input_report));
+    input_reports.push_back(std::move(remove_input_report));
+    fake_input_device_->SetReports(std::move(input_reports));
+
+    return injection_times;
   }
 
   // Guaranteed to be initialized after SetUp().
@@ -575,6 +684,174 @@ TEST_F(GfxInputTestIp, CppGfxClientTap) {
 
   input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>(TapLocation::kTopLeft);
   RunLoopUntil([&injection_complete] { return injection_complete; });
+}
+
+TEST_F(GfxInputTestIp, CppGFXClientSwipeTest) {
+  // Inject a right swipe on the display. As the child view is rotated by 90 degrees, an upward
+  // swipe is observed by the child view.
+  {
+    const int swipe_length = 40, begin_x = kTouchScreenMinDim, begin_y = 0;
+    std::vector<test::touch::PointerData> actual_events;
+    response_listener()->SetRespondCallback(
+        [&actual_events](auto touch) { actual_events.push_back(std::move(touch)); });
+    auto injection_times = InjectSwipe<zx::basic_time<ZX_CLOCK_MONOTONIC>>(
+        SwipeGesture::RIGHT, swipe_length, begin_x, begin_y);
+
+    //  Client sends a response for every PointerEventPhase event which includes 1 Add, 1 Down,
+    // |swipe_length| Move, 1 Up, 1 Remove.
+    RunLoopUntil([&actual_events] {
+      return actual_events.size() >= static_cast<uint32_t>(swipe_length + 4);
+    });
+
+    std::vector<ExpectedSwipeEvent> expected_events;
+    auto tap_distance = static_cast<double>(display_width()) / static_cast<double>(swipe_length);
+
+    // As the child view is rotated by 90 degrees, a swipe in the middle of the display from
+    // the left edge to the right edge should appear as a swipe in the middle of the screen from the
+    // bottom edge to the top edge.
+    for (double i = static_cast<double>(swipe_length); i >= 0; i--) {
+      expected_events.push_back(
+          {.x = static_cast<double>(display_height()) / 2,
+           .y = i * tap_distance,
+           .injection_time = injection_times[swipe_length - static_cast<int>(i)]});
+    }
+
+    // The |ExpectedSwipeEvent| for Up and Remove PointerEventPhase will be the same as the last
+    // Move event.
+    auto last_touch_event = expected_events.back();
+    expected_events.push_back(last_touch_event);
+    expected_events.push_back(last_touch_event);
+
+    // Remove the first event received as it is a response sent for an Add event.
+    actual_events.erase(actual_events.begin());
+
+    ASSERT_EQ(actual_events.size(), expected_events.size());
+    AssertSwipeEvents(actual_events, expected_events);
+  }
+
+  // Inject a downward swipe on the display. As the child view is rotated by 90 degrees, a right
+  // swipe is observed by the child view.
+  {
+    const int swipe_length = 40, begin_x = 0, begin_y = kTouchScreenMinDim;
+    std::vector<test::touch::PointerData> actual_events;
+    response_listener()->SetRespondCallback(
+        [&actual_events](auto touch) { actual_events.push_back(std::move(touch)); });
+    auto injection_times = InjectSwipe<zx::basic_time<ZX_CLOCK_MONOTONIC>>(
+        SwipeGesture::DOWN, swipe_length, begin_x, begin_y);
+
+    //  Client sends a response for every PointerEventPhase event which includes 1 Add, 1 Down,
+    // |swipe_length| Move, 1 Up, 1 Remove.
+    RunLoopUntil([&actual_events] {
+      return actual_events.size() >= static_cast<uint32_t>(swipe_length + 4);
+    });
+
+    std::vector<ExpectedSwipeEvent> expected_events;
+    auto tap_distance = static_cast<double>(display_height()) / static_cast<double>(swipe_length);
+
+    // As the child view is rotated by 90 degrees, a swipe in the middle of the display from the
+    // top edge to the bottom edge should appear as a swipe in the middle of the screen from the
+    // left edge to the right edge.
+    for (double i = 0; i <= static_cast<double>(swipe_length); i++) {
+      expected_events.push_back({.x = i * tap_distance,
+                                 .y = static_cast<double>(display_width()) / 2,
+                                 .injection_time = injection_times[static_cast<int>(i)]});
+    }
+
+    // The |ExpectedSwipeEvent| for Up and Remove PointerEventPhase will be the same as the last
+    // Move event.
+    auto last_touch_event = expected_events.back();
+    expected_events.push_back(last_touch_event);
+    expected_events.push_back(last_touch_event);
+
+    // Remove the first event received as it is a response sent for an Add event.
+    actual_events.erase(actual_events.begin());
+
+    ASSERT_EQ(actual_events.size(), expected_events.size());
+    AssertSwipeEvents(actual_events, expected_events);
+  }
+
+  // Inject a left swipe on the display. As the child view is rotated by 90 degrees, a downward
+  // swipe is observed by the child view.
+  {
+    const int swipe_length = 40, begin_x = kTouchScreenMaxDim, begin_y = 0;
+    std::vector<test::touch::PointerData> actual_events;
+    response_listener()->SetRespondCallback(
+        [&actual_events](auto touch) { actual_events.push_back(std::move(touch)); });
+    auto injection_times = InjectSwipe<zx::basic_time<ZX_CLOCK_MONOTONIC>>(
+        SwipeGesture::LEFT, swipe_length, begin_x, begin_y);
+
+    //  Client sends a response for every PointerEventPhase event which includes 1 Add, 1 Down,
+    // |swipe_length| Move, 1 Up, 1 Remove.
+    RunLoopUntil([&actual_events] {
+      return actual_events.size() >= static_cast<uint32_t>(swipe_length + 4);
+    });
+
+    std::vector<ExpectedSwipeEvent> expected_events;
+    auto tap_distance = static_cast<double>(display_width()) / static_cast<double>(swipe_length);
+
+    // As the child view is rotated by 90 degrees, a swipe in the middle of the display from the
+    // right edge to the left edge should appear as a swipe in the middle of the screen from the top
+    // edge to the the bottom edge.
+    for (double i = 0; i <= static_cast<double>(swipe_length); i++) {
+      expected_events.push_back({.x = static_cast<double>(display_height()) / 2,
+                                 .y = i * tap_distance,
+                                 .injection_time = injection_times[static_cast<int>(i)]});
+    }
+
+    // The |ExpectedSwipeEvent| for Up and Remove PointerEventPhase will be the same as the last
+    // Move event.
+    auto last_touch_event = expected_events.back();
+    expected_events.push_back(last_touch_event);
+    expected_events.push_back(last_touch_event);
+
+    // Remove the first event received as it is a response sent for an Add event.
+    actual_events.erase(actual_events.begin());
+
+    ASSERT_EQ(actual_events.size(), expected_events.size());
+    AssertSwipeEvents(actual_events, expected_events);
+  }
+
+  // Inject an upward swipe on the display. As the child view is rotated by 90 degrees, a left
+  // swipe is observed by the child view.
+  {
+    const int swipe_length = 40, begin_x = 0, begin_y = kTouchScreenMaxDim;
+    std::vector<test::touch::PointerData> actual_events;
+    response_listener()->SetRespondCallback(
+        [&actual_events](auto touch) { actual_events.push_back(std::move(touch)); });
+    auto injection_times = InjectSwipe<zx::basic_time<ZX_CLOCK_MONOTONIC>>(
+        SwipeGesture::UP, swipe_length, begin_x, begin_y);
+
+    //  Client sends a response for every PointerEventPhase event which includes 1 Add, 1 Down,
+    // |swipe_length| Move, 1 Up, 1 Remove.
+    RunLoopUntil([&actual_events] {
+      return actual_events.size() >= static_cast<uint32_t>(swipe_length + 4);
+    });
+
+    std::vector<ExpectedSwipeEvent> expected_events;
+    auto tap_distance = static_cast<double>(display_height()) / static_cast<double>(swipe_length);
+
+    // As the child view is rotated by 90 degrees, a swipe in the middle of the display from the
+    // bottom edge to the top edge should appear as a swipe in the middle of the screen from the
+    // right edge to the left edge.
+    for (double i = static_cast<double>(swipe_length); i >= 0; i--) {
+      expected_events.push_back(
+          {.x = i * tap_distance,
+           .y = static_cast<double>(display_width()) / 2,
+           .injection_time = injection_times[swipe_length - static_cast<int>(i)]});
+    }
+
+    // The |ExpectedSwipeEvent| for Up and Remove PointerEventPhase will be the same as the last
+    // Move event.
+    auto last_touch_event = expected_events.back();
+    expected_events.push_back(last_touch_event);
+    expected_events.push_back(last_touch_event);
+
+    // Remove the first event received as it is a response sent for an Add event.
+    actual_events.erase(actual_events.begin());
+
+    ASSERT_EQ(actual_events.size(), expected_events.size());
+    AssertSwipeEvents(actual_events, expected_events);
+  }
 }
 
 class WebEngineTestIp : public TouchInputBase {

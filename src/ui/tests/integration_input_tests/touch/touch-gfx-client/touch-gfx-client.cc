@@ -125,27 +125,23 @@ class TouchGfxClient : public fuchsia::ui::app::ViewProvider {
       } else if (event.is_input()) {
         switch (event.input().Which()) {
           case fuchsia::ui::input::InputEvent::Tag::kPointer: {
-            if (event.input().pointer().phase == fuchsia::ui::input::PointerEventPhase::DOWN &&
-                material_) {
-              {
-                // Cycle to next color.
-                color_index_ = (color_index_ + 1) % kColorsRgba.size();
-                std::array<uint8_t, 4> color = kColorsRgba[color_index_];
-                material_->SetColor(color[0], color[1], color[2], color[3]);
-                session_->Present2(/*when*/ zx_clock_get_monotonic(), /*span*/ 0, [](auto) {});
-              }
-
-              if (response_listener_) {
-                test::touch::PointerData data;
-                // The raw pointer event's coordinates are in pips (logical pixels). The test
-                // expects coordinates in physical pixels. The former is transformed into the latter
-                // with the scale factor provided in the metrics event.
-                data.set_local_x(event.input().pointer().x * metrics_.scale_x)
-                    .set_local_y(event.input().pointer().y * metrics_.scale_y)
-                    .set_time_received(zx_clock_get_monotonic())
-                    .set_component_name("touch-gfx-client");
-                response_listener_->Respond(std::move(data));
-              }
+            const auto& phase = event.input().pointer().phase;
+            if (phase == fuchsia::ui::input::PointerEventPhase::DOWN && material_) {
+              color_index_ = (color_index_ + 1) % kColorsRgba.size();
+              std::array<uint8_t, 4> color = kColorsRgba[color_index_];
+              material_->SetColor(color[0], color[1], color[2], color[3]);
+              session_->Present2(/*when*/ zx_clock_get_monotonic(), /*span*/ 0, [](auto) {});
+            }
+            if (response_listener_) {
+              test::touch::PointerData data;
+              // The raw pointer event's coordinates are in pips (logical pixels). The test
+              // expects coordinates in physical pixels. The former is transformed into the latter
+              // with the scale factor provided in the metrics event.
+              data.set_local_x(event.input().pointer().x * metrics_.scale_x)
+                  .set_local_y(event.input().pointer().y * metrics_.scale_y)
+                  .set_time_received(zx_clock_get_monotonic())
+                  .set_component_name("touch-gfx-client");
+              response_listener_->Respond(std::move(data));
             }
             break;
           }
