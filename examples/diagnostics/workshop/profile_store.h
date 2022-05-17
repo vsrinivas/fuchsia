@@ -19,6 +19,10 @@ class ProfileStore : public fuchsia::examples::diagnostics::ProfileStore {
     return bindings_.GetHandler(this);
   }
 
+  void AddBinding(fidl::InterfaceRequest<fuchsia::examples::diagnostics::ProfileStore> channel) {
+    bindings_.AddBinding(this, std::move(channel), dispatcher_);
+  }
+
   explicit ProfileStore(async_dispatcher_t* dispatcher);
 
   ~ProfileStore() override;

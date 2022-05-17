@@ -6,8 +6,44 @@
 
 #include <lib/async/dispatcher.h>
 
-Profile::Profile(async_dispatcher_t* dispatcher)
-    : balance_(0), reader_(this), dispatcher_(dispatcher) {}
+#include <string>
+
+#include <rapidjson/document.h>
+#include <rapidjson/schema.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
+#include "src/lib/files/file.h"
+#include "src/lib/json_parser/json_parser.h"
+
+bool LoadFromFile(std::string& filepath, std::string* name, int64_t* balance) {
+  json::JSONParser json_parser;
+  rapidjson::Document document = json_parser.ParseFromFile(filepath);
+  if (json_parser.HasError()) {
+    return false;
+  }
+  *name = document["name"].GetString();
+  *balance = document["balance"].GetInt();
+  return true;
+}
+
+bool SaveToFile(std::string& filepath, std::string& name, int64_t balance) {
+  rapidjson::Document document;
+  document.SetObject();
+  document.AddMember("name", name, document.GetAllocator());
+  document.AddMember("balance", balance, document.GetAllocator());
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  document.Accept(writer);
+  return files::WriteFile(filepath, buffer.GetString());
+}
+
+Profile::Profile(async_dispatcher_t* dispatcher, std::string filepath)
+    : balance_(0), filepath_(filepath), reader_(this), dispatcher_(dispatcher) {
+  LoadFromFile(filepath_, &name_, &balance_);
+
+  bindings_.set_empty_set_handler([&]() { SaveToFile(filepath_, name_, balance_); });
+}
 
 Profile::~Profile() = default;
 

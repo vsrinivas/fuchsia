@@ -19,7 +19,7 @@ class Profile : public fuchsia::examples::diagnostics::Profile {
     reader_.AddBinding(std::move(channel));
   }
 
-  explicit Profile(async_dispatcher_t* dispatcher);
+  explicit Profile(async_dispatcher_t* dispatcher, std::string);
 
   ~Profile() override;
 
@@ -55,6 +55,7 @@ class Profile : public fuchsia::examples::diagnostics::Profile {
   fidl::BindingSet<fuchsia::examples::diagnostics::Profile> bindings_;
   std::string name_;
   int64_t balance_;
+  std::string filepath_;
   Reader reader_;
   async_dispatcher_t* dispatcher_;
 };

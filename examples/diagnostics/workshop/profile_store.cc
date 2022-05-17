@@ -7,6 +7,10 @@
 #include <memory>
 
 #include "profile.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+
+std::string FilepathForKey(std::string& key) { return files::JoinPath("/data", key); }
 
 ProfileStore::ProfileStore(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
@@ -17,6 +21,14 @@ void ProfileStore::Open(std::string key,
   auto it = profiles_.find(key);
   if (it != profiles_.end()) {
     it->second->AddBinding(std::move(channel));
+  } else {
+    std::string filepath = FilepathForKey(key);
+    // Only open if the profile has previously been created.
+    if (files::IsFile(filepath)) {
+      auto profile = std::make_unique<Profile>(dispatcher_, filepath);
+      profile->AddBinding(std::move(channel));
+      profiles_[std::move(key)] = std::move(profile);
+    }
   }
 }
 
@@ -26,20 +38,19 @@ void ProfileStore::CreateOrOpen(
   if (it != profiles_.end()) {
     it->second->AddBinding(std::move(channel));
   } else {
-    auto profile = std::make_unique<Profile>(dispatcher_);
+    std::string filepath = FilepathForKey(key);
+    auto profile = std::make_unique<Profile>(dispatcher_, filepath);
     profile->AddBinding(std::move(channel));
     profiles_[std::move(key)] = std::move(profile);
   }
 }
 
 void ProfileStore::Delete(std::string key, DeleteCallback callback) {
-  auto it = profiles_.find(key);
-  if (it != profiles_.end()) {
-    profiles_.erase(it);
-    callback(true);
-  } else {
-    callback(false);
+  std::string filepath = FilepathForKey(key);
+  if (files::IsFile(filepath)) {
+    callback(files::DeletePath(filepath, false));
   }
+  callback(false);
 }
 
 void ProfileStore::OpenReader(
@@ -48,5 +59,13 @@ void ProfileStore::OpenReader(
   auto it = profiles_.find(key);
   if (it != profiles_.end()) {
     it->second->AddReaderBinding(std::move(channel));
+  } else {
+    std::string filepath = FilepathForKey(key);
+    // Only open if the profile has previously been created.
+    if (files::IsFile(filepath)) {
+      auto profile = std::make_unique<Profile>(dispatcher_, filepath);
+      profile->AddReaderBinding(std::move(channel));
+      profiles_[std::move(key)] = std::move(profile);
+    }
   }
 }

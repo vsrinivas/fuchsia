@@ -10,6 +10,12 @@
     capabilities: [
         { protocol: "fuchsia.examples.diagnostics.ProfileStore" },
     ],
+    use: [
+        {
+            storage: "data",
+            path: "/data",
+        },
+    ],
     expose: [
         {
             protocol: "fuchsia.examples.diagnostics.ProfileStore",

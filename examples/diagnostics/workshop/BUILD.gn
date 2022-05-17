@@ -15,6 +15,8 @@ source_set("lib") {
 
   public_deps = [
     "fidl:fuchsia.examples.diagnostics",
+    "//src/lib/files",
+    "//src/lib/json_parser",
     "//zircon/system/ulib/async:async-cpp",
   ]
 }
@@ -46,7 +48,10 @@ executable("test_bin") {
   testonly = true
   output_name = "profile_store_example_unittests"
 
-  sources = [ "profile_unittest_example.cc" ]
+  sources = [
+    "profile_store_unittest_example.cc",
+    "profile_unittest_example.cc",
+  ]
 
   deps = [
     ":lib",
@@ -60,6 +65,7 @@ executable("test_bin") {
 
 fuchsia_unittest_package("profile_store_example_unittests") {
   deps = [ ":test_bin" ]
+  manifest = "meta/profile_store_example_unittests.cml"
 }
 
 group("workshop") {

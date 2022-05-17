@@ -14,6 +14,7 @@
 #include "lib/async/dispatcher.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "profile.h"
+#include "src/lib/files/path.h"
 
 class ProfileTests : public gtest::RealLoopFixture {
  public:
@@ -21,11 +22,20 @@ class ProfileTests : public gtest::RealLoopFixture {
 
   ~ProfileTests() override { loop_.Shutdown(); }
 
-  std::shared_ptr<Profile> CreateNewProfile() {
-    auto p = std::make_shared<Profile>(loop_.dispatcher());
+  std::shared_ptr<Profile> CreateNewProfile(std::string key) {
+    auto p = std::make_shared<Profile>(loop_.dispatcher(), files::JoinPath("/data", key));
     // profile will run on its own thread, so save it so that it doesn't die before loop variable.
     profiles_.push_back(p);
     return p;
+  }
+
+  void StopServingProfiles() {
+    loop_.RunUntilIdle();
+    loop_.Quit();
+    profiles_.clear();
+    loop_.JoinThreads();
+    loop_.ResetQuit();
+    loop_.StartThread();
   }
 
   fidl::InterfacePtr<fuchsia::examples::diagnostics::Profile> GetHandler(
@@ -48,7 +58,7 @@ class ProfileTests : public gtest::RealLoopFixture {
 };
 
 TEST_F(ProfileTests, Name) {
-  auto profile = CreateNewProfile();
+  auto profile = CreateNewProfile("Name");
   auto client = GetHandler(profile);
   std::string name = "placeholder";
   client->GetName([&](std::string n) { name = std::move(n); });
@@ -63,7 +73,7 @@ TEST_F(ProfileTests, Name) {
 }
 
 TEST_F(ProfileTests, Balance) {
-  auto profile = CreateNewProfile();
+  auto profile = CreateNewProfile("Balance");
   auto client = GetHandler(profile);
 
   int64_t balance = -1;
@@ -93,10 +103,39 @@ TEST_F(ProfileTests, Balance) {
   EXPECT_EQ(balance, 0);
 }
 
+TEST_F(ProfileTests, Persists) {
+  std::string name = "";
+  int64_t balance = -1;
+  std::string set_name = "my_name";
+
+  auto profile = CreateNewProfile("Persists");
+  auto client = GetHandler(profile);
+  client->SetName(set_name);
+  client->AddBalance(10);
+  client->GetName([&](std::string n) { name = std::move(n); });
+  client->GetBalance([&](int64_t b) { balance = b; });
+  RunLoopUntil([&]() { return !name.empty() && balance != -1; });
+  EXPECT_EQ(name, set_name);
+  EXPECT_EQ(balance, 10);
+  client.Unbind();
+  StopServingProfiles();
+
+  // A profile created with the same key should contain the same information.
+  auto profile2 = CreateNewProfile("Persists");
+  auto client2 = GetHandler(profile2);
+  name = "";
+  balance = -1;
+  client2->GetName([&](std::string n) { name = std::move(n); });
+  client2->GetBalance([&](int64_t b) { balance = b; });
+  RunLoopUntil([&]() { return !name.empty() && balance != -1; });
+  EXPECT_EQ(name, set_name);
+  EXPECT_EQ(balance, 10);
+}
+
 // Test that reader can read latest changes to profile.
 // Disabled because it is flaky.
 TEST_F(ProfileTests, DISABLED_NameWithReader) {
-  auto profile = CreateNewProfile();
+  auto profile = CreateNewProfile("NameWithReader");
   auto client = GetHandler(profile);
   auto reader = GetReaderHandler(profile);
 
@@ -115,7 +154,7 @@ TEST_F(ProfileTests, DISABLED_NameWithReader) {
 // Test that reader can read latest changes to profile.
 // Disabled because it is flaky.
 TEST_F(ProfileTests, DISABLED_BalanceWithReader) {
-  auto profile = CreateNewProfile();
+  auto profile = CreateNewProfile("BalanceWithReader");
   auto client = GetHandler(profile);
   auto reader = GetReaderHandler(profile);
   int64_t balance = -1;
