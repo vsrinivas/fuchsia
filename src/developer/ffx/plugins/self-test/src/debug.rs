@@ -6,7 +6,7 @@ use {
     crate::test::*,
     anyhow::{ensure, Result},
     errors::ffx_bail,
-    fuchsia_async::{unblock, TimeoutExt},
+    fuchsia_async::{unblock, TimeoutExt, Timer},
     regex::Regex,
     std::fs::{create_dir_all, File},
     std::io::Write,
@@ -143,18 +143,26 @@ pub mod include_target {
         assert!(output.status.success(), "{:?}", output);
 
         // "cpp_crasher.cm" should be in the limbo.
-        let output = isolate.ffx(&["--target", &target, "debug", "limbo", "list"]).await?;
-        assert!(output.status.success(), "{:?}", output);
+        // Since we cannot control how long the crasher will crash, do some retries here.
+        let mut retries = 5;
         let re = Regex::new(r"cpp_crasher\.cm \(pid: (\d+)\)").unwrap();
-        let pid = re
-            .captures(&output.stdout)
-            .expect("the output should contain cpp_crasher.cm")
-            .get(1)
-            .unwrap()
-            .as_str();
+        let pid = loop {
+            let output = isolate.ffx(&["--target", &target, "debug", "limbo", "list"]).await?;
+            assert!(output.status.success(), "{:?}", output);
+            match re.captures(&output.stdout) {
+                None => {
+                    assert!(retries > 0, "\"cpp_crasher.cm\" didn't appear in the limbo :(");
+                    retries -= 1;
+                    Timer::new(Duration::from_secs(1)).await;
+                }
+                Some(capture) => {
+                    break capture.get(1).unwrap().as_str().to_owned();
+                }
+            }
+        };
 
         // Release the crasher.
-        let output = isolate.ffx(&["--target", &target, "debug", "limbo", "release", pid]).await?;
+        let output = isolate.ffx(&["--target", &target, "debug", "limbo", "release", &pid]).await?;
         assert!(output.status.success(), "{:?}", output);
 
         // The output should not contain cpp_crasher.cm.
