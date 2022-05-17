@@ -514,21 +514,6 @@
       {
         "properties": {
           "type": {
-            "pattern": "ThermalLimiter"
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "name"
-        ]
-      },
-      {
-        "properties": {
-          "type": {
             "pattern": "ThermalLoadDriver"
           },
           "name": {

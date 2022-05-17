@@ -250,10 +250,6 @@
     }
   },
   {
-    "type": "ThermalLimiter",
-    "name": "thermal_limiter"
-  },
-  {
     "type": "ThermalStateHandler",
     "name": "thermal_state_handler"
   },
@@ -274,7 +270,6 @@
     "dependencies": {
       "system_shutdown_node": "sys_shutdown",
       "thermal_load_notify_nodes": [
-        "thermal_limiter",
         "thermal_state_handler"
       ],
       "temperature_handler_node_names": [

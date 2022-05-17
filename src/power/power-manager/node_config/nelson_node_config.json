@@ -72,10 +72,6 @@
     }
   },
   {
-    "type": "ThermalLimiter",
-    "name": "thermal_limiter"
-  },
-  {
     "type": "ThermalStateHandler",
     "name": "thermal_state_handler"
   },
