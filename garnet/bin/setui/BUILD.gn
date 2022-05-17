@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/core/build/core_shard.gni")
-
 # Set default visibility for targets to this file only in preparation for
 # migration away from //garnet. See fxbug.dev/98194 for more details.
 visibility = [ ":*" ]
@@ -30,36 +28,4 @@ group("setui_service") {
     "//:legacy_base_packages",
   ]
   public_deps = [ "//src/settings/service:setui_service" ]
-}
-
-# TODO(fxbug.dev/98207): remove proxy targets once migration is complete
-group("setui-config-test") {
-  testonly = true
-  visibility = []
-  visibility = [
-    ":*",
-    "//vendor/google/*",
-  ]
-  public_deps = [ "//src/settings/service:setui-config-test" ]
-}
-
-group("setui_service_core_shard") {
-  visibility = []
-  visibility = [
-    ":*",
-    "//build/images/fuchsia:*",
-    "//vendor/google/*",
-  ]
-  public_deps = [ "//src/settings/service:setui_service_core_shard" ]
-}
-
-group("setui_service_with_camera_core_shard") {
-  visibility = []
-  visibility = [
-    ":*",
-    "//build/images/fuchsia:*",
-    "//vendor/google/*",
-  ]
-  public_deps =
-      [ "//src/settings/service:setui_service_with_camera_core_shard" ]
 }
