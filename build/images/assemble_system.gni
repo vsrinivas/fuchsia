@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/assembly/compare_image_assembly_configs.gni")
 import("//build/assembly/legacy.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
@@ -15,7 +16,6 @@ import("//build/images/fvm.gni")
 import("//build/images/shell_commands.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
-import("//build/python/python_action.gni")
 import("//build/security/verifier/verify_bootfs.gni")
 import("//build/security/verifier/verify_kernel_cmdline.gni")
 import("//build/security/verifier/verify_route_sources.gni")
@@ -692,32 +692,17 @@ template("assemble_system") {
     }
   }
 
-  python_action(labels.compare_image_assembly_configs) {
+  # Validate that the generated image assembly configuration matches the
+  # legacy + the product assembly configuration.
+  compare_image_assembly_configs(labels.compare_image_assembly_configs) {
     forward_variables_from(invoker, [ "testonly" ])
-    hermetic_deps = false
-
-    binary_label = "//build/assembly/scripts:compare_image_assembly_configs"
     deps = [
              ":${labels.image_assembly_config}",
              ":${labels.product_assembler}",
            ] + labels.product_assembly_config_deps
-
-    inputs = [
-      files.image_assembly_config,
-      files.regenerated_image_assembly_config,
-      files.product_assembly_config,
-    ]
-    outputs = [ files.compare_image_assembly_configs ]
-    args = [
-      "--stamp",
-      rebase_path(files.compare_image_assembly_configs, root_build_dir),
-      "--legacy-image-assembly-config",
-      rebase_path(files.image_assembly_config, root_build_dir),
-      "--generated-image-assembly-config",
-      rebase_path(files.regenerated_image_assembly_config, root_build_dir),
-      "--product-assembly-config",
-      rebase_path(files.product_assembly_config, root_build_dir),
-    ]
+    legacy_image_assembly_config = files.image_assembly_config
+    generated_image_assembly_config = files.regenerated_image_assembly_config
+    product_assembly_config = files.product_assembly_config
   }
 
   hermetic_inputs_for_image_assembly(labels.image_assembly_inputs) {
