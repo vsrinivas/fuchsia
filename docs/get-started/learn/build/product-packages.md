@@ -44,17 +44,17 @@ few additional packages to each dependency set:
 ```gn
 import("//products/core.gni")
 
-base_package_labels += [
+legacy_base_package_labels += [
   "//src/chromium:web_engine",
   "//src/flutter",
   "//src/fonts",
 ]
 
-cache_package_labels += [
+legacy_cache_package_labels += [
   "//src/media/playback/bundles:services",
 ]
 
-universe_package_labels += [
+legacy_universe_package_labels += [
   "//src/ui/examples:bouncing_ball",
 ]
 ```
@@ -286,7 +286,7 @@ Add the following lines to `//vendor/fuchsia-codelab/products/fuchsialab.gni`
 to include the Hello World example in your custom product:
 
 ```gn
-universe_package_labels += [
+legacy_universe_package_labels += [
     "//examples/hello_world",
 ]
 ```
