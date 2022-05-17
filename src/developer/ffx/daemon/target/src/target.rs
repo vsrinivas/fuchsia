@@ -17,9 +17,7 @@ use {
     fidl_fuchsia_developer_ffx as bridge,
     fidl_fuchsia_developer_ffx::TargetState,
     fidl_fuchsia_developer_remotecontrol::{IdentifyHostResponse, RemoteControlProxy},
-    fidl_fuchsia_net::{
-        InterfaceAddress, IpAddress, Ipv4Address, Ipv4AddressWithPrefix, Ipv6Address,
-    },
+    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
     fuchsia_async::Task,
     netext::IsLocalAddr,
     rand::random,
@@ -806,13 +804,10 @@ impl Target {
         if let Some(addrs) = identify.addresses {
             let mut taddrs = target.addrs.borrow_mut();
             let now = Utc::now();
-            for addr in addrs.iter().copied().map(|addr| {
+            for addr in addrs.iter().copied().map(|Subnet { addr, prefix_len: _ }| {
                 let addr = match addr {
-                    InterfaceAddress::Ipv4(Ipv4AddressWithPrefix {
-                        addr: Ipv4Address { addr },
-                        prefix_len: _,
-                    }) => addr.into(),
-                    InterfaceAddress::Ipv6(Ipv6Address { addr }) => addr.into(),
+                    IpAddress::Ipv4(Ipv4Address { addr }) => addr.into(),
+                    IpAddress::Ipv6(Ipv6Address { addr }) => addr.into(),
                 };
                 TargetAddrEntry::new((addr, 0).into(), now.clone(), TargetAddrType::Ssh)
             }) {
@@ -1146,10 +1141,10 @@ mod test {
                                 .context("sending testing error response")
                                 .unwrap();
                         } else {
-                            let result = vec![InterfaceAddress::Ipv4(Ipv4AddressWithPrefix {
-                                addr: Ipv4Address { addr: [192, 168, 0, 1] },
+                            let result = vec![Subnet {
+                                addr: IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 0, 1] }),
                                 prefix_len: 24,
-                            })];
+                            }];
                             let serial = String::from(TEST_SERIAL);
                             let nodename = if nodename_response.len() == 0 {
                                 None

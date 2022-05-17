@@ -8,16 +8,14 @@ using fuchsia.net;
 using fuchsia.hwinfo;
 using fuchsia.buildinfo;
 
+
+
 type IdentifyHostResponse = table {
-    // TODO(https://fxbug.dev/94339): The semantics of this field are not well
-    // defined. Are these addresses intended to be used to connect to the
-    // device, or only identify it? Various comments in the code refer to
-    // needing the scope id of a given address, but such a scope id would
-    // inherently refer to the device side, rather than the host side,
-    // rendering it not helpful for connecting to the device. If this field is
-    // for identification, the scope ID can serve as additional information,
-    // but may tempt its use for connection, which might be incorrect.
-    1: addresses vector<fuchsia.net.InterfaceAddress>:MAX;
+    // TODO(https://fxbug.dev/100502): Delete this once it is safe to do so.
+    1: addresses_deprecated vector<@generated_name("InterfaceAddressDeprecated") strict union {
+        1: ipv4 fuchsia.net.Ipv4AddressWithPrefix;
+        2: ipv6 fuchsia.net.Ipv6Address;
+    }>:MAX;
     2: nodename string:fuchsia.device.DEVICE_NAME_MAX;
     // UTC timestamp of the target's time of boot, in nanoseconds.
     3: boot_timestamp_nanos uint64;
@@ -28,6 +26,15 @@ type IdentifyHostResponse = table {
     6: product_config string:fuchsia.buildinfo.MAX_STRING_LENGTH;
     // The board as set via `fx set` in-tree, like `x64` for example.
     7: board_config string:fuchsia.buildinfo.MAX_STRING_LENGTH;
+    // TODO(https://fxbug.dev/94339): The semantics of this field are not well
+    // defined. Are these addresses intended to be used to connect to the
+    // device, or only identify it? Various comments in the code refer to
+    // needing the scope id of a given address, but such a scope id would
+    // inherently refer to the device side, rather than the host side,
+    // rendering it not helpful for connecting to the device. If this field is
+    // for identification, the scope ID can serve as additional information,
+    // but may tempt its use for connection, which might be incorrect.
+    8: addresses vector<fuchsia.net.Subnet>:MAX;
 };
 
 type IdentifyHostError = strict enum : uint32 {

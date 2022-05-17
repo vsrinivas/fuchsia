@@ -711,11 +711,14 @@ mod tests {
         assert_eq!(
             addrs[..],
             [
-                fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-                    addr: fnet::Ipv4Address { addr: IPV4_ADDR },
+                fnet::Subnet {
+                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_ADDR }),
                     prefix_len: 4,
-                }),
-                fnet::InterfaceAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_ADDR }),
+                },
+                fnet::Subnet {
+                    addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_ADDR }),
+                    prefix_len: 110,
+                }
             ]
         );
 

@@ -69,38 +69,43 @@ impl HostIdentifier {
             .and_then(|i| Some((i.product_config, i.board_config)))
             .unwrap_or((None, None));
 
-        let addresses = Some(
-            ilist
-                .into_iter()
-                .map(|(_, v): (u64, _)| v)
-                .flat_map(
-                    |fnet_interfaces_ext::Properties {
-                         id: _,
-                         name: _,
-                         device_class: _,
-                         online: _,
-                         addresses,
-                         has_default_ipv4_route: _,
-                         has_default_ipv6_route: _,
-                     }| {
-                        addresses.into_iter().map(
-                            |fnet_interfaces_ext::Address {
-                                 addr: fnet::Subnet { addr, prefix_len },
-                                 valid_until: _,
-                             }| match addr {
-                                fnet::IpAddress::Ipv4(addr) => {
-                                    fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-                                        addr,
-                                        prefix_len,
-                                    })
-                                }
-                                fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
-                            },
-                        )
-                    },
-                )
+        let addresses = ilist
+            .into_iter()
+            .map(|(_, v): (u64, _)| v)
+            .flat_map(
+                |fnet_interfaces_ext::Properties {
+                     id: _,
+                     name: _,
+                     device_class: _,
+                     online: _,
+                     addresses,
+                     has_default_ipv4_route: _,
+                     has_default_ipv6_route: _,
+                 }| {
+                    addresses
+                        .into_iter()
+                        .map(|fnet_interfaces_ext::Address { addr, valid_until: _ }| addr)
+                },
+            )
+            .collect::<Vec<_>>();
+
+        let addresses_deprecated = Some(
+            addresses
+                .iter()
+                .map(|fnet::Subnet { addr, prefix_len }| match addr {
+                    fnet::IpAddress::Ipv4(addr) => {
+                        rcs::InterfaceAddressDeprecated::Ipv4(fnet::Ipv4AddressWithPrefix {
+                            addr: addr.clone(),
+                            prefix_len: *prefix_len,
+                        })
+                    }
+                    fnet::IpAddress::Ipv6(addr) => {
+                        rcs::InterfaceAddressDeprecated::Ipv6(addr.clone())
+                    }
+                })
                 .collect(),
         );
+        let addresses = Some(addresses);
 
         let nodename = match self.name_provider_proxy.get_device_name().await {
             Ok(result) => match result {
@@ -121,6 +126,7 @@ impl HostIdentifier {
         Ok(rcs::IdentifyHostResponse {
             nodename,
             addresses,
+            addresses_deprecated,
             serial_number,
             boot_timestamp_nanos,
             product_config,
