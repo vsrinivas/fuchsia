@@ -188,7 +188,8 @@ fn update_tags_with_test_entry(tags: &mut FuchsiaTestTags, test_entry: &TestEntr
     // - "unknown" means we do not have knowledge of the build rule being used.
     // - "uncategorized" means we otherwise could not match the test.
 
-    let test_type = if test_entry.name.starts_with("host_") {
+    let test_type = if test_entry.name.starts_with("host_") || test_entry.name.starts_with("linux_")
+    {
         "host"
     } else {
         match (build_rule, has_generated_manifest, wrapped_legacy_test, realm) {
@@ -202,6 +203,10 @@ fn update_tags_with_test_entry(tags: &mut FuchsiaTestTags, test_entry: &TestEntr
             (Some("fuchsia_unittest_package"), false, _, _) => "integration",
             (Some("fuchsia_test_package"), true, _, _) => "unit",
             (Some("fuchsia_test_package"), false, _, _) => "integration",
+            (Some("fuchsia_test"), true, _, _) => "unit",
+            (Some("fuchsia_test"), false, _, _) => "integration",
+            (Some("prebuilt_test_package"), _, _, _) => "prebuilt",
+            (Some("fuzzer_package"), _, _, _) => "fuzzer",
             (None, _, _, _) => "unknown",
             _ => "uncategorized",
         }
@@ -683,8 +688,91 @@ mod tests {
             (
                 TestEntry {
                     cpu: "x64".to_string(),
+                    os: "fuchsia".to_string(),
+                    wrapped_legacy_test: Some(false),
+                    build_rule: Some("fuchsia_test".to_string()),
+                    has_generated_manifest: Some(true),
+                    ..TestEntry::default()
+                },
+                FuchsiaTestTags {
+                    realm: Some("hermetic".to_string()),
+                    ..FuchsiaTestTags::default()
+                },
+                vec![
+                    TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                    TestTag { key: "realm".to_string(), value: "hermetic".to_string() },
+                    TestTag { key: "scope".to_string(), value: "unit".to_string() },
+                ],
+            ),
+            (
+                TestEntry {
+                    cpu: "x64".to_string(),
+                    os: "fuchsia".to_string(),
+                    wrapped_legacy_test: Some(false),
+                    build_rule: Some("fuzzer_package".to_string()),
+                    has_generated_manifest: Some(false),
+                    ..TestEntry::default()
+                },
+                FuchsiaTestTags {
+                    realm: Some("hermetic".to_string()),
+                    ..FuchsiaTestTags::default()
+                },
+                vec![
+                    TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                    TestTag { key: "realm".to_string(), value: "hermetic".to_string() },
+                    TestTag { key: "scope".to_string(), value: "fuzzer".to_string() },
+                ],
+            ),
+            (
+                TestEntry {
+                    cpu: "x64".to_string(),
+                    os: "fuchsia".to_string(),
+                    wrapped_legacy_test: Some(false),
+                    build_rule: Some("prebuilt_test_package".to_string()),
+                    has_generated_manifest: Some(false),
+                    ..TestEntry::default()
+                },
+                FuchsiaTestTags {
+                    realm: Some("hermetic".to_string()),
+                    ..FuchsiaTestTags::default()
+                },
+                vec![
+                    TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                    TestTag { key: "realm".to_string(), value: "hermetic".to_string() },
+                    TestTag { key: "scope".to_string(), value: "prebuilt".to_string() },
+                ],
+            ),
+            (
+                TestEntry {
+                    cpu: "x64".to_string(),
                     os: "linux".to_string(),
                     name: "host_x64/test".to_string(),
+                    ..TestEntry::default()
+                },
+                FuchsiaTestTags { ..FuchsiaTestTags::default() },
+                vec![
+                    TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "linux".to_string() },
+                    TestTag { key: "realm".to_string(), value: "".to_string() },
+                    TestTag { key: "scope".to_string(), value: "host".to_string() },
+                ],
+            ),
+            (
+                TestEntry {
+                    cpu: "x64".to_string(),
+                    os: "linux".to_string(),
+                    name: "linux_x64/test".to_string(),
                     ..TestEntry::default()
                 },
                 FuchsiaTestTags { ..FuchsiaTestTags::default() },
