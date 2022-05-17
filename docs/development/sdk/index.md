@@ -28,6 +28,12 @@ If you're new to the Fuchsia SDK, complete the
 [Get started with the Fuchsia SDK][get-started-sdk] guide to set up the
 Fuchsia SDK development environment on your host machine.
 
+## Get started with driver development
+
+If you're interested in developing a new driver for Fuchsia,
+complete the [Get started with driver development][get-started-drivers] guide
+to learn about the basic workflows of driver development using the Fuchsia SDK.
+
 <!-- Reference links -->
 
 [host-tools]: https://fuchsia.dev/reference/tools/sdk/ffx
@@ -35,3 +41,4 @@ Fuchsia SDK development environment on your host machine.
 [fuchsia-platform]: /docs/development
 [bazel]: https://bazel.build/docs
 [get-started-sdk]: /docs/get-started/sdk/index.md
+[get-started-drivers]: /docs/get-started/sdk/get-started-with-driver.md
