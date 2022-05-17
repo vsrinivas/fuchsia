@@ -554,8 +554,16 @@ void DebuggedProcess::OnThreadStarting(std::unique_ptr<ExceptionHandle> exceptio
   zx_koid_t thread_id = thread_handle->GetKoid();
   DEBUG_LOG(Process) << LogPreamble(this) << " Thread starting with koid " << thread_id;
 
-  // Shouldn't have this thread yet.
-  FX_DCHECK(threads_.find(thread_id) == threads_.end());
+  if (threads_.find(thread_id) != threads_.end()) {
+    // This is possible when `DebugAgent::AttachToExistingProcess` in the following order:
+    //   - We create an exception channel.
+    //   - A thread starts and the notification is delivered to the exception channel,
+    //     but we haven't got a chance to look into it.
+    //   - We PopulateCurrentThreads().
+    //   - We process the pending notifications and OnThreadStarting() the same thread
+    //     populated just now.
+    return;
+  }
 
   auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, this, std::move(thread_handle),
                                                      ThreadCreationOption::kSuspendedKeepSuspended,
