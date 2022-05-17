@@ -62,8 +62,8 @@ closing the VMO handle does not remove the mapping added by this function.
   **ZX_VM_SPECIFIC_OVERWRITE** is used.
 - **ZX_VM_ALLOW_FAULTS** Required if it would be possible for the created
   mapping to generate faults. In particular, it is required if *vmo* is resizable,
-  if *vmo* is non-resizable but the mapping extends past the end of *vmo*, or if
-  *vmo* was created from [`zx_pager_create_vmo()`].
+  if *vmo* is non-resizable but the mapping extends past the end of *vmo*, if
+  *vmo* is discardable, or if *vmo* was created from [`zx_pager_create_vmo()`].
 
 *vmar_offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC**,
 **ZX_VM_SPECIFIC_OVERWRITE** or **ZX_VM_OFFSET_IS_UPPER_LIMIT** set.
@@ -128,7 +128,7 @@ and non-zero.  In the event of failure, a negative error value is returned.
 
 **ZX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested mapping.
 
-**ZX_ERR_NOT_SUPPORTED** If the vmo is resizable, or backed by a pager but
+**ZX_ERR_NOT_SUPPORTED** If the vmo is resizable, discardable, or backed by a pager but
 **ZX_VM_ALLOW_FAULTS** is not set.
 
 **ZX_ERR_BUFFER_TOO_SMALL** The VMO is not resizable and the mapping extends past the end
