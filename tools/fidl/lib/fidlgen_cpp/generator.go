@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"log"
 	"path"
-	"runtime"
 	"strings"
 	"text/template"
 
@@ -45,11 +44,8 @@ func NewGenerator(flags *CmdlineFlags, templates fs.FS, extraFuncs template.Func
 }
 
 func NewFormatter(clangFormatPath string, clangFormatArgs []string) fidlgen.Formatter {
-	if runtime.GOOS == "darwin" {
-		// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
-		return fidlgen.NewFormatterWithSizeLimit(512*1024, clangFormatPath, clangFormatArgs...)
-	}
-	return fidlgen.NewFormatter(clangFormatPath, clangFormatArgs...)
+	// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
+	return fidlgen.NewFormatterWithSizeLimit(256*1024, clangFormatPath, clangFormatArgs...)
 }
 
 func (gen *Generator) ExperimentEnabled(experiment string) bool {
