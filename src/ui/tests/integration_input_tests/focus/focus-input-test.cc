@@ -191,7 +191,7 @@ class FocusInputTest : public gtest::RealLoopFixture {
 
     // Add components specific for this test case to the realm.
     for (const auto& [name, component] : components) {
-      realm_builder_.AddLegacyChild(name, component);
+      realm_builder_.AddChild(name, component);
     }
 
     // Add the necessary routing for each of the base components added above.
@@ -287,16 +287,12 @@ class GfxFocusInputTest : public FocusInputTest {
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
          .source = ChildRef{kScenicTestRealm},
          .targets = {ChildRef{kFocusGfxClient}}},
-        {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
-         .source = ParentRef(),
-         .targets = {ChildRef{kFocusGfxClient}}},
     };
   }
 
  private:
   static constexpr auto kFocusGfxClient = "focus-gfx-client";
-  static constexpr auto kFocusGfxClientUrl =
-      "fuchsia-pkg://fuchsia.com/focus-input-test#meta/focus-gfx-client.cmx";
+  static constexpr auto kFocusGfxClientUrl = "#meta/focus-gfx-client.cm";
 };
 
 // This test exercises the focus contract between a parent view and child view: upon focus transfer

@@ -6,7 +6,7 @@ import("//build/components.gni")
 
 fuchsia_component("focus-gfx-client") {
   testonly = true
-  manifest = "meta/focus-gfx-client.cmx"
+  manifest = "meta/focus-gfx-client.cml"
   deps = [ ":focus-gfx-client-binary" ]
 }
 
@@ -20,6 +20,7 @@ executable("focus-gfx-client-binary") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
