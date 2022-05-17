@@ -24,11 +24,15 @@ class File : public VnodeF2fs, public fbl::Recyclable<File> {
   // long F2fsIoctl(/*file *filp,*/ unsigned int cmd, uint64_t arg);
 #endif
 
-  zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
-  zx_status_t DoWrite(const void* data, size_t len, size_t offset, size_t* out_actual);
-  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
-  zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
-  zx_status_t Truncate(size_t len) final;
+  zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final
+      __TA_EXCLUDES(mutex_);
+  zx_status_t DoWrite(const void* data, size_t len, size_t offset, size_t* out_actual)
+      __TA_EXCLUDES(mutex_);
+  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final
+      __TA_EXCLUDES(mutex_);
+  zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final
+      __TA_EXCLUDES(mutex_);
+  zx_status_t Truncate(size_t len) final __TA_EXCLUDES(mutex_);
 
  private:
   zx_status_t ReadInline(void* data, size_t len, size_t off, size_t* out_actual);

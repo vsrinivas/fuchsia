@@ -95,18 +95,11 @@ class VnodeF2fs : public fs::Vnode,
   // For fs::PagedVnode
   zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo *out_vmo, size_t *out_size) final
       __TA_EXCLUDES(mutex_);
-
   void VmoRead(uint64_t offset, uint64_t length) final __TA_EXCLUDES(mutex_);
-
   void VmoDirty(uint64_t offset, uint64_t length) final {
     FX_LOGS(ERROR) << "Unsupported VmoDirty in VnodeF2fs.";
   }
-
-  zx::status<zx::vmo> PageFaultReadPages(uint64_t offset, uint64_t length)
-      __TA_REQUIRES_SHARED(mutex_);
-
-  zx_status_t SetMmamppedPages(size_t offset, size_t length) __TA_REQUIRES_SHARED(mutex_);
-
+  zx::status<zx::vmo> PopulateAndGetMmappedVmo(const size_t offset, const size_t length);
   void OnNoPagedVmoClones() final __TA_REQUIRES(mutex_);
 #endif  // __Fuchsia__
 
@@ -409,6 +402,21 @@ class VnodeF2fs : public fs::Vnode,
   }
 #endif
 
+  // Overriden methods for thread safety analysis annotations.
+  zx_status_t Read(void *data, size_t len, size_t off, size_t *out_actual) override
+      __TA_EXCLUDES(mutex_) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t Write(const void *data, size_t len, size_t offset, size_t *out_actual) override
+      __TA_EXCLUDES(mutex_) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t Append(const void *data, size_t len, size_t *out_end, size_t *out_actual) override
+      __TA_EXCLUDES(mutex_) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t Truncate(size_t len) override __TA_EXCLUDES(mutex_) { return ZX_ERR_NOT_SUPPORTED; }
+
  protected:
   void RecycleNode() override;
   std::condition_variable_any flag_cvar_{};
@@ -420,13 +428,10 @@ class VnodeF2fs : public fs::Vnode,
 
 #ifdef __Fuchsia__
   zx_status_t CreatePagedVmo(size_t size) __TA_REQUIRES(mutex_);
-
   zx_status_t ClonePagedVmo(fuchsia_io::wire::VmoFlags flags, size_t size, zx::vmo *out_vmo,
                             size_t *out_size) __TA_REQUIRES(mutex_);
-
   void SetPagedVmoName() __TA_REQUIRES(mutex_);
-
-  void ReportPagerError(uint64_t offset, uint64_t length, zx_status_t err)
+  void ReportPagerError(const uint64_t offset, const uint64_t length, const zx_status_t err)
       __TA_REQUIRES_SHARED(mutex_);
 #endif  // __Fuchsia__
 

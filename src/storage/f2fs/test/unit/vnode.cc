@@ -108,6 +108,15 @@ TEST_F(VnodeTest, Advise) {
   test_vnode = nullptr;
 }
 
+TEST_F(VnodeTest, EmptyOverridenMethods) {
+  char buf[kPageSize];
+  size_t out, end;
+  ASSERT_EQ(root_dir_->Read(buf, 0, kPageSize, &out), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(root_dir_->Write(buf, 0, kPageSize, &out), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(root_dir_->Append(buf, kPageSize, &end, &out), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(root_dir_->Truncate(0), ZX_ERR_NOT_SUPPORTED);
+}
+
 TEST_F(VnodeTest, Mode) {
   fbl::RefPtr<fs::Vnode> dir_fs_vnode;
   std::string dir_name("test_dir");

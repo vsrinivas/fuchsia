@@ -167,70 +167,63 @@ zx_status_t VnodeF2fs::ClonePagedVmo(fuchsia_io::wire::VmoFlags flags, size_t si
 }
 
 void VnodeF2fs::VmoRead(uint64_t offset, uint64_t length) {
-  fs::SharedLock rlock(mutex_);
+  ZX_DEBUG_ASSERT(kBlockSize == PAGE_SIZE);
+  ZX_DEBUG_ASSERT(offset % kBlockSize == 0);
+  ZX_DEBUG_ASSERT(length);
+  ZX_DEBUG_ASSERT(length % kBlockSize == 0);
 
-  ZX_DEBUG_ASSERT(offset % PAGE_SIZE == 0);
-  ZX_DEBUG_ASSERT(length % PAGE_SIZE == 0);
+  fs::SharedLock rlock(mutex_);
 
   if (!paged_vmo()) {
     // Races with calling FreePagedVmo() on another thread can result in stale read requests. Ignore
     // them if the VMO is gone.
-    FX_LOGS(WARNING) << "Pager-backed VMO is already freed: " << ZX_ERR_NOT_FOUND;
+    FX_LOGS(WARNING) << "A pager-backed VMO is already freed: " << ZX_ERR_NOT_FOUND;
     return;
   }
 
-  auto read_vmo = PageFaultReadPages(offset, length);
-  if (read_vmo.is_error()) {
-    FX_LOGS(ERROR) << "Failed to read pages from file: " << read_vmo.status_string();
-    ReportPagerError(offset, length, read_vmo.status_value());
+  auto vmo_or = PopulateAndGetMmappedVmo(offset, length);
+  if (vmo_or.is_error()) {
+    FX_LOGS(ERROR) << "Failed to read a VMO at " << offset << " + " << length << ", "
+                   << vmo_or.status_string();
+    ReportPagerError(offset, length, vmo_or.status_value());
     return;
   }
 
-  if (auto ret = paged_vfs()->SupplyPages(paged_vmo(), offset, length, *read_vmo, 0);
+  if (auto ret =
+          paged_vfs()->SupplyPages(paged_vmo(), offset, length, std::move(vmo_or.value()), 0);
       ret.is_error()) {
-    FX_LOGS(ERROR) << "Failed to SupplyPages: " << ret.status_string();
+    FX_LOGS(ERROR) << "Failed to supply a VMO to " << offset << " + " << length << ", "
+                   << vmo_or.status_string();
     ReportPagerError(offset, length, ret.status_value());
   }
 }
 
-zx::status<zx::vmo> VnodeF2fs::PageFaultReadPages(uint64_t offset, uint64_t length) {
-  zx::vmo read_vmo;
-  fzl::VmoMapper mapping;
-
-  if (auto status =
-          mapping.CreateAndMap(length, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &read_vmo);
-      status != ZX_OK) {
+zx::status<zx::vmo> VnodeF2fs::PopulateAndGetMmappedVmo(const size_t offset, const size_t length) {
+  zx::vmo vmo;
+  // It creates a zero-filled vmo, so we don't need to fill an invalidated area with zero.
+  if (auto status = vmo.create(length, 0, &vmo); status != ZX_OK) {
     return zx::error(status);
   }
 
-  size_t read_size = 0;
-  {
-    auto unmap = fit::defer([&] { mapping.Unmap(); });
-
-    if (auto status = Read(mapping.start(), length, offset, &read_size); status != ZX_OK) {
-      return zx::error(status);
-    }
-  }
-  ZX_ASSERT((read_size <= length) && (read_size >= length - PAGE_SIZE));
-
-  if (auto status = SetMmamppedPages(offset, length); status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(std::move(read_vmo));
-}
-
-zx_status_t VnodeF2fs::SetMmamppedPages(size_t offset, size_t length) {
-  uint64_t blk_start = offset / kBlockSize;
-  uint64_t blk_end = (offset + length) / kBlockSize;
-
-  for (pgoff_t n = blk_start; n <= blk_end; ++n) {
+  pgoff_t block_index = safemath::CheckDiv<pgoff_t>(offset, kBlockSize).ValueOrDie();
+  for (size_t copied_bytes = 0; copied_bytes < length; copied_bytes += kBlockSize, ++block_index) {
     LockedPage data_page;
-    if (zx_status_t status = GrabCachePage(n, &data_page); status != ZX_OK) {
-      return status;
+    if (zx_status_t status = GetLockDataPage(block_index, &data_page); status != ZX_OK) {
+      // If |data_page| is not a valid Page, just grab one.
+      if (status = GrabCachePage(block_index, &data_page); status != ZX_OK) {
+        return zx::error(status);
+      }
+      // Just set a mmapped flag for an invalid page.
+      ZX_DEBUG_ASSERT(!data_page->IsUptodate());
+      data_page->SetMmapped();
+    } else {
+      ZX_DEBUG_ASSERT(data_page->IsUptodate());
+      // If it is a valid Page, fill |vmo| with |data_page|.
+      data_page->SetMmapped();
+      vmo.write(data_page->GetAddress(), copied_bytes, kBlockSize);
     }
-    data_page->SetMmapped();
   }
-  return ZX_OK;
+  return zx::ok(std::move(vmo));
 }
 
 void VnodeF2fs::OnNoPagedVmoClones() {
@@ -247,7 +240,8 @@ void VnodeF2fs::OnNoPagedVmoClones() {
   }
 }
 
-void VnodeF2fs::ReportPagerError(uint64_t offset, uint64_t length, zx_status_t err) {
+void VnodeF2fs::ReportPagerError(const uint64_t offset, const uint64_t length,
+                                 const zx_status_t err) {
   if (auto result = paged_vfs()->ReportPagerError(paged_vmo(), offset, length, err);
       result.is_error()) {
     FX_LOGS(ERROR) << "Failed to report pager error to kernel: " << result.status_string();
