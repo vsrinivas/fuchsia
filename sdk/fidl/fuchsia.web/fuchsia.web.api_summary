@@ -124,7 +124,7 @@ enum/member fuchsia.web/FrameError.NO_DATA_IN_MESSAGE 4
 strict enum fuchsia.web/FrameError int32
 protocol/member fuchsia.web/FrameHost.CreateFrameWithParams(fuchsia.web/CreateFrameParams params,server_end:fuchsia.web/Frame frame)
 protocol fuchsia.web/FrameHost
-table/member fuchsia.web/FrameMediaSettings.audio_capturer_session_id uint64
+table/member fuchsia.web/FrameMediaSettings.audio_consumer_session_id uint64
 table/member fuchsia.web/FrameMediaSettings.renderer_usage fuchsia.media/AudioRenderUsage
 table fuchsia.web/FrameMediaSettings
 struct fuchsia.web/Frame_AddBeforeLoadJavaScript_Response

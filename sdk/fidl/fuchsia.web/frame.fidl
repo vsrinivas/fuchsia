@@ -148,7 +148,7 @@ type FrameMediaSettings = table {
 
     /// When set, enables usage of [`fuchsia.media/AudioConsumer`] for audio playback. In that
     /// case the specified value is passed to [`fuchsia.media/SessionAudioConsumerFactory`].
-    2: audio_capturer_session_id uint64;
+    2: audio_consumer_session_id uint64;
 };
 
 protocol Frame {
