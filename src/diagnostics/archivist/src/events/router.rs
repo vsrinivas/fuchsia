@@ -4,13 +4,14 @@
 
 use crate::{events::types::*, identity::ComponentIdentity};
 use async_trait::async_trait;
-use fuchsia_inspect::{self as inspect, NumericProperty};
+use fuchsia_inspect::{self as inspect, NumericProperty, StringReference};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use futures::{
     channel::{mpsc, oneshot},
     task::{Context, Poll},
     Future, SinkExt, Stream, StreamExt,
 };
+use lazy_static::lazy_static;
 use pin_project::pin_project;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -23,6 +24,11 @@ use tracing::{debug, error};
 
 const MAX_EVENT_BUS_CAPACITY: usize = 1024;
 const RECENT_EVENT_LIMIT: usize = 200;
+
+lazy_static! {
+    static ref EVENT: StringReference<'static> = "event".into();
+    static ref MONIKER: StringReference<'static> = "moniker".into();
+}
 
 /// Core archivist internal event router that supports multiple event producers and multiple event
 /// consumers.
@@ -409,10 +415,10 @@ impl EventStreamLogger {
     }
 
     fn log_inspect(&mut self, event_name: &str, identity: &ComponentIdentity) {
-        // TODO(fxbug.dev/92374): leverage string references for the keys.
+        // TODO(fxbug.dev/92374): leverage string references for the `event_name`.
         inspect_log!(self.component_log_node,
-            event: event_name,
-            moniker: match &identity.instance_id {
+            &*EVENT => event_name,
+            &*MONIKER => match &identity.instance_id {
                 Some(instance_id) => format!("{}:{}", identity.relative_moniker, instance_id),
                 None => identity.relative_moniker.to_string(),
             }

@@ -22,9 +22,10 @@
 mod impls;
 mod wrappers;
 
+pub use fuchsia_inspect::StringReference;
 pub use wrappers::{InspectBytes, InspectList, InspectListClosure};
 
-use fuchsia_inspect::{Node, StringReference};
+use fuchsia_inspect::Node;
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -146,7 +147,7 @@ macro_rules! inspect_insert {
     }};
 
     (@internal $node_writer:expr, $key:expr => $($rest:tt)+) => {{
-        let key: StringReference<'_> = $key.into();
+        let key: $crate::log::StringReference<'_> = $key.into();
         inspect_insert!(@internal $node_writer, var key: $($rest)+);
     }};
 

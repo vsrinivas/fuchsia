@@ -23,8 +23,8 @@ use {
 };
 
 lazy_static! {
-    static ref EVENT: StringReference<'static> = "event".into();
-    static ref MONIKER: StringReference<'static> = "moniker".into();
+    pub static ref EVENT: StringReference<'static> = "event".into();
+    pub static ref MONIKER: StringReference<'static> = "moniker".into();
 }
 
 /// Tracks all event sources and listens to events coming from them pushing them into an MPSC
