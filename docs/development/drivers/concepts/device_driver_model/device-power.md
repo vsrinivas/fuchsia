@@ -1,5 +1,8 @@
 # Device power management
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 The [zx_device_ops_t][device] *suspend* hook is sequenced before itself (e.g.
 if a request to suspend to D1 happens, and while that is being executed a
 request to suspend to D2 happens, the first will finish before the latter

@@ -5,7 +5,7 @@ driver and utilize it in another driver. This guide assumes familiarity with the
 following concepts:
 
 *   [FIDL](/docs/development/languages/fidl/README.md)
-*   [Driver Binding](/docs/concepts/drivers/device_driver_model/driver-binding.md)
+*   [Driver Binding](/docs/development/drivers/concepts/device_driver_model/driver-binding.md)
 *   [DDKTL](/docs/development/drivers/concepts/driver_development/using-ddktl.md)
 *   [LLCPP FIDL Bindings](/docs/development/languages/fidl/tutorials/llcpp/README.md)
 

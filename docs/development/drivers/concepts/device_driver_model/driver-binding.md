@@ -1,5 +1,8 @@
 # Driver binding
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 In Fuchsia, the driver framework maintains a tree of drivers and devices in the system. In this
 tree, a device represents access to some hardware available to the OS. A driver both publishes and
 binds to devices. For example, a USB driver might bind to a PCI device (its parent) and publish an

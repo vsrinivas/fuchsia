@@ -543,7 +543,7 @@ specific features your components may support:
 [cmx-services]: /docs/concepts/components/v1/component_manifests.md#sandbox
 [component-id-index]: /docs/development/components/component_id_index.md
 [config-data]: /docs/development/components/data.md#product-specific_configuration_with_config_data
-[device-model]: /docs/concepts/drivers/device_driver_model/device-model.md
+[device-model]: /docs/development/drivers/concepts/device_driver_model/device-model.md
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
 [event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
 [example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json5

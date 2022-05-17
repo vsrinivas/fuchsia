@@ -278,7 +278,7 @@ basic bootloader driver. In most cases, your roadmap will be:
 [dcimpl]: /sdk/banjo/fuchsia.hardware.display.controller/display-controller.fidl
 [ddk-tl]: /docs/development/drivers/concepts/driver_development/using-ddktl.md
 [display-core]: /src/graphics/display/drivers/display/
-[driver-binding]: /docs/concepts/drivers/device_driver_model/driver-binding.md
+[driver-binding]: /docs/development/drivers/concepts/device_driver_model/driver-binding.md
 [intel-bind]: /src/graphics/display/drivers/intel-i915/intel-i915.bind
 [license-policies]: /docs/contribute/governance/policy/open-source-licensing-policies.md
 [sysmem]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem

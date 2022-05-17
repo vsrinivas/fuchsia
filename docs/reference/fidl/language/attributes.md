@@ -200,7 +200,7 @@ The compiler will issue an error if the number of handles exceeds this limit.
 **MEANING**:
 This attribute is used to mark libraries that should be skipped by documentation
 generation tools. As an example, this attribute is used by generated FIDL
-libraries, such as by the [driver bind compiler](/docs/concepts/drivers/device_driver_model/driver-binding.md).
+libraries, such as by the [driver bind compiler](/docs/development/drivers/concepts/device_driver_model/driver-binding.md).
 
 ## `@selector` {#selector}
 

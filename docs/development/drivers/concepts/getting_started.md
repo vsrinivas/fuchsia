@@ -8,6 +8,9 @@
 
 # Getting Started
 
+Caution: The pages in this section may contain information that is specific to the
+previous version of the driver framework (DFv1).
+
 Writing a device driver is often viewed as a daunting task, fraught with complexities
 and requiring arcane knowledge of little-known kernel secrets.
 
@@ -18,7 +21,6 @@ they work, and how they fit into the overall system.
 List of documents to get started -
 
 * [Fuchsia Driver Framework][fdf] - Overview of driver manager and driver host
-* [Fuchsia drivers][fuchsia-drivers-overview] - Overview of fuchsia driver model.
 * [Device and driver model][device-driver-model] - Documents that explain device and driver model
 * [Driver development][driver-development] - Documents related to interrupts, DMA and other concepts
 for developing drivers
@@ -29,11 +31,10 @@ driver types
 The sections are listed above in default reading order, but it's perfectly fine to jump around and
 read them in order of interest or applicability.
 
+<!-- Reference links -->
 
-<!-- xrefs -->
-[fdf]: /docs/concepts/drivers/fdf.md
+[fdf]: /docs/development/drivers/concepts/fdf.md
 [driver-rubric]: /docs/development/drivers/developer_guide/rubric.md
-[fuchsia-drivers-overview]: /docs/concepts/drivers/device_driver_model/introduction.md
 [device-driver-model]: /docs/development/drivers/concepts/device_driver_model/README.md
 [driver-development]: /docs/development/drivers/concepts/driver_development/README.md
 [driver-architectures]: /docs/development/drivers/concepts/driver_architectures/README.md

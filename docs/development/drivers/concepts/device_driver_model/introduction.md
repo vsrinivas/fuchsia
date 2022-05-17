@@ -1,5 +1,8 @@
 # Introduction
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 At the highest level, a device driver's job is to provide a uniform interface to
 a particular device, while hiding details specific to the device's implementation.
 

@@ -202,7 +202,7 @@ appmgr.
 [bootloader-and-kernel]: /docs/concepts/process/userboot.md#boot_loader_and_kernel_startup
 [component-manager]: /docs/concepts/components/v2/introduction.md#component-manager
 [critical-processes]: /docs/reference/syscalls/job_set_critical.md
-[devfs]: /docs/concepts/drivers/device_driver_model/device-model.md
+[devfs]: /docs/development/drivers/concepts/device_driver_model/device-model.md
 [driver-manager-exposes]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/driver_manager.cml#91
 [dynamic-linking]: https://en.wikipedia.org/wiki/Dynamic_linker
 [fs-mount]: /docs/concepts/filesystems/filesystems.md#mounting

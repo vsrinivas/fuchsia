@@ -1,5 +1,7 @@
-
 # The Device ops
+
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
 
 Please refer to the [header comments][device] for descriptions of the methods.
 

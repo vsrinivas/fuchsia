@@ -1,5 +1,8 @@
 # Protocols in drivers
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 ## What is a protocol?
 
 A protocol is a strict interface definition.

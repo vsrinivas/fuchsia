@@ -1,5 +1,8 @@
 # Fuchsia Driver Framework
 
+Caution: This page may contain information that is specific to the previous
+version of the driver framework (DFv1).
+
 ## Overview
 Fuchsia Driver Framework (FDF) is a collection of libraries, tools, metadata and images that enables
 driver writers to develop, test and distribute drivers targeting Fuchsia. It aims to provide a

@@ -3,8 +3,8 @@
 Fuchsia drivers are shared libraries that are dynamically loaded in driver host
 processes in user space. The process of loading a driver is controlled by the
 driver manager. See
-[Device Model](/docs/concepts/drivers/device_driver_model/device-model.md) for
-more information on driver hosts, driver manager and the driver and device
+[Device Model](/docs/development/drivers/concepts/device_driver_model/device-model.md)
+for more information on driver hosts, driver manager and the driver and device
 lifecycles.
 
 ## Directory structure
@@ -87,7 +87,7 @@ These bind rules state that the driver binds to devices with a `BIND_PROTOCOL`
 property that matches `DEVICE` from the `pci` namespace and the given PCI
 class/subclass/interface. The `pci` namespace is imported from the `fucnsia.pci`
 library on the first line. For more details, refer to the [binding
-documentation](/docs/concepts/drivers/device_driver_model/driver-binding.md).
+documentation](/docs/development/drivers/concepts/device_driver_model/driver-binding.md).
 
 To generate a driver declaration macro including these bind rules, there should
 be a corresponding `bind_rules` build target. This should declare dependencies

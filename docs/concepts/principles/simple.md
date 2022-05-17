@@ -33,4 +33,4 @@ easy to scale an open ecosystem of hardware—without forking the operating
 system.
 
 [glossary.FIDL]: /docs/glossary/README.md#FIDL
-[fuchsia-driver-framework]: /docs/concepts/drivers/fdf.md
+[fuchsia-driver-framework]: /docs/development/drivers/concepts/fdf.md

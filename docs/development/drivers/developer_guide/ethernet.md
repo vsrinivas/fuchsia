@@ -71,7 +71,7 @@ This driver not only handles the `ethmac` protocol, but also:
 
 The `intel_ethernet.bind` file contains the binding information, which describes
 the bind rules for binding the driver. More information about driver binding is
-found [here](/docs/concepts/drivers/device_driver_model/driver-binding.md).
+found [here](/docs/development/drivers/concepts/device_driver_model/driver-binding.md).
 
 ```
 using fuchsia.pci;

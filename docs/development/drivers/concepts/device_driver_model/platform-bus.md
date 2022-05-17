@@ -1,5 +1,8 @@
 # Platform Bus
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 ## Introduction
 
 The term **platform bus** refers to a specific Fuchsia driver with source code located at

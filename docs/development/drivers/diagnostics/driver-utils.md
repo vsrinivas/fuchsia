@@ -33,7 +33,7 @@ TODO(fxbug.dev/45662): Add inspect usage description.
 ## Discovery
 
 The Fuchsia driver model defines a `devfs` filesystem (see
-[Device Model](/docs/concepts/drivers/device_driver_model/device-model.md), which is the mechanism
+[Device Model](/docs/development/drivers/concepts/device_driver_model/device-model.md), which is the mechanism
 through which userspace services and applications gain access to devices. As a
 user, you can navigate the `devfs` filesystem to see what devices are exported,
 note that there are multiple ways to access the same device, you can use the

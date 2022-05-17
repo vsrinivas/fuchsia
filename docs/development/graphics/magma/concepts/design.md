@@ -165,10 +165,10 @@ implement Vulkan fences and semaphores.  Magma semaphores are built on zircon
 The thread model used for each installed GPU device and driver is as follows:
 
 The msd is typically loaded by the [platform bus
-driver](/docs/concepts/drivers/device_driver_model/platform-bus.md) and a msd
-main devhost thread is created.  The msd main thread in turn creates a device
-thread to talk to the GPU and a driver-dependent number of interrupt threads to
-service GPU interrupts.
+driver](/docs/development/drivers/concepts/device_driver_model/platform-bus.md)
+and a msd main devhost thread is created.  The msd main thread in turn creates
+a device thread to talk to the GPU and a driver-dependent number of interrupt
+threads to service GPU interrupts.
 
 A client driver library that implements the Vulkan api is referred to as a
 **vcd** (Vulkan Client Driver).  When a Vulkan application starts and makes a

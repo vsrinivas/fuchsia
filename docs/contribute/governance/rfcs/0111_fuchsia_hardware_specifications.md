@@ -898,7 +898,7 @@ respective OWNERS file.
     [Change properties](https://gerrit-review.googlesource.com/Documentation/concept-changes.html)
     in the Gerrit documentation.
         *   Refactors include but aren't limited to the following:
-            *   [FDF](/docs/concepts/drivers/fdf.md),
+            *   [FDF](/docs/development/drivers/concepts/fdf.md),
             driver [FIDL](/sdk/fidl/)
             `[fuchsia.hardware.\*]` and [Banjo](/sdk/banjo/)
             interfaces, syscalls

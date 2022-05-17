@@ -1,5 +1,8 @@
 # Device driver lifecycle
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 Device drivers are loaded into driver host processes when it is determined they are
 needed. What determines if they are loaded or not is the binding program, which
 is a description of what device a driver can bind to. The binding program is

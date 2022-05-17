@@ -1,5 +1,8 @@
 # Device model
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 ## Introduction
 
 In Fuchsia, device drivers are implemented as ELF shared libraries (DSOs), which are

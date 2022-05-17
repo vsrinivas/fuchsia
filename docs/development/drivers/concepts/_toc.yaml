@@ -8,6 +8,8 @@
 toc:
 - title: "Getting started"
   path: /docs/development/drivers/concepts/getting_started.md
+- title: "Fuchsia Driver Framework"
+  path: /docs/development/drivers/concepts/fdf.md
 - title: "Device driver model"
   section:
   - include: /docs/development/drivers/concepts/device_driver_model/_toc.yaml
