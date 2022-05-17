@@ -8,6 +8,7 @@ using fuchsia.net;
 using zx;
 
 /// Discoverable protocol for resolving host names to IP addresses.
+@available(added=HEAD)
 @discoverable
 protocol HostNameResolver {
     /// Gets the addresses for the specified host.
@@ -29,6 +30,7 @@ protocol HostNameResolver {
 };
 
 /// Options for `HostNameResolver.ResolveHostName`.
+@available(added=HEAD)
 type HostNameResolutionOptions = table {
     /// The media (wired, wireless, both) of the interfaces on which the host name should be
     /// resolved. The default is both wired and wireless media.
@@ -41,6 +43,7 @@ type HostNameResolutionOptions = table {
 
 /// An IPv4 or IPv6 host address with the id of the interface through which the address was
 /// received.
+@available(added=HEAD)
 type HostAddress = struct {
     /// IPv4 or IPv6 host address.
     address fuchsia.net.IpAddress;

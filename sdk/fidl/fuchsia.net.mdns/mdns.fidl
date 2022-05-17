@@ -10,12 +10,13 @@ using zx;
 /// Provides description relating to a service instance. In typical use, TXT
 /// strings consist of a key and value separated by '='. TXT strings must be
 /// at most 255 characters long and are UTF-8-encoded.
+@available(deprecated=HEAD)
 alias txt_string = string:255;
 
 /// Discoverable protocol for resolving host names to IP addresses.
 /// Deprecated: use HostNameResolver.
+@available(deprecated=HEAD)
 @discoverable
-@deprecated
 protocol Resolver {
     /// Gets the addresses for the specified host. `timeout` specifies how long
     /// the service should wait before giving up when waiting for a response to
@@ -35,8 +36,8 @@ protocol Resolver {
 
 /// Discoverable protocol for finding service instances.
 /// Deprecated: use ServiceInstanceSubscriber.
+@available(deprecated=HEAD)
 @discoverable
-@deprecated
 protocol Subscriber {
     /// Subscribes to a service. The subscription lasts until `subscriber` is
     /// unbound.
@@ -49,7 +50,7 @@ protocol Subscriber {
 /// Client-implemented interface for subscribers. Method replies are used to
 /// throttle traffic. The service won't necessarily wait for a reply before
 /// calling another method.
-@deprecated
+@available(deprecated=HEAD)
 protocol ServiceSubscriber {
     /// Notifies the subscriber that a service instance has been discovered.
     OnInstanceDiscovered(struct {
@@ -76,8 +77,8 @@ protocol ServiceSubscriber {
 
 /// Discoverable protocol for publishing service instances.
 /// Deprecated: use ServiceInstancePublisher.
+@available(deprecated=HEAD)
 @discoverable
-@deprecated
 protocol Publisher {
     /// Publishes a service instance. `publication_responder` is consulted via its
     /// `OnPublication` method for initial announcements and to answer queries.
@@ -101,7 +102,7 @@ protocol Publisher {
 };
 
 /// Client-supplied publication responder interface.
-@deprecated
+@available(deprecated=HEAD)
 protocol PublicationResponder {
     /// Provides instance information for initial announcements and query
     /// responses relating to the service instance specified in
@@ -132,7 +133,7 @@ protocol PublicationResponder {
 };
 
 /// Describes the cause of a publication.
-@deprecated
+@available(deprecated=HEAD)
 type PublicationCause = strict enum : uint32 {
     /// Indicates the publication is part of an initial announcement.
     ANNOUNCEMENT = 1;
@@ -151,7 +152,7 @@ type PublicationCause = strict enum : uint32 {
 /// values are rounded down to the nearest second. TTL values less than one
 /// second are not permitted and will result in the `PublicationResponder`
 /// channel being closed.
-@deprecated
+@available(deprecated=HEAD)
 type Publication = struct {
     /// The port at which the service instance is addressable.
     port uint16;
@@ -177,14 +178,19 @@ type Publication = struct {
     txt_ttl zx.duration = DEFAULT_TXT_TTL;
 };
 
+@available(deprecated=HEAD)
 const DEFAULT_SRV_PRIORITY uint16 = 0;
+@available(deprecated=HEAD)
 const DEFAULT_SRV_WEIGHT uint16 = 0;
+@available(deprecated=HEAD)
 const DEFAULT_PTR_TTL zx.duration = 120000000000; // 2 minutes
+@available(deprecated=HEAD)
 const DEFAULT_SRV_TTL zx.duration = 120000000000; // 2 minutes
+@available(deprecated=HEAD)
 const DEFAULT_TXT_TTL zx.duration = 4500000000000; // 75 minutes
 
 /// Error values for instance publishing.
-@deprecated
+@available(deprecated=HEAD)
 type Error = strict enum : uint32 {
     /// The specified service name is invalid.
     INVALID_SERVICE_NAME = 1;

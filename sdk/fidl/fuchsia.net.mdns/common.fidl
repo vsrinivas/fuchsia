@@ -33,6 +33,7 @@ alias subtype_name = string:63;
 /// Provides description relating to a service instance. In typical use, TXT
 /// strings consist of a key and value separated by '='. TXT strings must be
 /// at most 255 characters long and are UTF-8-encoded.
+@available(added=HEAD)
 alias txt_character_string = bytes:255;
 
 /// Specifies network media on which a service instance should be published.
@@ -62,14 +63,17 @@ type ServiceInstance = table {
     2: instance instance_name;
 
     /// IPv4 socket address for the service. May be empty. Deprecated: use `addresses`.
+    @available(deprecated=HEAD)
     @deprecated
     3: ipv4_endpoint fuchsia.net.Ipv4SocketAddress;
 
     /// IPv6 socket address for the service. May be empty. Deprecated: use `addresses`.
+    @available(deprecated=HEAD)
     @deprecated
     4: ipv6_endpoint fuchsia.net.Ipv6SocketAddress;
 
     /// Text strings describing the instance. Deprecated: use `text_strings`.
+    @available(deprecated=HEAD)
     @deprecated
     5: text vector<txt_string>:MAX_TEXT_STRINGS;
 
@@ -85,9 +89,11 @@ type ServiceInstance = table {
     8: target host_name;
 
     /// The socket addresses for the service instance.
+    @available(added=HEAD)
     9: addresses vector<fuchsia.net.SocketAddress>:MAX_ADDRESSES;
 
     /// Text strings describing the instance.
+    @available(added=HEAD)
    10: text_strings vector<txt_character_string>:MAX_TEXT_STRINGS;
 };
 

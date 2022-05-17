@@ -6,6 +6,7 @@ library fuchsia.net.mdns;
 
 /// Discoverable protocol for finding service instances.
 // TODO(dalesat): rename `ServiceSubscriber`.
+@available(added=HEAD)
 @discoverable
 protocol ServiceSubscriber2 {
     /// Subscribes to a service. The subscription lasts until `subscriber` is unbound.
@@ -23,6 +24,7 @@ protocol ServiceSubscriber2 {
 };
 
 /// Options for `ServiceSubscriber.SubscribeToService`.
+@available(added=HEAD)
 type ServiceSubscriptionOptions = table {
     /// The media (wired, wireless, both) of the interfaces on which the service should be
     /// susbsribed. The default is both wired and wireless media.
@@ -36,6 +38,7 @@ type ServiceSubscriptionOptions = table {
 /// Client-implemented interface for subscribers. Method replies are used to
 /// throttle traffic. The service won't necessarily wait for a reply before
 /// calling another method.
+@available(added=HEAD)
 protocol ServiceSubscriptionListener {
     /// Notifies the subscriber that a service instance has been discovered.
     OnInstanceDiscovered(struct {
