@@ -9,4 +9,11 @@
             url: "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cm",
         },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.virtualization.GuestManager",
+            from: "self",
+            as: "fuchsia.virtualization.ZirconGuestManager",
+        },
+    ],
 }

@@ -30,3 +30,19 @@ protocol GuestManager {
         endpoint server_end:HostVsockEndpoint;
     });
 };
+
+// TODO(fxbug.dev/100515): Reconsider the use of composition here
+@discoverable
+protocol ZirconGuestManager {
+    compose GuestManager;
+};
+
+@discoverable
+protocol DebianGuestManager {
+    compose GuestManager;
+};
+
+@discoverable
+protocol TerminaGuestManager {
+    compose GuestManager;
+};

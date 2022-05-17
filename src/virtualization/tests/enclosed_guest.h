@@ -49,6 +49,11 @@ class LocalGuestConfigProvider : public fuchsia::virtualization::GuestConfigProv
   std::string package_dir_name_;
 };
 
+struct GuestLaunchInfo {
+  std::string url;
+  std::string interface_name;
+  fuchsia::virtualization::GuestConfig config;
+};
 // EnclosedGuest is a base class that defines an guest environment and instance
 // encapsulated in an EnclosingEnvironment. A derived class must define the
 // |LaunchInfo| to send to the guest environment controller, as well as methods
@@ -121,8 +126,8 @@ class EnclosedGuest {
   std::optional<GuestConsole>& GetConsole() { return console_; }
 
  protected:
-  // Provides guest specific |url| and |cfg|, called by Start.
-  virtual zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) = 0;
+  // Provides guest specific launch info, called by Start.
+  virtual zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) = 0;
 
   // Waits until the guest is ready to run test utilities, called by Start.
   virtual zx_status_t WaitForSystemReady(zx::time deadline) = 0;
@@ -176,7 +181,7 @@ class ZirconEnclosedGuest : public EnclosedGuest {
   GuestKernel GetGuestKernel() override { return GuestKernel::ZIRCON; }
 
  protected:
-  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override;
+  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady(zx::time deadline) override;
   zx_status_t ShutdownAndWait(zx::time deadline) override;
   std::string ShellPrompt() override { return "$ "; }
@@ -192,7 +197,7 @@ class DebianEnclosedGuest : public EnclosedGuest {
   GuestKernel GetGuestKernel() override { return GuestKernel::LINUX; }
 
  protected:
-  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override;
+  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady(zx::time deadline) override;
   zx_status_t ShutdownAndWait(zx::time deadline) override;
   std::string ShellPrompt() override { return "$ "; }
@@ -212,7 +217,7 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
                       std::string* result, int32_t* return_code) override;
 
  protected:
-  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override;
+  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady(zx::time deadline) override;
   zx_status_t ShutdownAndWait(zx::time deadline) override;
   std::string ShellPrompt() override { return "$ "; }

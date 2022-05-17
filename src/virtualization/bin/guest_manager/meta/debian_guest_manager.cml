@@ -9,4 +9,11 @@
             url: "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cm",
         },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.virtualization.GuestManager",
+            from: "self",
+            as: "fuchsia.virtualization.DebianGuestManager",
+        },
+    ],
 }

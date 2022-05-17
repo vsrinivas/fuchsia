@@ -9,4 +9,11 @@
             url: "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cm",
         },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.virtualization.GuestManager",
+            from: "self",
+            as: "fuchsia.virtualization.TerminaGuestManager",
+        },
+    ],
 }

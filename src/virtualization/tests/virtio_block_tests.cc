@@ -221,22 +221,22 @@ class VirtioBlockZirconGuest : public ZirconEnclosedGuest, public VirtioBlockTes
   explicit VirtioBlockZirconGuest(async::Loop& loop)
       : ZirconEnclosedGuest(loop), VirtioBlockTestGuest() {}
 
-  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
-    zx_status_t status = ZirconEnclosedGuest::LaunchInfo(url, cfg);
+  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override {
+    zx_status_t status = ZirconEnclosedGuest::LaunchInfo(launch_info);
     if (status != ZX_OK) {
       return status;
     }
 
     // Disable other virtio devices to ensure there's enough space on the PCI
     // bus, and to simplify slot assignment.
-    cfg->set_default_net(false);
-    cfg->set_virtio_balloon(false);
-    cfg->set_virtio_gpu(false);
-    cfg->set_virtio_rng(false);
-    cfg->set_virtio_vsock(false);
+    launch_info->config.set_default_net(false);
+    launch_info->config.set_virtio_balloon(false);
+    launch_info->config.set_virtio_gpu(false);
+    launch_info->config.set_virtio_rng(false);
+    launch_info->config.set_virtio_vsock(false);
 
     // Device count starts at 2: root device, block-0, then the test devices.
-    return CreateBlockDevices(/*device_count=*/2, cfg);
+    return CreateBlockDevices(/*device_count=*/2, &launch_info->config);
   }
 };
 
@@ -245,23 +245,23 @@ class VirtioBlockDebianGuest : public DebianEnclosedGuest, public VirtioBlockTes
   explicit VirtioBlockDebianGuest(async::Loop& loop)
       : DebianEnclosedGuest(loop), VirtioBlockTestGuest() {}
 
-  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
-    zx_status_t status = DebianEnclosedGuest::LaunchInfo(url, cfg);
+  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override {
+    zx_status_t status = DebianEnclosedGuest::LaunchInfo(launch_info);
     if (status != ZX_OK) {
       return status;
     }
 
     // Disable other virtio devices to ensure there's enough space on the PCI
     // bus, and to simplify slot assignment.
-    cfg->set_default_net(false);
-    cfg->set_virtio_balloon(false);
-    cfg->set_virtio_gpu(false);
-    cfg->set_virtio_rng(false);
-    cfg->set_virtio_vsock(false);
+    launch_info->config.set_default_net(false);
+    launch_info->config.set_virtio_balloon(false);
+    launch_info->config.set_virtio_gpu(false);
+    launch_info->config.set_virtio_rng(false);
+    launch_info->config.set_virtio_vsock(false);
 
     // Device count starts at 4: root device, block-0, block-1, block-2, then
     // the test devices.
-    return CreateBlockDevices(/*device_count=*/4, cfg);
+    return CreateBlockDevices(/*device_count=*/4, &launch_info->config);
   }
 };
 

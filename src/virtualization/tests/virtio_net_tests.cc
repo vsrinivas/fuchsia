@@ -84,13 +84,13 @@ class VirtioNetMultipleInterfacesZirconGuest : public ZirconEnclosedGuest {
  public:
   explicit VirtioNetMultipleInterfacesZirconGuest(async::Loop& loop) : ZirconEnclosedGuest(loop) {}
 
-  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
-    zx_status_t status = ZirconEnclosedGuest::LaunchInfo(url, cfg);
+  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override {
+    zx_status_t status = ZirconEnclosedGuest::LaunchInfo(launch_info);
     if (status != ZX_OK) {
       return status;
     }
-    cfg->set_virtio_gpu(false);
-    cfg->mutable_net_devices()->emplace_back(kSecondNicNetSpec);
+    launch_info->config.set_virtio_gpu(false);
+    launch_info->config.mutable_net_devices()->emplace_back(kSecondNicNetSpec);
     return ZX_OK;
   }
 };
@@ -136,13 +136,13 @@ class VirtioNetMultipleInterfacesDebianGuest : public DebianEnclosedGuest {
  public:
   explicit VirtioNetMultipleInterfacesDebianGuest(async::Loop& loop) : DebianEnclosedGuest(loop) {}
 
-  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
-    zx_status_t status = DebianEnclosedGuest::LaunchInfo(url, cfg);
+  zx_status_t LaunchInfo(struct GuestLaunchInfo* launch_info) override {
+    zx_status_t status = DebianEnclosedGuest::LaunchInfo(launch_info);
     if (status != ZX_OK) {
       return status;
     }
-    cfg->set_virtio_gpu(false);
-    cfg->mutable_net_devices()->emplace_back(kSecondNicNetSpec);
+    launch_info->config.set_virtio_gpu(false);
+    launch_info->config.mutable_net_devices()->emplace_back(kSecondNicNetSpec);
     return ZX_OK;
   }
 };

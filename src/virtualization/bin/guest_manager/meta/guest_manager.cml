@@ -101,10 +101,4 @@
             to: "#host_vsock",
         },
     ],
-    expose: [
-        {
-            protocol: [ "fuchsia.virtualization.GuestManager" ],
-            from: "self",
-        },
-    ],
 }

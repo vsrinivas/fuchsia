@@ -165,9 +165,8 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   constexpr auto kFakeNetstackComponentName = "fake_netstack";
   constexpr auto kFakeScenicComponentName = "fake_scenic";
 
-  fuchsia::virtualization::GuestConfig cfg;
-  std::string guest_manager_url;
-  zx_status_t status = LaunchInfo(&guest_manager_url, &cfg);
+  GuestLaunchInfo launch_info;
+  zx_status_t status = LaunchInfo(&launch_info);
 
   constexpr auto kDevGpuDirectory = "dev-gpu";
   constexpr auto kGuestManagerName = "guest_manager";
@@ -177,7 +176,7 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
     return status;
   }
   auto realm_builder = RealmBuilder::Create();
-  realm_builder.AddChild(kGuestManagerName, guest_manager_url);
+  realm_builder.AddChild(kGuestManagerName, launch_info.url);
   realm_builder.AddLocalChild(kFakeNetstackComponentName, &fake_netstack_);
   realm_builder.AddLocalChild(kFakeScenicComponentName, &fake_scenic_);
 
@@ -213,18 +212,18 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
                       .targets = {ChildRef{kGuestManagerName}}})
       .AddRoute(Route{.capabilities =
                           {
-                              Protocol{fuchsia::virtualization::GuestManager::Name_},
+                              Protocol{launch_info.interface_name},
                           },
                       .source = ChildRef{kGuestManagerName},
                       .targets = {ParentRef()}});
 
   realm_root_ = std::make_unique<RealmRoot>(realm_builder.Build(loop_.dispatcher()));
-
-  guest_manager_ = realm_root_->ConnectSync<fuchsia::virtualization::GuestManager>();
   fuchsia::virtualization::GuestManager_LaunchGuest_Result res;
-  status = guest_manager_->LaunchGuest(std::move(cfg), guest_.NewRequest(), &res);
+  guest_manager_ =
+      realm_root_->ConnectSync<fuchsia::virtualization::GuestManager>(launch_info.interface_name);
+  status = guest_manager_->LaunchGuest(std::move(launch_info.config), guest_.NewRequest(), &res);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failure launching guest " << guest_manager_url;
+    FX_PLOGS(ERROR, status) << "Failure launching guest " << launch_info.url;
     return status;
   }
   guest_cid_ = fuchsia::virtualization::DEFAULT_GUEST_CID;
@@ -386,9 +385,8 @@ zx_status_t EnclosedGuest::InstallV1(sys::testing::EnvironmentServices& services
 zx_status_t EnclosedGuest::LaunchV1(sys::testing::EnclosingEnvironment& environment,
                                     const std::string& realm, zx::time deadline) {
   PeriodicLogger logger;
-  std::string url;
-  fuchsia::virtualization::GuestConfig cfg;
-  zx_status_t status = LaunchInfo(&url, &cfg);
+  GuestLaunchInfo launch_info;
+  zx_status_t status = LaunchInfo(&launch_info);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failure launching guest image: " << zx_status_get_string(status);
     return status;
@@ -407,8 +405,8 @@ zx_status_t EnclosedGuest::LaunchV1(sys::testing::EnclosingEnvironment& environm
   bool launch_complete = false;
   std::optional<zx_status_t> guest_error;
   guest_.set_error_handler([&guest_error](zx_status_t status) { guest_error = status; });
-  realm_->LaunchInstance(url, cpp17::nullopt, std::move(cfg), guest_.NewRequest(),
-                         [this, &launch_complete](uint32_t cid) {
+  realm_->LaunchInstance(launch_info.url, cpp17::nullopt, std::move(launch_info.config),
+                         guest_.NewRequest(), [this, &launch_complete](uint32_t cid) {
                            guest_cid_ = cid;
                            launch_complete = true;
                          });
@@ -494,11 +492,11 @@ zx_status_t EnclosedGuest::LaunchV1(sys::testing::EnclosingEnvironment& environm
   return ZX_OK;
 }
 
-zx_status_t ZirconEnclosedGuest::LaunchInfo(std::string* url,
-                                            fuchsia::virtualization::GuestConfig* cfg) {
-  *url = kZirconGuestUrl;
+zx_status_t ZirconEnclosedGuest::LaunchInfo(GuestLaunchInfo* launch_info) {
+  launch_info->url = kZirconGuestUrl;
+  launch_info->interface_name = fuchsia::virtualization::ZirconGuestManager::Name_;
   // Disable netsvc to avoid spamming the net device with logs.
-  cfg->mutable_cmdline_add()->emplace_back("netsvc.disable=true");
+  launch_info->config.mutable_cmdline_add()->emplace_back("netsvc.disable=true");
   return ZX_OK;
 }
 
@@ -558,12 +556,12 @@ std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
   return exec_argv;
 }
 
-zx_status_t DebianEnclosedGuest::LaunchInfo(std::string* url,
-                                            fuchsia::virtualization::GuestConfig* cfg) {
-  *url = kDebianGuestUrl;
+zx_status_t DebianEnclosedGuest::LaunchInfo(GuestLaunchInfo* launch_info) {
+  launch_info->url = kDebianGuestUrl;
+  launch_info->interface_name = fuchsia::virtualization::DebianGuestManager::Name_;
   // Enable kernel debugging serial output.
   for (std::string_view cmd : kLinuxKernelSerialDebugCmdline) {
-    cfg->mutable_cmdline_add()->emplace_back(cmd);
+    launch_info->config.mutable_cmdline_add()->emplace_back(cmd);
   }
   return ZX_OK;
 }
@@ -603,17 +601,17 @@ std::vector<std::string> DebianEnclosedGuest::GetTestUtilCommand(
   return exec_argv;
 }
 
-zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
-                                             fuchsia::virtualization::GuestConfig* cfg) {
+zx_status_t TerminaEnclosedGuest::LaunchInfo(GuestLaunchInfo* launch_info) {
   if (UsingCFv1()) {
     constexpr auto kTerminaGuestUrlCFv1 =
         "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
-    *url = kTerminaGuestUrlCFv1;
+    launch_info->url = kTerminaGuestUrlCFv1;
   } else {
-    *url = kTerminaGuestUrl;
+    launch_info->url = kTerminaGuestUrl;
+    launch_info->interface_name = fuchsia::virtualization::TerminaGuestManager::Name_;
   }
-  cfg->set_virtio_gpu(false);
-  cfg->set_magma_device(fuchsia::virtualization::MagmaDevice());
+  launch_info->config.set_virtio_gpu(false);
+  launch_info->config.set_magma_device(fuchsia::virtualization::MagmaDevice());
 
   // Add the block device that contains the VM extras
   {
@@ -626,7 +624,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
     if (status != ZX_OK) {
       return status;
     }
-    cfg->mutable_block_devices()->push_back({
+    launch_info->config.mutable_block_devices()->push_back({
         "vm_extras",
         fuchsia::virtualization::BlockMode::READ_ONLY,
         fuchsia::virtualization::BlockFormat::FILE,
@@ -644,7 +642,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
     if (status != ZX_OK) {
       return status;
     }
-    cfg->mutable_block_devices()->push_back({
+    launch_info->config.mutable_block_devices()->push_back({
         "linux_tests",
         fuchsia::virtualization::BlockMode::READ_ONLY,
         fuchsia::virtualization::BlockFormat::FILE,
@@ -662,7 +660,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
     if (status != ZX_OK) {
       return status;
     }
-    cfg->mutable_block_devices()->push_back({
+    launch_info->config.mutable_block_devices()->push_back({
         "extras",
         fuchsia::virtualization::BlockMode::READ_ONLY,
         fuchsia::virtualization::BlockFormat::FILE,
@@ -672,7 +670,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
 
   // Enable kernel debugging serial output.
   for (std::string_view cmd : kLinuxKernelSerialDebugCmdline) {
-    cfg->mutable_cmdline_add()->emplace_back(cmd);
+    launch_info->config.mutable_cmdline_add()->emplace_back(cmd);
   }
 
   return ZX_OK;

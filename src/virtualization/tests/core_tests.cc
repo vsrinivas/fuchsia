@@ -145,13 +145,13 @@ class CustomizableMemoryGuest : public T {
  public:
   explicit CustomizableMemoryGuest(async::Loop& loop) : T(loop) {}
 
-  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
-    zx_status_t status = T::LaunchInfo(url, cfg);
+  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override {
+    zx_status_t status = T::LaunchInfo(launch_info);
     if (status != ZX_OK) {
       return status;
     }
 
-    cfg->set_guest_memory(kGuestMemoryForMemoryTests);
+    launch_info->config.set_guest_memory(kGuestMemoryForMemoryTests);
 
     return ZX_OK;
   }
