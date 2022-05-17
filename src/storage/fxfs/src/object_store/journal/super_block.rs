@@ -5,8 +5,9 @@
 use {
     crate::{
         errors::FxfsError,
-        filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
+        filesystem::{ApplyContext, ApplyMode, Mutations},
         lsm_tree::types::LayerIterator,
+        metrics::{traits::Metric as _, UintMetric},
         object_handle::BootstrapObjectHandle,
         object_store::{
             allocator::Reservation,
@@ -17,7 +18,7 @@ use {
             },
             object_record::ObjectItem,
             transaction::{AssocObj, Options},
-            Mutation, ObjectStore, StoreObjectHandle,
+            HandleOptions, Mutation, ObjectStore, StoreObjectHandle,
         },
         range::RangeExt,
         serialized_types::{Versioned, VersionedLatest},
@@ -26,9 +27,11 @@ use {
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
+        convert::TryInto,
         io::{Read, Write},
         ops::{Bound, Range},
-        sync::Arc,
+        sync::{Arc, Mutex},
+        time::SystemTime,
     },
     storage_device::Device,
     uuid::Uuid,
@@ -157,7 +160,111 @@ pub enum SuperBlockRecord {
     End,
 }
 
+struct SuperBlockMetrics {
+    /// Time we wrote the most recent superblock in milliseconds since [`std::time::UNIX_EPOCH`].
+    /// Uses [`std::time::SystemTime`] as the clock source.
+    last_super_block_update_time_ms: UintMetric,
+
+    /// Offset of the most recent superblock we wrote in the journal.
+    last_super_block_offset: UintMetric,
+}
+
+impl Default for SuperBlockMetrics {
+    fn default() -> Self {
+        SuperBlockMetrics {
+            last_super_block_update_time_ms: UintMetric::new("last_super_block_update_time_ms", 0),
+            last_super_block_offset: UintMetric::new("last_super_block_offset", 0),
+        }
+    }
+}
+
+/// This encapsulates the A/B alternating SuperBlock logic.
+/// All SuperBlockload/save operations should be via the methods on this type.
+pub struct SuperBlockManager {
+    next_instance: Arc<Mutex<SuperBlockInstance>>,
+    metrics: SuperBlockMetrics,
+}
+
+impl SuperBlockManager {
+    pub fn new() -> Self {
+        Self {
+            next_instance: Arc::new(Mutex::new(SuperBlockInstance::A)),
+            metrics: Default::default(),
+        }
+    }
+
+    // TODO(ripper): It would be nice to move create_objects here as well but for now our
+    // transaction code requires handles to outlive transactions and so moving it here would
+    // likely require us to split the single filesystem creation transaction into several.
+
+    /// Loads both A/B super blocks and root_parent ObjectStores and and returns the newest valid
+    /// pair. Also ensures the next superblock updated via |save| will be the other instance.
+    pub async fn load(
+        &self,
+        device: Arc<dyn Device>,
+        block_size: u64,
+    ) -> Result<(SuperBlock, ObjectStore), Error> {
+        let (super_block, current_super_block, root_parent) = match futures::join!(
+            SuperBlock::read(device.clone(), block_size, SuperBlockInstance::A),
+            SuperBlock::read(device.clone(), block_size, SuperBlockInstance::B)
+        ) {
+            (Err(e1), Err(e2)) => {
+                bail!("Failed to load both superblocks due to {:?}\nand\n{:?}", e1, e2)
+            }
+            (Ok(result), Err(_)) => result,
+            (Err(_), Ok(result)) => result,
+            (Ok(result1), Ok(result2)) => {
+                // Break the tie by taking the super-block with the greatest generation.
+                if result2.0.generation > result1.0.generation {
+                    result2
+                } else {
+                    result1
+                }
+            }
+        };
+        log::info!("superblock: {:?} (copy {:?})", super_block, current_super_block);
+        *self.next_instance.lock().unwrap() = current_super_block.next();
+        Ok((super_block, root_parent))
+    }
+
+    /// Writes the provided superblock and root_parent ObjectStore to the device.
+    /// Requires that the filesystem is fully loaded and writable as this may require allocation.
+    pub async fn save(
+        &self,
+        super_block: &SuperBlock,
+        root_parent: Arc<ObjectStore>,
+    ) -> Result<(), Error> {
+        let filesystem = root_parent.filesystem();
+        let root_store = filesystem.root_store();
+        let object_id = {
+            let mut next_instance = self.next_instance.lock().unwrap();
+            let object_id = next_instance.object_id();
+            *next_instance = next_instance.next();
+            object_id
+        };
+        let handle = ObjectStore::open_object(
+            &root_store,
+            object_id,
+            HandleOptions { skip_journal_checks: true, ..Default::default() },
+            None,
+        )
+        .await?;
+        super_block.write(&root_parent, handle).await?;
+        self.metrics.last_super_block_offset.set(super_block.super_block_journal_file_offset);
+        self.metrics.last_super_block_update_time_ms.set(
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+                .try_into()
+                .unwrap_or(0u64),
+        );
+        Ok(())
+    }
+}
+
 impl SuperBlock {
+    /// Creates a new SuperBlock with random GUID.
     pub fn new(
         root_parent_store_object_id: u64,
         root_parent_graveyard_directory_object_id: u64,
@@ -180,20 +287,19 @@ impl SuperBlock {
         }
     }
 
-    /// Read one of the SuperBlock instances from the filesystem's underlying device.
-    pub async fn read(
-        filesystem: Arc<dyn Filesystem>,
-        target_super_block: SuperBlockInstance,
-    ) -> Result<(SuperBlock, SuperBlockInstance, Arc<ObjectStore>), Error> {
-        let device = filesystem.device();
-        let (super_block, mut reader) = SuperBlock::read_header(device, target_super_block)
+    /// Reads a SuperBlock instance and root_parent ObjectStore from a device.
+    async fn read(
+        device: Arc<dyn Device>,
+        block_size: u64,
+        instance: SuperBlockInstance,
+    ) -> Result<(SuperBlock, SuperBlockInstance, ObjectStore), Error> {
+        let (super_block, mut reader) = SuperBlock::read_header(device.clone(), instance)
             .await
             .context("Failed to read superblocks")?;
-
-        let root_parent = ObjectStore::new_empty(
-            None,
+        let root_parent = ObjectStore::new_root_parent(
+            device,
+            block_size,
             super_block.root_parent_store_object_id,
-            filesystem.clone(),
         );
         root_parent.set_graveyard_directory_object_id(
             super_block.root_parent_graveyard_directory_object_id,
@@ -221,7 +327,7 @@ impl SuperBlock {
                 .await;
         }
 
-        Ok((super_block, target_super_block, root_parent))
+        Ok((super_block, instance, root_parent))
     }
 
     /// Shreds the super-block, rendering it unreadable.  This is used in mkfs to ensure that we
@@ -275,7 +381,7 @@ impl SuperBlock {
     }
 
     /// Writes the super-block and the records from the root parent store to |handle|.
-    pub async fn write<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
+    async fn write<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
         &self,
         root_parent_store: &'a ObjectStore,
         handle: StoreObjectHandle<S>,

@@ -31,7 +31,7 @@ use {
         data_buffer::{DataBuffer, MemDataBuffer},
         errors::FxfsError,
         ff1::Ff1,
-        filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
+        filesystem::{ApplyContext, ApplyMode, Filesystem, FxFilesystem, Mutations},
         lsm_tree::{
             types::{Item, ItemRef, LayerIterator},
             LSMTree,
@@ -468,6 +468,37 @@ impl ObjectStore {
             LockState::Unencrypted,
             LastObjectId::default(),
         )
+    }
+
+    /// Cycle breaker constructor that returns an ObjectStore without a filesystem.
+    /// This should only be used from SuperBlock code.
+    pub fn new_root_parent(device: Arc<dyn Device>, block_size: u64, store_object_id: u64) -> Self {
+        ObjectStore {
+            parent_store: None,
+            store_object_id,
+            device,
+            block_size,
+            filesystem: Weak::<FxFilesystem>::new(),
+            store_info: Mutex::new(StoreOrReplayInfo::Info(StoreInfo::default())),
+            tree: LSMTree::new(merge::merge),
+            store_info_handle: OnceCell::new(),
+            mutations_cipher: Mutex::new(None),
+            encrypted_mutations: Mutex::new(None),
+            lock_state: Mutex::new(LockState::Unencrypted),
+            trace: AtomicBool::new(false),
+            metrics: OnceCell::new(),
+            last_object_id: Mutex::new(LastObjectId::default()),
+        }
+    }
+
+    /// Used to set filesystem on root_parent stores at bootstrap time after the filesystem has
+    /// been created.
+    pub fn attach_filesystem(
+        mut this: ObjectStore,
+        filesystem: Arc<dyn Filesystem>,
+    ) -> ObjectStore {
+        this.filesystem = Arc::downgrade(&filesystem);
+        this
     }
 
     /// Create a child store. It is a multi-step process:

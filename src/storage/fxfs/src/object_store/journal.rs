@@ -26,7 +26,6 @@ use {
         debug_assert_not_too_long,
         errors::FxfsError,
         filesystem::{ApplyContext, ApplyMode, Filesystem, SyncOptions},
-        metrics::{traits::Metric as _, UintMetric},
         object_handle::{BootstrapObjectHandle, ObjectHandle},
         object_store::{
             allocator::{Allocator, SimpleAllocator},
@@ -35,7 +34,7 @@ use {
             journal::{
                 checksum_list::ChecksumList,
                 reader::{JournalReader, ReadResult},
-                super_block::SuperBlockInstance,
+                super_block::{SuperBlockInstance, SuperBlockManager},
                 writer::JournalWriter,
             },
             object_manager::ObjectManager,
@@ -63,14 +62,12 @@ use {
     std::{
         clone::Clone,
         convert::TryFrom as _,
-        convert::TryInto as _,
         ops::Bound,
         sync::{
             atomic::{AtomicBool, Ordering},
             Arc, Mutex,
         },
         task::{Poll, Waker},
-        time::SystemTime,
         vec::Vec,
     },
     storage_device::buffer::Buffer,
@@ -165,17 +162,18 @@ pub(super) fn journal_handle_options() -> HandleOptions {
 pub struct Journal {
     objects: Arc<ObjectManager>,
     handle: OnceCell<StoreObjectHandle<ObjectStore>>,
+    super_block_manager: SuperBlockManager,
     inner: Mutex<Inner>,
     commit_mutex: futures::lock::Mutex<()>,
     writer_mutex: futures::lock::Mutex<()>,
     sync_mutex: futures::lock::Mutex<()>,
     trace: AtomicBool,
-    metrics: JournalMetrics,
 }
 
 struct Inner {
     super_block: SuperBlock,
-    super_block_to_write: SuperBlockInstance,
+    // This manages access to the A/B SuperBlocks. (It will soon be moved up to FxFilesystem.)
+    // Must be Option<> so we can take it without holding the lock on Inner across an await.
 
     // This event is used when we are waiting for a compaction to free up journal space.
     reclaim_event: Option<Event>,
@@ -239,33 +237,15 @@ impl Default for JournalOptions {
     }
 }
 
-struct JournalMetrics {
-    /// Time we wrote the most recent superblock in milliseconds since [`std::time::UNIX_EPOCH`].
-    /// Uses [`std::time::SystemTime`] as the clock source.
-    last_super_block_update_time_ms: UintMetric,
-
-    /// Offset of the most recent superblock we wrote in the journal.
-    last_super_block_offset: UintMetric,
-}
-
-impl Default for JournalMetrics {
-    fn default() -> Self {
-        JournalMetrics {
-            last_super_block_update_time_ms: UintMetric::new("last_super_block_update_time_ms", 0),
-            last_super_block_offset: UintMetric::new("last_super_block_offset", 0),
-        }
-    }
-}
-
 impl Journal {
     pub fn new(objects: Arc<ObjectManager>, options: JournalOptions) -> Journal {
         let starting_checksum = rand::thread_rng().gen();
         Journal {
             objects: objects,
             handle: OnceCell::new(),
+            super_block_manager: SuperBlockManager::new(),
             inner: Mutex::new(Inner {
                 super_block: SuperBlock::default(),
-                super_block_to_write: SuperBlockInstance::A,
                 reclaim_event: None,
                 zero_offset: None,
                 device_flushed_offset: 0,
@@ -285,7 +265,6 @@ impl Journal {
             writer_mutex: futures::lock::Mutex::new(()),
             sync_mutex: futures::lock::Mutex::new(()),
             trace: AtomicBool::new(false),
-            metrics: JournalMetrics::default(),
         }
     }
 
@@ -412,30 +391,12 @@ impl Journal {
         on_new_allocator: Option<Box<dyn Fn(Arc<dyn Allocator>) + Send + Sync>>,
     ) -> Result<(), Error> {
         trace_duration!("Journal::replay");
-        let (super_block, current_super_block, root_parent) = match futures::join!(
-            SuperBlock::read(filesystem.clone(), SuperBlockInstance::A),
-            SuperBlock::read(filesystem.clone(), SuperBlockInstance::B)
-        ) {
-            (Err(e1), Err(e2)) => {
-                bail!("Failed to load both superblocks due to {:?}\nand\n{:?}", e1, e2)
-            }
-            (Ok(result), Err(_)) => result,
-            (Err(_), Ok(result)) => result,
-            (Ok(result1), Ok(result2)) => {
-                // Break the tie by taking the super-block with the greatest generation.
-                if result2.0.generation > result1.0.generation {
-                    result2
-                } else {
-                    result1
-                }
-            }
-        };
+        let block_size = filesystem.block_size();
 
-        log::info!(
-            "replaying journal, superblock: {:?} (copy {:?})",
-            super_block,
-            current_super_block
-        );
+        let (super_block, root_parent) =
+            self.super_block_manager.load(filesystem.device(), block_size).await?;
+
+        let root_parent = Arc::new(ObjectStore::attach_filesystem(root_parent, filesystem.clone()));
 
         self.objects.set_root_parent_store(root_parent.clone());
         let allocator =
@@ -449,7 +410,6 @@ impl Journal {
         {
             let mut inner = self.inner.lock().unwrap();
             inner.super_block = super_block.clone();
-            inner.super_block_to_write = current_super_block.next();
         }
         let root_store = ObjectStore::new(
             Some(root_parent.clone()),
@@ -796,6 +756,7 @@ impl Journal {
         let super_block_b_handle;
         let root_store;
         let mut transaction = filesystem
+            .clone()
             .new_transaction(&[], Options { skip_journal_checks: true, ..Default::default() })
             .await?;
         root_store = root_parent
@@ -860,19 +821,14 @@ impl Journal {
 
         transaction.commit().await?;
 
-        // Cache the super-block.
-        {
-            let mut inner = self.inner.lock().unwrap();
-            inner.super_block = SuperBlock::new(
-                root_parent.store_object_id(),
-                root_parent.graveyard_directory_object_id(),
-                root_store.store_object_id(),
-                allocator.object_id(),
-                journal_handle.object_id(),
-                checkpoint,
-            );
-            inner.super_block_to_write = SuperBlockInstance::A;
-        }
+        self.inner.lock().unwrap().super_block = SuperBlock::new(
+            root_parent.store_object_id(),
+            root_parent.graveyard_directory_object_id(),
+            root_store.store_object_id(),
+            allocator.object_id(),
+            journal_handle.object_id(),
+            checkpoint,
+        );
 
         // Initialize the journal writer.
         let _ = self.handle.set(journal_handle);
@@ -995,10 +951,8 @@ impl Journal {
             result
         };
 
-        let (mut new_super_block, super_block_to_write) = {
-            let inner = self.inner.lock().unwrap();
-            (inner.super_block.clone(), inner.super_block_to_write)
-        };
+        let mut new_super_block = self.inner.lock().unwrap().super_block.clone();
+
         let old_super_block_offset = new_super_block.journal_checkpoint.file_offset;
 
         let (journal_file_offsets, min_checkpoint) = self.objects.journal_file_offsets();
@@ -1011,37 +965,13 @@ impl Journal {
         new_super_block.journal_file_offsets = journal_file_offsets;
         new_super_block.borrowed_metadata_space = borrowed;
 
-        new_super_block
-            .write(
-                &root_parent_store,
-                ObjectStore::open_object(
-                    &self.objects.root_store(),
-                    super_block_to_write.object_id(),
-                    journal_handle_options(),
-                    None,
-                )
-                .await?,
-            )
-            .await?;
-
-        let new_journal_offset = new_super_block.super_block_journal_file_offset;
+        self.super_block_manager.save(&new_super_block, root_parent_store).await?;
 
         {
             let mut inner = self.inner.lock().unwrap();
             inner.super_block = new_super_block;
-            inner.super_block_to_write = super_block_to_write.next();
             inner.zero_offset = Some(round_down(old_super_block_offset, BLOCK_SIZE));
         }
-
-        self.metrics.last_super_block_offset.set(new_journal_offset);
-        self.metrics.last_super_block_update_time_ms.set(
-            SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_millis()
-                .try_into()
-                .unwrap_or(0u64),
-        );
 
         Ok(())
     }
