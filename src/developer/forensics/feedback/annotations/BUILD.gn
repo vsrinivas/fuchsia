@@ -137,3 +137,21 @@ source_set("time_provider") {
     "//src/lib/timekeeper",
   ]
 }
+
+source_set("timezone_provider") {
+  sources = [
+    "timezone_provider.cc",
+    "timezone_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.intl",
+    "//sdk/lib/fit",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/feedback/annotations",
+    "//src/lib/backoff",
+    "//src/lib/fxl",
+  ]
+
+  deps = [ "//zircon/system/ulib/async" ]
+}
