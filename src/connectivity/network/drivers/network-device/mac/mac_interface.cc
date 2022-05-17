@@ -4,6 +4,8 @@
 
 #include "mac_interface.h"
 
+#include <lib/async/cpp/task.h>
+
 #include <array>
 
 #include <fbl/alloc_checker.h>
@@ -89,7 +91,14 @@ zx_status_t MacInterface::Bind(async_dispatcher_t* dispatcher,
   }
 
   clients_.push_back(std::move(client_instance));
-  Consolidate();
+  // TODO(https://fxbug.dev/100499): Improve communication with parent driver. MacInterface relies
+  // heavily on synchronous communication which can be problematic and cause lock inversions with
+  // the parent driver. We need a better strategy here that is going to be more compatible with
+  // DFv2. For now, dispatching to do the work eliminates known deadlocks.
+  async::PostTask(dispatcher, [this]() {
+    fbl::AutoLock lock(&lock_);
+    Consolidate();
+  });
   return ZX_OK;
 }
 

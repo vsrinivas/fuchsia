@@ -253,6 +253,23 @@ void DeviceInterface::NetworkDeviceIfcAddPort(uint8_t port_id,
       port_client.Removed();
     }
   });
+
+  // Creating a MacAddrDeviceInterface may interact with the device, do that without holding the
+  // control lock to prevent deadlocks
+  std::unique_ptr<MacAddrDeviceInterface> mac;
+  mac_addr_protocol_t mac_proto;
+  port_client.GetMac(&mac_proto);
+  ddk::MacAddrProtocolClient mac_client(&mac_proto);
+  if (mac_client.is_valid()) {
+    zx::status status = MacAddrDeviceInterface::Create(mac_client);
+    if (status.is_error()) {
+      LOGF_ERROR("failed to instantiate MAC information for port %d: %s", port_id,
+                 status.status_string());
+      return;
+    }
+    mac = std::move(status.value());
+  }
+
   fbl::AutoLock lock(&control_lock_);
   // Don't allow new ports if tearing down.
   if (teardown_state_ != TeardownState::RUNNING) {
@@ -267,20 +284,6 @@ void DeviceInterface::NetworkDeviceIfcAddPort(uint8_t port_id,
   if (port_slot.port != nullptr) {
     LOGF_ERROR("port %d already exists", port_id);
     return;
-  }
-
-  std::unique_ptr<MacAddrDeviceInterface> mac;
-  mac_addr_protocol_t mac_proto;
-  port_client.GetMac(&mac_proto);
-  ddk::MacAddrProtocolClient mac_client(&mac_proto);
-  if (mac_client.is_valid()) {
-    zx::status status = MacAddrDeviceInterface::Create(mac_client);
-    if (status.is_error()) {
-      LOGF_ERROR("failed to instantiate MAC information for port %d: %s", port_id,
-                 status.status_string());
-      return;
-    }
-    mac = std::move(status.value());
   }
 
   fbl::AllocChecker checker;
