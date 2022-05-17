@@ -2061,3 +2061,16 @@
   reviewers: ['geb@google.com', 'jsankey@google.com', 'yifeit@google.com']
   submitted: '2021-12-20'
   reviewed: '2022-05-04'
+
+- name: 'RFC-0160'
+  title: 'Remove support for FIDL struct defaults'
+  short_description: 'This RFC proposes removing the ability to specify default values on FIDL struct fields.'
+  authors: ['bprosnitz@google.com']
+  file: '0160_fidl_remove_struct_defaults.md'
+  area: ['FIDL']
+  issue: ['100530']
+  gerrit_change_id: ['623161']
+  status: 'Accepted'
+  reviewers: ['ianloic@google.com', 'yifeit@google.com']
+  submitted: '2021-12-29'
+  reviewed: '2022-05-17'
