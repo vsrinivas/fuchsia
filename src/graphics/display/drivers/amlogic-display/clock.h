@@ -57,6 +57,7 @@ class Clock {
 
   PllConfig pll_cfg_;
   LcdTiming lcd_timing_;
+  display_setting_t last_valid_display_settings_ = {};
 
   bool clock_enabled_ = false;
 };
