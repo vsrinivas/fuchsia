@@ -6,6 +6,7 @@
 #define SRC_UI_TESTING_UI_TEST_MANAGER_UI_TEST_MANAGER_H_
 
 #include <fuchsia/session/scene/cpp/fidl.h>
+#include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/observation/test/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
@@ -160,7 +161,7 @@ namespace ui_testing {
 // auto service = realm_exposed_services.Connect<...>();
 // service->...;
 // ```
-class UITestManager {
+class UITestManager : public fuchsia::ui::focus::FocusChainListener {
  public:
   enum class SceneOwnerType {
     ROOT_PRESENTER = 1,
@@ -267,6 +268,9 @@ class UITestManager {
   // view tree snapshot received from scenic.
   bool ClientViewIsRendering();
 
+  // Convenience method to inform the client if its view is focused.
+  bool ClientViewIsFocused();
+
   // Convenience method to inform the client of its view scale factor.
   //
   // Returns the scale factor applied to the client view, as reported in the
@@ -292,11 +296,16 @@ class UITestManager {
   // Helper method to monitor the state of the view tree continuously.
   void WatchViewTree();
 
+  // |fuchsia::ui::focus::FocusChainListener|
+  void OnFocusChange(fuchsia::ui::focus::FocusChain focus_chain,
+                     OnFocusChangeCallback callback) override;
+
   Config config_;
   component_testing::RealmBuilder realm_builder_ = component_testing::RealmBuilder::Create();
   std::shared_ptr<component_testing::RealmRoot> realm_root_;
   fuchsia::ui::observation::test::RegistrySyncPtr observer_registry_;
   fuchsia::ui::observation::geometry::ProviderPtr geometry_provider_;
+  fidl::Binding<fuchsia::ui::focus::FocusChainListener> focus_chain_listener_binding_;
 
   // Connection to scene owner service. At most one will be active for a given
   // UITestManager instance.
@@ -311,6 +320,9 @@ class UITestManager {
   // From this snapshot, we can retrieve relevant view tree state on demand,
   // e.g. if the client view is rendering content.
   std::optional<fuchsia::ui::observation::geometry::ViewTreeSnapshot> last_view_tree_snapshot_;
+
+  // Holds the most recent focus chain received from the geometry observer.
+  std::optional<fuchsia::ui::focus::FocusChain> last_focus_chain_;
 
   // Some tests may not need a dedicated subrealm. Those clients will not call
   // AddSubrealm(), so UITestManager will crash if it tries to add routes

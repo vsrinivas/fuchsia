@@ -99,7 +99,8 @@ std::optional<fuchsia::ui::observation::geometry::ViewDescriptor> ViewDescriptor
 
 }  // namespace
 
-UITestManager::UITestManager(UITestManager::Config config) : config_(config) {}
+UITestManager::UITestManager(UITestManager::Config config)
+    : config_(config), focus_chain_listener_binding_(this) {}
 
 void UITestManager::RouteServices(std::vector<std::string> services, Ref source,
                                   std::vector<Ref> targets) {
@@ -319,17 +320,23 @@ void UITestManager::InitializeScene() {
   realm_root_->Connect<fuchsia::ui::observation::test::Registry>(observer_registry_.NewRequest());
   observer_registry_->RegisterGlobalGeometryProvider(geometry_provider_.NewRequest());
 
+  // Register focus chain listener.
+  auto focus_chain_listener_registry =
+      realm_root_->Connect<fuchsia::ui::focus::FocusChainListenerRegistry>();
+  focus_chain_listener_registry->Register(focus_chain_listener_binding_.NewBinding());
+
   if (*config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
     root_presenter_ = realm_root_->Connect<fuchsia::ui::policy::Presenter>();
 
     auto client_view_tokens = scenic::ViewTokenPair::New();
-    root_presenter_->PresentOrReplaceView(std::move(client_view_tokens.view_holder_token),
-                                          /* presentation */ nullptr);
-
-    auto client_view_provider = realm_root_->Connect<fuchsia::ui::app::ViewProvider>();
     auto [client_control_ref, client_view_ref] = scenic::ViewRefPair::New();
     client_view_ref_ = fidl::Clone(client_view_ref);
 
+    root_presenter_->PresentOrReplaceView2(std::move(client_view_tokens.view_holder_token),
+                                           fidl::Clone(client_view_ref),
+                                           /* presentation */ nullptr);
+
+    auto client_view_provider = realm_root_->Connect<fuchsia::ui::app::ViewProvider>();
     client_view_provider->CreateViewWithViewRef(std::move(client_view_tokens.view_token.value),
                                                 std::move(client_control_ref),
                                                 std::move(client_view_ref));
@@ -374,6 +381,12 @@ void UITestManager::WatchViewTree() {
   });
 }
 
+void UITestManager::OnFocusChange(fuchsia::ui::focus::FocusChain focus_chain,
+                                  OnFocusChangeCallback callback) {
+  last_focus_chain_ = std::move(focus_chain);
+  callback();
+}
+
 bool UITestManager::ClientViewIsRendering() {
   if (!last_view_tree_snapshot_) {
     return false;
@@ -386,6 +399,28 @@ bool UITestManager::ClientViewIsRendering() {
 
   return ViewDescriptorFromSnapshot(*last_view_tree_snapshot_, *client_view_ref_koid) !=
          std::nullopt;
+}
+
+bool UITestManager::ClientViewIsFocused() {
+  if (!last_focus_chain_) {
+    return false;
+  }
+
+  auto client_view_ref_koid = ClientViewRefKoid();
+  if (!client_view_ref_koid) {
+    return false;
+  }
+
+  if (!last_focus_chain_->has_focus_chain()) {
+    return false;
+  }
+
+  if (last_focus_chain_->focus_chain().empty()) {
+    return false;
+  }
+
+  return fsl::GetKoid(last_focus_chain_->focus_chain().back().reference.get()) ==
+         client_view_ref_koid;
 }
 
 std::optional<zx_koid_t> UITestManager::ClientViewRefKoid() {

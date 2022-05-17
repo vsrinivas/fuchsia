@@ -23,7 +23,6 @@ executable("focus-input-test-bin") {
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.focus",
-    "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
@@ -31,6 +30,8 @@ executable("focus-input-test-bin") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/ui/testing/ui_test_manager",
+    "//src/ui/testing/util",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -42,11 +43,6 @@ fuchsia_test_component("focus-input-test-component") {
 
 fuchsia_test_package("focus-input-test") {
   test_components = [ ":focus-input-test-component" ]
-  deps = [
-    "//src/ui/bin/root_presenter:component_v1_for_test",
-    "//src/ui/tests/integration_input_tests:scenic-test-realm",
-    "//src/ui/tests/integration_input_tests/focus/focus-gfx-client",
-  ]
   test_specs = {
     environments = [
       {
@@ -56,6 +52,9 @@ fuchsia_test_package("focus-input-test") {
         }
       },
     ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
