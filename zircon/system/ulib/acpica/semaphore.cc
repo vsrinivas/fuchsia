@@ -34,6 +34,7 @@ struct AcpiSemaphore {
       return AE_TIME;
     }
     count_ -= units;
+    sync_mutex_unlock(&mutex_);
     return AE_OK;
   }
 
@@ -51,7 +52,7 @@ struct AcpiSemaphore {
  private:
   sync_condition_t condition_;
   sync_mutex_t mutex_;
-  uint32_t count_;
+  uint32_t count_ __TA_GUARDED(mutex_);
 };
 
 /**
