@@ -16,6 +16,9 @@ group("test") {
   ]
 }
 
+# test_binary.zstd results from building this target under core.x64-release and compressing with
+# zstd.  For now, this is a manual process, which should be fine since it shouldn't need to change
+# very often.
 executable("test_binary") {
   testonly = true
   sources = [ "test_binary_main.cc" ]
@@ -24,9 +27,8 @@ executable("test_binary") {
 
 resource("test_binary_resource") {
   testonly = true
-  data_deps = [ ":test_binary" ]
-  sources = [ "$root_out_dir/test_binary" ]
-  outputs = [ "data/test_binary" ]
+  sources = [ "test_binary.zstd" ]
+  outputs = [ "data/test_binary.zstd" ]
   visibility = [ ":*" ]
 }
 
@@ -48,6 +50,7 @@ source_set("test_utils") {
     "//sdk/lib/fdio",
     "//src/lib/digest",
     "//third_party/googletest:gtest",
+    "//third_party/zstd",
     "//zircon/system/ulib/fbl",
     "//zircon/third_party/ulib/safemath",
   ]

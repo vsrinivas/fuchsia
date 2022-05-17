@@ -22,6 +22,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 #include <safemath/safe_conversions.h>
+#include <zstd/zstd.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
@@ -32,8 +33,8 @@ namespace {
 
 using digest::MerkleTreeCreator;
 
-fbl::Array<uint8_t> LoadTemplateData() {
-  constexpr char kDataFile[] = "/pkg/data/test_binary";
+std::vector<uint8_t> LoadTemplateData() {
+  constexpr char kDataFile[] = "/pkg/data/test_binary.zstd";
   fbl::unique_fd fd(open(kDataFile, O_RDONLY));
   EXPECT_TRUE(fd.is_valid());
   if (!fd) {
@@ -45,9 +46,12 @@ fbl::Array<uint8_t> LoadTemplateData() {
   EXPECT_EQ(fstat(fd.get(), &s), 0);
   size_t sz = s.st_size;
 
-  fbl::Array<uint8_t> data(new uint8_t[sz], sz);
-  EXPECT_EQ(StreamAll(read, fd.get(), data.get(), sz), 0);
-  return data;
+  std::vector<uint8_t> compressed(sz);
+  EXPECT_EQ(StreamAll(read, fd.get(), compressed.data(), sz), 0);
+  std::vector<uint8_t> uncompressed(128 * 1024);
+  uncompressed.resize(ZSTD_decompress(uncompressed.data(), uncompressed.size(), compressed.data(),
+                                      compressed.size()));
+  return uncompressed;
 }
 
 }  // namespace
@@ -79,8 +83,11 @@ std::unique_ptr<BlobInfo> GenerateRandomBlob(const std::string& mount_path, size
 }
 
 std::unique_ptr<BlobInfo> GenerateRealisticBlob(const std::string& mount_path, size_t data_size) {
-  static fbl::Array<uint8_t> template_data = LoadTemplateData();
-  ZX_ASSERT_MSG(template_data.size() > 0ul, "Failed to load realistic data");
+  static auto* template_data = [] {
+    auto* data = new std::vector(LoadTemplateData());
+    ZX_ASSERT_MSG(data->size() > 0ul, "Failed to load realistic data");
+    return data;
+  }();
   return GenerateBlob(
       [](uint8_t* data, size_t length) {
         // TODO(jfsulliv): Use explicit seed
@@ -91,8 +98,8 @@ std::unique_ptr<BlobInfo> GenerateRealisticBlob(const std::string& mount_path, s
         length -= nonce_size;
 
         while (length > 0) {
-          size_t to_copy = std::min(template_data.size(), length);
-          memcpy(data, template_data.get(), to_copy);
+          size_t to_copy = std::min(template_data->size(), length);
+          memcpy(data, template_data->data(), to_copy);
           data += to_copy;
           length -= to_copy;
         }
