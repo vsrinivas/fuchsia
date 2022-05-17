@@ -40,9 +40,11 @@ pub struct Galaxy {
 
 /// Creates a new galaxy.
 ///
-/// If the CONFIG specifies an init task, it is run before
-/// returning from create_galaxy and optionally waits for
-/// a startup file to be created.
+/// A galaxy contains a `Kernel`, and an optional `init_task`. The returned init task is expected to
+/// execute before any other tasks are executed.
+///
+/// If a `startup_file_path` is also returned, the caller should wait to start any other tasks
+/// until the file at `startup_file_path` exists.
 pub async fn create_galaxy() -> Result<Galaxy, Error> {
     const COMPONENT_PKG_PATH: &'static str = "/pkg";
 

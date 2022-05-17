@@ -14,12 +14,12 @@ use fuchsia_component::client as fclient;
 use fuchsia_zircon as zx;
 use rand::Rng;
 use std::ffi::CString;
-use std::sync::Arc;
 use tracing::info;
 
 use crate::auth::Credentials;
 use crate::execution::{
-    create_filesystem_from_spec, execute_task, galaxy::Galaxy, parse_numbered_handles,
+    create_filesystem_from_spec, create_galaxy, execute_task, galaxy::Galaxy,
+    parse_numbered_handles,
 };
 use crate::task::*;
 use crate::types::*;
@@ -40,8 +40,8 @@ use crate::types::*;
 pub async fn start_component(
     mut start_info: ComponentStartInfo,
     controller: ServerEnd<ComponentControllerMarker>,
-    galaxy: Arc<Galaxy>,
 ) -> Result<(), Error> {
+    let galaxy = create_galaxy().await?;
     let url = start_info.resolved_url.clone().unwrap_or("<unknown>".to_string());
     info!(
         "start_component: {}\narguments: {:?}\nmanifest: {:?}",
