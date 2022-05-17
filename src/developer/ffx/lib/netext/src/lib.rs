@@ -206,7 +206,7 @@ pub fn parse_address_parts(addr_str: &str) -> Result<(IpAddr, Option<&str>, Opti
     lazy_static::lazy_static! {
         static ref V6_BRACKET: Regex = Regex::new(r"^\[([^\]]+?[:]{1,2}[^\]]+)\](:\d+)?$").unwrap();
         static ref V4_PORT: Regex = Regex::new(r"^(\d+\.\d+\.\d+\.\d+)(:\d+)?$").unwrap();
-        static ref WITH_SCOPE: Regex = Regex::new(r"^([^%]+)%([0-9a-zA-Z]+)$").unwrap();
+        static ref WITH_SCOPE: Regex = Regex::new(r"^([^%]+)%([^%/ ]+)$").unwrap();
     }
     let (addr, port) =
         if let Some(caps) = V6_BRACKET.captures(addr_str).or_else(|| V4_PORT.captures(addr_str)) {
@@ -504,6 +504,19 @@ mod tests {
         assert_eq!(addr, "fe80::1".parse::<IpAddr>().unwrap());
         assert_eq!(scope, Some("eno1"));
         assert_eq!(port, None);
+    }
+
+    #[test]
+    fn test_parse_address_parts_scoped_no_port_odd_characters() {
+        let (addr, scope, port) = parse_address_parts("fe80::1%zx-eno1").unwrap();
+        assert_eq!(addr, "fe80::1".parse::<IpAddr>().unwrap());
+        assert_eq!(scope, Some("zx-eno1"));
+        assert_eq!(port, None);
+    }
+
+    #[test]
+    fn test_parse_address_parts_scoped_spaces() {
+        assert!(parse_address_parts("fe80::1%zx eno1").is_err());
     }
 
     #[test]
