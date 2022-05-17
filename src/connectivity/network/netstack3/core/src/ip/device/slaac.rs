@@ -20,7 +20,6 @@ use net_types::{
     ip::{AddrSubnet, IpAddress, Ipv6, Ipv6Addr, Subnet},
     UnicastAddr, Witness as _,
 };
-use num::rational::Ratio;
 use packet_formats::{icmp::ndp::NonZeroNdpLifetime, utils::NonZeroDuration};
 use rand::{distributions::Uniform, Rng as _, RngCore};
 
@@ -49,12 +48,6 @@ const MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE: Duration = Duration::from_secs(7200)
 const REQUIRED_PREFIX_BITS: u8 = 64;
 
 // Host constants.
-
-/// Maximum allowed DESYNC_FACTOR as a ratio of the TEMP_PREFERRED_LIFETIME as
-/// described in [RFC 8981 Section 3.8].
-///
-/// [RFC 8981 Section 3.8]: http://tools.ietf.org/html/rfc8981#section-3.8
-const MAX_DESYNC_FACTOR_RATIO: Ratio<u64> = Ratio::new_raw(2, 5);
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 enum InnerSlaacTimerId {
@@ -832,6 +825,19 @@ fn set_deprecated_slaac_addr<C: SlaacContext>(
     *entry.deprecated = deprecated;
 }
 
+/// The minimum REGEN_ADVANCE as specified in [RFC 8981 Section 3.8].
+///
+/// [RFC 8981 Section 3.8]: https://datatracker.ietf.org/doc/html/rfc8981#section-3.8
+// As per [RFC 8981 Section 3.8],
+//
+//   REGEN_ADVANCE
+//      2 + (TEMP_IDGEN_RETRIES * DupAddrDetectTransmits * RetransTimer /
+//      1000)
+//
+//      ..., such that REGEN_ADVANCE is expressed in seconds.
+const MIN_REGEN_ADVANCE: NonZeroDuration =
+    NonZeroDuration::from_nonzero_secs(const_unwrap::const_unwrap_option(NonZeroU64::new(2)));
+
 /// Computes REGEN_ADVANCE as specified in [RFC 8981 Section 3.8].
 ///
 /// [RFC 8981 Section 3.8]: http://tools.ietf.org/html/rfc8981#section-3.8
@@ -840,17 +846,47 @@ fn regen_advance(
     retrans_timer: Duration,
     dad_transmits: u8,
 ) -> NonZeroDuration {
-    const TWO_SECONDS: NonZeroDuration =
-        NonZeroDuration::from_nonzero_secs(const_unwrap::const_unwrap_option(NonZeroU64::new(2)));
     // Per the RFC, REGEN_ADVANCE in seconds =
     //   2 + (TEMP_IDGEN_RETRIES * DupAddrDetectTransmits * RetransTimer / 1000)
     //
     // where RetransTimer is in milliseconds. Since values here are kept as
     // Durations, there is no need to apply scale factors.
-    TWO_SECONDS
+    MIN_REGEN_ADVANCE
         + retrans_timer
             .checked_mul(u32::from(temp_idgen_retries) * u32::from(dad_transmits))
             .unwrap_or(Duration::ZERO)
+}
+
+/// Computes the DESYNC_FACTOR as specified in [RFC 8981 section 3.8].
+///
+/// [RFC 8981 Section 3.8]: http://tools.ietf.org/html/rfc8981#section-3.8
+fn desync_factor<R: RngCore>(
+    rng: &mut R,
+    temp_preferred_lifetime: NonZeroDuration,
+    regen_advance: NonZeroDuration,
+) -> Duration {
+    let temp_preferred_lifetime = temp_preferred_lifetime.get();
+
+    // Per RFC 8981 Section 3.8:
+    //    MAX_DESYNC_FACTOR
+    //       0.4 * TEMP_PREFERRED_LIFETIME.  Upper bound on DESYNC_FACTOR.
+    //
+    //       |  Rationale: Setting MAX_DESYNC_FACTOR to 0.4
+    //       |  TEMP_PREFERRED_LIFETIME results in addresses that have
+    //       |  statistically different lifetimes, and a maximum of three
+    //       |  concurrent temporary addresses when the default values
+    //       |  specified in this section are employed.
+    //    DESYNC_FACTOR
+    //       A random value within the range 0 - MAX_DESYNC_FACTOR.  It
+    //       is computed each time a temporary address is generated, and
+    //       is associated with the corresponding address.  It MUST be
+    //       smaller than (TEMP_PREFERRED_LIFETIME - REGEN_ADVANCE).
+    let max_desync_factor = core::cmp::min(
+        (temp_preferred_lifetime * 2) / 5,
+        temp_preferred_lifetime - regen_advance.get(),
+    );
+
+    rng.sample(Uniform::new(Duration::ZERO, max_desync_factor))
 }
 
 fn regenerate_temporary_slaac_addr<C: SlaacContext>(
@@ -1144,8 +1180,7 @@ fn add_slaac_addr_sub<C: SlaacContext>(
                 temporary_address_config.temp_idgen_retries,
                 sync_ctx.retrans_timer(device_id),
                 dad_transmits.map_or(0, NonZeroU8::get),
-            )
-            .get();
+            );
 
             let iid = sync_ctx.get_interface_identifier(device_id);
             let secret_key = temporary_address_config.secret_key;
@@ -1172,28 +1207,15 @@ fn add_slaac_addr_sub<C: SlaacContext>(
 
             let valid_until = now.checked_add(valid_for.get()).unwrap();
 
-            let temp_preferred_lifetime = temporary_address_config.temp_preferred_lifetime.get();
-            // Per RFC 8981 Section 3.8:
-            //    DESYNC_FACTOR
-            //       A random value within the range 0 - MAX_DESYNC_FACTOR.  It
-            //       is computed each time a temporary address is generated, and
-            //       is associated with the corresponding address.  It MUST be
-            //       smaller than (TEMP_PREFERRED_LIFETIME - REGEN_ADVANCE).
-            let max_desync_factor = core::cmp::min(
-                // Using second accuracy will only cause problems here if
-                // temp_preferred_lifetime is < 1s, in which case
-                // `preferred_for.checked_sub(regen_advance)` below will be None
-                // and an address will not be generated.
-                Duration::from_secs(
-                    (MAX_DESYNC_FACTOR_RATIO * temp_preferred_lifetime.as_secs()).to_integer(),
-                ),
-                temp_preferred_lifetime - regen_advance,
+            let desync_factor = desync_factor(
+                sync_ctx.rng_mut(),
+                temporary_address_config.temp_preferred_lifetime,
+                regen_advance,
             );
-
-            let desync_factor =
-                sync_ctx.rng_mut().sample(Uniform::new(Duration::ZERO, max_desync_factor));
             let preferred_for = prefix_preferred_for.and_then(|prefix_preferred_for| {
-                temp_preferred_lifetime
+                temporary_address_config
+                    .temp_preferred_lifetime
+                    .get()
                     .checked_sub(desync_factor)
                     .and_then(NonZeroDuration::new)
                     .map(|d| prefix_preferred_for.min_finite_duration(d))
@@ -1206,7 +1228,7 @@ fn add_slaac_addr_sub<C: SlaacContext>(
             //   units.
             let preferred_for_and_regen_at = match preferred_for {
                 None => return,
-                Some(preferred_for) => match preferred_for.get().checked_sub(regen_advance) {
+                Some(preferred_for) => match preferred_for.get().checked_sub(regen_advance.get()) {
                     Some(before_regen) => PreferredForAndRegenAt(
                         NonZeroNdpLifetime::Finite(preferred_for),
                         Some(now.checked_add(before_regen).unwrap()),
@@ -1325,8 +1347,8 @@ fn add_slaac_addr_sub<C: SlaacContext>(
 
 #[cfg(test)]
 mod tests {
-    use assert_matches::assert_matches;
-    use fakealloc::collections::hash_map::{Entry, HashMap};
+    use core::convert::TryFrom as _;
+
     use net_declare::net::ip_v6;
     use test_case::test_case;
 
@@ -1334,7 +1356,7 @@ mod tests {
     use crate::{
         context::testutil::{DummyCtx, DummyInstant, DummyTimerCtxExt as _},
         ip::DummyDeviceId,
-        testutil::assert_empty,
+        testutil::{assert_empty, FakeCryptoRng},
     };
 
     struct MockSlaacContext {
@@ -1342,7 +1364,7 @@ mod tests {
         dad_transmits: Option<NonZeroU8>,
         retrans_timer: Duration,
         iid: [u8; 8],
-        slaac_addrs: HashMap<UnicastAddr<Ipv6Addr>, SlaacAddressEntry<DummyInstant>>,
+        slaac_addrs: Vec<SlaacAddressEntry<DummyInstant>>,
         non_slaac_addr: Option<UnicastAddr<Ipv6Addr>>,
     }
 
@@ -1409,7 +1431,7 @@ mod tests {
                 slaac_addrs,
                 non_slaac_addr: _,
             } = self.get_ref();
-            Box::new(slaac_addrs.values().cloned())
+            Box::new(slaac_addrs.iter().cloned())
         }
 
         fn iter_slaac_addrs_mut(
@@ -1424,7 +1446,7 @@ mod tests {
                 slaac_addrs,
                 non_slaac_addr: _,
             } = self.get_mut();
-            Box::new(slaac_addrs.values_mut().map(
+            Box::new(slaac_addrs.iter_mut().map(
                 |SlaacAddressEntry { addr_sub, config, deprecated }| SlaacAddressEntryMut {
                     addr_sub: *addr_sub,
                     config,
@@ -1452,14 +1474,12 @@ mod tests {
                 return Err(ExistsError);
             }
 
-            match slaac_addrs.entry(addr_sub.addr()) {
-                Entry::Occupied(_) => Err(ExistsError),
-                Entry::Vacant(e) => {
-                    let _inserted_val: &mut SlaacAddressEntry<_> =
-                        e.insert(SlaacAddressEntry { addr_sub, config, deprecated: false });
-                    Ok(())
-                }
+            if slaac_addrs.iter().any(|e| e.addr_sub.addr() == addr_sub.addr()) {
+                return Err(ExistsError);
             }
+
+            slaac_addrs.push(SlaacAddressEntry { addr_sub, config, deprecated: false });
+            Ok(())
         }
 
         fn remove_slaac_addr(
@@ -1475,7 +1495,8 @@ mod tests {
                 slaac_addrs,
                 non_slaac_addr: _,
             } = self.get_mut();
-            let _removed_val: Option<SlaacAddressEntry<_>> = slaac_addrs.remove(addr);
+
+            slaac_addrs.retain(|e| &e.addr_sub.addr() != addr)
         }
     }
 
@@ -1664,14 +1685,13 @@ mod tests {
         ]);
 
         // Remove the address and let SLAAC know the address was removed
-        let config = assert_matches!(
-            ctx.get_mut().slaac_addrs.remove(&addr_sub.addr()),
-            Some(SlaacAddressEntry { addr_sub: got_addr_sub, config, deprecated }) => {
-                assert_eq!(addr_sub, got_addr_sub);
-                assert!(!deprecated);
-                config
-            }
-        );
+        let config = {
+            let SlaacAddressEntry { addr_sub: got_addr_sub, config, deprecated } =
+                ctx.get_mut().slaac_addrs.remove(0);
+            assert_eq!(addr_sub, got_addr_sub);
+            assert!(!deprecated);
+            config
+        };
         SlaacHandler::on_address_removed(&mut ctx, DummyDeviceId, addr_sub, config, reason);
         ctx.timer_ctx().assert_no_timers_installed();
     }
@@ -1867,5 +1887,436 @@ mod tests {
         };
         assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [entry],);
         ctx.timer_ctx().assert_timers_installed(expected_timers);
+    }
+
+    const SECRET_KEY: [u8; STABLE_IID_SECRET_KEY_BYTES] = [1; STABLE_IID_SECRET_KEY_BYTES];
+
+    struct DontGenerateTemporaryAddressTest {
+        preferred_lifetime_secs: u32,
+        valid_lifetime_secs: u32,
+        temp_idgen_retries: u8,
+        dad_transmits: u8,
+        retrans_timer: Duration,
+        enable: bool,
+    }
+
+    impl DontGenerateTemporaryAddressTest {
+        fn with_pl_less_than_regen_advance(
+            dad_transmits: u8,
+            retrans_timer: Duration,
+            temp_idgen_retries: u8,
+        ) -> Self {
+            DontGenerateTemporaryAddressTest {
+                preferred_lifetime_secs: u32::try_from(
+                    (MIN_REGEN_ADVANCE.get()
+                        + (u32::from(temp_idgen_retries)
+                            * u32::from(dad_transmits)
+                            * retrans_timer))
+                        .as_secs(),
+                )
+                .unwrap()
+                    - 1,
+                valid_lifetime_secs: TWO_HOURS_AS_SECS,
+                temp_idgen_retries,
+                dad_transmits,
+                retrans_timer,
+                enable: true,
+            }
+        }
+    }
+
+    #[test_case(DontGenerateTemporaryAddressTest {
+        preferred_lifetime_secs: ONE_HOUR_AS_SECS,
+        valid_lifetime_secs: TWO_HOURS_AS_SECS,
+        temp_idgen_retries: 0,
+        dad_transmits: 0,
+        retrans_timer: DEFAULT_RETRANS_TIMER,
+        enable: false,
+    }; "disabled")]
+    #[test_case(DontGenerateTemporaryAddressTest{
+        preferred_lifetime_secs: 0,
+        valid_lifetime_secs: 0,
+        temp_idgen_retries: 0,
+        dad_transmits: 0,
+        retrans_timer: DEFAULT_RETRANS_TIMER,
+        enable: true,
+    }; "zero lifetimes")]
+    #[test_case(DontGenerateTemporaryAddressTest {
+        preferred_lifetime_secs: TWO_HOURS_AS_SECS,
+        valid_lifetime_secs: ONE_HOUR_AS_SECS,
+        temp_idgen_retries: 0,
+        dad_transmits: 0,
+        retrans_timer: DEFAULT_RETRANS_TIMER,
+        enable: true,
+    }; "preferred larger than valid")]
+    #[test_case(DontGenerateTemporaryAddressTest {
+        preferred_lifetime_secs: 0,
+        valid_lifetime_secs: TWO_HOURS_AS_SECS,
+        temp_idgen_retries: 0,
+        dad_transmits: 0,
+        retrans_timer: DEFAULT_RETRANS_TIMER,
+        enable: true,
+    }; "not preferred")]
+    #[test_case(DontGenerateTemporaryAddressTest::with_pl_less_than_regen_advance(
+        0 /* dad_transmits */,
+        DEFAULT_RETRANS_TIMER /* retrans_timer */,
+        0 /* temp_idgen_retries */,
+    ); "preferred lifetime less than than regen advance with no DAD transmits")]
+    #[test_case(DontGenerateTemporaryAddressTest::with_pl_less_than_regen_advance(
+        1 /* dad_transmits */,
+        DEFAULT_RETRANS_TIMER /* retrans_timer */,
+        0 /* temp_idgen_retries */,
+    ); "preferred lifetime less than than regen advance with DAD transmits")]
+    #[test_case(DontGenerateTemporaryAddressTest::with_pl_less_than_regen_advance(
+        1 /* dad_transmits */,
+        DEFAULT_RETRANS_TIMER /* retrans_timer */,
+        1 /* temp_idgen_retries */,
+    ); "preferred lifetime less than than regen advance with DAD transmits and retries")]
+    #[test_case(DontGenerateTemporaryAddressTest::with_pl_less_than_regen_advance(
+        2 /* dad_transmits */,
+        DEFAULT_RETRANS_TIMER + Duration::from_secs(1) /* retrans_timer */,
+        3 /* temp_idgen_retries */,
+    ); "preferred lifetime less than than regen advance with multiple DAD transmits and multiple retries")]
+    fn dont_generate_temporary_address(
+        DontGenerateTemporaryAddressTest {
+            preferred_lifetime_secs,
+            valid_lifetime_secs,
+            temp_idgen_retries,
+            dad_transmits,
+            retrans_timer,
+            enable,
+        }: DontGenerateTemporaryAddressTest,
+    ) {
+        let mut ctx = MockCtx::with_state(MockSlaacContext {
+            config: SlaacConfiguration {
+                temporary_address_configuration: enable.then(|| {
+                    TemporarySlaacAddressConfiguration {
+                        temp_valid_lifetime: NonZeroDuration::new(Duration::from_secs(
+                            ONE_HOUR_AS_SECS.into(),
+                        ))
+                        .unwrap(),
+                        temp_preferred_lifetime: NonZeroDuration::new(Duration::from_secs(
+                            ONE_HOUR_AS_SECS.into(),
+                        ))
+                        .unwrap(),
+                        temp_idgen_retries,
+                        secret_key: SECRET_KEY,
+                    }
+                }),
+                ..Default::default()
+            },
+            dad_transmits: NonZeroU8::new(dad_transmits),
+            retrans_timer,
+            iid: IID,
+            slaac_addrs: Default::default(),
+            non_slaac_addr: None,
+        });
+
+        SlaacHandler::apply_slaac_update(
+            &mut ctx,
+            DummyDeviceId,
+            SUBNET,
+            NonZeroNdpLifetime::from_u32_with_infinite(preferred_lifetime_secs),
+            NonZeroNdpLifetime::from_u32_with_infinite(valid_lifetime_secs),
+        );
+        assert_empty(ctx.iter_slaac_addrs(DummyDeviceId));
+        ctx.timer_ctx().assert_no_timers_installed();
+    }
+
+    struct GenerateTemporaryAddressTest {
+        pl_config: u32,
+        vl_config: u32,
+        dad_transmits: u8,
+        retrans_timer: Duration,
+        temp_idgen_retries: u8,
+        pl_ra: u32,
+        vl_ra: u32,
+        expected_pl_addr: u32,
+        expected_vl_addr: u32,
+    }
+    #[test_case(GenerateTemporaryAddressTest{
+        pl_config: ONE_HOUR_AS_SECS,
+        vl_config: ONE_HOUR_AS_SECS,
+        dad_transmits: 0,
+        retrans_timer: DEFAULT_RETRANS_TIMER,
+        temp_idgen_retries: 0,
+        pl_ra: ONE_HOUR_AS_SECS,
+        vl_ra: ONE_HOUR_AS_SECS,
+        expected_pl_addr: ONE_HOUR_AS_SECS,
+        expected_vl_addr: ONE_HOUR_AS_SECS,
+    }; "config and prefix same lifetimes")]
+    #[test_case(GenerateTemporaryAddressTest{
+        pl_config: ONE_HOUR_AS_SECS,
+        vl_config: TWO_HOURS_AS_SECS,
+        dad_transmits: 0,
+        retrans_timer: DEFAULT_RETRANS_TIMER,
+        temp_idgen_retries: 0,
+        pl_ra: THREE_HOURS_AS_SECS,
+        vl_ra: THREE_HOURS_AS_SECS,
+        expected_pl_addr: ONE_HOUR_AS_SECS,
+        expected_vl_addr: TWO_HOURS_AS_SECS,
+    }; "config smaller than prefix lifetimes")]
+    #[test_case(GenerateTemporaryAddressTest{
+        pl_config: TWO_HOURS_AS_SECS,
+        vl_config: THREE_HOURS_AS_SECS,
+        dad_transmits: 0,
+        retrans_timer: DEFAULT_RETRANS_TIMER,
+        temp_idgen_retries: 0,
+        pl_ra: ONE_HOUR_AS_SECS,
+        vl_ra: TWO_HOURS_AS_SECS,
+        expected_pl_addr: ONE_HOUR_AS_SECS,
+        expected_vl_addr: TWO_HOURS_AS_SECS,
+    }; "config larger than prefix lifetimes")]
+    #[test_case(GenerateTemporaryAddressTest{
+        pl_config: TWO_HOURS_AS_SECS,
+        vl_config: THREE_HOURS_AS_SECS,
+        dad_transmits: 0,
+        retrans_timer: DEFAULT_RETRANS_TIMER,
+        temp_idgen_retries: 0,
+        pl_ra: INFINITE_LIFETIME,
+        vl_ra: INFINITE_LIFETIME,
+        expected_pl_addr: TWO_HOURS_AS_SECS,
+        expected_vl_addr: THREE_HOURS_AS_SECS,
+    }; "prefix with infinite lifetimes")]
+    #[test_case(GenerateTemporaryAddressTest{
+        pl_config: TWO_HOURS_AS_SECS,
+        vl_config: THREE_HOURS_AS_SECS,
+        dad_transmits: 1,
+        retrans_timer: DEFAULT_RETRANS_TIMER,
+        temp_idgen_retries: 0,
+        pl_ra: INFINITE_LIFETIME,
+        vl_ra: INFINITE_LIFETIME,
+        expected_pl_addr: TWO_HOURS_AS_SECS,
+        expected_vl_addr: THREE_HOURS_AS_SECS,
+    }; "generate_with_dad_enabled")]
+    #[test_case(GenerateTemporaryAddressTest{
+        pl_config: TWO_HOURS_AS_SECS,
+        vl_config: THREE_HOURS_AS_SECS,
+        dad_transmits: 2,
+        retrans_timer: Duration::from_secs(5),
+        temp_idgen_retries: 3,
+        pl_ra: INFINITE_LIFETIME,
+        vl_ra: INFINITE_LIFETIME,
+        expected_pl_addr: TWO_HOURS_AS_SECS,
+        expected_vl_addr: THREE_HOURS_AS_SECS,
+    }; "generate_with_dad_enabled_and_retries")]
+    #[test_case(GenerateTemporaryAddressTest{
+        pl_config: TWO_HOURS_AS_SECS,
+        vl_config: THREE_HOURS_AS_SECS,
+        dad_transmits: 1,
+        retrans_timer: Duration::from_secs(10),
+        temp_idgen_retries: 0,
+        pl_ra: INFINITE_LIFETIME,
+        vl_ra: INFINITE_LIFETIME,
+        expected_pl_addr: TWO_HOURS_AS_SECS,
+        expected_vl_addr: THREE_HOURS_AS_SECS,
+    }; "generate_with_dad_enabled_but_no_retries")]
+    fn generate_temporary_address(
+        GenerateTemporaryAddressTest {
+            pl_config,
+            vl_config,
+            dad_transmits,
+            retrans_timer,
+            temp_idgen_retries,
+            pl_ra,
+            vl_ra,
+            expected_pl_addr,
+            expected_vl_addr,
+        }: GenerateTemporaryAddressTest,
+    ) {
+        let pl_config = Duration::from_secs(pl_config.into());
+        let regen_advance = regen_advance(temp_idgen_retries, retrans_timer, dad_transmits);
+
+        let mut ctx = MockCtx::with_state(MockSlaacContext {
+            config: SlaacConfiguration {
+                temporary_address_configuration: Some(TemporarySlaacAddressConfiguration {
+                    temp_valid_lifetime: NonZeroDuration::new(Duration::from_secs(
+                        vl_config.into(),
+                    ))
+                    .unwrap(),
+                    temp_preferred_lifetime: NonZeroDuration::new(pl_config).unwrap(),
+                    temp_idgen_retries,
+                    secret_key: SECRET_KEY,
+                }),
+                ..Default::default()
+            },
+            dad_transmits: NonZeroU8::new(dad_transmits),
+            retrans_timer,
+            iid: IID,
+            slaac_addrs: Default::default(),
+            non_slaac_addr: None,
+        });
+        let ctx = &mut ctx;
+
+        let mut dup_rng = ctx.rng().clone();
+
+        struct AddrProps {
+            desync_factor: Duration,
+            valid_until: DummyInstant,
+            preferred_until: DummyInstant,
+            entry: SlaacAddressEntry<DummyInstant>,
+            deprecate_timer_id: SlaacTimerId<DummyDeviceId>,
+            invalidate_timer_id: SlaacTimerId<DummyDeviceId>,
+            regenerate_timer_id: SlaacTimerId<DummyDeviceId>,
+        }
+
+        let addr_props = |rng: &mut FakeCryptoRng<_>,
+                          creation_time,
+                          config_greater_than_ra_desync_factor_offset| {
+            let valid_until = creation_time + Duration::from_secs(expected_vl_addr.into());
+            let addr_sub =
+                generate_global_temporary_address(&SUBNET, &IID, rng.next_u64(), &SECRET_KEY);
+            let desync_factor =
+                desync_factor(rng, NonZeroDuration::new(pl_config).unwrap(), regen_advance);
+
+            AddrProps {
+                desync_factor,
+                valid_until,
+                preferred_until: {
+                    let d = creation_time + Duration::from_secs(expected_pl_addr.into());
+                    if pl_config.as_secs() > pl_ra.into() {
+                        d + config_greater_than_ra_desync_factor_offset
+                    } else {
+                        d - desync_factor
+                    }
+                },
+                entry: SlaacAddressEntry {
+                    addr_sub,
+                    config: SlaacConfig::Temporary(TemporarySlaacConfig {
+                        valid_until,
+                        desync_factor,
+                        creation_time,
+                        dad_counter: 0,
+                    }),
+                    deprecated: false,
+                },
+                deprecate_timer_id: SlaacTimerId::new_deprecate_slaac_address(
+                    DummyDeviceId,
+                    addr_sub.addr(),
+                ),
+                invalidate_timer_id: SlaacTimerId::new_invalidate_slaac_address(
+                    DummyDeviceId,
+                    addr_sub.addr(),
+                ),
+                regenerate_timer_id: SlaacTimerId::new_regenerate_temporary_slaac_address(
+                    DummyDeviceId,
+                    addr_sub,
+                ),
+            }
+        };
+
+        // Generate the first temporary SLAAC address.
+        SlaacHandler::apply_slaac_update(
+            ctx,
+            DummyDeviceId,
+            SUBNET,
+            NonZeroNdpLifetime::from_u32_with_infinite(pl_ra),
+            NonZeroNdpLifetime::from_u32_with_infinite(vl_ra),
+        );
+        let AddrProps {
+            desync_factor: first_desync_factor,
+            valid_until: first_valid_until,
+            preferred_until: first_preferred_until,
+            entry: first_entry,
+            deprecate_timer_id: first_deprecate_timer_id,
+            invalidate_timer_id: first_invalidate_timer_id,
+            regenerate_timer_id: first_regenerate_timer_id,
+        } = addr_props(&mut dup_rng, ctx.now(), Duration::ZERO);
+        assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [first_entry]);
+        ctx.timer_ctx().assert_timers_installed([
+            (first_deprecate_timer_id, first_preferred_until),
+            (first_invalidate_timer_id, first_valid_until),
+            (first_regenerate_timer_id, first_preferred_until - regen_advance.get()),
+        ]);
+
+        // Trigger the regenerate timer to generate the second temporary SLAAC
+        // address.
+        assert_eq!(
+            ctx.trigger_next_timer(TimerHandler::handle_timer),
+            Some(first_regenerate_timer_id),
+        );
+        let AddrProps {
+            desync_factor: second_desync_factor,
+            valid_until: second_valid_until,
+            preferred_until: second_preferred_until,
+            entry: second_entry,
+            deprecate_timer_id: second_deprecate_timer_id,
+            invalidate_timer_id: second_invalidate_timer_id,
+            regenerate_timer_id: second_regenerate_timer_id,
+        } = addr_props(&mut dup_rng, ctx.now(), first_desync_factor);
+        assert_eq!(
+            ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(),
+            [first_entry, second_entry]
+        );
+        let second_regen_at = second_preferred_until - regen_advance.get();
+        ctx.timer_ctx().assert_timers_installed([
+            (first_deprecate_timer_id, first_preferred_until),
+            (first_invalidate_timer_id, first_valid_until),
+            (second_deprecate_timer_id, second_preferred_until),
+            (second_invalidate_timer_id, second_valid_until),
+            (second_regenerate_timer_id, second_regen_at),
+        ]);
+
+        // Deprecate first address.
+        assert_eq!(
+            ctx.trigger_next_timer(TimerHandler::handle_timer),
+            Some(first_deprecate_timer_id),
+        );
+        let first_entry = SlaacAddressEntry { deprecated: true, ..first_entry };
+        assert_eq!(
+            ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(),
+            [first_entry, second_entry]
+        );
+        ctx.timer_ctx().assert_timers_installed([
+            (first_invalidate_timer_id, first_valid_until),
+            (second_deprecate_timer_id, second_preferred_until),
+            (second_invalidate_timer_id, second_valid_until),
+            (second_regenerate_timer_id, second_regen_at),
+        ]);
+
+        let third_created_at = {
+            let expected_timer_order = if first_valid_until > second_regen_at {
+                [second_regenerate_timer_id, second_deprecate_timer_id, first_invalidate_timer_id]
+            } else {
+                [first_invalidate_timer_id, second_regenerate_timer_id, second_deprecate_timer_id]
+            };
+
+            let mut third_created_at = None;
+            for timer_id in expected_timer_order.iter() {
+                let timer_id = *timer_id;
+
+                assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(timer_id),);
+
+                if timer_id == second_regenerate_timer_id {
+                    assert_eq!(third_created_at, None);
+                    third_created_at = Some(ctx.now());
+                }
+            }
+
+            third_created_at.unwrap()
+        };
+
+        // Make sure we regenerated the third address, deprecated the second and
+        // invalidated the first.
+        let AddrProps {
+            desync_factor: _,
+            valid_until: third_valid_until,
+            preferred_until: third_preferred_until,
+            entry: third_entry,
+            deprecate_timer_id: third_deprecate_timer_id,
+            invalidate_timer_id: third_invalidate_timer_id,
+            regenerate_timer_id: third_regenerate_timer_id,
+        } = addr_props(&mut dup_rng, third_created_at, first_desync_factor + second_desync_factor);
+        let second_entry = SlaacAddressEntry { deprecated: true, ..second_entry };
+        assert_eq!(
+            ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(),
+            [second_entry, third_entry]
+        );
+        ctx.timer_ctx().assert_some_timers_installed([
+            (second_invalidate_timer_id, second_valid_until),
+            (third_deprecate_timer_id, third_preferred_until),
+            (third_invalidate_timer_id, third_valid_until),
+            (third_regenerate_timer_id, third_preferred_until - regen_advance.get()),
+        ]);
     }
 }
