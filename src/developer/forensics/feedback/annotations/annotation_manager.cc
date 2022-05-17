@@ -11,6 +11,7 @@
 
 #include <map>
 #include <memory>
+#include <vector>
 
 namespace forensics::feedback {
 namespace {
@@ -72,6 +73,7 @@ AnnotationManager::AnnotationManager(
     const Annotations static_annotations, NonPlatformAnnotationProvider* non_platform_provider,
     std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers,
     std::vector<StaticAsyncAnnotationProvider*> static_async_providers,
+    std::vector<CachedAsyncAnnotationProvider*> cached_async_providers,
     std::vector<DynamicAsyncAnnotationProvider*> dynamic_async_providers)
     : dispatcher_(dispatcher),
       allowlist_(std::move(allowlist)),
@@ -79,7 +81,8 @@ AnnotationManager::AnnotationManager(
       non_platform_provider_(non_platform_provider),
       dynamic_sync_providers_(std::move(dynamic_sync_providers)),
       static_async_providers_(std::move(static_async_providers)),
-      dynamic_async_providers_(std::move(dynamic_async_providers)) {
+      dynamic_async_providers_(std::move(dynamic_async_providers)),
+      cached_async_providers_(std::move(cached_async_providers)) {
   InsertUnique(static_annotations, allowlist_, &static_annotations_);
 
   // Create a weak pointer because |this| isn't guaranteed to outlive providers.
@@ -107,6 +110,37 @@ AnnotationManager::AnnotationManager(
       Remove(self->waiting_for_static_, nullptr);
     });
   }
+
+  for (auto* provider : cached_async_providers_) {
+    provider->GetOnUpdate(
+        [self, provider, keys = provider->GetKeys()](const Annotations annotations) {
+          if (!self) {
+            return;
+          }
+
+          // Clear the last collected annotations.
+          for (const auto& key : keys) {
+            self->cached_annotations_.erase(key);
+          }
+
+          InsertUnique(annotations, self->allowlist_, &(self->cached_annotations_));
+
+          // Remove the reference to |provider| once it has returned its annotations. This is safe
+          // because the original provider still exists outside the AnnotationManager.
+          Remove(self->cached_async_providers_, provider);
+          if (!self->cached_async_providers_.empty()) {
+            return;
+          }
+
+          // No cached async providers remain so complete all calls to WaitForCachedAsync.
+          for (auto& waiting : self->waiting_for_cached_) {
+            waiting();
+            waiting = nullptr;
+          }
+
+          Remove(self->waiting_for_cached_, nullptr);
+        });
+  }
 }
 
 void AnnotationManager::InsertStatic(const Annotations& annotations) {
@@ -117,15 +151,21 @@ void AnnotationManager::InsertStatic(const Annotations& annotations) {
   // Create a weak pointer because |this| isn't guaranteed to outlive providers.
   auto self = ptr_factory_.GetWeakPtr();
 
-  return ::fpromise::join_promises(WaitForStaticAsync(timeout), WaitForDynamicAsync(timeout))
-      .and_then([self](std::tuple<::fpromise::result<>, ::fpromise::result<Annotations>>& results) {
+  return ::fpromise::join_promises(WaitForStaticAsync(timeout), WaitForCachedAsync(timeout),
+                                   WaitForDynamicAsync(timeout))
+      .and_then([self](std::tuple<::fpromise::result<>, ::fpromise::result<>,
+                                  ::fpromise::result<Annotations>>& results) {
         Annotations annotations = self->ImmediatelyAvailable();
 
         // Add the dynamic async annotations.
-        InsertUnique(std::get<1>(results).value(), &annotations);
+        InsertUnique(std::get<2>(results).value(), &annotations);
 
         // Any async annotations not collected timed out.
         for (const auto& p : self->static_async_providers_) {
+          InsertMissing(p->GetKeys(), Error::kTimeout, self->allowlist_, &annotations);
+        }
+
+        for (const auto& p : self->cached_async_providers_) {
           InsertMissing(p->GetKeys(), Error::kTimeout, self->allowlist_, &annotations);
         }
 
@@ -139,6 +179,9 @@ void AnnotationManager::InsertStatic(const Annotations& annotations) {
 
 Annotations AnnotationManager::ImmediatelyAvailable() const {
   Annotations annotations(static_annotations_);
+
+  InsertUnique(cached_annotations_, allowlist_, &annotations);
+
   for (auto* provider : dynamic_sync_providers_) {
     InsertUnique(provider->Get(), allowlist_, &annotations);
   }
@@ -168,6 +211,23 @@ bool AnnotationManager::IsMissingNonPlatformAnnotations() const {
 
   return consume.promise_or(::fpromise::error()).or_else([] {
     FX_LOGS(FATAL) << "Promise for waiting on static annotations was incorrectly dropped";
+    return ::fpromise::error();
+  });
+}
+
+::fpromise::promise<> AnnotationManager::WaitForCachedAsync(const zx::duration timeout) {
+  // All cached async annotations have been collected.
+  if (cached_async_providers_.empty()) {
+    return ::fpromise::make_ok_promise();
+  }
+
+  auto [complete, consume] = CompleteAndConsume();
+
+  async::PostDelayedTask(dispatcher_, complete, timeout);
+  waiting_for_cached_.push_back(complete);
+
+  return consume.promise_or(::fpromise::error()).or_else([] {
+    FX_LOGS(FATAL) << "Promise for waiting on cached annotations was incorrectly dropped";
     return ::fpromise::error();
   });
 }

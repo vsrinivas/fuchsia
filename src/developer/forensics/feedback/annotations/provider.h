@@ -52,6 +52,19 @@ class DynamicAsyncAnnotationProvider {
   virtual void Get(::fit::callback<void(Annotations)> callback) = 0;
 };
 
+// Collects safe-to-cache but dynamic annotations asynchronously.
+class CachedAsyncAnnotationProvider {
+ public:
+  virtual std::set<std::string> GetKeys() const = 0;
+
+  // Returns the annotations this provider collects via |callback| when they change.
+  //
+  // Note: this method will be called once and |callback| invoked each time the annotations change.
+  // Additionally, |callback| is expected to return all its annotations, regardless of whether their
+  // values changed.
+  virtual void GetOnUpdate(::fit::function<void(Annotations)> callback) = 0;
+};
+
 }  // namespace forensics::feedback
 
 #endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_PROVIDER_H_

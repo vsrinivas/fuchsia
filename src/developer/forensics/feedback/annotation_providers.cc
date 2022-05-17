@@ -36,7 +36,7 @@ AnnotationProviders::AnnotationProviders(async_dispatcher_t* dispatcher,
       target_channel_provider_(dispatcher_, services, AnnotationProviderBackoff()),
       annotation_manager_(
           dispatcher_, allowlist, static_annotations, &data_register_, {&time_provider_},
-          {&board_info_provider_, &product_info_provider_, &current_channel_provider_},
+          {&board_info_provider_, &product_info_provider_, &current_channel_provider_}, {},
           {&target_channel_provider_}) {}
 
 void AnnotationProviders::Handle(

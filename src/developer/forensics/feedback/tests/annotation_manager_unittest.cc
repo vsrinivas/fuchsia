@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -162,6 +163,46 @@ class SimpleStaticAsync : public StaticAsyncAnnotationProvider {
   async_dispatcher_t* dispatcher_;
   Annotations annotations_;
   zx::duration delay_;
+};
+
+class SimpleCachedAsync : public CachedAsyncAnnotationProvider {
+ public:
+  SimpleCachedAsync(async_dispatcher_t* dispatcher, std::set<std::string> keys,
+                    const zx::duration period = zx::sec(1))
+      : dispatcher_(dispatcher), keys_(std::move(keys)), period_(period) {}
+
+  std::set<std::string> GetKeys() const override { return keys_; }
+
+  void GetOnUpdate(::fit::function<void(Annotations)> callback) override {
+    FX_CHECK(callback_ == nullptr);
+    callback_ = std::move(callback);
+
+    PostNext();
+  }
+
+ private:
+  void PostNext() {
+    async::PostDelayedTask(
+        dispatcher_,
+        [this]() mutable {
+          const std::string value = "value" + std::to_string(++count_);
+
+          Annotations annotations;
+          for (const auto& key : keys_) {
+            annotations.insert_or_assign(key, value);
+          }
+          callback_(annotations);
+          PostNext();
+        },
+        period_);
+  }
+
+  async_dispatcher_t* dispatcher_;
+  std::set<std::string> keys_;
+  zx::duration period_;
+
+  ::fit::function<void(Annotations)> callback_;
+  size_t count_{0};
 };
 
 TEST_F(AnnotationManagerTest, GetAllNoStaticAsyncProviders) {
@@ -349,6 +390,88 @@ TEST_F(AnnotationManagerTest, GetAllNoDyanmicAsyncProviders) {
   }
 }
 
+TEST_F(AnnotationManagerTest, GetAllCachedAsyncProviders) {
+  async::Executor executor(dispatcher());
+
+  const Annotations static_annotations({
+      {"annotation1", "value1"},
+      {"annotation2", Error::kMissingValue},
+  });
+
+  SimpleCachedAsync one_second_cached(dispatcher(), {"annotation3"}, zx::sec(1));
+  SimpleCachedAsync five_second_cached(dispatcher(), {"annotation4"}, zx::sec(5));
+  SimpleCachedAsync ten_second_cached(dispatcher(), {"annotation5"}, zx::sec(10));
+  DynamicNonPlatform non_platform;
+
+  AnnotationManager manager(dispatcher(),
+                            {
+                                "annotation1",
+                                "annotation2",
+                                "num_calls",
+                                "annotation3",
+                                "annotation4",
+                                "annotation5",
+                            },
+                            static_annotations, &non_platform, {}, {},
+                            {&one_second_cached, &five_second_cached, &ten_second_cached}, {});
+  {
+    Annotations annotations;
+
+    executor.schedule_task(
+        manager.GetAll(zx::sec(0))
+            .and_then([&annotations](Annotations& result) { annotations = std::move(result); })
+            .or_else([]() { FX_LOGS(FATAL) << "Unreachable error reached"; }));
+
+    RunLoopUntilIdle();
+    EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                                 MakePair("annotation1", "value1"),
+                                 MakePair("annotation2", Error::kMissingValue),
+                                 MakePair("num_calls", "1"),
+                                 MakePair("annotation3", Error::kTimeout),
+                                 MakePair("annotation4", Error::kTimeout),
+                                 MakePair("annotation5", Error::kTimeout),
+                             }));
+  }
+
+  {
+    Annotations annotations;
+
+    executor.schedule_task(
+        manager.GetAll(zx::sec(5))
+            .and_then([&annotations](Annotations& result) { annotations = std::move(result); })
+            .or_else([]() { FX_LOGS(FATAL) << "Unreachable error reached"; }));
+
+    RunLoopFor(zx::sec(5));
+    EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                                 MakePair("annotation1", "value1"),
+                                 MakePair("annotation2", Error::kMissingValue),
+                                 MakePair("num_calls", "2"),
+                                 MakePair("annotation3", "value5"),
+                                 MakePair("annotation4", "value1"),
+                                 MakePair("annotation5", Error::kTimeout),
+                             }));
+  }
+
+  {
+    Annotations annotations;
+
+    executor.schedule_task(
+        manager.GetAll(zx::sec(5))
+            .and_then([&annotations](Annotations& result) { annotations = std::move(result); })
+            .or_else([]() { FX_LOGS(FATAL) << "Unreachable error reached"; }));
+
+    RunLoopFor(zx::sec(5));
+    EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                                 MakePair("annotation1", "value1"),
+                                 MakePair("annotation2", Error::kMissingValue),
+                                 MakePair("num_calls", "3"),
+                                 MakePair("annotation3", "value10"),
+                                 MakePair("annotation4", "value2"),
+                                 MakePair("annotation5", "value1"),
+                             }));
+  }
+}
+
 TEST_F(AnnotationManagerTest, GetAllDynamicAsyncProviders) {
   async::Executor executor(dispatcher());
 
@@ -371,7 +494,7 @@ TEST_F(AnnotationManagerTest, GetAllDynamicAsyncProviders) {
                                 "annotation4",
                                 "annotation5",
                             },
-                            static_annotations, &non_platform, {}, {},
+                            static_annotations, &non_platform, {}, {}, {},
                             {&immediate_dynamic, &five_second_dynamic, &ten_second_dynamic});
   {
     Annotations annotations;
@@ -440,7 +563,8 @@ TEST_F(AnnotationManagerTest, GetAll) {
   });
 
   SimpleStaticAsync three_second_static(dispatcher(), {{"annotation3", "value3"}}, zx::sec(3));
-  SimpleDynamicAsync five_second_dynamic(dispatcher(), {"annotation4"}, zx::sec(5));
+  SimpleCachedAsync one_second_cached(dispatcher(), {"annotation4"}, zx::sec(1));
+  SimpleDynamicAsync five_second_dynamic(dispatcher(), {"annotation5"}, zx::sec(5));
   DynamicNonPlatform non_platform;
 
   AnnotationManager manager(dispatcher(),
@@ -450,9 +574,10 @@ TEST_F(AnnotationManagerTest, GetAll) {
                                 "num_calls",
                                 "annotation3",
                                 "annotation4",
+                                "annotation5",
                             },
                             static_annotations, &non_platform, {}, {&three_second_static},
-                            {&five_second_dynamic});
+                            {&one_second_cached}, {&five_second_dynamic});
   {
     Annotations annotations;
 
@@ -468,6 +593,7 @@ TEST_F(AnnotationManagerTest, GetAll) {
                                  MakePair("num_calls", "1"),
                                  MakePair("annotation3", Error::kTimeout),
                                  MakePair("annotation4", Error::kTimeout),
+                                 MakePair("annotation5", Error::kTimeout),
                              }));
   }
 
@@ -485,7 +611,8 @@ TEST_F(AnnotationManagerTest, GetAll) {
                                  MakePair("annotation2", Error::kMissingValue),
                                  MakePair("num_calls", "2"),
                                  MakePair("annotation3", "value3"),
-                                 MakePair("annotation4", Error::kTimeout),
+                                 MakePair("annotation4", "value3"),
+                                 MakePair("annotation5", Error::kTimeout),
                              }));
   }
 
@@ -503,7 +630,8 @@ TEST_F(AnnotationManagerTest, GetAll) {
                                  MakePair("annotation2", Error::kMissingValue),
                                  MakePair("num_calls", "3"),
                                  MakePair("annotation3", "value3"),
-                                 MakePair("annotation4", "call3"),
+                                 MakePair("annotation4", "value8"),
+                                 MakePair("annotation5", "call3"),
                              }));
   }
 }
