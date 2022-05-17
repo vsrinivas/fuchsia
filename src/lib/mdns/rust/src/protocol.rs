@@ -813,6 +813,13 @@ impl<B: ByteSlice + Clone> Domain<B> {
         Ok(DomainData::Domain(buffer.take_front(idx).ok_or(ParseError::Malformed)?))
     }
 
+    /// Parse the provided record.
+    ///
+    /// `parent` is used for resolving compressed names as specified by [RFC
+    /// 1035 Section 4.1.4]. If `parent` is None, a reference to previous data
+    /// will be treated as an error.
+    ///
+    /// [RFC 1035 Section 4.1.4]: https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.4
     pub fn parse<BV: BufferView<B>>(
         buffer: &mut BV,
         parent: Option<&B>,
@@ -834,8 +841,12 @@ impl<B: ByteSlice + Clone> Domain<B> {
                         return Err(ParseError::PointerCycle);
                     }
                     pointer_set.insert(pointer);
-                    let mut bv = BufferViewWrapper(parent.unwrap().clone());
-                    bv.take_front(pointer.into()).ok_or(ParseError::BadPointerIndex(pointer))?;
+                    let mut bv = parent
+                        .and_then(|parent| {
+                            let mut bv = BufferViewWrapper(parent.clone());
+                            bv.take_front(pointer.into()).map(|_: B| bv)
+                        })
+                        .ok_or(ParseError::BadPointerIndex(pointer))?;
                     result = Domain::parse_domain_helper(&mut bv)?;
                 }
             }
@@ -1315,6 +1326,31 @@ mod tests {
             Domain::parse(&mut bv, Some(&slice)).unwrap_err(),
             ParseError::BadPointerIndex(0x09)
         );
+    }
+
+    #[test]
+    fn test_domain_pointer_with_no_parent() {
+        let packet: Vec<u8> = vec![
+            0u8, 0x03, 'f' as u8, 'o' as u8, 'o' as u8, 0x03, 'b' as u8, 'a' as u8, 'r' as u8,
+            0x00, 0x03, 'b' as u8, 'a' as u8, 'z' as u8, 0x03, 'b' as u8, 'o' as u8, 'i' as u8,
+            0xc0, 0x01,
+        ];
+        let slice: &[u8] = packet.as_ref();
+        {
+            #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95085)
+            let mut bv = BufferViewWrapper(slice.clone());
+            bv.take_front(10).unwrap();
+            // Prove that with parent this is valid.
+            let _: Domain<_> = Domain::parse(&mut bv, Some(&slice)).expect("should succeed");
+        }
+
+        {
+            // Without parent the indirection is rejected.
+            #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95085)
+            let mut bv = BufferViewWrapper(slice.clone());
+            bv.take_front(10).unwrap();
+            assert_eq!(Domain::parse(&mut bv, None), Err(ParseError::BadPointerIndex(0x01)));
+        }
     }
 
     #[test]

@@ -597,9 +597,17 @@ impl<'a> RecordsImpl<'a> for ParsedDhcpOptionImpl {
                 let mut domains = Vec::new();
                 while opt_val.len() > 0 {
                     domains.push(checked::Domain::try_from(
-                        Domain::parse(&mut opt_val, None)
-                            .map_err(ParseError::DomainParseError)?
-                            .to_string(),
+                        Domain::parse(
+                            &mut opt_val,
+                            // Per RFC 8415 Section 10:
+                            //   A domain name, or list of domain names, in DHCP
+                            //   MUST NOT be stored in compressed form
+                            //
+                            // Pass None to indicate this.
+                            None,
+                        )
+                        .map_err(ParseError::DomainParseError)?
+                        .to_string(),
                     )?);
                 }
                 Ok(ParsedDhcpOption::DomainList(domains))
