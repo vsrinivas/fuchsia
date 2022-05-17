@@ -3,17 +3,17 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use argh::from_env;
-use fuchsia_async as fasync;
 use fuchsia_syslog as syslog;
-use setui_client_lib::*;
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["setui-client"]).expect("Can't init logger");
 
-    let command = from_env::<SettingClient>();
-    run_command(command).await?;
+    println!(
+        "setui_client is DEPRECATED, please use `ffx setui` instead. Opt in by running a command: \
+        {cmd}. More information can be found in {here}.",
+        cmd = "ffx config set setui true",
+        here = "https://fuchsia.dev/reference/tools/sdk/ffx#setui"
+    );
 
     Ok(())
 }
