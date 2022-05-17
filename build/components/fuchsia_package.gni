@@ -99,6 +99,7 @@ import("//tools/configc/build/config.gni")
 #     Type: string
 #     Default: fuchsia.com
 #
+#   data_deps
 #   deps
 #   testonly
 #   visibility
@@ -186,6 +187,7 @@ template("fuchsia_package") {
     pm_build(_pm_build_target) {
       forward_variables_from(invoker,
                              [
+                               "data_deps",
                                "deps",
                                "testonly",
                                "visibility",

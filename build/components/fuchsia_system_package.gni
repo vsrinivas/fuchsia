@@ -41,11 +41,10 @@ import("fuchsia_package.gni")
 #     package is required by another base or meta package, but shouldn't
 #     be part of the default system image dependency tree otherwise.
 #
+#   data_deps
 #   deps
 #   testonly
 #   visibility
-#
-#
 template("fuchsia_system_package") {
   fuchsia_package(target_name) {
     forward_variables_from(invoker,

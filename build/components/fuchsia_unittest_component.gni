@@ -80,6 +80,7 @@ import("fuchsia_test_component_manifest.gni")
 #     which sacrifices isolation for higher performance.
 #     Type: boolean
 #
+#   data_deps
 #   deps
 #   visibility
 template("fuchsia_unittest_component") {
@@ -107,6 +108,7 @@ template("fuchsia_unittest_component") {
     fuchsia_component(target_name) {
       forward_variables_from(invoker,
                              [
+                               "data_deps",
                                "deps",
                                "manifest",
                                "manifest_deps",

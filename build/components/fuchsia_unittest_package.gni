@@ -82,6 +82,7 @@ import("fuchsia_unittest_component.gni")
 #     Type: bool
 #     Default: true
 #
+#   data_deps
 #   deps
 #   visibility
 template("fuchsia_unittest_package") {
@@ -91,6 +92,7 @@ template("fuchsia_unittest_package") {
       forward_variables_from(invoker,
                              [
                                "component_name",
+                               "data_deps",
                                "deps",
                                "manifest",
                                "restricted_features",

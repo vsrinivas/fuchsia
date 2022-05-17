@@ -21,6 +21,7 @@ import("fuchsia_package.gni")
 #     then specify the component manifest here.
 #     Type: path
 #
+#   data_deps
 #   deps
 #   testonly
 #   visibility
@@ -47,6 +48,7 @@ template("fuchsia_shell_package") {
       fuchsia_component(component_target) {
         forward_variables_from(invoker,
                                [
+                                 "data_deps",
                                  "deps",
                                  "manifest_deps",
                                  "testonly",
@@ -60,6 +62,7 @@ template("fuchsia_shell_package") {
     fuchsia_package(target_name) {
       forward_variables_from(invoker,
                              [
+                               "data_deps",
                                "deps",
                                "disable_elf_binaries_checks",
                                "testonly",

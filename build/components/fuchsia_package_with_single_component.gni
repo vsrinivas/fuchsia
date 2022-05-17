@@ -58,6 +58,7 @@ import("fuchsia_package.gni")
 #     Type: list of strings
 #     Default: []
 #
+#   data_deps
 #   deps
 #   testonly
 #   visibility
@@ -79,6 +80,7 @@ template("fuchsia_package_with_single_component") {
   fuchsia_component(component_target) {
     forward_variables_from(invoker,
                            [
+                             "data_deps",
                              "deps",
                              "manifest",
                              "manifest_deps",

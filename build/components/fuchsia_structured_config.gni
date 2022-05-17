@@ -84,6 +84,7 @@ import("//tools/configc/build/config.gni")
 #     derived from the `cm_label` parameter's outputs. Must be specified in order to invoke
 #     this template in a different GN module from where `cm_label` is defined.
 #
+#   data_deps (optional)
 #   deps (optional)
 #   testonly (optional)
 #     Standard GN meaning.
@@ -139,6 +140,7 @@ template("fuchsia_structured_config_values") {
     cvf(target_name) {
       forward_variables_from(invoker,
                              [
+                               "data_deps",
                                "deps",
                                "testonly",
                                "visibility",

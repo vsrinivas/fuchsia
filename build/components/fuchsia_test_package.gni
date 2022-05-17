@@ -70,6 +70,7 @@ import("fuchsia_test_component_manifest.gni")
 #     Type: bool
 #     Default: true
 #
+#   data_deps
 #   deps
 #   visibility
 template("fuchsia_test_package") {
@@ -166,6 +167,7 @@ template("fuchsia_test_package") {
     fuchsia_package(target_name) {
       forward_variables_from(invoker,
                              [
+                               "data_deps",
                                "deps",
                                "disable_elf_binaries_checks",
                                "metadata",
