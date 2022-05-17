@@ -11,7 +11,6 @@ rustc_library("lib") {
   with_unit_tests = true
 
   deps = [
-    "logs_data_v1:lib",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
