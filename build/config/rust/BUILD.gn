@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#  ________  _________  ________  ________
+# |\   ____\|\___   ___\\   __  \|\   __  \
+# \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+#  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+#   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+#     ____\_\  \   \ \__\ \ \_______\ \__\
+#    |\_________\   \|__|  \|_______|\|__|
+#    \|_________|
+#
+# Here to enable an unstable feature? All unstable features require special
+# approval because they create risk and may have stable alternatives that better
+# fit our needs. See the "Unstable features" section for more information.
+
 import("//build/images/filesystem_limits.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/rbe.gni")
@@ -77,13 +90,6 @@ config("bootfs") {
   # Can't dynamically link libstd and libtest for ZBI binaries.
   # TODO(fxbug.dev/83081): reconsider this.
   rustflags += [ "-Cprefer-dynamic=no" ]
-}
-
-config("netstack3_only_specialization_feature") {
-  rustflags = [
-    "-Zallow-features=min_specialization,specialization",
-    "-Aincomplete-features",
-  ]
 }
 
 config("proc_macro_test") {
@@ -212,11 +218,6 @@ config("coverage") {
   rustflags = [ "-Cinstrument-coverage" ]
 }
 
-# TODO(fxbug.dev/94237): Consider moving this to platform and board configs, respectively.
-config("allow_simd") {
-  rustflags = [ "-Zallow-features=stdsimd,aarch64_target_feature" ]
-}
-
 # TODO(fxbug.dev/94355): Eliminate or identify all sources of output dir leaks.
 # This option makes it explicit that a particular build action is sensitive
 # to the output dir path, and informs remote execution to refrain from
@@ -228,4 +229,26 @@ config("output_dir_sensitive") {
     # build/rbe/rustc-remote-wrapper.sh and forwarded to rewrapper (reclient).
     rustflags = [ "--remote-flag=--canonicalize_working_dir=false" ]
   }
+}
+
+# Unstable features
+#
+# These configs enable unstable Rust features. Configs that enable unstable
+# features must go through an approval process before they may be added. See:
+# https://fuchsia.dev/fuchsia-src/development/languages/rust/unstable#the_process
+#
+# When adding a new config, make sure to add a TODO with a link to the tracking
+# issue.
+
+# TODO(fxbug.dev/98399)
+config("netstack3_only_specialization_feature") {
+  rustflags = [
+    "-Zallow-features=min_specialization,specialization",
+    "-Aincomplete-features",
+  ]
+}
+
+# TODO(fxbug.dev/94237)
+config("allow_simd") {
+  rustflags = [ "-Zallow-features=stdsimd,aarch64_target_feature" ]
 }
