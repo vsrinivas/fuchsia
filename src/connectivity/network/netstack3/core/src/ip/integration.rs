@@ -74,7 +74,7 @@ impl<
         meta: SendIpPacketMeta<Ipv4, C::DeviceId, SpecifiedAddr<Ipv4Addr>>,
         body: S,
     ) -> Result<(), S> {
-        send_ipv4_packet_from_device(self, meta.into(), body)
+        send_ipv4_packet_from_device(self, &mut (), meta.into(), body)
     }
 }
 
@@ -88,6 +88,6 @@ impl<
         meta: SendIpPacketMeta<Ipv6, C::DeviceId, SpecifiedAddr<Ipv6Addr>>,
         body: S,
     ) -> Result<(), S> {
-        send_ipv6_packet_from_device(self, meta.into(), body)
+        send_ipv6_packet_from_device(self, &mut (), meta.into(), body)
     }
 }

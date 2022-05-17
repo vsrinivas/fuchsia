@@ -332,7 +332,7 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
         remote_ip: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, Self::CreateConnError> {
-        connect_udp(ctx, id, local_ip, local_id, remote_ip, remote_id)
+        connect_udp(ctx, &mut (), id, local_ip, local_id, remote_ip, remote_id)
     }
 
     fn listen_on_unbound(
@@ -341,7 +341,7 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
         addr: Option<SpecifiedAddr<I::Addr>>,
         port: Option<Self::LocalIdentifier>,
     ) -> Result<Self::ListenerId, Self::CreateListenerError> {
-        listen_udp(ctx, id, addr, port)
+        listen_udp(ctx, &mut (), id, addr, port)
     }
 
     fn get_conn_info(
@@ -354,7 +354,7 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
         Self::RemoteIdentifier,
     ) {
         let UdpConnInfo { local_ip, local_port, remote_ip, remote_port } =
-            get_udp_conn_info(ctx, id);
+            get_udp_conn_info(ctx, &mut (), id);
         (local_ip, local_port, remote_ip, remote_port)
     }
 
@@ -362,7 +362,7 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
         ctx: &C,
         id: Self::ListenerId,
     ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
-        let UdpListenerInfo { local_ip, local_port } = get_udp_listener_info(ctx, id);
+        let UdpListenerInfo { local_ip, local_port } = get_udp_listener_info(ctx, &mut (), id);
         (local_ip, local_port)
     }
 
@@ -375,7 +375,8 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
         SpecifiedAddr<I::Addr>,
         Self::RemoteIdentifier,
     ) {
-        let UdpConnInfo { local_ip, local_port, remote_ip, remote_port } = remove_udp_conn(ctx, id);
+        let UdpConnInfo { local_ip, local_port, remote_ip, remote_port } =
+            remove_udp_conn(ctx, &mut (), id);
         (local_ip, local_port, remote_ip, remote_port)
     }
 
@@ -383,7 +384,7 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
         ctx: &mut C,
         id: Self::ListenerId,
     ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
-        let UdpListenerInfo { local_ip, local_port } = remove_udp_listener(ctx, id);
+        let UdpListenerInfo { local_ip, local_port } = remove_udp_listener(ctx, &mut (), id);
         (local_ip, local_port)
     }
 
@@ -398,10 +399,10 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
     ) -> Result<(), Self::SetSocketDeviceError> {
         match id {
             SocketId::Unbound(id) => {
-                set_unbound_udp_device(ctx, id, device);
+                set_unbound_udp_device(ctx, &mut (), id, device);
                 Ok(())
             }
-            SocketId::Bound(id) => set_bound_udp_device(ctx, id.into(), device),
+            SocketId::Bound(id) => set_bound_udp_device(ctx, &mut (), id.into(), device),
         }
     }
 }
@@ -419,11 +420,11 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferTransportStat
         remote_id: Self::RemoteIdentifier,
         body: B,
     ) -> Result<(), (B, Self::SendError)> {
-        send_udp(ctx, local_ip, local_id, remote_ip, remote_id, body)
+        send_udp(ctx, &mut (), local_ip, local_id, remote_ip, remote_id, body)
     }
 
     fn send_conn(ctx: &mut C, conn: Self::ConnId, body: B) -> Result<(), (B, Self::SendConnError)> {
-        send_udp_conn(ctx, conn, body)
+        send_udp_conn(ctx, &mut (), conn, body)
     }
 
     fn send_listener(
@@ -434,7 +435,7 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferTransportStat
         remote_id: Self::RemoteIdentifier,
         body: B,
     ) -> Result<(), (B, Self::SendListenerError)> {
-        send_udp_listener(ctx, listener, remote_ip, remote_id, body)
+        send_udp_listener(ctx, &mut (), listener, remote_ip, remote_id, body)
     }
 }
 

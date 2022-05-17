@@ -518,7 +518,7 @@ mod tests {
 
         {
             let ctx = &mut ctx;
-            crate::ip::device::set_ipv6_configuration(ctx, device_id, {
+            crate::ip::device::set_ipv6_configuration(ctx, &mut (), device_id, {
                 let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
                 config.ip_config.ip_enabled = true;
                 config
@@ -863,7 +863,7 @@ mod tests {
         ]);
 
         // Disable the interface.
-        crate::ip::device::set_ipv6_configuration(ctx, device_id, {
+        crate::ip::device::set_ipv6_configuration(ctx, &mut (), device_id, {
             let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
             config.ip_config.ip_enabled = false;
             config

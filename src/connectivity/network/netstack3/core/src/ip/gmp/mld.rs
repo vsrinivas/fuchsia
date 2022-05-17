@@ -115,11 +115,11 @@ pub(crate) trait MldContext:
 
 impl<C: MldContext> GmpHandler<Ipv6> for C {
     fn gmp_handle_maybe_enabled(&mut self, device: Self::DeviceId) {
-        gmp_handle_maybe_enabled(self, device)
+        gmp_handle_maybe_enabled(self, &mut (), device)
     }
 
     fn gmp_handle_disabled(&mut self, device: Self::DeviceId) {
-        gmp_handle_disabled(self, device)
+        gmp_handle_disabled(self, &mut (), device)
     }
 
     fn gmp_join_group(
@@ -127,7 +127,7 @@ impl<C: MldContext> GmpHandler<Ipv6> for C {
         device: Self::DeviceId,
         group_addr: MulticastAddr<Ipv6Addr>,
     ) -> GroupJoinResult {
-        gmp_join_group(self, device, group_addr)
+        gmp_join_group(self, &mut (), device, group_addr)
     }
 
     fn gmp_leave_group(
@@ -135,7 +135,7 @@ impl<C: MldContext> GmpHandler<Ipv6> for C {
         device: Self::DeviceId,
         group_addr: MulticastAddr<Ipv6Addr>,
     ) -> GroupLeaveResult {
-        gmp_leave_group(self, device, group_addr)
+        gmp_leave_group(self, &mut (), device, group_addr)
     }
 }
 
@@ -177,7 +177,7 @@ impl<C: MldContext> MldPacketHandler<C::DeviceId> for C {
                 let addr = msg.body().group_addr();
                 MulticastAddr::new(msg.body().group_addr())
                     .map_or(Err(MldError::NotAMember { addr }), |group_addr| {
-                        handle_report_message(self, device, group_addr)
+                        handle_report_message(self, &mut (), device, group_addr)
                     })
             }
             MldPacket::MulticastListenerDone(_) => {
@@ -226,16 +226,18 @@ impl<C: MldContext> GmpContext<Ipv6, MldProtocolSpecific> for C {
         msg_type: GmpMessageType<MldProtocolSpecific>,
     ) {
         let result = match msg_type {
-            GmpMessageType::Report(MldProtocolSpecific) => send_mld_packet::<_, &[u8], _>(
+            GmpMessageType::Report(MldProtocolSpecific) => send_mld_packet::<_, _, &[u8], _>(
                 self,
+                &mut (),
                 device,
                 group_addr,
                 MulticastListenerReport,
                 group_addr,
                 (),
             ),
-            GmpMessageType::Leave => send_mld_packet::<_, &[u8], _>(
+            GmpMessageType::Leave => send_mld_packet::<_, _, &[u8], _>(
                 self,
+                &mut (),
                 device,
                 Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
                 MulticastListenerDone,
@@ -385,7 +387,7 @@ impl_timer_context!(
 impl<C: MldContext> TimerHandler<MldDelayedReportTimerId<C::DeviceId>> for C {
     fn handle_timer(&mut self, timer: MldDelayedReportTimerId<C::DeviceId>) {
         let MldDelayedReportTimerId(id) = timer;
-        gmp_handle_timer(self, id);
+        gmp_handle_timer(self, &mut (), id);
     }
 }
 
@@ -393,9 +395,10 @@ impl<C: MldContext> TimerHandler<MldDelayedReportTimerId<C::DeviceId>> for C {
 ///
 /// The MLD packet being sent should have its `hop_limit` to be 1 and a
 /// `RouterAlert` option in its Hop-by-Hop Options extensions header.
-fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+fn send_mld_packet<SC: MldContext, C, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device: SC::DeviceId,
     dst_ip: MulticastAddr<Ipv6Addr>,
     msg: M,
     group_addr: M::GroupAddr,
@@ -1104,7 +1107,7 @@ mod tests {
         }
         let set_config = |ctx: &mut crate::testutil::DummyCtx,
                           TestConfig { ip_enabled, gmp_enabled }| {
-            crate::ip::device::set_ipv6_configuration(ctx, device_id, {
+            crate::ip::device::set_ipv6_configuration(ctx, &mut (), device_id, {
                 let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
                 // TODO(https://fxbug.dev/98534): Make sure that DAD resolving
                 // for a link-local address results in reports sent with a

@@ -314,8 +314,9 @@ impl<I: Ip> IdMapCollectionKey for IcmpConnId<I> {
 
 /// Apply an update to all IPv4 sockets that this module is responsible for
 /// - namely, those contained in ICMPv4 sockets.
-pub(super) fn update_all_ipv4_sockets<C: InnerIcmpv4Context>(
-    sync_ctx: &mut C,
+pub(super) fn update_all_ipv4_sockets<SC: InnerIcmpv4Context, C>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
     update: IpSockUpdate<Ipv4>,
 ) {
     let (state, meta) = sync_ctx.get_state_and_update_meta();
@@ -332,8 +333,9 @@ pub(super) fn update_all_ipv4_sockets<C: InnerIcmpv4Context>(
 
 /// Apply an update to all IPv6 sockets that this module is responsible for
 /// - namely, those contained in ICMPv6 sockets.
-pub(super) fn update_all_ipv6_sockets<C: InnerIcmpv6Context>(
-    sync_ctx: &mut C,
+pub(super) fn update_all_ipv6_sockets<SC: InnerIcmpv6Context, C>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
     update: IpSockUpdate<Ipv6>,
 ) {
     let (state, meta) = sync_ctx.get_state_and_update_meta();
@@ -447,6 +449,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B>> BufferIcmpHandler<Ipv4, B> fo
             Icmpv4ErrorKind::ParameterProblem { code, pointer, fragment_type } => {
                 send_icmpv4_parameter_problem(
                     self,
+                    &mut (),
                     device,
                     frame_dst,
                     src_ip,
@@ -460,6 +463,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B>> BufferIcmpHandler<Ipv4, B> fo
             }
             Icmpv4ErrorKind::TtlExpired { proto, fragment_type } => send_icmpv4_ttl_expired(
                 self,
+                &mut (),
                 device,
                 frame_dst,
                 src_ip,
@@ -472,6 +476,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B>> BufferIcmpHandler<Ipv4, B> fo
             Icmpv4ErrorKind::NetUnreachable { proto, fragment_type } => {
                 send_icmpv4_net_unreachable(
                     self,
+                    &mut (),
                     device,
                     frame_dst,
                     src_ip,
@@ -484,6 +489,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B>> BufferIcmpHandler<Ipv4, B> fo
             }
             Icmpv4ErrorKind::ProtocolUnreachable => send_icmpv4_protocol_unreachable(
                 self,
+                &mut (),
                 device,
                 frame_dst,
                 src_ip,
@@ -493,6 +499,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B>> BufferIcmpHandler<Ipv4, B> fo
             ),
             Icmpv4ErrorKind::PortUnreachable => send_icmpv4_port_unreachable(
                 self,
+                &mut (),
                 device,
                 frame_dst,
                 src_ip,
@@ -518,6 +525,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv6Context<B>> BufferIcmpHandler<Ipv6, B> fo
             Icmpv6ErrorKind::ParameterProblem { code, pointer, allow_dst_multicast } => {
                 send_icmpv6_parameter_problem(
                     self,
+                    &mut (),
                     device,
                     frame_dst,
                     src_ip,
@@ -530,6 +538,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv6Context<B>> BufferIcmpHandler<Ipv6, B> fo
             }
             Icmpv6ErrorKind::TtlExpired { proto, header_len } => send_icmpv6_ttl_expired(
                 self,
+                &mut (),
                 device,
                 frame_dst,
                 src_ip,
@@ -540,6 +549,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv6Context<B>> BufferIcmpHandler<Ipv6, B> fo
             ),
             Icmpv6ErrorKind::NetUnreachable { proto, header_len } => send_icmpv6_net_unreachable(
                 self,
+                &mut (),
                 device,
                 frame_dst,
                 src_ip,
@@ -550,6 +560,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv6Context<B>> BufferIcmpHandler<Ipv6, B> fo
             ),
             Icmpv6ErrorKind::PacketTooBig { proto, header_len, mtu } => send_icmpv6_packet_too_big(
                 self,
+                &mut (),
                 device,
                 frame_dst,
                 src_ip,
@@ -562,6 +573,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv6Context<B>> BufferIcmpHandler<Ipv6, B> fo
             Icmpv6ErrorKind::ProtocolUnreachable { header_len } => {
                 send_icmpv6_protocol_unreachable(
                     self,
+                    &mut (),
                     device,
                     frame_dst,
                     src_ip,
@@ -572,6 +584,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv6Context<B>> BufferIcmpHandler<Ipv6, B> fo
             }
             Icmpv6ErrorKind::PortUnreachable => send_icmpv6_port_unreachable(
                 self,
+                &mut (),
                 device,
                 frame_dst,
                 src_ip,
@@ -1004,7 +1017,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
                     let (local_ip, remote_ip) = (dst_ip, src_ip);
                     // TODO(joshlf): Do something if send_icmp_reply returns an
                     // error?
-                    let _ = send_icmp_reply(sync_ctx, Some(device), remote_ip, local_ip, |src_ip| {
+                    let _ = send_icmp_reply(sync_ctx, &mut (), Some(device), remote_ip, local_ip, |src_ip| {
                         buffer.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                             src_ip,
                             remote_ip,
@@ -1021,7 +1034,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
                 trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet: Received an EchoReply message");
                 let id = echo_reply.message().id();
                 let seq = echo_reply.message().seq();
-                receive_icmp_echo_reply(sync_ctx, src_ip, dst_ip, id, seq, buffer);
+                receive_icmp_echo_reply(sync_ctx,&mut (), src_ip, dst_ip, id, seq, buffer);
             }
             Icmpv4Packet::TimestampRequest(timestamp_request) => {
                 sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::timestamp_request");
@@ -1058,7 +1071,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
                         buffer.shrink_front_to(0);
                         // TODO(joshlf): Do something if send_icmp_reply returns
                         // an error?
-                        let _ = send_icmp_reply(sync_ctx, Some(device), remote_ip, local_ip, |src_ip| {
+                        let _ = send_icmp_reply(sync_ctx, &mut (), Some(device), remote_ip, local_ip, |src_ip| {
                             buffer.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                                 src_ip,
                                 remote_ip,
@@ -1145,6 +1158,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
 
                 receive_icmpv4_error(
                     sync_ctx,
+                    &mut (),
                     device,
                     &dest_unreachable,
                     Icmpv4ErrorCode::DestUnreachable(dest_unreachable.code()),
@@ -1156,6 +1170,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
 
                 receive_icmpv4_error(
                     sync_ctx,
+                    &mut (),
                     device,
                     &time_exceeded,
                     Icmpv4ErrorCode::TimeExceeded(time_exceeded.code()),
@@ -1168,6 +1183,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
 
                 receive_icmpv4_error(
                     sync_ctx,
+                    &mut (),
                     device,
                     &parameter_problem,
                     Icmpv4ErrorCode::ParameterProblem(parameter_problem.code()),
@@ -1181,13 +1197,15 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
 
 fn receive_ndp_packet<
     B: ByteSlice,
-    C: InnerIcmpv6Context
-        + NdpPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
+    SC: InnerIcmpv6Context
+        + NdpPacketHandler<<SC as IpDeviceIdContext<Ipv6>>::DeviceId>
         + RouteDiscoveryHandler
         + SlaacHandler,
+    C,
 >(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device_id: SC::DeviceId,
     src_ip: Ipv6SourceAddr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
     packet: NdpPacket<B>,
@@ -1347,6 +1365,7 @@ impl<
                     // error?
                     let _ = send_icmp_reply(
                         sync_ctx,
+                        &mut (),
                         Some(device),
                         remote_ip.into_specified(),
                         local_ip,
@@ -1372,11 +1391,19 @@ impl<
                 if let Ipv6SourceAddr::Unicast(src_ip) = src_ip {
                     let id = echo_reply.message().id();
                     let seq = echo_reply.message().seq();
-                    receive_icmp_echo_reply(sync_ctx, src_ip.get(), dst_ip, id, seq, buffer);
+                    receive_icmp_echo_reply(
+                        sync_ctx,
+                        &mut (),
+                        src_ip.get(),
+                        dst_ip,
+                        id,
+                        seq,
+                        buffer,
+                    );
                 }
             }
             Icmpv6Packet::Ndp(packet) => {
-                receive_ndp_packet(sync_ctx, device, src_ip, dst_ip, packet)
+                receive_ndp_packet(sync_ctx, &mut (), device, src_ip, dst_ip, packet)
             }
             Icmpv6Packet::PacketTooBig(packet_too_big) => {
                 sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::packet_too_big");
@@ -1399,6 +1426,7 @@ impl<
                 }
                 receive_icmpv6_error(
                     sync_ctx,
+                    &mut (),
                     device,
                     &packet_too_big,
                     Icmpv6ErrorCode::PacketTooBig,
@@ -1409,18 +1437,21 @@ impl<
             }
             Icmpv6Packet::DestUnreachable(dest_unreachable) => receive_icmpv6_error(
                 sync_ctx,
+                &mut (),
                 device,
                 &dest_unreachable,
                 Icmpv6ErrorCode::DestUnreachable(dest_unreachable.code()),
             ),
             Icmpv6Packet::TimeExceeded(time_exceeded) => receive_icmpv6_error(
                 sync_ctx,
+                &mut (),
                 device,
                 &time_exceeded,
                 Icmpv6ErrorCode::TimeExceeded(time_exceeded.code()),
             ),
             Icmpv6Packet::ParameterProblem(parameter_problem) => receive_icmpv6_error(
                 sync_ctx,
+                &mut (),
                 device,
                 &parameter_problem,
                 Icmpv6ErrorCode::ParameterProblem(parameter_problem.code()),
@@ -1446,12 +1477,14 @@ impl<
 fn send_icmp_reply<
     I: crate::ip::IpExt,
     B: BufferMut,
-    C: BufferIpSocketHandler<I, B> + IpDeviceIdContext<I> + CounterContext,
+    SC: BufferIpSocketHandler<I, B> + IpDeviceIdContext<I> + CounterContext,
+    C,
     S: Serializer<Buffer = B>,
     F: FnOnce(SpecifiedAddr<I::Addr>) -> S,
 >(
-    sync_ctx: &mut C,
-    device: Option<C::DeviceId>,
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device: Option<SC::DeviceId>,
     original_src_ip: SpecifiedAddr<I::Addr>,
     original_dst_ip: SpecifiedAddr<I::Addr>,
     get_body_from_src_ip: F,
@@ -1480,12 +1513,14 @@ fn send_icmp_reply<
 /// original IPv4 packet and then delegating to the context.
 fn receive_icmpv4_error<
     B: BufferMut,
-    C: InnerBufferIcmpv4Context<B>,
+    SC: InnerBufferIcmpv4Context<B>,
+    C,
     BB: ByteSlice,
     M: IcmpMessage<Ipv4, BB, Body = OriginalPacket<BB>>,
 >(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device: SC::DeviceId,
     packet: &IcmpPacket<Ipv4, BB, M>,
     err: Icmpv4ErrorCode,
 ) {
@@ -1520,12 +1555,14 @@ fn receive_icmpv4_error<
 /// the original IPv6 packet and then delegating to the context.
 fn receive_icmpv6_error<
     B: BufferMut,
-    C: InnerBufferIcmpv6Context<B>,
+    SC: InnerBufferIcmpv6Context<B>,
+    C,
     BB: ByteSlice,
     M: IcmpMessage<Ipv6, BB, Body = OriginalPacket<BB>>,
 >(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device: SC::DeviceId,
     packet: &IcmpPacket<Ipv6, BB, M>,
     err: Icmpv6ErrorCode,
 ) {
@@ -1575,9 +1612,10 @@ fn receive_icmpv6_error<
 /// `original_packet` contains the contents of the entire original packet,
 /// including the IP header. This must be a whole packet, not a packet fragment.
 /// `header_len` is the length of the header including all options.
-pub(crate) fn send_icmpv4_protocol_unreachable<B: BufferMut, C: InnerBufferIcmpv4Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+pub(crate) fn send_icmpv4_protocol_unreachable<B: BufferMut, SC: InnerBufferIcmpv4Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -1588,6 +1626,7 @@ pub(crate) fn send_icmpv4_protocol_unreachable<B: BufferMut, C: InnerBufferIcmpv
 
     send_icmpv4_dest_unreachable(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -1613,9 +1652,10 @@ pub(crate) fn send_icmpv4_protocol_unreachable<B: BufferMut, C: InnerBufferIcmpv
 ///
 /// `header_len` is the length of all IPv6 headers (including extension headers)
 /// *before* the payload with the problematic Next Header type.
-pub(crate) fn send_icmpv6_protocol_unreachable<B: BufferMut, C: InnerBufferIcmpv6Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+pub(crate) fn send_icmpv6_protocol_unreachable<B: BufferMut, SC: InnerBufferIcmpv6Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -1626,6 +1666,7 @@ pub(crate) fn send_icmpv6_protocol_unreachable<B: BufferMut, C: InnerBufferIcmpv
 
     send_icmpv6_parameter_problem(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -1661,9 +1702,10 @@ pub(crate) fn send_icmpv6_protocol_unreachable<B: BufferMut, C: InnerBufferIcmpv
 /// `original_packet` contains the contents of the entire original packet,
 /// including the IP header. This must be a whole packet, not a packet fragment.
 /// `header_len` is the length of the header including all options.
-pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, C: InnerBufferIcmpv4Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, SC: InnerBufferIcmpv4Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -1674,6 +1716,7 @@ pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, C: InnerBufferIcmpv4Con
 
     send_icmpv4_dest_unreachable(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -1698,9 +1741,10 @@ pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, C: InnerBufferIcmpv4Con
 ///
 /// `original_packet` contains the contents of the entire original packet,
 /// including extension headers.
-pub(crate) fn send_icmpv6_port_unreachable<B: BufferMut, C: InnerBufferIcmpv6Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+pub(crate) fn send_icmpv6_port_unreachable<B: BufferMut, SC: InnerBufferIcmpv6Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -1710,6 +1754,7 @@ pub(crate) fn send_icmpv6_port_unreachable<B: BufferMut, C: InnerBufferIcmpv6Con
 
     send_icmpv6_dest_unreachable(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -1730,9 +1775,10 @@ pub(crate) fn send_icmpv6_port_unreachable<B: BufferMut, C: InnerBufferIcmpv6Con
 /// `original_packet` contains the contents of the entire original packet -
 /// including all IP headers. `header_len` is the length of the IPv4 header. It
 /// is ignored for IPv6.
-pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, C: InnerBufferIcmpv4Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, SC: InnerBufferIcmpv4Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -1751,6 +1797,7 @@ pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, C: InnerBufferIcmpv4Cont
 
     send_icmpv4_dest_unreachable(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -1772,9 +1819,10 @@ pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, C: InnerBufferIcmpv4Cont
 /// `original_packet` contains the contents of the entire original packet
 /// including extension headers. `header_len` is the length of the IP header and
 /// all extension headers.
-pub(crate) fn send_icmpv6_net_unreachable<B: BufferMut, C: InnerBufferIcmpv6Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+pub(crate) fn send_icmpv6_net_unreachable<B: BufferMut, SC: InnerBufferIcmpv6Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -1792,6 +1840,7 @@ pub(crate) fn send_icmpv6_net_unreachable<B: BufferMut, C: InnerBufferIcmpv6Cont
 
     send_icmpv6_dest_unreachable(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -1812,9 +1861,10 @@ pub(crate) fn send_icmpv6_net_unreachable<B: BufferMut, C: InnerBufferIcmpv6Cont
 /// `original_packet` contains the contents of the entire original packet,
 /// including the header. `header_len` is the length of the IP header including
 /// options.
-pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C: InnerBufferIcmpv4Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, SC: InnerBufferIcmpv4Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -1833,6 +1883,7 @@ pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C: InnerBufferIcmpv4Context<
 
     send_icmpv4_error_message(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -1855,9 +1906,10 @@ pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C: InnerBufferIcmpv4Context<
 /// `original_packet` contains the contents of the entire original packet
 /// including extension headers. `header_len` is the length of the IP header and
 /// all extension headers.
-pub(crate) fn send_icmpv6_ttl_expired<B: BufferMut, C: InnerBufferIcmpv6Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+pub(crate) fn send_icmpv6_ttl_expired<B: BufferMut, SC: InnerBufferIcmpv6Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -1875,6 +1927,7 @@ pub(crate) fn send_icmpv6_ttl_expired<B: BufferMut, C: InnerBufferIcmpv6Context<
 
     send_icmpv6_error_message(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -1895,9 +1948,10 @@ pub(crate) fn send_icmpv6_ttl_expired<B: BufferMut, C: InnerBufferIcmpv6Context<
 /// `send_icmpv6_packet_too_big` sends an ICMPv6 "packet too big" message in
 /// response to receiving an IP packet from `src_ip` to `dst_ip` whose size
 /// exceeds the `mtu` of the next hop interface.
-pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, C: InnerBufferIcmpv6Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, SC: InnerBufferIcmpv6Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -1915,6 +1969,7 @@ pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, C: InnerBufferIcmpv6Conte
 
     send_icmpv6_error_message(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -1944,9 +1999,10 @@ pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, C: InnerBufferIcmpv6Conte
     )
 }
 
-pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C: InnerBufferIcmpv4Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, SC: InnerBufferIcmpv4Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -1960,6 +2016,7 @@ pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C: InnerBufferIcmpv4Co
 
     send_icmpv4_error_message(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -1982,9 +2039,10 @@ pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C: InnerBufferIcmpv4Co
 ///
 /// Panics if `allow_multicast_addr` is set to `true`, but this Parameter
 /// Problem's code is not 2 (Unrecognized IPv6 Option).
-pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, C: InnerBufferIcmpv6Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, SC: InnerBufferIcmpv6Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -2003,6 +2061,7 @@ pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, C: InnerBufferIcmpv6Co
 
     send_icmpv6_error_message(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -2014,9 +2073,10 @@ pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, C: InnerBufferIcmpv6Co
     )
 }
 
-fn send_icmpv4_dest_unreachable<B: BufferMut, C: InnerBufferIcmpv4Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+fn send_icmpv4_dest_unreachable<B: BufferMut, SC: InnerBufferIcmpv4Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -2028,6 +2088,7 @@ fn send_icmpv4_dest_unreachable<B: BufferMut, C: InnerBufferIcmpv4Context<B>>(
     sync_ctx.increment_counter("send_icmpv4_dest_unreachable");
     send_icmpv4_error_message(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -2040,9 +2101,10 @@ fn send_icmpv4_dest_unreachable<B: BufferMut, C: InnerBufferIcmpv4Context<B>>(
     )
 }
 
-fn send_icmpv6_dest_unreachable<B: BufferMut, C: InnerBufferIcmpv6Context<B>>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+fn send_icmpv6_dest_unreachable<B: BufferMut, SC: InnerBufferIcmpv6Context<B>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -2051,6 +2113,7 @@ fn send_icmpv6_dest_unreachable<B: BufferMut, C: InnerBufferIcmpv6Context<B>>(
 ) {
     send_icmpv6_error_message(
         sync_ctx,
+        ctx,
         device,
         frame_dst,
         src_ip,
@@ -2067,10 +2130,12 @@ const SEND_ICMPV4_ERROR_MESSAGE_COUNTER_NAME: &'static str = "send_icmpv4_error_
 fn send_icmpv4_error_message<
     B: BufferMut,
     M: IcmpMessage<Ipv4, &'static [u8]>,
-    C: InnerBufferIcmpv4Context<B>,
+    SC: InnerBufferIcmpv4Context<B>,
+    C,
 >(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     original_src_ip: SpecifiedAddr<Ipv4Addr>,
     original_dst_ip: SpecifiedAddr<Ipv4Addr>,
@@ -2120,10 +2185,12 @@ const SEND_ICMPV6_ERROR_MESSAGE_COUNTER_NAME: &'static str = "send_icmpv6_error_
 fn send_icmpv6_error_message<
     B: BufferMut,
     M: IcmpMessage<Ipv6, &'static [u8]>,
-    C: InnerBufferIcmpv6Context<B>,
+    SC: InnerBufferIcmpv6Context<B>,
+    C,
 >(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     original_src_ip: UnicastAddr<Ipv6Addr>,
     original_dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -2278,8 +2345,14 @@ fn is_icmp_error_message<I: IcmpIpExt>(proto: I::Proto, buf: &[u8]) -> bool {
 }
 
 /// Common logic for receiving an ICMP echo reply.
-fn receive_icmp_echo_reply<I: IcmpIpExt + IpExt, B: BufferMut, C: InnerBufferIcmpContext<I, B>>(
-    sync_ctx: &mut C,
+fn receive_icmp_echo_reply<
+    I: IcmpIpExt + IpExt,
+    B: BufferMut,
+    SC: InnerBufferIcmpContext<I, B>,
+    C,
+>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
     src_ip: I::Addr,
     dst_ip: SpecifiedAddr<I::Addr>,
     id: u16,
@@ -2337,7 +2410,7 @@ pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: Blanket
     seq_num: u16,
     body: B,
 ) -> Result<(), (B, IpSockSendError)> {
-    send_icmp_echo_request_inner(ctx, conn, seq_num, body)
+    send_icmp_echo_request_inner(ctx, &mut (), conn, seq_num, body)
 }
 
 /// Send an ICMPv6 echo request on an existing connection.
@@ -2352,15 +2425,17 @@ pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: Blanket
     seq_num: u16,
     body: B,
 ) -> Result<(), (B, IpSockSendError)> {
-    send_icmp_echo_request_inner(ctx, conn, seq_num, body)
+    send_icmp_echo_request_inner(ctx, &mut (), conn, seq_num, body)
 }
 
 fn send_icmp_echo_request_inner<
     I: IcmpIpExt + IpExt,
     B: BufferMut,
-    C: InnerBufferIcmpContext<I, B>,
+    SC: InnerBufferIcmpContext<I, B>,
+    C,
 >(
-    sync_ctx: &mut C,
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
     conn: IcmpConnId<I>,
     seq_num: u16,
     body: B,
@@ -2492,14 +2567,15 @@ pub fn connect_icmpv4<D: EventDispatcher, C: BlanketCoreContext>(
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv4>, IcmpSockCreationError> {
-    connect_icmpv4_inner(ctx, id, local_addr, remote_addr, icmp_id)
+    connect_icmpv4_inner(ctx, &mut (), id, local_addr, remote_addr, icmp_id)
 }
 
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
 // existing `connect_icmpv4`) once the ICMP context traits are part of the
 // public API.
-fn connect_icmpv4_inner<C: InnerIcmpv4Context>(
-    sync_ctx: &mut C,
+fn connect_icmpv4_inner<SC: InnerIcmpv4Context, C>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
     id: IcmpUnboundId<Ipv4>,
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
     remote_addr: SpecifiedAddr<Ipv4Addr>,
@@ -2536,14 +2612,15 @@ pub fn connect_icmpv6<D: EventDispatcher, C: BlanketCoreContext>(
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv6>, IcmpSockCreationError> {
-    connect_icmpv6_inner(ctx, id, local_addr, remote_addr, icmp_id)
+    connect_icmpv6_inner(ctx, &mut (), id, local_addr, remote_addr, icmp_id)
 }
 
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
 // existing `connect_icmpv6`) once the ICMP context traits are part of the
 // public API.
-fn connect_icmpv6_inner<C: InnerIcmpv6Context>(
-    sync_ctx: &mut C,
+fn connect_icmpv6_inner<SC: InnerIcmpv6Context, C>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
     id: IcmpUnboundId<Ipv6>,
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
     remote_addr: SpecifiedAddr<Ipv6Addr>,
@@ -2729,7 +2806,8 @@ mod tests {
             I::DUMMY_CONFIG.into_builder().build_with_modifications(modify_stack_state_builder);
 
         let device = DeviceId::new_ethernet(0);
-        set_routing_enabled::<_, I>(&mut ctx, device, true).expect("error setting routing enabled");
+        set_routing_enabled::<_, _, I>(&mut ctx, &mut (), device, true)
+            .expect("error setting routing enabled");
         match I::VERSION {
             IpVersion::V4 => {
                 receive_ipv4_packet(&mut ctx, device, FrameDestination::Unicast, buffer)
@@ -3750,6 +3828,7 @@ mod tests {
             assert_eq!(
                 connect_icmpv4_inner(
                     &mut ctx,
+                    &mut (),
                     unbound,
                     Some(DUMMY_CONFIG_V4.local_ip),
                     DUMMY_CONFIG_V4.remote_ip,
@@ -4063,6 +4142,7 @@ mod tests {
             assert_eq!(
                 connect_icmpv6_inner(
                     &mut ctx,
+                    &mut (),
                     unbound,
                     Some(DUMMY_CONFIG_V6.local_ip),
                     DUMMY_CONFIG_V6.remote_ip,
@@ -4334,6 +4414,7 @@ mod tests {
         fn send_icmpv4_ttl_expired_helper(ctx: &mut Dummyv4Ctx) {
             send_icmpv4_ttl_expired(
                 ctx,
+                &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 DUMMY_CONFIG_V4.remote_ip,
@@ -4349,6 +4430,7 @@ mod tests {
         fn send_icmpv4_parameter_problem_helper(ctx: &mut Dummyv4Ctx) {
             send_icmpv4_parameter_problem(
                 ctx,
+                &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 DUMMY_CONFIG_V4.remote_ip,
@@ -4365,6 +4447,7 @@ mod tests {
         fn send_icmpv4_dest_unreachable_helper(ctx: &mut Dummyv4Ctx) {
             send_icmpv4_dest_unreachable(
                 ctx,
+                &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 DUMMY_CONFIG_V4.remote_ip,
@@ -4380,6 +4463,7 @@ mod tests {
         fn send_icmpv6_ttl_expired_helper(ctx: &mut Dummyv6Ctx) {
             send_icmpv6_ttl_expired(
                 ctx,
+                &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
@@ -4394,6 +4478,7 @@ mod tests {
         fn send_icmpv6_packet_too_big_helper(ctx: &mut Dummyv6Ctx) {
             send_icmpv6_packet_too_big(
                 ctx,
+                &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
@@ -4409,6 +4494,7 @@ mod tests {
         fn send_icmpv6_parameter_problem_helper(ctx: &mut Dummyv6Ctx) {
             send_icmpv6_parameter_problem(
                 ctx,
+                &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::new(*DUMMY_CONFIG_V6.remote_ip).expect("unicast source address"),
@@ -4424,6 +4510,7 @@ mod tests {
         fn send_icmpv6_dest_unreachable_helper(ctx: &mut Dummyv6Ctx) {
             send_icmpv6_dest_unreachable(
                 ctx,
+                &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),

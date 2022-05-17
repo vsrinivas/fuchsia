@@ -211,8 +211,9 @@ pub(super) trait ArpHandler<D: ArpDevice, P: PType>:
     fn deinitialize(&mut self, device_id: Self::DeviceId);
 
     /// Look up the hardware address for a network protocol address.
-    fn lookup(
+    fn lookup<C>(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         local_addr: D::HType,
         lookup_addr: P,
@@ -224,10 +225,16 @@ pub(super) trait ArpHandler<D: ArpDevice, P: PType>:
     /// future conflicting gratuitous ARPs to be ignored.
     // TODO(rheacock): remove `cfg(test)` when this is used.
     #[cfg(test)]
-    fn insert_static_neighbor(&mut self, device_id: Self::DeviceId, addr: P, hw: D::HType);
+    fn insert_static_neighbor<C>(
+        &mut self,
+        ctx: &mut C,
+        device_id: Self::DeviceId,
+        addr: P,
+        hw: D::HType,
+    );
 }
 
-impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> ArpHandler<D, P> for C {
+impl<D: ArpDevice, P: PType, SC: ArpContext<D, P>> ArpHandler<D, P> for SC {
     fn deinitialize(&mut self, device_id: Self::DeviceId) {
         // Remove all timers associated with the device
         self.cancel_timers_with(|timer_id| *timer_id.get_device_id() == device_id);
@@ -235,8 +242,9 @@ impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> ArpHandler<D, P> for C {
         // uninitialized?
     }
 
-    fn lookup(
+    fn lookup<C>(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         _local_addr: D::HType,
         lookup_addr: P,
@@ -245,19 +253,25 @@ impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> ArpHandler<D, P> for C {
 
         // Send an ARP Request if the address is not in our cache
         if result.is_none() {
-            send_arp_request(self, device_id, lookup_addr);
+            send_arp_request(self, ctx, device_id, lookup_addr);
         }
 
         result
     }
 
     #[cfg(test)]
-    fn insert_static_neighbor(&mut self, device_id: Self::DeviceId, addr: P, hw: D::HType) {
+    fn insert_static_neighbor<C>(
+        &mut self,
+        _ctx: &mut C,
+        device_id: Self::DeviceId,
+        addr: P,
+        hw: D::HType,
+    ) {
         // Cancel any outstanding timers for this entry; if none exist, these
         // will be no-ops.
         let outstanding_request =
             self.cancel_timer(ArpTimerId::new_request_retry(device_id, addr)).is_some();
-        let _: Option<C::Instant> =
+        let _: Option<SC::Instant> =
             self.cancel_timer(ArpTimerId::new_entry_expiration(device_id, addr));
 
         // If there was an outstanding resolution request, notify the device
@@ -299,7 +313,7 @@ impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> TimerHandler<ArpTimerId<D, P, 
     fn handle_timer(&mut self, id: ArpTimerId<D, P, C::DeviceId>) {
         match id.inner {
             ArpTimerIdInner::RequestRetry { proto_addr } => {
-                send_arp_request(self, id.device_id, proto_addr)
+                send_arp_request(self, &mut (), id.device_id, proto_addr)
             }
             ArpTimerIdInner::EntryExpiration { proto_addr } => {
                 self.get_state_mut_with(id.device_id).table.remove(proto_addr);
@@ -513,13 +527,14 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
 /// See [`ArpHandler::insert_static_neighbor`] for more details.
 // TODO(rheacock): remove `cfg(test)` when this is used.
 #[cfg(test)]
-pub(super) fn insert_static_neighbor<D: ArpDevice, P: PType, H: ArpHandler<D, P>>(
-    ctx: &mut H,
+pub(super) fn insert_static_neighbor<D: ArpDevice, P: PType, H: ArpHandler<D, P>, C>(
+    sync_ctx: &mut H,
+    ctx: &mut C,
     device_id: H::DeviceId,
     net: P,
     hw: D::HType,
 ) {
-    ctx.insert_static_neighbor(device_id, net, hw)
+    sync_ctx.insert_static_neighbor(ctx, device_id, net, hw)
 }
 
 /// Insert a dynamic entry into this device's ARP table.
@@ -546,13 +561,14 @@ fn insert_dynamic<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
 /// Look up the hardware address for a network protocol address.
 ///
 /// Equivalent to calling `ctx.lookup`.
-pub(super) fn lookup<D: ArpDevice, P: PType, H: ArpHandler<D, P>>(
-    ctx: &mut H,
+pub(super) fn lookup<D: ArpDevice, P: PType, H: ArpHandler<D, P>, C>(
+    sync_ctx: &mut H,
+    ctx: &mut C,
     device_id: H::DeviceId,
     local_addr: D::HType,
     lookup_addr: P,
 ) -> Option<D::HType> {
-    ctx.lookup(device_id, local_addr, lookup_addr)
+    sync_ctx.lookup(ctx, device_id, local_addr, lookup_addr)
 }
 
 // Since BSD resends ARP requests every 20 seconds and sets the default time
@@ -565,9 +581,10 @@ const DEFAULT_ARP_REQUEST_PERIOD: Duration = Duration::from_secs(20);
 // entry.
 const DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD: Duration = Duration::from_secs(60);
 
-fn send_arp_request<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+fn send_arp_request<D: ArpDevice, P: PType, SC: ArpContext<D, P>, C>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device_id: SC::DeviceId,
     lookup_addr: P,
 ) {
     let tries_remaining = sync_ctx
@@ -597,13 +614,13 @@ fn send_arp_request<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
         let id = ArpTimerId::new_request_retry(device_id, lookup_addr);
         if tries_remaining > 1 {
             // TODO(wesleyac): Configurable timer.
-            let _: Option<C::Instant> = sync_ctx.schedule_timer(DEFAULT_ARP_REQUEST_PERIOD, id);
+            let _: Option<SC::Instant> = sync_ctx.schedule_timer(DEFAULT_ARP_REQUEST_PERIOD, id);
             sync_ctx
                 .get_state_mut_with(device_id)
                 .table
                 .set_waiting(lookup_addr, tries_remaining - 1);
         } else {
-            let _: Option<C::Instant> = sync_ctx.cancel_timer(id);
+            let _: Option<SC::Instant> = sync_ctx.cancel_timer(id);
             sync_ctx.get_state_mut_with(device_id).table.remove(lookup_addr);
             sync_ctx.address_resolution_failed(device_id, lookup_addr);
         }
@@ -949,7 +966,7 @@ mod tests {
 
         let mut ctx = DummyCtx::default();
 
-        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should have installed a single retry timer.
         validate_single_retry_timer(&ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
@@ -1039,7 +1056,7 @@ mod tests {
         let device_id_0: usize = 0;
         let device_id_1: usize = 1;
 
-        assert_eq!(lookup(&mut ctx, device_id_0, TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(lookup(&mut ctx, &mut (), device_id_0, TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should have installed a single retry timer.
         let deadline = ctx.now() + DEFAULT_ARP_REQUEST_PERIOD;
@@ -1063,7 +1080,7 @@ mod tests {
         let mut ctx = DummyCtx::default();
 
         // Perform the lookup.
-        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should have sent a single ARP request.
         validate_last_arp_packet(
@@ -1119,7 +1136,10 @@ mod tests {
         );
 
         // Perform the lookup.
-        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), Some(TEST_REMOTE_MAC));
+        assert_eq!(
+            lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            Some(TEST_REMOTE_MAC)
+        );
 
         // We should not have sent any ARP request.
         assert_empty(ctx.frames().iter());
@@ -1134,7 +1154,7 @@ mod tests {
 
         let mut ctx = DummyCtx::default();
 
-        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // `i` represents the `i`th request, so we start it at 1 since we
         // already sent one request during the call to `lookup`.
@@ -1214,7 +1234,10 @@ mod tests {
         );
 
         // Make sure we cached the sender's address information.
-        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), Some(TEST_REMOTE_MAC));
+        assert_eq!(
+            lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            Some(TEST_REMOTE_MAC)
+        );
 
         // We should have sent an ARP response.
         validate_last_arp_packet(
@@ -1326,7 +1349,13 @@ mod tests {
 
         // The lookup should fail.
         assert_eq!(
-            lookup(network.context(local_name), (), local_hw_addr, requested_remote_proto_addr),
+            lookup(
+                network.context(local_name),
+                &mut (),
+                (),
+                local_hw_addr,
+                requested_remote_proto_addr
+            ),
             None
         );
         // We should have sent an ARP request.
@@ -1514,7 +1543,7 @@ mod tests {
 
         // Perform a lookup in order to kick off a request and install a retry
         // timer.
-        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should be in the Waiting state.
         assert_eq!(
@@ -1525,7 +1554,7 @@ mod tests {
         validate_single_retry_timer(&ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
 
         // Now insert a static entry.
-        insert_static_neighbor(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_static_neighbor(&mut ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // The timer should have been canceled.
         ctx.timer_ctx().assert_no_timers_installed();
@@ -1549,7 +1578,7 @@ mod tests {
         validate_single_entry_timer(&ctx, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, TEST_REMOTE_IPV4);
 
         // Now insert a static entry.
-        insert_static_neighbor(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_static_neighbor(&mut ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // The timer should have been canceled.
         ctx.timer_ctx().assert_no_timers_installed();
@@ -1649,7 +1678,7 @@ mod tests {
         // entry for the same address will not cause a timer to be scheduled.
         let mut ctx = DummyCtx::default();
 
-        insert_static_neighbor(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_static_neighbor(&mut ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
         ctx.timer_ctx().assert_no_timers_installed();
 
         insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);

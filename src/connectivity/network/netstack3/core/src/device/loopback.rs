@@ -77,8 +77,8 @@ mod tests {
         let device = ctx.state.add_loopback_device(MTU).expect("error adding loopback device");
         crate::device::testutil::enable_device(&mut ctx, device);
 
-        assert_eq!(crate::ip::device::get_mtu::<Ipv4, _>(&ctx, device), MTU);
-        assert_eq!(crate::ip::device::get_mtu::<Ipv6, _>(&ctx, device), MTU);
+        assert_eq!(crate::ip::device::get_mtu::<Ipv4, _, _>(&ctx, &mut (), device), MTU);
+        assert_eq!(crate::ip::device::get_mtu::<Ipv6, _, _>(&ctx, &mut (), device), MTU);
 
         fn test<
             I: TestIpExt + IpDeviceStateIpExt<C::Instant>,
@@ -87,10 +87,14 @@ mod tests {
         >(
             ctx: &mut Ctx<D, C>,
             device: DeviceId,
-            get_ip_state: fn(&Ctx<D, C>, DeviceId) -> &IpDeviceState<C::Instant, I>,
+            get_ip_state: for<'a> fn(
+                &'a Ctx<D, C>,
+                &mut (),
+                DeviceId,
+            ) -> &'a IpDeviceState<C::Instant, I>,
         ) {
             assert_eq!(
-                &get_ip_state(ctx, device)
+                &get_ip_state(ctx, &mut (), device)
                     .iter_addrs()
                     .map(AssignedAddress::addr)
                     .collect::<Vec<_>>()[..],
@@ -109,7 +113,7 @@ mod tests {
             assert_eq!(crate::device::add_ip_addr_subnet(ctx, device, addr,), Ok(()));
             let addr = addr.addr();
             assert_eq!(
-                &get_ip_state(ctx, device)
+                &get_ip_state(ctx, &mut (), device)
                     .iter_addrs()
                     .map(AssignedAddress::addr)
                     .collect::<Vec<_>>()[..],
@@ -118,7 +122,7 @@ mod tests {
 
             assert_eq!(crate::device::del_ip_addr(ctx, device, &addr,), Ok(()));
             assert_eq!(
-                &get_ip_state(ctx, device)
+                &get_ip_state(ctx, &mut (), device)
                     .iter_addrs()
                     .map(AssignedAddress::addr)
                     .collect::<Vec<_>>()[..],
@@ -128,7 +132,15 @@ mod tests {
             assert_eq!(crate::device::del_ip_addr(ctx, device, &addr,), Err(NotFoundError));
         }
 
-        test::<Ipv4, _, _>(&mut ctx, device, crate::ip::device::get_ipv4_device_state::<DummyCtx>);
-        test::<Ipv6, _, _>(&mut ctx, device, crate::ip::device::get_ipv6_device_state::<DummyCtx>);
+        test::<Ipv4, _, _>(
+            &mut ctx,
+            device,
+            crate::ip::device::get_ipv4_device_state::<DummyCtx, ()>,
+        );
+        test::<Ipv6, _, _>(
+            &mut ctx,
+            device,
+            crate::ip::device::get_ipv6_device_state::<DummyCtx, ()>,
+        );
     }
 }

@@ -1039,12 +1039,22 @@ mod tests {
                 mtu: None,
             };
             #[ipv4addr]
-            crate::ip::send_ipv4_packet_from_device(ctx, meta, Buf::new(vec![1, 2, 3, 4], ..))
-                .unwrap();
+            crate::ip::send_ipv4_packet_from_device(
+                ctx,
+                &mut (),
+                meta,
+                Buf::new(vec![1, 2, 3, 4], ..),
+            )
+            .unwrap();
 
             #[ipv6addr]
-            crate::ip::send_ipv6_packet_from_device(ctx, meta, Buf::new(vec![1, 2, 3, 4], ..))
-                .unwrap();
+            crate::ip::send_ipv6_packet_from_device(
+                ctx,
+                &mut (),
+                meta,
+                Buf::new(vec![1, 2, 3, 4], ..),
+            )
+            .unwrap();
         }
 
         let device_builder_id = 0;

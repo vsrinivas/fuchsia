@@ -420,7 +420,7 @@ pub(super) fn update_all_ipv4_sockets<D: EventDispatcher, C: BlanketCoreContext>
     ctx: &mut Ctx<D, C>,
     update: IpSockUpdate<Ipv4>,
 ) {
-    crate::ip::icmp::update_all_ipv4_sockets(ctx, update);
+    crate::ip::icmp::update_all_ipv4_sockets(ctx, &mut (), update);
 }
 
 /// Apply an update to all IPv6 sockets.
@@ -432,7 +432,7 @@ pub(super) fn update_all_ipv6_sockets<D: EventDispatcher, C: BlanketCoreContext>
     ctx: &mut Ctx<D, C>,
     update: IpSockUpdate<Ipv6>,
 ) {
-    crate::ip::icmp::update_all_ipv6_sockets(ctx, update);
+    crate::ip::icmp::update_all_ipv6_sockets(ctx, &mut (), update);
 }
 
 // TODO(joshlf): Once we support configuring transport-layer protocols using
@@ -1200,12 +1200,13 @@ mod tests {
 
         #[ipv4]
         let remove_all_local_addrs = |ctx: &mut crate::testutil::DummyCtx| {
-            let devices = crate::ip::device::iter_ipv4_devices(ctx)
+            let devices = crate::ip::device::iter_ipv4_devices(ctx, &mut ())
                 .map(|(device, _state)| device)
                 .collect::<Vec<_>>();
             for device in devices {
-                let subnets = crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, device)
-                    .collect::<Vec<_>>();
+                let subnets =
+                    crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, &mut (), device)
+                        .collect::<Vec<_>>();
                 for subnet in subnets {
                     crate::device::del_ip_addr(ctx, device, &subnet.addr())
                         .expect("failed to remove addr from device");
@@ -1215,12 +1216,13 @@ mod tests {
 
         #[ipv6]
         let remove_all_local_addrs = |ctx: &mut crate::testutil::DummyCtx| {
-            let devices = crate::ip::device::iter_ipv6_devices(ctx)
+            let devices = crate::ip::device::iter_ipv6_devices(ctx, &mut ())
                 .map(|(device, _state)| device)
                 .collect::<Vec<_>>();
             for device in devices {
-                let subnets = crate::ip::device::get_assigned_ipv6_addr_subnets(ctx, device)
-                    .collect::<Vec<_>>();
+                let subnets =
+                    crate::ip::device::get_assigned_ipv6_addr_subnets(ctx, &mut (), device)
+                        .collect::<Vec<_>>();
                 for subnet in subnets {
                     crate::device::del_ip_addr(ctx, device, &subnet.addr())
                         .expect("failed to remove addr from device");
@@ -1263,10 +1265,14 @@ mod tests {
             }
             AddressType::Unroutable => {
                 match subnet.into() {
-                    SubnetEither::V4(subnet) => crate::ip::del_route::<Ipv4, _>(&mut ctx, subnet)
-                        .expect("failed to delete IPv4 device route"),
-                    SubnetEither::V6(subnet) => crate::ip::del_route::<Ipv6, _>(&mut ctx, subnet)
-                        .expect("failed to delete IPv6 device route"),
+                    SubnetEither::V4(subnet) => {
+                        crate::ip::del_route::<Ipv4, _, _>(&mut ctx, &mut (), subnet)
+                            .expect("failed to delete IPv4 device route")
+                    }
+                    SubnetEither::V6(subnet) => {
+                        crate::ip::del_route::<Ipv6, _, _>(&mut ctx, &mut (), subnet)
+                            .expect("failed to delete IPv6 device route")
+                    }
                 }
 
                 (remote_ip, LOCAL_DEVICE)
@@ -1549,11 +1555,11 @@ mod tests {
         .unwrap();
         match subnet.into() {
             SubnetEither::V4(subnet) => {
-                crate::ip::add_device_route::<Ipv4, _>(&mut ctx, subnet, device_id)
+                crate::ip::add_device_route::<Ipv4, _, _>(&mut ctx, &mut (), subnet, device_id)
                     .expect("install IPv4 device route on a fresh stack without routes")
             }
             SubnetEither::V6(subnet) => {
-                crate::ip::add_device_route::<Ipv6, _>(&mut ctx, subnet, device_id)
+                crate::ip::add_device_route::<Ipv6, _, _>(&mut ctx, &mut (), subnet, device_id)
                     .expect("install IPv6 device route on a fresh stack without routes")
             }
         }

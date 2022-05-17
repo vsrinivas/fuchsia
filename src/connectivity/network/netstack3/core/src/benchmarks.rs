@@ -175,8 +175,13 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
         BenchmarkEventDispatcher::default(),
         BenchmarkCoreContext::default(),
     );
-    crate::ip::device::set_routing_enabled::<_, Ipv4>(&mut ctx, DeviceId::new_ethernet(0), true)
-        .expect("error setting routing enabled");
+    crate::ip::device::set_routing_enabled::<_, _, Ipv4>(
+        &mut ctx,
+        &mut (),
+        DeviceId::new_ethernet(0),
+        true,
+    )
+    .expect("error setting routing enabled");
 
     assert!(
         frame_size

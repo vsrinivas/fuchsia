@@ -214,7 +214,7 @@ fn iter_devices<D: EventDispatcher, C: BlanketCoreContext>(
 
 fn get_mtu<D: EventDispatcher, C: BlanketCoreContext>(ctx: &Ctx<D, C>, device: DeviceId) -> u32 {
     match device.inner() {
-        DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(ctx, id),
+        DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(ctx, &mut (), id),
         DeviceIdInner::Loopback => self::loopback::get_mtu(ctx),
     }
 }
@@ -225,9 +225,12 @@ fn join_link_multicast_group<D: EventDispatcher, C: BlanketCoreContext, A: IpAdd
     multicast_addr: MulticastAddr<A>,
 ) {
     match device_id.inner() {
-        DeviceIdInner::Ethernet(id) => {
-            self::ethernet::join_link_multicast(ctx, id, MulticastAddr::from(&multicast_addr))
-        }
+        DeviceIdInner::Ethernet(id) => self::ethernet::join_link_multicast(
+            ctx,
+            &mut (),
+            id,
+            MulticastAddr::from(&multicast_addr),
+        ),
         DeviceIdInner::Loopback => {}
     }
 }
@@ -238,9 +241,12 @@ fn leave_link_multicast_group<D: EventDispatcher, C: BlanketCoreContext, A: IpAd
     multicast_addr: MulticastAddr<A>,
 ) {
     match device_id.inner() {
-        DeviceIdInner::Ethernet(id) => {
-            self::ethernet::leave_link_multicast(ctx, id, MulticastAddr::from(&multicast_addr))
-        }
+        DeviceIdInner::Ethernet(id) => self::ethernet::leave_link_multicast(
+            ctx,
+            &mut (),
+            id,
+            MulticastAddr::from(&multicast_addr),
+        ),
         DeviceIdInner::Loopback => {}
     }
 }
@@ -305,7 +311,9 @@ fn send_ip_frame<
     body: S,
 ) -> Result<(), S> {
     match device.inner() {
-        DeviceIdInner::Ethernet(id) => self::ethernet::send_ip_frame(ctx, id, local_addr, body),
+        DeviceIdInner::Ethernet(id) => {
+            self::ethernet::send_ip_frame(ctx, &mut (), id, local_addr, body)
+        }
         DeviceIdInner::Loopback => self::loopback::send_ip_frame(ctx, local_addr, body),
     }
 }
@@ -373,16 +381,18 @@ impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6DeviceContext for Ctx<D, C> 
 
     fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]> {
         match device_id.inner() {
-            DeviceIdInner::Ethernet(id) => Some(ethernet::get_mac(self, id).as_ref().as_ref()),
+            DeviceIdInner::Ethernet(id) => {
+                Some(ethernet::get_mac(self, &mut (), id).as_ref().as_ref())
+            }
             DeviceIdInner::Loopback => None,
         }
     }
 
     fn get_eui64_iid(&self, device_id: Self::DeviceId) -> Option<[u8; 8]> {
         match device_id.inner() {
-            DeviceIdInner::Ethernet(id) => {
-                Some(ethernet::get_mac(self, id).to_eui64_with_magic(Mac::DEFAULT_EUI_MAGIC))
-            }
+            DeviceIdInner::Ethernet(id) => Some(
+                ethernet::get_mac(self, &mut (), id).to_eui64_with_magic(Mac::DEFAULT_EUI_MAGIC),
+            ),
             DeviceIdInner::Loopback => None,
         }
     }
@@ -470,7 +480,7 @@ pub(crate) fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(
     id: DeviceLayerTimerId,
 ) {
     match id.0 {
-        DeviceLayerTimerIdInner::Ethernet(id) => ethernet::handle_timer(ctx, id),
+        DeviceLayerTimerIdInner::Ethernet(id) => ethernet::handle_timer(ctx, &mut (), id),
     }
 }
 
@@ -678,7 +688,7 @@ pub fn remove_device<D: EventDispatcher, C: BlanketCoreContext>(
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
             // TODO(rheacock): Generate any final frames to send here.
-            crate::device::ethernet::deinitialize(ctx, id);
+            crate::device::ethernet::deinitialize(ctx, &mut (), id);
             let EthernetDeviceId(id) = id;
             let _: IpLinkDeviceState<_, _> = ctx
                 .state
@@ -705,7 +715,7 @@ pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext
     buffer: B,
 ) -> Result<(), NotSupportedError> {
     match device.inner() {
-        DeviceIdInner::Ethernet(id) => Ok(self::ethernet::receive_frame(ctx, id, buffer)),
+        DeviceIdInner::Ethernet(id) => Ok(self::ethernet::receive_frame(ctx, &mut (), id, buffer)),
         DeviceIdInner::Loopback => Err(NotSupportedError),
     }
 }
@@ -719,7 +729,9 @@ pub(crate) fn set_promiscuous_mode<D: EventDispatcher, C: BlanketCoreContext>(
     enabled: bool,
 ) -> Result<(), NotSupportedError> {
     match device.inner() {
-        DeviceIdInner::Ethernet(id) => Ok(self::ethernet::set_promiscuous_mode(ctx, id, enabled)),
+        DeviceIdInner::Ethernet(id) => {
+            Ok(self::ethernet::set_promiscuous_mode(ctx, &mut (), id, enabled))
+        }
         DeviceIdInner::Loopback => Err(NotSupportedError),
     }
 }
@@ -737,13 +749,17 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext, A: I
 
     match addr_sub.into() {
         AddrSubnetEither::V4(addr_sub) => {
-            crate::ip::device::add_ipv4_addr_subnet(ctx, device, addr_sub)
-                .map(|()| crate::ip::on_routing_state_updated::<Ipv4, _>(ctx))
+            crate::ip::device::add_ipv4_addr_subnet(ctx, &mut (), device, addr_sub)
+                .map(|()| crate::ip::on_routing_state_updated::<Ipv4, _, _>(ctx, &mut ()))
         }
-        AddrSubnetEither::V6(addr_sub) => {
-            crate::ip::device::add_ipv6_addr_subnet(ctx, device, addr_sub, AddrConfig::Manual)
-                .map(|()| crate::ip::on_routing_state_updated::<Ipv6, _>(ctx))
-        }
+        AddrSubnetEither::V6(addr_sub) => crate::ip::device::add_ipv6_addr_subnet(
+            ctx,
+            &mut (),
+            device,
+            addr_sub,
+            AddrConfig::Manual,
+        )
+        .map(|()| crate::ip::on_routing_state_updated::<Ipv6, _, _>(ctx, &mut ())),
     }
 }
 
@@ -758,15 +774,16 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext, A: IpAddres
     trace!("del_ip_addr: removing addr {:?} from device {:?}", addr, device);
 
     match Into::into(*addr) {
-        IpAddr::V4(addr) => crate::ip::device::del_ipv4_addr(ctx, device, &addr)
-            .map(|()| crate::ip::on_routing_state_updated::<Ipv4, _>(ctx)),
+        IpAddr::V4(addr) => crate::ip::device::del_ipv4_addr(ctx, &mut (), device, &addr)
+            .map(|()| crate::ip::on_routing_state_updated::<Ipv4, _, _>(ctx, &mut ())),
         IpAddr::V6(addr) => crate::ip::device::del_ipv6_addr_with_reason(
             ctx,
+            &mut (),
             device,
             &addr,
             crate::ip::device::state::DelIpv6AddrReason::ManualAction,
         )
-        .map(|()| crate::ip::on_routing_state_updated::<Ipv6, _>(ctx)),
+        .map(|()| crate::ip::on_routing_state_updated::<Ipv6, _, _>(ctx, &mut ())),
     }
 }
 
@@ -795,7 +812,7 @@ pub(super) fn insert_static_arp_table_entry<D: EventDispatcher, C: BlanketCoreCo
 ) -> Result<(), NotSupportedError> {
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
-            Ok(self::ethernet::insert_static_arp_table_entry(ctx, id, addr, mac.into()))
+            Ok(self::ethernet::insert_static_arp_table_entry(ctx, &mut (), id, addr, mac.into()))
         }
         DeviceIdInner::Loopback => Err(NotSupportedError),
     }
@@ -816,7 +833,7 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher, C: BlanketCoreContext>(
 ) -> Result<(), NotSupportedError> {
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
-            Ok(self::ethernet::insert_ndp_table_entry(ctx, id, addr, mac))
+            Ok(self::ethernet::insert_ndp_table_entry(ctx, &mut (), id, addr, mac))
         }
         DeviceIdInner::Loopback => Err(NotSupportedError),
     }
@@ -844,7 +861,7 @@ pub fn set_ipv4_configuration<D: EventDispatcher, C: BlanketCoreContext>(
     device: DeviceId,
     config: Ipv4DeviceConfiguration,
 ) {
-    crate::ip::device::set_ipv4_configuration(ctx, device, config)
+    crate::ip::device::set_ipv4_configuration(ctx, &mut (), device, config)
 }
 
 /// Updates the IPv6 Configuration for a `device`.
@@ -853,7 +870,7 @@ pub fn set_ipv6_configuration<D: EventDispatcher, C: BlanketCoreContext>(
     device: DeviceId,
     config: Ipv6DeviceConfiguration,
 ) {
-    crate::ip::device::set_ipv6_configuration(ctx, device, config)
+    crate::ip::device::set_ipv6_configuration(ctx, &mut (), device, config)
 }
 
 /// An address that may be "tentative" in that it has not yet passed duplicate
@@ -880,7 +897,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> NdpPacketHandler<DeviceId> for C
 
         match device.inner() {
             DeviceIdInner::Ethernet(id) => {
-                crate::device::ndp::receive_ndp_packet(self, id, src_ip, dst_ip, packet);
+                crate::device::ndp::receive_ndp_packet(self, &mut (), id, src_ip, dst_ip, packet);
             }
             DeviceIdInner::Loopback => {
                 unimplemented!("TODO(https://fxbug.dev/72378): Handle NDP on loopback")
@@ -913,7 +930,7 @@ pub(crate) mod testutil {
             ctx: &Ctx<D, C>,
             device: DeviceId,
         ) -> &IpDeviceState<C::Instant, Ipv4> {
-            crate::ip::device::get_ipv4_device_state(ctx, device)
+            crate::ip::device::get_ipv4_device_state(ctx, &mut (), device)
         }
     }
 
@@ -922,7 +939,7 @@ pub(crate) mod testutil {
             ctx: &Ctx<D, C>,
             device: DeviceId,
         ) -> &IpDeviceState<C::Instant, Ipv6> {
-            crate::ip::device::get_ipv6_device_state(ctx, device)
+            crate::ip::device::get_ipv6_device_state(ctx, &mut (), device)
         }
     }
 
@@ -943,12 +960,12 @@ pub(crate) mod testutil {
         ctx: &mut Ctx<D, C>,
         device: DeviceId,
     ) {
-        crate::ip::device::set_ipv4_configuration(ctx, device, {
+        crate::ip::device::set_ipv4_configuration(ctx, &mut (), device, {
             let mut config = crate::ip::device::get_ipv4_configuration(ctx, device);
             config.ip_config.ip_enabled = true;
             config
         });
-        crate::ip::device::set_ipv6_configuration(ctx, device, {
+        crate::ip::device::set_ipv6_configuration(ctx, &mut (), device, {
             let mut config = crate::ip::device::get_ipv6_configuration(ctx, device);
             config.ip_config.ip_enabled = true;
             config

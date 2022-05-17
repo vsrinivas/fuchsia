@@ -117,7 +117,7 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     ///
     /// The contract is that after `deinitialize` is called, nothing else should
     /// be done with the state.
-    fn deinitialize(&mut self, device_id: Self::DeviceId);
+    fn deinitialize<C>(&mut self, ctx: &mut C, device_id: Self::DeviceId);
 
     /// Returns the configured retransmit timer.
     fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration;
@@ -126,60 +126,64 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     ///
     /// Begins the address resolution process if the link layer address for
     /// `lookup_addr` is not already known.
-    fn lookup(
+    fn lookup<C>(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         lookup_addr: UnicastAddr<Ipv6Addr>,
     ) -> Option<D::Address>;
 
     /// Handles a timer firing.
-    fn handle_timer(&mut self, id: NdpTimerId<D, Self::DeviceId>);
+    fn handle_timer<C>(&mut self, ctx: &mut C, id: NdpTimerId<D, Self::DeviceId>);
 
     /// Insert a neighbor to the known neighbors table.
     ///
     /// This method only gets called when testing to force a neighbor so link
     /// address lookups completes immediately without doing address resolution.
     #[cfg(test)]
-    fn insert_static_neighbor(
+    fn insert_static_neighbor<C>(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         net: UnicastAddr<Ipv6Addr>,
         hw: D::Address,
     );
 }
 
-impl<D: LinkDevice, C: NdpContext<D>> NdpHandler<D> for C
+impl<D: LinkDevice, SC: NdpContext<D>> NdpHandler<D> for SC
 where
     D::Address: for<'a> From<&'a MulticastAddr<Ipv6Addr>>,
 {
-    fn deinitialize(&mut self, device_id: Self::DeviceId) {
-        deinitialize(self, device_id)
+    fn deinitialize<C>(&mut self, ctx: &mut C, device_id: Self::DeviceId) {
+        deinitialize(self, ctx, device_id)
     }
 
     fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration {
         self.get_state_with(device_id).retrans_timer
     }
 
-    fn lookup(
+    fn lookup<C>(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         lookup_addr: UnicastAddr<Ipv6Addr>,
     ) -> Option<D::Address> {
-        lookup(self, device_id, lookup_addr)
+        lookup(self, ctx, device_id, lookup_addr)
     }
 
-    fn handle_timer(&mut self, id: NdpTimerId<D, Self::DeviceId>) {
-        handle_timer(self, id)
+    fn handle_timer<C>(&mut self, ctx: &mut C, id: NdpTimerId<D, Self::DeviceId>) {
+        handle_timer(self, ctx, id)
     }
 
     #[cfg(test)]
-    fn insert_static_neighbor(
+    fn insert_static_neighbor<C>(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         net: UnicastAddr<Ipv6Addr>,
         hw: D::Address,
     ) {
-        insert_neighbor(self, device_id, net, hw)
+        insert_neighbor(self, ctx, device_id, net, hw)
     }
 }
 
@@ -305,7 +309,11 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     }
 }
 
-fn deinitialize<D: LinkDevice, C: NdpContext<D>>(sync_ctx: &mut C, device_id: C::DeviceId) {
+fn deinitialize<D: LinkDevice, SC: NdpContext<D>, C>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device_id: SC::DeviceId,
+) {
     // Remove all timers associated with the device
     sync_ctx.cancel_timers_with(|timer_id| timer_id.get_device_id() == device_id);
     // TODO(rheacock): Send any immediate packets, and potentially flag the
@@ -465,7 +473,11 @@ impl<D: LinkDevice, DeviceId: Copy> NdpTimerId<D, DeviceId> {
     }
 }
 
-fn handle_timer<D: LinkDevice, C: NdpContext<D>>(sync_ctx: &mut C, id: NdpTimerId<D, C::DeviceId>) {
+fn handle_timer<D: LinkDevice, SC: NdpContext<D>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    id: NdpTimerId<D, SC::DeviceId>,
+) {
     match id.inner {
         InnerNdpTimerId::LinkAddressResolution { neighbor_addr } => {
             let ndp_state = sync_ctx.get_state_mut_with(id.device_id);
@@ -480,8 +492,8 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(sync_ctx: &mut C, id: NdpTimerI
                     // Increase the transmit counter and send the solicitation
                     // again
                     *transmit_counter += 1;
-                    send_neighbor_solicitation(sync_ctx, id.device_id, neighbor_addr);
-                    let _: Option<C::Instant> = sync_ctx.schedule_timer(
+                    send_neighbor_solicitation(sync_ctx, ctx, id.device_id, neighbor_addr);
+                    let _: Option<SC::Instant> = sync_ctx.schedule_timer(
                         retrans_timer,
                         NdpTimerId::new_link_address_resolution(id.device_id, neighbor_addr).into(),
                     );
@@ -501,9 +513,10 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(sync_ctx: &mut C, id: NdpTimerI
     }
 }
 
-fn lookup<D: LinkDevice, C: NdpContext<D>>(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+fn lookup<D: LinkDevice, SC: NdpContext<D>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
     lookup_addr: UnicastAddr<Ipv6Addr>,
 ) -> Option<D::Address>
 where
@@ -539,11 +552,11 @@ where
             // also setting the transmission count to 1.
             ndpstate.neighbors.add_incomplete_neighbor_state(lookup_addr);
 
-            send_neighbor_solicitation(sync_ctx, device_id, lookup_addr);
+            send_neighbor_solicitation(sync_ctx, ctx, device_id, lookup_addr);
 
             // Also schedule a timer to retransmit in case we don't get neighbor
             // advertisements back.
-            let _: Option<C::Instant> = sync_ctx.schedule_timer(
+            let _: Option<SC::Instant> = sync_ctx.schedule_timer(
                 retrans_timer,
                 NdpTimerId::new_link_address_resolution(device_id, lookup_addr).into(),
             );
@@ -569,9 +582,10 @@ where
 }
 
 #[cfg(test)]
-fn insert_neighbor<D: LinkDevice, C: NdpContext<D>>(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+fn insert_neighbor<D: LinkDevice, SC: NdpContext<D>, C>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device_id: SC::DeviceId,
     net: UnicastAddr<Ipv6Addr>,
     hw: D::Address,
 ) {
@@ -735,9 +749,10 @@ impl<H> Default for NeighborTable<H> {
     }
 }
 
-fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+fn send_neighbor_solicitation<D: LinkDevice, SC: NdpContext<D>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
     lookup_addr: UnicastAddr<Ipv6Addr>,
 ) {
     trace!("send_neighbor_solicitation: lookup_addr {:?}", lookup_addr);
@@ -752,8 +767,9 @@ fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
         let dst_ip = lookup_addr.to_solicited_node_address();
         // TODO(https://fxbug.dev/85055): Either panic or guarantee that this
         // error can't happen statically?
-        let _ = send_ndp_packet::<_, _, &[u8], _>(
+        let _ = send_ndp_packet::<_, _, _, &[u8], _>(
             sync_ctx,
+            ctx,
             device_id,
             src_ip.get(),
             dst_ip.into_specified(),
@@ -767,9 +783,10 @@ fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
     }
 }
 
-fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+fn send_neighbor_advertisement<D: LinkDevice, SC: NdpContext<D>, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
     solicited: bool,
     device_addr: SpecifiedAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -793,8 +810,9 @@ fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
     // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
     // can't happen statically?
     let device_addr = device_addr.get();
-    let _ = send_ndp_packet::<_, _, &[u8], _>(
+    let _ = send_ndp_packet::<_, _, _, &[u8], _>(
         sync_ctx,
+        ctx,
         device_id,
         device_addr,
         dst_ip,
@@ -811,9 +829,10 @@ fn send_neighbor_advertisement<D: LinkDevice, C: NdpContext<D>>(
 /// Helper function to send MTU packet over an NdpDevice to `dst_ip`.
 // TODO(https://fxbug.dev/85055): Is it possible to guarantee that some types of
 // errors don't happen?
-pub(super) fn send_ndp_packet<D: LinkDevice, C: NdpContext<D>, B: ByteSlice, M>(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+pub(super) fn send_ndp_packet<D: LinkDevice, SC: NdpContext<D>, C, B: ByteSlice, M>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device_id: SC::DeviceId,
     src_ip: Ipv6Addr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
     message: M,
@@ -862,9 +881,10 @@ pub(crate) trait NdpPacketHandler<DeviceId> {
     );
 }
 
-pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+pub(crate) fn receive_ndp_packet<D: LinkDevice, SC: NdpContext<D>, C, B>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
     src_ip: Ipv6SourceAddr,
     _dst_ip: SpecifiedAddr<Ipv6Addr>,
     packet: NdpPacket<B>,
@@ -1118,6 +1138,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 // Neighbor Advertisement.
                 send_neighbor_advertisement(
                     sync_ctx,
+                    ctx,
                     device_id,
                     true,
                     target_address.into_specified(),
@@ -1130,6 +1151,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 // who's performing DAD, as described in RFC 4861 and 4862.
                 send_neighbor_advertisement(
                     sync_ctx,
+                    ctx,
                     device_id,
                     false,
                     target_address.into_specified(),
@@ -1229,7 +1251,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     ndp_state.neighbors.set_link_address(src_ip, address, message.solicited_flag());
 
                     // Cancel the resolution timeout.
-                    let _: Option<C::Instant> = sync_ctx.cancel_timer(
+                    let _: Option<SC::Instant> = sync_ctx.cancel_timer(
                         NdpTimerId::new_link_address_resolution(device_id, src_ip).into(),
                     );
 
@@ -1536,8 +1558,9 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            lookup::<EthernetLinkDevice, _>(
+            lookup::<EthernetLinkDevice, _, _>(
                 &mut ctx,
+                &mut (),
                 dev_id.try_into().expect("expected ethernet ID"),
                 remote_ip()
             ),
@@ -1606,6 +1629,7 @@ mod tests {
 
         crate::ip::send_ipv6_packet_from_device(
             net.context("local"),
+            &mut (),
             SendIpPacketMeta {
                 device: device_id,
                 src_ip: Some(local_ip().into_specified()),
@@ -1714,7 +1738,10 @@ mod tests {
             .unwrap();
 
         let device_id = dev_id.try_into().unwrap();
-        assert_eq!(lookup::<EthernetLinkDevice, _>(&mut ctx, device_id, remote_ip()), None);
+        assert_eq!(
+            lookup::<EthernetLinkDevice, _, _>(&mut ctx, &mut (), device_id, remote_ip()),
+            None
+        );
 
         // This should have scheduled a timer
         let timer_id = NdpTimerId::new_link_address_resolution(device_id, remote_ip()).into();
@@ -1725,11 +1752,11 @@ mod tests {
             let EthernetDeviceId(id) = device_id;
             EthernetDeviceId(id + 1).into()
         };
-        deinitialize(&mut ctx, other_id);
+        deinitialize(&mut ctx, &mut (), other_id);
         ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
 
         // Deinitializing the correct ID should cancel the timer.
-        deinitialize(&mut ctx, dev_id.try_into().expect("expected ethernet ID"));
+        deinitialize(&mut ctx, &mut (), dev_id.try_into().expect("expected ethernet ID"));
         ctx.ctx.timer_ctx().assert_no_timers_installed();
     }
 
@@ -1783,10 +1810,10 @@ mod tests {
         assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 1);
 
         // Both devices should be in the solicited-node multicast group.
-        assert!(get_ipv6_device_state(net.context("local"), device_id)
+        assert!(get_ipv6_device_state(net.context("local"), &mut (), device_id)
             .multicast_groups
             .contains(&multicast_addr));
-        assert!(get_ipv6_device_state(net.context("remote"), device_id)
+        assert!(get_ipv6_device_state(net.context("remote"), &mut (), device_id)
             .multicast_groups
             .contains(&multicast_addr));
 
@@ -1794,14 +1821,14 @@ mod tests {
 
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
-        assert_empty(get_assigned_ipv6_addr_subnets(net.context("local"), device_id));
-        assert_empty(get_assigned_ipv6_addr_subnets(net.context("remote"), device_id));
+        assert_empty(get_assigned_ipv6_addr_subnets(net.context("local"), &mut (), device_id));
+        assert_empty(get_assigned_ipv6_addr_subnets(net.context("remote"), &mut (), device_id));
 
         // Both devices should not be in the multicast group
-        assert!(!get_ipv6_device_state(net.context("local"), device_id)
+        assert!(!get_ipv6_device_state(net.context("local"), &mut (), device_id)
             .multicast_groups
             .contains(&multicast_addr));
-        assert!(!get_ipv6_device_state(net.context("remote"), device_id)
+        assert!(!get_ipv6_device_state(net.context("remote"), &mut (), device_id)
             .multicast_groups
             .contains(&multicast_addr));
     }
@@ -1849,10 +1876,10 @@ mod tests {
         let multicast_addr = local_ip().to_solicited_node_address();
         add_ip_addr_subnet(net.context("local"), device_id, addr).unwrap();
         // Only local should be in the solicited node multicast group.
-        assert!(get_ipv6_device_state(net.context("local"), device_id)
+        assert!(get_ipv6_device_state(net.context("local"), &mut (), device_id)
             .multicast_groups
             .contains(&multicast_addr));
-        assert!(!get_ipv6_device_state(net.context("remote"), device_id)
+        assert!(!get_ipv6_device_state(net.context("remote"), &mut (), device_id)
             .multicast_groups
             .contains(&multicast_addr));
 
@@ -1872,16 +1899,19 @@ mod tests {
 
         add_ip_addr_subnet(net.context("remote"), device_id, addr).unwrap();
         // Local & remote should be in the multicast group.
-        assert!(get_ipv6_device_state(net.context("local"), device_id)
+        assert!(get_ipv6_device_state(net.context("local"), &mut (), device_id)
             .multicast_groups
             .contains(&multicast_addr));
-        assert!(get_ipv6_device_state(net.context("remote"), device_id)
+        assert!(get_ipv6_device_state(net.context("remote"), &mut (), device_id)
             .multicast_groups
             .contains(&multicast_addr));
 
         let _: StepResult = net.step(receive_frame_or_panic, crate::handle_timer);
 
-        assert_eq!(get_assigned_ipv6_addr_subnets(net.context("remote"), device_id).count(), 1);
+        assert_eq!(
+            get_assigned_ipv6_addr_subnets(net.context("remote"), &mut (), device_id).count(),
+            1
+        );
         // Let's make sure that our local node still can use that address.
         assert!(NdpContext::<EthernetLinkDevice>::get_ip_device_state(
             net.context("local"),
@@ -1893,10 +1923,10 @@ mod tests {
         .is_assigned());
 
         // Only local should be in the solicited node multicast group.
-        assert!(get_ipv6_device_state(net.context("local"), device_id)
+        assert!(get_ipv6_device_state(net.context("local"), &mut (), device_id)
             .multicast_groups
             .contains(&multicast_addr));
-        assert!(!get_ipv6_device_state(net.context("remote"), device_id)
+        assert!(!get_ipv6_device_state(net.context("remote"), &mut (), device_id)
             .multicast_groups
             .contains(&multicast_addr));
     }
@@ -2048,8 +2078,14 @@ mod tests {
 
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
-        assert_eq!(get_assigned_ipv6_addr_subnets(net.context("local"), device_id).count(), 1);
-        assert_eq!(get_assigned_ipv6_addr_subnets(net.context("remote"), device_id).count(), 1);
+        assert_eq!(
+            get_assigned_ipv6_addr_subnets(net.context("local"), &mut (), device_id).count(),
+            1
+        );
+        assert_eq!(
+            get_assigned_ipv6_addr_subnets(net.context("remote"), &mut (), device_id).count(),
+            1
+        );
     }
 
     #[test]
@@ -2069,7 +2105,7 @@ mod tests {
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
@@ -2088,12 +2124,12 @@ mod tests {
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
             .is_tentative());
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -2107,12 +2143,12 @@ mod tests {
             ctx.trigger_timers_for(Duration::from_secs(2), crate::handle_timer),
             [local_timer_id, remote_timer_id, local_timer_id, remote_timer_id]
         );
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
             .is_assigned());
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -2124,12 +2160,12 @@ mod tests {
             ctx.trigger_timers_for(Duration::from_secs(1), crate::handle_timer),
             [remote_timer_id]
         );
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
             .is_assigned());
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -2158,7 +2194,7 @@ mod tests {
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
@@ -2177,12 +2213,12 @@ mod tests {
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
             .is_tentative());
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -2196,12 +2232,12 @@ mod tests {
             ctx.trigger_timers_for(Duration::from_secs(1), crate::handle_timer),
             [local_timer_id, remote_timer_id]
         );
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
             .is_tentative());
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -2210,8 +2246,8 @@ mod tests {
 
         // Remove local ip
         del_ip_addr(&mut ctx, dev_id, &local_ip().into_specified()).unwrap();
-        assert_eq!(get_ipv6_device_state(&ctx, dev_id).find_addr(&local_ip()), None);
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert_eq!(get_ipv6_device_state(&ctx, &mut (), dev_id).find_addr(&local_ip()), None);
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -2223,8 +2259,8 @@ mod tests {
             ctx.trigger_timers_for(Duration::from_secs(2), crate::handle_timer),
             [remote_timer_id, remote_timer_id]
         );
-        assert_eq!(get_ipv6_device_state(&ctx, dev_id).find_addr(&local_ip()), None);
-        assert!(get_ipv6_device_state(&ctx, dev_id)
+        assert_eq!(get_ipv6_device_state(&ctx, &mut (), dev_id).find_addr(&local_ip()), None);
+        assert!(get_ipv6_device_state(&ctx, &mut (), dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -2361,9 +2397,10 @@ mod tests {
                 config.local_ip,
                 icmpv6_packet.unwrap_ndp(),
             );
-            assert_eq!(get_ipv6_hop_limit(ctx, device_id).get(), hop_limit);
+            assert_eq!(get_ipv6_hop_limit(ctx, &mut (), device_id).get(), hop_limit);
             crate::ip::send_ipv6_packet_from_device(
                 ctx,
+                &mut (),
                 SendIpPacketMeta {
                     device: device_id,
                     src_ip: Some(config.local_ip),
@@ -2508,7 +2545,7 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
-        assert_eq!(get_mtu::<Ipv6, _>(&ctx, device), hw_mtu);
+        assert_eq!(get_mtu::<Ipv6, _, _>(&ctx, &mut (), device), hw_mtu);
 
         // Receive a new RA with an invalid MTU option (value is lower than IPv6
         // min MTU).
@@ -2525,7 +2562,7 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
-        assert_eq!(get_mtu::<Ipv6, _>(&ctx, device), hw_mtu);
+        assert_eq!(get_mtu::<Ipv6, _, _>(&ctx, &mut (), device), hw_mtu);
 
         // Receive a new RA with a valid MTU option (value is exactly IPv6 min
         // MTU).
@@ -2542,7 +2579,7 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
-        assert_eq!(get_mtu::<Ipv6, _>(&ctx, device), Ipv6::MINIMUM_LINK_MTU.into());
+        assert_eq!(get_mtu::<Ipv6, _, _>(&ctx, &mut (), device), Ipv6::MINIMUM_LINK_MTU.into());
     }
 
     #[test]
@@ -2746,8 +2783,9 @@ mod tests {
         ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
 
         // Enable routing on device.
-        set_ipv6_routing_enabled(&mut ctx, device, true).expect("error setting routing enabled");
-        assert!(is_ipv6_routing_enabled(&ctx, device));
+        set_ipv6_routing_enabled(&mut ctx, &mut (), device, true)
+            .expect("error setting routing enabled");
+        assert!(is_ipv6_routing_enabled(&ctx, &mut (), device));
 
         // Should have not sent any new packets, but unset the router
         // solicitation timer.
@@ -2755,8 +2793,9 @@ mod tests {
         assert_empty(ctx.ctx.timer_ctx().timers().iter().filter(|x| x.1 == timer_id));
 
         // Unsetting routing should succeed.
-        set_ipv6_routing_enabled(&mut ctx, device, false).expect("error setting routing enabled");
-        assert!(!is_ipv6_routing_enabled(&ctx, device));
+        set_ipv6_routing_enabled(&mut ctx, &mut (), device, false)
+            .expect("error setting routing enabled");
+        assert!(!is_ipv6_routing_enabled(&ctx, &mut (), device));
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
 
@@ -3273,7 +3312,8 @@ mod tests {
         );
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::testutil::enable_device(&mut ctx, device);
-        set_ipv6_routing_enabled(&mut ctx, device, true).expect("error setting routing enabled");
+        set_ipv6_routing_enabled(&mut ctx, &mut (), device, true)
+            .expect("error setting routing enabled");
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
@@ -3408,7 +3448,7 @@ mod tests {
             idgen_retries,
         );
 
-        crate::ip::device::set_ipv6_configuration(&mut ctx, device, ipv6_config);
+        crate::ip::device::set_ipv6_configuration(&mut ctx, &mut (), device, ipv6_config);
         (ctx, device, ipv6_config.slaac_config)
     }
 
@@ -4617,7 +4657,7 @@ mod tests {
             );
             config
         };
-        crate::ip::device::set_ipv6_configuration(&mut ctx, device, ipv6_config);
+        crate::ip::device::set_ipv6_configuration(&mut ctx, &mut (), device, ipv6_config);
         // The new valid time is measured from the time at which the address was created (`start`),
         // not the current time (`now`). That means the max valid lifetime takes precedence over
         // the router's advertised valid lifetime.

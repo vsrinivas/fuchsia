@@ -361,10 +361,10 @@ pub fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(ctx: &mut Ctx<D, 
             ip::handle_timer(ctx, x);
         }
         TimerId(TimerIdInner::Ipv4Device(x)) => {
-            ip::device::handle_ipv4_timer(ctx, x);
+            ip::device::handle_ipv4_timer(ctx, &mut (), x);
         }
         TimerId(TimerIdInner::Ipv6Device(x)) => {
-            ip::device::handle_ipv6_timer(ctx, x);
+            ip::device::handle_ipv6_timer(ctx, &mut (), x);
         }
         #[cfg(test)]
         TimerId(TimerIdInner::Nop(_)) => {
@@ -491,9 +491,9 @@ pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher, C: BlanketCoreContext>(
     ctx: &'a Ctx<D, C>,
     device: DeviceId,
 ) -> impl 'a + Iterator<Item = AddrSubnetEither> {
-    let addr_v4 = crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, device)
+    let addr_v4 = crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, &mut (), device)
         .map(|a| AddrSubnetEither::V4(a));
-    let addr_v6 = crate::ip::device::get_assigned_ipv6_addr_subnets(ctx, device)
+    let addr_v6 = crate::ip::device::get_assigned_ipv6_addr_subnets(ctx, &mut (), device)
         .map(|a| AddrSubnetEither::V6(a));
 
     addr_v4.chain(addr_v6)
@@ -534,16 +534,16 @@ pub fn add_route<D: EventDispatcher, C: BlanketCoreContext>(
     match (device, gateway) {
         (Some(device), None) => map_addr_version!(
             subnet: SubnetEither;
-            crate::ip::add_device_route::<Ipv4, _>(ctx, subnet, device),
-            crate::ip::add_device_route::<Ipv6, _>(ctx, subnet, device)
+            crate::ip::add_device_route::<Ipv4, _, _>(ctx, &mut (), subnet, device),
+            crate::ip::add_device_route::<Ipv6, _, _>(ctx, &mut (), subnet, device)
         )
         .map_err(From::from),
         (None, Some(next_hop)) => {
             let next_hop = next_hop.into();
             map_addr_version!(
                 (subnet: SubnetEither, next_hop: IpAddr);
-                crate::ip::add_route::<Ipv4, _>(ctx, subnet, next_hop),
-                crate::ip::add_route::<Ipv6, _>(ctx, subnet, next_hop),
+                crate::ip::add_route::<Ipv4, _, _>(ctx, &mut (), subnet, next_hop),
+                crate::ip::add_route::<Ipv6, _, _>(ctx, &mut (), subnet, next_hop),
                 unreachable!()
             )
         }
@@ -559,8 +559,8 @@ pub fn del_route<D: EventDispatcher, C: BlanketCoreContext>(
 ) -> error::Result<()> {
     map_addr_version!(
         subnet: SubnetEither;
-        crate::ip::del_route::<Ipv4, _>(ctx, subnet),
-        crate::ip::del_route::<Ipv6, _>(ctx, subnet)
+        crate::ip::del_route::<Ipv4, _, _>(ctx, &mut (), subnet),
+        crate::ip::del_route::<Ipv6, _, _>(ctx, &mut (), subnet)
     )
     .map_err(From::from)
 }

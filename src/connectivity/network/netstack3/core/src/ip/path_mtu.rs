@@ -124,19 +124,20 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
     /// Updates the PMTU between `src_ip` and `dst_ip` if `new_mtu` is less than
     /// the current PMTU and does not violate the minimum MTU size requirements
     /// for an IP.
-    pub(crate) fn update_pmtu_if_less<C: PmtuContext<I, Instant = Instant>>(
+    pub(crate) fn update_pmtu_if_less<SC: PmtuContext<I, Instant = Instant>, C>(
         &mut self,
-        sync_ctx: &mut C,
+        sync_ctx: &mut SC,
+        ctx: &mut C,
         src_ip: I::Addr,
         dst_ip: I::Addr,
         new_mtu: u32,
     ) -> Result<Option<u32>, Option<u32>> {
         match self.get_pmtu(src_ip, dst_ip) {
             // No PMTU exists so update.
-            None => self.update_pmtu(sync_ctx, src_ip, dst_ip, new_mtu),
+            None => self.update_pmtu(sync_ctx, ctx, src_ip, dst_ip, new_mtu),
             // A PMTU exists but it is greater than `new_mtu` so update.
             Some(prev_mtu) if new_mtu < prev_mtu => {
-                self.update_pmtu(sync_ctx, src_ip, dst_ip, new_mtu)
+                self.update_pmtu(sync_ctx, ctx, src_ip, dst_ip, new_mtu)
             }
             // A PMTU exists but it is less than or equal to `new_mtu` so no need to
             // update.
@@ -154,9 +155,10 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
     /// exists that does not violate IP specific minimum MTU requirements and it
     /// is less than the current PMTU estimate, `a`). Returns `Err(a)`
     /// otherwise, where `a` is the same `a` as in the success case.
-    pub(crate) fn update_pmtu_next_lower<C: PmtuContext<I, Instant = Instant>>(
+    pub(crate) fn update_pmtu_next_lower<SC: PmtuContext<I, Instant = Instant>, C>(
         &mut self,
-        sync_ctx: &mut C,
+        sync_ctx: &mut SC,
+        ctx: &mut C,
         src_ip: I::Addr,
         dst_ip: I::Addr,
         from: u32,
@@ -169,7 +171,7 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
                 next_pmtu
             );
 
-            self.update_pmtu_if_less(sync_ctx, src_ip, dst_ip, next_pmtu)
+            self.update_pmtu_if_less(sync_ctx, ctx, src_ip, dst_ip, next_pmtu)
         } else {
             // TODO(ghanan): Should we make sure the current PMTU value is set
             //               to the IP specific minimum MTU value?
@@ -190,9 +192,10 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
     /// If there is no PMTU maintenance task scheduled yet, `update_pmtu` will
     /// schedule one to happen after a duration of `SCHEDULE_TIMEOUT` from the
     /// current time instant known by `dispatcher`.
-    fn update_pmtu<C: PmtuContext<I, Instant = Instant>>(
+    fn update_pmtu<SC: PmtuContext<I, Instant = Instant>, C>(
         &mut self,
-        sync_ctx: &mut C,
+        sync_ctx: &mut SC,
+        _ctx: &mut C,
         src_ip: I::Addr,
         dst_ip: I::Addr,
         new_mtu: u32,
@@ -225,9 +228,10 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
         ret
     }
 
-    pub(crate) fn handle_timer<C: PmtuContext<I, Instant = Instant>>(
+    pub(crate) fn handle_timer<SC: PmtuContext<I, Instant = Instant>, C>(
         &mut self,
-        sync_ctx: &mut C,
+        sync_ctx: &mut SC,
+        _ctx: &mut C,
         _timer: PmtuTimerId<I>,
     ) {
         // Make sure we expected this timer to fire.
@@ -408,7 +412,7 @@ mod tests {
     fn get_timer_handler<I: Ip, Instant: crate::Instant, C: PmtuContext<I, Instant = Instant>>(
         cache: &mut PmtuCache<I, Instant>,
     ) -> impl FnMut(&mut C, PmtuTimerId<I>) + '_ {
-        move |ctx, id| cache.handle_timer(ctx, id)
+        move |ctx, id| cache.handle_timer(ctx, &mut (), id)
     }
 
     #[test]
@@ -454,6 +458,7 @@ mod tests {
             cache
                 .update_pmtu(
                     &mut ctx,
+                    &mut (),
                     dummy_config.local_ip.get(),
                     dummy_config.remote_ip.get(),
                     new_mtu1
@@ -491,6 +496,7 @@ mod tests {
             cache
                 .update_pmtu(
                     &mut ctx,
+                    &mut (),
                     dummy_config.local_ip.get(),
                     dummy_config.remote_ip.get(),
                     new_mtu2
@@ -529,6 +535,7 @@ mod tests {
             cache
                 .update_pmtu_if_less(
                     &mut ctx,
+                    &mut (),
                     dummy_config.local_ip.get(),
                     dummy_config.remote_ip.get(),
                     new_mtu3
@@ -566,6 +573,7 @@ mod tests {
             cache
                 .update_pmtu_if_less(
                     &mut ctx,
+                    &mut (),
                     dummy_config.local_ip.get(),
                     dummy_config.remote_ip.get(),
                     new_mtu4
@@ -601,6 +609,7 @@ mod tests {
             cache
                 .update_pmtu_if_less(
                     &mut ctx,
+                    &mut (),
                     dummy_config.local_ip.get(),
                     dummy_config.remote_ip.get(),
                     low_mtu
@@ -650,6 +659,7 @@ mod tests {
             cache
                 .update_pmtu(
                     &mut ctx,
+                    &mut (),
                     dummy_config.local_ip.get(),
                     dummy_config.remote_ip.get(),
                     new_mtu1
@@ -691,7 +701,13 @@ mod tests {
         let new_mtu2 = u32::from(I::MINIMUM_LINK_MTU) + 100;
         assert_eq!(
             cache
-                .update_pmtu(&mut ctx, dummy_config.local_ip.get(), other_ip.get(), new_mtu2)
+                .update_pmtu(
+                    &mut ctx,
+                    &mut (),
+                    dummy_config.local_ip.get(),
+                    other_ip.get(),
+                    new_mtu2
+                )
                 .unwrap(),
             None
         );

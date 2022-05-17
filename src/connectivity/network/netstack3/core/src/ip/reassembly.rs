@@ -329,9 +329,10 @@ impl<I: Ip> IpPacketFragmentCache<I> {
     /// # Panics
     ///
     /// Panics if the packet has no fragment data.
-    pub(crate) fn process_fragment<C: FragmentContext<I>, B: ByteSlice>(
+    pub(crate) fn process_fragment<SC: FragmentContext<I>, C, B: ByteSlice>(
         &mut self,
-        sync_ctx: &mut C,
+        sync_ctx: &mut SC,
+        ctx: &mut C,
         packet: <I as IpExtByteSlice<B>>::Packet,
     ) -> FragmentProcessingState<B, I>
     where
@@ -371,7 +372,7 @@ impl<I: Ip> IpPacketFragmentCache<I> {
         let key = FragmentCacheKey::new(packet.src_ip(), packet.dst_ip(), id);
 
         // Get (or create) the fragment cache data.
-        let fragment_data = self.get_or_create(sync_ctx, key);
+        let fragment_data = self.get_or_create(sync_ctx, ctx, key);
 
         // The number of fragment blocks `packet` contains.
         //
@@ -579,12 +580,14 @@ impl<I: Ip> IpPacketFragmentCache<I> {
     /// processing a packet with a given `key` as `reassemble_packet` will fail
     /// to cancel the reassembly timer.
     pub(crate) fn reassemble_packet<
-        C: FragmentContext<I>,
+        SC: FragmentContext<I>,
+        C,
         B: ByteSliceMut,
         BV: BufferViewMut<B>,
     >(
         &mut self,
-        sync_ctx: &mut C,
+        sync_ctx: &mut SC,
+        _ctx: &mut C,
         key: &FragmentCacheKey<I::Addr>,
         buffer: BV,
     ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
@@ -631,9 +634,10 @@ impl<I: Ip> IpPacketFragmentCache<I> {
     /// Gets or creates a new entry in the cache for a given `key`.
     ///
     /// When a new entry is created, a re-assembly timer is scheduled.
-    fn get_or_create<C: FragmentContext<I>>(
+    fn get_or_create<SC: FragmentContext<I>, C>(
         &mut self,
-        sync_ctx: &mut C,
+        sync_ctx: &mut SC,
+        _ctx: &mut C,
         key: FragmentCacheKey<I::Addr>,
     ) -> &mut FragmentCacheData {
         self.cache.entry(key).or_insert_with(|| {
@@ -840,9 +844,10 @@ mod tests {
     /// be called when `process_ip_fragment` is specialized for `Ipv4` and
     /// `Ipv6`, respectively.
     #[specialize_ip]
-    fn process_ip_fragment<I: Ip, C: FragmentContext<I>>(
+    fn process_ip_fragment<I: Ip, SC: FragmentContext<I>, C>(
         cache: &mut IpPacketFragmentCache<I>,
-        sync_ctx: &mut C,
+        sync_ctx: &mut SC,
+        ctx: &mut C,
         fragment_id: u16,
         fragment_offset: u16,
         m_flag: bool,
@@ -852,6 +857,7 @@ mod tests {
         process_ipv4_fragment(
             cache,
             sync_ctx,
+            ctx,
             fragment_id,
             fragment_offset,
             m_flag,
@@ -862,6 +868,7 @@ mod tests {
         process_ipv6_fragment(
             cache,
             sync_ctx,
+            ctx,
             fragment_id,
             fragment_offset,
             m_flag,
@@ -872,9 +879,10 @@ mod tests {
     /// Generates and processes an IPv4 fragment packet.
     ///
     /// The generated packet will have body of size `FRAGMENT_BLOCK_SIZE` bytes.
-    fn process_ipv4_fragment<C: FragmentContext<Ipv4>>(
+    fn process_ipv4_fragment<SC: FragmentContext<Ipv4>, C>(
         cache: &mut IpPacketFragmentCache<Ipv4>,
-        sync_ctx: &mut C,
+        sync_ctx: &mut SC,
+        ctx: &mut C,
         fragment_id: u16,
         fragment_offset: u16,
         m_flag: bool,
@@ -893,7 +901,7 @@ mod tests {
         match expected_result {
             ExpectedResult::Ready { total_body_len } => {
                 let _: (FragmentCacheKey<_>, usize) = assert_frag_proc_state_ready!(
-                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet),
+                    cache.process_fragment::<_, _, &[u8]>(sync_ctx, ctx, packet),
                     DUMMY_CONFIG_V4.remote_ip.get(),
                     DUMMY_CONFIG_V4.local_ip.get(),
                     fragment_id,
@@ -902,16 +910,18 @@ mod tests {
             }
             ExpectedResult::NeedMore => {
                 assert_frag_proc_state_need_more!(
-                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet)
+                    cache.process_fragment::<_, _, &[u8]>(sync_ctx, ctx, packet)
                 );
             }
             ExpectedResult::Invalid => {
                 assert_frag_proc_state_invalid!(
-                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet)
+                    cache.process_fragment::<_, _, &[u8]>(sync_ctx, ctx, packet)
                 );
             }
             ExpectedResult::OutOfMemory => {
-                assert_frag_proc_state_oom!(cache.process_fragment::<_, &[u8]>(sync_ctx, packet));
+                assert_frag_proc_state_oom!(
+                    cache.process_fragment::<_, _, &[u8]>(sync_ctx, ctx, packet)
+                );
             }
         }
     }
@@ -919,9 +929,10 @@ mod tests {
     /// Generates and processes an IPv6 fragment packet.
     ///
     /// The generated packet will have body of size `FRAGMENT_BLOCK_SIZE` bytes.
-    fn process_ipv6_fragment<C: FragmentContext<Ipv6>>(
+    fn process_ipv6_fragment<SC: FragmentContext<Ipv6>, C>(
         cache: &mut IpPacketFragmentCache<Ipv6>,
-        sync_ctx: &mut C,
+        sync_ctx: &mut SC,
+        ctx: &mut C,
         fragment_id: u16,
         fragment_offset: u16,
         m_flag: bool,
@@ -949,7 +960,7 @@ mod tests {
         match expected_result {
             ExpectedResult::Ready { total_body_len } => {
                 let _: (FragmentCacheKey<_>, usize) = assert_frag_proc_state_ready!(
-                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet),
+                    cache.process_fragment::<_, _, &[u8]>(sync_ctx, ctx, packet),
                     DUMMY_CONFIG_V6.remote_ip.get(),
                     DUMMY_CONFIG_V6.local_ip.get(),
                     fragment_id,
@@ -958,16 +969,18 @@ mod tests {
             }
             ExpectedResult::NeedMore => {
                 assert_frag_proc_state_need_more!(
-                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet)
+                    cache.process_fragment::<_, _, &[u8]>(sync_ctx, ctx, packet)
                 );
             }
             ExpectedResult::Invalid => {
                 assert_frag_proc_state_invalid!(
-                    cache.process_fragment::<_, &[u8]>(sync_ctx, packet)
+                    cache.process_fragment::<_, _, &[u8]>(sync_ctx, ctx, packet)
                 );
             }
             ExpectedResult::OutOfMemory => {
-                assert_frag_proc_state_oom!(cache.process_fragment::<_, &[u8]>(sync_ctx, packet));
+                assert_frag_proc_state_oom!(
+                    cache.process_fragment::<_, _, &[u8]>(sync_ctx, ctx, packet)
+                );
             }
         }
     }
@@ -983,9 +996,10 @@ mod tests {
     }
 
     /// Tries to reassemble the packet with the given fragment ID.
-    fn try_reassemble_ip_packet<I: TestIpExt, C: FragmentContext<I>>(
+    fn try_reassemble_ip_packet<I: TestIpExt, SC: FragmentContext<I>, C>(
         cache: &mut IpPacketFragmentCache<I>,
-        sync_ctx: &mut C,
+        sync_ctx: &mut SC,
+        ctx: &mut C,
         fragment_id: u16,
         total_body_len: usize,
     ) {
@@ -996,7 +1010,7 @@ mod tests {
             I::DUMMY_CONFIG.local_ip.get(),
             fragment_id.into(),
         );
-        let packet = cache.reassemble_packet(sync_ctx, &key, &mut buffer).unwrap();
+        let packet = cache.reassemble_packet(sync_ctx, ctx, &key, &mut buffer).unwrap();
         let expected_body = generate_body_fragment(fragment_id, 0, total_body_len);
         assert_eq!(packet.body(), &expected_body[..]);
     }
@@ -1043,7 +1057,7 @@ mod tests {
             Buf::new(body.to_vec(), ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         assert_matches::assert_matches!(
-            cache.process_fragment::<_, &[u8]>(&mut ctx, packet),
+            cache.process_fragment::<_, _, &[u8]>(&mut ctx, &mut (), packet),
             FragmentProcessingState::NotNeeded(unfragmented) if unfragmented.body() == body
         );
     }
@@ -1064,7 +1078,7 @@ mod tests {
             Buf::new(vec![1, 2, 3, 4, 5], ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv6Packet<_>>().unwrap();
         assert_matches::assert_matches!(
-            cache.process_fragment::<_, &[u8]>(&mut ctx, packet),
+            cache.process_fragment::<_, _, &[u8]>(&mut ctx, &mut (), packet),
             FragmentProcessingState::InvalidFragment
         );
     }
@@ -1078,22 +1092,39 @@ mod tests {
         // Test that we properly reassemble fragmented packets.
 
         // Process fragment #0
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #1
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id, 1, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id,
+            1,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #2
         process_ip_fragment(
             &mut cache,
             &mut ctx,
+            &mut (),
             fragment_id,
             2,
             false,
             ExpectedResult::Ready { total_body_len: 24 },
         );
 
-        try_reassemble_ip_packet(&mut cache, &mut ctx, fragment_id, 24);
+        try_reassemble_ip_packet(&mut cache, &mut ctx, &mut (), fragment_id, 24);
     }
 
     #[ip_test]
@@ -1107,10 +1138,26 @@ mod tests {
         // fragments.
 
         // Process fragment #0
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #2
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id, 1, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id,
+            1,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         let mut buffer: Vec<u8> = vec![0; 1];
         let mut buffer = &mut buffer[..];
@@ -1120,7 +1167,9 @@ mod tests {
             fragment_id as u32,
         );
         assert_eq!(
-            cache.reassemble_packet::<_, &mut [u8], _>(&mut ctx, &key, &mut buffer).unwrap_err(),
+            cache
+                .reassemble_packet::<_, _, &mut [u8], _>(&mut ctx, &mut (), &key, &mut buffer)
+                .unwrap_err(),
             FragmentReassemblyError::MissingFragments,
         );
     }
@@ -1140,13 +1189,29 @@ mod tests {
         // Test that we properly reset fragment cache on timer.
 
         // Process fragment #0
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
         // Make sure a timer got added.
         ctx.assert_timers_installed([(key, DummyInstant::from(REASSEMBLY_TIMEOUT))]);
         validate_size(&cache);
 
         // Process fragment #1
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id, 1, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id,
+            1,
+            true,
+            ExpectedResult::NeedMore,
+        );
         // Make sure no new timers got added or fired.
         ctx.assert_timers_installed([(key, DummyInstant::from(REASSEMBLY_TIMEOUT))]);
         validate_size(&cache);
@@ -1155,6 +1220,7 @@ mod tests {
         process_ip_fragment(
             &mut cache,
             &mut ctx,
+            &mut (),
             fragment_id,
             2,
             false,
@@ -1182,7 +1248,9 @@ mod tests {
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
         assert_eq!(
-            cache.reassemble_packet::<_, &mut [u8], _>(&mut ctx, &key, &mut buffer).unwrap_err(),
+            cache
+                .reassemble_packet::<_, _, &mut [u8], _>(&mut ctx, &mut (), &key, &mut buffer)
+                .unwrap_err(),
             FragmentReassemblyError::InvalidKey,
         );
     }
@@ -1204,6 +1272,7 @@ mod tests {
             process_ip_fragment(
                 &mut cache,
                 &mut ctx,
+                &mut (),
                 fragment_id,
                 0,
                 true,
@@ -1217,6 +1286,7 @@ mod tests {
         process_ip_fragment(
             &mut cache,
             &mut ctx,
+            &mut (),
             fragment_id,
             0,
             true,
@@ -1236,7 +1306,15 @@ mod tests {
         validate_size(&cache);
 
         // Can process fragments again.
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
     }
 
     #[ip_test]
@@ -1248,10 +1326,26 @@ mod tests {
         // Test that we error on overlapping/duplicate fragments.
 
         // Process fragment #0
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #0 (overlaps original fragment #0 completely)
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id, 0, true, ExpectedResult::Invalid);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::Invalid,
+        );
     }
 
     #[test]
@@ -1265,7 +1359,15 @@ mod tests {
         // `FRAGMENT_BLOCK_SIZE`, except for the last fragment.
 
         // Process fragment #0
-        process_ipv4_fragment(&mut cache, &mut ctx, fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ipv4_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #1 (body size is not a multiple of
         // `FRAGMENT_BLOCK_SIZE` and more flag is `true`).
@@ -1279,7 +1381,11 @@ mod tests {
         body.extend(FRAGMENT_BLOCK_SIZE..FRAGMENT_BLOCK_SIZE * 2 - 1);
         let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
-        assert_frag_proc_state_invalid!(cache.process_fragment::<_, &[u8]>(&mut ctx, packet));
+        assert_frag_proc_state_invalid!(cache.process_fragment::<_, _, &[u8]>(
+            &mut ctx,
+            &mut (),
+            packet
+        ));
 
         // Process fragment #1 (body size is not a multiple of
         // `FRAGMENT_BLOCK_SIZE` but more flag is `false`). The last fragment is
@@ -1295,7 +1401,7 @@ mod tests {
         let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(
-            cache.process_fragment::<_, &[u8]>(&mut ctx, packet),
+            cache.process_fragment::<_, _, &[u8]>(&mut ctx, &mut (), packet),
             DUMMY_CONFIG_V4.remote_ip.get(),
             DUMMY_CONFIG_V4.local_ip.get(),
             fragment_id,
@@ -1304,8 +1410,9 @@ mod tests {
         validate_size(&cache);
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
-        let packet =
-            cache.reassemble_packet::<_, &mut [u8], _>(&mut ctx, &key, &mut buffer).unwrap();
+        let packet = cache
+            .reassemble_packet::<_, _, &mut [u8], _>(&mut ctx, &mut (), &key, &mut buffer)
+            .unwrap();
         let mut expected_body: Vec<u8> = Vec::new();
         expected_body.extend(0..15);
         assert_eq!(packet.body(), &expected_body[..]);
@@ -1323,7 +1430,15 @@ mod tests {
         // `FRAGMENT_BLOCK_SIZE`, except for the last fragment.
 
         // Process fragment #0
-        process_ipv6_fragment(&mut cache, &mut ctx, fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ipv6_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #1 (body size is not a multiple of
         // `FRAGMENT_BLOCK_SIZE` and more flag is `true`).
@@ -1342,7 +1457,11 @@ mod tests {
         bytes[4..6].copy_from_slice(&payload_len.to_be_bytes());
         let mut buf = Buf::new(bytes, ..);
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
-        assert_frag_proc_state_invalid!(cache.process_fragment::<_, &[u8]>(&mut ctx, packet));
+        assert_frag_proc_state_invalid!(cache.process_fragment::<_, _, &[u8]>(
+            &mut ctx,
+            &mut (),
+            packet
+        ));
 
         // Process fragment #1 (body size is not a multiple of
         // `FRAGMENT_BLOCK_SIZE` but more flag is `false`). The last fragment is
@@ -1363,7 +1482,7 @@ mod tests {
         let mut buf = Buf::new(bytes, ..);
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(
-            cache.process_fragment::<_, &[u8]>(&mut ctx, packet),
+            cache.process_fragment::<_, _, &[u8]>(&mut ctx, &mut (), packet),
             DUMMY_CONFIG_V6.remote_ip.get(),
             DUMMY_CONFIG_V6.local_ip.get(),
             fragment_id,
@@ -1372,8 +1491,9 @@ mod tests {
         validate_size(&cache);
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
-        let packet =
-            cache.reassemble_packet::<_, &mut [u8], _>(&mut ctx, &key, &mut buffer).unwrap();
+        let packet = cache
+            .reassemble_packet::<_, _, &mut [u8], _>(&mut ctx, &mut (), &key, &mut buffer)
+            .unwrap();
         let mut expected_body: Vec<u8> = Vec::new();
         expected_body.extend(0..15);
         assert_eq!(packet.body(), &expected_body[..]);
@@ -1391,40 +1511,74 @@ mod tests {
         // intertwined with other packets' fragments.
 
         // Process fragment #0 for packet #0
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id_0, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id_0,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #0 for packet #1
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id_1, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id_1,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #1 for packet #0
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id_0, 1, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id_0,
+            1,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #1 for packet #0
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id_1, 1, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id_1,
+            1,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #2 for packet #0
         process_ip_fragment(
             &mut cache,
             &mut ctx,
+            &mut (),
             fragment_id_0,
             2,
             false,
             ExpectedResult::Ready { total_body_len: 24 },
         );
 
-        try_reassemble_ip_packet(&mut cache, &mut ctx, fragment_id_0, 24);
+        try_reassemble_ip_packet(&mut cache, &mut ctx, &mut (), fragment_id_0, 24);
 
         // Process fragment #2 for packet #1
         process_ip_fragment(
             &mut cache,
             &mut ctx,
+            &mut (),
             fragment_id_1,
             2,
             false,
             ExpectedResult::Ready { total_body_len: 24 },
         );
 
-        try_reassemble_ip_packet(&mut cache, &mut ctx, fragment_id_1, 24);
+        try_reassemble_ip_packet(&mut cache, &mut ctx, &mut (), fragment_id_1, 24);
     }
 
     #[ip_test]
@@ -1460,12 +1614,21 @@ mod tests {
         //       already triggered so fragment not complete).
 
         // Process fragment #0 for packet #0
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id_0, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id_0,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #1 for packet #1
         process_ip_fragment(
             &mut cache,
             &mut ctx,
+            &mut (),
             fragment_id_1,
             2,
             false,
@@ -1476,6 +1639,7 @@ mod tests {
         process_ip_fragment(
             &mut cache,
             &mut ctx,
+            &mut (),
             fragment_id_2,
             2,
             false,
@@ -1491,6 +1655,7 @@ mod tests {
         process_ip_fragment(
             &mut cache,
             &mut ctx,
+            &mut (),
             fragment_id_0,
             2,
             false,
@@ -1503,19 +1668,28 @@ mod tests {
         );
 
         // Process fragment #1 for packet #2
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id_2, 1, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id_2,
+            1,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #1 for packet #0
         process_ip_fragment(
             &mut cache,
             &mut ctx,
+            &mut (),
             fragment_id_0,
             1,
             true,
             ExpectedResult::Ready { total_body_len: 24 },
         );
 
-        try_reassemble_ip_packet(&mut cache, &mut ctx, fragment_id_0, 24);
+        try_reassemble_ip_packet(&mut cache, &mut ctx, &mut (), fragment_id_0, 24);
 
         // Advance time by 10s (should be at 50s now).
         assert_empty(
@@ -1523,19 +1697,28 @@ mod tests {
         );
 
         // Process fragment #0 for packet #1
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id_1, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id_1,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #0 for packet #2
         process_ip_fragment(
             &mut cache,
             &mut ctx,
+            &mut (),
             fragment_id_2,
             0,
             true,
             ExpectedResult::Ready { total_body_len: 24 },
         );
 
-        try_reassemble_ip_packet(&mut cache, &mut ctx, fragment_id_2, 24);
+        try_reassemble_ip_packet(&mut cache, &mut ctx, &mut (), fragment_id_2, 24);
 
         // Advance time by 10s (should be at 60s now)), triggering the timer for
         // the reassembly of packet #1
@@ -1551,15 +1734,31 @@ mod tests {
         // Process fragment #2 for packet #1 Should get a need more return value
         // since even though we technically received all the fragments, the last
         // fragment didn't arrive until after the reassembly timer.
-        process_ip_fragment(&mut cache, &mut ctx, fragment_id_1, 2, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            fragment_id_1,
+            2,
+            true,
+            ExpectedResult::NeedMore,
+        );
     }
 
     #[test]
     fn test_no_more_fragments_in_middle_of_block() {
         let mut ctx = DummyCtx::<Ipv4>::default();
         let mut cache = IpPacketFragmentCache::<Ipv4>::default();
-        process_ipv4_fragment(&mut cache, &mut ctx, 0, 100, false, ExpectedResult::NeedMore);
+        process_ipv4_fragment(
+            &mut cache,
+            &mut ctx,
+            &mut (),
+            0,
+            100,
+            false,
+            ExpectedResult::NeedMore,
+        );
 
-        process_ipv4_fragment(&mut cache, &mut ctx, 0, 50, false, ExpectedResult::Invalid);
+        process_ipv4_fragment(&mut cache, &mut ctx, &mut (), 0, 50, false, ExpectedResult::Invalid);
     }
 }

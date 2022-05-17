@@ -136,12 +136,16 @@ impl<C: RsContext> RsHandler for C {
     }
 
     fn handle_timer(&mut self, RsTimerId { device_id }: RsTimerId<C::DeviceId>) {
-        do_router_solicitation(self, device_id)
+        do_router_solicitation(self, &mut (), device_id)
     }
 }
 
 /// Solicit routers once and schedule next message.
-fn do_router_solicitation<C: RsContext>(sync_ctx: &mut C, device_id: C::DeviceId) {
+fn do_router_solicitation<SC: RsContext, C>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device_id: SC::DeviceId,
+) {
     let src_ll = sync_ctx.get_link_layer_addr_bytes(device_id).map(|a| a.to_vec());
 
     // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error

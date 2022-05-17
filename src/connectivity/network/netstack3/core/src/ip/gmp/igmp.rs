@@ -107,11 +107,11 @@ pub(crate) trait IgmpContext:
 
 impl<C: IgmpContext> GmpHandler<Ipv4> for C {
     fn gmp_handle_maybe_enabled(&mut self, device: Self::DeviceId) {
-        gmp_handle_maybe_enabled(self, device)
+        gmp_handle_maybe_enabled(self, &mut (), device)
     }
 
     fn gmp_handle_disabled(&mut self, device: Self::DeviceId) {
-        gmp_handle_disabled(self, device)
+        gmp_handle_disabled(self, &mut (), device)
     }
 
     fn gmp_join_group(
@@ -119,7 +119,7 @@ impl<C: IgmpContext> GmpHandler<Ipv4> for C {
         device: C::DeviceId,
         group_addr: MulticastAddr<Ipv4Addr>,
     ) -> GroupJoinResult {
-        gmp_join_group(self, device, group_addr)
+        gmp_join_group(self, &mut (), device, group_addr)
     }
 
     fn gmp_leave_group(
@@ -127,7 +127,7 @@ impl<C: IgmpContext> GmpHandler<Ipv4> for C {
         device: C::DeviceId,
         group_addr: MulticastAddr<Ipv4Addr>,
     ) -> GroupLeaveResult {
-        gmp_leave_group(self, device, group_addr)
+        gmp_leave_group(self, &mut (), device, group_addr)
     }
 }
 
@@ -180,13 +180,13 @@ impl<C: IgmpContext, B: BufferMut> IgmpPacketHandler<C::DeviceId, B> for C {
             IgmpPacket::MembershipReportV1(msg) => {
                 let addr = msg.group_addr();
                 MulticastAddr::new(addr).map_or(Err(IgmpError::NotAMember { addr }), |group_addr| {
-                    handle_report_message(self, device, group_addr)
+                    handle_report_message(self, &mut (), device, group_addr)
                 })
             }
             IgmpPacket::MembershipReportV2(msg) => {
                 let addr = msg.group_addr();
                 MulticastAddr::new(addr).map_or(Err(IgmpError::NotAMember { addr }), |group_addr| {
-                    handle_report_message(self, device, group_addr)
+                    handle_report_message(self, &mut (), device, group_addr)
                 })
             }
             IgmpPacket::LeaveGroup(_) => {
@@ -228,16 +228,18 @@ impl<C: IgmpContext> GmpContext<Ipv4, Igmpv2ProtocolSpecific> for C {
         let result = match msg_type {
             GmpMessageType::Report(Igmpv2ProtocolSpecific { v1_router_present }) => {
                 if v1_router_present {
-                    send_igmp_message::<_, IgmpMembershipReportV1>(
+                    send_igmp_message::<_, _, IgmpMembershipReportV1>(
                         self,
+                        &mut (),
                         device,
                         group_addr,
                         group_addr,
                         (),
                     )
                 } else {
-                    send_igmp_message::<_, IgmpMembershipReportV2>(
+                    send_igmp_message::<_, _, IgmpMembershipReportV2>(
                         self,
+                        &mut (),
                         device,
                         group_addr,
                         group_addr,
@@ -245,8 +247,9 @@ impl<C: IgmpContext> GmpContext<Ipv4, Igmpv2ProtocolSpecific> for C {
                     )
                 }
             }
-            GmpMessageType::Leave => send_igmp_message::<_, IgmpLeaveGroup>(
+            GmpMessageType::Leave => send_igmp_message::<_, _, IgmpLeaveGroup>(
                 self,
+                &mut (),
                 device,
                 group_addr,
                 Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS,
@@ -334,7 +337,7 @@ impl<DeviceId> IgmpTimerId<DeviceId> {
 impl<C: IgmpContext> TimerHandler<IgmpTimerId<C::DeviceId>> for C {
     fn handle_timer(&mut self, timer: IgmpTimerId<C::DeviceId>) {
         match timer {
-            IgmpTimerId::Gmp(id) => gmp_handle_timer(self, id),
+            IgmpTimerId::Gmp(id) => gmp_handle_timer(self, &mut (), id),
             IgmpTimerId::V1RouterPresent { device } => {
                 for (_, IgmpGroupState(state)) in self.get_state_mut(device).iter_mut() {
                     state.v1_router_present_timer_expired();
@@ -344,9 +347,10 @@ impl<C: IgmpContext> TimerHandler<IgmpTimerId<C::DeviceId>> for C {
     }
 }
 
-fn send_igmp_message<C: IgmpContext, M>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
+fn send_igmp_message<SC: IgmpContext, C, M>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device: SC::DeviceId,
     group_addr: MulticastAddr<Ipv4Addr>,
     dst_ip: MulticastAddr<Ipv4Addr>,
     max_resp_time: M::MaxRespTime,
@@ -1216,6 +1220,7 @@ mod tests {
             ctx.state.device.add_ethernet_device(local_mac, Ipv4::MINIMUM_LINK_MTU.into());
         crate::ip::device::add_ipv4_addr_subnet(
             &mut ctx,
+            &mut (),
             device_id,
             AddrSubnet::new(MY_ADDR.get(), 24).unwrap(),
         )
@@ -1238,7 +1243,7 @@ mod tests {
 
         let set_config = |ctx: &mut crate::testutil::DummyCtx,
                           TestConfig { ip_enabled, gmp_enabled }| {
-            crate::ip::device::set_ipv4_configuration(ctx, device_id, {
+            crate::ip::device::set_ipv4_configuration(ctx, &mut (), device_id, {
                 let mut config = crate::ip::device::get_ipv4_configuration(ctx, device_id);
                 config.ip_config.ip_enabled = ip_enabled;
                 config.ip_config.gmp_enabled = gmp_enabled;

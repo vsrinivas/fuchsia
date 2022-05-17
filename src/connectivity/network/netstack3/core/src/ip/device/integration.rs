@@ -132,6 +132,7 @@ impl<C: device::Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler> SlaacStateCon
     ) -> Result<(), ExistsError> {
         add_ipv6_addr_subnet(
             self,
+            &mut (),
             device_id,
             addr_sub.to_witness(),
             AddrConfig::Slaac(slaac_config),
@@ -140,7 +141,7 @@ impl<C: device::Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler> SlaacStateCon
 
     fn remove_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>) {
         let _: Ipv6AddressEntry<_> =
-            del_ipv6_addr_core(self, device_id, &addr.into_specified()).unwrap();
+            del_ipv6_addr_core(self, &mut (), device_id, &addr.into_specified()).unwrap();
     }
 }
 
@@ -155,7 +156,7 @@ impl<C: device::IpDeviceContext<Ipv6>> Ipv6RouteDiscoveryStateContext for C {
 
 impl<C: device::BufferIpDeviceContext<Ipv4, EmptyBuf>> IgmpContext for C {
     fn get_ip_addr_subnet(&self, device: C::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
-        get_ipv4_addr_subnet(self, device)
+        get_ipv4_addr_subnet(self, &mut (), device)
     }
 
     fn igmp_enabled(&self, device: C::DeviceId) -> bool {
@@ -202,7 +203,7 @@ impl<C: device::BufferIpDeviceContext<Ipv6, EmptyBuf>> MldContext for C {
         &self,
         device: C::DeviceId,
     ) -> Option<LinkLocalUnicastAddr<Ipv6Addr>> {
-        get_ipv6_device_state(self, device).iter_addrs().find_map(|a| {
+        get_ipv6_device_state(self, &mut (), device).iter_addrs().find_map(|a| {
             if a.state.is_assigned() {
                 LinkLocalUnicastAddr::new(a.addr_sub().addr())
             } else {
@@ -263,12 +264,14 @@ impl<C: device::Ipv6DeviceContext> Ipv6DeviceDadContext for C {
 }
 
 fn send_ndp_packet<
-    C: ip::BufferIpDeviceContext<Ipv6, EmptyBuf>,
+    SC: ip::BufferIpDeviceContext<Ipv6, EmptyBuf>,
+    C,
     S: Serializer<Buffer = EmptyBuf>,
     M: IcmpMessage<Ipv6, &'static [u8]>,
 >(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
     src_ip: Ipv6Addr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
     body: S,
@@ -278,6 +281,7 @@ fn send_ndp_packet<
     // TODO(https://fxbug.dev/95359): Send through ICMPv6 send path.
     send_ipv6_packet_from_device(
         sync_ctx,
+        ctx,
         SendIpPacketMeta {
             device: device_id,
             src_ip: SpecifiedAddr::new(src_ip),
@@ -307,6 +311,7 @@ impl<C: ip::BufferIpDeviceContext<Ipv6, EmptyBuf>> Ipv6LayerDadContext for C {
     ) -> Result<(), S> {
         send_ndp_packet(
             self,
+            &mut (),
             device_id,
             Ipv6::UNSPECIFIED_ADDRESS,
             dst_ip.into_specified(),
@@ -346,11 +351,14 @@ impl<C: ip::BufferIpDeviceContext<Ipv6, EmptyBuf> + device::Ipv6DeviceContext> I
         let dst_ip = Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.into_specified();
         send_ndp_packet(
             self,
+            &mut (),
             device_id,
             crate::ip::socket::ipv6_source_address_selection::select_ipv6_source_address(
                 dst_ip,
                 device_id,
-                get_ipv6_device_state(self, device_id).iter_addrs().map(move |a| (a, device_id)),
+                get_ipv6_device_state(self, &mut (), device_id)
+                    .iter_addrs()
+                    .map(move |a| (a, device_id)),
             )
             .map_or(Ipv6::UNSPECIFIED_ADDRESS, |a| a.get()),
             dst_ip,
@@ -383,9 +391,9 @@ impl<C: device::IpDeviceContext<Ipv4>> ip::IpDeviceContext<Ipv4> for C {
         };
 
         if let Some(device_id) = device_id {
-            get_status(get_ipv4_device_state(self, device_id))
+            get_status(get_ipv4_device_state(self, &mut (), device_id))
         } else {
-            iter_ipv4_devices(self)
+            iter_ipv4_devices(self, &mut ())
                 .find_map(|(_device_id, state)| match get_status(state) {
                     AddressStatus::Present(()) => Some(AddressStatus::Present(())),
                     AddressStatus::Unassigned => None,
@@ -395,7 +403,7 @@ impl<C: device::IpDeviceContext<Ipv4>> ip::IpDeviceContext<Ipv4> for C {
     }
 
     fn is_device_routing_enabled(&self, device_id: C::DeviceId) -> bool {
-        is_ipv4_routing_enabled(self, device_id)
+        is_ipv4_routing_enabled(self, &mut (), device_id)
     }
 
     fn get_hop_limit(&self, _device_id: C::DeviceId) -> NonZeroU8 {
@@ -430,9 +438,9 @@ impl<C: device::IpDeviceContext<Ipv6>> ip::IpDeviceContext<Ipv6> for C {
         };
 
         if let Some(device_id) = device_id {
-            get_status(get_ipv6_device_state(self, device_id))
+            get_status(get_ipv6_device_state(self, &mut (), device_id))
         } else {
-            iter_ipv6_devices(self)
+            iter_ipv6_devices(self, &mut ())
                 .find_map(|(_device_id, state)| match get_status(state) {
                     AddressStatus::Present(a) => Some(AddressStatus::Present(a)),
                     AddressStatus::Unassigned => None,
@@ -442,11 +450,11 @@ impl<C: device::IpDeviceContext<Ipv6>> ip::IpDeviceContext<Ipv6> for C {
     }
 
     fn is_device_routing_enabled(&self, device_id: C::DeviceId) -> bool {
-        is_ipv6_routing_enabled(self, device_id)
+        is_ipv6_routing_enabled(self, &mut (), device_id)
     }
 
     fn get_hop_limit(&self, device_id: C::DeviceId) -> NonZeroU8 {
-        get_ipv6_hop_limit(self, device_id)
+        get_ipv6_hop_limit(self, &mut (), device_id)
     }
 }
 
@@ -474,6 +482,6 @@ impl<
         next_hop: SpecifiedAddr<I::Addr>,
         packet: S,
     ) -> Result<(), S> {
-        send_ip_frame(self, device_id, next_hop, packet)
+        send_ip_frame(self, &mut (), device_id, next_hop, packet)
     }
 }
