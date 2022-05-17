@@ -12,6 +12,12 @@ pub trait HttpUriExt {
     /// Will only error if asked to add a path to a `Uri` without a scheme (because `Uri` requires
     /// a scheme if a path is present), or if `path` contains invalid URI characters.
     fn extend_dir_with_path(self, path: &str) -> Result<Uri, Error>;
+
+    /// Append the given query parameter `key`=`value` to the URI, preserving existing query
+    /// parameters if any, `key` and `value` should already be URL-encoded (if necessary).
+    ///
+    /// Will only error if `key` or `value` contains invalid URI characters.
+    fn append_query_parameter(self, key: &str, value: &str) -> Result<Uri, Error>;
 }
 
 impl HttpUriExt for Uri {
@@ -36,6 +42,22 @@ impl HttpUriExt for Uri {
             } else {
                 format!("{}/{}", base_path, path)
             }
+        };
+        base_parts.path_and_query = Some(new_path_and_query.parse()?);
+        Ok(Uri::from_parts(base_parts)?)
+    }
+
+    fn append_query_parameter(self, key: &str, value: &str) -> Result<Uri, Error> {
+        let mut base_parts = self.into_parts();
+        let new_path_and_query = match &base_parts.path_and_query {
+            Some(path_and_query) => {
+                if let Some(query) = path_and_query.query() {
+                    format!("{}?{query}&{key}={value}", path_and_query.path())
+                } else {
+                    format!("{}?{key}={value}", path_and_query.path())
+                }
+            }
+            None => format!("?{key}={value}"),
         };
         base_parts.path_and_query = Some(new_path_and_query.parse()?);
         Ok(Uri::from_parts(base_parts)?)
@@ -100,5 +122,30 @@ mod tests {
         assert_expected_path(Some("/?k=v"), "c", Some("/c?k=v"));
         assert_expected_path(Some("/a?k=v"), "c", Some("/a/c?k=v"));
         assert_expected_path(Some("/a/?k=v"), "c", Some("/a/c?k=v"));
+    }
+
+    fn assert_expected_param(base: Option<&str>, key: &str, value: &str, expected: Option<&str>) {
+        let uri = make_uri_from_path_and_query(base).append_query_parameter(key, value).unwrap();
+        assert_eq!(
+            uri.into_parts().path_and_query.map(|p| p.to_string()),
+            expected.map(|s| s.to_string())
+        );
+    }
+
+    #[test]
+    fn new_query() {
+        assert_expected_param(None, "k", "v", Some("/?k=v"));
+        assert_expected_param(Some(""), "k", "v", Some("/?k=v"));
+        assert_expected_param(Some("/"), "k", "v", Some("/?k=v"));
+        assert_expected_param(Some("/a"), "k", "v", Some("/a?k=v"));
+        assert_expected_param(Some("/a/"), "k", "v", Some("/a/?k=v"));
+    }
+
+    #[test]
+    fn append_query() {
+        assert_expected_param(Some("?k=v"), "k2", "v2", Some("/?k=v&k2=v2"));
+        assert_expected_param(Some("/?k=v"), "k2", "v2", Some("/?k=v&k2=v2"));
+        assert_expected_param(Some("/a?k=v"), "k2", "v2", Some("/a?k=v&k2=v2"));
+        assert_expected_param(Some("/a/?k=v"), "k2", "v2", Some("/a/?k=v&k2=v2"));
     }
 }

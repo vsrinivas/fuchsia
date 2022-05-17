@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use http::Response;
+use http::{Response, Uri};
+use http_uri_ext::HttpUriExt as _;
 use hyper::header::ETAG;
 use p256::ecdsa::{signature::Verifier as _, DerSignature};
 use rand::{thread_rng, Rng};
@@ -10,7 +11,6 @@ use serde::{Deserialize, Deserializer, Serialize};
 use sha2::{digest, Digest, Sha256};
 use signature::Signature;
 use std::{collections::HashMap, convert::TryInto, fmt::Debug};
-use url::Url;
 
 /// Error enum listing different kinds of CUPv2 decoration errors.
 #[derive(Debug, thiserror::Error)]
@@ -18,7 +18,9 @@ pub enum CupDecorationError {
     #[error("could not serialize request.")]
     SerializationError(#[from] serde_json::Error),
     #[error("could not parse existing URI.")]
-    ParseError(#[from] url::ParseError),
+    ParseError(#[from] http::uri::InvalidUri),
+    #[error("could not append query parameter.")]
+    AppendQueryParameterError(#[from] http_uri_ext::Error),
 }
 
 /// Error enum listing different kinds of CUPv2 verification errors.
@@ -171,13 +173,12 @@ impl Cupv2RequestHandler for StandardCupv2Handler {
         let mut nonce: Nonce = [0_u8; 32];
         thread_rng().fill(&mut nonce[..]);
 
-        request.set_uri(
-            Url::parse_with_params(
-                request.get_uri(),
-                &[("cup2key", format!("{}:{}", public_key_id, hex::encode(nonce)))],
-            )?
-            .into_string(),
-        );
+        let uri: Uri = request.get_uri().parse()?;
+        let uri = uri.append_query_parameter(
+            "cup2key",
+            &format!("{}:{}", public_key_id, hex::encode(nonce)),
+        )?;
+        request.set_uri(uri.to_string());
 
         Ok(RequestMetadata { request_body: request.get_serialized_body()?, public_key_id, nonce })
     }
@@ -381,6 +382,7 @@ mod tests {
     use crate::request_builder::Intermediate;
     use assert_matches::assert_matches;
     use p256::ecdsa::SigningKey;
+    use url::Url;
 
     // For testing only, it is useful to compute equality for CupVerificationError enums.
     impl PartialEq for CupVerificationError {
@@ -433,6 +435,36 @@ mod tests {
         let (public_key_decimal, nonce_hex) = cup2key_value.split_once(':').unwrap();
         assert_eq!(public_key_decimal, public_key_id.to_string());
         assert_eq!(nonce_hex, hex::encode(request_metadata.nonce));
+        // Assert that the nonce is being generated randomly inline (i.e. not the default value).
+        assert_ne!(request_metadata.nonce, [0_u8; 32]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_standard_cup_handler_decorate_ipv6_link_local() -> Result<(), anyhow::Error> {
+        let (_, public_key) = test_support::make_keys_for_test();
+        let public_key_id: PublicKeyId = 42.try_into()?;
+        let public_keys = test_support::make_public_keys_for_test(public_key_id, public_key);
+        let cup_handler = StandardCupv2Handler::new(&public_keys);
+
+        let mut intermediate = Intermediate {
+            uri: "http://[::1%eth0]".to_string(),
+            headers: [].into(),
+            body: RequestWrapper { request: Request::default() },
+        };
+
+        let request_metadata = cup_handler.decorate_request(&mut intermediate)?;
+
+        assert_eq!(
+            intermediate.uri,
+            format!(
+                "http://[::1%eth0]/?cup2key={}:{}",
+                public_key_id,
+                hex::encode(request_metadata.nonce)
+            )
+        );
+
         // Assert that the nonce is being generated randomly inline (i.e. not the default value).
         assert_ne!(request_metadata.nonce, [0_u8; 32]);
 

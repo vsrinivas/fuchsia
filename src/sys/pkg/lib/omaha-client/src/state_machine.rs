@@ -4008,7 +4008,7 @@ mod tests {
             let http = MockHttpRequest::new(HttpResponse::new(make_noupdate_httpresponse()));
 
             let stub_cup_handler = MockCupv2Handler::new().set_decoration_error(|| {
-                Some(CupDecorationError::ParseError(url::ParseError::EmptyHost))
+                Some(CupDecorationError::ParseError("".parse::<http::Uri>().unwrap_err()))
             });
 
             assert_matches!(
@@ -4018,7 +4018,7 @@ mod tests {
                     .oneshot(RequestParams::default())
                     .await,
                 Err(UpdateCheckError::OmahaRequest(OmahaRequestError::CupDecoration(
-                    CupDecorationError::ParseError(url::ParseError::EmptyHost)
+                    CupDecorationError::ParseError(_)
                 )))
             );
 

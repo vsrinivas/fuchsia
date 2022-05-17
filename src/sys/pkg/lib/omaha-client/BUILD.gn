@@ -11,6 +11,7 @@ rustc_library("omaha-client") {
   with_unit_tests = true
 
   deps = [
+    "//src/lib/http-uri-ext",
     "//src/sys/pkg/lib/async-generator",
     "//src/sys/pkg/lib/version",
     "//third_party/rust_crates:anyhow",
@@ -31,11 +32,13 @@ rustc_library("omaha-client") {
     "//third_party/rust_crates:signature",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:typed-builder",
-    "//third_party/rust_crates:url",
     "//third_party/rust_crates:uuid",
   ]
 
-  test_deps = [ "//third_party/rust_crates:assert_matches" ]
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:url",
+  ]
 
   sources = [
     "src/app_set.rs",
