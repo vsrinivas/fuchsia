@@ -26,4 +26,5 @@ const List<String> validProjects = <String>[
   'vscode-language-fidl',
   'workstation',
   'samples',
+  'sdk-samples', // This is a family of projects.
 ];
