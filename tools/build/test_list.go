@@ -5,6 +5,7 @@
 package build
 
 import (
+	"fmt"
 	"os"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
@@ -13,8 +14,11 @@ import (
 // TestList contains the list of tests in the build along with
 // arbitrary test metadata.
 type TestList struct {
-	Tests []TestListEntry `json:"tests,omitempty"`
+	Data     []TestListEntry `json:"data,omitempty"`
+	SchemaID string          `json:"schema_id"`
 }
+
+const TestListSchemaIDExperimental string = "experimental"
 
 // TestListEntry is an entry in the test-list.json.
 // See //src/lib/testing/test_list/src/lib.rs.
@@ -58,8 +62,12 @@ func LoadTestList(testListPath string) (map[string]TestListEntry, error) {
 		return nil, err
 	}
 
+	if testList.SchemaID != TestListSchemaIDExperimental {
+		return nil, fmt.Errorf(`"schema_id" must be %q, found %q`, TestListSchemaIDExperimental, testList.SchemaID)
+	}
+
 	m := make(map[string]TestListEntry)
-	for _, entry := range testList.Tests {
+	for _, entry := range testList.Data {
 		m[entry.Name] = entry
 	}
 	return m, nil

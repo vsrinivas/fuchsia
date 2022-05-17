@@ -14,7 +14,8 @@ import (
 
 func TestLoadTestList(t *testing.T) {
 	manifest := `{
-	  "tests": [
+	  "schema_id": "experimental",
+	  "data": [
 	    {
 	      "name": "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component1.cmx",
 	      "labels": [
@@ -75,5 +76,64 @@ func TestLoadTestList(t *testing.T) {
 	}
 	if !reflect.DeepEqual(testListEntries, expected) {
 		t.Fatalf("got test list: %#v\n\nexpected: %#v", testListEntries, expected)
+	}
+}
+
+func TestLoadTestListVersionMismatch(t *testing.T) {
+	manifest := `{
+	  "schema_id": "1234",
+	  "data": [
+	    {
+	      "name": "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component1.cmx",
+	      "labels": [
+	        "//garnet/bin/fuchsia:fuchsia_pkg_test_component1(//build/toolchain/fuchsia:x64)"
+	      ],
+	      "tags": [
+	        {
+	          "key": "key",
+	          "value": "value"
+	        }
+	      ]
+	    }
+	  ]
+	}`
+	testListPath := filepath.Join(t.TempDir(), "test-list.json")
+	ioutil.WriteFile(testListPath, []byte(manifest), os.ModePerm)
+	_, err := LoadTestList(testListPath)
+	if err == nil {
+		t.Fatalf("expected an error loading an unknown schema_id")
+	}
+	expected := `"schema_id" must be "experimental", found "1234"`
+	if err.Error() != expected {
+		t.Fatalf("got error '%s', expected '%s'", err, expected)
+	}
+}
+
+func TestLoadTestListVersionMissing(t *testing.T) {
+	manifest := `{
+	  "data": [
+	    {
+	      "name": "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component1.cmx",
+	      "labels": [
+	        "//garnet/bin/fuchsia:fuchsia_pkg_test_component1(//build/toolchain/fuchsia:x64)"
+	      ],
+	      "tags": [
+	        {
+	          "key": "key",
+	          "value": "value"
+	        }
+	      ]
+	    }
+	  ]
+	}`
+	testListPath := filepath.Join(t.TempDir(), "test-list.json")
+	ioutil.WriteFile(testListPath, []byte(manifest), os.ModePerm)
+	_, err := LoadTestList(testListPath)
+	if err == nil {
+		t.Fatalf("expected an error loading a missing schema_id")
+	}
+	expected := `"schema_id" must be "experimental", found ""`
+	if err.Error() != expected {
+		t.Fatalf(`got error %q, expected %q`, err, expected)
 	}
 }

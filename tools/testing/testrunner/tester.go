@@ -474,7 +474,7 @@ func (t *FFXTester) TestMultiple(ctx context.Context, tests []testsharder.Test, 
 	t.ffx.SetStdoutStderr(stdout, stderr)
 	defer t.ffx.SetStdoutStderr(os.Stdout, os.Stderr)
 
-	runResult, err := t.ffx.Test(ctx, build.TestList{Tests: testDefs}, outDir, "--filter-ansi")
+	runResult, err := t.ffx.Test(ctx, build.TestList{Data: testDefs, SchemaID: build.TestListSchemaIDExperimental}, outDir, "--filter-ansi")
 	if err != nil {
 		return []*TestResult{}, err
 	}

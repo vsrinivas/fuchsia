@@ -280,7 +280,7 @@ func TestExecute(t *testing.T) {
 			// Write test-list.json.
 			if err := jsonutil.WriteToFile(
 				filepath.Join(tc.flags.buildDir, testListPath),
-				build.TestList{Tests: tc.testList},
+				build.TestList{Data: tc.testList, SchemaID: "experimental"},
 			); err != nil {
 				t.Fatal(err)
 			}

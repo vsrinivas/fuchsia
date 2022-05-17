@@ -21,16 +21,14 @@ pub fn test_params_from_reader<R: Read>(
     options: TestParamsOptions,
 ) -> Result<Vec<TestParams>> {
     let test_list: TestList = serde_json::from_reader(reader).map_err(anyhow::Error::from)?;
+    let TestList::Experimental { data } = test_list;
     if options.ignore_test_without_known_execution {
-        Ok(test_list
-            .tests
+        Ok(data
             .into_iter()
             .filter_map(|entry| maybe_convert_test_list_entry_to_test_params(entry).ok())
             .collect())
     } else {
-        test_list
-            .tests
-            .into_iter()
+        data.into_iter()
             .map(maybe_convert_test_list_entry_to_test_params)
             .collect::<Result<Vec<TestParams>, anyhow::Error>>()
     }
@@ -74,7 +72,8 @@ mod test {
 
     const VALID_JSON: &'static str = r#"
     {
-        "tests": [
+        "schema_id": "experimental",
+        "data": [
             {
                 "name": "test",
                 "labels": [],
@@ -90,7 +89,8 @@ mod test {
 
     const CONTAINS_VALID_AND_INVALID: &'static str = r#"
     {
-        "tests": [
+        "schema_id": "experimental",
+        "data": [
             {
                 "name": "test",
                 "labels": [],

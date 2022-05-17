@@ -261,7 +261,7 @@ fn run_tool() -> Result<(), Error> {
     opt.validate()?;
 
     let tests_json = read_tests_json(&opt.input)?;
-    let mut test_list = TestList { tests: vec![] };
+    let mut test_list = TestList::Experimental { data: vec![] };
     let mut inputs: Vec<PathBuf> = vec![];
 
     for entry in tests_json {
@@ -299,7 +299,8 @@ fn run_tool() -> Result<(), Error> {
 
         update_tags_with_test_entry(&mut test_tags, &entry.test);
         test_list_entry.tags = test_tags.into_vec();
-        test_list.tests.push(test_list_entry);
+        let TestList::Experimental { data } = &mut test_list;
+        data.push(test_list_entry);
     }
     let test_list_json = serde_json::to_string_pretty(&test_list)?;
     fs::write(&opt.output, test_list_json)?;

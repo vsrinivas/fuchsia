@@ -500,7 +500,8 @@ mod test {
 
     lazy_static! {
         static ref VALID_INPUT_FORMAT: String = serde_json::to_string(&serde_json::json!({
-          "tests": [
+          "schema_id": "experimental",
+          "data": [
             {
                 "name": "{}-test-1",
                 "labels": ["{}-label"],

@@ -8,8 +8,12 @@ The schema for test-list.json is not yet stabilized, however, the below definiti
 
 ```json5
 {
+    // Identifier for schema version being used.
+    //
+    // Currently always set to "experimental"
+    "schema_id": "experimental",
     // Array containing all tests in the file.
-    "tests": [
+    "data": [
         {
             // The name of the test.
             //

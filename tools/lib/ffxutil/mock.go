@@ -31,6 +31,9 @@ func (f *MockFFXInstance) run(cmd string) error {
 }
 
 func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDir string, _ ...string) (*TestRunResult, error) {
+	if testList.SchemaID != build.TestListSchemaIDExperimental {
+		return nil, fmt.Errorf(`schema_id must be %q, found %q`, build.TestListSchemaIDExperimental, testList.SchemaID)
+	}
 	f.run("test")
 	outcome := TestPassed
 	if f.TestOutcome != "" {
@@ -40,7 +43,7 @@ func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDi
 		return nil, err
 	}
 	var suites []suiteEntry
-	for i, test := range testList.Tests {
+	for i, test := range testList.Data {
 		relTestDir := fmt.Sprintf("test%d", i)
 		if err := os.Mkdir(filepath.Join(outDir, relTestDir), os.ModePerm); err != nil {
 			return nil, err

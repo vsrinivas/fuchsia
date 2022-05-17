@@ -9,8 +9,10 @@ use {
 };
 
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct TestList {
-    pub tests: Vec<TestListEntry>,
+#[serde(tag = "schema_id")]
+pub enum TestList {
+    #[serde(rename = "experimental")]
+    Experimental { data: Vec<TestListEntry> },
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
