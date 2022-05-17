@@ -707,7 +707,7 @@ zx_status_t TerminaEnclosedGuest::SetupVsockServices(zx::time deadline) {
 grpc::Status TerminaEnclosedGuest::VmReady(grpc::ServerContext* context,
                                            const vm_tools::EmptyMessage* request,
                                            vm_tools::EmptyMessage* response) {
-  auto p = NewGrpcVsockStub<vm_tools::Maitred>(vsock_, GetGuestCid(), kTerminaMaitredPort);
+  auto p = NewGrpcVsockStub<vm_tools::Maitred>(vsock_, kTerminaMaitredPort);
   auto result = fpromise::run_single_threaded(std::move(p));
   if (result.is_ok()) {
     maitred_ = std::move(result.value());

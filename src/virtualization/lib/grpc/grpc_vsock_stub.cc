@@ -10,27 +10,17 @@
 #include "src/virtualization/lib/grpc/fdio_util.h"
 
 fpromise::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
-    const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint, uint32_t cid,
-    uint32_t port) {
-  // Create the socket for the connection.
-  zx::socket h1, h2;
-  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create socket";
-    return fpromise::make_result_promise<zx::socket, zx_status_t>(fpromise::error(status));
-  }
-
+    const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint, uint32_t port) {
   // Establish connection, hand first socket endpoint over to the guest.
   fpromise::bridge<zx::socket, zx_status_t> bridge;
-  socket_endpoint->Connect(
-      cid, port, std::move(h1),
-      [completer = std::move(bridge.completer), h2 = std::move(h2)](
-          fuchsia::virtualization::HostVsockEndpoint_Connect_Result result) mutable {
+  socket_endpoint->Connect2(
+      port, [completer = std::move(bridge.completer)](
+                fuchsia::virtualization::HostVsockEndpoint_Connect2_Result result) mutable {
         if (result.is_err()) {
           FX_LOGS(ERROR) << "Failed to connect: " << result.err();
           completer.complete_error(result.err());
         } else {
-          completer.complete_ok(std::move(h2));
+          completer.complete_ok(std::move(result.response().socket));
         }
       });
   return bridge.consumer.promise();

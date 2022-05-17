@@ -19,8 +19,7 @@
 // If you need to dispatch RPCs to the service, consider using
 // |NewGrpcVsockStub| instead.
 fpromise::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
-    const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint, uint32_t cid,
-    uint32_t port);
+    const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint, uint32_t port);
 
 // Creates a new gRPC stub backed by a zx::socket.
 template <typename T>
@@ -36,15 +35,15 @@ fpromise::result<std::unique_ptr<typename T::Stub>, zx_status_t> NewGrpcStub(zx:
   return fpromise::ok(T::NewStub(grpc::CreateInsecureChannelFromFd("vsock", fd.release())));
 }
 
-// Connects to a gRPC service listening on cid:port and returns a gRPC
+// Connects to a gRPC service listening on DEFAULT_GUEST_CID:port and returns a gRPC
 // interface stub for the connection. This stub can be used to dispatch RPCs
 // to the server.
 template <typename T>
 fpromise::promise<std::unique_ptr<typename T::Stub>, zx_status_t> NewGrpcVsockStub(
-    const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint, uint32_t cid,
-    uint32_t port) {
-  return ConnectToGrpcVsockService(socket_endpoint, cid, port)
-      .and_then([](zx::socket& socket) mutable { return NewGrpcStub<T>(std::move(socket)); });
+    const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint, uint32_t port) {
+  return ConnectToGrpcVsockService(socket_endpoint, port).and_then([](zx::socket& socket) mutable {
+    return NewGrpcStub<T>(std::move(socket));
+  });
 }
 
 #endif  // SRC_VIRTUALIZATION_LIB_GRPC_GRPC_VSOCK_STUB_H_

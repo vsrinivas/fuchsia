@@ -751,8 +751,8 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context, const vm_tools::EmptyM
         ConfigureNetwork();
         StartTermina();
       };
-  auto task = NewGrpcVsockStub<vm_tools::Maitred>(socket_endpoint_, guest_cid_, kMaitredPort)
-                  .then(start_maitred);
+  auto task =
+      NewGrpcVsockStub<vm_tools::Maitred>(socket_endpoint_, kMaitredPort).then(start_maitred);
   executor_.schedule_task(std::move(task));
   return grpc::Status::OK;
 }
@@ -770,9 +770,8 @@ grpc::Status Guest::TremplinReady(grpc::ServerContext* context,
     CreateContainer();
     return fpromise::ok();
   };
-  auto task =
-      NewGrpcVsockStub<vm_tools::tremplin::Tremplin>(socket_endpoint_, guest_cid_, kTremplinPort)
-          .then(start_tremplin);
+  auto task = NewGrpcVsockStub<vm_tools::tremplin::Tremplin>(socket_endpoint_, kTremplinPort)
+                  .then(start_tremplin);
   executor_.schedule_task(std::move(task));
   return grpc::Status::OK;
 }
@@ -883,9 +882,8 @@ grpc::Status Guest::ContainerReady(grpc::ServerContext* context,
 
     return fpromise::ok();
   };
-  auto task =
-      NewGrpcVsockStub<vm_tools::container::Garcon>(socket_endpoint_, guest_cid_, garcon_port)
-          .then(start_garcon);
+  auto task = NewGrpcVsockStub<vm_tools::container::Garcon>(socket_endpoint_, garcon_port)
+                  .then(start_garcon);
   executor_.schedule_task(std::move(task));
 
   return grpc::Status::OK;
