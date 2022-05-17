@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -394,8 +395,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 					}()
 				}
 				if r.syslogDir != "" {
-					if err := os.Mkdir(r.syslogDir, os.ModePerm); err != nil {
-						return err
+					if _, err := os.Stat(r.syslogDir); errors.Is(err, os.ErrNotExist) {
+						if err := os.Mkdir(r.syslogDir, os.ModePerm); err != nil {
+							return err
+						}
 					}
 					go func() {
 						syslogName := fmt.Sprintf("%s_syslog.txt", t.Nodename())
