@@ -14,7 +14,7 @@ use crate::{
             base::{DisplayDirectParams, ViewStrategyParams, ViewStrategyPtr},
             display_direct::DisplayDirectViewStrategy,
         },
-        ViewKey, USE_FIRST_VIEW,
+        ViewKey,
     },
 };
 use anyhow::{bail, ensure, Context, Error};
@@ -33,7 +33,7 @@ use futures::{channel::mpsc::UnboundedSender, StreamExt, TryFutureExt, TryStream
 use io_util::{open_directory_in_namespace, OpenFlags};
 use keymaps::Keymap;
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     fmt::Debug,
     fs::{self, OpenOptions},
     path::{Path, PathBuf},
@@ -66,7 +66,6 @@ async fn watch_directory_async(
 
 pub(crate) struct AutoRepeatContext {
     app_sender: UnboundedSender<MessageInternal>,
-    view_id: ViewKey,
     #[allow(unused)]
     keyboard_autorepeat_task: Option<fasync::Task<()>>,
     repeat_interval: std::time::Duration,
@@ -79,10 +78,9 @@ pub(crate) trait AutoRepeatTimer {
 }
 
 impl AutoRepeatContext {
-    pub(crate) fn new(app_sender: &UnboundedSender<MessageInternal>, view_id: ViewKey) -> Self {
+    pub(crate) fn new(app_sender: &UnboundedSender<MessageInternal>) -> Self {
         Self {
             app_sender: app_sender.clone(),
-            view_id,
             keyboard_autorepeat_task: None,
             repeat_interval: Config::get().keyboard_autorepeat_slow_interval,
         }
@@ -92,11 +90,10 @@ impl AutoRepeatContext {
         let timer = fasync::Timer::new(fuchsia_async::Time::after(self.repeat_interval.into()));
         let app_sender = self.app_sender.clone();
         let device_id = device_id.clone();
-        let view_id = self.view_id;
         let task = fasync::Task::local(async move {
             timer.await;
             app_sender
-                .unbounded_send(MessageInternal::KeyboardAutoRepeat(device_id, view_id))
+                .unbounded_send(MessageInternal::KeyboardAutoRepeat(device_id))
                 .expect("unbounded_send");
         });
         self.keyboard_autorepeat_task = Some(task);
@@ -200,6 +197,12 @@ impl DisplayController {
 
 pub type DisplayId = u64;
 
+#[derive(Debug)]
+pub struct DisplayInfo {
+    preferred_size: IntSize,
+    info: fidl_fuchsia_hardware_display::Info,
+}
+
 pub(crate) struct DisplayDirectAppStrategy<'a> {
     pub display_controller: Option<DisplayController>,
     pub display_rotation: DisplayRotation,
@@ -208,7 +211,8 @@ pub(crate) struct DisplayDirectAppStrategy<'a> {
     pub context: AutoRepeatContext,
     pub app_sender: UnboundedSender<MessageInternal>,
     pub owned: bool,
-    pub size: Option<IntSize>,
+    pub primary_display: Option<DisplayInfo>,
+    views: BTreeMap<DisplayId, Vec<ViewKey>>,
 }
 
 impl<'a> DisplayDirectAppStrategy<'a> {
@@ -223,10 +227,11 @@ impl<'a> DisplayDirectAppStrategy<'a> {
             display_rotation: app_config.display_rotation,
             keymap,
             input_report_handlers: HashMap::new(),
-            context: AutoRepeatContext::new(&app_sender, 0),
+            context: AutoRepeatContext::new(&app_sender),
             app_sender,
             owned: false,
-            size: None,
+            primary_display: None,
+            views: Default::default(),
         }
     }
 
@@ -237,27 +242,34 @@ impl<'a> DisplayDirectAppStrategy<'a> {
     ) -> Result<(), Error> {
         let display_controller = self.display_controller.as_ref().expect("display_controller");
         for display_id in removed {
+            self.views.remove(&display_id);
             self.app_sender
-                .unbounded_send(MessageInternal::CloseView(display_id as ViewKey))
+                .unbounded_send(MessageInternal::CloseViewsOnDisplay(display_id))
                 .expect("unbounded");
         }
 
         for info in added {
-            let display_id = info.id;
             // We use the preferred mode of the first display as the preferred size.
             // This makes it more likely that input events will translate across
             // different displays.
-            let preferred_size = self.size.get_or_insert_with(|| {
-                let mode = info.modes[0];
-                size2(mode.horizontal_resolution, mode.vertical_resolution).to_i32()
-            });
+            let preferred_size = self
+                .primary_display
+                .get_or_insert_with(|| {
+                    let mode = info.modes[0];
+                    DisplayInfo {
+                        preferred_size: size2(mode.horizontal_resolution, mode.vertical_resolution)
+                            .to_i32(),
+                        info: info.clone(),
+                    }
+                })
+                .preferred_size;
             self.app_sender
                 .unbounded_send(MessageInternal::CreateView(ViewStrategyParams::DisplayDirect(
                     DisplayDirectParams {
-                        display_id,
+                        view_key: None,
                         controller: display_controller.controller.clone(),
                         info,
-                        preferred_size: *preferred_size,
+                        preferred_size,
                     },
                 )))
                 .expect("send");
@@ -270,7 +282,7 @@ impl<'a> DisplayDirectAppStrategy<'a> {
 #[async_trait(?Send)]
 impl<'a> AppStrategy for DisplayDirectAppStrategy<'a> {
     async fn create_view_strategy(
-        &self,
+        &mut self,
         key: ViewKey,
         app_sender: UnboundedSender<MessageInternal>,
         strategy_params: ViewStrategyParams,
@@ -281,19 +293,34 @@ impl<'a> AppStrategy for DisplayDirectAppStrategy<'a> {
                 "Incorrect ViewStrategyParams passed to create_view_strategy for frame buffer"
             ),
         };
-        ensure!(
-            key == strategy_params.display_id,
-            "key = {}, display_id = {}",
-            key,
-            strategy_params.display_id
-        );
+        let views_on_display = self.views.entry(strategy_params.info.id).or_default();
+        views_on_display.push(key);
         Ok(DisplayDirectViewStrategy::new(
+            key,
             strategy_params.controller,
             app_sender.clone(),
             strategy_params.info,
             strategy_params.preferred_size,
         )
         .await?)
+    }
+
+    fn create_view_strategy_params_for_additional_view(
+        &mut self,
+        view_key: ViewKey,
+    ) -> ViewStrategyParams {
+        let primary_display = self.primary_display.as_ref().expect("primary_display");
+        ViewStrategyParams::DisplayDirect(DisplayDirectParams {
+            view_key: Some(view_key),
+            controller: self
+                .display_controller
+                .as_ref()
+                .expect("display_controller")
+                .controller
+                .clone(),
+            info: primary_display.info.clone(),
+            preferred_size: primary_display.preferred_size,
+        })
     }
 
     fn supports_scenic(&self) -> bool {
@@ -305,10 +332,9 @@ impl<'a> AppStrategy for DisplayDirectAppStrategy<'a> {
     }
 
     async fn post_setup(&mut self, internal_sender: &InternalSender) -> Result<(), Error> {
-        let view_key = USE_FIRST_VIEW;
         let input_report_sender = internal_sender.clone();
         fasync::Task::local(
-            listen_for_user_input(view_key, input_report_sender)
+            listen_for_user_input(input_report_sender)
                 .unwrap_or_else(|e: anyhow::Error| eprintln!("error: listening for input {:?}", e)),
         )
         .detach();
@@ -329,7 +355,8 @@ impl<'a> AppStrategy for DisplayDirectAppStrategy<'a> {
         device_id: &input::DeviceId,
         device_descriptor: &hid_input_report::DeviceDescriptor,
     ) {
-        let frame_buffer_size = self.size.expect("frame_buffer_size");
+        let frame_buffer_size =
+            self.primary_display.as_ref().expect("primary_display").preferred_size;
         self.input_report_handlers.insert(
             device_id.clone(),
             InputReportHandler::new(
@@ -405,5 +432,23 @@ impl<'a> AppStrategy for DisplayDirectAppStrategy<'a> {
             .controller
             .set_display_gamma_table(display_id, gamma_table_id)
             .expect("set_display_gamma_table");
+    }
+
+    fn get_focused_view_key(&self) -> Option<ViewKey> {
+        self.views.keys().next().and_then(|first_display| {
+            self.views.get(first_display).expect("first_display").last().cloned()
+        })
+    }
+
+    fn get_visible_view_key_for_display(&self, display_id: DisplayId) -> Option<ViewKey> {
+        self.views
+            .get(&display_id)
+            .and_then(|views_on_first_display| views_on_first_display.last().cloned())
+    }
+
+    fn handle_view_closed(&mut self, view_key: ViewKey) {
+        for views_on_display in self.views.values_mut() {
+            views_on_display.retain(|a_view_key| view_key != *a_view_key);
+        }
     }
 }

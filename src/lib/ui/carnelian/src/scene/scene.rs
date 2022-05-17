@@ -9,7 +9,7 @@ use super::{
     },
     group::{GroupId, GroupMap, GroupMember, GroupMemberData},
     layout::{ArrangerPtr, Axis, Flex, FlexBuilder, StackBuilder},
-    raster_for_corner_knockouts, BlendMode, FillRule, IdGenerator, LayerGroup, Rendering,
+    raster_for_corner_knockouts, BlendMode, FillRule, LayerGroup, Rendering,
 };
 use crate::{
     color::Color,
@@ -152,7 +152,6 @@ pub struct Scene {
     renderings: HashMap<u64, Rendering>,
     mouse_cursor_raster: Option<Raster>,
     corner_knockouts_raster: Option<Raster>,
-    id_generator: IdGenerator,
     facets: FacetMap,
     facet_order: Vec<FacetId>,
     groups: GroupMap,
@@ -162,18 +161,12 @@ pub struct Scene {
 }
 
 impl Scene {
-    fn new_from_builder(
-        options: SceneOptions,
-        facets: FacetMap,
-        groups: GroupMap,
-        id_generator: IdGenerator,
-    ) -> Self {
+    fn new_from_builder(options: SceneOptions, facets: FacetMap, groups: GroupMap) -> Self {
         let facet_order: Vec<FacetId> = facets.iter().map(|(facet_id, _)| *facet_id).collect();
         Self {
             renderings: HashMap::new(),
             mouse_cursor_raster: None,
             corner_knockouts_raster: None,
-            id_generator,
             facets,
             facet_order,
             groups,
@@ -194,7 +187,7 @@ impl Scene {
     /// Add a facet to the scene, returning its ID.
     pub fn add_facet(&mut self, mut facet: FacetPtr) -> FacetId {
         assert_eq!(self.options.mutable, true);
-        let facet_id = FacetId::new(&mut self.id_generator);
+        let facet_id = FacetId::new();
         facet.associate_facet_id(facet_id);
         self.facets
             .insert(facet_id, FacetEntry { facet, location: Point::zero(), size: Size::zero() });
@@ -244,7 +237,7 @@ impl Scene {
 
     /// Create a new group.
     pub fn new_group(&mut self) -> GroupId {
-        GroupId::new(&mut self.id_generator)
+        GroupId::new()
     }
 
     /// Add a facet to a group, removing it from any group it might already belong to.
@@ -644,7 +637,6 @@ impl<'a> GroupBuilder<'a> {
 /// Fluent builder for scenes.
 pub struct SceneBuilder {
     options: SceneOptions,
-    id_generator: IdGenerator,
     facets: FacetMap,
     groups: GroupMap,
     group_stack: Vec<GroupId>,
@@ -653,10 +645,8 @@ pub struct SceneBuilder {
 impl SceneBuilder {
     /// Create a new fluent builder for building Scenes.
     pub fn new() -> Self {
-        let id_generator = IdGenerator::default();
         Self {
             options: SceneOptions::default(),
-            id_generator,
             facets: FacetMap::new(),
             groups: GroupMap::new(),
             group_stack: vec![],
@@ -697,7 +687,7 @@ impl SceneBuilder {
     }
 
     fn allocate_facet_id(&mut self) -> FacetId {
-        FacetId::new(&mut self.id_generator)
+        FacetId::new()
     }
 
     fn push_facet(
@@ -839,7 +829,7 @@ impl SceneBuilder {
         arranger: ArrangerPtr,
         member_data: Option<GroupMemberData>,
     ) {
-        let group_id = GroupId::new(&mut self.id_generator);
+        let group_id = GroupId::new();
         self.groups.start_group(group_id, label, arranger, self.group_stack.last(), member_data);
         self.group_stack.push(group_id);
     }
@@ -865,6 +855,6 @@ impl SceneBuilder {
         while self.group_stack.len() > 0 {
             self.end_group();
         }
-        Scene::new_from_builder(self.options, self.facets, self.groups, self.id_generator)
+        Scene::new_from_builder(self.options, self.facets, self.groups)
     }
 }

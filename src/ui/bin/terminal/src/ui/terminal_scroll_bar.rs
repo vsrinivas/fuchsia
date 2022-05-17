@@ -53,7 +53,7 @@ impl Default for ScrollBar {
     fn default() -> Self {
         ScrollBar {
             app_sender: None,
-            view_key: 0,
+            view_key: ViewKey::default(),
             frame: Rect::zero(),
             content_height: 0.0,
             content_offset: 0.0,

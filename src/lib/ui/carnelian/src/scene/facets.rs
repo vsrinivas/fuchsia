@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{IdGenerator, LayerGroup};
+use super::LayerGroup;
 use crate::{
     color::Color,
     drawing::{
@@ -14,7 +14,7 @@ use crate::{
         BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Shed, Style,
     },
     scene::scene::SceneOrder,
-    Coord, Point, Rect, Size, ViewAssistantContext,
+    Coord, IdFromRaw, IdGenerator2, Point, Rect, Size, ViewAssistantContext,
 };
 use anyhow::Error;
 use euclid::{default::Transform2D, size2, vec2};
@@ -24,7 +24,7 @@ use std::{any::Any, collections::BTreeMap, convert::TryFrom, path::PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Identifier for a Facet
-pub struct FacetId(usize);
+pub struct FacetId(u64);
 
 pub(crate) struct FacetEntry {
     pub facet: FacetPtr,
@@ -35,9 +35,14 @@ pub(crate) struct FacetEntry {
 pub(crate) type FacetMap = BTreeMap<FacetId, FacetEntry>;
 
 impl FacetId {
-    pub(crate) fn new(id_generator: &mut IdGenerator) -> Self {
-        let facet_id = id_generator.next().expect("facet ID");
-        FacetId(facet_id)
+    pub(crate) fn new() -> Self {
+        IdGenerator2::<FacetId>::next().expect("facet ID")
+    }
+}
+
+impl IdFromRaw for FacetId {
+    fn from_raw(id: u64) -> FacetId {
+        FacetId(id)
     }
 }
 

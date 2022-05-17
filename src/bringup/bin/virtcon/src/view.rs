@@ -223,7 +223,16 @@ impl VirtualConsoleViewAssistant {
     fn new_for_test(animation: bool) -> Result<ViewAssistantPtr, Error> {
         let app_sender = AppSender::new_for_testing_purposes_only();
         let dpi: BTreeSet<u32> = [160, 320, 480, 640].iter().cloned().collect();
-        Self::new(&app_sender, 1, ColorScheme::default(), false, 14.0, dpi, animation, true)
+        Self::new(
+            &app_sender,
+            Default::default(),
+            ColorScheme::default(),
+            false,
+            14.0,
+            dpi,
+            animation,
+            true,
+        )
     }
 
     // Resize all terminals for 'new_size'.

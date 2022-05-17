@@ -4,6 +4,7 @@
 
 use anyhow::Error;
 use carnelian::{
+    app::ViewCreationParameters,
     color::Color,
     drawing::{load_font, FontFace},
     input::{self},
@@ -35,12 +36,11 @@ impl AppAssistant for FontAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_with_sender(
+    fn create_view_assistant_with_parameters(
         &mut self,
-        view_key: ViewKey,
-        app_sender: AppSender,
+        params: ViewCreationParameters,
     ) -> Result<ViewAssistantPtr, Error> {
-        Ok(FontMetricsViewAssistant::new(app_sender, view_key)?)
+        Ok(FontMetricsViewAssistant::new(params.app_sender, params.view_key)?)
     }
 }
 

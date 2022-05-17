@@ -2,22 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::IdGenerator;
 use crate::{
     scene::{facets::FacetId, layout::ArrangerPtr, scene::Scene},
-    Size,
+    IdFromRaw, IdGenerator2, Size,
 };
 use std::{any::Any, collections::HashMap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Identifier for a group.
-pub struct GroupId(usize);
+pub struct GroupId(u64);
 
 impl GroupId {
     /// Create a new group identifier.
-    pub(crate) fn new(id_generator: &mut IdGenerator) -> Self {
-        let group_id = id_generator.next().expect("group ID");
-        Self(group_id)
+    pub(crate) fn new() -> Self {
+        IdGenerator2::<GroupId>::next().expect("group_id")
+    }
+}
+
+impl IdFromRaw for GroupId {
+    fn from_raw(id: u64) -> GroupId {
+        GroupId(id)
     }
 }
 

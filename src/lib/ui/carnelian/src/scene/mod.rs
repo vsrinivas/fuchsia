@@ -9,7 +9,6 @@ use crate::{
     render::{BlendMode, Context as RenderContext, FillRule, Layer, Raster},
     Coord, Rect, Size,
 };
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub use crate::scene::scene::SceneOrder;
 
@@ -41,25 +40,6 @@ fn raster_for_corner_knockouts(
     let mut raster_builder = render_context.raster_builder().expect("raster_builder");
     raster_builder.add(&path, None);
     raster_builder.build()
-}
-
-#[derive(Default)]
-pub(crate) struct IdGenerator {}
-
-impl Iterator for IdGenerator {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<usize> {
-        static NEXT_ID: AtomicUsize = AtomicUsize::new(100);
-        let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
-        // fetch_add wraps on overflow, which we'll use as a signal
-        // that this generator is out of ids.
-        if id == 0 {
-            None
-        } else {
-            Some(id)
-        }
-    }
 }
 
 /// Trait used by facets to mutate layers.

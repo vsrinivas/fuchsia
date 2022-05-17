@@ -130,6 +130,7 @@ struct DisplayResources {
 const RENDER_FRAME_COUNT: usize = 2;
 
 pub(crate) struct DisplayDirectViewStrategy {
+    key: ViewKey,
     display: Display,
     app_sender: UnboundedSender<MessageInternal>,
     display_rotation: DisplayRotation,
@@ -146,6 +147,7 @@ pub(crate) struct DisplayDirectViewStrategy {
 
 impl DisplayDirectViewStrategy {
     pub async fn new(
+        key: ViewKey,
         controller: ControllerProxyPtr,
         app_sender: UnboundedSender<MessageInternal>,
         info: fidl_fuchsia_hardware_display::Info,
@@ -181,11 +183,11 @@ impl DisplayDirectViewStrategy {
         )
         .await?;
 
-        let key = display.display_id as ViewKey;
         app_sender.unbounded_send(MessageInternal::Render(key)).expect("unbounded_send");
         app_sender.unbounded_send(MessageInternal::Focus(key, true)).expect("unbounded_send");
 
         Ok(Box::new(Self {
+            key,
             display,
             app_sender,
             display_rotation: app_config.display_rotation,
@@ -630,11 +632,15 @@ impl ViewStrategy for DisplayDirectViewStrategy {
                     self.display.controller.acknowledge_vsync(cookie).expect("acknowledge_vsync");
                 }
                 self.app_sender
-                    .unbounded_send(MessageInternal::Render(self.display.display_id as ViewKey))
+                    .unbounded_send(MessageInternal::Render(self.key))
                     .expect("unbounded_send");
             }
             _ => (),
         }
+    }
+
+    fn is_hosted_on_display(&self, display_id: u64) -> bool {
+        self.display.display_id == display_id
     }
 
     fn close(&mut self) {

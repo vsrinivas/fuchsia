@@ -611,6 +611,7 @@ carnelian_examples = [
   },
   {
     name = "spinning_square"
+    additional_deps = [ ":robotoslab" ]
   },
   {
     name = "svg"

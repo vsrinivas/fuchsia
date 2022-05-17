@@ -92,7 +92,7 @@ impl Default for HideScrollThumbTimer {
     fn default() -> Self {
         HideScrollThumbTimer {
             app_sender: None,
-            view_id: 0,
+            view_id: ViewKey::default(),
             task: None,
             delay: Duration::default(),
         }

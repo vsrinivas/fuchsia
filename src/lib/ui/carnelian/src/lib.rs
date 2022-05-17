@@ -60,6 +60,11 @@
 //! }
 //! ```
 
+use std::{
+    marker::PhantomData,
+    sync::atomic::{AtomicU64, Ordering},
+};
+
 pub mod app;
 /// Color related items
 pub mod color;
@@ -73,6 +78,32 @@ pub mod render;
 /// UI item abstraction
 pub mod scene;
 mod view;
+
+pub(crate) trait IdFromRaw {
+    fn from_raw(id: u64) -> Self;
+}
+
+#[derive(Default)]
+pub(crate) struct IdGenerator2<T> {
+    id_type: PhantomData<T>,
+}
+
+impl<T> IdGenerator2<T>
+where
+    T: IdFromRaw + std::fmt::Debug,
+{
+    fn next() -> Option<T> {
+        static NEXT_ID: AtomicU64 = AtomicU64::new(100);
+        let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
+        // fetch_add wraps on overflow, which we'll use as a signal
+        // that this generator is out of ids.
+        if id == 0 {
+            None
+        } else {
+            Some(T::from_raw(id))
+        }
+    }
+}
 
 pub use crate::{
     app::{

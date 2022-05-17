@@ -7,7 +7,7 @@
 use anyhow::Error;
 use argh::FromArgs;
 use carnelian::{
-    app::Config,
+    app::{Config, ViewCreationParameters},
     color::Color,
     derive_handle_message,
     drawing::{load_font, measure_text_width, DisplayRotation, FontFace},
@@ -68,12 +68,11 @@ impl AppAssistant for ButtonAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_with_sender(
+    fn create_view_assistant_with_parameters(
         &mut self,
-        view_key: ViewKey,
-        app_sender: AppSender,
+        params: ViewCreationParameters,
     ) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(ButtonViewAssistant::new(app_sender, view_key)?))
+        Ok(Box::new(ButtonViewAssistant::new(params.app_sender, params.view_key)?))
     }
 
     fn filter_config(&mut self, config: &mut Config) {

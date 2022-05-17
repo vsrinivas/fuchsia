@@ -120,7 +120,7 @@ impl ScenicAppStrategy {
 #[async_trait(?Send)]
 impl AppStrategy for ScenicAppStrategy {
     async fn create_view_strategy(
-        &self,
+        &mut self,
         key: ViewKey,
         app_sender: UnboundedSender<MessageInternal>,
         strategy_params: ViewStrategyParams,
@@ -141,6 +141,13 @@ impl AppStrategy for ScenicAppStrategy {
             }
             _ => bail!("Incorrect ViewStrategyParams passed to create_view_strategy for scenic"),
         }
+    }
+
+    fn create_view_strategy_params_for_additional_view(
+        &mut self,
+        _view_key: ViewKey,
+    ) -> ViewStrategyParams {
+        todo!("Additional views not yet supported on Scenic");
     }
 
     fn create_view_for_testing(

@@ -121,11 +121,11 @@ impl SessionManagerClient for VirtualConsoleClient {
 
 pub struct VirtualConsoleAppAssistant {
     app_sender: AppSender,
-    view_key: ViewKey,
     args: VirtualConsoleArgs,
     read_only_debuglog: Option<zx::DebugLog>,
     session_manager: SessionManager,
     terminals: BTreeMap<u32, (Terminal<EventProxy>, bool)>,
+    first_view: Option<ViewKey>,
 }
 
 impl VirtualConsoleAppAssistant {
@@ -140,11 +140,11 @@ impl VirtualConsoleAppAssistant {
 
         Ok(VirtualConsoleAppAssistant {
             app_sender,
-            view_key: 0,
             args,
             read_only_debuglog,
             session_manager,
             terminals,
+            first_view: None,
         })
     }
 
@@ -173,7 +173,13 @@ impl AppAssistant for VirtualConsoleAppAssistant {
 
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
         // The first view created will take the role as primary output.
-        let is_primary = self.view_key == 0;
+        let is_primary = if self.first_view.is_none() {
+            // Terminal messages will be routed to this view from this point forward.
+            self.first_view = Some(view_key);
+            true
+        } else {
+            false
+        };
 
         let view_assistant = VirtualConsoleViewAssistant::new(
             &self.app_sender,
@@ -203,9 +209,6 @@ impl AppAssistant for VirtualConsoleAppAssistant {
                 make_message(ViewMessages::AddTerminalMessage(*id, terminal_clone, *make_active)),
             );
         }
-
-        // Terminal messages will be routed to this view from this point forward.
-        self.view_key = view_key;
 
         Ok(view_assistant)
     }
@@ -242,27 +245,26 @@ impl AppAssistant for VirtualConsoleAppAssistant {
                 AppMessages::AddTerminalMessage(id, terminal, make_active) => {
                     let terminal_clone = terminal.try_clone().expect("failed to clone terminal");
                     self.terminals.insert(*id, (terminal_clone, *make_active));
-                    if self.view_key == 0 {
-                        return;
+                    if let Some(view_key) = self.first_view {
+                        let terminal_clone =
+                            terminal.try_clone().expect("failed to clone terminal");
+                        self.app_sender.queue_message(
+                            MessageTarget::View(view_key),
+                            make_message(ViewMessages::AddTerminalMessage(
+                                *id,
+                                terminal_clone,
+                                *make_active,
+                            )),
+                        );
                     }
-                    let terminal_clone = terminal.try_clone().expect("failed to clone terminal");
-                    self.app_sender.queue_message(
-                        MessageTarget::View(self.view_key),
-                        make_message(ViewMessages::AddTerminalMessage(
-                            *id,
-                            terminal_clone,
-                            *make_active,
-                        )),
-                    );
                 }
                 AppMessages::RequestTerminalUpdateMessage(id) => {
-                    if self.view_key == 0 {
-                        return;
+                    if let Some(view_key) = self.first_view {
+                        self.app_sender.queue_message(
+                            MessageTarget::View(view_key),
+                            make_message(ViewMessages::RequestTerminalUpdateMessage(*id)),
+                        );
                     }
-                    self.app_sender.queue_message(
-                        MessageTarget::View(self.view_key),
-                        make_message(ViewMessages::RequestTerminalUpdateMessage(*id)),
-                    );
                 }
             }
         }
@@ -282,7 +284,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn can_create_virtual_console_view() -> Result<(), Error> {
         let mut app = VirtualConsoleAppAssistant::new_for_test()?;
-        app.create_view_assistant(1)?;
+        app.create_view_assistant(Default::default())?;
         Ok(())
     }
 

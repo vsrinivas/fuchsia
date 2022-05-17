@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        app::Config,
+        app::{Config, ViewCreationParameters},
         color::Color,
         drawing::DisplayRotation,
         input::{self},
@@ -81,10 +81,9 @@ impl AppAssistant for RiveAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_with_sender(
+    fn create_view_assistant_with_parameters(
         &mut self,
-        view_key: ViewKey,
-        app_sender: AppSender,
+        params: ViewCreationParameters,
     ) -> Result<ViewAssistantPtr, Error> {
         let file = load_rive(&Path::new("/pkg/data/static").join(self.filename.clone()))?;
         let playback_speed = self.playback_speed;
@@ -92,8 +91,8 @@ impl AppAssistant for RiveAppAssistant {
         let artboard = self.artboard.clone();
 
         Ok(Box::new(RiveViewAssistant::new(
-            app_sender,
-            view_key,
+            params.app_sender,
+            params.view_key,
             file,
             playback_speed,
             background,

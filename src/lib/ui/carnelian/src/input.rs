@@ -5,7 +5,6 @@
 use crate::{
     app::{InternalSender, MessageInternal},
     geometry::{IntPoint, IntSize},
-    view::ViewKey,
 };
 use anyhow::{format_err, Error};
 use euclid::default::Transform2D;
@@ -328,11 +327,7 @@ fn device_id_for_event(event: &fidl_fuchsia_ui_input::PointerEvent) -> DeviceId 
     DeviceId(format!("{}-{}", id_string, event.device_id))
 }
 
-async fn listen_to_path(
-    device_path: &Path,
-    view_key: ViewKey,
-    internal_sender: &InternalSender,
-) -> Result<(), Error> {
+async fn listen_to_path(device_path: &Path, internal_sender: &InternalSender) -> Result<(), Error> {
     let (client, server) = zx::Channel::create()?;
     fdio::service_connect(device_path.to_str().expect("bad path"), server)?;
     let client = fasync::Channel::from_channel(client)?;
@@ -362,7 +357,6 @@ async fn listen_to_path(
                             input_report_sender
                                 .unbounded_send(MessageInternal::InputReport(
                                     DeviceId(device_id.clone()),
-                                    view_key,
                                     report,
                                 ))
                                 .expect("unbounded_send");
@@ -384,17 +378,14 @@ async fn listen_to_path(
     Ok(())
 }
 
-pub(crate) async fn listen_for_user_input(
-    view_key: ViewKey,
-    internal_sender: InternalSender,
-) -> Result<(), Error> {
+pub(crate) async fn listen_for_user_input(internal_sender: InternalSender) -> Result<(), Error> {
     let input_devices_directory = "/dev/class/input-report";
     let watcher_sender = internal_sender.clone();
     let path = std::path::Path::new(input_devices_directory);
     let entries = fs::read_dir(path)?;
     for entry in entries {
         let entry = entry?;
-        match listen_to_path(&entry.path(), view_key, &internal_sender).await {
+        match listen_to_path(&entry.path(), &internal_sender).await {
             Err(err) => {
                 eprintln!("Error: {}: {}", entry.file_name().to_string_lossy().to_string(), err)
             }
@@ -410,7 +401,7 @@ pub(crate) async fn listen_for_user_input(
             match msg.event {
                 vfs_watcher::WatchEvent::ADD_FILE => {
                     let device_path = input_devices_directory_path.join(msg.filename);
-                    match listen_to_path(&device_path, view_key, &watcher_sender).await {
+                    match listen_to_path(&device_path, &watcher_sender).await {
                         Err(err) => {
                             eprintln!("Error: {:?}: {}", device_path, err)
                         }

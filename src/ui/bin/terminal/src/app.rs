@@ -56,7 +56,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn creates_terminal_view() -> Result<(), Error> {
         let mut app = TerminalAssistant::new_for_test();
-        app.create_view_assistant(1)?;
+        app.create_view_assistant(Default::default())?;
         Ok(())
     }
 }

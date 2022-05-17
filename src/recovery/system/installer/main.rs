@@ -218,7 +218,7 @@ impl InstallerViewAssistant {
             menu_state_machine: MenuStateMachine::new(),
             installation_paths: InstallationPaths::new(),
             app_sender: app_sender.clone(),
-            view_key: 0,
+            view_key,
             file,
             render_resources: None,
         })

@@ -282,7 +282,13 @@ impl TerminalViewAssistant {
     #[cfg(test)]
     pub fn new_for_test() -> TerminalViewAssistant {
         let app_sender = AppSender::new_for_testing_purposes_only();
-        Self::new(&app_sender, 1, false, vec![cstr!("/pkg/bin/sh").to_owned()], vec![])
+        Self::new(
+            &app_sender,
+            Default::default(),
+            false,
+            vec![cstr!("/pkg/bin/sh").to_owned()],
+            vec![],
+        )
     }
 
     /// Checks if we need to perform a resize based on a new size.
@@ -820,7 +826,7 @@ mod tests {
         let (sender, mut receiver) = mpsc::unbounded();
         let app_sender = AppSenderWrapper { app_sender: None, test_sender: Some(sender) };
 
-        let event_proxy = EventProxy { app_sender, view_key: 0 };
+        let event_proxy = EventProxy { app_sender, view_key: Default::default() };
 
         event_proxy.send_event(Event::MouseCursorDirty);
 

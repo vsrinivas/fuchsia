@@ -10,7 +10,7 @@ use crate::{
     render::Context,
     scene::{facets::FacetId, scene::Scene},
     view::strategies::base::ViewStrategyPtr,
-    MessageTarget,
+    IdFromRaw, MessageTarget,
 };
 use anyhow::{ensure, Error};
 use euclid::size2;
@@ -19,6 +19,7 @@ use fuchsia_scenic::View;
 use fuchsia_trace::instant;
 use fuchsia_zircon::{Event, Time};
 use futures::channel::mpsc::{unbounded, UnboundedSender};
+use std::fmt::{Display, Formatter};
 
 pub(crate) mod strategies;
 
@@ -420,10 +421,20 @@ pub trait ViewAssistant {
 pub type ViewAssistantPtr = Box<dyn ViewAssistant>;
 
 /// Key identifying a view.
-pub type ViewKey = u64;
+#[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ViewKey(pub u64);
 
-/// Magic value for the first key
-pub(crate) const USE_FIRST_VIEW: ViewKey = 0;
+impl IdFromRaw for ViewKey {
+    fn from_raw(id: u64) -> ViewKey {
+        ViewKey(id)
+    }
+}
+
+impl Display for ViewKey {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "ViewKey({})", self.0)
+    }
+}
 
 #[derive(Debug)]
 pub(crate) struct ViewDetails {
@@ -642,6 +653,10 @@ impl ViewController {
         event: fidl_fuchsia_hardware_display::ControllerEvent,
     ) {
         self.strategy.handle_display_controller_event(event).await;
+    }
+
+    pub fn is_hosted_on_display(&self, display_id: u64) -> bool {
+        self.strategy.is_hosted_on_display(display_id)
     }
 
     pub fn close(&mut self) {

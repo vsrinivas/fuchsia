@@ -3,16 +3,17 @@
 // found in the LICENSE file.
 
 use crate::{
-    app::strategies::base::{create_app_strategy, AppStrategyPtr},
+    app::strategies::{
+        base::{create_app_strategy, AppStrategyPtr},
+        framebuffer::DisplayId,
+    },
     drawing::DisplayRotation,
     geometry::Size,
     input::{DeviceId, UserInputMessage},
     message::Message,
     scene::facets::FacetId,
-    view::{
-        strategies::base::ViewStrategyParams, ViewAssistantPtr, ViewController, ViewKey,
-        USE_FIRST_VIEW,
-    },
+    view::{strategies::base::ViewStrategyParams, ViewAssistantPtr, ViewController, ViewKey},
+    IdGenerator2,
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use fidl_fuchsia_hardware_display::{ControllerEvent, VirtconMode};
@@ -28,7 +29,7 @@ use futures::{
 };
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use std::{collections::BTreeMap, fs, path::PathBuf, pin::Pin};
+use std::{any::Any, collections::BTreeMap, fmt::Debug, fs, path::PathBuf, pin::Pin};
 use toml;
 
 pub(crate) mod strategies;
@@ -199,14 +200,14 @@ pub(crate) static CONFIG: OnceCell<Config> = OnceCell::new();
 
 pub(crate) type InternalSender = UnboundedSender<MessageInternal>;
 
-pub(crate) const FIRST_VIEW_KEY: ViewKey = 100;
-
 #[derive(Debug, Clone, Copy)]
 pub enum MessageTarget {
     Facet(ViewKey, FacetId),
     View(ViewKey),
     Application,
 }
+
+pub type CreateViewOptions = Box<dyn Any>;
 
 /// Context struct passed to the application assistant creator
 // function.
@@ -234,6 +235,20 @@ impl AppSender {
         self.sender
             .unbounded_send(MessageInternal::SetVirtconMode(virtcon_mode))
             .expect("AppSender::set_virtcon_mode - unbounded_send");
+    }
+
+    pub fn create_additional_view(&self, options: Option<CreateViewOptions>) -> ViewKey {
+        let view_key = IdGenerator2::<ViewKey>::next().expect("view_key");
+        self.sender
+            .unbounded_send(MessageInternal::CreateAdditionalView(view_key, options))
+            .expect("AppSender::create_additional_view - unbounded_send");
+        view_key
+    }
+
+    pub fn close_additional_view(&self, view_key: ViewKey) {
+        self.sender
+            .unbounded_send(MessageInternal::CloseAdditionalView(view_key))
+            .expect("AppSender::close_additional_view - unbounded_send");
     }
 
     /// Create an futures mpsc sender and a task to poll the receiver and
@@ -304,6 +319,24 @@ pub fn make_app_assistant<T: AppAssistant + Default + 'static>() -> AssistantCre
     Box::new(make_app_assistant_fut::<T>)
 }
 
+/// Parameter struction for view creation
+pub struct ViewCreationParameters {
+    pub view_key: ViewKey,
+    pub app_sender: AppSender,
+    pub display_id: Option<u64>,
+    pub options: Option<Box<dyn Any>>,
+}
+
+impl Debug for ViewCreationParameters {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ViewCreationParameters")
+            .field("view_key", &self.view_key)
+            .field("display_id", &self.display_id)
+            .field("options", &self.options)
+            .finish()
+    }
+}
+
 /// Trait that a mod author must implement. Currently responsible for creating
 /// a view assistant when the Fuchsia view framework requests that the mod create
 /// a view.
@@ -317,17 +350,17 @@ pub trait AppAssistant {
     /// Called when the Fuchsia view system requests that a view be created, or once at startup
     /// when running without Scenic.
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        todo!("Must implement create_view_assistant_with_sender or create_view_assistant");
+        todo!("Must implement create_view_assistant_with_parameters or create_view_assistant");
     }
 
-    /// Called when the Fuchsia view system requests that a view be created, or once at startup
-    /// when running without Scenic. Provides the app context in case the view needs it.
-    fn create_view_assistant_with_sender(
+    /// Called when the Fuchsia view system requests that a view be created. Provides
+    /// parameters to view creation that include anything provided the the view creation
+    /// requestor and an AppSender.
+    fn create_view_assistant_with_parameters(
         &mut self,
-        view_key: ViewKey,
-        _: AppSender,
+        params: ViewCreationParameters,
     ) -> Result<ViewAssistantPtr, Error> {
-        self.create_view_assistant(view_key)
+        self.create_view_assistant(params.view_key)
     }
 
     /// Return the list of names of services this app wants to provide
@@ -361,7 +394,6 @@ pub type AppAssistantPtr = Box<dyn AppAssistant>;
 pub struct App {
     strategy: AppStrategyPtr,
     view_controllers: BTreeMap<ViewKey, ViewController>,
-    next_key: ViewKey,
     assistant: AppAssistantPtr,
     messages: Vec<(ViewKey, Message)>,
     sender: InternalSender,
@@ -374,19 +406,21 @@ type BoxedGammaValues = Box<[f32; 256]>;
 pub(crate) enum MessageInternal {
     ServiceConnection(zx::Channel, &'static str),
     CreateView(ViewStrategyParams),
+    CreateAdditionalView(ViewKey, Option<CreateViewOptions>),
+    CloseAdditionalView(ViewKey),
     MetricsChanged(ViewKey, Size),
     SizeChanged(ViewKey, Size),
     ScenicPresentSubmitted(ViewKey, fidl_fuchsia_scenic_scheduling::FuturePresentationTimes),
     ScenicPresentDone(ViewKey, fidl_fuchsia_scenic_scheduling::FramePresentedInfo),
     Focus(ViewKey, bool),
-    CloseView(ViewKey),
+    CloseViewsOnDisplay(DisplayId),
     RequestRender(ViewKey),
     Render(ViewKey),
     ImageFreed(ViewKey, u64, u32),
     TargetedMessage(MessageTarget, Message),
     RegisterDevice(DeviceId, hid_input_report::DeviceDescriptor),
-    InputReport(DeviceId, ViewKey, hid_input_report::InputReport),
-    KeyboardAutoRepeat(DeviceId, ViewKey),
+    InputReport(DeviceId, hid_input_report::InputReport),
+    KeyboardAutoRepeat(DeviceId),
     OwnershipChanged(bool),
     DropDisplayResources,
     FlatlandOnNextFrameBegin(ViewKey, fidl_fuchsia_ui_composition::OnNextFrameBeginValues),
@@ -406,14 +440,7 @@ pub type AssistantCreatorFunc = Box<dyn FnOnce(&AppSender) -> AssistantCreator<'
 
 impl App {
     fn new(sender: InternalSender, strategy: AppStrategyPtr, assistant: AppAssistantPtr) -> App {
-        App {
-            strategy,
-            view_controllers: BTreeMap::new(),
-            next_key: FIRST_VIEW_KEY,
-            assistant,
-            messages: Vec::new(),
-            sender,
-        }
+        App { strategy, view_controllers: BTreeMap::new(), assistant, messages: Vec::new(), sender }
     }
 
     fn load_and_filter_config(assistant: &mut AppAssistantPtr) -> Result<(), Error> {
@@ -464,37 +491,55 @@ impl App {
                     Err(e) => eprintln!("error asyncifying channel: {:?}", e),
                 }
             }
-            MessageInternal::CreateView(params) => self.create_view_with_params(params).await?,
+            MessageInternal::CreateView(params) => {
+                self.create_view_with_params(params, None).await?
+            }
+            MessageInternal::CreateAdditionalView(view_key, options) => {
+                self.create_additional_view(view_key, options).await?
+            }
+            MessageInternal::CloseAdditionalView(view_key) => {
+                self.close_additional_view(view_key)?;
+            }
             MessageInternal::MetricsChanged(view_id, metrics) => {
-                let view = self.get_view(view_id).context("MetricsChanged")?;
-                view.handle_metrics_changed(metrics);
+                if let Ok(view) = self.get_view(view_id) {
+                    view.handle_metrics_changed(metrics);
+                }
             }
             MessageInternal::SizeChanged(view_id, new_size) => {
-                let view = self.get_view(view_id).context("SizeChanged")?;
-                view.handle_size_changed(new_size);
+                if let Ok(view) = self.get_view(view_id) {
+                    view.handle_size_changed(new_size);
+                }
             }
             MessageInternal::ScenicPresentSubmitted(view_id, info) => {
-                let view = self.get_view(view_id).context("ScenicPresentSubmitted")?;
-                view.present_submitted(info);
+                if let Ok(view) = self.get_view(view_id) {
+                    view.present_submitted(info);
+                }
             }
             MessageInternal::ScenicPresentDone(view_id, info) => {
-                let view = self.get_view(view_id).context("ScenicPresentDone")?;
-                view.present_done(info);
+                if let Ok(view) = self.get_view(view_id) {
+                    view.present_done(info);
+                }
             }
             MessageInternal::Focus(view_id, focused) => {
-                let view = self.get_view(view_id).context("Focus")?;
-                view.focus(focused);
+                if let Ok(view) = self.get_view(view_id) {
+                    view.focus(focused);
+                }
             }
             MessageInternal::RequestRender(view_id) => {
-                let view = self.get_view(view_id).context("RequestRender")?;
-                view.request_render();
+                if let Ok(view) = self.get_view(view_id) {
+                    view.request_render();
+                }
             }
             MessageInternal::Render(view_id) => {
-                let view = self.get_view(view_id).context("Render")?;
-                view.render().await;
+                if let Ok(view) = self.get_view(view_id) {
+                    view.render().await;
+                }
             }
-            MessageInternal::CloseView(view_id) => {
-                self.close_view(view_id);
+            MessageInternal::CloseViewsOnDisplay(display_id) => {
+                let view_keys = self.get_view_keys_for_display(display_id);
+                for view_key in view_keys.into_iter() {
+                    self.close_view(view_key);
+                }
             }
             MessageInternal::ImageFreed(view_id, image_id, collection_id) => {
                 self.image_freed(view_id, image_id, collection_id)
@@ -515,25 +560,23 @@ impl App {
             MessageInternal::RegisterDevice(device_id, device_descriptor) => {
                 self.strategy.handle_register_input_device(&device_id, &device_descriptor);
             }
-            MessageInternal::InputReport(device_id, view_id, input_report) => {
+            MessageInternal::InputReport(device_id, input_report) => {
                 let input_events = self.strategy.handle_input_report(&device_id, &input_report);
-                let calculated_view_id = if view_id == USE_FIRST_VIEW {
-                    *self.view_controllers.keys().next().expect("first_key")
+                if let Some(focused_view_key) = self.get_focused_view_key() {
+                    let view = self.get_view(focused_view_key).context("InputReport")?;
+                    view.handle_input_events(input_events).context("InputReport")?;
                 } else {
-                    view_id
-                };
-                let view = self.get_view(calculated_view_id).context("InputReport")?;
-                view.handle_input_events(input_events).context("InputReport")?;
+                    eprintln!("dropping input report due to no focused view");
+                }
             }
-            MessageInternal::KeyboardAutoRepeat(device_id, view_id) => {
+            MessageInternal::KeyboardAutoRepeat(device_id) => {
                 let input_events = self.strategy.handle_keyboard_autorepeat(&device_id);
-                let calculated_view_id = if view_id == USE_FIRST_VIEW {
-                    *self.view_controllers.keys().next().expect("first_key")
+                if let Some(focused_view_key) = self.get_focused_view_key() {
+                    let view = self.get_view(focused_view_key).context("KeyboardAutoRepeat")?;
+                    view.handle_input_events(input_events).context("KeyboardAutoRepeat")?;
                 } else {
-                    view_id
-                };
-                let view = self.get_view(calculated_view_id).context("KeyboardAutoRepeat")?;
-                view.handle_input_events(input_events).context("KeyboardAutoRepeat")?;
+                    eprintln!("dropping keyboard auto repeat due to no focused view");
+                }
             }
             MessageInternal::UserInputMessage(view_id, user_input_message) => {
                 let view = self.get_view(view_id).context("UserInputMessage")?;
@@ -561,14 +604,19 @@ impl App {
             }
             MessageInternal::DisplayControllerEvent(event) => match event {
                 ControllerEvent::OnVsync { display_id, .. } => {
-                    if let Ok(view) = self.get_view(display_id) {
-                        view.handle_display_controller_event(event).await;
-                    } else {
-                        // We seem to get two vsyncs after the display is removed.
-                        // Log it to help run down why that is.
-                        eprintln!("vsync for display {} with no view", display_id);
+                    if let Some(view_key) =
+                        self.strategy.get_visible_view_key_for_display(display_id)
+                    {
+                        if let Ok(view) = self.get_view(view_key) {
+                            view.handle_display_controller_event(event).await;
+                        } else {
+                            // We seem to get two vsyncs after the display is removed.
+                            // Log it to help run down why that is.
+                            eprintln!("vsync for display {} with no view", display_id);
+                        }
                     }
                 }
+
                 _ => self.strategy.handle_display_controller_event(event).await,
             },
             MessageInternal::SetVirtconMode(virtcon_mode) => {
@@ -637,6 +685,10 @@ impl App {
         Ok(())
     }
 
+    fn get_focused_view_key(&self) -> Option<ViewKey> {
+        self.strategy.get_focused_view_key()
+    }
+
     fn get_view(&mut self, view_key: ViewKey) -> Result<&mut ViewController, Error> {
         if let Some(view) = self.view_controllers.get_mut(&view_key) {
             Ok(view)
@@ -645,11 +697,21 @@ impl App {
         }
     }
 
+    fn get_view_keys_for_display(&mut self, display_id: u64) -> Vec<ViewKey> {
+        self.view_controllers
+            .iter()
+            .filter_map(|(view_key, view_controller)| {
+                view_controller.is_hosted_on_display(display_id).then(|| *view_key)
+            })
+            .collect()
+    }
+
     fn close_view(&mut self, view_key: ViewKey) {
         let view = self.view_controllers.remove(&view_key);
         if let Some(mut view) = view {
             view.close();
         }
+        self.strategy.handle_view_closed(view_key);
     }
 
     fn ownership_changed(&mut self, owned: bool) {
@@ -672,34 +734,63 @@ impl App {
 
     // Creates a view assistant for views that are using the render view mode feature, either
     // in hosted or direct mode.
-    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        Ok(self.assistant.create_view_assistant_with_sender(
+    fn create_view_assistant(
+        &mut self,
+        view_key: ViewKey,
+        display_id: Option<u64>,
+        options: Option<CreateViewOptions>,
+    ) -> Result<ViewAssistantPtr, Error> {
+        Ok(self.assistant.create_view_assistant_with_parameters(ViewCreationParameters {
             view_key,
-            AppSender { sender: self.sender.clone() },
-        )?)
+            display_id,
+            app_sender: AppSender { sender: self.sender.clone() },
+            options,
+        })?)
     }
 
-    async fn create_view_with_params(&mut self, params: ViewStrategyParams) -> Result<(), Error> {
+    async fn create_view_with_params(
+        &mut self,
+        params: ViewStrategyParams,
+        options: Option<CreateViewOptions>,
+    ) -> Result<(), Error> {
         let view_key = if let Some(view_key) = params.view_key() {
             view_key
         } else {
-            let view_key = self.next_key;
-            self.next_key += 1;
-            view_key
+            IdGenerator2::<ViewKey>::next().expect("view_key")
         };
-        let view_assistant = self.create_view_assistant(view_key)?;
+        let view_assistant = self
+            .create_view_assistant(view_key, params.display_id(), options)
+            .context("create_view_assistant")?;
         let sender = &self.sender;
         let view_strat = {
-            let view_strat =
-                self.strategy.create_view_strategy(view_key, sender.clone(), params).await?;
-            self.strategy.post_setup(sender).await?;
+            let view_strat = self
+                .strategy
+                .create_view_strategy(view_key, sender.clone(), params)
+                .await
+                .context("create_view_strategy")?;
+            self.strategy.post_setup(sender).await.context("post_setup")?;
             view_strat
         };
         let view_controller =
             ViewController::new_with_strategy(view_key, view_assistant, view_strat, sender.clone())
-                .await?;
+                .await
+                .context("new_with_strategy")?;
 
         self.view_controllers.insert(view_key, view_controller);
+        Ok(())
+    }
+
+    async fn create_additional_view(
+        &mut self,
+        view_key: ViewKey,
+        options: Option<CreateViewOptions>,
+    ) -> Result<(), Error> {
+        let params = self.strategy.create_view_strategy_params_for_additional_view(view_key);
+        self.create_view_with_params(params, options).await
+    }
+
+    fn close_additional_view(&mut self, view_key: ViewKey) -> Result<(), Error> {
+        self.close_view(view_key);
         Ok(())
     }
 
@@ -735,8 +826,6 @@ impl App {
     pub(crate) fn image_freed(&mut self, view_id: ViewKey, image_id: u64, collection_id: u32) {
         if let Ok(view) = self.get_view(view_id) {
             view.image_freed(image_id, collection_id);
-        } else {
-            eprintln!("No view for view_id: {}", view_id);
         }
     }
 

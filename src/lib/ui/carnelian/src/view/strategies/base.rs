@@ -83,6 +83,10 @@ pub(crate) trait ViewStrategy {
     ) {
     }
 
+    fn is_hosted_on_display(&self, _display_id: u64) -> bool {
+        false
+    }
+
     fn close(&mut self) {}
 }
 
@@ -90,8 +94,8 @@ pub(crate) type ViewStrategyPtr = Box<dyn ViewStrategy>;
 
 #[derive(Debug)]
 pub(crate) struct DisplayDirectParams {
+    pub view_key: Option<ViewKey>,
     pub controller: ControllerProxyPtr,
-    pub display_id: u64,
     pub info: fidl_fuchsia_hardware_display::Info,
     pub preferred_size: IntSize,
 }
@@ -119,7 +123,16 @@ pub(crate) enum ViewStrategyParams {
 impl ViewStrategyParams {
     pub fn view_key(&self) -> Option<ViewKey> {
         match self {
-            ViewStrategyParams::DisplayDirect(params) => Some(params.display_id),
+            ViewStrategyParams::DisplayDirect(params) => {
+                params.view_key.or_else(|| Some(ViewKey(params.info.id)))
+            }
+            _ => None,
+        }
+    }
+
+    pub fn display_id(&self) -> Option<u64> {
+        match self {
+            ViewStrategyParams::DisplayDirect(params) => Some(params.info.id),
             _ => None,
         }
     }

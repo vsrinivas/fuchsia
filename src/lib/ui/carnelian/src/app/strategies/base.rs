@@ -5,7 +5,9 @@
 use crate::{
     app::{
         strategies::{
-            framebuffer::{first_display_device_path, DisplayController, DisplayDirectAppStrategy},
+            framebuffer::{
+                first_display_device_path, DisplayController, DisplayDirectAppStrategy, DisplayId,
+            },
             scenic::ScenicAppStrategy,
         },
         BoxedGammaValues, Config, InternalSender, MessageInternal, ViewMode,
@@ -37,7 +39,7 @@ use std::path::PathBuf;
 #[async_trait(?Send)]
 pub(crate) trait AppStrategy {
     async fn create_view_strategy(
-        &self,
+        &mut self,
         key: ViewKey,
         app_sender: UnboundedSender<MessageInternal>,
         strategy_params: ViewStrategyParams,
@@ -46,6 +48,10 @@ pub(crate) trait AppStrategy {
     fn create_view_for_testing(&self, _: &UnboundedSender<MessageInternal>) -> Result<(), Error> {
         Ok(())
     }
+    fn create_view_strategy_params_for_additional_view(
+        &mut self,
+        view_key: ViewKey,
+    ) -> ViewStrategyParams;
     fn start_services<'a, 'b>(
         &self,
         _app_sender: UnboundedSender<MessageInternal>,
@@ -86,6 +92,13 @@ pub(crate) trait AppStrategy {
         mut _g: BoxedGammaValues,
         mut _b: BoxedGammaValues,
     ) {
+    }
+    fn handle_view_closed(&mut self, _view_key: ViewKey) {}
+    fn get_focused_view_key(&self) -> Option<ViewKey> {
+        panic!("get_focused_view_key not implemented");
+    }
+    fn get_visible_view_key_for_display(&self, _display_id: DisplayId) -> Option<ViewKey> {
+        panic!("get_visible_view_key_for_display not implemented");
     }
 }
 
