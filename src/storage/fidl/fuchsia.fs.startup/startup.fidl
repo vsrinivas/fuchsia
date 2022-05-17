@@ -6,6 +6,7 @@ library fuchsia.fs.startup;
 
 using fuchsia.fxfs;
 using fuchsia.hardware.block;
+using fuchsia.io;
 using zx;
 
 /// Compression algorithm specifier.
@@ -47,6 +48,10 @@ type StartOptions = resource struct {
 
     /// An optional connection to a crypt client (for encrypted filesystems).
     crypt client_end:<fuchsia.fxfs.Crypt, optional>;
+
+    // If set, provides the caller with the opportunity to migrate data before the mount is
+    // finalised.  The mount will be blocked until the channel is closed.
+    migrate_root server_end:<fuchsia.io.Directory, optional>;
 };
 
 /// Options for how to format filesystems.

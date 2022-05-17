@@ -9,6 +9,7 @@
 #include "src/storage/fshost/fshost_config.h"
 
 namespace fshost {
+
 // Returns the default/base configuration for fshost when run without configuration from the
 // component framework.
 fshost_config::Config DefaultConfig();

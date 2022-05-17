@@ -233,6 +233,18 @@ impl Component {
         let volume = volumes
             .open_or_create_volume(DEFAULT_VOLUME_NAME, Some(crypt), /* create_only: */ false)
             .await?;
+        let root = volume.root();
+        if let Some(migrate_root) = options.migrate_root {
+            let scope = volume.volume().scope();
+            root.clone().open(
+                scope.clone(),
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                0,
+                Path::dot(),
+                migrate_root.into_channel().into(),
+            );
+            scope.wait().await;
+        }
         self.start_serving(&volume).await?;
         if let State::PreStart { queued } = std::mem::replace(
             &mut *self.state.lock().unwrap(),
@@ -245,7 +257,6 @@ impl Component {
                 ),
             }),
         ) {
-            let root = volume.root();
             let scope = volume.volume().scope();
             for (open_flags, mode, path, channel) in queued {
                 root.clone().open(scope.clone(), open_flags, mode, path, channel);

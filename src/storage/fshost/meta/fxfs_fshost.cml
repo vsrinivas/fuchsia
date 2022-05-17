@@ -27,11 +27,11 @@
             path: "/fxfs/fuchsia.fs.startup.Startup",
         },
 
-        // Required for inspect data.
+        // Required for inspect data and to migrate data.
         {
             directory: "root",
             from: "#fxfs",
-            rights: [ "r*" ],
+            rights: [ "rw*" ],
             path: "/data_root",
         },
     ],

@@ -6,6 +6,7 @@
 #define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_OPTIONS_H_
 
 #include <fidl/fuchsia.fs.startup/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>
 
@@ -59,6 +60,11 @@ struct MountOptions {
 
   // If set, use the specified component URL rather than a default.
   std::string component_url;
+
+  // If set, provides the caller with the opportunity to migrate data before the mount is finalised.
+  // The mount will be blocked until the channel and any other channels opened via this channel are
+  // closed.
+  std::function<fidl::ServerEnd<fuchsia_io::Directory>()> migrate_root;
 
   // Generate the argv list for launching a process based on this set of options.
   __EXPORT

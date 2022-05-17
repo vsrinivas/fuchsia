@@ -19,6 +19,7 @@
 
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/block-device-interface.h"
+#include "src/storage/fshost/copier.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fshost_config.h"
 
@@ -65,10 +66,13 @@ class BlockDevice : public BlockDeviceInterface {
   const std::string& partition_name() const override;
   zx::status<fidl::ClientEnd<fuchsia_io::Node>> GetDeviceEndPoint() const;
   zx_status_t CheckCustomFilesystem(fs_management::DiskFormat format) const;
-  zx_status_t FormatCustomFilesystem(fs_management::DiskFormat format) const;
+  zx_status_t FormatCustomFilesystem(fs_management::DiskFormat format);
 
  private:
   zx_status_t MountData(fs_management::MountOptions* options, zx::channel block_device);
+
+  // Copies source data for filesystems that aren't components.
+  zx_status_t CopySourceData(const Copier& copier) const;
 
   FilesystemMounter* mounter_ = nullptr;
   fbl::unique_fd fd_;
@@ -80,6 +84,9 @@ class BlockDevice : public BlockDeviceInterface {
   mutable std::string partition_name_;
   mutable std::optional<fuchsia_hardware_block_partition::wire::Guid> instance_guid_;
   mutable std::optional<fuchsia_hardware_block_partition::wire::Guid> type_guid_;
+
+  // Data that should be written to the partition once mounted.
+  std::optional<Copier> source_data_;
 };
 
 }  // namespace fshost

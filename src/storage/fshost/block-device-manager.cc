@@ -314,7 +314,7 @@ class DataPartitionMatcher : public BlockDeviceManager::Matcher {
         reformat_ = true;
       }
     } else if (reformat_) {
-      // We formatted zxcrypt, so skip straight to formatting minfs.
+      // We formatted zxcrypt, so skip straight to formatting the filesystem.
       zx_status_t status = device.FormatFilesystem();
       if (status != ZX_OK) {
         return status;

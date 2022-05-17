@@ -775,7 +775,7 @@ impl Journal {
         const INIT_ROOT_STORE_OBJECT_ID: u64 = 4;
         const INIT_ALLOCATOR_OBJECT_ID: u64 = 5;
 
-        log::info!("Formatting fxfs device-size: {})", filesystem.device().size());
+        log::info!("Formatting fxfs (device size: {})", filesystem.device().size());
 
         let checkpoint = JournalCheckpoint {
             version: LATEST_VERSION,

@@ -55,7 +55,6 @@
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/fshost/block-device-interface.h"
-#include "src/storage/fshost/copier.h"
 #include "src/storage/fshost/fshost-fs-provider.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/minfs/fsck.h"
@@ -113,26 +112,20 @@ int OpenVerityDeviceThread(void* arg) {
 // binary to terminate and returns the status.
 zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
                       fidl::ClientEnd<fuchsia_io::Node> device,
-                      fidl::ServerEnd<fuchsia_io::Directory> export_root = {},
-                      fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client = {}) {
+                      fidl::ServerEnd<fuchsia_io::Directory> export_root = {}) {
   FX_CHECK(argv[argv.size() - 1] == nullptr);
   FshostFsProvider fs_provider;
   DevmgrLauncher launcher(&fs_provider);
   zx::process proc;
   int handle_count = 1;
-  zx_handle_t handles[3] = {device.TakeChannel().release()};
-  uint32_t handle_ids[3] = {FS_HANDLE_BLOCK_DEVICE_ID};
+  zx_handle_t handles[2] = {device.TakeChannel().release()};
+  uint32_t handle_ids[2] = {FS_HANDLE_BLOCK_DEVICE_ID};
   bool async = false;
   if (export_root) {
     handles[handle_count] = export_root.TakeChannel().release();
     handle_ids[handle_count] = PA_DIRECTORY_REQUEST;
     ++handle_count;
     async = true;
-  }
-  if (crypt_client) {
-    handles[handle_count] = crypt_client.TakeChannel().release();
-    handle_ids[handle_count] = PA_HND(PA_USER0, 2);
-    ++handle_count;
   }
   if (zx_status_t status = launcher.Launch(
           *zx::job::default_job(), argv[0], argv.data(), nullptr, -1,
@@ -707,13 +700,59 @@ zx_status_t BlockDevice::MountFilesystem() {
     case fs_management::kDiskFormatF2fs:
     case fs_management::kDiskFormatMinfs: {
       fs_management::MountOptions options;
+
+      // Fxfs supports the migrate_root mount option which allows us to copy source data before the
+      // mount is finalised.
+      std::thread copy_thread;
+      std::optional<Copier> copier = std::move(source_data_);
+      source_data_.reset();
+
+      if (copier) {
+        if (format_ == fs_management::kDiskFormatFxfs) {
+          options.migrate_root = [&copier,
+                                  &copy_thread]() -> fidl::ServerEnd<fuchsia_io::Directory> {
+            FX_CHECK(copier);
+
+            auto migrate_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
+            if (migrate_root_or.is_error())
+              return {};
+
+            zx::channel client = migrate_root_or->client.TakeChannel();
+            copy_thread = std::thread([&copier, client = std::move(client)]() mutable {
+              FX_LOGS(INFO) << "Copying data...";
+              fbl::unique_fd fd;
+              if (zx_status_t status = fdio_fd_create(client.release(), fd.reset_and_get_address());
+                  status != ZX_OK) {
+                FX_PLOGS(ERROR, status) << "Unable to create fd";
+                return;
+              }
+              if (zx_status_t status = copier->Write(std::move(fd)); status != ZX_OK) {
+                FX_PLOGS(ERROR, status) << "Failed to copy data";
+                return;
+              }
+              FX_LOGS(INFO) << "Successfully copied data";
+            });
+
+            return std::move(migrate_root_or->server);
+          };
+        } else {
+          // Treat errors here as non-fatal.
+          [[maybe_unused]] zx_status_t status = CopySourceData(*copier);
+        }
+      }
+
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
       zx_status_t status = MountData(&options, std::move(block_device));
+
+      if (copy_thread.joinable())
+        copy_thread.join();
+
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount data partition: " << zx_status_get_string(status) << ".";
         MaybeDumpMetadata(fd_.duplicate(), {.disk_format = format_});
         return status;
       }
+
       return ZX_OK;
     }
     default:
@@ -735,7 +774,7 @@ zx_status_t BlockDevice::MountData(fs_management::MountOptions* options, zx::cha
   if (gpt_is_sys_guid(guid, GPT_GUID_LEN)) {
     return ZX_ERR_NOT_SUPPORTED;
   } else if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
-    return mounter_->MountData(std::move(block_device), *options, content_format());
+    return mounter_->MountData(std::move(block_device), *options, format_);
   } else if (gpt_is_durable_guid(guid, GPT_GUID_LEN)) {
     return mounter_->MountDurable(std::move(block_device), *options);
   }
@@ -854,54 +893,66 @@ zx::status<fidl::ClientEnd<fuchsia_io::Node>> BlockDevice::GetDeviceEndPoint() c
 }
 
 zx_status_t BlockDevice::CheckCustomFilesystem(fs_management::DiskFormat format) const {
-  const std::string binary_path(BinaryPathForFormat(format));
-  if (binary_path.empty()) {
-    FX_LOGS(ERROR) << "Unsupported data format";
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  FX_LOGS(INFO) << "Starting fsck with format " << DiskFormatString(format);
-
-  fbl::Vector<const char*> argv;
-  argv.push_back(binary_path.c_str());
-  argv.push_back("fsck");
-  argv.push_back(nullptr);
   auto device_or = GetDeviceEndPoint();
   if (device_or.is_error()) {
     return device_or.error_value();
   }
-  auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
-  if (crypt_client_or.is_error())
-    return crypt_client_or.error_value();
-  return RunBinary(argv, std::move(device_or).value(), {}, std::move(crypt_client_or).value());
+
+  if (format == fs_management::kDiskFormatFxfs) {
+    // Fxfs runs as a component.
+    constexpr char startup_service_path[] = "/fxfs/fuchsia.fs.startup.Startup";
+    auto startup_client_end = service::Connect<fuchsia_fs_startup::Startup>(startup_service_path);
+    if (startup_client_end.is_error()) {
+      FX_PLOGS(ERROR, startup_client_end.error_value())
+          << "Failed to connect to startup service at " << startup_service_path;
+      return startup_client_end.error_value();
+    }
+    auto startup_client = fidl::BindSyncClient(std::move(*startup_client_end));
+    fidl::ClientEnd<fuchsia_hardware_block::Block> block_client_end(device_or->TakeChannel());
+    fs_management::FsckOptions options;
+    options.crypt_client = [] {
+      auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
+      if (crypt_client_or.is_error())
+        return zx::channel();
+      else
+        return crypt_client_or->TakeChannel();
+    };
+    auto res = startup_client->Check(std::move(block_client_end), options.as_check_options());
+    if (!res.ok()) {
+      FX_PLOGS(ERROR, res.status()) << "Failed to fsck (FIDL error)";
+      return res.status();
+    }
+    if (res->result.is_err()) {
+      FX_PLOGS(ERROR, res->result.err()) << "Fsck failed";
+      return res->result.err();
+    }
+    return ZX_OK;
+  } else {
+    const std::string binary_path(BinaryPathForFormat(format));
+    if (binary_path.empty()) {
+      FX_LOGS(ERROR) << "Unsupported data format";
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    return RunBinary({binary_path.c_str(), "fsck", nullptr}, std::move(device_or).value());
+  }
 }
 
 // This is a destructive operation and isn't atomic (i.e. not resilient to power interruption).
-zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format) const {
-  const std::string binary_path(BinaryPathForFormat(format));
-  if (binary_path.empty()) {
-    FX_LOGS(ERROR) << "Unsupported data format";
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  FX_LOGS(INFO) << "Formatting " << DiskFormatString(format);
-
+zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format) {
   // Try mounting minfs and slurp all existing data off.
-  zx_handle_t handle;
-  if (zx_status_t status = fdio_fd_clone(fd_.get(), &handle); status != ZX_OK)
-    return status;
-  fbl::unique_fd fd;
-  if (zx_status_t status = fdio_fd_create(handle, fd.reset_and_get_address()); status != ZX_OK)
-    return status;
-
-  Copier copier;
-  {
+  if (content_format() == fs_management::kDiskFormatMinfs) {
+    FX_LOGS(INFO) << "Attempting to read existing Minfs data";
     auto device_or = GetDeviceEndPoint();
     if (device_or.is_error())
       return device_or.error_value();
-    copier = TryReadingMinfs(std::move(device_or).value());
+    if (Copier copier = TryReadingMinfs(std::move(device_or).value()); !copier.empty()) {
+      FX_LOGS(INFO) << "Successfully read Minfs data";
+      source_data_.emplace(std::move(copier));
+    }
   }
 
+  FX_LOGS(INFO) << "Formatting " << DiskFormatString(format);
   fidl::ClientEnd<fuchsia_io::Node> device;
   if (auto device_or = GetDeviceEndPoint(); device_or.is_error()) {
     return device_or.error_value();
@@ -994,7 +1045,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
     if (format == fs_management::kDiskFormatF2fs) {
       slice_target = kDefaultF2fsMinBytes;
     }
-    if (slices_available < slice_target) {
+    if (slices_available * slice_size < slice_target) {
       FX_LOGS(WARNING) << "Only " << slices_available << " slices available for "
                        << DiskFormatString(format)
                        << " partition; some functionality may be missing.";
@@ -1020,91 +1071,97 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
     return status;
   }
 
-  fbl::Vector<const char*> argv = {binary_path.c_str(), "mkfs", nullptr};
+  if (format == fs_management::kDiskFormatFxfs) {
+    // Fxfs runs as a component.
+    constexpr char startup_service_path[] = "/fxfs/fuchsia.fs.startup.Startup";
+    auto startup_client_end = service::Connect<fuchsia_fs_startup::Startup>(startup_service_path);
+    if (startup_client_end.is_error()) {
+      FX_PLOGS(ERROR, startup_client_end.error_value())
+          << "Failed to connect to startup service at " << startup_service_path;
+      return startup_client_end.error_value();
+    }
+    auto startup_client = fidl::BindSyncClient(std::move(*startup_client_end));
+    auto device_or = GetDeviceEndPoint();
+    if (device_or.is_error()) {
+      FX_PLOGS(ERROR, device_or.error_value()) << "Unable to get device";
+      return device_or.error_value();
+    }
+    fidl::ClientEnd<fuchsia_hardware_block::Block> block_client_end(device_or->TakeChannel());
+    fs_management::MkfsOptions options;
+    options.crypt_client = [] {
+      auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
+      if (crypt_client_or.is_error())
+        return zx::channel();
+      else
+        return crypt_client_or->TakeChannel();
+    };
+    auto res = startup_client->Format(std::move(block_client_end), options.as_format_options());
+    if (!res.ok()) {
+      FX_PLOGS(ERROR, res.status()) << "Failed to format (FIDL error)";
+      return res.status();
+    }
+    if (res->result.is_err()) {
+      FX_PLOGS(ERROR, res->result.err()) << "Format failed";
+      return res->result.err();
+    }
+  } else {
+    const std::string binary_path(BinaryPathForFormat(format));
+    if (binary_path.empty()) {
+      FX_LOGS(ERROR) << "Unsupported data format";
+      return ZX_ERR_INVALID_ARGS;
+    }
 
-  {
-    auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
-    if (crypt_client_or.is_error())
-      return crypt_client_or.error_value();
-    if (zx_status_t status =
-            RunBinary(argv, std::move(device), {}, std::move(crypt_client_or).value());
+    if (zx_status_t status = RunBinary({binary_path.c_str(), "mkfs", nullptr}, std::move(device));
         status != ZX_OK) {
       return status;
     }
   }
+  content_format_ = format_;
 
-  // If there's any data to copy, mount and then copy all the data back.
-  if (copier.empty()) {
-    content_format_ = format_;
-    return ZX_OK;
-  }
-  FX_LOGS(INFO) << "Copying data from old partition...";
+  return ZX_OK;
+}
 
-  if (zx_status_t status = fdio_fd_clone(fd_.get(), &handle); status != ZX_OK) {
-    FX_LOGS(ERROR) << "fdio_fd_clone failed";
-    return status;
-  }
-  if (zx_status_t status = fdio_fd_create(handle, fd.reset_and_get_address()); status != ZX_OK)
-    return status;
-
+// This copies source data for filesystems that aren't components and don't support the migrate_root
+// mount option.
+zx_status_t BlockDevice::CopySourceData(const Copier& copier) const {
+  FX_LOGS(INFO) << "Copying data...";
   auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (export_root_or.is_error())
     return export_root_or.error_value();
 
-  argv[1] = "mount";
+  const std::string binary_path(BinaryPathForFormat(format_));
   auto device_or = GetDeviceEndPoint();
   if (device_or.is_error()) {
     return device_or.error_value();
   }
-  {
-    auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
-    if (crypt_client_or.is_error())
-      return crypt_client_or.error_value();
-    if (zx_status_t status =
-            RunBinary(argv, std::move(device_or).value(), std::move(export_root_or->server),
-                      std::move(crypt_client_or).value());
-        status != ZX_OK) {
-      FX_LOGS(ERROR) << "Unable to mount after format";
-      return status;
-    }
-  }
-
-  zx::status create_root = fidl::CreateEndpoints<fuchsia_io::Node>();
-  if (create_root.is_error()) {
-    return create_root.status_value();
-  }
-  auto [root_client, root_server] = std::move(create_root).value();
-
-  if (auto resp = fidl::WireCall(export_root_or->client)
-                      ->Open(fuchsia_io::wire::OpenFlags::kRightReadable |
-                                 fuchsia_io::wire::OpenFlags::kPosixWritable |
-                                 fuchsia_io::wire::OpenFlags::kPosixExecutable,
-                             0, fidl::StringView("root"), std::move(root_server));
-      !resp.ok()) {
-    FX_LOGS(ERROR) << "Failed to open export root: " << resp.status_string();
-    return resp.status();
-  }
-
   if (zx_status_t status =
-          fdio_fd_create(root_client.TakeChannel().release(), fd.reset_and_get_address());
+          RunBinary({binary_path.c_str(), "mount", nullptr}, std::move(device_or).value(),
+                    std::move(export_root_or->server));
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to mount after format";
+    return status;
+  }
+  auto root_or = fs_management::FsRootHandle(export_root_or->client);
+  if (root_or.is_error()) {
+    FX_PLOGS(ERROR, root_or.error_value()) << "Unable to get root";
+    return root_or.error_value();
+  }
+  fbl::unique_fd fd;
+  if (zx_status_t status =
+          fdio_fd_create(root_or->TakeChannel().release(), fd.reset_and_get_address());
       status != ZX_OK) {
     FX_LOGS(ERROR) << "fdio_fd_create failed";
     return status;
   }
-
   if (zx_status_t status = copier.Write(std::move(fd)); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to copy data: " << zx_status_get_string(status);
     return status;
   }
-
   if (auto status = fs_management::Shutdown(export_root_or->client); status.is_error()) {
     // Ignore errors; there's nothing we can do.
     FX_LOGS(WARNING) << "Unmount failed: " << status.status_string();
   }
-
-  FX_LOGS(INFO) << "Copying data complete.";
-  content_format_ = format_;
-
+  FX_LOGS(INFO) << "Successfully copied data";
   return ZX_OK;
 }
 

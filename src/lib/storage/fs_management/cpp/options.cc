@@ -50,6 +50,8 @@ zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_option
   options.write_compression_level = write_compression_level;
   if (crypt_client)
     options.crypt = fidl::ClientEnd<fuchsia_fxfs::Crypt>(crypt_client());
+  if (migrate_root)
+    options.migrate_root = migrate_root();
 
   if (write_compression_algorithm != nullptr) {
     std::string write_compression_algorithm_string(write_compression_algorithm);
