@@ -132,6 +132,5 @@ group("custom_analysis_options") {
   visibility = [
     "//build/flutter/internal/build_test_bootstrap/*",
     "//src/tests/benchmarks/fidl/dart/*",
-    "//tools/codesize/*",
   ]
 }
