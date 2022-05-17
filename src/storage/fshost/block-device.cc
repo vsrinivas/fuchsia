@@ -599,7 +599,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
                       "|\n"
                       "--------------------------------------------------------------";
     MaybeDumpMetadata(fd_.duplicate(), {.disk_format = format_});
-    mounter_->ReportDataPartitionCorrupted();
+    mounter_->ReportPartitionCorrupted(format_);
   } else {
     FX_LOGS(INFO) << "fsck of " << DiskFormatString(format_) << " completed OK";
   }

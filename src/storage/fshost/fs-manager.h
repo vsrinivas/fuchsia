@@ -19,6 +19,7 @@
 #include <iterator>
 #include <map>
 
+#include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/fshost/fdio.h"
 #include "src/storage/fshost/fshost-boot-args.h"
@@ -112,13 +113,13 @@ class FsManager {
   // Note that additional reasons should be added sparingly, and only in cases where the data is
   // useful and it would be difficult to debug the issue otherwise.
   enum ReportReason {
-    kMinfsCorrupted,
-    kMinfsNotUpgradeable,
+    // Unable to mount due to fsck failure.
+    kFsckFailure,
   };
 
   // Files a synthetic crash report.  This is done in the background on a new thread, so never
   // blocks. Note that there is no indication if the reporting fails.
-  void FileReport(ReportReason reason);
+  void FileReport(fs_management::DiskFormat format, ReportReason reason) const;
 
   zx_status_t AttachMount(std::string_view device_path,
                           fidl::ClientEnd<fuchsia_io::Directory> export_root,

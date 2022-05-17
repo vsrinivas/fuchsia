@@ -61,7 +61,7 @@ class FilesystemMounter {
                              const fs_management::MountOptions& options);
 
   std::shared_ptr<FshostBootArgs> boot_args() { return fshost_.boot_args(); }
-  void ReportDataPartitionCorrupted();
+  void ReportPartitionCorrupted(fs_management::DiskFormat format);
 
   bool BlobMounted() const { return blob_mounted_; }
   bool DataMounted() const { return data_mounted_; }

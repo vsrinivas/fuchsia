@@ -232,10 +232,11 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
   return ZX_OK;
 }
 
-void FilesystemMounter::ReportDataPartitionCorrupted() {
+void FilesystemMounter::ReportPartitionCorrupted(fs_management::DiskFormat format) {
+  // TODO(fxbug.dev/96057): Report this via Inspect using Lapis and remove Cobalt flushing thread.
   fshost_.mutable_metrics()->LogDataCorruption();
   fshost_.FlushMetrics();
-  fshost_.FileReport(FsManager::ReportReason::kMinfsCorrupted);
+  fshost_.FileReport(format, FsManager::ReportReason::kFsckFailure);
 }
 
 zx::status<> FilesystemMounter::MaybeInitCryptClient() {

@@ -27,6 +27,7 @@
 
 #include <iterator>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -34,6 +35,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string.h>
 
 #include "admin-server.h"
 #include "block-watcher.h"
@@ -50,12 +52,11 @@ namespace fshost {
 
 namespace {
 
-const char* ReportReasonStr(const FsManager::ReportReason& reason) {
+fbl::String ReportReasonString(fs_management::DiskFormat format, FsManager::ReportReason reason) {
   switch (reason) {
-    case FsManager::ReportReason::kMinfsCorrupted:
-      return "fuchsia-minfs-corruption";
-    case FsManager::ReportReason::kMinfsNotUpgradeable:
-      return "fuchsia-minfs-not-upgraded";
+    case FsManager::ReportReason::kFsckFailure:
+      return fbl::String::Concat(
+          {"fuchsia-", fs_management::DiskFormatString(format), "-corruption"});
   }
 }
 
@@ -455,15 +456,16 @@ zx_status_t FsManager::ForwardFsService(MountPoint point, const char* service_na
   return svc_dir_->AddEntry(service_name, std::move(service_node));
 }
 
-void FsManager::FileReport(ReportReason reason) {
+void FsManager::FileReport(fs_management::DiskFormat format, ReportReason reason) const {
+  fbl::String report_reason = ReportReasonString(format, reason);
+  FX_LOGS(INFO) << "Filing crash report, reason: " << report_reason.c_str();
   if (!file_crash_report_) {
-    FX_LOGS(INFO) << "Not filing a crash report for " << ReportReasonStr(reason) << " (disabled)";
+    FX_LOGS(INFO) << "Report filing disabled, ignoring crash report.";
     return;
   }
-  FX_LOGS(INFO) << "Filing a crash report for " << ReportReasonStr(reason);
   // This thread accesses no state in the SyntheticCrashReporter, so is thread-safe even if the
   // reporter is destroyed.
-  std::thread t([reason]() {
+  std::thread t([format, report_reason = std::move(report_reason)]() {
     auto client_end = service::Connect<fuchsia_feedback::CrashReporter>();
     if (client_end.is_error()) {
       FX_LOGS(WARNING) << "Unable to connect to crash reporting service: "
@@ -474,8 +476,8 @@ void FsManager::FileReport(ReportReason reason) {
 
     fidl::Arena allocator;
     fuchsia_feedback::wire::CrashReport report(allocator);
-    report.set_program_name(allocator, allocator, "minfs");
-    report.set_crash_signature(allocator, allocator, ReportReasonStr(reason));
+    report.set_program_name(allocator, allocator, fs_management::DiskFormatString(format));
+    report.set_crash_signature(allocator, allocator, report_reason);
     report.set_is_fatal(false);
 
     auto res = client->File(report);
