@@ -633,33 +633,40 @@ impl Allocator for SimpleAllocator {
 
         ensure!(len > 0, FxfsError::NoSpace);
 
-        let _guard = loop {
-            {
-                let guard = self.allocation_mutex.lock().await;
+        #[allow(clippy::never_loop)] // Loop used as a for {} else {}.
+        let _guard = 'sync: loop {
+            // Cap number of sync attempts before giving up on finding free space.
+            for _ in 0..10 {
+                {
+                    let guard = self.allocation_mutex.lock().await;
 
-                if !self.needs_sync() {
-                    break guard;
+                    if !self.needs_sync() {
+                        break 'sync guard;
+                    }
                 }
-            }
 
-            // All the free space is currently tied up with deallocations, so we need to sync
-            // and flush the device to free that up.
-            //
-            // We can't hold the allocation lock whilst we sync here because the allocation lock is
-            // also taken in apply_mutations, which is called when journal locks are held, and we
-            // call sync here which takes those same locks, so it would have the potential to result
-            // in a deadlock.  Sync holds its own lock to guard against multiple syncs occurring at
-            // the same time, and we can supply a precondition that is evaluated under that lock to
-            // ensure we don't sync twice if we don't need to.
-            self.filesystem
-                .upgrade()
-                .unwrap()
-                .sync(SyncOptions {
-                    flush_device: true,
-                    precondition: Some(Box::new(|| self.needs_sync())),
-                    ..Default::default()
-                })
-                .await?;
+                // All the free space is currently tied up with deallocations, so we need to sync
+                // and flush the device to free that up.
+                //
+                // We can't hold the allocation lock whilst we sync here because the allocation lock
+                // is also taken in apply_mutations, which is called when journal locks are held,
+                // and we call sync here which takes those same locks, so it would have the
+                // potential to result in a deadlock.  Sync holds its own lock to guard against
+                // multiple syncs occurring at the same time, and we can supply a precondition that
+                // is evaluated under that lock to ensure we don't sync twice if we don't need to.
+                self.filesystem
+                    .upgrade()
+                    .unwrap()
+                    .sync(SyncOptions {
+                        flush_device: true,
+                        precondition: Some(Box::new(|| self.needs_sync())),
+                        ..Default::default()
+                    })
+                    .await?;
+            }
+            bail!(
+                anyhow!(FxfsError::NoSpace).context("Sync failed to yield sufficient free space.")
+            );
         };
 
         let dropped_allocations =
@@ -1591,6 +1598,65 @@ mod tests {
         device_ranges.clear();
         device_ranges.push(fs.block_size() * 200..fs.block_size() * (200 + 2));
         check_allocations(&allocator, &device_ranges).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_allocate_free_reallocate() {
+        const STORE_OBJECT_ID: u64 = 99;
+        let (fs, allocator, _) = test_fs().await;
+
+        // Allocate some stuff.
+        let mut device_ranges = Vec::new();
+        let mut transaction =
+            fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
+        for _ in 0..30 {
+            device_ranges.push(
+                allocator
+                    .allocate(&mut transaction, STORE_OBJECT_ID, 100 * fs.block_size())
+                    .await
+                    .expect("allocate failed"),
+            );
+        }
+        transaction.commit().await.expect("commit failed");
+
+        assert_eq!(
+            fs.block_size() * 3000,
+            *allocator.get_owner_allocated_bytes().entry(STORE_OBJECT_ID).or_default() as u64
+        );
+
+        // Delete it all.
+        let mut transaction =
+            fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
+        for range in std::mem::replace(&mut device_ranges, Vec::new()) {
+            allocator.deallocate(&mut transaction, STORE_OBJECT_ID, range).await.expect("dealloc");
+        }
+        transaction.commit().await.expect("commit failed");
+
+        assert_eq!(
+            0,
+            *allocator.get_owner_allocated_bytes().entry(STORE_OBJECT_ID).or_default() as u64
+        );
+
+        // Allocate some more stuff. Due to storage pressure, this requires us to flush device
+        // before reusing the above space
+        let mut transaction =
+            fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
+        let target_len = 1500 * fs.block_size();
+        while device_ranges.iter().map(|i| i.length().unwrap()).sum::<u64>() != target_len {
+            let len = target_len - device_ranges.iter().map(|i| i.length().unwrap()).sum::<u64>();
+            device_ranges.push(
+                allocator
+                    .allocate(&mut transaction, STORE_OBJECT_ID, len)
+                    .await
+                    .expect("allocate failed"),
+            );
+        }
+        transaction.commit().await.expect("commit failed");
+
+        assert_eq!(
+            fs.block_size() * 1500,
+            *allocator.get_owner_allocated_bytes().entry(STORE_OBJECT_ID).or_default() as u64
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
