@@ -177,15 +177,17 @@ static void arm64_cpu_early_init() {
   // Save all of the features of the cpu.
   arm64_feature_init();
 
-  // Enable cycle counter.
-  __arm_wsr64("pmcr_el0", PMCR_EL0_ENABLE_BIT | PMCR_EL0_LONG_COUNTER_BIT);
-  __isb(ARM_MB_SY);
-  __arm_wsr64("pmcntenset_el0", PMCNTENSET_EL0_ENABLE);
-  __isb(ARM_MB_SY);
+  // Enable cycle counter, if FEAT_PMUv3 is enabled.
+  if (feat_pmuv3_enabled) {
+    __arm_wsr64("pmcr_el0", PMCR_EL0_ENABLE_BIT | PMCR_EL0_LONG_COUNTER_BIT);
+    __isb(ARM_MB_SY);
+    __arm_wsr64("pmcntenset_el0", PMCNTENSET_EL0_ENABLE);
+    __isb(ARM_MB_SY);
 
-  // Enable user space access to cycle counter.
-  __arm_wsr64("pmuserenr_el0", PMUSERENR_EL0_ENABLE);
-  __isb(ARM_MB_SY);
+    // Enable user space access to cycle counter.
+    __arm_wsr64("pmuserenr_el0", PMUSERENR_EL0_ENABLE);
+    __isb(ARM_MB_SY);
+  }
 
   // Enable Debug Exceptions by Disabling the OS Lock. The OSLAR_EL1 is a WO
   // register with only the low bit defined as OSLK. Write 0 to disable.

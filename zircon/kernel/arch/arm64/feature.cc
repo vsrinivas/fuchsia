@@ -20,6 +20,9 @@
 // saved feature bitmap
 uint32_t arm64_isa_features;
 
+// Whether FEAT_PMUv3 is implemented.
+bool feat_pmuv3_enabled;
+
 static arm64_cache_info_t cache_info[SMP_MAX_CPUS];
 
 enum arm64_asid_width arm64_asid_width_;
@@ -454,6 +457,10 @@ void arm64_feature_init() {
     } else {
       arm64_asid_width_ = arm64_asid_width::ASID_8;
     }
+
+    // Check if FEAT_PMUv3 is enabled.
+    uint64_t pmu_version = (__arm_rsr64("id_aa64dfr0_el1") & FEAT_PMUVER_MASK) >> 8;
+    feat_pmuv3_enabled = pmu_version > 0b0000 && pmu_version < 0b1111;
   }
 
   // read the cache info for each cpu

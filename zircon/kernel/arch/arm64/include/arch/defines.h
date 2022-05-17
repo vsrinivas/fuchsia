@@ -28,6 +28,9 @@
 #define USER_PAGE_SIZE (1L << USER_PAGE_SIZE_SHIFT)
 #define USER_PAGE_MASK (USER_PAGE_SIZE - 1)
 
+// Mask for PMU version section of ID_AA64DFR0_EL1.
+#define FEAT_PMUVER_MASK 0xF00
+
 // Align the heap to 2MiB to optionally support large page mappings in it.
 #define ARCH_HEAP_ALIGN_BITS 21
 

@@ -147,6 +147,10 @@ zx_status_t PerfmonState::Create(unsigned n_cpus, ktl::unique_ptr<PerfmonState>*
 PerfmonState::PerfmonState(unsigned n_cpus) : PerfmonStateBase(n_cpus) {}
 
 static void arm64_perfmon_init_once(uint level) {
+  if (!feat_pmuv3_enabled) {
+    return;
+  }
+
   uint64_t pmcr = __arm_rsr64("pmcr_el0");
 
   // Play it safe for now and require ARM's implementation.

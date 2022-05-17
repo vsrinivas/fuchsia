@@ -53,6 +53,7 @@ enum arm64_microarch {
 enum arm64_microarch midr_to_microarch(uint32_t midr);
 
 extern uint32_t arm64_isa_features;
+extern bool feat_pmuv3_enabled;
 
 static inline bool arm64_feature_test(uint32_t feature) { return arm64_isa_features & feature; }
 
