@@ -11,7 +11,7 @@ use fuchsia_async::TimeoutExt as _;
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 use itertools::Itertools as _;
-use net_declare::{fidl_if_addr, fidl_ip, fidl_subnet, std_ip};
+use net_declare::{fidl_ip, fidl_subnet, std_ip};
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::Result;
 use netstack_testing_common::{
@@ -151,15 +151,10 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         .await
         .expect("wait device online");
 
-        let addr = fidl_fuchsia_net::Ipv4Address { addr: [192, 168, idx.try_into().unwrap(), 1] };
-        let prefix_len = 24;
-        let if_addr =
-            fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                addr,
-                prefix_len,
-            });
         let mut addr = fidl_fuchsia_net::Subnet {
-            addr: fidl_fuchsia_net::IpAddress::Ipv4(addr),
+            addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                addr: [192, 168, idx.try_into().unwrap(), 1],
+            }),
             prefix_len: 24,
         };
         let expected =
@@ -169,7 +164,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
             NetstackVersion::Netstack2 => {
                 let address_state_provider = interfaces::add_address_wait_assigned(
                     iface.control(),
-                    if_addr,
+                    addr,
                     fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                 )
                 .await
@@ -775,9 +770,6 @@ async fn test_watcher_race() {
             .expect("install in realm");
 
         const ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
-        // TODO(https://fxbug.dev/98955): Delete this once fuchsia.net.interfaces.admin uses
-        // subnet.
-        const IF_ADDR: fidl_fuchsia_net::InterfaceAddress = fidl_if_addr!("192.168.0.1/24");
         let control_add_address = {
             let (control, server_end) =
                 fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
@@ -798,7 +790,7 @@ async fn test_watcher_race() {
             async {
                 let address_state_provider = interfaces::add_address_wait_assigned(
                     &control_add_address,
-                    IF_ADDR,
+                    ADDR,
                     fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                 )
                 .await

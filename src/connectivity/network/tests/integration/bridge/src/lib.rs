@@ -268,9 +268,10 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
                 let prefix_len = 16;
                 let address_state_provider = interfaces::add_address_wait_assigned(
                     &switch_interface_control,
-                    fidl_fuchsia_net::InterfaceAddress::Ipv4(
-                        fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len },
-                    ),
+                    fidl_fuchsia_net::Subnet {
+                        addr: fidl_fuchsia_net::IpAddress::Ipv4(addr),
+                        prefix_len,
+                    },
                     fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                 )
                 .await

@@ -1556,16 +1556,15 @@ impl<'a> NetCfg<'a> {
         // The interface address should be the first available address.
         let network_addr_as_u32 = u32::from_be_bytes(WLAN_AP_NETWORK_ADDR.addr);
         let interface_addr_as_u32 = network_addr_as_u32 + 1;
-        let addr = fnet::Ipv4Address { addr: interface_addr_as_u32.to_be_bytes() };
+        let ipv4 = fnet::Ipv4Address { addr: interface_addr_as_u32.to_be_bytes() };
+        let addr = fidl_fuchsia_net::Subnet {
+            addr: fnet::IpAddress::Ipv4(ipv4.clone()),
+            prefix_len: WLAN_AP_PREFIX_LEN,
+        };
 
         let () = control
             .add_address(
-                &mut fidl_fuchsia_net::InterfaceAddress::Ipv4(
-                    fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                        addr,
-                        prefix_len: WLAN_AP_PREFIX_LEN,
-                    },
-                ),
+                &mut addr.clone(),
                 fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                 server_end,
             )
@@ -1646,10 +1645,7 @@ impl<'a> NetCfg<'a> {
             severity(anyhow::Error::new(e).context("failed to add interface address for WLAN AP"))
         })?;
 
-        let subnet = fidl_fuchsia_net_ext::apply_subnet_mask(fidl_fuchsia_net::Subnet {
-            addr: fidl_fuchsia_net::IpAddress::Ipv4(addr),
-            prefix_len: WLAN_AP_PREFIX_LEN,
-        });
+        let subnet = fidl_fuchsia_net_ext::apply_subnet_mask(addr);
         let () = stack
             .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
                 subnet,
@@ -1695,7 +1691,7 @@ impl<'a> NetCfg<'a> {
             .map_err(errors::Error::NonFatal)?;
 
         // Configure the DHCP server.
-        let v = vec![addr.into()];
+        let v = vec![ipv4];
         debug!("setting DHCP IpAddrs parameter to {:?}", v);
         let () = dhcp_server
             .set_parameter(&mut fnet_dhcp::Parameter::IpAddrs(v))

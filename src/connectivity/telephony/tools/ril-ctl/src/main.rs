@@ -166,11 +166,9 @@ async fn handle_cmd(
                             let () = debug_interfaces.get_admin(3, server_end).context("send get admin request")?;
                             let (address_state_provider, server_end) = fidl::endpoints::create_proxy()
                                 .context("create proxy")?;
-                            let mut addr = {
-                                fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                                    addr,
+                            let mut addr = fidl_fuchsia_net::Subnet {
+                                    addr: fidl_fuchsia_net::IpAddress::Ipv4(addr),
                                     prefix_len,
-                                })
                             };
                             let () = control
                                 .add_address(

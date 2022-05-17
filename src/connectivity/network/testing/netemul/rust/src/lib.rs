@@ -1174,20 +1174,17 @@ impl<'a> TestInterface<'a> {
     /// Adds an address and a subnet route, waiting until the address assignment
     /// state is `ASSIGNED`.
     pub async fn add_address_and_subnet_route(&self, subnet: fnet::Subnet) -> Result<()> {
-        let fnet::Subnet { addr, prefix_len } = subnet.clone();
-        let mut addr = match addr {
-            fnet::IpAddress::Ipv4(addr) => {
-                fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix { addr, prefix_len })
-            }
-            fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
-        };
         let (address_state_provider, server) =
             fidl::endpoints::create_proxy::<fnet_interfaces_admin::AddressStateProviderMarker>()
                 .context("create proxy")?;
         let () = address_state_provider.detach().context("detach address lifetime")?;
         let () = self
             .control
-            .add_address(&mut addr, fnet_interfaces_admin::AddressParameters::EMPTY, server)
+            .add_address(
+                &mut subnet.clone(),
+                fnet_interfaces_admin::AddressParameters::EMPTY,
+                server,
+            )
             .context("FIDL error")?;
 
         let state_stream =

@@ -275,22 +275,9 @@ async fn add_address_to_hermetic_interface(
         fnet_interfaces_ext::admin::Control::create_endpoints().expect("create_endpoints failed");
     interfaces_proxy.get_admin(id, server_end).expect("get_admin failed");
 
-    let fnet::Subnet { addr, prefix_len } = &subnet;
-    let interface_address = match addr {
-        fidl_fuchsia_net::IpAddress::Ipv4(ipv4_addr) => {
-            fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                addr: ipv4_addr.clone(),
-                prefix_len: *prefix_len,
-            })
-        }
-        fidl_fuchsia_net::IpAddress::Ipv6(ipv6_addr) => {
-            fidl_fuchsia_net::InterfaceAddress::Ipv6(ipv6_addr.clone())
-        }
-    };
-
     let address_state_provider = netstack_testing_common::interfaces::add_address_wait_assigned(
         &control,
-        interface_address,
+        subnet,
         fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
     )
     .await

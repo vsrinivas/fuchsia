@@ -135,7 +135,7 @@ impl Control {
     /// Calls AddAddress on the proxy.
     pub fn add_address(
         &self,
-        address: &mut fidl_fuchsia_net::InterfaceAddress,
+        address: &mut fidl_fuchsia_net::Subnet,
         parameters: fnet_interfaces_admin::AddressParameters,
         address_state_provider: fidl::endpoints::ServerEnd<
             fnet_interfaces_admin::AddressStateProviderMarker,
@@ -158,7 +158,7 @@ impl Control {
     /// Calls RemoveAddress on the proxy.
     pub async fn remove_address(
         &self,
-        address: &mut fidl_fuchsia_net::InterfaceAddress,
+        address: &mut fidl_fuchsia_net::Subnet,
     ) -> Result<
         fnet_interfaces_admin::ControlRemoveAddressResult,
         TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>,

@@ -241,10 +241,10 @@ async fn test_resolve_default_route_while_dhcp_is_running() {
     // Configure stack statically with an address and a default route while DHCP is still running.
     let _host_address_state_provider = interfaces::add_address_wait_assigned(
         ep.control(),
-        fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
-            addr: EP_ADDR,
+        fidl_fuchsia_net::Subnet {
+            addr: fidl_fuchsia_net::IpAddress::Ipv4(EP_ADDR),
             prefix_len: PREFIX_LEN,
-        }),
+        },
         fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
     )
     .await

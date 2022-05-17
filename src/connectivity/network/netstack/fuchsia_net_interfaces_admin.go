@@ -14,6 +14,7 @@ import (
 	"syscall/zx"
 	"syscall/zx/fidl"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
@@ -233,24 +234,6 @@ func (pi *adminAddressStateProviderImpl) WatchAddressAssignmentState(ctx fidl.Co
 	}
 }
 
-func interfaceAddressToProtocolAddress(addr net.InterfaceAddress) tcpip.ProtocolAddress {
-	var protocolAddr tcpip.ProtocolAddress
-	switch tag := addr.Which(); tag {
-	case net.InterfaceAddressIpv4:
-		protocolAddr.Protocol = ipv4.ProtocolNumber
-		protocolAddr.AddressWithPrefix.Address = tcpip.Address(addr.Ipv4.Addr.Addr[:])
-		protocolAddr.AddressWithPrefix.PrefixLen = int(addr.Ipv4.PrefixLen)
-	case net.InterfaceAddressIpv6:
-		protocolAddr.Protocol = ipv6.ProtocolNumber
-		protocolAddr.AddressWithPrefix.Address = tcpip.Address(addr.Ipv6.Addr[:])
-		// TODO(https://fxbug.dev/81929): Don't lie about the prefix length to gVisor.
-		protocolAddr.AddressWithPrefix.PrefixLen = 8 * header.IPv6AddressSize
-	default:
-		panic(fmt.Sprintf("unknown address: %#v", addr))
-	}
-	return protocolAddr
-}
-
 func initialAddressAssignmentState(protocolAddr tcpip.ProtocolAddress, online bool) admin.AddressAssignmentState {
 	if !online {
 		return admin.AddressAssignmentStateUnavailable
@@ -327,8 +310,8 @@ func (ci *adminControlImpl) Detach(fidl.Context) error {
 	return nil
 }
 
-func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.InterfaceAddress, parameters admin.AddressParameters, request admin.AddressStateProviderWithCtxInterfaceRequest) error {
-	protocolAddr := interfaceAddressToProtocolAddress(interfaceAddr)
+func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Subnet, parameters admin.AddressParameters, request admin.AddressStateProviderWithCtxInterfaceRequest) error {
+	protocolAddr := fidlconv.ToTCPIPProtocolAddress(interfaceAddr)
 	addr := protocolAddr.AddressWithPrefix.Address
 
 	ifs := ci.getNICContext()
@@ -451,8 +434,8 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 	return nil
 }
 
-func (ci *adminControlImpl) RemoveAddress(_ fidl.Context, address net.InterfaceAddress) (admin.ControlRemoveAddressResult, error) {
-	protocolAddr := interfaceAddressToProtocolAddress(address)
+func (ci *adminControlImpl) RemoveAddress(_ fidl.Context, address net.Subnet) (admin.ControlRemoveAddressResult, error) {
+	protocolAddr := fidlconv.ToTCPIPProtocolAddress(address)
 	nicInfo, ok := ci.ns.stack.NICInfo()[ci.nicid]
 	if !ok {
 		panic(fmt.Sprintf("NIC %d not found when removing %s", ci.nicid, protocolAddr.AddressWithPrefix))

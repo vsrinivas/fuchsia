@@ -236,10 +236,10 @@ impl NetworkInterface for TunNetworkInterface {
 
     fn add_address(&self, addr: &Subnet) -> Result<(), Error> {
         fx_log_info!("TunNetworkInterface: Adding Address: {:?}", addr);
-        let mut device_addr: fnet::InterfaceAddress =
-            fnet::InterfaceAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
-                addr: addr.addr.octets(),
-            });
+        let mut device_addr = fnet::Subnet {
+            addr: fnetext::IpAddress(addr.addr.into()).into(),
+            prefix_len: addr.prefix_len,
+        };
         let (address_state_provider, server_end) = fidl::endpoints::create_proxy::<
             fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
         >()
@@ -272,10 +272,10 @@ impl NetworkInterface for TunNetworkInterface {
 
     fn remove_address(&self, addr: &Subnet) -> Result<(), Error> {
         fx_log_info!("TunNetworkInterface: Removing Address: {:?}", addr);
-        let mut device_addr: fnet::InterfaceAddress =
-            fnet::InterfaceAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
-                addr: addr.addr.octets(),
-            });
+        let mut device_addr = fnet::Subnet {
+            addr: fnetext::IpAddress(addr.addr.into()).into(),
+            prefix_len: addr.prefix_len,
+        };
         let mut forwarding_entry = fnetstack::ForwardingEntry {
             subnet: fnetext::apply_subnet_mask(fnet::Subnet {
                 addr: fnetext::IpAddress(addr.addr.into()).into(),

@@ -39,6 +39,8 @@ protocol Control {
     // does not support any values being present in `parameters`, and will
     // cause an event containing `AddressRemovalReason.INVALID` to be sent
     // and the server end of the protocol to be closed.
+    // TODO(https://fxbug.dev/100535): Clarify address semantics in regards to
+    // adding and removing same address on different subnets and/or interfaces.
     /// Assigns an address to the interface.
     ///
     /// Errors are communicated via
@@ -49,7 +51,7 @@ protocol Control {
     /// + request `address_state_provider` provides address assignment state
     ///     and enables updating address properties.
     AddAddress(resource struct {
-        address fuchsia.net.InterfaceAddress;
+        address fuchsia.net.Subnet;
         parameters AddressParameters;
         address_state_provider server_end:AddressStateProvider;
     });
@@ -60,7 +62,7 @@ protocol Control {
     /// - response `did_remove` `true` iff `address` was removed from the
     ///  interface as a consequence of this call.
     RemoveAddress(struct {
-        address fuchsia.net.InterfaceAddress;
+        address fuchsia.net.Subnet;
     }) -> (struct {
         did_remove bool;
     }) error flexible enum {};

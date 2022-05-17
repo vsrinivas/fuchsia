@@ -341,10 +341,7 @@ async fn bridged_packet_test<E: netemul::Endpoint>(name: &str) {
         assert!(did_enable);
         let address_state_provider = interfaces::add_address_wait_assigned(
             &bridge_interface_control,
-            fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-                addr: local_addr,
-                prefix_len: PREFIX_LEN,
-            }),
+            fnet::Subnet { addr: fnet::IpAddress::Ipv4(local_addr), prefix_len: PREFIX_LEN },
             fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
         )
         .await

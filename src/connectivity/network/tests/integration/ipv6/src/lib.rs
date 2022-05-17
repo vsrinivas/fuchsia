@@ -546,9 +546,12 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
             fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(address_state_provider);
         let () = control
             .add_address(
-                &mut net::InterfaceAddress::Ipv6(net::Ipv6Address {
-                    addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
-                }),
+                &mut net::Subnet {
+                    addr: net::IpAddress::Ipv6(net::Ipv6Address {
+                        addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
+                    }),
+                    prefix_len: ipv6_consts::LINK_LOCAL_SUBNET_PREFIX,
+                },
                 fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                 server,
             )
@@ -562,17 +565,18 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
             assert_eq!(
                 iface.get_addrs().await.expect("failed to get addresses").into_iter().find(
                     |fidl_fuchsia_net_interfaces_ext::Address {
-                         addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                         addr: fidl_fuchsia_net::Subnet { addr, prefix_len },
                          valid_until: _,
                      }| {
-                        match addr {
-                            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                                ..
-                            }) => false,
-                            fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
-                                addr,
-                            }) => *addr == ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
-                        }
+                        *prefix_len == ipv6_consts::LINK_LOCAL_SUBNET_PREFIX
+                            && match addr {
+                                fidl_fuchsia_net::IpAddress::Ipv4(
+                                    fidl_fuchsia_net::Ipv4Address { .. },
+                                ) => false,
+                                fidl_fuchsia_net::IpAddress::Ipv6(
+                                    fidl_fuchsia_net::Ipv6Address { addr },
+                                ) => *addr == ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
+                            }
                     }
                 ),
                 None,
@@ -676,9 +680,12 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         assert_dad_success(&mut state_stream).await;
 
         let removed = control
-            .remove_address(&mut net::InterfaceAddress::Ipv6(net::Ipv6Address {
-                addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
-            }))
+            .remove_address(&mut net::Subnet {
+                addr: net::IpAddress::Ipv6(net::Ipv6Address {
+                    addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
+                }),
+                prefix_len: ipv6_consts::LINK_LOCAL_SUBNET_PREFIX,
+            })
             .await
             .expect("FIDL error removing address")
             .expect("failed to remove address");

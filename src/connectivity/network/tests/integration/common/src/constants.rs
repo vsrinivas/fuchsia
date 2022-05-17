@@ -32,6 +32,9 @@ pub mod ipv6 {
     /// fe80::1
     pub const LINK_LOCAL_ADDR: net_types_ip::Ipv6Addr =
         net_types_ip::Ipv6Addr::new([0xfe80, 0, 0, 0, 0, 0, 0, 1]);
+
+    /// The prefix length for the link-local subnet.
+    pub const LINK_LOCAL_SUBNET_PREFIX: u8 = 64;
 }
 
 /// Ethernet constants.

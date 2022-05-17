@@ -70,7 +70,7 @@ pub async fn wait_for_non_loopback_interface_up<
 /// Add an address, returning once the assignment state is `Assigned`.
 pub async fn add_address_wait_assigned(
     control: &fidl_fuchsia_net_interfaces_ext::admin::Control,
-    mut address: fidl_fuchsia_net::InterfaceAddress,
+    mut address: fidl_fuchsia_net::Subnet,
     address_parameters: fidl_fuchsia_net_interfaces_admin::AddressParameters,
 ) -> std::result::Result<
     fidl_fuchsia_net_interfaces_admin::AddressStateProviderProxy,
@@ -104,18 +104,8 @@ pub async fn add_subnet_address_and_route_wait_assigned<'a>(
     subnet: fidl_fuchsia_net::Subnet,
     address_parameters: fidl_fuchsia_net_interfaces_admin::AddressParameters,
 ) -> Result<fidl_fuchsia_net_interfaces_admin::AddressStateProviderProxy> {
-    let fidl_fuchsia_net::Subnet { addr, prefix_len } = subnet;
-    let address = match addr {
-        fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
-            fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                addr,
-                prefix_len,
-            })
-        }
-        fidl_fuchsia_net::IpAddress::Ipv6(addr) => fidl_fuchsia_net::InterfaceAddress::Ipv6(addr),
-    };
     let (address_state_provider, ()) = futures::future::try_join(
-        add_address_wait_assigned(iface.control(), address, address_parameters)
+        add_address_wait_assigned(iface.control(), subnet, address_parameters)
             .map(|res| res.context("add address")),
         iface.add_subnet_route(subnet),
     )
@@ -128,24 +118,16 @@ pub async fn remove_subnet_address_and_route<'a>(
     iface: &'a netemul::TestInterface<'a>,
     subnet: fidl_fuchsia_net::Subnet,
 ) -> Result<bool> {
-    let fidl_fuchsia_net::Subnet { addr, prefix_len } = subnet;
-    let mut address = match addr {
-        fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
-            fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                addr,
-                prefix_len,
-            })
-        }
-        fidl_fuchsia_net::IpAddress::Ipv6(addr) => fidl_fuchsia_net::InterfaceAddress::Ipv6(addr),
-    };
     let (did_remove, ()) = futures::future::try_join(
-        iface.control().remove_address(&mut address).map_err(anyhow::Error::new).and_then(|res| {
-            futures::future::ready(res.map_err(
-                |e: fidl_fuchsia_net_interfaces_admin::ControlRemoveAddressError| {
-                    anyhow::anyhow!("{:?}", e)
-                },
-            ))
-        }),
+        iface.control().remove_address(&mut subnet.clone()).map_err(anyhow::Error::new).and_then(
+            |res| {
+                futures::future::ready(res.map_err(
+                    |e: fidl_fuchsia_net_interfaces_admin::ControlRemoveAddressError| {
+                        anyhow::anyhow!("{:?}", e)
+                    },
+                ))
+            },
+        ),
         iface.del_subnet_route(subnet),
     )
     .await?;

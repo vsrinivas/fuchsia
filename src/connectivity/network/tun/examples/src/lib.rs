@@ -615,26 +615,9 @@ mod helpers {
         // this proxy, opt out by detaching.
         let () = address_state_provider.detach().expect("detach failed");
 
-        let mut interface_addr = {
-            let fidl_fuchsia_net::Subnet { addr, prefix_len } = &subnet;
-            match addr {
-                fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
-                    fidl_fuchsia_net::InterfaceAddress::Ipv4(
-                        fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                            addr: addr.clone(),
-                            prefix_len: *prefix_len,
-                        },
-                    )
-                }
-                fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
-                    fidl_fuchsia_net::InterfaceAddress::Ipv6(addr.clone())
-                }
-            }
-        };
-
         let () = control
             .add_address(
-                &mut interface_addr,
+                &mut subnet.clone(),
                 fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                 server_end,
             )

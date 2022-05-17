@@ -434,16 +434,8 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
             opts::IfAddrEnum::Add(opts::IfAddrAdd { interface, addr, prefix, no_subnet_route }) => {
                 let id = interface.find_nicid(connector).await?;
                 let control = get_control(connector, id).await?;
-                let addr = fnet_ext::IpAddress::from_str(&addr)?;
-                let mut interface_addr = match addr.into() {
-                    fnet::IpAddress::Ipv4(addr) => {
-                        fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-                            addr,
-                            prefix_len: prefix,
-                        })
-                    }
-                    fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
-                };
+                let addr = fnet_ext::IpAddress::from_str(&addr)?.into();
+                let subnet = fnet_ext::Subnet { addr, prefix_len: prefix };
                 let (address_state_provider, server_end) = fidl::endpoints::create_proxy::<
                     finterfaces_admin::AddressStateProviderMarker,
                 >()
@@ -457,7 +449,7 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                 let () = address_state_provider.detach().context("detach address lifetime")?;
                 let () = control
                     .add_address(
-                        &mut interface_addr,
+                        &mut subnet.into(),
                         finterfaces_admin::AddressParameters::EMPTY,
                         server_end,
                     )
@@ -488,9 +480,7 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                     let stack: fstack::StackProxy =
                         connect_with_context::<fstack::StackMarker, _>(connector).await?;
                     let mut forwarding_entry = fstack::ForwardingEntry {
-                        subnet: fnet_ext::apply_subnet_mask(
-                            fnet_ext::Subnet { addr, prefix_len: prefix }.into(),
-                        ),
+                        subnet: fnet_ext::apply_subnet_mask(subnet.into()),
                         device_id: id,
                         next_hop: None,
                         metric: 0,
@@ -509,17 +499,19 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                 let control = get_control(connector, id).await?;
                 let addr = fnet_ext::IpAddress::from_str(&addr)?;
                 let did_remove = {
-                    let mut addr = match addr.into() {
-                        fnet::IpAddress::Ipv4(addr) => {
-                            fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-                                addr,
-                                prefix_len: prefix.unwrap_or(32),
+                    let addr = addr.into();
+                    let mut subnet = fnet::Subnet {
+                        addr,
+                        prefix_len: prefix.unwrap_or_else(|| {
+                            8 * u8::try_from(match addr {
+                                fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => addr.len(),
+                                fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => addr.len(),
                             })
-                        }
-                        fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
+                            .expect("prefix length doesn't fit u8")
+                        }),
                     };
                     control
-                        .remove_address(&mut addr)
+                        .remove_address(&mut subnet)
                         .await
                         .map_err(anyhow::Error::new)
                         .and_then(|res| {
@@ -1259,8 +1251,8 @@ mod tests {
     use std::convert::TryInto as _;
     use test_case::test_case;
 
-    const IF_ADDR_V4: fnet::InterfaceAddress = net_declare::fidl_if_addr!("192.168.0.1/32");
-    const IF_ADDR_V6: fnet::InterfaceAddress = net_declare::fidl_if_addr!("fd00::1");
+    const IF_ADDR_V4: fnet::Subnet = net_declare::fidl_subnet!("192.168.0.1/32");
+    const IF_ADDR_V6: fnet::Subnet = net_declare::fidl_subnet!("fd00::1/64");
 
     const MAC_1: fnet::MacAddress = net_declare::fidl_mac!("01:02:03:04:05:06");
     const MAC_2: fnet::MacAddress = net_declare::fidl_mac!("02:03:04:05:06:07");
@@ -1635,15 +1627,6 @@ mod tests {
         }
     }
 
-    fn extract_ip(if_addr: fnet::InterfaceAddress) -> fnet::IpAddress {
-        match if_addr {
-            fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix { addr, prefix_len: _ }) => {
-                fnet::IpAddress::Ipv4(addr)
-            }
-            fnet::InterfaceAddress::Ipv6(addr) => fnet::IpAddress::Ipv6(addr),
-        }
-    }
-
     #[test_case(true, false ; "when interface is up, and adding subnet route")]
     #[test_case(true, true ; "when interface is up, and not adding subnet route")]
     #[test_case(false, false ; "when interface is down, and adding subnet route")]
@@ -1674,7 +1657,7 @@ mod tests {
             opts::IfEnum::Addr(opts::IfAddr {
                 addr_cmd: opts::IfAddrEnum::Add(opts::IfAddrAdd {
                     interface: interface1.identifier(false /* use_ifname */),
-                    addr: fnet_ext::IpAddress::from(extract_ip(IF_ADDR_V6)).to_string(),
+                    addr: fnet_ext::IpAddress::from(IF_ADDR_V6.addr).to_string(),
                     prefix: TEST_PREFIX_LENGTH,
                     no_subnet_route,
                 }),
@@ -1762,7 +1745,7 @@ mod tests {
                     entry,
                     fstack::ForwardingEntry {
                         subnet: fnet_ext::apply_subnet_mask(fnet::Subnet {
-                            addr: extract_ip(IF_ADDR_V6),
+                            addr: IF_ADDR_V6.addr,
                             prefix_len: TEST_PREFIX_LENGTH
                         }),
                         device_id: interface1.nicid,
@@ -1813,7 +1796,7 @@ mod tests {
             opts::IfEnum::Addr(opts::IfAddr {
                 addr_cmd: opts::IfAddrEnum::Del(opts::IfAddrDel {
                     interface: interface1.identifier(use_ifname),
-                    addr: fnet_ext::IpAddress::from(extract_ip(IF_ADDR_V4)).to_string(),
+                    addr: fnet_ext::IpAddress::from(IF_ADDR_V4.addr).to_string(),
                     prefix: None, // The prefix should be set to the default of 32 for IPv4.
                 }),
             }),
@@ -1852,8 +1835,8 @@ mod tests {
             opts::IfEnum::Addr(opts::IfAddr {
                 addr_cmd: opts::IfAddrEnum::Del(opts::IfAddrDel {
                     interface: interface2.identifier(use_ifname),
-                    addr: fnet_ext::IpAddress::from(extract_ip(IF_ADDR_V6)).to_string(),
-                    prefix: None, // The prefix should be set to the default of 128 for IPv6.
+                    addr: fnet_ext::IpAddress::from(IF_ADDR_V6.addr).to_string(),
+                    prefix: Some(IF_ADDR_V6.prefix_len),
                 }),
             }),
             &connector,
@@ -1893,7 +1876,7 @@ mod tests {
             futures::select! {
                 () = interfaces_fut => panic!("interfaces_fut should never complete"),
                 ((), e) = futures::future::join(handler_fut, fails).fuse() => {
-                    let fnet_ext::IpAddress(addr) = extract_ip(IF_ADDR_V6).into();
+                    let fnet_ext::IpAddress(addr) = IF_ADDR_V6.addr.into();
                     assert_eq!(e.to_string(), format!("Address {} not found on interface {}", addr, interface2.nicid));
                 },
             }
@@ -2503,7 +2486,7 @@ mac             -
         fn new_entry(updated_at: i64) -> fneighbor::Entry {
             fneighbor::Entry {
                 interface: Some(1),
-                neighbor: Some(extract_ip(IF_ADDR_V4)),
+                neighbor: Some(IF_ADDR_V4.addr),
                 state: Some(fneighbor::EntryState::Reachable),
                 mac: Some(MAC_1),
                 updated_at: Some(updated_at),
@@ -2568,24 +2551,20 @@ mac             -
             watch_for_changes,
             vec![vec![
                 fneighbor::EntryIteratorItem::Existing(new_entry(
-                    extract_ip(IF_ADDR_V4),
+                    IF_ADDR_V4.addr,
                     MAC_1,
                     updated_at,
                 )),
                 fneighbor::EntryIteratorItem::Existing(new_entry(
-                    extract_ip(IF_ADDR_V6),
+                    IF_ADDR_V6.addr,
                     MAC_2,
                     updated_at - offset,
                 )),
                 fneighbor::EntryIteratorItem::Idle(fneighbor::IdleEvent {}),
             ]],
             want(
-                fneighbor_ext::Entry::from(new_entry(extract_ip(IF_ADDR_V4), MAC_1, updated_at)),
-                fneighbor_ext::Entry::from(new_entry(
-                    extract_ip(IF_ADDR_V6),
-                    MAC_2,
-                    updated_at - offset,
-                )),
+                fneighbor_ext::Entry::from(new_entry(IF_ADDR_V4.addr, MAC_1, updated_at)),
+                fneighbor_ext::Entry::from(new_entry(IF_ADDR_V6.addr, MAC_2, updated_at - offset)),
             ),
         )
         .await
@@ -2639,7 +2618,7 @@ mac             -
     fn neigh_write_entry(json: bool, include_entry_state: bool, wanted_output: &str) {
         let entry = fneighbor::EntryIteratorItem::Existing(fneighbor::Entry {
             interface: Some(1),
-            neighbor: Some(extract_ip(IF_ADDR_V4)),
+            neighbor: Some(IF_ADDR_V4.addr),
             state: Some(fneighbor::EntryState::Reachable),
             mac: Some(MAC_1),
             updated_at: Some(timestamp_60s_ago()),
@@ -2663,7 +2642,7 @@ mac             -
     async fn neigh_add() {
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fneighbor::ControllerMarker>().unwrap();
-        let neigh = do_neigh_add(INTERFACE_ID, extract_ip(IF_ADDR_V4), MAC_1, controller);
+        let neigh = do_neigh_add(INTERFACE_ID, IF_ADDR_V4.addr, MAC_1, controller);
         let neigh_succeeds = async {
             let (got_interface_id, got_ip_address, got_mac, responder) = requests
                 .try_next()
@@ -2673,7 +2652,7 @@ mac             -
                 .into_add_entry()
                 .expect("request should be of type AddEntry");
             assert_eq!(got_interface_id, INTERFACE_ID);
-            assert_eq!(got_ip_address, extract_ip(IF_ADDR_V4));
+            assert_eq!(got_ip_address, IF_ADDR_V4.addr);
             assert_eq!(got_mac, MAC_1);
             let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
             Ok(())
@@ -2710,7 +2689,7 @@ mac             -
     async fn neigh_del() {
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fneighbor::ControllerMarker>().unwrap();
-        let neigh = do_neigh_del(INTERFACE_ID, extract_ip(IF_ADDR_V4), controller);
+        let neigh = do_neigh_del(INTERFACE_ID, IF_ADDR_V4.addr, controller);
         let neigh_succeeds = async {
             let (got_interface_id, got_ip_address, responder) = requests
                 .try_next()
@@ -2720,7 +2699,7 @@ mac             -
                 .into_remove_entry()
                 .expect("request should be of type RemoveEntry");
             assert_eq!(got_interface_id, INTERFACE_ID);
-            assert_eq!(got_ip_address, extract_ip(IF_ADDR_V4));
+            assert_eq!(got_ip_address, IF_ADDR_V4.addr);
             let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
             Ok(())
         };

@@ -301,23 +301,13 @@ async fn install_ip_device(
                 fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
             >()
             .expect("create proxy");
-            let fnet::Subnet { addr, prefix_len } = &subnet;
-            let mut interface_address = match addr {
-                fnet::IpAddress::Ipv4(a) => {
-                    fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-                        addr: a.clone(),
-                        prefix_len: *prefix_len,
-                    })
-                }
-                fnet::IpAddress::Ipv6(a) => fnet::InterfaceAddress::Ipv6(a.clone()),
-            };
 
             // We're not interested in maintaining the address' lifecycle through
             // the proxy.
             let () = address_state_provider.detach().expect("detach");
             let () = control
                 .add_address(
-                    &mut interface_address,
+                    &mut subnet.clone(),
                     fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                     server_end,
                 )
