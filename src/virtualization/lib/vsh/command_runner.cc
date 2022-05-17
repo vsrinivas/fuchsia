@@ -11,13 +11,13 @@
 namespace vsh {
 
 BlockingCommandRunner::BlockingCommandRunner(
-    fidl::InterfaceHandle<fuchsia::virtualization::HostVsockEndpoint> socket_endpoint, uint32_t cid,
+    fidl::InterfaceHandle<fuchsia::virtualization::HostVsockEndpoint> socket_endpoint,
     uint32_t port)
-    : socket_endpoint_(socket_endpoint.BindSync()), cid_(cid), port_(port) {}
+    : socket_endpoint_(socket_endpoint.BindSync()), port_(port) {}
 
 fpromise::result<vsh::BlockingCommandRunner::CommandResult, zx_status_t>
 BlockingCommandRunner::Execute(Command command) {
-  auto client_result = BlockingClient::Connect(socket_endpoint_, cid_, port_);
+  auto client_result = BlockingClient::Connect(socket_endpoint_, port_);
   if (client_result.is_error()) {
     return fpromise::error(client_result.error());
   }

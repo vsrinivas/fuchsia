@@ -26,7 +26,7 @@ class BlockingCommandRunner {
  public:
   BlockingCommandRunner(
       fidl::InterfaceHandle<fuchsia::virtualization::HostVsockEndpoint> socket_endpoint,
-      uint32_t cid, uint32_t port = 9001);
+      uint32_t port = 9001);
 
   struct Command {
     // The command to be run. The executable must be at argv[0].
@@ -52,7 +52,6 @@ class BlockingCommandRunner {
 
  private:
   fuchsia::virtualization::HostVsockEndpointSyncPtr socket_endpoint_;
-  uint32_t cid_;
   uint32_t port_;
 };
 

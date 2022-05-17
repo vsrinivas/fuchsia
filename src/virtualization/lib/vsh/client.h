@@ -19,7 +19,7 @@ namespace vsh {
 class BlockingClient {
  public:
   static fpromise::result<BlockingClient, zx_status_t> Connect(
-      const fuchsia::virtualization::HostVsockEndpointSyncPtr& socket_endpoint, uint32_t cid,
+      const fuchsia::virtualization::HostVsockEndpointSyncPtr& socket_endpoint,
       uint32_t port = 9001);
 
   vm_tools::vsh::ConnectionStatus status() const { return status_; }

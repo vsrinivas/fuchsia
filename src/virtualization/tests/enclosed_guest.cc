@@ -767,8 +767,7 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
     GetHostVsockEndpoint(endpoint.NewRequest());
   }
 
-  command_runner_ =
-      std::make_unique<vsh::BlockingCommandRunner>(std::move(endpoint), GetGuestCid());
+  command_runner_ = std::make_unique<vsh::BlockingCommandRunner>(std::move(endpoint));
 
   // Create mountpoints for test utils and extras. The root filesystem is read only so we
   // put these under /tmp.

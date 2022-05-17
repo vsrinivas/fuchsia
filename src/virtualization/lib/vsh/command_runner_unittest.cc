@@ -147,7 +147,7 @@ class VshCommandRunnerTest : public gtest::TestLoopFixture {
 // Test sending and receiving messages by simulating a simple vsh session.
 TEST_F(VshCommandRunnerTest, RunCommandCollectResult) {
   BlockingCommandRunnerParams params{
-      {GetHostVsockEndpoint(), guest::testing::kGuestCid, vsh::kVshPort},
+      {GetHostVsockEndpoint(), vsh::kVshPort},
       /* argv */ /*env*/
       {{"some_test_exe"}, {}},
       {},
