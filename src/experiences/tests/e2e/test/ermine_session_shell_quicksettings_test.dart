@@ -11,11 +11,13 @@ import 'package:test/test.dart';
 ///  - Verify quickstatus memory setting is present
 void main() {
   late Sl4f sl4f;
+  late SetUi setUi;
   late ErmineDriver ermine;
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
+    setUi = SetUi(sl4f);
 
     ermine = ErmineDriver(sl4f);
     await ermine.setUp();
@@ -40,9 +42,7 @@ void main() {
     await ermine.gotoOverview();
 
     // Change the system timezone using setui_client.
-    await ermine.component.launch(
-        'fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx',
-        ['intl', '--time_zone', 'UTC']);
+    await setUi.setTimeZone('UTC');
 
     // tap default timezone (UTC) to launch timezone list
     final defaultTimezone = find.text('UTC');
