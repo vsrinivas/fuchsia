@@ -73,6 +73,9 @@ legacy_cache_package_labels += [
   # Used for Chromium tests for example: web_runner_tests.
   "//src/testing/fidl/intl_property_manager",
 
+  # Used for Chromium e2e tests. See fxb/96503.
+  "//src/experiences/session_shells/ermine/tools",
+
   "//src/tests/end_to_end/bundles:end_to_end_deps",
   "//src/experiences/tests/e2e:end_to_end_deps",
   "//src/experiences/tests/performance:performance_deps",
