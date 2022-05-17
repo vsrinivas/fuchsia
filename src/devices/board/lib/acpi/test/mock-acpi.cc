@@ -174,4 +174,53 @@ acpi::status<> MockAcpi::RemoveNotifyHandler(ACPI_HANDLE object, uint32_t mode,
   return device->RemoveNotifyHandler(callable, mode);
 }
 
+acpi::status<> MockAcpi::InstallGpeHandler(ACPI_HANDLE device, uint32_t number, uint32_t type,
+                                           GpeHandler handler, void* context) {
+  ZX_ASSERT_MSG(device == nullptr, "gpe blocks not supported");
+  auto [value, did_insert] = gpes_.emplace(number, GpeState{.enabled = false});
+  if (!did_insert) {
+    return acpi::error(AE_ALREADY_EXISTS);
+  }
+  value->second.handler = handler;
+  value->second.handler_ctx = context;
+
+  return acpi::ok();
+}
+
+acpi::status<> MockAcpi::RemoveGpeHandler(ACPI_HANDLE device, uint32_t number, GpeHandler handler) {
+  ZX_ASSERT_MSG(device == nullptr, "gpe blocks not supported");
+  auto gpe = gpes_.find(number);
+  if (gpe == gpes_.end()) {
+    return acpi::error(AE_NOT_FOUND);
+  }
+  gpes_.erase(gpe);
+  return acpi::ok();
+}
+acpi::status<> MockAcpi::EnableGpe(ACPI_HANDLE device, uint32_t number) {
+  ZX_ASSERT_MSG(device == nullptr, "gpe blocks not supported");
+  auto value = gpes_.find(number);
+  if (value == gpes_.end()) {
+    return acpi::error(AE_NOT_FOUND);
+  }
+  value->second.enabled = true;
+  return acpi::ok();
+}
+
+acpi::status<> MockAcpi::DisableGpe(ACPI_HANDLE device, uint32_t number) {
+  auto value = gpes_.find(number);
+  if (value == gpes_.end()) {
+    return acpi::error(AE_NOT_FOUND);
+  }
+  value->second.enabled = false;
+  return acpi::ok();
+}
+
+void MockAcpi::FireGpe(uint32_t gpe) {
+  auto value = gpes_.find(gpe);
+  ZX_ASSERT(value != gpes_.end());
+  if (value->second.enabled) {
+    value->second.handler(nullptr, gpe, value->second.handler_ctx);
+  }
+}
+
 }  // namespace acpi::test

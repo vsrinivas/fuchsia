@@ -87,6 +87,15 @@ class Acpi {
   virtual acpi::status<> RemoveAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_SPACE_TYPE space_id,
                                                    AddressSpaceHandler handler) = 0;
 
+  // GPE support
+  using GpeHandler = ACPI_GPE_HANDLER;
+  virtual acpi::status<> InstallGpeHandler(ACPI_HANDLE device, uint32_t number, uint32_t type,
+                                           GpeHandler handler, void* context) = 0;
+  virtual acpi::status<> RemoveGpeHandler(ACPI_HANDLE device, uint32_t number,
+                                          GpeHandler handler) = 0;
+  virtual acpi::status<> EnableGpe(ACPI_HANDLE device, uint32_t number) = 0;
+  virtual acpi::status<> DisableGpe(ACPI_HANDLE device, uint32_t number) = 0;
+
   // Initialise the ACPI subsystem.
   virtual acpi::status<> InitializeAcpi() = 0;
 

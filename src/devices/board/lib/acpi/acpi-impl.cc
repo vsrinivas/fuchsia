@@ -169,6 +169,25 @@ acpi::status<> AcpiImpl::RemoveAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_
   return acpi::make_status(status);
 }
 
+acpi::status<> AcpiImpl::InstallGpeHandler(ACPI_HANDLE device, uint32_t number, uint32_t type,
+                                           GpeHandler handler, void* context) {
+  ACPI_STATUS status = AcpiInstallGpeHandler(device, number, type, handler, context);
+  return acpi::make_status(status);
+}
+acpi::status<> AcpiImpl::EnableGpe(ACPI_HANDLE device, uint32_t number) {
+  ACPI_STATUS status = AcpiEnableGpe(device, number);
+  return acpi::make_status(status);
+}
+
+acpi::status<> AcpiImpl::RemoveGpeHandler(ACPI_HANDLE device, uint32_t number, GpeHandler handler) {
+  ACPI_STATUS status = AcpiRemoveGpeHandler(device, number, handler);
+  return acpi::make_status(status);
+}
+acpi::status<> AcpiImpl::DisableGpe(ACPI_HANDLE device, uint32_t number) {
+  ACPI_STATUS status = AcpiDisableGpe(device, number);
+  return acpi::make_status(status);
+}
+
 acpi::status<> AcpiImpl::InitializeAcpi() {
   // This sequence is described in section 10.1.2.1 (Full ACPICA Initialization)
   // of the ACPICA developer's reference.

@@ -7,6 +7,8 @@
 
 #include <lib/ddk/debug.h>
 
+#include <unordered_map>
+
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/test/device.h"
 
@@ -14,6 +16,12 @@ namespace acpi::test {
 
 constexpr const char* kPciPnpID = "PNP0A03";
 constexpr const char* kPciePnpID = "PNP0A08";
+
+struct GpeState {
+  ACPI_GPE_HANDLER handler;
+  void* handler_ctx;
+  bool enabled;
+};
 
 class MockAcpi : public Acpi {
  public:
@@ -78,6 +86,13 @@ class MockAcpi : public Acpi {
     return ToDevice(object)->RemoveAddressSpaceHandler(space_id, handler);
   }
 
+  acpi::status<> InstallGpeHandler(ACPI_HANDLE device, uint32_t number, uint32_t type,
+                                   GpeHandler handler, void* context) override;
+  acpi::status<> RemoveGpeHandler(ACPI_HANDLE device, uint32_t number, GpeHandler handler) override;
+  acpi::status<> EnableGpe(ACPI_HANDLE device, uint32_t number) override;
+  acpi::status<> DisableGpe(ACPI_HANDLE device, uint32_t number) override;
+  void FireGpe(uint32_t gpe);
+
   acpi::status<> InitializeAcpi() override { return acpi::ok(); }
 
   const std::vector<std::pair<Device*, uint32_t>>& GetWakeGpes() { return wake_gpes_; }
@@ -104,6 +119,7 @@ class MockAcpi : public Acpi {
   std::mutex global_lock_;
 
   std::vector<std::pair<Device*, uint32_t>> wake_gpes_;
+  std::unordered_map<uint32_t, GpeState> gpes_;
 };
 
 }  // namespace acpi::test

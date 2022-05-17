@@ -14,13 +14,15 @@ source_set("mock-acpi") {
   ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//sdk/fidl/fuchsia.hardware.i2c.businfo:fuchsia.hardware.i2c.businfo_llcpp",
     "//sdk/fidl/fuchsia.hardware.spi.businfo:fuchsia.hardware.spi.businfo_llcpp",
     "//src/devices/bind/fuchsia.acpi:bind.fuchsia.acpi",
     "//src/devices/lib/acpi",
-    "//third_party/acpica",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zxc",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
+    "//third_party/acpica",
   ]
 }

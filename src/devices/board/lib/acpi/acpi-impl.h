@@ -51,6 +51,12 @@ class AcpiImpl : public Acpi {
   acpi::status<> RemoveAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_SPACE_TYPE space_id,
                                            AddressSpaceHandler handler) override;
 
+  acpi::status<> InstallGpeHandler(ACPI_HANDLE device, uint32_t number, uint32_t type,
+                                   GpeHandler handler, void* context) override;
+  acpi::status<> RemoveGpeHandler(ACPI_HANDLE device, uint32_t number, GpeHandler handler) override;
+  acpi::status<> EnableGpe(ACPI_HANDLE device, uint32_t number) override;
+  acpi::status<> DisableGpe(ACPI_HANDLE device, uint32_t number) override;
+
   acpi::status<> InitializeAcpi() override;
 
   acpi::status<> SetupGpeForWake(ACPI_HANDLE wake_dev, ACPI_HANDLE gpe_dev,
