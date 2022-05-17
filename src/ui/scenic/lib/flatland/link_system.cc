@@ -20,10 +20,20 @@ namespace flatland {
 
 namespace {
 
+// Scale can be extracted from a matrix by finding the length of the
+// column the scale is located in:
+//
+//   a b c
+//   e f g
+//   i j k
+//
+// If |a| is the x scale and rotation, and |f| is the y scale and rotation, then
+// we can calculate the x scale with length(vector(a,e,i)) and y scale with
+// length(vector(b,f,j)).
 glm::vec2 ComputeScale(const glm::mat3& matrix) {
-  const glm::vec3 x_row = glm::row(matrix, 0);
-  const glm::vec3 y_row = glm::row(matrix, 1);
-  return {std::fabs(glm::length(x_row)), std::fabs(glm::length(y_row))};
+  const glm::vec3 x_column = glm::column(matrix, 0);
+  const glm::vec3 y_column = glm::column(matrix, 1);
+  return {glm::length(x_column), glm::length(y_column)};
 }
 
 }  // namespace
