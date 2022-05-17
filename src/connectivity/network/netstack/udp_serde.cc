@@ -280,6 +280,24 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(RecvMsgMeta meta, Buffer from_
     fidl::WireTableBuilder<fsocket::wire::Ipv6RecvControlData> ipv6_control_builder =
         fsocket::wire::Ipv6RecvControlData::Builder(alloc);
     bool ipv6_control_set = false;
+    if (meta.cmsg_set.has_ipv6_pktinfo) {
+      const Ipv6PktInfo& pktinfo = meta.cmsg_set.ipv6_pktinfo;
+      fuchsia_posix_socket::wire::Ipv6PktInfoRecvControlData fidl_pktinfo = {
+          .iface = pktinfo.if_index,
+      };
+      if (pktinfo.addr.buf == nullptr) {
+        return SerializeRecvMsgMetaErrorIpv6PktInfoAddrNull;
+      }
+      const cpp20::span<uint8_t> from_addr(pktinfo.addr.buf, pktinfo.addr.buf_size);
+      cpp20::span<uint8_t> to_addr(fidl_pktinfo.header_destination_addr.addr.data(),
+                                   decltype(fidl_pktinfo.header_destination_addr.addr)::size());
+      if (from_addr.size() != to_addr.size()) {
+        return SerializeRecvMsgMetaErrorIpv6PktInfoAddrWrongSize;
+      }
+      copy_into(to_addr, from_addr);
+      ipv6_control_set = true;
+      ipv6_control_builder.pktinfo(fidl_pktinfo);
+    }
     if (meta.cmsg_set.has_ipv6_hoplimit) {
       ipv6_control_set = true;
       ipv6_control_builder.hoplimit(meta.cmsg_set.ipv6_hoplimit);

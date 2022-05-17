@@ -62,6 +62,11 @@ typedef struct DeserializeSendMsgMetaResult {
 // describing the reason for the failure.
 FXL_EXPORT DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf);
 
+typedef struct Ipv6PktInfo {
+  uint64_t if_index;
+  Buffer addr;
+} Ipv6PktInfo;
+
 typedef struct CmsgSet {
   bool has_ip_tos;
   uint8_t ip_tos;
@@ -77,6 +82,9 @@ typedef struct CmsgSet {
 
   bool has_timestamp_nanos;
   int64_t timestamp_nanos;
+
+  bool has_ipv6_pktinfo;
+  Ipv6PktInfo ipv6_pktinfo;
 } CmsgSet;
 
 typedef struct RecvMsgMeta {
@@ -90,6 +98,8 @@ typedef enum SerializeRecvMsgMetaError {
   SerializeRecvMsgMetaErrorNone,
   SerializeRecvMsgMetaErrorOutputBufferNull,
   SerializeRecvMsgMetaErrorOutputBufferTooSmall,
+  SerializeRecvMsgMetaErrorIpv6PktInfoAddrNull,
+  SerializeRecvMsgMetaErrorIpv6PktInfoAddrWrongSize,
   SerializeRecvMsgMetaErrorFromAddrBufferNull,
   SerializeRecvMsgMetaErrorFromAddrBufferTooSmall,
   SerializeRecvMsgMetaErrorFailedToEncode,
