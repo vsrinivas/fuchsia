@@ -41,7 +41,6 @@ use {
         prelude::*,
         StreamExt,
     },
-    maplit::hashset,
     moniker::RelativeMonikerBase,
     std::{
         collections::HashSet,
@@ -512,22 +511,18 @@ async fn get_realm(
     // If this is realm is inside the hermetic tests collections, set up the
     // hermetic resolver local component.
     let mut test_root_child_opts = ChildOptions::new().eager();
-    let mut allowed_package_names = None;
+    let mut hermetic_test_package_name = None;
     if collection.eq(HERMETIC_TESTS_COLLECTION) {
-        let allowed_list = hashset! {
-            test_package.into(),
-        };
-        allowed_package_names = Some(Arc::new(allowed_list));
-        let allowed_package_names = allowed_package_names.clone();
+        hermetic_test_package_name = Some(Arc::new(test_package.to_owned()));
+        let hermetic_test_package_name = hermetic_test_package_name.clone();
         wrapper_realm
             .add_local_child(
                 HERMETIC_RESOLVER_REALM_NAME,
                 move |handles| {
                     Box::pin(resolver::serve_hermetic_resolver(
                         handles,
-                        allowed_package_names.clone().unwrap(),
+                        hermetic_test_package_name.clone().unwrap(),
                         resolver.clone(),
-                        true,
                     ))
                 },
                 ChildOptions::new(),
@@ -661,7 +656,10 @@ async fn get_realm(
         .add_local_child(
             ENCLOSING_ENV_REALM_NAME,
             move |handles| {
-                Box::pin(enclosing_env::gen_enclosing_env(handles, allowed_package_names.clone()))
+                Box::pin(enclosing_env::gen_enclosing_env(
+                    handles,
+                    hermetic_test_package_name.clone(),
+                ))
             },
             ChildOptions::new(),
         )

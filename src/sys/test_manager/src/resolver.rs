@@ -10,35 +10,26 @@ use {
     fuchsia_component_test::LocalComponentHandles,
     fuchsia_url::pkg_url::PkgUrl,
     futures::{StreamExt, TryStreamExt},
-    std::collections::HashSet,
     std::sync::Arc,
     tracing::{error, warn},
 };
 
 async fn hermetic_resolve(
     component_url: &str,
-    allowed_package_names: &HashSet<String>,
+    hermetic_test_package_name: &String,
     universe_resolver: Arc<fresolution::ResolverProxy>,
-    enforce: bool,
 ) -> Result<fresolution::Component, fresolution::ResolverError> {
     let package_url =
         PkgUrl::parse(component_url).map_err(|_| fresolution::ResolverError::InvalidArgs)?;
     let package_name = package_url.name();
-    if !allowed_package_names.contains(package_name.as_ref()) {
-        if enforce {
-            error!(
-                "failed to resolve component {}: package {} is not in the set of allowed packages: {:?}
+    if hermetic_test_package_name != package_name.as_ref() {
+        error!(
+                "failed to resolve component {}: package {} is not in the test package: '{}'
                 \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
                 for more information.",
-                &component_url, package_name, allowed_package_names
+                &component_url, package_name, hermetic_test_package_name
             );
-            return Err(fresolution::ResolverError::PackageNotFound);
-        } else {
-            warn!(
-                "package {} used by component {} is not in the set of allowed packages: {:?}\n \
-                    this will be an error in the near future; see https://fxbug.dev/83130 for more info.",
-                package_name, &component_url, allowed_package_names);
-        }
+        return Err(fresolution::ResolverError::PackageNotFound);
     }
     universe_resolver.resolve(component_url).await.map_err(|err| {
         error!("failed to resolve component {}: {:?}", &component_url, err);
@@ -48,25 +39,23 @@ async fn hermetic_resolve(
 
 pub async fn serve_hermetic_resolver(
     handles: LocalComponentHandles,
-    allowed_package_names: Arc<HashSet<String>>,
+    hermetic_test_package_name: Arc<String>,
     universe_resolver: Arc<fresolution::ResolverProxy>,
-    enforce: bool,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     let mut tasks = vec![];
 
     fs.dir("svc").add_fidl_service(move |mut stream: fresolution::ResolverRequestStream| {
         let universe_resolver = universe_resolver.clone();
-        let allowed_package_names = allowed_package_names.clone();
+        let hermetic_test_package_name = hermetic_test_package_name.clone();
         tasks.push(fasync::Task::local(async move {
             while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
                 stream.try_next().await.expect("failed to serve component resolver")
             {
                 match hermetic_resolve(
                     &component_url,
-                    &allowed_package_names,
+                    &hermetic_test_package_name,
                     universe_resolver.clone(),
-                    enforce,
                 )
                 .await
                 {
@@ -84,7 +73,7 @@ pub async fn serve_hermetic_resolver(
 
 async fn hermetic_loader(
     component_url: &str,
-    allowed_package_names: &HashSet<String>,
+    hermetic_test_package_name: &String,
     loader_service: fv1sys::LoaderProxy,
 ) -> Option<Box<fv1sys::Package>> {
     let package_url = match PkgUrl::parse(component_url) {
@@ -95,12 +84,12 @@ async fn hermetic_loader(
         }
     };
     let package_name = package_url.name();
-    if !allowed_package_names.contains(package_name.as_ref()) {
+    if hermetic_test_package_name != package_name.as_ref() {
         error!(
-                "failed to resolve component {}: package {} is not in the set of allowed packages: {:?}
+                "failed to resolve component {}: package {} is not in the test package: '{}'
                 \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
                 for more information.",
-                &component_url, package_name, allowed_package_names
+                &component_url, package_name, hermetic_test_package_name
             );
         return None;
     }
@@ -115,14 +104,15 @@ async fn hermetic_loader(
 
 pub async fn serve_hermetic_loader(
     mut stream: fv1sys::LoaderRequestStream,
-    allowed_package_names: Arc<HashSet<String>>,
+    hermetic_test_package_name: Arc<String>,
     loader_service: fv1sys::LoaderProxy,
 ) {
     while let Some(fv1sys::LoaderRequest::LoadUrl { url, responder }) =
         stream.try_next().await.expect("failed to serve loader")
     {
-        let mut result =
-            hermetic_loader(&url, &allowed_package_names, loader_service.clone()).await.map(|p| *p);
+        let mut result = hermetic_loader(&url, &hermetic_test_package_name, loader_service.clone())
+            .await
+            .map(|p| *p);
 
         responder.send(result.as_mut()).expect("failed sending response");
     }
@@ -189,7 +179,7 @@ mod tests {
     // Constructs a test realm that contains a local system resolver that we
     // route to our hermetic resolver.
     async fn construct_test_realm(
-        allowed_package_names: Arc<HashSet<String>>,
+        hermetic_test_package_name: Arc<String>,
         mock_universe_resolver: Arc<fresolution::ResolverProxy>,
     ) -> Result<RealmInstance, RealmBuilderError> {
         // Set up a realm to test the hermetic resolver.
@@ -201,9 +191,8 @@ mod tests {
                 move |handles| {
                     Box::pin(serve_hermetic_resolver(
                         handles,
-                        allowed_package_names.clone(),
+                        hermetic_test_package_name.clone(),
                         mock_universe_resolver.clone(),
-                        true,
                     ))
                 },
                 ChildOptions::new(),
@@ -223,8 +212,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_successful_resolve() {
-        let mut allowed = HashSet::new();
-        allowed.insert("package-one".to_string());
+        let pkg_name = "package-one".to_string();
 
         let (resolver_proxy, mut resolver_request_stream) =
             create_proxy_and_stream::<fresolution::ResolverMarker>()
@@ -234,7 +222,7 @@ mod tests {
             drop(resolver_request_stream);
         });
 
-        let realm = construct_test_realm(allowed.into(), Arc::new(resolver_proxy))
+        let realm = construct_test_realm(pkg_name.into(), Arc::new(resolver_proxy))
             .await
             .expect("failed to construct test realm");
         let hermetic_resolver_proxy =
@@ -255,9 +243,10 @@ mod tests {
         let (resolver_proxy, _) = create_proxy_and_stream::<fresolution::ResolverMarker>()
             .expect("failed to create mock universe resolver proxy");
 
-        let realm = construct_test_realm(HashSet::new().into(), Arc::new(resolver_proxy))
-            .await
-            .expect("failed to construct test realm");
+        let realm =
+            construct_test_realm("package-two".to_string().into(), Arc::new(resolver_proxy))
+                .await
+                .expect("failed to construct test realm");
         let hermetic_resolver_proxy =
             realm.root.connect_to_protocol_at_exposed_dir::<fresolution::ResolverMarker>().unwrap();
 
@@ -280,10 +269,9 @@ mod tests {
             drop(resolver_request_stream);
         });
 
-        let mut allowed = HashSet::new();
-        allowed.insert("package-two".to_string());
+        let pkg_name = "package-two".to_string();
 
-        let realm = construct_test_realm(allowed.into(), Arc::new(resolver_proxy))
+        let realm = construct_test_realm(pkg_name.into(), Arc::new(resolver_proxy))
             .await
             .expect("failed to construct test realm");
         let hermetic_resolver_proxy =
@@ -304,10 +292,9 @@ mod tests {
         let (resolver_proxy, _) = create_proxy_and_stream::<fresolution::ResolverMarker>()
             .expect("failed to create mock universe resolver proxy");
 
-        let mut allowed = HashSet::new();
-        allowed.insert("package-two".to_string());
+        let pkg_name = "package-two".to_string();
 
-        let realm = construct_test_realm(allowed.into(), Arc::new(resolver_proxy))
+        let realm = construct_test_realm(pkg_name.into(), Arc::new(resolver_proxy))
             .await
             .expect("failed to construct test realm");
         let hermetic_resolver_proxy =
@@ -324,8 +311,7 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn test_successful_loader() {
-            let mut allowed = HashSet::new();
-            allowed.insert("package-one".to_string());
+            let pkg_name = "package-one".to_string();
 
             let (loader_proxy, mut loader_request_stream) =
                 create_proxy_and_stream::<fv1sys::LoaderMarker>()
@@ -338,7 +324,7 @@ mod tests {
             });
 
             let _serve_task =
-                fasync::Task::spawn(serve_hermetic_loader(stream, allowed.into(), loader_proxy));
+                fasync::Task::spawn(serve_hermetic_loader(stream, pkg_name.into(), loader_proxy));
 
             assert_matches!(
                 proxy.load_url("fuchsia-pkg://fuchsia.com/package-one#meta/comp.cm").await.unwrap(),
@@ -355,7 +341,7 @@ mod tests {
 
             let _serve_task = fasync::Task::spawn(serve_hermetic_loader(
                 stream,
-                HashSet::new().into(),
+                "package-two".to_string().into(),
                 loader_proxy,
             ));
 
@@ -375,13 +361,12 @@ mod tests {
                 drop(loader_request_stream);
             });
 
-            let mut allowed = HashSet::new();
-            allowed.insert("package-two".to_string());
+            let pkg_name = "package-two".to_string();
 
             let (proxy, stream) = create_proxy_and_stream::<fv1sys::LoaderMarker>().unwrap();
 
             let _serve_task =
-                fasync::Task::spawn(serve_hermetic_loader(stream, allowed.into(), loader_proxy));
+                fasync::Task::spawn(serve_hermetic_loader(stream, pkg_name.into(), loader_proxy));
 
             assert_eq!(
                 proxy.load_url("fuchsia-pkg://fuchsia.com/package-two#meta/comp.cm").await.unwrap(),
@@ -394,13 +379,12 @@ mod tests {
             let (loader_proxy, _) = create_proxy_and_stream::<fv1sys::LoaderMarker>()
                 .expect("failed to create mock loader proxy");
 
-            let mut allowed = HashSet::new();
-            allowed.insert("package-two".to_string());
+            let pkg_name = "package-two".to_string();
 
             let (proxy, stream) = create_proxy_and_stream::<fv1sys::LoaderMarker>().unwrap();
 
             let _serve_task =
-                fasync::Task::spawn(serve_hermetic_loader(stream, allowed.into(), loader_proxy));
+                fasync::Task::spawn(serve_hermetic_loader(stream, pkg_name.into(), loader_proxy));
 
             assert_eq!(proxy.load_url("invalid_url").await.unwrap(), None);
         }

@@ -14,12 +14,9 @@ use {
     fuchsia_zircon as zx,
     futures::{prelude::*, StreamExt},
     lazy_static::lazy_static,
-    std::{
-        collections::HashSet,
-        sync::{
-            atomic::{AtomicU64, Ordering},
-            Arc,
-        },
+    std::sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
     },
     tracing::{debug, warn},
 };
@@ -58,7 +55,7 @@ impl Drop for EnclosingEnvironment {
 impl EnclosingEnvironment {
     fn new(
         incoming_svc: fio::DirectoryProxy,
-        allowed_package_names: Option<Arc<HashSet<String>>>,
+        hermetic_test_package_name: Option<Arc<String>>,
     ) -> Result<Arc<Self>, Error> {
         let sys_env = connect_to_protocol::<fv1sys::EnvironmentMarker>()?;
         let (additional_svc, additional_directory_request) = zx::Channel::create()?;
@@ -67,15 +64,15 @@ impl EnclosingEnvironment {
         let mut fs = ServiceFs::new();
         let mut loader_tasks = vec![];
         let loader_service = connect_to_protocol::<fv1sys::LoaderMarker>()?;
-        match allowed_package_names {
-            Some(allowed_package_names) => {
+        match hermetic_test_package_name {
+            Some(hermetic_test_package_name) => {
                 fs.add_fidl_service(move |stream: fv1sys::LoaderRequestStream| {
-                    let allowed_package_names = allowed_package_names.clone();
+                    let hermetic_test_package_name = hermetic_test_package_name.clone();
                     let loader_service = loader_service.clone();
                     loader_tasks.push(fasync::Task::spawn(async move {
                         resolver::serve_hermetic_loader(
                             stream,
-                            allowed_package_names,
+                            hermetic_test_package_name,
                             loader_service.clone(),
                         )
                         .await;
@@ -238,12 +235,12 @@ impl EnclosingEnvironment {
 /// no matter how many times it connects to Environment service.
 pub async fn gen_enclosing_env(
     handles: LocalComponentHandles,
-    allowed_package_names: Option<Arc<HashSet<String>>>,
+    hermetic_test_package_name: Option<Arc<String>>,
 ) -> Result<(), Error> {
     // This function should only be called when test tries to connect to Environment or Launcher.
     let mut fs = ServiceFs::new();
     let incoming_svc = handles.clone_from_namespace("svc")?;
-    let enclosing_env = EnclosingEnvironment::new(incoming_svc, allowed_package_names)
+    let enclosing_env = EnclosingEnvironment::new(incoming_svc, hermetic_test_package_name)
         .context("Cannot create enclosing env")?;
     let enclosing_env_clone = enclosing_env.clone();
     let enclosing_env_clone2 = enclosing_env.clone();
