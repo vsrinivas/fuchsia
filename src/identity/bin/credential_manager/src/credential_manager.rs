@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        diagnostics::{Diagnostics, IncomingMethod},
-        hash_tree::{HashTree, HashTreeStorage, LABEL_LENGTH},
+        diagnostics::{Diagnostics, IncomingManagerMethod, IncomingResetMethod},
+        hash_tree::{HashTree, HashTreeStorage, BITS_PER_LEVEL, LABEL_LENGTH, TREE_HEIGHT},
         label_generator::Label,
         lookup_table::LookupTable,
         pinweaver::{CredentialMetadata, Hash, Mac, PinWeaverProtocol},
@@ -13,6 +13,7 @@ use {
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_identity_credential::{
         self as fcred, CredentialError, CredentialManagerRequest, CredentialManagerRequestStream,
+        ResetError, ResetRequest, ResetRequestStream,
     },
     fidl_fuchsia_tpm_cr50::TryAuthResponse,
     futures::{lock::Mutex, prelude::*},
@@ -83,6 +84,18 @@ where
         }
     }
 
+    /// Handles the special Reset FIDL requests which reset the state of
+    /// CredentialManager both on-disk and on-chip.
+    pub async fn handle_requests_for_reset_stream(&self, mut request_stream: ResetRequestStream) {
+        while let Some(request) = request_stream.try_next().await.expect("read request") {
+            self.handle_reset_request(request)
+                .unwrap_or_else(|e| {
+                    error!("error handling fidl request: {:#}", anyhow!(e));
+                })
+                .await
+        }
+    }
+
     /// Process a single CredentialManager FIDL request and send a reply.
     /// This request can either add, remove or check a credential. It is important
     /// that only one request is processed at a time as the |pinweaver| protocol
@@ -92,18 +105,37 @@ where
             CredentialManagerRequest::AddCredential { params, responder } => {
                 let mut resp = self.add_credential(&params).await;
                 responder.send(&mut resp).context("sending AddCredential response")?;
-                self.diagnostics.incoming_outcome(IncomingMethod::AddCredential, resp.map(|_| ()));
+                self.diagnostics.incoming_manager_outcome(
+                    IncomingManagerMethod::AddCredential,
+                    resp.map(|_| ()),
+                );
             }
             CredentialManagerRequest::RemoveCredential { label, responder } => {
                 let mut resp = self.remove_credential(label).await;
                 responder.send(&mut resp).context("sending RemoveLabel response")?;
-                self.diagnostics.incoming_outcome(IncomingMethod::RemoveCredential, resp);
+                self.diagnostics
+                    .incoming_manager_outcome(IncomingManagerMethod::RemoveCredential, resp);
             }
             CredentialManagerRequest::CheckCredential { params, responder } => {
                 let mut resp = self.check_credential(&params).await;
                 responder.send(&mut resp).context("sending CheckCredential response")?;
-                self.diagnostics
-                    .incoming_outcome(IncomingMethod::CheckCredential, resp.map(|_| ()));
+                self.diagnostics.incoming_manager_outcome(
+                    IncomingManagerMethod::CheckCredential,
+                    resp.map(|_| ()),
+                );
+            }
+        }
+        Ok(())
+    }
+
+    /// Process a single Reset FIDL request and send a reply. This request can
+    /// only be the reset method.
+    async fn handle_reset_request(&self, request: ResetRequest) -> Result<(), Error> {
+        match request {
+            ResetRequest::Reset { responder } => {
+                let mut resp = self.reset().await;
+                responder.send(&mut resp).context("sending Reset response")?;
+                self.diagnostics.incoming_reset_outcome(IncomingResetMethod::Reset, resp);
             }
         }
         Ok(())
@@ -186,6 +218,23 @@ where
         } else {
             Ok(())
         }
+    }
+
+    /// Reset resets the state of the credential manager calling ResetTree and
+    /// purging all of the on-disk state. This is intended to be called during
+    /// FactoryDeviceReset.
+    async fn reset(&self) -> Result<(), ResetError> {
+        let pinweaver = self.pinweaver.lock().await;
+        pinweaver
+            .reset_tree(BITS_PER_LEVEL, TREE_HEIGHT)
+            .await
+            .map_err(|_| ResetError::ChipStateFailedToClear)?;
+        self.hash_tree().reset().map_err(|_| ResetError::DiskStateFailedToClear)?;
+        self.lookup_table().reset().await.map_err(|_| ResetError::DiskStateFailedToClear)?;
+        self.hash_tree_storage
+            .store(&self.hash_tree.borrow())
+            .map_err(|_| ResetError::DiskStateFailedToClear)?;
+        Ok(())
     }
 
     /// Allocates a new empty credential in the |hash_tree| returning the
@@ -626,6 +675,16 @@ mod test {
     }
 
     #[fuchsia::test]
+    async fn test_reset() {
+        let mut params = TestParams::default();
+        params.pinweaver.expect_reset_tree().times(1).returning(|_, _| Ok([0; 32]));
+        params.lookup_table.expect_reset().times(1).returning(|| Ok(()));
+        let test = TestHarness::create(params).await;
+        let result = test.cm.reset().await;
+        assert_matches!(result, Ok(()));
+    }
+
+    #[fuchsia::test]
     async fn test_request_stream_handling() {
         let mut params = TestParams::default();
         params
@@ -664,8 +723,11 @@ mod test {
         test.diag.assert_events(&[
             Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::CredentialCount(1),
-            Event::IncomingOutcome(IncomingMethod::AddCredential, Ok(())),
-            Event::IncomingOutcome(IncomingMethod::RemoveCredential, Err(CE::InvalidLabel)),
+            Event::IncomingManagerOutcome(IncomingManagerMethod::AddCredential, Ok(())),
+            Event::IncomingManagerOutcome(
+                IncomingManagerMethod::RemoveCredential,
+                Err(CE::InvalidLabel),
+            ),
         ]);
     }
 }

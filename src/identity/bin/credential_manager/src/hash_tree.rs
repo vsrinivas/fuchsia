@@ -178,7 +178,6 @@ impl HashTree {
     }
 
     /// Clears all leaves from a tree and reinstantiates the tree's structure.
-    #[allow(dead_code)]
     pub fn reset(&mut self) -> Result<(), HashTreeError> {
         // Resetting a tree should be as simple as dropping the reference to
         // the root node, which will cause it and its subtree to be cleaned up.

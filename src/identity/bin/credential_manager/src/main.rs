@@ -10,7 +10,7 @@ mod pinweaver;
 mod provision;
 
 use anyhow::{Context, Error};
-use fidl_fuchsia_identity_credential::CredentialManagerRequestStream;
+use fidl_fuchsia_identity_credential::{CredentialManagerRequestStream, ResetRequestStream};
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_tpm_cr50::PinWeaverMarker;
 use fuchsia_async as fasync;
@@ -34,6 +34,7 @@ pub const HASH_TREE_PATH: &str = "/data/hash_tree";
 
 enum Services {
     CredentialManager(CredentialManagerRequestStream),
+    Reset(ResetRequestStream),
 }
 
 #[fasync::run_singlethreaded]
@@ -69,13 +70,19 @@ async fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::CredentialManager);
+    fs.dir("svc").add_fidl_service(Services::Reset);
     inspect_runtime::serve(&INSPECTOR, &mut fs)?;
     fs.take_and_serve_directory_handle().context("serving directory handle")?;
     // It is important that this remains `for_each` to create a sequential queue and prevent
     // subsequent requests being serviced before the first finishes.
-    fs.for_each(|service| match service {
-        Services::CredentialManager(stream) => {
-            credential_manager.handle_requests_for_stream(stream)
+    fs.for_each(|service| async {
+        match service {
+            Services::CredentialManager(stream) => {
+                credential_manager.handle_requests_for_stream(stream).await
+            }
+            Services::Reset(stream) => {
+                credential_manager.handle_requests_for_reset_stream(stream).await
+            }
         }
     })
     .await;

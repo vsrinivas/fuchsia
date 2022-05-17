@@ -4,10 +4,13 @@
 
 use {
     crate::{
-        diagnostics::{Diagnostics, HashTreeOperation, IncomingMethod, PinweaverMethod},
+        diagnostics::{
+            Diagnostics, HashTreeOperation, IncomingManagerMethod, IncomingResetMethod,
+            PinweaverMethod,
+        },
         hash_tree::HashTreeError,
     },
-    fidl_fuchsia_identity_credential::CredentialError,
+    fidl_fuchsia_identity_credential::{CredentialError, ResetError},
     fidl_fuchsia_tpm_cr50::PinWeaverError,
     fuchsia_inspect::{Inspector, Node, NumericProperty, Property, UintProperty},
     fuchsia_zircon as zx,
@@ -35,7 +38,7 @@ struct OperationNode<E: Eq + Debug + Hash> {
 }
 
 impl<E: Eq + Debug + Hash> OperationNode<E> {
-    /// Create a new `IncomingMethodNode` at the supplied inspect `Node`.
+    /// Create a new `IncomingManagerMethodNode` at the supplied inspect `Node`.
     fn new(node: Node) -> Self {
         Self {
             success_count: node.create_uint("success_count", 0),
@@ -64,19 +67,28 @@ impl<E: Eq + Debug + Hash> OperationNode<E> {
     }
 }
 
-/// A record in inspect of the success count and failure counts for incoming RPC methods.
-type IncomingMethodNode = OperationNode<CredentialError>;
+/// A record in inspect of the success count and failure counts for
+/// incoming CredentialManager RPC methods.
+type IncomingManagerMethodNode = OperationNode<CredentialError>;
 
-/// A record in inspect of the success count and failure counts for outgoing Pinweaver RPC methods.
+/// A record in inspect of the success count and failure counts for
+/// incoming Reset RPC methods.
+type IncomingResetMethodNode = OperationNode<ResetError>;
+
+/// A record in inspect of the success count and failure counts for
+/// outgoing Pinweaver RPC methods.
 type PinweaverMethodNode = OperationNode<PinWeaverError>;
 
-/// A record in inspect of the success count and failure counts for hash tree operations.
+/// A record in inspect of the success count and failure counts for
+/// hash tree operations.
 type HashTreeOperationNode = OperationNode<HashTreeError>;
 
 /// The complete set of CredentialManager information exported through Inspect.
 pub struct InspectDiagnostics {
-    /// Counters of success and failures for each incoming RPC.
-    incoming_outcomes: Mutex<HashMap<IncomingMethod, IncomingMethodNode>>,
+    /// Counters of success and failures for each incoming CredentialManager RPC.
+    incoming_manager_outcomes: Mutex<HashMap<IncomingManagerMethod, IncomingManagerMethodNode>>,
+    /// Counters of success and failures for each incoming Reset RPC.
+    incoming_reset_outcomes: Mutex<HashMap<IncomingResetMethod, IncomingResetMethodNode>>,
     /// Counters of success and failures for each outgoing Pinweaver RPC.
     pinweaver_outcomes: Mutex<HashMap<PinweaverMethod, PinweaverMethodNode>>,
     /// Counters of success and failures for each hash tree operation.
@@ -92,10 +104,15 @@ impl InspectDiagnostics {
     pub fn new(node: &Node) -> Self {
         // Record the initialization time.
         node.record_int("initialization_time_nanos", zx::Time::get_monotonic().into_nanos());
-        // Add new nodes for each incoming RPC.
-        let incoming_node = node.create_child("incoming");
-        let incoming_map = IncomingMethod::create_hash_map(|name| {
-            IncomingMethodNode::new(incoming_node.create_child(name))
+        // Add new nodes for each incoming CredentialManager RPC.
+        let incoming_manager_node = node.create_child("incoming_manager");
+        let incoming_manager_map = IncomingManagerMethod::create_hash_map(|name| {
+            IncomingManagerMethodNode::new(incoming_manager_node.create_child(name))
+        });
+        // Add new nodes for each incoming Reset RPC.
+        let incoming_reset_node = node.create_child("incoming_reset");
+        let incoming_reset_map = IncomingResetMethod::create_hash_map(|name| {
+            IncomingResetMethodNode::new(incoming_reset_node.create_child(name))
         });
         // Add new nodes for each outgoing Pinweaver RPC.
         let pinweaver_node = node.create_child("pinweaver");
@@ -109,18 +126,37 @@ impl InspectDiagnostics {
         });
         let credential_count = node.create_uint("credential_count", 0);
         Self {
-            incoming_outcomes: Mutex::new(incoming_map),
+            incoming_manager_outcomes: Mutex::new(incoming_manager_map),
+            incoming_reset_outcomes: Mutex::new(incoming_reset_map),
             pinweaver_outcomes: Mutex::new(pinweaver_map),
             hash_tree_operations: Mutex::new(hash_tree_map),
             credential_count,
-            _nodes: vec![node.clone_weak(), incoming_node, pinweaver_node, hash_tree_node],
+            _nodes: vec![
+                node.clone_weak(),
+                incoming_manager_node,
+                incoming_reset_node,
+                pinweaver_node,
+                hash_tree_node,
+            ],
         }
     }
 }
 
 impl Diagnostics for InspectDiagnostics {
-    fn incoming_outcome(&self, method: IncomingMethod, result: Result<(), CredentialError>) {
-        self.incoming_outcomes
+    fn incoming_manager_outcome(
+        &self,
+        method: IncomingManagerMethod,
+        result: Result<(), CredentialError>,
+    ) {
+        self.incoming_manager_outcomes
+            .lock()
+            .get_mut(&method)
+            .expect("Incoming RPC method missing from auto-generated map")
+            .record(result);
+    }
+
+    fn incoming_reset_outcome(&self, method: IncomingResetMethod, result: Result<(), ResetError>) {
+        self.incoming_reset_outcomes
             .lock()
             .get_mut(&method)
             .expect("Incoming RPC method missing from auto-generated map")
@@ -166,7 +202,7 @@ mod tests {
             inspector,
             root: {
                 initialization_time_nanos: AnyProperty,
-                incoming: {
+                incoming_manager: {
                     add_credential: {
                         success_count: 0u64,
                         error_count: 0u64,
@@ -178,6 +214,13 @@ mod tests {
                         errors: {},
                     },
                     remove_credential: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                },
+                incoming_reset: {
+                    reset: {
                         success_count: 0u64,
                         error_count: 0u64,
                         errors: {},
@@ -233,20 +276,28 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn incoming_outcomes() {
+    fn incoming_manager_outcomes() {
         let inspector = Inspector::new();
         let diagnostics = InspectDiagnostics::new(&inspector.root());
-        diagnostics.incoming_outcome(IncomingMethod::AddCredential, Ok(()));
-        diagnostics.incoming_outcome(IncomingMethod::RemoveCredential, Err(CE::InvalidLabel));
-        diagnostics.incoming_outcome(IncomingMethod::CheckCredential, Ok(()));
-        diagnostics.incoming_outcome(IncomingMethod::AddCredential, Err(CE::NoFreeLabel));
-        diagnostics.incoming_outcome(IncomingMethod::AddCredential, Err(CE::InternalError));
-        diagnostics.incoming_outcome(IncomingMethod::RemoveCredential, Err(CE::InvalidLabel));
+        diagnostics.incoming_manager_outcome(IncomingManagerMethod::AddCredential, Ok(()));
+        diagnostics.incoming_manager_outcome(
+            IncomingManagerMethod::RemoveCredential,
+            Err(CE::InvalidLabel),
+        );
+        diagnostics.incoming_manager_outcome(IncomingManagerMethod::CheckCredential, Ok(()));
+        diagnostics
+            .incoming_manager_outcome(IncomingManagerMethod::AddCredential, Err(CE::NoFreeLabel));
+        diagnostics
+            .incoming_manager_outcome(IncomingManagerMethod::AddCredential, Err(CE::InternalError));
+        diagnostics.incoming_manager_outcome(
+            IncomingManagerMethod::RemoveCredential,
+            Err(CE::InvalidLabel),
+        );
 
         assert_data_tree!(
             inspector,
             root: contains {
-                incoming: {
+                incoming_manager: {
                     add_credential: {
                         success_count: 1u64,
                         error_count: 2u64,
@@ -270,6 +321,35 @@ mod tests {
                 }
             }
         );
+    }
+
+    #[fuchsia::test]
+    fn incoming_reset_outcomes() {
+        let inspector = Inspector::new();
+        let diagnostics = InspectDiagnostics::new(&inspector.root());
+        diagnostics.incoming_reset_outcome(IncomingResetMethod::Reset, Ok(()));
+        diagnostics.incoming_reset_outcome(
+            IncomingResetMethod::Reset,
+            Err(ResetError::ChipStateFailedToClear),
+        );
+        diagnostics.incoming_reset_outcome(
+            IncomingResetMethod::Reset,
+            Err(ResetError::DiskStateFailedToClear),
+        );
+        assert_data_tree!(
+        inspector,
+        root: contains {
+            incoming_reset: {
+                reset: {
+                    success_count: 1u64,
+                    error_count: 2u64,
+                    errors: {
+                        ChipStateFailedToClear: 1u64,
+                        DiskStateFailedToClear: 1u64,
+                    }
+                }
+            }
+        });
     }
 
     #[fuchsia::test]

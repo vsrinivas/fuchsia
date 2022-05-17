@@ -1,0 +1,21 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.identity.credential;
+
+/// Specific error codes returned by the Reset protocol.
+type ResetError = flexible enum : uint32 {
+    // Failed to clear the disk state when wiping hardware backed credentials.
+    DISK_STATE_FAILED_TO_CLEAR = 1;
+    // Failed to clear the chip state when wiping hardware backed credentials.
+    CHIP_STATE_FAILED_TO_CLEAR = 2;
+};
+
+/// Reset is a small protocol intended to be used exclusively on factory reset
+/// to reset any hardware backed credentials.
+@discoverable
+protocol Reset {
+    /// Resets the sytem credential state. This is used when performing
+    /// a factory reset.
+    Reset() -> (struct {}) error ResetError;
+};

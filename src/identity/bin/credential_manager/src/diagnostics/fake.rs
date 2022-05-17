@@ -4,10 +4,13 @@
 
 use {
     crate::{
-        diagnostics::{Diagnostics, HashTreeOperation, IncomingMethod, PinweaverMethod},
+        diagnostics::{
+            Diagnostics, HashTreeOperation, IncomingManagerMethod, IncomingResetMethod,
+            PinweaverMethod,
+        },
         hash_tree::HashTreeError,
     },
-    fidl_fuchsia_identity_credential::CredentialError,
+    fidl_fuchsia_identity_credential::{CredentialError, ResetError},
     fidl_fuchsia_tpm_cr50::PinWeaverError,
     parking_lot::Mutex,
 };
@@ -15,7 +18,8 @@ use {
 /// The different events that can be recorded through interactions with a `FakeDiagnostics`.
 #[derive(Debug, PartialEq)]
 pub enum Event {
-    IncomingOutcome(IncomingMethod, Result<(), CredentialError>),
+    IncomingManagerOutcome(IncomingManagerMethod, Result<(), CredentialError>),
+    IncomingResetOutcome(IncomingResetMethod, Result<(), ResetError>),
     PinweaverOutcome(PinweaverMethod, Result<(), PinWeaverError>),
     HashTreeOutcome(HashTreeOperation, Result<(), HashTreeError>),
     CredentialCount(u64),
@@ -41,8 +45,16 @@ impl FakeDiagnostics {
 }
 
 impl Diagnostics for FakeDiagnostics {
-    fn incoming_outcome(&self, method: IncomingMethod, result: Result<(), CredentialError>) {
-        self.events.lock().push(Event::IncomingOutcome(method, result));
+    fn incoming_manager_outcome(
+        &self,
+        method: IncomingManagerMethod,
+        result: Result<(), CredentialError>,
+    ) {
+        self.events.lock().push(Event::IncomingManagerOutcome(method, result));
+    }
+
+    fn incoming_reset_outcome(&self, method: IncomingResetMethod, result: Result<(), ResetError>) {
+        self.events.lock().push(Event::IncomingResetOutcome(method, result));
     }
 
     fn pinweaver_outcome(&self, method: PinweaverMethod, result: Result<(), PinWeaverError>) {
@@ -63,25 +75,29 @@ mod test {
     use super::*;
 
     #[fuchsia::test]
-    fn log_and_assert_incoming_outcomes() {
+    fn log_and_assert_incoming_manager_outcomes() {
         let diagnostics = FakeDiagnostics::new();
 
-        diagnostics.incoming_outcome(IncomingMethod::AddCredential, Ok(()));
-        diagnostics
-            .incoming_outcome(IncomingMethod::RemoveCredential, Err(CredentialError::InvalidLabel));
-        diagnostics.incoming_outcome(IncomingMethod::CheckCredential, Ok(()));
-        diagnostics
-            .incoming_outcome(IncomingMethod::AddCredential, Err(CredentialError::NoFreeLabel));
+        diagnostics.incoming_manager_outcome(IncomingManagerMethod::AddCredential, Ok(()));
+        diagnostics.incoming_manager_outcome(
+            IncomingManagerMethod::RemoveCredential,
+            Err(CredentialError::InvalidLabel),
+        );
+        diagnostics.incoming_manager_outcome(IncomingManagerMethod::CheckCredential, Ok(()));
+        diagnostics.incoming_manager_outcome(
+            IncomingManagerMethod::AddCredential,
+            Err(CredentialError::NoFreeLabel),
+        );
 
         diagnostics.assert_events(&[
-            Event::IncomingOutcome(IncomingMethod::AddCredential, Ok(())),
-            Event::IncomingOutcome(
-                IncomingMethod::RemoveCredential,
+            Event::IncomingManagerOutcome(IncomingManagerMethod::AddCredential, Ok(())),
+            Event::IncomingManagerOutcome(
+                IncomingManagerMethod::RemoveCredential,
                 Err(CredentialError::InvalidLabel),
             ),
-            Event::IncomingOutcome(IncomingMethod::CheckCredential, Ok(())),
-            Event::IncomingOutcome(
-                IncomingMethod::AddCredential,
+            Event::IncomingManagerOutcome(IncomingManagerMethod::CheckCredential, Ok(())),
+            Event::IncomingManagerOutcome(
+                IncomingManagerMethod::AddCredential,
                 Err(CredentialError::NoFreeLabel),
             ),
         ]);
