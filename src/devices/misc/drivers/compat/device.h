@@ -121,6 +121,7 @@ class Device : public std::enable_shared_from_this<Device> {
   std::vector<fpromise::completer<void, zx_status_t>> init_waiters_ __TA_GUARDED(init_lock_);
 
   bool pending_rebind_ = false;
+  bool pending_removal_ = false;
 
   // The default protocol of the device.
   device_t compat_symbol_;

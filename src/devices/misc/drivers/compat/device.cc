@@ -257,32 +257,39 @@ zx_status_t Device::CreateNode() {
   controller_teardown_finished_.emplace(teardown_bridge.consumer.promise());
   controller_.Bind(
       std::move(controller_ends->client), dispatcher_,
-      fidl::ObserveTeardown(
-          [device = weak_from_this(), completer = std::move(teardown_bridge.completer)]() mutable {
-            // Because the dispatcher can be multi-threaded, we must use a
-            // `fidl::WireSharedClient`. The `fidl::WireSharedClient` uses a
-            // two-phase destruction to teardown the client.
-            //
-            // Because of this, the teardown might be happening after the
-            // Device has already been erased. This is likely to occur if the
-            // Driver is asked to shutdown. If that happens, the Driver will
-            // free its Devices, the Device will release its NodeController,
-            // and then this shutdown will occur later. In order to not have a
-            // Use-After-Free here, only try to remove the Device if the
-            // weak_ptr still exists.
-            //
-            // The weak pointer will be valid here if the NodeController
-            // representing the Device exits on its own. This represents the
-            // Device's child Driver exiting, and in that instance we want to
-            // Remove the Device.
-            if (auto ptr = device.lock()) {
-              // If there's a pending rebind, don't remove our parent's reference to us.
-              if (ptr->parent_.has_value() && !ptr->pending_rebind_) {
-                (*ptr->parent_)->RemoveChild(ptr);
-              }
-              completer.complete_ok();
-            }
-          }));
+      fidl::ObserveTeardown([device = weak_from_this(),
+                             completer = std::move(teardown_bridge.completer)]() mutable {
+        // Because the dispatcher can be multi-threaded, we must use a
+        // `fidl::WireSharedClient`. The `fidl::WireSharedClient` uses a
+        // two-phase destruction to teardown the client.
+        //
+        // Because of this, the teardown might be happening after the
+        // Device has already been erased. This is likely to occur if the
+        // Driver is asked to shutdown. If that happens, the Driver will
+        // free its Devices, the Device will release its NodeController,
+        // and then this shutdown will occur later. In order to not have a
+        // Use-After-Free here, only try to remove the Device if the
+        // weak_ptr still exists.
+        //
+        // The weak pointer will be valid here if the NodeController
+        // representing the Device exits on its own. This represents the
+        // Device's child Driver exiting, and in that instance we want to
+        // Remove the Device.
+        if (auto ptr = device.lock()) {
+          if (ptr->pending_removal_) {
+            // TODO(fxbug.dev/100470): We currently do not remove the DFv1 child
+            // if the NodeController is removed but the driver didn't asked to be
+            // removed. We need to investigate the correct behavior here.
+            FDF_LOGL(INFO, ptr->logger(), "Device %s has its NodeController unexpectedly removed",
+                     (ptr)->topological_path_.data());
+          }
+          // Only remove us if the driver requested it (normally via device_async_remove)
+          if (ptr->parent_.has_value() && ptr->pending_removal_ && !ptr->pending_rebind_) {
+            (*ptr->parent_)->RemoveChild(ptr);
+          }
+        }
+        completer.complete_ok();
+      }));
 
   // If the node is not bindable, we own the node.
   fidl::ServerEnd<fdf::Node> node_server;
@@ -337,6 +344,7 @@ zx_status_t Device::CreateNode() {
 void Device::Remove() {
   executor_.schedule_task(
       WaitForInitToComplete().then([this](fpromise::result<void, zx_status_t>& init) {
+        pending_removal_ = true;
         // This should be called if we hit an error trying to remove the controller.
         auto schedule_removal = fit::defer([this]() {
           if (parent_.has_value()) {
