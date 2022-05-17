@@ -6,6 +6,7 @@
 import("//build/components.gni")
 
 executable("bin") {
+ output_name = "echo_server_test"
  testonly = true
  sources = [ "src/echo_server_test.cc" ]
  deps = [
@@ -22,7 +23,7 @@ executable("bin") {
  ]
 }
 
-fuchsia_component(":echo_server_test") {
+fuchsia_component("echo_server_test") {
  testonly = true
  deps = [ ":bin" ]
  manifest = "meta/echo_server_test.cml"

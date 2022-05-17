@@ -3,6 +3,7 @@
 import("//build/components.gni")
 
 executable("bin") {
+ output_name = "BINARY_NAME"
  testonly = true
  sources = [ "src/BINARY_NAME.cc" ]
  deps = [
@@ -19,7 +20,7 @@ executable("bin") {
  ]
 }
 
-fuchsia_component(":BINARY_NAME") {
+fuchsia_component("BINARY_NAME") {
  testonly = true
  deps = [ ":bin" ]
  manifest = "meta/BINARY_NAME.cml"

@@ -1,10 +1,10 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include </fidl/examples/routing/echo/cpp/fidl.h>;
-#include <gtest/gtest.h>;
-#include <lib/gtest/real_loop_fixture.h>;
-#include <lib/sys/component/cpp/testing/realm_builder.h>;
+#include <fidl/examples/routing/echo/cpp/fidl.h>
+#include <gtest/gtest.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 
 constexpr char COMPONENT_URL[] = "fuchsia-pkg://fuchsia.com/echo_server_test#meta/echo_server.cm";
 
@@ -34,7 +34,7 @@ class EchoServerTest: public ::gtest::RealLoopFixture {
 
 TEST_F(EchoServerTest, Echo) {
   auto realm = CreateRealm();
-  fidl::examples::routing::echo::Echo proxy;
+  fidl::InterfacePtr<fidl::examples::routing::echo::Echo> proxy;
   realm -> Connect(proxy.NewRequest());
 }
 

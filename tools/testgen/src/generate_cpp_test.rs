@@ -137,7 +137,7 @@ impl TestCodeBuilder for CppTestCode {
         }
     }
     fn add_import<'a>(&'a mut self, import_library: &str) -> &'a dyn TestCodeBuilder {
-        self.imports.push(format!(r#"#include {};"#, import_library));
+        self.imports.push(format!(r#"#include {}"#, import_library));
         self
     }
 

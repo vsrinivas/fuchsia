@@ -32,7 +32,7 @@ const TEST_REALM_CAPABILITIES: &'static [&'static str] = &["fuchsia.logger.LogSi
 // Capabilities provided by component framework. These capabilities are skipped from generated
 // mocked templates.
 const COMPONENT_FRAMEWORK_CAPABILITIES_PREFIX_RUST: &'static str = "fidl_fuchsia_component";
-const COMPONENT_FRAMEWORK_CAPABILITIES_PREFIX_CPP: &'static str = "/fuchsia/component/";
+const COMPONENT_FRAMEWORK_CAPABILITIES_PREFIX_CPP: &'static str = "fuchsia/component/";
 
 fn main() -> Result<()> {
     let input: AutoTestGeneratorCommand = argh::from_env();
@@ -453,13 +453,14 @@ impl Protocols {
         component: &str,
     ) -> Result<(), anyhow::Error> {
         let fields: Vec<&str> = protocol.split(".").collect();
-        let mut fidl_lib = "".to_string();
+        let mut fidl_lib_path = vec![];
         let mut protocol_type = "".to_string(); // ex: fuchsia::metrics::MetricEventLogger
         for i in 0..(fields.len() - 1) {
-            fidl_lib.push_str(format!("/{}", fields[i]).as_str());
+            fidl_lib_path.push(fields[i]);
             protocol_type.push_str(format!("{}::", fields[i]).as_str());
         }
-        fidl_lib.push_str("/cpp/fidl.h"); // ex: /fuchsia/metrics/cpp/fidl.h
+        fidl_lib_path.push("cpp");
+        fidl_lib_path.push("fidl.h"); // ex: /fuchsia/metrics/cpp/fidl.h
 
         let capture =
             Regex::new(r"^(?P<protocol>\w+)").unwrap().captures(fields.last().unwrap()).unwrap();
@@ -468,7 +469,7 @@ impl Protocols {
             .protocols
             .entry(component.to_string())
             .or_insert_with_key(|_| HashMap::new())
-            .entry(fidl_lib)
+            .entry(fidl_lib_path.join("/"))
             .or_insert(Vec::new());
         marker.push(format!("{}{}", protocol_type, capture.name("protocol").unwrap().as_str()));
         marker.dedup();
@@ -532,19 +533,19 @@ mod test {
 
         let d = p.protocols.get("diagnostics").unwrap();
         assert_eq!(d.len(), 1);
-        assert!(d.contains_key("/fuchsia/diagnostics/internal/cpp/fidl.h"));
+        assert!(d.contains_key("fuchsia/diagnostics/internal/cpp/fidl.h"));
 
-        let d_markers = d.get("/fuchsia/diagnostics/internal/cpp/fidl.h").unwrap();
+        let d_markers = d.get("fuchsia/diagnostics/internal/cpp/fidl.h").unwrap();
         assert_eq!(d_markers.len(), 2);
         assert_eq!(d_markers[0], "fuchsia::diagnostics::internal::FooController");
         assert_eq!(d_markers[1], "fuchsia::diagnostics::internal::BarController");
 
         let c = p.protocols.get("cobalt").unwrap();
         assert_eq!(c.len(), 2);
-        assert!(c.contains_key("/fuchsia/metrics/cpp/fidl.h"));
-        assert!(c.contains_key("/fuchsia/metrics2/cpp/fidl.h"));
+        assert!(c.contains_key("fuchsia/metrics/cpp/fidl.h"));
+        assert!(c.contains_key("fuchsia/metrics2/cpp/fidl.h"));
 
-        let c_markers = c.get("/fuchsia/metrics/cpp/fidl.h").unwrap();
+        let c_markers = c.get("fuchsia/metrics/cpp/fidl.h").unwrap();
         assert_eq!(c_markers.len(), 2);
         assert_eq!(c_markers[0], "fuchsia::metrics::FooController");
         assert_eq!(c_markers[1], "fuchsia::metrics::BarController");
@@ -601,9 +602,9 @@ mod test {
         let mut all_imports = code.imports.clone();
         all_imports.sort();
         let imports = all_imports.join("\n");
-        let expect_imports = r#"#include </fuchsia/diagnostics/cpp/fidl.h>;
-#include </fuchsia/metrics/cpp/fidl.h>;
-#include <zircon/status.h>;"#;
+        let expect_imports = r#"#include <fuchsia/diagnostics/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
+#include <zircon/status.h>"#;
         assert_eq!(imports, expect_imports);
 
         Ok(())
