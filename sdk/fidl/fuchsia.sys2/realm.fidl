@@ -30,25 +30,48 @@ type InstanceState = strict enum {
 /// Basic information about a component instance.
 /// This object contains information that is readily available to component manager.
 type InstanceInfo = struct {
+    /// The path to this instance relative to the scope root.
     moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+
+    /// The URL of the component manifest for this instance.
     url fuchsia.url.Url;
+
+    /// The stable identifier for this instance.
     component_id string:<MAX_COMPONENT_ID_LENGTH, optional>;
+
+    /// The current state of this instance.
     state InstanceState;
 };
 
 /// The detailed resolved state of a component instance
 type ResolvedState = resource struct {
+    /// All `use` declarations as defined in the component manifest.
     uses vector<fuchsia.component.decl.Use>:MAX;
+
+    /// All `expose` declarations as defined in the component manifest.
     exposes vector<fuchsia.component.decl.Expose>:MAX;
+
+    /// The resolved structured configuration of this component instance.
     config fuchsia.component.config.ResolvedConfig:optional;
+
+    /// The package directory containing the component manifest, if one exists.
+    /// This directory has the same permissions given by the package resolver
+    /// (most likely RO permissions).
     pkg_dir client_end:<fuchsia.io.Directory, optional>;
+
+    /// The execution state of this instance.
     started StartedState:optional;
 };
 
 /// The detailed started state of a component instance
 type StartedState = resource struct {
+    /// The outgoing directory of this instance, if one exists.
     out_dir client_end:<fuchsia.io.Directory, optional>;
+
+    /// The debug directory served by the runner of this instance, if one exists.
     runtime_dir client_end:<fuchsia.io.Directory, optional>;
+
+    /// The human-readable explanation for why this instance is running.
     start_reason string:MAX;
 };
 
@@ -65,6 +88,10 @@ protocol RealmQuery {
     /// Gets the detailed information of a particular instance identified by its moniker.
     /// This response contains handles to resources of the instance. As a result, component manager
     /// pays a non-trivial cost when this method is invoked.
+    ///
+    /// Errors:
+    /// * INVALID_ARGUMENTS: The given moniker is not valid.
+    /// * INSTANCE_NOT_FOUND: No instance was found matching the given moniker.
     GetInstanceInfo(struct {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
     }) -> (resource struct {
@@ -84,6 +111,9 @@ protocol RealmExplorer {
     /// When the server receives this call, it will take a snapshot of the current component
     /// topology and relays that over the iterator. Any changes to the topology *after* this method
     /// call is received by the server will not be shown by the iterator.
+    ///
+    /// Errors:
+    /// * INSTANCE_NOT_FOUND: The instance at the scope root cannot be found.
     GetAllInstanceInfos() -> (resource struct {
         iterator client_end:InstanceInfoIterator;
     }) error fuchsia.component.Error;
