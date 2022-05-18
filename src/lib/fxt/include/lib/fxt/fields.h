@@ -11,13 +11,9 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "record_types.h"
+
 namespace fxt {
-
-inline constexpr size_t Pad(size_t size) { return size + ((8 - (size & 7)) & 7); }
-
-inline constexpr size_t BytesToWords(size_t num_bytes) { return Pad(num_bytes) / sizeof(uint64_t); }
-
-inline constexpr size_t WordsToBytes(size_t num_words) { return num_words * sizeof(uint64_t); }
 
 // Casts an enum's value to its underlying type.
 template <typename T>
@@ -72,7 +68,7 @@ struct StringArgumentFields : ArgumentFields {
 
 struct RecordFields {
   static constexpr uint64_t kMaxRecordSizeWords = 0xfff;
-  static constexpr uint64_t kMaxRecordSizeBytes = WordsToBytes(kMaxRecordSizeWords);
+  static constexpr uint64_t kMaxRecordSizeBytes = WordSize(kMaxRecordSizeWords).SizeInBytes();
 
   using Type = Field<0, 3>;
   using RecordSize = Field<4, 15>;
@@ -80,7 +76,7 @@ struct RecordFields {
 
 struct LargeRecordFields {
   static constexpr uint64_t kMaxRecordSizeWords = (1ull << 32) - 1;
-  static constexpr uint64_t kMaxRecordSizeBytes = WordsToBytes(kMaxRecordSizeWords);
+  static constexpr uint64_t kMaxRecordSizeBytes = WordSize(kMaxRecordSizeWords).SizeInBytes();
 
   using Type = Field<0, 3>;
   using RecordSize = Field<4, 35>;
