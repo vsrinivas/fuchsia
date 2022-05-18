@@ -51,6 +51,15 @@
         {
             name: "sysmem_connector",
             url: "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cm",
+
+            // Until there is something analogous to on_terminate: "reboot" for drivers, we need
+            // sysmem_connector to terminate and trigger a reboot on behalf of sysmem if the sysmem
+            // driver terminates.
+            //
+            // TODO(fxbug.dev/96061): Once we have something like on_terminate: "reboot" for drivers
+            // we can remove both "eager" and "reboot" here.
+            startup: "eager",
+            on_terminate: "reboot",
         },
         {
             name: "text_manager",

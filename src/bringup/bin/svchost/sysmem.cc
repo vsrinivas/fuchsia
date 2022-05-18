@@ -15,7 +15,8 @@ const char* kSysmemSvchostPath = "/dev/class/sysmem";
 // We don't really need a service context, only a sysmem-connector context, so
 // we just directly use the sysmem-connector context as the only context.
 static zx_status_t sysmem2_init(void** out_ctx) {
-  return sysmem_connector_init(kSysmemSvchostPath, reinterpret_cast<sysmem_connector_t**>(out_ctx));
+  return sysmem_connector_init(kSysmemSvchostPath, false,
+                               reinterpret_cast<sysmem_connector_t**>(out_ctx));
 }
 
 static zx_status_t sysmem2_connect(void* ctx, async_dispatcher_t* dispatcher,

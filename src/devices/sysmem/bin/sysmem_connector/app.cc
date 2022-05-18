@@ -16,7 +16,7 @@ const char* kLogTag = "sysmem_connector";
 App::App(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher),
       component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
-  zx_status_t status = sysmem_connector_init(kSysmemClassPath, &sysmem_connector_);
+  zx_status_t status = sysmem_connector_init(kSysmemClassPath, true, &sysmem_connector_);
   if (status != ZX_OK) {
     printf(
         "sysmem_connector sysmem_connector_init() failed - exiting - status: "
@@ -47,9 +47,8 @@ App::App(async_dispatcher_t* dispatcher)
       aux_service_directory.NewRequest().TakeChannel(), dispatcher_);
   if (status != ZX_OK) {
     printf("outgoing_aux_service_directory_.Serve() failed - status: %d\n", status);
-    // We expect this to work, else we'd rather let this service_connector die so we can start a new
-    // sysmem_connector that's likely to work better.
-    ZX_ASSERT(ZX_OK);
+    // We expect this to work.
+    ZX_ASSERT(status == ZX_OK);
   }
 
   sysmem_connector_queue_service_directory(sysmem_connector_,

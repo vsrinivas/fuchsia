@@ -19,13 +19,24 @@ typedef struct sysmem_connector sysmem_connector_t;
 // doesn't guarantee that the sysmem driver is found yet, only that the
 // connector has successfully been created and initialized.
 //
-// |sysmem_device_path| must remain valid for lifetime of sysmem_connector_t.
+// |sysmem_directory_path| must remain valid for lifetime of sysmem_connector_t.
 // This is the path to the directory of sysmem device instances (just one
 // device instance will actually exist, unless something is going wrong).
+//
+// |terminate_on_sysmem_connection_failure| true will terminate this process if
+// the initial persistent connection to sysmem ever closes from the remote end
+// due to sysmem failure.  Passing false will instead attempt to re-connect to
+// sysmem.  System-wide, in typical configurations, there will be at least one
+// critical process that passes true here, so that the system will reboot on
+// sysmem failure (currently with reason "fuchsia-reboot-" +
+// <critical_process_name> + "-terminated".
+//
+// TODO()
 __EXPORT zx_status_t sysmem_connector_init(const char* sysmem_directory_path,
+                                           bool terminate_on_sysmem_connection_failure,
                                            sysmem_connector_t** out_connector);
 
-// allocator2_request is consumed.  A call to this function doesn't guarantee
+// allocator_request is consumed.  A call to this function doesn't guarantee
 // that the request will reach the sysmem driver, only that the connector has
 // queued the request internally to be sent.
 //
@@ -34,7 +45,7 @@ __EXPORT zx_status_t sysmem_connector_init(const char* sysmem_directory_path,
 // would probably do more harm than good, since sysmem is always supposed to be
 // running.
 __EXPORT void sysmem_connector_queue_connection_request(sysmem_connector_t* connector,
-                                                        zx_handle_t allocator2_request);
+                                                        zx_handle_t allocator_request);
 
 // Sysmem needs access to Cobalt.  We provide a service directory to sysmem which has only Cobalt
 // in it.

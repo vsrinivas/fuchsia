@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -47,7 +48,7 @@ class SysmemConnector : public sysmem_connector {
   // public in this case just means public to this file.  The interface is via
   // the functions declared in lib/sysmem-connector/sysmem-connector.h.
  public:
-  SysmemConnector(const char* sysmem_device_path);
+  SysmemConnector(const char* sysmem_directory_path, bool terminate_on_sysmem_connection_failure);
   zx_status_t Start();
   void QueueRequest(zx::channel allocator_request);
   void QueueServiceDirectory(zx::channel service_directory);
@@ -71,13 +72,18 @@ class SysmemConnector : public sysmem_connector {
 
   void ProcessQueue();
 
+  void OnSysmemPeerClosed(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal);
+
   //
   // Set once during construction + Start(), never set again.
   //
 
-  const char* sysmem_device_path_{};
+  // directory of device instances
+  const char* sysmem_directory_path_{};
   async::Loop process_queue_loop_;
   thrd_t process_queue_thrd_{};
+  bool terminate_on_sysmem_connection_failure_ = false;
 
   //
   // Only touched from process_queue_loop_'s one thread.
@@ -85,6 +91,7 @@ class SysmemConnector : public sysmem_connector {
 
   fbl::unique_fd sysmem_dir_fd_;
   zx::channel driver_connector_client_;
+  async::WaitMethod<SysmemConnector, &SysmemConnector::OnSysmemPeerClosed> wait_sysmem_peer_closed_;
 
   //
   // Synchronized using lock_.
@@ -94,10 +101,13 @@ class SysmemConnector : public sysmem_connector {
   std::queue<QueueItem> connection_requests_ __TA_GUARDED(lock_);
 };
 
-SysmemConnector::SysmemConnector(const char* sysmem_device_path)
-    : sysmem_device_path_(sysmem_device_path),
-      process_queue_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-  ZX_DEBUG_ASSERT(sysmem_device_path_);
+SysmemConnector::SysmemConnector(const char* sysmem_directory_path,
+                                 bool terminate_on_sysmem_connection_failure)
+    : sysmem_directory_path_(sysmem_directory_path),
+      process_queue_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      terminate_on_sysmem_connection_failure_(terminate_on_sysmem_connection_failure),
+      wait_sysmem_peer_closed_(this) {
+  ZX_DEBUG_ASSERT(sysmem_directory_path_);
 }
 
 zx_status_t SysmemConnector::Start() {
@@ -197,6 +207,18 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
     // keep watching for another device instance.
     return ZX_OK;
   }
+
+  if (terminate_on_sysmem_connection_failure_) {
+    wait_sysmem_peer_closed_.set_trigger(ZX_CHANNEL_PEER_CLOSED);
+    wait_sysmem_peer_closed_.set_object(driver_connector_client.get());
+    status = wait_sysmem_peer_closed_.Begin(process_queue_loop_.dispatcher());
+    if (status != ZX_OK) {
+      ZX_PANIC("Failed begin wait for sysmem failure - terminating process to trigger reboot.\n");
+    }
+    // Cancel() doesn't need to be called anywhere because this process will terminate immediately
+    // if the wait ever completes.
+  }
+
   char process_name[ZX_MAX_NAME_LEN] = "";
   status = zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
   ZX_DEBUG_ASSERT(status == ZX_OK);
@@ -214,9 +236,12 @@ zx_status_t SysmemConnector::ConnectToSysmemDriver() {
 
   ZX_DEBUG_ASSERT(!sysmem_dir_fd_);
   {
-    int fd = open(sysmem_device_path_, O_DIRECTORY | O_RDONLY);
+    int fd = open(sysmem_directory_path_, O_DIRECTORY | O_RDONLY);
     if (fd < 0) {
-      printf("sysmem-connector: Failed to open %s: %d\n", sysmem_device_path_, errno);
+      printf("sysmem-connector: Failed to open %s: %d\n", sysmem_directory_path_, errno);
+      if (terminate_on_sysmem_connection_failure_) {
+        ZX_PANIC("Unable to connect to sysmem - terminating process to trigger reboot.\n");
+      }
       return ZX_ERR_INTERNAL;
     }
     sysmem_dir_fd_.reset(fd);
@@ -227,7 +252,9 @@ zx_status_t SysmemConnector::ConnectToSysmemDriver() {
   // found.  We rely on those to go away if the corresponding sysmem instance
   // is no longer operational, so that we don't find them when we call
   // ConnectToSysmemDriver() again upon discovering that we can't send to a
-  // previous device instance.
+  // previous device instance.  When terminate_on_sysmem_connection_failure_,
+  // there won't be any instances after 000 fails because sysmem_connector will
+  // terminate and sysmem_connector is a critical process.
   //
   // TODO(dustingreen): Currently if this watch never finds a sysmem device
   // instance, then sysmem_connector_release() will block forever.  This can
@@ -237,6 +264,9 @@ zx_status_t SysmemConnector::ConnectToSysmemDriver() {
       fdio_watch_directory(sysmem_dir_fd_.get(), DeviceAddedShim, ZX_TIME_INFINITE, this);
   if (watch_status != ZX_ERR_STOP) {
     printf("sysmem-connector: Failed to find sysmem device - status: %d\n", watch_status);
+    if (terminate_on_sysmem_connection_failure_) {
+      ZX_PANIC("Sysmem device instance not found - terminating process to trigger reboot.\n");
+    }
     return watch_status;
   }
   ZX_DEBUG_ASSERT(driver_connector_client_);
@@ -338,9 +368,25 @@ void SysmemConnector::ProcessQueue() {
   }
 }
 
-zx_status_t sysmem_connector_init(const char* sysmem_device_path,
+void SysmemConnector::OnSysmemPeerClosed(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                         zx_status_t status, const zx_packet_signal_t* signal) {
+  // Else we wouldn't have started the wait that is now completing.
+  ZX_ASSERT(terminate_on_sysmem_connection_failure_);
+  // Any other wait status is unexpected, so terminate this process.
+  ZX_ASSERT(status == ZX_OK);
+  // This signal is set because we only waited on this signal.
+  ZX_ASSERT((signal->observed & ZX_CHANNEL_PEER_CLOSED) != 0);
+  // Terminate sysmem_connector, which is a critical process, so this will do a hard reboot.
+  ZX_PANIC(
+      "sysmem_connector's connection to sysmem has closed; sysmem driver failed - "
+      "terminating process to trigger reboot.\n");
+}
+
+zx_status_t sysmem_connector_init(const char* sysmem_directory_path,
+                                  bool terminate_on_sysmem_connection_failure,
                                   sysmem_connector_t** out_connector) {
-  SysmemConnector* connector = new SysmemConnector(sysmem_device_path);
+  SysmemConnector* connector =
+      new SysmemConnector(sysmem_directory_path, terminate_on_sysmem_connection_failure);
   zx_status_t status = connector->Start();
   if (status != ZX_OK) {
     printf("sysmem_connector_init() connector->Start() failed - status: %d\n", status);
