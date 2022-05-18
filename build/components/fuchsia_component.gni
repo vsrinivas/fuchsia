@@ -297,6 +297,7 @@ template("fuchsia_component") {
     copy(target_name) {
       forward_variables_from(invoker,
                              [
+                               "data_deps",
                                "deps",
                                "testonly",
                              ])
