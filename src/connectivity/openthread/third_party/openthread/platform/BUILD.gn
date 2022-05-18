@@ -29,6 +29,14 @@ source_set("platform") {
     "thread_config_manager.cc",
   ]
 
+  # Define during the soft-transition.
+  # This allows for compilation work both before and after update
+  # of third_party/openthread
+  if (openthread_upstream_version ==
+      "74f5ab5c9f434c4ffe44c580be40b7ff14e7f0e9") {
+    defines = [ "OPENTHREAD_USE_OLD_SETTING_API=1" ]
+  }
+
   public_deps = [
     "//sdk/fidl/fuchsia.lowpan.bootstrap:fuchsia.lowpan.bootstrap_llcpp",
     "//sdk/fidl/fuchsia.net",

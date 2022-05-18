@@ -62,10 +62,11 @@ impl AdvertisingProxyService {
 }
 
 // Splits the TXT record into individual values.
-fn split_txt(txt: &[u8]) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    Ok(ot::dnssd_split_txt(std::str::from_utf8(txt)?)
-        .map(|x| x.as_bytes().to_vec())
-        .collect::<Vec<_>>())
+fn split_txt(txt: &[u8]) -> Vec<Vec<u8>> {
+    txt.split(|&x| x == ot::DNSSD_TXT_SEPARATOR_BYTE)
+        .filter(|x| !x.is_empty())
+        .map(|x| x.to_vec())
+        .collect::<Vec<_>>()
 }
 
 impl AdvertisingProxy {
@@ -83,17 +84,19 @@ impl AdvertisingProxy {
             move |ot_instance: &ot::Instance,
                   update_id: ot::SrpServerServiceUpdateId,
                   host: &ot::SrpServerHost,
-                  _timeout: u32| {
-                info!("srp_server_set_service_update: Update for {:?}", host);
+                  timeout: u32| {
+                info!("srp_server_set_service_update: Update for {:?}, timeout: {}", host, timeout);
+                let result = inner.lock().push_srp_host_changes(instance, host);
+
+                if let Err(err) = &result {
+                    warn!("srp_server_set_service_update: Error publishing {:?}: {:?}", host, err);
+                } else {
+                    info!("srp_server_set_service_update: Finished publishing {:?}", host);
+                }
+
                 ot_instance.srp_server_handle_service_update_result(
                     update_id,
-                    inner.lock().publish_srp_host(instance, host).map_err(|e| {
-                        warn!(
-                            "srp_server_set_service_update: Error publishing {:?}: {:?}",
-                            host, e
-                        );
-                        ot::Error::Failed
-                    }),
+                    result.map_err(|_: anyhow::Error| ot::Error::Failed),
                 );
             },
         ));
@@ -107,7 +110,7 @@ impl AdvertisingProxy {
 impl AdvertisingProxyInner {
     pub fn publish_srp_all(&mut self, instance: &ot::Instance) -> Result<(), anyhow::Error> {
         for host in instance.srp_server_hosts() {
-            if let Err(err) = self.publish_srp_host(instance, host) {
+            if let Err(err) = self.push_srp_host_changes(instance, host) {
                 warn!(
                     "Unable to fully publish SRP host {:?} to mDNS: {:?}",
                     host.full_name_cstr(),
@@ -120,7 +123,7 @@ impl AdvertisingProxyInner {
     }
 
     /// Updates the mDNS service with the host and services from the SrpServerHost.
-    pub fn publish_srp_host(
+    pub fn push_srp_host_changes(
         &mut self,
         _instance: &ot::Instance,
         srp_host: &ot::SrpServerHost,
@@ -187,7 +190,6 @@ impl AdvertisingProxyInner {
                     &local_name,
                     &mut addrs.iter_mut(),
                     ProxyHostPublicationOptions {
-                        media: Some(Media::all()),
                         ip_versions: Some(IpVersions::V6),
                         perform_probe: Some(true),
                         ..ProxyHostPublicationOptions::EMPTY
@@ -228,7 +230,7 @@ impl AdvertisingProxyInner {
             // The service name as a Rust string slice from the SRP service.
             let service_name = srp_service.service_name_cstr().as_ref().to_str()?;
 
-            // The service name without the domain, with a trailing period, like "_trel.udp_.".
+            // The service name without the domain, with a trailing period, like "_trel._udp.".
             let local_service_name = service_name.trim_end_matches(&self.srp_domain);
 
             // The instance name without the service name or domain,
@@ -302,13 +304,7 @@ impl AdvertisingProxyInner {
                 });
 
             // Make copies of all of the pertinent data for the publication responder.
-            let txt = match split_txt(srp_service.txt_data()) {
-                Ok(x) => x,
-                Err(err) => {
-                    error!("publish_service_instance: split_txt failed: {:?}", err);
-                    continue;
-                }
-            };
+            let txt = split_txt(srp_service.txt_data());
             let port = srp_service.port();
             let weight = srp_service.weight();
             let priority = srp_service.priority();

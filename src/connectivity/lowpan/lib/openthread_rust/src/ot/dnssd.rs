@@ -5,13 +5,13 @@
 use crate::prelude_internal::*;
 
 /// Value of the separator byte between TXT entries.
-pub const DNSSD_TXT_SEPARATOR_BYTE: u8 = 0x13;
+pub const DNSSD_TXT_SEPARATOR_BYTE: u8 = 0x0b;
 
 /// Value of the separator character between TXT entries.
-pub const DNSSD_TXT_SEPARATOR_CHAR: char = '\x13';
+pub const DNSSD_TXT_SEPARATOR_CHAR: char = '\x0b';
 
 /// String containing the separator character used between TXT entries.
-pub const DNSSD_TXT_SEPARATOR_STR: &str = "\x13";
+pub const DNSSD_TXT_SEPARATOR_STR: &str = "\x0b";
 
 /// Converts a iterator of strings into a single string separated with
 /// [`DNSSD_TXT_SEPARATOR_STR`].
@@ -350,17 +350,17 @@ mod test {
             Vec::<String>::new()
         );
         assert_eq!(
-            ot::dnssd_split_txt("\x13\x13\x13\x13").map(ToString::to_string).collect::<Vec<_>>(),
+            ot::dnssd_split_txt("\x0b\x0b\x0b\x0b").map(ToString::to_string).collect::<Vec<_>>(),
             Vec::<String>::new()
         );
         assert_eq!(
-            ot::dnssd_split_txt("\x13xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb")
+            ot::dnssd_split_txt("\x0bxa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb")
                 .map(ToString::to_string)
                 .collect::<Vec<_>>(),
             vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()]
         );
         assert_eq!(
-            ot::dnssd_split_txt("xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb")
+            ot::dnssd_split_txt("xa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb")
                 .map(ToString::to_string)
                 .collect::<Vec<_>>(),
             vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()]
@@ -387,7 +387,7 @@ mod test {
                     .into_iter()
                     .flatten()
             ),
-            "xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb".to_string()
+            "xa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb".to_string()
         );
     }
 }

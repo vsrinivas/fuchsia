@@ -24,14 +24,18 @@ pub(crate) struct TrelInstance {
 }
 
 // Converts an optional vector of strings and to a single string.
-fn flatten_txt(txt: Option<Vec<String>>) -> String {
-    ot::dnssd_flatten_txt(txt.into_iter().flat_map(IntoIterator::into_iter))
+fn flatten_txt(txt: Option<Vec<Vec<u8>>>) -> Vec<u8> {
+    let txt: Vec<&[u8]> = txt.iter().flat_map(|x| x.iter()).map(Vec::as_slice).collect::<Vec<_>>();
+
+    txt.join(&ot::DNSSD_TXT_SEPARATOR_BYTE)
 }
 
 // Splits the TXT record into individual values.
-fn split_txt(txt: &[u8]) -> Vec<String> {
-    ot::dnssd_split_txt(std::str::from_utf8(txt).unwrap())
-        .map(ToString::to_string)
+fn split_txt(txt: &[u8]) -> Vec<Vec<u8>> {
+    info!("trel:split_txt: Splitting TXT record: {:?}", hex::encode(txt));
+    txt.split(|&x| x == ot::DNSSD_TXT_SEPARATOR_BYTE)
+        .filter(|x| !x.is_empty())
+        .map(|x| x.to_vec())
         .collect::<Vec<_>>()
 }
 
@@ -72,17 +76,18 @@ impl TrelInstance {
 
     fn register_service(&mut self, port: u16, txt: &[u8]) {
         let txt = split_txt(txt);
-        let (client, server) = create_endpoints::<PublicationResponder_Marker>().unwrap();
+        let (client, server) =
+            create_endpoints::<ServiceInstancePublicationResponder_Marker>().unwrap();
 
         let publisher =
-            fuchsia_component::client::connect_to_protocol::<PublisherMarker>().unwrap();
+            fuchsia_component::client::connect_to_protocol::<ServiceInstancePublisherMarker>()
+                .unwrap();
 
         let publish_init_future = publisher
             .publish_service_instance(
                 ot::TREL_DNSSD_SERVICE_NAME,
                 self.instance_name.as_str(),
-                Media::all(),
-                true,
+                ServiceInstancePublicationOptions::EMPTY,
                 client,
             )
             .map(|x| -> Result<(), anyhow::Error> {
@@ -95,18 +100,18 @@ impl TrelInstance {
 
         let publish_responder_future =
             server.into_stream().unwrap().map_err(Into::into).try_for_each(
-                move |PublicationResponder_Request::OnPublication { responder, .. }| {
+                move |ServiceInstancePublicationResponder_Request::OnPublication {
+                          responder,
+                          ..
+                      }| {
                     let txt = txt.clone();
+                    let _publisher = publisher.clone();
                     async move {
                         responder
-                            .send(Some(&mut Publication {
-                                port,
-                                text: txt,
-                                srv_priority: fidl_fuchsia_net_mdns::DEFAULT_SRV_PRIORITY,
-                                srv_weight: fidl_fuchsia_net_mdns::DEFAULT_SRV_WEIGHT,
-                                ptr_ttl: fidl_fuchsia_net_mdns::DEFAULT_PTR_TTL,
-                                srv_ttl: fidl_fuchsia_net_mdns::DEFAULT_SRV_TTL,
-                                txt_ttl: fidl_fuchsia_net_mdns::DEFAULT_TXT_TTL,
+                            .send(&mut Ok(ServiceInstancePublication {
+                                port: Some(port),
+                                text: Some(txt),
+                                ..ServiceInstancePublication::EMPTY
                             }))
                             .map_err(Into::into)
                     }
@@ -131,17 +136,17 @@ impl TrelInstance {
                     ServiceInstance {
                         instance: Some(instance_name),
                         ipv6_endpoint: Some(ipv6_endpoint),
-                        text,
+                        text_strings,
                         ..
                     },
                 responder,
             } => {
-                let txt = flatten_txt(text);
+                let txt = flatten_txt(text_strings);
                 let sockaddr: ot::SockAddr = ipv6_endpoint.into();
 
                 self.peer_instance_sockaddr_map.insert(instance_name, sockaddr);
 
-                let info = ot::PlatTrelPeerInfo::new(false, txt.as_bytes(), sockaddr);
+                let info = ot::PlatTrelPeerInfo::new(false, &txt, sockaddr);
                 info!("otPlatTrelHandleDiscoveredPeerInfo: {:?}", info);
                 ot_instance.plat_trel_handle_discovered_peer_info(&info);
 
@@ -154,12 +159,12 @@ impl TrelInstance {
                     ServiceInstance {
                         instance: Some(instance_name),
                         ipv6_endpoint: Some(ipv6_endpoint),
-                        text,
+                        text_strings,
                         ..
                     },
                 responder,
             } => {
-                let txt = flatten_txt(text);
+                let txt = flatten_txt(text_strings);
                 let sockaddr: ot::SockAddr = ipv6_endpoint.into();
 
                 if let Some(old_sockaddr) =
@@ -173,7 +178,7 @@ impl TrelInstance {
                     }
                 }
 
-                let info = ot::PlatTrelPeerInfo::new(false, txt.as_bytes(), sockaddr);
+                let info = ot::PlatTrelPeerInfo::new(false, &txt, sockaddr);
                 info!("otPlatTrelHandleDiscoveredPeerInfo: {:?}", info);
                 ot_instance.plat_trel_handle_discovered_peer_info(&info);
 
@@ -373,29 +378,29 @@ mod test {
     #[test]
     fn test_split_txt() {
         assert_eq!(
-            split_txt(b"\x13xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb"),
-            vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()]
+            split_txt(b"\x0bxa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb"),
+            vec![b"xa=a7bfc4981f4e4d22".to_vec(), b"xp=029c6f4dbae059cb".to_vec()]
         );
         assert_eq!(
-            split_txt(b"xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb"),
-            vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()]
+            split_txt(b"xa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb"),
+            vec![b"xa=a7bfc4981f4e4d22".to_vec(), b"xp=029c6f4dbae059cb".to_vec()]
         );
     }
 
     #[test]
     fn test_flatten_txt() {
-        assert_eq!(flatten_txt(None), String::default());
-        assert_eq!(flatten_txt(Some(vec![])), String::default());
+        assert_eq!(flatten_txt(None), vec![]);
+        assert_eq!(flatten_txt(Some(vec![])), vec![]);
         assert_eq!(
-            flatten_txt(Some(vec!["xa=a7bfc4981f4e4d22".to_string()])),
-            "xa=a7bfc4981f4e4d22".to_string()
+            flatten_txt(Some(vec![b"xa=a7bfc4981f4e4d22".to_vec()])),
+            b"xa=a7bfc4981f4e4d22".to_vec()
         );
         assert_eq!(
             flatten_txt(Some(vec![
-                "xa=a7bfc4981f4e4d22".to_string(),
-                "xp=029c6f4dbae059cb".to_string()
+                b"xa=a7bfc4981f4e4d22".to_vec(),
+                b"xp=029c6f4dbae059cb".to_vec()
             ])),
-            "xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb".to_string()
+            b"xa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb".to_vec()
         );
     }
 }
