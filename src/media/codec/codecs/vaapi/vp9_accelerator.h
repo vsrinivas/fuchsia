@@ -26,6 +26,15 @@ class VaapiVP9Picture : public media::VP9Picture {
   VASurfaceID GetVASurfaceID() const { return va_surface_->id(); }
 
  private:
+  // Since the Vp9Decoder will not call SubmitDecode() on duplicated pictures and instead only calls
+  // OutputPicture() we can just create a VP9Picture object that has the same underlying surface.
+  // The Vp9Decoder will then call OutputPicture() which will call vaSyncSurface() and then
+  // ProcessOutput() on same underlying surface but at a different bitstream_id indicating a
+  // different timestamp
+  scoped_refptr<VP9Picture> CreateDuplicate() override {
+    return std::make_shared<VaapiVP9Picture>(va_surface());
+  }
+
   scoped_refptr<VASurface> va_surface_;
 };
 
