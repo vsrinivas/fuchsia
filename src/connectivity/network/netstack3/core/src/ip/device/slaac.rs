@@ -859,12 +859,24 @@ fn regen_advance(
 
 /// Computes the DESYNC_FACTOR as specified in [RFC 8981 section 3.8].
 ///
+/// Per the RFC,
+///
+///    DESYNC_FACTOR
+///       A random value within the range 0 - MAX_DESYNC_FACTOR.  It
+///       is computed each time a temporary address is generated, and
+///       is associated with the corresponding address.  It MUST be
+///       smaller than (TEMP_PREFERRED_LIFETIME - REGEN_ADVANCE).
+///
+/// Returns `None` if a DESYNC_FACTOR value cannot be calculated. This will
+/// occur when REGEN_ADVANCE is larger than TEMP_PREFERRED_LIFETIME as no valid
+/// DESYNC_FACTOR exists that is greater than or equal to 0.
+///
 /// [RFC 8981 Section 3.8]: http://tools.ietf.org/html/rfc8981#section-3.8
 fn desync_factor<R: RngCore>(
     rng: &mut R,
     temp_preferred_lifetime: NonZeroDuration,
     regen_advance: NonZeroDuration,
-) -> Duration {
+) -> Option<Duration> {
     let temp_preferred_lifetime = temp_preferred_lifetime.get();
 
     // Per RFC 8981 Section 3.8:
@@ -881,12 +893,11 @@ fn desync_factor<R: RngCore>(
     //       is computed each time a temporary address is generated, and
     //       is associated with the corresponding address.  It MUST be
     //       smaller than (TEMP_PREFERRED_LIFETIME - REGEN_ADVANCE).
-    let max_desync_factor = core::cmp::min(
-        (temp_preferred_lifetime * 2) / 5,
-        temp_preferred_lifetime - regen_advance.get(),
-    );
-
-    rng.sample(Uniform::new(Duration::ZERO, max_desync_factor))
+    temp_preferred_lifetime.checked_sub(regen_advance.get()).map(|max_desync_factor| {
+        let max_desync_factor =
+            core::cmp::min(max_desync_factor, (temp_preferred_lifetime * 2) / 5);
+        rng.sample(Uniform::new(Duration::ZERO, max_desync_factor))
+    })
 }
 
 fn regenerate_temporary_slaac_addr<C: SlaacContext>(
@@ -1207,11 +1218,28 @@ fn add_slaac_addr_sub<C: SlaacContext>(
 
             let valid_until = now.checked_add(valid_for.get()).unwrap();
 
-            let desync_factor = desync_factor(
+            let desync_factor = if let Some(d) = desync_factor(
                 sync_ctx.rng_mut(),
                 temporary_address_config.temp_preferred_lifetime,
                 regen_advance,
-            );
+            ) {
+                d
+            } else {
+                // We only fail to calculate a desync factor when the configured
+                // maximum temporary address preferred lifetime is less than
+                // REGEN_ADVANCE and per RFC 8981 Section 3.4.5,
+                //
+                //   A temporary address is created only if this calculated
+                //   preferred lifetime is greater than REGEN_ADVANCE time
+                //   units.
+                trace!(
+                    "failed to calculate DESYNC_FACTOR; temp_preferred_lifetime={:?}, regen_advance={:?}",
+                    temporary_address_config.temp_preferred_lifetime,
+                    regen_advance,
+                );
+                return;
+            };
+
             let preferred_for = prefix_preferred_for.and_then(|prefix_preferred_for| {
                 temporary_address_config
                     .temp_preferred_lifetime
@@ -1239,6 +1267,7 @@ fn add_slaac_addr_sub<C: SlaacContext>(
                     }
                 },
             };
+
             (
                 Lifetime::Finite(valid_until),
                 Some(preferred_for_and_regen_at),
@@ -1891,7 +1920,12 @@ mod tests {
 
     const SECRET_KEY: [u8; STABLE_IID_SECRET_KEY_BYTES] = [1; STABLE_IID_SECRET_KEY_BYTES];
 
+    const ONE_HOUR: NonZeroDuration = NonZeroDuration::from_nonzero_secs(
+        const_unwrap::const_unwrap_option(NonZeroU64::new(ONE_HOUR_AS_SECS as u64)),
+    );
+
     struct DontGenerateTemporaryAddressTest {
+        preferred_lifetime_config: NonZeroDuration,
         preferred_lifetime_secs: u32,
         valid_lifetime_secs: u32,
         temp_idgen_retries: u8,
@@ -1907,6 +1941,7 @@ mod tests {
             temp_idgen_retries: u8,
         ) -> Self {
             DontGenerateTemporaryAddressTest {
+                preferred_lifetime_config: ONE_HOUR,
                 preferred_lifetime_secs: u32::try_from(
                     (MIN_REGEN_ADVANCE.get()
                         + (u32::from(temp_idgen_retries)
@@ -1926,6 +1961,7 @@ mod tests {
     }
 
     #[test_case(DontGenerateTemporaryAddressTest {
+        preferred_lifetime_config: ONE_HOUR,
         preferred_lifetime_secs: ONE_HOUR_AS_SECS,
         valid_lifetime_secs: TWO_HOURS_AS_SECS,
         temp_idgen_retries: 0,
@@ -1934,6 +1970,7 @@ mod tests {
         enable: false,
     }; "disabled")]
     #[test_case(DontGenerateTemporaryAddressTest{
+        preferred_lifetime_config: ONE_HOUR,
         preferred_lifetime_secs: 0,
         valid_lifetime_secs: 0,
         temp_idgen_retries: 0,
@@ -1942,6 +1979,7 @@ mod tests {
         enable: true,
     }; "zero lifetimes")]
     #[test_case(DontGenerateTemporaryAddressTest {
+        preferred_lifetime_config: ONE_HOUR,
         preferred_lifetime_secs: TWO_HOURS_AS_SECS,
         valid_lifetime_secs: ONE_HOUR_AS_SECS,
         temp_idgen_retries: 0,
@@ -1950,6 +1988,7 @@ mod tests {
         enable: true,
     }; "preferred larger than valid")]
     #[test_case(DontGenerateTemporaryAddressTest {
+        preferred_lifetime_config: ONE_HOUR,
         preferred_lifetime_secs: 0,
         valid_lifetime_secs: TWO_HOURS_AS_SECS,
         temp_idgen_retries: 0,
@@ -1977,8 +2016,18 @@ mod tests {
         DEFAULT_RETRANS_TIMER + Duration::from_secs(1) /* retrans_timer */,
         3 /* temp_idgen_retries */,
     ); "preferred lifetime less than than regen advance with multiple DAD transmits and multiple retries")]
+    #[test_case(DontGenerateTemporaryAddressTest {
+        preferred_lifetime_config: MIN_REGEN_ADVANCE,
+        preferred_lifetime_secs: ONE_HOUR_AS_SECS,
+        valid_lifetime_secs: TWO_HOURS_AS_SECS,
+        temp_idgen_retries: 1,
+        dad_transmits: 1,
+        retrans_timer: DEFAULT_RETRANS_TIMER,
+        enable: true,
+    }; "configured preferred lifetime less than regen advance")]
     fn dont_generate_temporary_address(
         DontGenerateTemporaryAddressTest {
+            preferred_lifetime_config,
             preferred_lifetime_secs,
             valid_lifetime_secs,
             temp_idgen_retries,
@@ -1995,10 +2044,7 @@ mod tests {
                             ONE_HOUR_AS_SECS.into(),
                         ))
                         .unwrap(),
-                        temp_preferred_lifetime: NonZeroDuration::new(Duration::from_secs(
-                            ONE_HOUR_AS_SECS.into(),
-                        ))
-                        .unwrap(),
+                        temp_preferred_lifetime: preferred_lifetime_config,
                         temp_idgen_retries,
                         secret_key: SECRET_KEY,
                     }
@@ -2167,7 +2213,8 @@ mod tests {
             let addr_sub =
                 generate_global_temporary_address(&SUBNET, &IID, rng.next_u64(), &SECRET_KEY);
             let desync_factor =
-                desync_factor(rng, NonZeroDuration::new(pl_config).unwrap(), regen_advance);
+                desync_factor(rng, NonZeroDuration::new(pl_config).unwrap(), regen_advance)
+                    .unwrap();
 
             AddrProps {
                 desync_factor,
