@@ -40,25 +40,24 @@ class HostVsockEndpoint : public fuchsia::virtualization::HostVsockConnector,
 
   fidl::InterfaceRequestHandler<fuchsia::virtualization::HostVsockEndpoint> GetHandler();
 
-  // |fuchsia::virtualization::HostVsockConnector|
+// |fuchsia::virtualization::HostVsockConnector|
+// NOTE: These pragmas are only needed until we remove Connect from HostVsockEndpoint.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Woverloaded-virtual"
   void Connect(uint32_t src_cid, uint32_t src_port, uint32_t cid, uint32_t port,
                fuchsia::virtualization::HostVsockConnector::ConnectCallback callback) override;
+#pragma clang diagnostic pop
 
   // |fuchsia::virtualization::HostVsockEndpoint|
   void Listen(uint32_t port,
               fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
               ListenCallback callback) override;
-  void Connect(uint32_t cid, uint32_t port, zx::socket socket,
-               fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback) override;
   void Connect2(uint32_t port,
                 fuchsia::virtualization::HostVsockEndpoint::Connect2Callback callback) override;
 
   void OnShutdown(uint32_t port);
 
  private:
-  void ConnectCallback(zx_status_t status, uint32_t src_port,
-                       fuchsia::virtualization::HostVsockEndpoint::ConnectCallback remote_callback);
-
   zx_status_t AllocEphemeralPort(uint32_t* port);
   void FreeEphemeralPort(uint32_t port);
 

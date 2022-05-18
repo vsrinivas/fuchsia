@@ -12,7 +12,6 @@
 using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Result;
 using ::fuchsia::virtualization::HostVsockConnector_Connect_Response;
 using ::fuchsia::virtualization::HostVsockConnector_Connect_Result;
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
 using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
 
 HostVsockEndpoint::HostVsockEndpoint(async_dispatcher_t* dispatcher,
@@ -93,46 +92,6 @@ void HostVsockEndpoint::Listen(
   }
   port_bitmap_.SetOne(port);
   callback(HostVsockEndpoint_Listen_Result::WithResponse({}));
-}
-
-void HostVsockEndpoint::Connect(
-    uint32_t cid, uint32_t port, zx::socket socket,
-    fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback) {
-  if (cid == fuchsia::virtualization::HOST_CID) {
-    FX_LOGS(ERROR) << "Attempt to connect to host service from host";
-    callback(HostVsockEndpoint_Connect_Result::WithErr(ZX_ERR_CONNECTION_REFUSED));
-    return;
-  }
-  fuchsia::virtualization::GuestVsockAcceptor* acceptor = acceptor_provider_(cid);
-  if (acceptor == nullptr) {
-    callback(HostVsockEndpoint_Connect_Result::WithErr(ZX_ERR_CONNECTION_REFUSED));
-    return;
-  }
-  uint32_t src_port;
-  zx_status_t status = AllocEphemeralPort(&src_port);
-  if (status != ZX_OK) {
-    callback(HostVsockEndpoint_Connect_Result::WithErr(std::move(status)));
-    return;
-  }
-
-  // Get access to the guests.
-  acceptor->Accept(fuchsia::virtualization::HOST_CID, src_port, port, std::move(socket),
-                   [this, src_port, callback = std::move(callback)](
-                       fuchsia::virtualization::GuestVsockAcceptor_Accept_Result result) mutable {
-                     ConnectCallback(result.is_err() ? result.err() : ZX_OK, src_port,
-                                     std::move(callback));
-                   });
-}
-
-void HostVsockEndpoint::ConnectCallback(
-    zx_status_t status, uint32_t src_port,
-    fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback) {
-  if (status != ZX_OK) {
-    FreeEphemeralPort(src_port);
-    callback(HostVsockEndpoint_Connect_Result::WithErr(std::move(status)));
-  } else {
-    callback(HostVsockEndpoint_Connect_Result::WithResponse({}));
-  }
 }
 
 void HostVsockEndpoint::Connect2(

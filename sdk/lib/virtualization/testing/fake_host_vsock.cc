@@ -10,7 +10,6 @@ namespace guest {
 namespace testing {
 
 using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Result;
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
 using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
 
 void FakeHostVsock::Listen(
@@ -22,15 +21,6 @@ void FakeHostVsock::Listen(
   }
   listeners_.emplace(std::make_pair(port, acceptor.Bind()));
   callback(HostVsockEndpoint_Listen_Result::WithResponse({}));
-}
-
-void FakeHostVsock::Connect(uint32_t cid, uint32_t port, zx::socket socket,
-                            ConnectCallback callback) {
-  if (cid != kGuestCid) {
-    callback(HostVsockEndpoint_Connect_Result::WithErr(ZX_ERR_INVALID_ARGS));
-    return;
-  }
-  guest_vsock_->AcceptConnectionFromHost(port, std::move(socket), std::move(callback));
 }
 
 void FakeHostVsock::Connect2(uint32_t port, Connect2Callback callback) {

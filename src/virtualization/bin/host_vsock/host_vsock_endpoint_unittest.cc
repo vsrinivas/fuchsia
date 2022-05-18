@@ -15,11 +15,8 @@
 
 namespace {
 
-using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Response;
-using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Result;
 using ::fuchsia::virtualization::HostVsockConnector_Connect_Result;
 using ::fuchsia::virtualization::HostVsockEndpoint_Connect2_Result;
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
 using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
 
 constexpr uint32_t kGuestCid = 3;
@@ -88,12 +85,6 @@ struct TestEndpointConnection {
   zx_status_t status = ZX_ERR_BAD_STATE;
   zx::socket socket;
 
-  fuchsia::virtualization::HostVsockEndpoint::ConnectCallback connect_callback() {
-    return [this](HostVsockEndpoint_Connect_Result result) {
-      this->status = result.is_response() ? ZX_OK : result.err();
-    };
-  }
-
   fuchsia::virtualization::HostVsockEndpoint::Connect2Callback connect2_callback() {
     return [this](HostVsockEndpoint_Connect2_Result result) {
       if (result.is_response()) {
@@ -112,7 +103,6 @@ struct TestEndpointConnection {
   }
 };
 
-void NoOpCallback(HostVsockEndpoint_Connect_Result result) {}
 void NoOpCallback(HostVsockEndpoint_Listen_Result result) {}
 
 class HostVsockEndpointTest : public ::gtest::TestLoopFixture {
@@ -163,32 +153,12 @@ TEST_F(HostVsockEndpointTest, ConnectGuestToHost) {
   zx::socket h1, h2;
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
 
-  requests[0].callback(HostVsockAcceptor_Accept_Result::WithResponse(
-      HostVsockAcceptor_Accept_Response(std::move(h1))));
+  requests[0].callback(fpromise::ok((std::move(h1))));
 
   RunLoopUntilIdle();
 
   EXPECT_EQ(ZX_OK, connection.status);
   EXPECT_TRUE(connection.socket.is_valid());
-}
-
-TEST_F(HostVsockEndpointTest, ConnectHostToGuest) {
-  zx::socket h1, h2;
-  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
-
-  TestEndpointConnection connection;
-  host_endpoint_.Connect(kGuestCid, 22, std::move(h1), connection.connect_callback());
-
-  auto requests = guest_acceptor_.TakeRequests();
-  ASSERT_EQ(1u, requests.size());
-  EXPECT_EQ(fuchsia::virtualization::HOST_CID, requests[0].src_cid);
-  EXPECT_EQ(kFirstEphemeralPort, requests[0].src_port);
-  EXPECT_EQ(22u, requests[0].port);
-  EXPECT_TRUE(requests[0].socket.is_valid());
-
-  requests[0].callback(fuchsia::virtualization::GuestVsockAcceptor_Accept_Result::WithResponse({}));
-
-  EXPECT_EQ(ZX_OK, connection.status);
 }
 
 TEST_F(HostVsockEndpointTest, Connect2HostToGuest) {
@@ -208,28 +178,6 @@ TEST_F(HostVsockEndpointTest, Connect2HostToGuest) {
   EXPECT_TRUE(connection.socket.is_valid());
 }
 
-TEST_F(HostVsockEndpointTest, ConnectHostToHost) {
-  zx::socket h1, h2;
-  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
-
-  TestEndpointConnection connection;
-  host_endpoint_.Connect(fuchsia::virtualization::HOST_CID, 22, std::move(h1),
-                         connection.connect_callback());
-
-  ASSERT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
-}
-
-TEST_F(HostVsockEndpointTest, ConnectGuestToGuestNoAcceptor) {
-  TestConnectorConnection connection;
-  host_endpoint_.Connect(kOtherGuestCid, 1022, kGuestCid + 1000, 22, connection.callback());
-
-  auto requests = guest_acceptor_.TakeRequests();
-  ASSERT_EQ(0u, requests.size());
-
-  EXPECT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
-  EXPECT_FALSE(connection.socket.is_valid());
-}
-
 TEST_F(HostVsockEndpointTest, ConnectGuestToHostNoAcceptor) {
   TestConnectorConnection connection;
   host_endpoint_.Connect(kGuestCid, 1022, fuchsia::virtualization::HOST_CID, 22,
@@ -237,16 +185,6 @@ TEST_F(HostVsockEndpointTest, ConnectGuestToHostNoAcceptor) {
 
   EXPECT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
   EXPECT_FALSE(connection.socket.is_valid());
-}
-
-TEST_F(HostVsockEndpointTest, ConnectHostToGuestNoAcceptor) {
-  zx::socket h1, h2;
-  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
-
-  TestEndpointConnection connection;
-  host_endpoint_.Connect(kGuestCid + 1000, 22, std::move(h1), connection.connect_callback());
-
-  EXPECT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
 }
 
 TEST_F(HostVsockEndpointTest, ListenMultipleTimesSamePort) {
@@ -268,12 +206,14 @@ TEST_F(HostVsockEndpointTest, ListenMultipleTimesSamePort) {
 TEST_F(HostVsockEndpointTest, ConnectHostToGuestMultipleTimes) {
   constexpr size_t kNumTimes = 4;
 
-  zx::socket handles[2 * kNumTimes];
+  zx::socket handles[kNumTimes];
   for (size_t i = 0; i < kNumTimes; i++) {
-    zx::socket* h = &handles[i * 2];
-    ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h[0], &h[1]));
+    zx::socket* h = &handles[i];
+    auto callback = [h](HostVsockEndpoint_Connect2_Result result) {
+      *h = std::move(result.response().socket);
+    };
 
-    host_endpoint_.Connect(kGuestCid, 22, std::move(h[1]), NoOpCallback);
+    host_endpoint_.Connect2(22, std::move(callback));
   }
 
   auto requests = guest_acceptor_.TakeRequests();
@@ -288,21 +228,20 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestMultipleTimes) {
 }
 
 // Open a connection from the host to the given guest on the given port.
-zx::socket OpenConnectionToGuest(HostVsockEndpoint* host_endpoint, uint32_t cid, uint32_t port) {
-  // Create a socket.
-  zx::socket host_end, guest_end;
-  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &host_end, &guest_end);
-  ZX_ASSERT(status == ZX_OK);
+zx::socket OpenConnectionToGuest(HostVsockEndpoint* host_endpoint, uint32_t port) {
+  zx::socket host_end;
+  auto callback = [&host_end](HostVsockEndpoint_Connect2_Result result) {
+    host_end = std::move(result.response().socket);
+  };
 
-  // Connect to the guest.
-  host_endpoint->Connect(cid, port, std::move(guest_end), NoOpCallback);
+  host_endpoint->Connect2(port, std::move(callback));
   return host_end;
 }
 
 TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
   // Open two connections.
-  zx::socket first = OpenConnectionToGuest(&host_endpoint_, /*cid=*/kGuestCid, /*port=*/22);
-  zx::socket second = OpenConnectionToGuest(&host_endpoint_, /*cid=*/kGuestCid, /*port=*/22);
+  zx::socket first = OpenConnectionToGuest(&host_endpoint_, /*port=*/22);
+  zx::socket second = OpenConnectionToGuest(&host_endpoint_, /*port=*/22);
   RunLoopUntilIdle();
 
   // Ensure the two connections succeeded, and were allocated different ports.
@@ -318,7 +257,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
 
   // Connect again. We expect the recently freed port to be under quarantine,
   // and should not be reallocated.
-  zx::socket third = OpenConnectionToGuest(&host_endpoint_, /*cid=*/kGuestCid, /*port=*/22);
+  zx::socket third = OpenConnectionToGuest(&host_endpoint_, /*port=*/22);
   requests = guest_acceptor_.TakeRequests();
   ASSERT_EQ(1u, requests.size());
   EXPECT_EQ(requests[0].src_port, kFirstEphemeralPort + 2);
@@ -329,7 +268,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
   RunLoopFor(kPortQuarantineTime * 2);
 
   // Connect a fourth time. This time, the ephemeral port should be reused.
-  zx::socket fourth = OpenConnectionToGuest(&host_endpoint_, /*cid=*/kGuestCid, /*port=*/22);
+  zx::socket fourth = OpenConnectionToGuest(&host_endpoint_, /*port=*/22);
   requests = guest_acceptor_.TakeRequests();
   ASSERT_EQ(1u, requests.size());
   EXPECT_EQ(requests[0].src_port, kFirstEphemeralPort);
