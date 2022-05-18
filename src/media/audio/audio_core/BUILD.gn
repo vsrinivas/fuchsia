@@ -387,7 +387,7 @@ group("tests") {
     "test",
 
     # include this explicitly, in case product includes a custom audio_core package by other name
-    "//src/media/audio/audio_core",
+    "//src/media/audio/audio_core/v2:audio_core",
   ]
 }
 

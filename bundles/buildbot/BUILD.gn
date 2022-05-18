@@ -149,7 +149,6 @@ group("core_base_packages") {
     "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_middle",
     "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_middle_sibling",
     "//src/lib/storage/ramdevice_client/rust:ramdisk-isolated-devmgr",
-    "//src/media/audio/audio_core",
     "//src/media/audio/audio_core:audio-core-for-test",
     "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_aac",
