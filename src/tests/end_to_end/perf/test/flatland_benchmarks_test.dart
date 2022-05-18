@@ -93,7 +93,7 @@ void _addTest(String testName, String appUrl) {
     await _killProcesses(helper);
     await helper.sl4fDriver.ssh.run(
         'log flatland_benchmarks_test "Finished killing processes for flatland_benchmarks_test, after test"');
-  });
+  }, timeout: Timeout(Duration(minutes: 1)));
 }
 
 void main() {
