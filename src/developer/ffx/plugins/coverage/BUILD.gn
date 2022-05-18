@@ -1,0 +1,18 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_coverage") {
+  version = "0.0.1"
+  edition = "2018"
+  with_unit_tests = true
+  deps = [
+    "//src/developer/ffx/core:lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+  ]
+  args_sources = [ "src/args.rs" ]
+  sources = [ "src/lib.rs" ]
+}
