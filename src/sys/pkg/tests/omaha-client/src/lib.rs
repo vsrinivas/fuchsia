@@ -6,7 +6,7 @@
 use {
     anyhow::anyhow,
     assert_matches::assert_matches,
-    diagnostics_reader::{ArchiveReader, /*ComponentSelector, */ Inspect},
+    diagnostics_reader::{ArchiveReader, Inspect},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_paver::{self as paver, PaverRequestStream},
     fidl_fuchsia_pkg::{PackageCacheRequestStream, PackageResolverRequestStream},
@@ -53,7 +53,7 @@ use {
         convert::TryInto,
         fs::{self, create_dir},
         path::PathBuf,
-        str::FromStr,
+        str::FromStr as _,
         sync::Arc,
     },
     tempfile::TempDir,
@@ -119,15 +119,10 @@ fn make_default_public_key_string() -> String {
     "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----".to_string()
 }
 
+const RAW_PRIVATE_KEY: &str = include_str!("test_private_key.pem");
+
 fn make_default_private_key() -> PrivateKey {
-    PrivateKey::from_str(
-        r#"-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgaWJBcVYaYzQN4OfY
-afKgVJJVjhoEhotqn4VKhmeIGI2hRANCAAQcrP+1Xy8s79idies3SyaBFSRSgC3u
-oJkWBoE32DnPf8SBpESSME1+9mrBF77+g6jQjxVfK1L59hjdRHApBI4P
------END PRIVATE KEY-----"#,
-    )
-    .unwrap()
+    PrivateKey::from_str(RAW_PRIVATE_KEY).unwrap()
 }
 
 fn make_default_private_keys() -> PrivateKeys {
