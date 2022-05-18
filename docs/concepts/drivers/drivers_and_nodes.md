@@ -25,7 +25,9 @@ devices and the blue boxes are drivers.
 A node has the following properties:
 
 *   [Binding properties][binding-properties]: Key-value pairs that describe
-    which driver can [bind][driver-binding] to the node.
+    which driver can [bind][driver-binding] to the node. The keys can be of
+    integer or string type. The values can be of integer, string, boolean,
+    or enum type.
 *   [Capabilities][capabilities]: FIDL capabilities that are offered to a driver
     when it is bound to the node. These can be both in-process and
     out-of-process capabilities.
