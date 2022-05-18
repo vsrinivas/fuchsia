@@ -56,6 +56,7 @@ abstract class AppState {
   List<Map<String, String>> get appLaunchEntries;
   FeedbackPage get feedbackPage;
   String get feedbackUuid;
+  String get feedbackErrorMsg;
   String get simpleLocale;
   double get scale;
 

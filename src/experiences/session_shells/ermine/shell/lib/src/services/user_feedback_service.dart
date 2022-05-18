@@ -3,17 +3,16 @@
 // found in the LICENSE file.
 
 import 'package:fidl_fuchsia_feedback/fidl_async.dart';
-import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:uuid/uuid.dart';
 import 'package:zircon/zircon.dart' as zircon;
 
-typedef FeedbackSubmitCallback = void Function(String url);
+typedef UserFeedbackCallback = void Function(String url);
 
 class UserFeedbackService {
-  late final FeedbackSubmitCallback onSubmit;
-  late final VoidCallback onError;
+  late final UserFeedbackCallback onSubmit;
+  late final UserFeedbackCallback onError;
 
   Future<void> submit(String title, String desc, String username) async {
     final uptime = zircon.System.clockGetMonotonic();
@@ -33,8 +32,6 @@ class UserFeedbackService {
       ],
     );
 
-    // TODO(fxb/88445): Do one-off data sharing opt-in if it is currently opt-out.
-
     final reporter = CrashReporterProxy();
     final connection = Incoming.fromSvcPath()..connectToService(reporter);
 
@@ -44,8 +41,7 @@ class UserFeedbackService {
       log.info('Filed a user feedback report with eventID: $eventId');
       onSubmit(eventId);
     } on Exception catch (e) {
-      // TODO(fxb/88445): Add the error handling UX
-      // onError();
+      onError(e.toString());
       log.warning('Failed to file user feedback: $e ${StackTrace.current}');
     }
     reporter.ctrl.close();

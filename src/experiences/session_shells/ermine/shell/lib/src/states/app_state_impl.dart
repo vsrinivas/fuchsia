@@ -238,6 +238,11 @@ class AppStateImpl with Disposable implements AppState {
   final _feedbackUuid = ''.asObservable();
 
   @override
+  String get feedbackErrorMsg => _feedbackErrorMsg.value;
+  set feedbackErrorMsg(String value) => _feedbackErrorMsg.value = value;
+  final _feedbackErrorMsg = ''.asObservable();
+
+  @override
   bool get viewsVisible => _viewsVisible.value;
   late final _viewsVisible = () {
     return views.isNotEmpty && !isIdle;
@@ -943,8 +948,9 @@ class AppStateImpl with Disposable implements AppState {
     });
   }
 
-  void _onFeedbackError() {
+  void _onFeedbackError(String error) {
     runInAction(() {
+      _feedbackErrorMsg.value = error;
       _feedbackPage.value = FeedbackPage.failed;
     });
   }

@@ -36,6 +36,8 @@ class UserFeedback extends StatelessWidget {
             );
           case FeedbackPage.submitted:
             return UserFeedbackSubmitted(app);
+          case FeedbackPage.failed:
+            return UserFeedbackError(app);
           default:
             return Offstage();
         }
@@ -254,6 +256,53 @@ class UserFeedbackSubmitted extends StatelessWidget {
                             style: Theme.of(context).textTheme.headline5),
                         SizedBox(height: 32),
                         Text(Strings.submittedDesc(app.feedbackUuid),
+                            style: Theme.of(context).textTheme.bodyText1),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton(
+                    child: Text(Strings.close.toUpperCase()),
+                    style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
+                    onPressed: app.closeUserFeedback,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+/// A page displayed when filing report has been failed.
+class UserFeedbackError extends StatelessWidget {
+  final AppState app;
+
+  const UserFeedbackError(this.app);
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: EdgeInsets.symmetric(vertical: _kPageVerticalPaddings),
+        color: Theme.of(context).bottomAppBarColor,
+        child: FocusScope(
+          child: Center(
+            child: SizedBox(
+              width: _kContentWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(Strings.failedToFileTitle,
+                            style: Theme.of(context).textTheme.headline5),
+                        SizedBox(height: 32),
+                        Text(app.feedbackErrorMsg,
+                            style: Theme.of(context).textTheme.bodyText1),
+                        SizedBox(height: 24),
+                        Text(
+                            Strings.failedToFileDesc('go/workstation-feedback'),
                             style: Theme.of(context).textTheme.bodyText1),
                       ],
                     ),

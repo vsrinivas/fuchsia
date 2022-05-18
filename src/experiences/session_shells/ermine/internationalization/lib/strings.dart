@@ -1347,6 +1347,20 @@ class Strings {
         args: [id],
       );
 
+  static String get failedToFileTitle => Intl.message(
+        'Failed to file your report',
+        name: 'failed to file your report',
+        desc: 'The title of the user feedback filing error page',
+      );
+
+  static String failedToFileDesc(String url) => Intl.message(
+        'Please try again later. Alternatively, you can create a report at $url.',
+        name: 'try to file the report later',
+        desc: 'The description of the user feedback filing error page',
+        examples: const {'url': 'go/workstation-feedback'},
+        args: [url],
+      );
+
   static String dataSharingLegalStatement(String legalHelpUrl,
           String privacyPolicyUrl, String termsOfServiceUrl,
           [String prefix = '[', String midfix = '](', String suffix = ')']) =>
