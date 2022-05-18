@@ -523,8 +523,8 @@ class PreemptionState {
   // A call to PreemptDisable() must be matched by a later call to
   // PreemptReenable() to decrement the preempt disable counter.
   void PreemptDisable() {
-    ASSERT(PreemptDisableCount() < kMaxFieldCount);
-    disable_counts_ += 1;
+    const uint32_t old_count = disable_counts_.fetch_add(1);
+    ASSERT((old_count & kPreemptDisableMask) < kMaxFieldCount);
   }
 
   // PreemptReenable() decrements the preempt disable counter and flushes any
@@ -532,10 +532,9 @@ class PreemptionState {
   // calling from a context where blocking is allowed, as the call may result in
   // the immediate preemption of the calling thread.
   void PreemptReenable() {
-    ASSERT(PreemptDisableCount() > 0);
-
-    const uint32_t new_count = disable_counts_ -= 1;
-    if (new_count == 0) {
+    const uint32_t old_count = disable_counts_.fetch_sub(1);
+    ASSERT((old_count & kPreemptDisableMask) > 0);
+    if (old_count == 1) {
       DEBUG_ASSERT(!arch_blocking_disallowed());
       FlushPending(FlushLocal);
     }
@@ -564,10 +563,10 @@ class PreemptionState {
   [[nodiscard]] bool PreemptReenableDelayFlush() {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(arch_blocking_disallowed());
-    ASSERT(PreemptDisableCount() > 0);
 
-    const uint32_t new_count = disable_counts_ -= 1;
-    if (new_count == 0) {
+    const uint32_t old_count = disable_counts_.fetch_sub(1);
+    ASSERT((old_count & kPreemptDisableMask) > 0);
+    if (old_count == 1) {
       const cpu_mask_t local_mask = cpu_num_to_mask(arch_curr_cpu_num());
       const cpu_mask_t prev_mask = preempts_pending_.fetch_and(~local_mask);
       return (local_mask & prev_mask) != 0;
@@ -589,8 +588,8 @@ class PreemptionState {
   // A call to EagerReschedDisable() must be matched by a later call to
   // EagerReschedReenable() to decrement the eager resched disable counter.
   void EagerReschedDisable() {
-    ASSERT(EagerReschedDisableCount() < kMaxFieldCount);
-    disable_counts_ += 1 << kEagerReschedDisableShift;
+    const uint32_t old_count = disable_counts_.fetch_add(1 << kEagerReschedDisableShift);
+    ASSERT((old_count >> kEagerReschedDisableShift) < kMaxFieldCount);
   }
 
   // EagerReschedReenable() decrements the eager resched disable counter and
@@ -600,12 +599,12 @@ class PreemptionState {
   // passing flush_pending=false. Disabling automatic flushing is strongly
   // discouraged outside of top-level interrupt glue and early threading setup.
   void EagerReschedReenable(bool flush_pending = true) {
-    ASSERT(EagerReschedDisableCount() > 0);
-    const uint32_t new_count = disable_counts_ -= (1 << kEagerReschedDisableShift);
+    const uint32_t old_count = disable_counts_.fetch_sub(1 << kEagerReschedDisableShift);
+    ASSERT((old_count >> kEagerReschedDisableShift) > 0);
 
-    if ((new_count & kEagerReschedDisableMask) == 0 && flush_pending) {
-      DEBUG_ASSERT(new_count != 0 || !arch_blocking_disallowed());
-      FlushPending(new_count == 0 ? FlushAll : FlushRemote);
+    if ((old_count & kEagerReschedDisableMask) == 1 << kEagerReschedDisableShift && flush_pending) {
+      DEBUG_ASSERT(old_count != 1 << kEagerReschedDisableShift || !arch_blocking_disallowed());
+      FlushPending(old_count == 1 << kEagerReschedDisableShift ? FlushAll : FlushRemote);
     }
   }
 
