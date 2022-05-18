@@ -33,7 +33,7 @@ void InvokeViewPropertiesChangedCallbacks(
     if (InvokeViewPropertiesChangedCallback(properties, *it)) {
       it++;
     } else {
-      callbacks->erase(it);
+      it = callbacks->erase(it);
     }
   }
 }
@@ -44,7 +44,7 @@ void InvokeSceneReadyCallbacks(std::vector<GfxAccessibilityView::SceneReadyCallb
     if ((*it)()) {
       it++;
     } else {
-      callbacks->erase(it);
+      it = callbacks->erase(it);
     }
   }
 }
