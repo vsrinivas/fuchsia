@@ -29,7 +29,6 @@ mod system_power_mode_handler;
 mod system_profile_handler;
 mod system_shutdown_handler;
 mod temperature_handler;
-mod thermal_limiter;
 mod thermal_load_driver;
 mod thermal_policy;
 mod thermal_shutdown;

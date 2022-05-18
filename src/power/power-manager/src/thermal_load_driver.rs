@@ -7,7 +7,6 @@ use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::shutdown_request::{RebootReason, ShutdownRequest};
 use crate::temperature_handler::TemperatureFilter;
-use crate::thermal_limiter;
 use crate::types::{Celsius, Seconds, ThermalLoad};
 use crate::utils::get_current_timestamp;
 use anyhow::{format_err, Error, Result};
@@ -191,7 +190,7 @@ impl ThermalLoadDriver {
                     cached_thermal_load = new_thermal_load;
                     inspect.log_thermal_load(new_thermal_load);
 
-                    if new_thermal_load >= thermal_limiter::MAX_THERMAL_LOAD {
+                    if new_thermal_load >= ThermalLoad(100) {
                         log_if_err!(
                             this.initiate_thermal_shutdown().await,
                             "Failed to initiate thermal shutdown"
@@ -318,11 +317,11 @@ fn temperature_to_thermal_load(
     if temperature < onset_temperature {
         ThermalLoad(0)
     } else if temperature > reboot_temperature {
-        thermal_limiter::MAX_THERMAL_LOAD
+        ThermalLoad(100)
     } else {
         ThermalLoad(
             ((temperature - onset_temperature).0 / (reboot_temperature - onset_temperature).0
-                * thermal_limiter::MAX_THERMAL_LOAD.0 as f64) as u32,
+                * 100.0) as u32,
         )
     }
 }
@@ -431,7 +430,7 @@ mod tests {
             "dependencies": {
               "system_shutdown_node": "shutdown",
               "thermal_load_notify_nodes": [
-                "thermal_limiter"
+                "thermal_load_notify"
               ],
               "temperature_handler_node_names": [
                 "temp_sensor_1",
@@ -444,7 +443,7 @@ mod tests {
         nodes.insert("temp_sensor_1".to_string(), create_dummy_node());
         nodes.insert("temp_sensor_2".to_string(), create_dummy_node());
         nodes.insert("shutdown".to_string(), create_dummy_node());
-        nodes.insert("thermal_limiter".to_string(), create_dummy_node());
+        nodes.insert("thermal_load_notify".to_string(), create_dummy_node());
         let _ = ThermalLoadDriverBuilder::new_from_json(json_data, &nodes);
     }
 

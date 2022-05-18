@@ -74,8 +74,7 @@ define_unit!(Nanoseconds, i64);
 define_unit!(Microseconds, i64);
 define_unit!(Milliseconds, i64);
 
-// An unsigned integer in the range [0 - x], where x is an upper bound defined by the
-// thermal_limiter crate.
+// An unsigned integer in the range [0 - 100].
 define_unit!(ThermalLoad, u32);
 
 // An unsigned integer that a thermal client has defined in their thermal configuration.

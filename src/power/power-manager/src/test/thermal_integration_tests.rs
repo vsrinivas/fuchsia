@@ -8,7 +8,7 @@ use crate::thermal_policy::*;
 use crate::types::{Celsius, Farads, Hertz, Nanoseconds, PState, Seconds, Volts, Watts};
 use crate::{
     cpu_control_handler, cpu_stats_handler, dev_control_handler, system_shutdown_handler,
-    temperature_handler, thermal_limiter,
+    temperature_handler,
 };
 use fuchsia_async as fasync;
 use futures::{
@@ -367,13 +367,11 @@ impl<'a> ThermalPolicyTest<'a> {
         )
         .await;
 
-        let thermal_limiter_node = thermal_limiter::tests::setup_test_node();
-
         let thermal_config = ThermalConfig {
             temperature_node,
             cpu_control_nodes: vec![cpu_control_node],
             sys_pwr_handler,
-            thermal_load_notify_nodes: vec![thermal_limiter_node],
+            thermal_load_notify_nodes: vec![],
             crash_report_handler: create_dummy_node(),
             policy_params,
             platform_metrics_node: create_dummy_node(),
