@@ -446,15 +446,32 @@ async fn hash_from_base_or_repo_or_cache(
     // Attempt to use EagerPackageManager to resolve the package.
     if let Some(eager_package_manager) = eager_package_manager {
         if let Some(dir) =
-            eager_package_manager.read().await.get_package_dir(&pkg_url).map_err(|err| {
-                fx_log_err!("retrieval error eager package url {}: {:#}", pkg_url, anyhow!(err));
+            eager_package_manager.read().await.get_package_dir(&rewritten_url).map_err(|err| {
+                fx_log_err!(
+                    "retrieval error eager package url {} as {}: {:#}",
+                    pkg_url,
+                    rewritten_url,
+                    anyhow!(err)
+                );
                 Status::NOT_FOUND
             })?
         {
-            return dir.merkle_root().await.map(Into::into).map_err(|err| {
-                fx_log_err!("package hash error eager package url {}: {:#}", pkg_url, anyhow!(err));
+            let hash = dir.merkle_root().await.map(Into::into).map_err(|err| {
+                fx_log_err!(
+                    "package hash error eager package url {} as {}: {:#}",
+                    pkg_url,
+                    rewritten_url,
+                    anyhow!(err)
+                );
                 Status::INTERNAL
-            });
+            })?;
+            fx_log_info!(
+                "get_hash for {} as {} to {} with eager package manager",
+                pkg_url,
+                rewritten_url,
+                hash
+            );
+            return Ok(hash);
         }
     }
 
