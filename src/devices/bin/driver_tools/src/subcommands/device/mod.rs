@@ -5,22 +5,16 @@
 pub mod args;
 
 use {
-    super::common,
     anyhow::{format_err, Result},
     args::{
         BindCommand, DeviceCommand, DeviceSubcommand, LogLevel, LogLevelCommand, UnbindCommand,
     },
     fidl::endpoints::Proxy,
-    fidl_fuchsia_developer_remotecontrol as fremotecontrol, fidl_fuchsia_device as fdev,
-    fidl_fuchsia_io as fio, fuchsia_zircon_status as zx,
+    fidl_fuchsia_device as fdev, fidl_fuchsia_io as fio, fuchsia_zircon_status as zx,
     std::convert::TryFrom,
 };
 
-pub async fn device(
-    remote_control: fremotecontrol::RemoteControlProxy,
-    cmd: DeviceCommand,
-) -> Result<()> {
-    let dev = common::get_devfs_proxy(remote_control, cmd.select).await?;
+pub async fn device(cmd: DeviceCommand, dev: fio::DirectoryProxy) -> Result<()> {
     match cmd.subcommand {
         DeviceSubcommand::Bind(BindCommand { ref device_path, ref driver_path }) => {
             let device = connect_to_device(dev, device_path)?;

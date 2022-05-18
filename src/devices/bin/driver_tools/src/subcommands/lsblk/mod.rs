@@ -6,13 +6,12 @@ pub mod args;
 mod guids;
 
 use {
-    super::common,
     anyhow::{format_err, Result},
     args::LsblkCommand,
     async_trait::async_trait,
     fidl::endpoints::Proxy,
-    fidl_fuchsia_developer_remotecontrol as fremotecontrol, fidl_fuchsia_device as fdevice,
-    fidl_fuchsia_hardware_block as fblock, fidl_fuchsia_hardware_block_partition as fpartition,
+    fidl_fuchsia_device as fdevice, fidl_fuchsia_hardware_block as fblock,
+    fidl_fuchsia_hardware_block_partition as fpartition,
     fidl_fuchsia_hardware_skipblock as fskipblock, fidl_fuchsia_io as fio,
     fuchsia_async::futures::TryStreamExt,
     fuchsia_zircon_status as zx,
@@ -20,11 +19,7 @@ use {
     std::path::Path,
 };
 
-pub async fn lsblk(
-    remote_control: fremotecontrol::RemoteControlProxy,
-    cmd: LsblkCommand,
-) -> Result<()> {
-    let dev = common::get_devfs_proxy(remote_control, cmd.select).await?;
+pub async fn lsblk(_cmd: LsblkCommand, dev: fio::DirectoryProxy) -> Result<()> {
     println!(
         "{:<3} {:<4} {:<16} {:<20} {:<6} {}",
         "ID", "SIZE", "TYPE", "LABEL", "FLAGS", "DEVICE"

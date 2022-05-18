@@ -5,17 +5,12 @@
 pub mod args;
 
 use {
-    super::common, anyhow::Result, args::LspciCommand, fidl::endpoints::Proxy,
-    fidl_fuchsia_developer_remotecontrol as fremotecontrol, fidl_fuchsia_hardware_pci as fhpci,
+    anyhow::Result, args::LspciCommand, fidl::endpoints::Proxy, fidl_fuchsia_hardware_pci as fhpci,
     fidl_fuchsia_io as fio, lspci::bridge::Bridge, lspci::device::Device, lspci::Args,
     zstd::block::decompress,
 };
 
-pub async fn lspci(
-    remote_control: fremotecontrol::RemoteControlProxy,
-    cmd: LspciCommand,
-) -> Result<()> {
-    let dev = common::get_devfs_proxy(remote_control, cmd.select).await?;
+pub async fn lspci(cmd: LspciCommand, dev: fio::DirectoryProxy) -> Result<()> {
     // Creates the proxy and server
     let (proxy, server) = fidl::endpoints::create_proxy::<fio::NodeMarker>()?;
 

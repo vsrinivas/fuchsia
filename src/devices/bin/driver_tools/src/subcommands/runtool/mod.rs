@@ -5,29 +5,20 @@
 pub mod args;
 
 use {
-    super::common,
     anyhow::{anyhow, Context, Result},
     args::RunToolCommand,
     blocking::Unblock,
     errors::ffx_error,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_remotecontrol as fremotecontrol, fidl_fuchsia_driver_playground as fdp,
-    futures::FutureExt,
-    futures::StreamExt,
+    fidl_fuchsia_driver_playground as fdp,
+    futures::{FutureExt, StreamExt},
+    std::io::Write,
 };
 
 pub async fn run_tool(
-    remote_control: fremotecontrol::RemoteControlProxy,
     cmd: RunToolCommand,
-) -> Result<()> {
-    let driver_dev_proxy = common::get_playground_proxy(remote_control, false).await?;
-    run_tool_impl(driver_dev_proxy, cmd, &mut std::io::stdout()).await
-}
-
-pub async fn run_tool_impl<W: std::io::Write>(
+    writer: &mut impl Write,
     tool_runner_proxy: fdp::ToolRunnerProxy,
-    cmd: RunToolCommand,
-    writer: &mut W,
 ) -> Result<()> {
     let (controller_proxy, controller_server_end) = create_proxy::<fdp::CloseControllerMarker>()?;
     let (sin, cin) =

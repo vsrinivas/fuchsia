@@ -12,23 +12,17 @@ use {
         bytecode_encoder::encode_v1::RawInstruction, compiler::instruction::DeviceProperty,
         debugger,
     },
-    fidl_fuchsia_driver_development::{BindRulesBytecode, DriverDevelopmentProxy},
+    fidl_fuchsia_driver_development as fdd,
+    std::io::Write,
 };
 
 pub async fn debug_bind(
-    remote_control: fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     cmd: DebugBindCommand,
+    writer: &mut impl Write,
+    driver_development_proxy: fdd::DriverDevelopmentProxy,
 ) -> Result<()> {
-    let service = common::get_development_proxy(remote_control, cmd.select).await?;
-    debug_bind_impl(service, cmd, &mut std::io::stdout()).await
-}
-
-pub async fn debug_bind_impl<W: std::io::Write>(
-    service: DriverDevelopmentProxy,
-    cmd: DebugBindCommand,
-    writer: &mut W,
-) -> Result<()> {
-    let driver_info = common::get_driver_info(&service, &[cmd.driver_path]).await?;
+    let driver_info =
+        common::get_driver_info(&driver_development_proxy, &[cmd.driver_path]).await?;
 
     if driver_info.len() != 1 {
         return Err(format_err!(
@@ -39,13 +33,14 @@ pub async fn debug_bind_impl<W: std::io::Write>(
 
     let bind_rules =
         match driver_info[0].bind_rules.as_ref().ok_or(format_err!("missing bind rules"))? {
-            BindRulesBytecode::BytecodeV1(rules) => rules,
-            BindRulesBytecode::BytecodeV2(_) => {
+            fdd::BindRulesBytecode::BytecodeV1(rules) => rules,
+            fdd::BindRulesBytecode::BytecodeV2(_) => {
                 return Err(format_err!("Currently the debugger only supports the old bytecode"));
             }
         };
 
-    let mut device_info = common::get_device_info(&service, &[cmd.device_path]).await?;
+    let mut device_info =
+        common::get_device_info(&driver_development_proxy, &[cmd.device_path]).await?;
 
     if device_info.len() != 1 {
         return Err(format_err!(

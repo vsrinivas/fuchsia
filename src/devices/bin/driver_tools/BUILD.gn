@@ -11,7 +11,6 @@ rustc_library("lib") {
   with_unit_tests = true
   deps = [
     "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
@@ -28,8 +27,6 @@ rustc_library("lib") {
     "//src/devices/lib/bind",
     "//src/devices/pci/bin/lspci:lib",
     "//src/devices/usb/bin/lsusb:lib",
-    "//src/lib/component_hub",
-    "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/storage/fuchsia-vfs-watcher",
@@ -37,12 +34,12 @@ rustc_library("lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:blocking",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:uuid",
     "//third_party/rust_crates:zstd",
-    "//third_party/rust_crates/compat/rustyline",
     "//third_party/zstd",
   ]
   sources = [
@@ -84,11 +81,18 @@ rustc_binary("driver_tools") {
   with_unit_tests = false
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
+    "//sdk/fidl/fuchsia.driver.playground:fuchsia.driver.playground-rustc",
+    "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:async-trait",
   ]
   sources = [ "src/main.rs" ]
 }

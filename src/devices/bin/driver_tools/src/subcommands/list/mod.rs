@@ -9,22 +9,21 @@ use {
     anyhow::Result,
     args::ListCommand,
     bind::debugger::debug_dump::dump_bind_rules,
-    fidl_fuchsia_driver_development::BindRulesBytecode,
+    fidl_fuchsia_driver_development as fdd,
     futures::join,
     std::{collections::HashSet, iter::FromIterator},
 };
 
 pub async fn list(
-    remote_control: fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     cmd: ListCommand,
+    driver_development_proxy: fdd::DriverDevelopmentProxy,
 ) -> Result<()> {
-    let service = common::get_development_proxy(remote_control, cmd.select).await?;
     let empty: [String; 0] = [];
-    let driver_info = common::get_driver_info(&service, &empty);
+    let driver_info = common::get_driver_info(&driver_development_proxy, &empty);
 
     let driver_info = if cmd.loaded {
         // Query devices and create a hash set of loaded drivers.
-        let device_info = common::get_device_info(&service, &empty);
+        let device_info = common::get_device_info(&driver_development_proxy, &empty);
 
         // Await the futures concurrently.
         let (driver_info, device_info) = join!(driver_info, device_info);
@@ -80,11 +79,11 @@ pub async fn list(
                 println!("{0: <10}: {1}", "Driver", libname);
             }
             match driver.bind_rules {
-                Some(BindRulesBytecode::BytecodeV1(bytecode)) => {
+                Some(fdd::BindRulesBytecode::BytecodeV1(bytecode)) => {
                     println!("{0: <10}: {1}", "Bytecode Version", 1);
                     println!("{0: <10}({1} bytes): {2:?}", "Bytecode:", bytecode.len(), bytecode);
                 }
-                Some(BindRulesBytecode::BytecodeV2(bytecode)) => {
+                Some(fdd::BindRulesBytecode::BytecodeV2(bytecode)) => {
                     println!("{0: <10}: {1}", "Bytecode Version", 2);
                     println!("{0: <10}({1} bytes): ", "Bytecode:", bytecode.len());
                     match dump_bind_rules(bytecode.clone()) {

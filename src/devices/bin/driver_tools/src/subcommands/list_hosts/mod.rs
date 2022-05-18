@@ -8,16 +8,15 @@ use {
     super::common,
     anyhow::{format_err, Result},
     args::ListHostsCommand,
-    fidl_fuchsia_developer_remotecontrol as fremotecontrol,
+    fidl_fuchsia_driver_development as fdd,
     std::collections::{BTreeMap, BTreeSet},
 };
 
 pub async fn list_hosts(
-    remote_control: fremotecontrol::RemoteControlProxy,
-    cmd: ListHostsCommand,
+    _cmd: ListHostsCommand,
+    driver_development_proxy: fdd::DriverDevelopmentProxy,
 ) -> Result<()> {
-    let service = common::get_development_proxy(remote_control, cmd.select).await?;
-    let device_info = common::get_device_info(&service, &[]).await?;
+    let device_info = common::get_device_info(&driver_development_proxy, &[]).await?;
 
     let mut driver_hosts = BTreeMap::new();
 

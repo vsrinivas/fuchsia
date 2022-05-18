@@ -8,7 +8,7 @@ use {
     super::common::{self, DFv1Device, DFv2Node, Device},
     anyhow::{format_err, Result},
     args::DumpCommand,
-    fidl_fuchsia_developer_remotecontrol as fremotecontrol, fidl_fuchsia_driver_development as fdd,
+    fidl_fuchsia_driver_development as fdd,
     std::collections::{BTreeMap, VecDeque},
 };
 
@@ -133,11 +133,10 @@ fn print_tree(root: &Device, device_map: &BTreeMap<u64, &Device>) -> Result<()> 
 }
 
 pub async fn dump(
-    remote_control: fremotecontrol::RemoteControlProxy,
     cmd: DumpCommand,
+    driver_development_proxy: fdd::DriverDevelopmentProxy,
 ) -> Result<()> {
-    let service = common::get_development_proxy(remote_control, cmd.select).await?;
-    let devices: Vec<Device> = common::get_device_info(&service, &[])
+    let devices: Vec<Device> = common::get_device_info(&driver_development_proxy, &[])
         .await?
         .into_iter()
         .map(|device| device.into())
