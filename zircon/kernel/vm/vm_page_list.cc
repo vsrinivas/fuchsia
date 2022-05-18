@@ -105,22 +105,6 @@ VmPageOrMarker* VmPageList::LookupOrAllocate(uint64_t offset) {
   return &p;
 }
 
-VmPageOrMarker* VmPageList::Lookup(uint64_t offset) {
-  uint64_t node_offset = offset_to_node_offset(offset, list_skew_);
-  size_t index = offset_to_node_index(offset, list_skew_);
-
-  LTRACEF_LEVEL(2, "%p offset %#" PRIx64 " node_offset %#" PRIx64 " index %zu\n", this, offset,
-                node_offset, index);
-
-  // lookup the tree node that holds this page
-  auto pln = list_.find(node_offset);
-  if (!pln.IsValid()) {
-    return nullptr;
-  }
-
-  return &pln->Lookup(index);
-}
-
 const VmPageOrMarker* VmPageList::Lookup(uint64_t offset) const {
   uint64_t node_offset = offset_to_node_offset(offset, list_skew_);
   size_t index = offset_to_node_index(offset, list_skew_);

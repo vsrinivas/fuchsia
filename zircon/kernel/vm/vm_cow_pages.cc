@@ -947,7 +947,7 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
           AssertHeld(lock_);
           // Whether this is a true page, or a marker, we must check |this| for a page as either
           // represents a potential fork, even if we subsequently changed it to a marker.
-          VmPageOrMarker* page_or_mark = page_list_.Lookup(offset + removed_offset);
+          const VmPageOrMarker* page_or_mark = page_list_.Lookup(offset + removed_offset);
           if (page_or_mark && page_or_mark->IsPage()) {
             vm_page* p_page = page_or_mark->Page();
             // The page was definitely forked into |removed|, but
@@ -1665,13 +1665,14 @@ zx_status_t VmCowPages::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* f
   return ZX_OK;
 }
 
-VmPageOrMarker* VmCowPages::FindInitialPageContentLocked(uint64_t offset, VmCowPages** owner_out,
-                                                         uint64_t* owner_offset_out,
-                                                         uint64_t* owner_length) {
+const VmPageOrMarker* VmCowPages::FindInitialPageContentLocked(uint64_t offset,
+                                                               VmCowPages** owner_out,
+                                                               uint64_t* owner_offset_out,
+                                                               uint64_t* owner_length) {
   // Search up the clone chain for any committed pages. cur_offset is the offset
   // into cur we care about. The loop terminates either when that offset contains
   // a committed page or when that offset can't reach into the parent.
-  VmPageOrMarker* page = nullptr;
+  const VmPageOrMarker* page = nullptr;
   VmCowPages* cur = this;
   AssertHeld(cur->lock_);
   uint64_t cur_offset = offset;
@@ -1704,7 +1705,7 @@ VmPageOrMarker* VmCowPages::FindInitialPageContentLocked(uint64_t offset, VmCowP
 
     cur = parent;
     cur_offset = parent_offset;
-    VmPageOrMarker* p = cur->page_list_.Lookup(parent_offset);
+    const VmPageOrMarker* p = cur->page_list_.Lookup(parent_offset);
     if (p && !p->IsEmpty()) {
       page = p;
       break;
@@ -2139,7 +2140,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
   // In the first two cases an exact Lookup is the most optimal choice, and in the third scenario
   // although we have to re-walk the page_list_ 'needlessly', we should somewhat amortize it by the
   // fact we return multiple pages.
-  VmPageOrMarker* page_or_mark = page_list_.Lookup(offset);
+  const VmPageOrMarker* page_or_mark = page_list_.Lookup(offset);
   if (page_or_mark && page_or_mark->IsPage()) {
     // This is the common case where we have the page and don't need to do anything more, so
     // return it straight away, collecting any additional pages if possible.
@@ -2539,7 +2540,7 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
   LookupInfo lookup_info;
   while (offset < end) {
     // Don't commit if we already have this page
-    VmPageOrMarker* p = page_list_.Lookup(offset);
+    const VmPageOrMarker* p = page_list_.Lookup(offset);
     if (!p || !p->IsPage()) {
       // Check if our parent has the page
       const uint flags = VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE;
@@ -2804,7 +2805,7 @@ zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len,
 bool VmCowPages::PageWouldReadZeroLocked(uint64_t page_offset) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(page_offset));
   DEBUG_ASSERT(page_offset < size_);
-  VmPageOrMarker* slot = page_list_.Lookup(page_offset);
+  const VmPageOrMarker* slot = page_list_.Lookup(page_offset);
   if (slot && slot->IsMarker()) {
     // This is already considered zero as there's a marker.
     return true;
@@ -2920,7 +2921,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
 
   *zeroed_len_out = 0;
   for (uint64_t offset = start; offset < end; offset += PAGE_SIZE, *zeroed_len_out += PAGE_SIZE) {
-    VmPageOrMarker* slot = page_list_.Lookup(offset);
+    const VmPageOrMarker* slot = page_list_.Lookup(offset);
 
     DEBUG_ASSERT(!direct_source_supplies_zero_pages_locked() || (!slot || !slot->IsMarker()));
     if (direct_source_supplies_zero_pages_locked() && (!slot || slot->IsEmpty())) {
@@ -2978,7 +2979,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
                                         TA_REQ(lock_) -> const InitialPageContent& {
       if (!initial_content_.inited) {
         DEBUG_ASSERT(can_see_parent);
-        VmPageOrMarker* page_or_marker = FindInitialPageContentLocked(
+        const VmPageOrMarker* page_or_marker = FindInitialPageContentLocked(
             offset, &initial_content_.page_owner, &initial_content_.owner_offset, nullptr);
         // We only care about the parent having a 'true' vm_page for content. If the parent has a
         // marker then it's as if the parent has no content since that's a zero page anyway, which
@@ -3015,7 +3016,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // contents visible through the parent, if applicable.
     //
     // This is a lambda instead of a bool that is computed once, because slot gets recomputed below.
-    auto can_decommit_slot = [this, offset](VmPageOrMarker* slot) TA_REQ(lock_) {
+    auto can_decommit_slot = [this, offset](const VmPageOrMarker* slot) TA_REQ(lock_) {
       if (!can_decommit_zero_pages_locked() ||
           (slot && slot->IsPage() && slot->Page()->object.pin_count > 0)) {
         return false;
@@ -4834,7 +4835,7 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
   }
 
   // Check this page is still a part of this VMO.
-  VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
+  const VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
   if (!page_or_marker || !page_or_marker->IsPage() || page_or_marker->Page() != page) {
     return false;
   }
@@ -4898,7 +4899,7 @@ void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t*
   // and some don't (such as state()).
   InitializeVmPage(new_page);
 
-  VmPageOrMarker* p = page_list_.Lookup(offset);
+  const VmPageOrMarker* p = page_list_.Lookup(offset);
   DEBUG_ASSERT(p);
   DEBUG_ASSERT(p->IsPage());
 
@@ -4928,7 +4929,7 @@ zx_status_t VmCowPages::ReplacePage(vm_page_t* before_page, uint64_t offset, boo
 
 zx_status_t VmCowPages::ReplacePageLocked(vm_page_t* before_page, uint64_t offset, bool with_loaned,
                                           vm_page_t** after_page) {
-  VmPageOrMarker* p = page_list_.Lookup(offset);
+  const VmPageOrMarker* p = page_list_.Lookup(offset);
   if (!p) {
     return ZX_ERR_NOT_FOUND;
   }

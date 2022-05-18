@@ -720,9 +720,9 @@ class VmCowPages final
   // If the passed |owner_length| is not null, then the visible range of the owner is calculated and
   // stored back into |owner_length| on the walk up. The |owner_length| represents the size of the
   // range in the owner for which no other VMO in the chain had forked a page.
-  VmPageOrMarker* FindInitialPageContentLocked(uint64_t offset, VmCowPages** owner_out,
-                                               uint64_t* owner_offset_out, uint64_t* owner_length)
-      TA_REQ(lock_);
+  const VmPageOrMarker* FindInitialPageContentLocked(uint64_t offset, VmCowPages** owner_out,
+                                                     uint64_t* owner_offset_out,
+                                                     uint64_t* owner_length) TA_REQ(lock_);
 
   // LookupPagesLocked helper function that 'forks' the page at |offset| of the current vmo. If
   // this function successfully inserts a page into |offset| of the current vmo, it returns ZX_OK

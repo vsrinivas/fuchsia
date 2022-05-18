@@ -312,7 +312,6 @@ class VmPageList final {
   // Lookup may return 'nullptr' if there is no slot allocated for the given offset. If non-null
   // is returned it may still be the case that IsEmpty() on the returned PageOrMarker is true.
   const VmPageOrMarker* Lookup(uint64_t offset) const;
-  VmPageOrMarker* Lookup(uint64_t offset);
 
   // Similar to `Lookup` but only returns `nullptr` if a slot cannot be allocated either due to out
   // of memory or due to offset being invalid.
