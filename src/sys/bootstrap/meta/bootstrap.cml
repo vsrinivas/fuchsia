@@ -1062,7 +1062,6 @@
                 "fuchsia.power.systemmode.ClientConfigurator",
                 "fuchsia.power.systemmode.Requester",
                 "fuchsia.thermal.ClientStateConnector",
-                "fuchsia.thermal.Controller",
             ],
             from: "#power_manager",
         },

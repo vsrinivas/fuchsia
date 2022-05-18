@@ -109,7 +109,6 @@
                 "fuchsia.settings.Setup",
                 "fuchsia.ssh.AuthorizedKeys",
                 "fuchsia.sys.Loader",
-                "fuchsia.thermal.Controller",
                 "fuchsia.timezone.Timezone",
                 "fuchsia.ui.activity.control.Control",
                 "fuchsia.ui.activity.Provider",
