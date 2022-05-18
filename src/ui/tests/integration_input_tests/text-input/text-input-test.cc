@@ -4,6 +4,8 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
+#include <fuchsia/memorypressure/cpp/fidl.h>
+#include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -100,8 +102,15 @@ class TestResponseListenerServer : public test::text::ResponseListener, public L
   std::optional<std::string> response_;
 };
 
-constexpr auto kTextInputFlutter = "text_input_flutter";
 constexpr auto kResponseListener = "test_text_response_listener";
+constexpr auto kTextInputFlutter = "text_input_flutter";
+static constexpr auto kTextInputFlutterUrl = "#meta/text-input-flutter-realm.cm";
+
+constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
+constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";
+
+constexpr auto kNetstack = "netstack";
+constexpr auto kNetstackUrl = "#meta/netstack.cm";
 
 class TextInputTest : public gtest::RealLoopFixture {
  protected:
@@ -130,12 +139,10 @@ class TextInputTest : public gtest::RealLoopFixture {
     realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
 
     realm_->AddLocalChild(kResponseListener, test_response_listener_.get());
-    realm_->AddLegacyChild(kTextInputFlutter,
-                           "fuchsia-pkg://fuchsia.com/text-input-test#meta/text-input-flutter.cmx");
-    realm_->AddRoute(Route{.capabilities =
-                               {
-                                   Protocol{fuchsia::ui::app::ViewProvider::Name_},
-                               },
+    realm_->AddChild(kTextInputFlutter, kTextInputFlutterUrl);
+    realm_->AddChild(kMemoryPressureProvider, kMemoryPressureProviderUrl);
+    realm_->AddChild(kNetstack, kNetstackUrl);
+    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
                            .source = ChildRef{kTextInputFlutter},
                            .targets = {ParentRef()}});
     realm_->AddRoute(Route{.capabilities =
@@ -155,7 +162,12 @@ class TextInputTest : public gtest::RealLoopFixture {
                                },
                            .source = ParentRef(),
                            .targets = {ChildRef{kTextInputFlutter}}});
-
+    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
+                           .source = ChildRef{kMemoryPressureProvider},
+                           .targets = {ChildRef{kTextInputFlutter}}});
+    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
+                           .source = ChildRef{kNetstack},
+                           .targets = {ChildRef{kTextInputFlutter}}});
     realm_->AddRoute(Route{.capabilities =
                                {
                                    Protocol{test::text::ResponseListener::Name_},

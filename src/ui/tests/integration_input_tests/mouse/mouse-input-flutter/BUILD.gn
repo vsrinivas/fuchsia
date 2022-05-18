@@ -9,8 +9,9 @@ import("//build/flutter/flutter_component.gni")
 group("mouse-input-flutter") {
   testonly = true
   deps = [
+    ":component",
     ":lib",
-    ":mouse-input-flutter-component",
+    ":realm",
   ]
 }
 
@@ -26,10 +27,21 @@ dart_library("lib") {
   ]
 }
 
-flutter_component("mouse-input-flutter-component") {
+flutter_component("component") {
+  testonly = true
   component_name = "mouse-input-flutter"
-  manifest = "meta/mouse-input-flutter.cmx"
+  manifest = "meta/mouse-input-flutter.cml"
   main_package = "mouse-input-flutter"
   main_dart = "mouse-input-flutter.dart"
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
+}
+
+fuchsia_component("realm") {
+  testonly = true
+  component_name = "mouse-input-flutter-realm"
+  manifest = "meta/mouse-input-flutter-realm.cml"
+  deps = [ ":component" ]
 }

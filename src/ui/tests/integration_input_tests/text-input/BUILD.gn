@@ -27,7 +27,7 @@ group("tests") {
   testonly = true
   deps = [
     ":text-input-test",
-    "text-input-flutter:text-input-flutter-component",
+    "text-input-flutter",
 
     # The deps below are necessary on minimal product configs.
     "//src/cobalt/bin/testing/mock_cobalt",
@@ -47,6 +47,7 @@ executable("text-input-test-bin") {
   deps = [
     ":test.text",
     "//sdk/fidl/fuchsia.memorypressure",
+    "//sdk/fidl/fuchsia.posix.socket",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.tracing.provider",
@@ -111,8 +112,10 @@ fuchsia_test_package("text-input-test") {
   deps = [
     ":scenic-test-config",
     ":text-input-test-config",
-    "text-input-flutter:text-input-flutter-component",
+    "text-input-flutter:realm",
     "//examples/fidl/rust/server:echo-server",
+    "//src/connectivity/network/netstack:component",
+    "//src/developer/memory/monitor:component",
     "//src/ui/bin/text:text_manager_comp_v2",
   ]
   test_specs = {

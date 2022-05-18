@@ -1,0 +1,57 @@
+{
+    children: [
+        {
+            name: "flutter_aot_runner",
+            url: "fuchsia-pkg://fuchsia.com/flutter_aot_runner#meta/flutter_aot_runner.cm",
+        },
+        {
+            name: "mouse_input_flutter",
+            url: "#meta/mouse-input-flutter.cm",
+            environment: "#mouse_input_flutter_env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [
+                "#flutter_aot_runner",
+                "#mouse_input_flutter",
+            ],
+        },
+        {
+            protocol: [ "test.mouse.ResponseListener" ],
+            from: "parent",
+            to: "#mouse_input_flutter",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "#mouse_input_flutter",
+            to: "parent",
+        },
+    ],
+    environments: [
+        {
+            name: "mouse_input_flutter_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "flutter_aot_runner",
+                    from: "#flutter_aot_runner",
+                },
+            ],
+        },
+    ],
+}

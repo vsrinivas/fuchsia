@@ -4,6 +4,8 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/memorypressure/cpp/fidl.h>
+#include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/session/scene/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -184,7 +186,7 @@ class MouseInputBase : public gtest::RealLoopFixture {
 
     // Add components specific for this test case to the realm.
     for (const auto& [name, component] : components) {
-      realm_->AddLegacyChild(name, component);
+      realm_->AddChild(name, component);
     }
 
     // Add the necessary routing for each of the extra components added above.
@@ -216,6 +218,8 @@ class FlutterInputTest : public MouseInputBase {
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
     return {
         std::make_pair(kMouseInputFlutter, kMouseInputFlutterUrl),
+        std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
+        std::make_pair(kNetstack, kNetstackUrl),
     };
   }
 
@@ -238,7 +242,6 @@ class FlutterInputTest : public MouseInputBase {
              .targets = {target}},
             {.capabilities =
                  {
-                     Protocol{fuchsia::cobalt::LoggerFactory::Name_},
                      Protocol{fuchsia::ui::composition::Allocator::Name_},
                      Protocol{fuchsia::ui::composition::Flatland::Name_},
                      Protocol{fuchsia::ui::scenic::Scenic::Name_},
@@ -251,12 +254,24 @@ class FlutterInputTest : public MouseInputBase {
                      Protocol{fuchsia::vulkan::loader::Loader::Name_},
                  },
              .source = ParentRef(),
+             .targets = {target}},
+            {.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
+             .source = ChildRef{kMemoryPressureProvider},
+             .targets = {target}},
+            {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
+             .source = ChildRef{kNetstack},
              .targets = {target}}};
   }
 
   static constexpr auto kMouseInputFlutter = "mouse-input-flutter";
-  static constexpr auto kMouseInputFlutterUrl =
-      "fuchsia-pkg://fuchsia.com/mouse-input-test#meta/mouse-input-flutter.cmx";
+  static constexpr auto kMouseInputFlutterUrl = "#meta/mouse-input-flutter-realm.cm";
+
+ private:
+  static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
+  static constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";
+
+  static constexpr auto kNetstack = "netstack";
+  static constexpr auto kNetstackUrl = "#meta/netstack.cm";
 };
 
 TEST_F(FlutterInputTest, FlutterMouseMove) {

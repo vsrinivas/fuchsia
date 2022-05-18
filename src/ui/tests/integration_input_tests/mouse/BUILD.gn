@@ -8,10 +8,7 @@ import("//build/flutter/config.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":mouse-input-test",
-    "mouse-input-flutter:mouse-input-flutter-component",
-  ]
+  deps = [ ":mouse-input-test" ]
 }
 
 fidl("test.mouse") {
@@ -28,6 +25,8 @@ executable("mouse-input-test-bin") {
     ":test.mouse",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.memorypressure",
+    "//sdk/fidl/fuchsia.posix.socket",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.session.scene",
     "//sdk/fidl/fuchsia.sys",
@@ -65,7 +64,11 @@ fuchsia_component("mouse-input-test-component") {
 
 fuchsia_test_package("mouse-input-test") {
   test_components = [ ":mouse-input-test-component" ]
-  deps = [ "mouse-input-flutter:mouse-input-flutter-component" ]
+  deps = [
+    "mouse-input-flutter:realm",
+    "//src/connectivity/network/netstack:component",
+    "//src/developer/memory/monitor:component",
+  ]
   test_specs = {
     # Do not fail the test if a message with level ERROR is logged.  Several
     # components will log ERROR if they miss a non-essential FIDL API in the

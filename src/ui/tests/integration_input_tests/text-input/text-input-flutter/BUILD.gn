@@ -9,8 +9,9 @@ import("//build/flutter/flutter_component.gni")
 group("text-input-flutter") {
   testonly = true
   deps = [
+    ":component",
     ":lib",
-    ":text-input-flutter-component",
+    ":realm",
   ]
 }
 
@@ -26,10 +27,21 @@ dart_library("lib") {
   ]
 }
 
-flutter_component("text-input-flutter-component") {
+flutter_component("component") {
+  testonly = true
   component_name = "text-input-flutter"
-  manifest = "meta/text-input-flutter.cmx"
+  manifest = "meta/text-input-flutter.cml"
   main_package = "text-input-flutter"
   main_dart = "text-input-flutter.dart"
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
+}
+
+fuchsia_component("realm") {
+  testonly = true
+  component_name = "text-input-flutter-realm"
+  manifest = "meta/text-input-flutter-realm.cml"
+  deps = [ ":component" ]
 }
