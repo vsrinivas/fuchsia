@@ -5,9 +5,9 @@
 */}}
 
 {{- define "Method:WireWeakSyncClientImpl:WireMessagingHeader" }}
-  {{- .Docs }}
-  {{ if .DocComments }}
-    //
+  {{ .Docs }}
+  {{- if .DocComments }}
+  //
   {{- end }}
   // {{- template "Method:ClientAllocationComment:Helper" . }}
   {{ .WireResult }} {{ .Name }}({{ RenderParams .RequestArgs }});

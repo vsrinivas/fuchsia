@@ -362,6 +362,7 @@ class ::fidl::internal::WireSyncClientImpl<::test_doccomments::Interface> final
   /// method comment #1
   ///
   /// method comment #3
+  //
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_doccomments::Interface::Method> Method() {

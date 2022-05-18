@@ -13,7 +13,7 @@
 
 {{- define "Method:ClientAllocationComment:Helper" -}}
   {{- if SyncCallTotalStackSizeV2 . -}}
-    Allocates {{ SyncCallTotalStackSizeV2 . }} bytes of {{ "" -}}
+    {{ "" }} Allocates {{ SyncCallTotalStackSizeV2 . }} bytes of {{ "" -}}
     {{- if not .Request.ClientAllocationV2.IsStack -}}
       response
     {{- else -}}

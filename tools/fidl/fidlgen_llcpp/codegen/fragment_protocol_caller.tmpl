@@ -16,8 +16,11 @@ class {{ .WireSyncClientImpl }} final :
  public:
   {{/* Client-calling functions do not apply to events. */}}
   {{ range .ClientMethods }}
-    {{ .Docs }}
-    //{{ template "Method:ClientAllocationComment:Helper" . }}
+    {{- .Docs }}
+    {{- if .DocComments }}
+    //
+    {{- end }}
+    // {{- template "Method:ClientAllocationComment:Helper" . }}
     {{ .WireResult }} {{ .Name }}({{- RenderParams .RequestArgs }}) {
       {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
       return {{ .WireResult }}(_client_end(), &_request);

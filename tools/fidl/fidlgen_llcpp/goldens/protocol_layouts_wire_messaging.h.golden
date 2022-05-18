@@ -5773,106 +5773,91 @@ class ::fidl::internal::WireSyncClientImpl<::test_protocollayouts::MainProtocol>
  public:
   
   
-    
-    //Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayAnonComposed> OneWayAnonComposed(::test_protocollayouts_imported::wire::ComposedProtocolOneWayAnonComposedRequest ComposedProtocolOneWayAnonComposedRequest) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed> _request{ ComposedProtocolOneWayAnonComposedRequest };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayAnonComposed>(_client_end(), &_request);
     }
 
-    
-    //Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> TwoWayAnonComposed(::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedRequest ComposedProtocolTwoWayAnonComposedRequest) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> _request{ ComposedProtocolTwoWayAnonComposedRequest };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>(_client_end(), &_request);
     }
 
-    
-    //Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> TwoWayAnonComposedWithError(::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorRequest ComposedProtocolTwoWayAnonComposedWithErrorRequest) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> _request{ ComposedProtocolTwoWayAnonComposedWithErrorRequest };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>(_client_end(), &_request);
     }
 
-    
-    //Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayNamedComposed> OneWayNamedComposed(::test_protocollayouts_imported::wire::ImportTablePayload ImportTablePayload) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed> _request{ ImportTablePayload };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayNamedComposed>(_client_end(), &_request);
     }
 
-    
-    //Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> TwoWayNamedComposed(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> _request{ ImportUnionPayload };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>(_client_end(), &_request);
     }
 
-    
-    //Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> TwoWayNamedComposedWithError(::test_protocollayouts_imported::wire::ImportTablePayload ImportTablePayload) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> _request{ ImportTablePayload };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>(_client_end(), &_request);
     }
 
-    
-    //Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayImport> OneWayImport(::test_protocollayouts_imported::wire::ImportTablePayload ImportTablePayload) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayImport> _request{ ImportTablePayload };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayImport>(_client_end(), &_request);
     }
 
-    
-    //Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImport> TwoWayImport(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport> _request{ ImportUnionPayload };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImport>(_client_end(), &_request);
     }
 
-    
-    //Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError> TwoWayImportWithError(::test_protocollayouts_imported::wire::ImportTablePayload ImportTablePayload) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError> _request{ ImportTablePayload };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError>(_client_end(), &_request);
     }
 
-    
-    //Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayLocal> OneWayLocal(::test_protocollayouts::wire::LocalTablePayload LocalTablePayload) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayLocal> _request{ LocalTablePayload };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayLocal>(_client_end(), &_request);
     }
 
-    
-    //Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocal> TwoWayLocal(::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal> _request{ LocalUnionPayload };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocal>(_client_end(), &_request);
     }
 
-    
-    //Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> TwoWayLocalWithError(::test_protocollayouts::wire::LocalTablePayload LocalTablePayload) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> _request{ LocalTablePayload };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>(_client_end(), &_request);
     }
 
-    
-    //Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayAnon> OneWayAnon(::test_protocollayouts::wire::MainProtocolOneWayAnonRequest MainProtocolOneWayAnonRequest) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnon> _request{ MainProtocolOneWayAnonRequest };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayAnon>(_client_end(), &_request);
     }
 
-    
-    //Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnon> TwoWayAnon(::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest MainProtocolTwoWayAnonRequest) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon> _request{ MainProtocolTwoWayAnonRequest };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnon>(_client_end(), &_request);
     }
 
-    
-    //Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
     ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> TwoWayAnonWithError(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest MainProtocolTwoWayAnonWithErrorRequest) {
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> _request{ MainProtocolTwoWayAnonWithErrorRequest };
       return ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>(_client_end(), &_request);
@@ -6456,19 +6441,19 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocollayouts::MainPro
  public:
   using ClientImplBase::ClientImplBase;
   
-  //Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::Status OneWayAnonComposed(::test_protocollayouts_imported::wire::ComposedProtocolOneWayAnonComposedRequest ComposedProtocolOneWayAnonComposedRequest);
   
-  //Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::Status OneWayNamedComposed(::test_protocollayouts_imported::wire::ImportTablePayload ImportTablePayload);
   
-  //Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::Status OneWayImport(::test_protocollayouts_imported::wire::ImportTablePayload ImportTablePayload);
   
-  //Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::Status OneWayLocal(::test_protocollayouts::wire::LocalTablePayload LocalTablePayload);
   
-  //Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::Status OneWayAnon(::test_protocollayouts::wire::MainProtocolOneWayAnonRequest MainProtocolOneWayAnonRequest);
 };
 
@@ -6574,34 +6559,34 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProto
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
   
-  //Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
+  // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
   ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> TwoWayAnonComposed(::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedRequest ComposedProtocolTwoWayAnonComposedRequest);
   
-  //Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
+  // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> TwoWayAnonComposedWithError(::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorRequest ComposedProtocolTwoWayAnonComposedWithErrorRequest);
   
-  //Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
+  // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
   ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> TwoWayNamedComposed(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload);
   
-  //Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
+  // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> TwoWayNamedComposedWithError(::test_protocollayouts_imported::wire::ImportTablePayload ImportTablePayload);
   
-  //Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
+  // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
   ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImport> TwoWayImport(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload);
   
-  //Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
+  // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError> TwoWayImportWithError(::test_protocollayouts_imported::wire::ImportTablePayload ImportTablePayload);
   
-  //Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
+  // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
   ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocal> TwoWayLocal(::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload);
   
-  //Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
+  // Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
   ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> TwoWayLocalWithError(::test_protocollayouts::wire::LocalTablePayload LocalTablePayload);
   
-  //Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
+  // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
   ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnon> TwoWayAnon(::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest MainProtocolTwoWayAnonRequest);
   
-  //Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
+  // Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
   ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> TwoWayAnonWithError(::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest MainProtocolTwoWayAnonWithErrorRequest);
 };namespace fidl {
 #endif  // __Fuchsia__
