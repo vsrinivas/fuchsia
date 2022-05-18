@@ -339,7 +339,7 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
 
   // Check this page is still a part of this VMO. object.page_offset could be wrong, but there's no
   // harm in looking up a random slot as we'll then notice it's the wrong page.
-  VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
+  const VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
   if (!page_or_marker || !page_or_marker->IsPage() || page_or_marker->Page() != page ||
       page->object.pin_count > 0) {
     return false;
@@ -355,12 +355,20 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
   RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::RemoveWrite);
 
   if (IsZeroPage(page_or_marker->Page())) {
-    RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::Unmap);
-    vm_page_t* released_page = page_or_marker->ReleasePage();
+    // Replace the slot with a marker.
+    VmPageOrMarker new_marker = VmPageOrMarker::Marker();
+    ktl::optional<vm_page_t*> old_page = ktl::nullopt;
+    zx_status_t status =
+        AddPageLocked(&new_marker, offset, CanOverwriteContent::NonZero, &old_page);
+    DEBUG_ASSERT(status == ZX_OK);
+    DEBUG_ASSERT(old_page.has_value());
+
+    // Free the old page.
+    vm_page_t* released_page = old_page.value();
     pmm_page_queues()->Remove(released_page);
     DEBUG_ASSERT(!list_in_list(&released_page->queue_node));
     FreePage(released_page);
-    *page_or_marker = VmPageOrMarker::Marker();
+
     eviction_event_count_++;
     IncrementHierarchyGenerationCountLocked();
     VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
@@ -1603,7 +1611,7 @@ zx_status_t VmCowPages::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* f
   DEBUG_ASSERT(parent_);
 
   // Ensure we have a slot as we'll need it later.
-  VmPageOrMarker* slot = page_list_.LookupOrAllocate(offset);
+  const VmPageOrMarker* slot = page_list_.LookupOrAllocate(offset);
 
   if (!slot) {
     return ZX_ERR_NO_MEMORY;
@@ -1645,7 +1653,15 @@ zx_status_t VmCowPages::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* f
     }
   }
   // Insert the zero marker.
-  *slot = VmPageOrMarker::Marker();
+  VmPageOrMarker new_marker = VmPageOrMarker::Marker();
+  // We know that the slot is empty, so we know we won't be overwriting an actual page.
+  // We expect the caller to update any mappings.
+  zx_status_t status = AddPageLocked(&new_marker, offset, CanOverwriteContent::Zero, nullptr,
+                                     /*do_range_update=*/false);
+  // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY, but that failure can only
+  // occur if we had to allocate a slot in the page list. Since we allocated a slot above, we
+  // know that can't be the case.
+  DEBUG_ASSERT(status == ZX_OK);
   return ZX_OK;
 }
 
