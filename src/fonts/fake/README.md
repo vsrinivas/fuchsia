@@ -17,11 +17,24 @@ don't actually render text or do not care what rendered text looks like.
 
 2.  Set up the capability routing.
 
-    a. Add a child component `yaml { name: "fake_fonts", url:
-    "fuchsia-pkg://fuchsia.com/<your-test-package>#meta/fake_fonts.cm", }`
+    a. Add a child component:
 
-    b. Add an `offer` entry for `fake_fonts`' dependencies: `yaml { protocol: [
-    "fuchsia.logger.LogSink" ], from: "parent", to: [ "#fake_fonts" ], }`
+    ```yaml
+    {
+        name: "fake_fonts",
+        url: "fuchsia-pkg://fuchsia.com/<your-test-package>#meta/fake_fonts.cm",
+    }
+    ```
+
+    b. Add an `offer` entry for `fake_fonts`' dependencies:
+
+    ```yaml
+    {
+        protocol: [ "fuchsia.logger.LogSink" ],
+        from: "parent",
+        to: [ "#fake_fonts" ],
+    }
+    ```
 
     c. Offer protocol `"fuchsia.fonts.Provider"` from `#fake_fonts` to your
     test.
