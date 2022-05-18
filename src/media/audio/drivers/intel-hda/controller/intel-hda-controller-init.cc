@@ -571,7 +571,7 @@ zx_status_t IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
 
   Status result = dsp_->Init(dsp_dev);
   if (!result.ok()) {
-    LOG(ERROR, "Failed to initialize DSP device: %s", result.ToString().c_str());
+    LOG(INFO, "DSP device not initialized (e.g. if not present): %s", result.ToString().c_str());
     return result.code();
   }
 
