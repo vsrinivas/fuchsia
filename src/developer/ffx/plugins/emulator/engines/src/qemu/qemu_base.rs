@@ -228,7 +228,11 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             }
         }
 
-        if let Some(script) = &self.emu_config().runtime.upscript {
+        // If using TAP, check for an upscript to run.
+        if let Some(script) = match &self.emu_config().host.networking {
+            NetworkingMode::Tap => &self.emu_config().runtime.upscript,
+            _ => &None,
+        } {
             let status = Command::new(&script)
                 // TODO(fxbug.dev/100022): Make this configurable.
                 // The interface name, "qemu", provided here used to be provided by the qemu
