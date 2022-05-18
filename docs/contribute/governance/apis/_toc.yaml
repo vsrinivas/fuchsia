@@ -16,3 +16,5 @@ toc:
     path: /docs/contribute/governance/apis/flatland.md
   - title: "Test Suite"
     path: /docs/contribute/governance/apis/test_suite.md
+  - title: "Test Output Format"
+    path: /docs/contribute/governance/apis/test_output_format.md
