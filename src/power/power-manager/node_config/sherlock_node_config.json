@@ -309,7 +309,7 @@
       "controller_params": {
         "sample_interval": 1.0,
         "filter_time_constant": 5.0,
-        "target_temperature": 90.0,
+        "target_temperature": 94.0,
         "e_integral_min": -39.37,
         "e_integral_max": 0.0,
         "sustainable_power": 6.22,
