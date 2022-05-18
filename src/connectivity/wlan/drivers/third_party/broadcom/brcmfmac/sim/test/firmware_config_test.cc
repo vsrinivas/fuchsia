@@ -16,7 +16,6 @@
 
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <zircon/errors.h>
 
