@@ -190,12 +190,21 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
   uint8_t _func_id = entry.bdf.function_id;
   UpstreamNode* upstream = entry.upstream;
   for (uint8_t dev_id = _dev_id; dev_id < PCI_MAX_DEVICES_PER_BUS; dev_id++) {
-    for (uint8_t func_id = _func_id; func_id < PCI_MAX_FUNCTIONS_PER_DEVICE; func_id++) {
+    uint8_t max_functions = 1;
+    for (uint8_t func_id = _func_id; func_id < max_functions; func_id++) {
       std::unique_ptr<Config> config;
       pci_bdf_t bdf = {static_cast<uint8_t>(bus_id), dev_id, func_id};
       zx_status_t status = MakeConfig(bdf, &config);
       if (status != ZX_OK) {
         continue;
+      }
+
+      if (func_id == 0) {
+        // Check if this device is multi-function. If it is, scan all 8 functions, otherwise, just
+        // scan 1.
+        if (config->Read(Config::kHeaderType) & PCI_HEADER_TYPE_MULTI_FN) {
+          max_functions = PCI_MAX_FUNCTIONS_PER_DEVICE;
+        }
       }
 
       // Check that the device is valid by verifying the vendor and device ids.

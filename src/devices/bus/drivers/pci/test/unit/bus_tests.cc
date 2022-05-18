@@ -41,7 +41,8 @@ class PciBusTests : public zxtest::Test {
   uint32_t SetupTopology() {
     uint8_t idx = 1;
     auto& ecam = pciroot_.ecam();
-    ecam.get({0, 0, 0}).device.set_vendor_id(0x8086).set_device_id(idx++);
+    ecam.get({0, 0, 0}).device.set_vendor_id(0x8086).set_device_id(idx++).set_header_type(
+        PCI_HEADER_TYPE_MULTI_FN);
     ecam.get({0, 0, 1}).device.set_vendor_id(0x8086).set_device_id(idx++);
     ecam.get({0, 1, 0})
         .bridge.set_vendor_id(0x8086)
@@ -52,7 +53,8 @@ class PciBusTests : public zxtest::Test {
         .set_memory_base(0x1000)
         .set_memory_limit(0xFFFFFFFF)
         .set_secondary_bus_number(1);
-    ecam.get({1, 0, 0}).device.set_vendor_id(0x8086).set_device_id(idx++);
+    ecam.get({1, 0, 0}).device.set_vendor_id(0x8086).set_device_id(idx++).set_header_type(
+        PCI_HEADER_TYPE_MULTI_FN);
     ecam.get({1, 0, 1}).device.set_vendor_id(0x8086).set_device_id(idx);
     return idx;
   }
@@ -327,6 +329,22 @@ TEST_F(PciBusTests, LegacyIrqNoAckTest) {
     irq_cnt++;
   }
   ASSERT_TRUE(check_disabled());
+}
+
+TEST_F(PciBusTests, ObeysHeaderTypeMultiFn) {
+  auto& ecam = pciroot().ecam();
+
+  ecam.get({0, 0, 0}).device.set_vendor_id(0x8086).set_device_id(1).set_header_type(
+      PCI_HEADER_TYPE_MULTI_FN);
+  ecam.get({0, 0, 1}).device.set_vendor_id(0x8086).set_device_id(2);
+  ecam.get({0, 1, 0}).device.set_vendor_id(0x8086).set_device_id(3).set_header_type(0);
+  ecam.get({0, 1, 1}).device.set_vendor_id(0x8086).set_device_id(4);
+
+  auto owned_bus =
+      std::make_unique<TestBus>(parent(), pciroot().proto(), pciroot().info(), std::nullopt);
+  ASSERT_OK(owned_bus->Initialize());
+  auto* bus = owned_bus.release();
+  ASSERT_EQ(bus->GetDeviceCount(), 3);
 }
 
 }  // namespace pci
