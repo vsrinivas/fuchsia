@@ -27,7 +27,7 @@ using fuchsia::virtualization::GuestConfig;
 
 uint64_t GetDefaultGuestMemory() {
   const uint64_t host_memory = zx_system_get_physmem();
-  const uint64_t max_reserved_host_memory = (1ul << 31);  // 2 GiB.
+  const uint64_t max_reserved_host_memory = 3 * (1ul << 30);  // 3 GiB.
 
   // Reserve half the host memory up to 2 GiB, and allow the rest to be used by the guest.
   return host_memory - std::min(host_memory / 2, max_reserved_host_memory);

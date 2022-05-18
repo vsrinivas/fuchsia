@@ -19,7 +19,7 @@ use {
 
 lazy_static! {
     static ref DEFAULT_GUEST_MEM_SIZE: u64 =
-        zx::system_get_physmem() - std::cmp::min(zx::system_get_physmem() / 2, 1 << 31);
+        zx::system_get_physmem() - std::cmp::min(zx::system_get_physmem() / 2, 3 * (1 << 30));
 }
 
 pub fn parse_vmm_args(arguments: &arguments::LaunchArgs) -> GuestConfig {

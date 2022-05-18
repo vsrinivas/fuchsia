@@ -38,7 +38,7 @@ TEST_F(GuestConfigParserTest, DefaultValues) {
   ASSERT_EQ(zx_system_get_num_cpus(), config_.cpus());
   ASSERT_FALSE(config_.has_block_devices());
   ASSERT_FALSE(config_.has_cmdline());
-  ASSERT_EQ(zx_system_get_physmem() - std::min(zx_system_get_physmem() / 2, (1ul << 31)),
+  ASSERT_EQ(zx_system_get_physmem() - std::min(zx_system_get_physmem() / 2, 3 * (1ul << 30)),
             config_.guest_memory());
 }
 
