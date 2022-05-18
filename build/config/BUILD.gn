@@ -806,6 +806,7 @@ config("Wno-conversion") {
     "//src/media/playback/mediaplayer/graph:*",
     "//src/media/playback/mediaplayer/metrics:*",
     "//src/media/sounds/soundplayer:*",
+    "//src/media/vnext/lib/ffmpeg/*",
     "//src/modular/bin/sessionctl:*",
     "//src/modular/bin/sessionmgr:*",
     "//src/modular/bin/sessionmgr/puppet_master:*",
