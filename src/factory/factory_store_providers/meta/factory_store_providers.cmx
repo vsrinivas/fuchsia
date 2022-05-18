@@ -11,7 +11,7 @@
             "sherlock-emmc"
         ],
         "features": [
-            "config-data",
+            "config-data"
         ],
         "services": [
             "fuchsia.boot.FactoryItems",
