@@ -231,7 +231,6 @@ where
     Ok(())
 }
 
-#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95067)
 async fn open_factory_source(factory_config: FactoryConfig) -> Result<fio::DirectoryProxy, Error> {
     let (directory_proxy, directory_server_end) = create_proxy::<fio::DirectoryMarker>()?;
     match factory_config {
@@ -265,7 +264,7 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<fio::Direc
             reader.seek(io::SeekFrom::Start(0))?;
 
             let mut reader_buf = vec![0u8; size as usize];
-            reader.read(&mut reader_buf)?;
+            reader.read_exact(&mut reader_buf)?;
 
             let vmo = zx::Vmo::create(size)?;
             vmo.write(&reader_buf, 0)?;
