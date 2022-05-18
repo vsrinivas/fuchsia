@@ -57,11 +57,11 @@ pub fn ffx_plugin_writer_all_output(_level: usize) {
 }
 
 pub fn ffx_plugin_is_machine_supported(
-{% if not includes_execution and not includes_subcommands %}
+{% if not includes_subcommands %}
   _cmd: &{{suite_args_lib}}::FfxPluginCommand,
 {% else %}
   cmd: &{{suite_args_lib}}::FfxPluginCommand,
-{% endif %}
+{% endif%}
 ) -> bool {
 {% if includes_execution %}
 {% if includes_subcommands %}
@@ -71,10 +71,10 @@ pub fn ffx_plugin_is_machine_supported(
         {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_is_machine_supported(c),
 {% endfor %}
       },
-      None => {{execution_lib}}::ffx_plugin_is_machine_supported(cmd)
+      None => {{execution_lib}}::ffx_plugin_is_machine_supported()
     }
 {% else %}
-  {{execution_lib}}::ffx_plugin_is_machine_supported(cmd)
+  {{execution_lib}}::ffx_plugin_is_machine_supported()
 {% endif %}
 
 {% else %}

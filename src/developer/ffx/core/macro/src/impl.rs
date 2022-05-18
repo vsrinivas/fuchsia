@@ -81,9 +81,9 @@ fn generate_fake_test_proxy_method(
         Ident::new(&format!("setup_oneshot_fake_{}", proxy_name), Span::call_site());
     quote! {
         #[cfg(test)]
-        fn #method_name<R:'static>(mut handle_request: R) -> #qualified_proxy_type
-            where R: FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>)
-        {
+        fn #method_name(
+            mut handle_request: impl FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>) + 'static
+        ) -> #qualified_proxy_type {
             use futures::TryStreamExt;
             let (proxy, mut stream) =
                 fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>().unwrap();
@@ -97,9 +97,9 @@ fn generate_fake_test_proxy_method(
         }
 
         #[cfg(test)]
-        fn #oneshot_method_name<R:'static>(mut handle_request: R) -> #qualified_proxy_type
-            where R: FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>)
-        {
+        fn #oneshot_method_name(
+            mut handle_request: impl FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>) + 'static
+        ) -> #qualified_proxy_type {
             use futures::TryStreamExt;
             let (proxy, mut stream) =
                 fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>().unwrap();
@@ -754,7 +754,8 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
             #writers
         }
 
-        pub fn ffx_plugin_is_machine_supported<T>(__cmd: T) -> bool {
+        // This is built for the execution library.
+        pub fn ffx_plugin_is_machine_supported() -> bool {
             #is_supported
         }
     };
