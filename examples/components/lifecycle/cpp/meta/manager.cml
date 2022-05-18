@@ -7,6 +7,7 @@
 
 // [START example_snippet]
 {
+    // [START_EXCLUDE]
     include: [ "syslog/client.shard.cml" ],
 
     // Information about the program to run.
@@ -23,6 +24,8 @@
             "Fuchsia",
         ],
     },
+
+    // [END_EXCLUDE]
 
     // Statically declared child components
     children: [

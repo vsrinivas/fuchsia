@@ -750,7 +750,7 @@ contents of a collection are runtime determined.
 
 [docs-concepts]: /docs/concepts/components
 [docs-development]: /docs/development/components
-[docs-eager]: /docs/concepts/components/v2/lifecycle#eager
+[docs-eager]: /docs/development/components/connect#eager
 [docs-environments]: /docs/concepts/components/v2/environments
 [docs-eventpair]: /docs/reference/kernel_objects/eventpair
 [docs-get-started]: /docs/get-started/learn/components

@@ -8,10 +8,10 @@
 toc:
 - title: "Build components"
   path: /docs/development/components/build.md
+- title: "Connect components"
+  path: /docs/development/components/connect.md
 - title: "Run components"
   path: /docs/development/components/run.md
-- title: "Troubleshooting components"
-  path: /docs/development/components/troubleshooting.md
 - title: "Provide data files to components"
   path: /docs/development/components/data.md
 - title: "Structured Configuration"

@@ -115,126 +115,18 @@ Concretely, there are two ways that `A` can bind to `B`:
 Note: For more details on running components during development, see
 [Run components][doc-run].
 
-## Lifecycle policies {#lifecycle-policies}
-
-This section covers additional policies you may configure to modify the startup
-and termination behavior of your component.
-
-### Eager binding {#eager}
-
-[Component manifests][doc-manifests] let you mark a child as
-[`eager`][doc-manifests-children], which causes the component framework to
-implicitly bind to that child when any component binds to the parent. In other
-words, this causes the child to be immediately started whenever the parent is
-started.
-
-If the eager child fails to start for any reason (such as a missing component),
-Component manager exhibits the following behavior:
-
--   If the parent is not the root component, the parent will start but the
-    component that bound to it will observe a dropped connection (just like any
-    other failed binding).
--   If the parent is the root component, Component manager will crash, with an
-    error message like:
-
-    ```none {:.devsite-disable-click-to-copy}
-    [component_manager] ERROR: Failed to route protocol `fuchsia.appmgr.Startup` with target component `/startup`:
-    failed to resolve "fuchsia-pkg://fuchsia.com/your_component#meta/your_component.cm":
-    package not found: remote resolver responded with PackageNotFound
-    ```
-
-An `eager` component should be in the same package set as its parent since the
-component will be started at the same time as its parent. Typically `eager`
-components should be in the product's base [package set][doc-package-set].
-
-Components marked as `eager` whose ancestors are marked `eager` up
-to the root will cause system crashes when they are not present. This is
-important because many tests and products create system images containing only a
-subset of all available components. You should declare these components using
-[**core realm shards**][core-shard] to ensure they can be safely excluded from
-test builds and product images containing subsets of components.
-
-You can determine if your package is in base. If your package is not present in
-base the command below will print no output.
-
-```posix-terminal
-fx list-packages --base {{ '<var label="package name">my-package</var>' }}
-```
-
-You can also look at all the packages in the the base package set.
-
-```posix-terminal
-fx list-packages --base
-```
-
-### Reboot on terminate {#reboot-on-terminate}
-
-A component that has the "reboot-on-terminate" policy set will cause the system
-to gracefully reboot if the component terminates for any reason (including
-successful exit). This is a special feature intended for use only by system
-components deemed critical to the system's function. Therefore, its use is
-governed by a [security policy allowlist][fidl-child-policy].
-
-Note: If you believe you need this option, please reach out to the
-[Component Framework team][cf-dev-list].
-
-To enable the feature, mark the child as `on_terminate: reboot` in the parent
-component's [manifest][doc-manifests]:
-
-```json5
-// core.cml
-{
-    children: [
-        ...
-        {
-            name: "system-update-checker",
-            url: "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cm",
-            startup: "eager",
-            on_terminate: "reboot",
-        },
-    ],
-}
-```
-
-Also, you'll need to add the component's moniker to Component manager's security
-policy allowlist at
-[`//src/security/policy/component_manager_policy.json5`][src-security-policy]:
-
-```json5
-// //src/security/policy/component_manager_policy.json5
-{
-    security_policy: {
-        ...
-        child_policy: {
-            reboot_on_terminate: [
-                ...
-                "/core/system-update-checker",
-            ],
-        },
-    },
-}
-```
-
 [binder.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.component#Binder
-[cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
-[core-shard]: /src/sys/core/README.md
 [doc-framework-protocol]: capabilities/protocol.md#framework
 [doc-collections]: realms.md#collections
 [doc-identifiers]: identifiers.md
-[doc-lifecycle]: lifecycle.md
 [doc-manifests-children]: https://fuchsia.dev/reference/cml#children
 [doc-manifests-expose]: https://fuchsia.dev/reference/cml#expose
 [doc-manifests-offer]: https://fuchsia.dev/reference/cml#offer
 [doc-manifests]: component_manifests.md
-[doc-package-set]: /docs/concepts/packages/package.md#types_of_packages
 [doc-resolvers]: capabilities/resolvers.md
 [doc-runners]: capabilities/runners.md
 [doc-storage]: capabilities/storage.md
-[doc-topology]: topology.md
 [doc-run]: /docs/development/components/run.md
-[fidl-child-policy]: https://fuchsia.dev/reference/fidl/fuchsia.component.internal#ChildPolicyAllowlists
 [handler-example]: /examples/components/lifecycle
-[realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
 [ref-ffx-resolve]: https://fuchsia.dev/reference/tools/sdk/ffx#resolve
 [ref-ffx-start]: https://fuchsia.dev/reference/tools/sdk/ffx#start
-[src-security-policy]: /src/security/policy/component_manager_policy.json5

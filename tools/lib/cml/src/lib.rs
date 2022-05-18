@@ -2216,8 +2216,8 @@ pub struct Offer {
 /// ```
 ///
 /// [component-url]: /docs/concepts/components/component_urls.md
-/// [doc-eager]: /docs/concepts/components/v2/lifecycle.md#eager_binding
-/// [doc-reboot-on-terminate]: /docs/concepts/components/v2/lifecycle.md#reboot-on-terminate
+/// [doc-eager]: /docs/development/components/connect.md#eager
+/// [doc-reboot-on-terminate]: /docs/development/components/connect.md#reboot-on-terminate
 #[derive(ReferenceDoc, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list", top_level_doc_after_fields)]

@@ -699,6 +699,93 @@ Components in the test realm may play various roles in the test, as follows:
     This may be identical to a component from production, or a component written
     specifically for the test intended to model production behavior.
 
+## Troubleshooting {#troubleshooting}
+
+This section contains common issues you may encounter while developing test components
+with the Test Runner Framework. If one of your test components fails to run, you may see
+an error like the following from `fx test`:
+
+```none {:.devsite-disable-click-to-copy}
+Test suite encountered error trying to run tests: getting test cases
+Caused by:
+    The test protocol was closed. This may mean `fuchsia.test.Suite` was not configured correctly.
+    Refer to: https://fuchsia.dev/fuchsia-src/development/components/troubleshooting#troubleshoot-test
+```
+
+To address the issue, explore the following options:
+
+- [The test failed to expose `fuchsia.test.Suite` to test manager](#troubleshoot-test-root)
+- [The test driver failed to expose `fuchsia.test.Suite` to the root](#troubleshoot-test-routing)
+- [The test driver does not use a test runner](#troubleshoot-test-runner)
+
+### The test failed to expose `fuchsia.test.Suite` to test manager {#troubleshoot-test-root}
+
+This happens when the test root fails to expose `fuchsia.test.Suite` from the
+[test root](#test-roles). The simple fix is to add an `expose` declaration:
+
+```json5
+// test_root.cml
+expose: [
+    ...
+    {
+        protocol: "fuchsia.test.Suite",
+        from: "self",  // If a child component is the test driver, put `from: "#driver"`
+    },
+],
+```
+
+### The test driver failed to expose `fuchsia.test.Suite` to the root {#troubleshoot-test-routing}
+
+Your test may fail with an error similar to the following if the `fuchsia.test.Suite`
+protocol is not properly exposed:
+
+```none {:.devsite-disable-click-to-copy}
+ERROR: Failed to route protocol `/svc/fuchsia.test.Suite` from component
+`/test_manager/...`: An `expose from #driver` declaration was found at `/test_manager/...`
+for `/svc/fuchsia.test.Suite`, but no matching `expose` declaration was found in the child
+```
+
+If the [test driver and test root](#test-roles) are different components, the test driver
+must also expose `fuchsia.test.Suite` to its parent, the test root.
+
+To address this issue, ensure the [test driver](#test-roles) component manifest includes
+the following `expose` declaration:
+
+```json5
+// test_driver.cml
+expose: [
+    ...
+    {
+        protocol: "fuchsia.test.Suite",
+        from: "self",
+    },
+],
+```
+
+### The test driver does not use a test runner {#troubleshoot-test-runner}
+
+The [test driver](#test-roles) must use the appropriate [test runner](#test-runners)
+corresponding to the language and test framework the test is written with.
+For example, the driver of a Rust test needs the following declaration:
+
+```json5
+// test_driver.cml
+include: [ "//src/sys/test_runners/rust/default.shard.cml" ]
+```
+
+Also, if the test driver is a child of the [test root](#test-roles), you need
+to offer it to the driver:
+
+```json5
+// test_root.cml
+offer: [
+    {
+        runner: "rust_test_runner",
+        to: [ "#driver" ],
+    },
+],
+```
+
 ## Further reading
 
 - [Complex topologies and integration testing][integration-testing]: testing

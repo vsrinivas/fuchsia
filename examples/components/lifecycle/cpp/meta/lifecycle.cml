@@ -7,8 +7,10 @@
 
 // [START example_snippet]
 {
+    // [START_EXCLUDE]
     include: [ "syslog/client.shard.cml" ],
 
+    // [START lifecycle_event]
     // Information about the program to run.
     program: {
         // Use the built-in ELF runner.
@@ -20,6 +22,9 @@
         // Subscribe to component lifecycle events
         lifecycle: { stop_event: "notify" },
     },
+
+    // [END lifecycle_event]
+    // [END_EXCLUDE]
 
     // Capabilities exposed from this component to parent.
     expose: [

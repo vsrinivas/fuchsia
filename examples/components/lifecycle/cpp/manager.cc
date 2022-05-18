@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <fidl/examples/routing/echo/cpp/fidl.h>
-#include <fuchsia/component/cpp/fidl.h>
-#include <fuchsia/component/decl/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
@@ -13,6 +11,11 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <zircon/processargs.h>
+
+// [START imports]
+#include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
+// [END imports]
 
 // Controller instance to manage sequence of asynchronous FIDL operations
 // using the fuchsia.component.Realm protocol.
@@ -37,6 +40,7 @@ class ChildRequestManager {
     CreateDynamicChild();
   }
 
+  // [START create_child]
   // Use the fuchsia.component.Realm protocol to create a dynamic
   // child instance in the collection.
   void CreateDynamicChild() {
@@ -57,7 +61,9 @@ class ChildRequestManager {
                                 ConnectDynamicChild();
                               });
   }
+  // [END create_child]
 
+  // [START destroy_child]
   // Use the fuchsia.component.Realm protocol to destroy the dynamic
   // child instance running in the collection.
   void DestroyDynamicChild() {
@@ -75,7 +81,9 @@ class ChildRequestManager {
                                  loop_->Quit();
                                });
   }
+  // [END destroy_child]
 
+  // [START connect_child]
   // Use the fuchsia.component.Realm protocol to open the exposed directory of
   // the dynamic child instance.
   void ConnectDynamicChild() {
@@ -96,7 +104,9 @@ class ChildRequestManager {
           SendEchoRequest(svc);
         });
   }
+  // [END connect_child]
 
+  // [START echo_send]
   // Connect to the fidl.examples.routing.echo capability exposed by the child's
   // service directory.
   void SendEchoRequest(std::shared_ptr<sys::ServiceDirectory> svc_directory) {
@@ -109,6 +119,7 @@ class ChildRequestManager {
       DestroyDynamicChild();
     });
   }
+  // [END echo_send]
 
  private:
   std::string message_;

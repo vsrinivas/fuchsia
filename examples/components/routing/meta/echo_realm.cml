@@ -15,14 +15,15 @@
             url: "#meta/echo_client.cm",
         },
     ],
-
-    // Route Echo service from server to client.
     offer: [
+        // Route Echo protocol from server to client.
         {
             protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
             to: "#echo_client",
         },
+
+        // Route LogSink protocol to both children.
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",

@@ -230,7 +230,7 @@ specific features your components may support:
 [cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
 [component-select]: /docs/development/tools/ffx/commands/component-select.md
 [cs-appmgr-allowlist]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/appmgr/main.cc;l=125;drc=ddf6d10ce8cf63268e21620638ea02e9b2b7cd20
-[eager-lifecycle]: /docs/concepts/components/v2/lifecycle.md#eager
+[eager-lifecycle]: /docs/development/components/connect.md#eager
 [eager-manifest]: https://fuchsia.dev/reference/cml#children
 [elf-runner-docs]: /docs/concepts/components/v2/elf_runner.md#lifecycle
 [ffx-overview]: /docs/development/tools/ffx/overview.md

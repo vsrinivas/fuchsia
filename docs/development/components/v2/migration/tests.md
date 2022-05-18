@@ -683,7 +683,7 @@ Verify that your migrated tests are passing successfully using Components v2.
     `fx shell run-test-suite` or `ffx test run`.
 
 If your test doesn't run correctly or doesn't start at all, try following the
-advice in [Troubleshooting components][troubleshooting-components].
+advice in [Troubleshooting test components][troubleshooting-tests].
 
 [cml-children]: https://fuchsia.dev/reference/cml#children
 [example-package-rule]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/BUILD.gn
@@ -695,6 +695,6 @@ advice in [Troubleshooting components][troubleshooting-components].
 [trf-provided-test-runners]: /src/sys/test_runners
 [trf-test-manager]: /docs/development/testing/components/test_runner_framework.md#the_test_manager
 [trf-test-runners]: /docs/development/testing/components/test_runner_framework.md#test-runners
-[troubleshooting-components]: /docs/development/components/troubleshooting.md
+[troubleshooting-tests]: /docs/development/testing/components/test_runner_framework.md#troubleshooting
 [unit-test-manifests]: /docs/development/components/build.md#unit-tests
 [realm-builder]: /docs/development/testing/components/realm_builder.md

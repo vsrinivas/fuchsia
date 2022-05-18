@@ -741,4 +741,4 @@ correctly, try following the advice in
 [sysmgr-config]: /docs/concepts/components/v1/sysmgr.md
 [sysmgr-config-search]: https://cs.opensource.google/search?q=fuchsia-pkg:%2F%2Ffuchsia.com%2F.*%23meta%2Fmy_component.cmx%20-f:.*.cmx$%20%5C%22services%5C%22&ss=fuchsia
 [sysmgr-gn-config-search]: https://cs.opensource.google/search?q=-f:.*.gn%20"font_provider:sysmgr_config"&ss=fuchsia
-[troubleshooting-components]: /docs/development/components/troubleshooting.md
+[troubleshooting-components]: /docs/development/components/connect.md#troubleshooting

@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fidl_fidl_examples_routing_echo::EchoMarker,
-    fidl_fuchsia_component::{BinderMarker, CreateChildArgs, RealmMarker},
-    fidl_fuchsia_component_decl::{Child, ChildRef, CollectionRef, StartupMode},
-    fuchsia_component::client,
-    tracing::info,
-};
+use {fidl_fidl_examples_routing_echo::EchoMarker, fuchsia_component::client, tracing::info};
+
+// [START imports]
+use fidl_fuchsia_component::{BinderMarker, CreateChildArgs, RealmMarker};
+use fidl_fuchsia_component_decl::{Child, ChildRef, CollectionRef, StartupMode};
+// [END imports]
 
 #[fuchsia::main(logging_tags = ["lifecycle", "example"])]
 async fn main() {
@@ -36,6 +35,7 @@ async fn main() {
     }
 }
 
+// [START connect_child]
 // Connect to the fidl.examples.routing.echo capability exposed by the child
 // instance, and send a request.
 async fn connect_dynamic_child(message: String) {
@@ -47,6 +47,8 @@ async fn connect_dynamic_child(message: String) {
     .await
     .expect("failed to open exposed directory");
 
+    // [START_EXCLUDE]
+    // [START echo_send]
     // Access the fidl.examples.routing.echo capability provided there
     let echo = client::connect_to_protocol_at_dir_root::<EchoMarker>(&exposed_dir)
         .expect("failed to connect to fidl.examples.routing.echo");
@@ -57,8 +59,12 @@ async fn connect_dynamic_child(message: String) {
         .expect("echo_string failed")
         .expect("echo_string got empty result");
     info!("Server response: {}", response);
+    // [END echo_send]
+    // [END_EXCLUDE]
 }
+// [END connect_child]
 
+// [START create_child]
 // Use the fuchsia.component.Realm protocol to create a dynamic
 // child instance in the collection.
 async fn create_dynamic_child() {
@@ -79,7 +85,9 @@ async fn create_dynamic_child() {
         .expect("create_child failed")
         .expect("failed to create child");
 }
+// [END create_child]
 
+// [START destroy_child]
 // Use the fuchsia.component.Realm protocol to destroy the dynamic
 // child instance running in the collection.
 async fn destroy_dynamic_child() {
@@ -97,3 +105,4 @@ async fn destroy_dynamic_child() {
         .expect("destroy_child failed")
         .expect("failed to destroy child");
 }
+// [END destroy_child]
