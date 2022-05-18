@@ -2922,7 +2922,8 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   }
 
   *zeroed_len_out = 0;
-  for (uint64_t offset = start; offset < end; offset += PAGE_SIZE, *zeroed_len_out += PAGE_SIZE) {
+  uint64_t offset = start;
+  for (; offset < end; offset += PAGE_SIZE, *zeroed_len_out += PAGE_SIZE) {
     const VmPageOrMarker* slot = page_list_.Lookup(offset);
 
     DEBUG_ASSERT(!direct_source_supplies_zero_pages_locked() || (!slot || !slot->IsMarker()));
@@ -2935,17 +2936,12 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       continue;
     }
 
-    // If the source preserves page content, offsets beyond supply_zero_offset_ are implicitly zero.
-    // If there isn't a committed page at this offset, there is nothing more to be done.
+    // If the source preserves page content, empty slots beyond supply_zero_offset_ are implicitly
+    // zero, and any committed pages beyond supply_zero_offset_ need to be removed. Exit the loop
+    // for this case, so that we can perform this operation later more optimally in the order of
+    // committed pages, instead of having to iterate over empty slots too.
     if (is_source_preserving_page_content_locked() && offset >= supply_zero_offset_) {
-      if (!slot || slot->IsEmpty()) {
-        continue;
-      }
-      // We cannot have clean pages beyond supply_zero_offset_.
-      ASSERT(slot->IsPage());
-      ASSERT(is_page_dirty_tracked(slot->Page()));
-      ASSERT(!is_page_clean(slot->Page()));
-      DEBUG_ASSERT(!pmm_is_loaned(slot->Page()));
+      break;
     }
 
     // If there's already a marker then we can avoid any second guessing and leave the marker alone.
@@ -3009,9 +3005,10 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // In the ideal case we can zero by making there be an Empty slot in our page list. This is true
     // when we're not specifically avoiding decommit on zero and there is nothing pinned.
     // Additionally, if the page source is preserving content, an empty slot at this offset should
-    // imply zero, and this is only true for offsets starting at supply_zero_offset_. For offsets
-    // preceding supply_zero_offset_ an empty slot signifies absent content that has not yet been
-    // supplied by the page source.
+    // imply zero, and this is only true for offsets starting at supply_zero_offset_. Since we
+    // exited the loop above for offset >= supply_zero_offset_, we know we cannot have this case.
+    // For offsets preceding supply_zero_offset_ an empty slot signifies absent content that has not
+    // yet been supplied by the page source.
     //
     // Note that this lambda is only checking for pre-conditions in *this* VMO which allow us to
     // represent zeros with an empty slot. We will combine this check with additional checks for
@@ -3023,7 +3020,12 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
           (slot && slot->IsPage() && slot->Page()->object.pin_count > 0)) {
         return false;
       }
-      return !is_source_preserving_page_content_locked() || offset >= supply_zero_offset_;
+      // If the page source is preserving content, we should only be operating on offsets smaller
+      // than supply_zero_offset_. We should have exited the loop above for offsets >=
+      // supply_zero_offset_.
+      DEBUG_ASSERT(!is_source_preserving_page_content_locked() || offset < supply_zero_offset_);
+      // Offsets less than supply_zero_offset_ cannot be decommitted.
+      return !is_source_preserving_page_content_locked();
     };
 
     // First see if we can simply get done with an empty slot in the page list. This VMO should
@@ -3149,6 +3151,35 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       DEBUG_ASSERT(!list_in_list(&page->queue_node));
       list_add_tail(&freed_list, &page->queue_node);
     }
+  }
+
+  // We will end up here with a portion of the range remaining only if we exited the loop early,
+  // which we only do if we go beyond supply_zero_offset_. The motivation there is so that we can
+  // decommit pages efficiently without having to walk empty slots in the loop which are zero
+  // anyway.
+  if (offset < end) {
+    DEBUG_ASSERT(is_source_preserving_page_content_locked());
+    DEBUG_ASSERT(offset >= supply_zero_offset_);
+
+    // Remove any committed pages. Empty slots starting at supply_zero_offset_ are implicitly zero.
+    page_list_.RemovePages(
+        [this, &freed_list](VmPageOrMarker* p, uint64_t off) {
+          // We cannot have clean pages beyond supply_zero_offset_.
+          ASSERT(p->IsPage());
+          ASSERT(is_page_dirty_tracked(p->Page()));
+          ASSERT(!is_page_clean(p->Page()));
+          DEBUG_ASSERT(!pmm_is_loaned(p->Page()));
+
+          AssertHeld(this->lock_);
+          vm_page_t* page = p->ReleasePage();
+          pmm_page_queues()->Remove(page);
+          DEBUG_ASSERT(!list_in_list(&page->queue_node));
+          list_add_tail(&freed_list, &page->queue_node);
+          return ZX_ERR_NEXT;
+        },
+        offset, end);
+
+    *zeroed_len_out += (end - offset);
   }
 
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
