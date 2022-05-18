@@ -101,11 +101,21 @@ void ThermalWatcher::SetThermalState(uint64_t state) {
                       } else {
                         err << "message '" << config << "' was rejected";
                       }
-                      FX_LOGS_FIRST_N(ERROR, 500)
-                          << "Unable to apply thermal policy: " << err.str();
+                      if constexpr (kLogThermalEffectEnumeration) {
+                        FX_LOGS(ERROR) << "Unable to apply thermal policy: " << err.str();
+                      } else {
+                        FX_LOGS_FIRST_N(ERROR, 500)
+                            << "Unable to apply thermal policy: " << err.str();
+                      }
                     } else {
-                      FX_LOGS(DEBUG)
-                          << "Successfully updated effect '" << instance << "' for state " << state;
+                      std::ostringstream out;
+                      out << "Successfully updated effect '" << instance << "' for state " << state
+                          << " with config '" << config << "'";
+                      if constexpr (kLogThermalEffectEnumeration) {
+                        FX_LOGS(INFO) << out.str();
+                      } else {
+                        FX_LOGS(DEBUG) << out.str();
+                      }
                     }
                   });
             });

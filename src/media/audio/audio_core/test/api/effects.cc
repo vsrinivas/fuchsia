@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <lib/media/audio/effects/audio_effects.h>
-#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include <cstring>
@@ -16,8 +15,12 @@ namespace {
 enum class EffectId {
   // This effect inverts the sign of every sample.
   INVERTER = 0,
-  // This effects sleeps for 20ms.
+  // This effect sleeps for 20ms.
   SLEEPER = 1,
+  // This effect doubles the incoming signal.
+  DOUBLER = 2,
+  // Total number of effects in this library.
+  COUNT = 3
 };
 
 struct Effect {
@@ -27,31 +30,43 @@ struct Effect {
   bool enabled;
 };
 
-// Support a very primitive config string to allow testing runtime changes of effect configurations.
-//
-// We support the following configs:
-//   > null/empty string -> enabled (default to enabled when no configuration is provided).
-//   > "enable" -> enabled
-//   > "disable" -> disabled
-//
-// Other configuration strings are rejected.
+// This key enables basic testing of runtime changes to effect configurations:  { "enabled": bool }
+// Also, a null or empty string results in an enabled effect (when no configuration is provided).
+const char* kEnabled = "enabled";
+
 zx_status_t ParseEnabledFromConfig(const char* config_cstr, size_t config_len, bool* enabled) {
-  // Default to enabled with no configuration.
+  // By default an effect is enabled unless there is a scema error, or we confirm we are disabled.
+  *enabled = true;
+
+  // If no configuration, this (simple) effect is enabled.
   if (config_cstr == nullptr || !config_cstr[0]) {
-    *enabled = true;
     return ZX_OK;
   }
 
-  std::string_view config(config_cstr, config_len);
-  if (config == "enable") {
-    *enabled = true;
-    return ZX_OK;
-  }
-  if (config == "disable") {
+  rapidjson::Document doc;
+  std::string parse_buffer(config_cstr);
+  const rapidjson::ParseResult parse_res = doc.ParseInsitu(parse_buffer.data());
+  // Invalid config string, so effect is disabled.
+  if (parse_res.IsError()) {
     *enabled = false;
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  const auto it = doc.FindMember(kEnabled);
+  // Valid config, kEnabled key not found, so assume effect is enabled.
+  if (it == doc.MemberEnd()) {
     return ZX_OK;
   }
-  return ZX_ERR_INVALID_ARGS;
+
+  // kEnabled key was found, but its value isn't a bool. Invalid config, so effect is disabled.
+  if (!it->value.IsBool()) {
+    *enabled = false;
+    return ZX_ERR_INVALID_ARGS;
+  }
+  // kEnabled key's value is a bool!  Are we enabled?
+  *enabled = it->value.GetBool();
+
+  return ZX_OK;
 }
 
 bool effect_get_info(uint32_t effect_id, fuchsia_audio_effects_description* desc) {
@@ -64,6 +79,9 @@ bool effect_get_info(uint32_t effect_id, fuchsia_audio_effects_description* desc
       break;
     case static_cast<uint32_t>(EffectId::SLEEPER):
       strlcpy(desc->name, "sleeper_filter", sizeof(desc->name));
+      break;
+    case static_cast<uint32_t>(EffectId::DOUBLER):
+      strlcpy(desc->name, "doubler_filter", sizeof(desc->name));
       break;
     default:
       return false;
@@ -82,6 +100,7 @@ fuchsia_audio_effects_handle_t effect_create(uint32_t effect_id, uint32_t frame_
   switch (effect_id) {
     case static_cast<uint32_t>(EffectId::INVERTER):
     case static_cast<uint32_t>(EffectId::SLEEPER):
+    case static_cast<uint32_t>(EffectId::DOUBLER):
       break;
     default:
       return FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
@@ -158,6 +177,11 @@ bool effect_process_inplace(fuchsia_audio_effects_handle_t handle, uint32_t num_
     case EffectId::SLEEPER:
       usleep(20'000);
       return true;
+    case EffectId::DOUBLER:
+      for (uint32_t k = 0; k < num_frames * e->channels; k++) {
+        audio_buff_in_out[k] *= 2.0f;
+      }
+      return true;
     default:
       return false;
   }
@@ -178,7 +202,7 @@ void effect_set_stream_info(fuchsia_audio_effects_handle_t handle,
 }  // namespace
 
 DECLARE_FUCHSIA_AUDIO_EFFECTS_MODULE_V1{
-    2,  // num_effects
+    static_cast<uint32_t>(EffectId::COUNT),  // num_effects
     &effect_get_info,
     &effect_create,
     &effect_update_configuration,

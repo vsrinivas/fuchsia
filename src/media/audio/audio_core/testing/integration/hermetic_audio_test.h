@@ -44,6 +44,7 @@ class HermeticAudioTest : public TestFixture {
     std::string volume_curve;          // if empty, a reasonable default is used
     std::string output_device_config;  // if empty, a reasonable default is used
     std::string input_device_config;   // if empty, a reasonable default is used
+    std::string thermal_config;        // if empty, no thermal configuration is specified
   };
   static component_testing::DirectoryContents MakeAudioCoreConfig(AudioCoreConfigOptions options);
 

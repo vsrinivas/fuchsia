@@ -70,8 +70,8 @@ template("audio_core_api_test_component") {
     deps += [
       "//sdk/fidl/fuchsia.media",
       "//sdk/lib/syslog/cpp",
-      "//src/lib/fxl/test:gtest_main",
       "//src/media/audio/audio_core/testing/integration:hermetic_audio_test",
+      "//src/media/audio/audio_core/testing/integration:hermetic_pipeline_test_main",
       "//src/media/audio/lib/test:comparators",
       "//third_party/googletest:gmock",
     ]

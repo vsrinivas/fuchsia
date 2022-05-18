@@ -55,7 +55,7 @@ inline constexpr bool kLogDevicePlugUnplug = true;
 inline constexpr bool kLogSetDeviceGainMuteActions = false;
 
 // Values retrieved from the audio driver related to delay, and associated calculations.
-inline constexpr bool kLogDriverDelayProperties = true;
+inline constexpr bool kLogDriverDelayProperties = false;
 
 inline constexpr bool kLogAudioDriverCallbacks = false;
 // For non-zero value N, log every Nth position notification. If 0, don't log any.
@@ -86,6 +86,9 @@ inline constexpr bool kLogTrims = false;
 inline constexpr bool kLogReadLocks = true;
 inline constexpr bool kLogTrims = true;
 #endif
+
+// Effects-related logging
+inline constexpr bool kLogThermalEffectEnumeration = false;
 
 // Policy-related logging
 //

@@ -8,6 +8,30 @@ import("//src/media/audio/audio_core/test/api/api_test_component.gni")
 import("//src/media/audio/audio_core_package_v2.gni")
 import("//src/media/audio/hardware.gni")
 
+group("api") {
+  testonly = true
+
+  deps = [
+    ":audio-core-api-test-effects",
+    ":audio-core-api-tests",
+
+    # TODO(fxbug.dev/90408): remove this
+    "//src/media/audio/audio_core:audio-core-for-test",
+
+    # TODO(fxbug.dev/90408): remove this
+    "//src/media/audio/virtual_audio_service:virtual-audio-service-for-test",
+  ]
+
+  # These have real-time requirements and must run in release builds (debug builds are too slow).
+  if (!is_debug) {
+    deps += [
+      ":audio-core-api-pipeline-tests",
+      ":audio_core_fidelity_tests",
+      ":audio_core_thermal_tests",
+    ]
+  }
+}
+
 loadable_module("audio-core-api-test-effects") {
   sources = [ "effects.cc" ]
 
@@ -58,12 +82,19 @@ audio_core_api_test_component("audio-clock-pipeline-test") {
   ]
 }
 
-audio_core_api_test_component("audio-core-fidelity-test") {
+audio_core_api_test_component("audio_core_fidelity_test") {
   source = "audio_core_fidelity_test.cc"
   executable_deps = [
     ":fidelity_results",
     "//src/media/audio/audio_core/mixer:coefficient_table",
-    "//src/media/audio/audio_core/testing/integration:hermetic_pipeline_test",
+    "//src/media/audio/lib/analysis",
+  ]
+}
+
+audio_core_api_test_component("audio_core_thermal_test") {
+  source = "audio_core_thermal_test.cc"
+  executable_deps = [
+    "//src/media/audio/audio_core/mixer:coefficient_table",
     "//src/media/audio/lib/analysis",
   ]
 }
@@ -187,14 +218,32 @@ audio_core_test_package("audio-core-api-pipeline-tests") {
   }
 }
 
-# These tests have real-time restraints and must run on real hardware (emulators are too slow).
 audio_core_test_package("audio_core_fidelity_tests") {
   audio_core_manifest_shards = [
     "//src/media/audio/audio_core/meta/audio_core.shard.ultrasound.cml",
     "//src/media/audio/audio_core/meta/audio_core.shard.for_integration_tests.cml",
   ]
 
-  test_components = [ ":audio-core-fidelity-test" ]
+  test_components = [ ":audio_core_fidelity_test" ]
+
+  # AudioCore emits ERRORs upon output pipeline underflows, which we don't treat as audio failures.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = hardware_envs
+  }
+}
+
+audio_core_test_package("audio_core_thermal_tests") {
+  package_deps = [ ":audio-core-api-test-effects" ]
+  audio_core_manifest_shards = [
+    "//src/media/audio/audio_core/meta/audio_core.shard.ultrasound.cml",
+    "//src/media/audio/audio_core/meta/audio_core.shard.for_integration_tests.cml",
+    "//sdk/lib/syslog/client.shard.cml",
+  ]
+
+  test_components = [ ":audio_core_thermal_test" ]
 
   # AudioCore emits ERRORs upon output pipeline underflows, which we don't treat as audio failures.
   test_specs = {

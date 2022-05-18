@@ -70,6 +70,8 @@ source_set("hermetic_pipeline_test") {
     "hermetic_impulse_test.h",
     "hermetic_pipeline_test.cc",
     "hermetic_pipeline_test.h",
+    "hermetic_step_test.cc",
+    "hermetic_step_test.h",
   ]
 
   deps = [

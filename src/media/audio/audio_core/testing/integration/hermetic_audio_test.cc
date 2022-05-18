@@ -42,13 +42,13 @@ namespace media::audio::test {
 // Creates a directory with an audio_core_config.json file.
 component_testing::DirectoryContents HermeticAudioTest::MakeAudioCoreConfig(
     AudioCoreConfigOptions options) {
-  if (options.volume_curve == "") {
+  if (options.volume_curve.empty()) {
     options.volume_curve = R"x(
         {"level": 0.0, "db": "MUTED"},
         {"level": 1.0, "db": 0.0}
       )x";
   }
-  if (options.output_device_config == "") {
+  if (options.output_device_config.empty()) {
     options.output_device_config = R"x(
         "device_id": "*",
         "supported_stream_types": [
@@ -60,7 +60,7 @@ component_testing::DirectoryContents HermeticAudioTest::MakeAudioCoreConfig(
         ]
       )x";
   }
-  if (options.input_device_config == "") {
+  if (options.input_device_config.empty()) {
     options.input_device_config = R"x(
         "device_id": "*",
         "supported_stream_types": [
@@ -72,11 +72,17 @@ component_testing::DirectoryContents HermeticAudioTest::MakeAudioCoreConfig(
         "rate": 48000
       )x";
   }
+  if (!options.thermal_config.empty()) {
+    options.thermal_config = ",\n\"thermal_states\": [\n" + options.thermal_config + "\n]";
+  }
+
   std::string data;
   data += "{\n";
   data += "\"volume_curve\": [\n" + options.volume_curve + "\n],\n";
   data += "\"output_devices\": [{\n" + options.output_device_config + "\n}],\n";
-  data += "\"input_devices\": [{\n" + options.input_device_config + "\n}]\n";
+  data += "\"input_devices\": [{\n" + options.input_device_config + "\n}]";
+  data += options.thermal_config;
+  data += "\n";
   data += "}\n";
 
   component_testing::DirectoryContents dir;
@@ -488,8 +494,6 @@ zx_status_t HermeticAudioTest::ConfigurePipelineForThermal(uint32_t thermal_stat
       break;
     }
 
-    FX_LOGS(INFO) << "Waiting " << kClientStateRetryPeriod.to_msecs() << " ms, for a '"
-                  << kAudioClientType << "' watcher to connect";
     zx::nanosleep(zx::deadline_after(kClientStateRetryPeriod));
   }
 

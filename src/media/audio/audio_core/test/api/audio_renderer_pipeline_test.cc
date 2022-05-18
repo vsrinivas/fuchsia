@@ -961,7 +961,8 @@ TEST_F(AudioRendererEffectsV1Test, RenderWithEffects) {
 
 TEST_F(AudioRendererEffectsV1Test, EffectsControllerEffectDoesNotExist) {
   fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
-  zx_status_t status = effects_controller_->UpdateEffect("invalid_effect_name", "disable", &result);
+  zx_status_t status =
+      effects_controller_->UpdateEffect("invalid_effect_name", "{ \"enabled\": false}", &result);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_TRUE(result.is_err());
   EXPECT_EQ(result.err(), fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
@@ -980,7 +981,8 @@ TEST_F(AudioRendererEffectsV1Test, EffectsControllerInvalidConfig) {
 TEST_F(AudioRendererEffectsV1Test, EffectsControllerUpdateEffect) {
   // Disable the inverter; frames should be unmodified.
   fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
-  zx_status_t status = effects_controller_->UpdateEffect(kInverterEffectName, "disable", &result);
+  zx_status_t status =
+      effects_controller_->UpdateEffect(kInverterEffectName, "{ \"enabled\": false}", &result);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_TRUE(result.is_response());
 
@@ -1206,7 +1208,7 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
                                         .lib_name = "inversion_filter.so",
                                         .effect_name = "inversion_filter",
                                         .instance_name = "inverter",
-                                        .effect_config = "disable",
+                                        .effect_config = "{ \"enabled\": false}",
                                     },
                                 }};
   auto pipeline_config = PipelineConfig(root);
@@ -1253,7 +1255,7 @@ TEST_F(AudioRendererPipelineTuningTest, AudioTunerUpdateEffect) {
   auto device_id = AudioDevice::UniqueIdToString({{0xff, 0x00}});
   fuchsia::media::tuning::AudioEffectConfig updated_effect;
   updated_effect.set_instance_name(kInverterEffectName);
-  updated_effect.set_configuration("disable");
+  updated_effect.set_configuration("{\"enabled\": false}");
   audio_tuner_->SetAudioEffectConfig(
       device_id, std::move(updated_effect),
       AddCallback("SetAudioEffectConfig", [](zx_status_t status) { EXPECT_EQ(status, ZX_OK); }));

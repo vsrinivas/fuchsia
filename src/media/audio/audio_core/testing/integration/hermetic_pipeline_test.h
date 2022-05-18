@@ -25,6 +25,13 @@ class HermeticPipelineTest : public HermeticAudioTest {
     HermeticAudioTest::TearDown();
   }
 
+  // The three render paths present in common effects configurations.
+  enum class RenderPath {
+    Media = 0,
+    Communications = 1,
+    Ultrasound = 2,
+  };
+
   struct PipelineConstants {
     // The pipeline's transition widths, in units of source frames.
     // These correspond to the sum of widths for all output (or input) pipeline components.

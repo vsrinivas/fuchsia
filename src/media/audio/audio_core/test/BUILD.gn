@@ -5,19 +5,15 @@
 group("test") {
   testonly = true
   deps = [
-    "api:audio-core-api-test-effects",
-    "api:audio-core-api-tests",
+    "api",
 
     # TODO(fxbug.dev/90408): remove this
     "//src/media/audio/audio_core:audio-core-for-test",
   ]
 
-  # These tests must run in release builds because they have hard real-time restraints.
-  # Debug builds are too slow.
+  # These have real-time requirements and must run in release builds (debug builds are too slow).
   if (!is_debug) {
     deps += [
-      "api:audio-core-api-pipeline-tests",
-      "api:audio_core_fidelity_tests",
       "hardware:audio_core_hardware_tests",
       "stress:audio-core-stress-tests",
     ]

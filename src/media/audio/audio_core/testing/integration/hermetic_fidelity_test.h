@@ -27,13 +27,6 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   // The actual frequencies (within a buffer of kFreqTestBufSize) are found in kRefFreqsInternal.
   static const std::array<int32_t, kNumReferenceFreqs> kReferenceFrequencies;
 
-  // Test the three render paths present in common effects configurations.
-  enum class RenderPath {
-    Media = 0,
-    Communications = 1,
-    Ultrasound = 2,
-  };
-
   // Test renderers that use various reference clocks.  These options include:
   enum class ClockMode {
     // Client wants to use the reference clock we provide to clients that do not specify one. This

@@ -6,4 +6,10 @@
     program: {
         binary: "bin/{binary}",
     },
+    use: [
+        {
+            storage: "cache",
+            path: "/cache",
+        },
+    ],
 }
