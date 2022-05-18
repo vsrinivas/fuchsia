@@ -30,7 +30,7 @@ the ethernet driver to manage its associated hardware.
 At the same time, other devices (such as a video card) could also use the base PCI
 driver in a similar manner to manage their hardware.
 
-# The Fuchsia model
+## The Fuchsia model
 
 In order to provide maximum flexibility, drivers in the Fuchsia world are allowed
 to bind to matching "parent" devices, and publish "children" of their own.

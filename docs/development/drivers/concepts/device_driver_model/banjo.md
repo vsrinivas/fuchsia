@@ -1,5 +1,8 @@
 # Banjo in drivers
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 Devices may implement protocols, which are Banjo ABIs used by child devices
 to interact with parent devices in a device-specific manner. The
 [USB Protocol](/sdk/banjo/fuchsia.hardware.usb/usb.fidl),

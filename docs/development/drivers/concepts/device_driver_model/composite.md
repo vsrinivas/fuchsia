@@ -1,6 +1,7 @@
 # Composite devices
 
-[TOC]
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
 
 ## Introduction
 
