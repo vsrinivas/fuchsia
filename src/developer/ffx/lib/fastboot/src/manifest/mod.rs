@@ -23,7 +23,7 @@ use {
     fms::Entries,
     sdk_metadata::{Metadata, ProductBundleV1},
     serde::{Deserialize, Serialize},
-    serde_json::{from_value, Value},
+    serde_json::{from_value, to_value, Value},
     std::fs::File,
     std::io::{BufReader, Read, Write},
     std::path::PathBuf,
@@ -61,6 +61,22 @@ pub enum FlashManifestVersion {
 }
 
 impl FlashManifestVersion {
+    pub fn write<W: Write>(&self, writer: W) -> Result<()> {
+        let manifest = match &self {
+            FlashManifestVersion::V1(manifest) => {
+                ManifestFile { version: 1, manifest: to_value(manifest)? }
+            }
+            FlashManifestVersion::V2(manifest) => {
+                ManifestFile { version: 2, manifest: to_value(manifest)? }
+            }
+            FlashManifestVersion::V3(manifest) => {
+                ManifestFile { version: 3, manifest: to_value(manifest)? }
+            }
+            _ => ffx_bail!("{}", UNKNOWN_VERSION),
+        };
+        serde_json::to_writer_pretty(writer, &manifest).context("writing flash manifest")
+    }
+
     pub fn load<R: Read>(reader: R) -> Result<Self> {
         let value: Value = serde_json::from_reader::<R, Value>(reader)
             .context("reading flash manifest from disk")?;
@@ -337,6 +353,30 @@ mod test {
     #[test]
     fn test_deserialization() -> Result<()> {
         let _manifest: ManifestFile = from_str(MANIFEST)?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_serialization() -> Result<()> {
+        let manifest = FlashManifestVersion::V3(FlashManifestV3 {
+            hw_revision: "board".into(),
+            credentials: vec![],
+            products: vec![],
+        });
+        let mut buf = Vec::new();
+        manifest.write(&mut buf).unwrap();
+        let str = String::from_utf8(buf).unwrap();
+        assert_eq!(
+            str,
+            r#"{
+  "version": 3,
+  "manifest": {
+    "credentials": [],
+    "hw_revision": "board",
+    "products": []
+  }
+}"#
+        );
         Ok(())
     }
 
