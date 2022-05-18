@@ -39,7 +39,7 @@ action("convert_size_limits_to_size_budgets") {
   ]
   deps = [
     ":size_checker_json",
-    "//build/images/fuchsia:fuchsia_product_assembler",
+    "//build/images/fuchsia:fuchsia.product_assembler",
   ]
   testonly = true
   args = [

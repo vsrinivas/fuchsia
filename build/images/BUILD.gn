@@ -37,9 +37,9 @@ labels = {
   images = "//build/images/fuchsia"
   images_prime = "//build/images/fuchsia:fuchsia_prime"
   images_netboot = "//build/images/fuchsia:netboot"
-  base_packages = "//build/images/fuchsia:fuchsia_base_packages"
-  cache_packages = "//build/images/fuchsia:fuchsia_cache_packages"
-  meta_packages = "//build/images/fuchsia:fuchsia_meta_packages"
+  base_packages = "//build/images/fuchsia:fuchsia.base_packages"
+  cache_packages = "//build/images/fuchsia:fuchsia.cache_packages"
+  meta_packages = "//build/images/fuchsia:fuchsia.meta_packages"
 }
 
 supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
@@ -1181,7 +1181,7 @@ group("updates") {
       ":verify_component_resolvers",
     ]
     if (fuchsia_route_sources_config != "") {
-      deps += [ "//build/images/fuchsia:fuchsia_route_sources_verify_files" ]
+      deps += [ "//build/images/fuchsia:fuchsia.route_sources_verify_files" ]
     }
   }
 }

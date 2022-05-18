@@ -69,8 +69,8 @@ template("legacy_assembly_input_bundle") {
     # Compute the assembly config and config_data labels that are generated within
     # assemble_system()
     assemble_system_image_assembly_config =
-        "${image_assembly_dir}:${image_assembly_name}_image_assembly_config"
-    assemble_system_config_data = "${image_assembly_dir}:${image_assembly_name}_config-data_config_package_entries"
+        "${image_assembly_dir}:${image_assembly_name}.image_assembly_config"
+    assemble_system_config_data = "${image_assembly_dir}:${image_assembly_name}.config-data_config_package_entries"
 
     # The AIB itself
     assembly_input_bundle = "$target_name.bundle"
@@ -85,10 +85,10 @@ template("legacy_assembly_input_bundle") {
     image_assembly_config_dir =
         get_label_info(labels.assemble_system_image_assembly_config,
                        "target_out_dir")
-    image_assembly_config = "${image_assembly_config_dir}/${labels.image_assembly_name}_image_assembly_config.json"
+    image_assembly_config = "${image_assembly_config_dir}/${labels.image_assembly_name}.image_assembly_config.json"
     assemble_system_config_data_dir =
         get_label_info(labels.assemble_system_config_data, "target_out_dir")
-    assemble_system_config_data_entries = "${assemble_system_config_data_dir}/${labels.image_assembly_name}_config-data_config_package_entries"
+    assemble_system_config_data_entries = "${assemble_system_config_data_dir}/${labels.image_assembly_name}.config-data_config_package_entries"
 
     # Outputs
 

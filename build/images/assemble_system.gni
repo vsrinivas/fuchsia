@@ -241,35 +241,35 @@ template("assemble_system") {
 
   # Internal labels used for Image Assembly.
   labels = {
-    base_packages_group = "${image_name}_base_packages"
-    cache_packages_group = "${image_name}_cache_packages"
-    meta_packages_group = "${image_name}_meta_packages"
-    all_packages_group = "${image_name}_packages"
-    legacy_assembly_input_bundle = "${image_name}_legacy_input_bundle"
+    base_packages_group = "${image_name}.base_packages"
+    cache_packages_group = "${image_name}.cache_packages"
+    meta_packages_group = "${image_name}.meta_packages"
+    all_packages_group = "${image_name}.packages"
+    legacy_assembly_input_bundle = "${image_name}.legacy_input_bundle"
     if (defined(invoker.product_assembly_config_dep)) {
       product_assembly_config_deps = [ invoker.product_assembly_config_dep ]
     } else {
       product_assembly_config_deps = []
     }
-    image_assembly_config = "${image_name}_image_assembly_config"
-    image_assembly_inputs = "${image_name}_image_assembly_inputs"
+    image_assembly_config = "${image_name}.image_assembly_config"
+    image_assembly_inputs = "${image_name}.image_assembly_inputs"
     compare_image_assembly_configs =
-        "${image_name}_compare_image_assembly_configs"
-    images_config = "${image_name}_images_config"
-    product_assembler = "${image_name}_product_assembler"
-    image_assembler = "${image_name}_image_assembler"
-    copy_vbmeta = "${image_name}_copy_vbmeta"
-    copy_zbi = "${image_name}_copy_zbi"
-    copy_zbi_signed = "${image_name}_copy_zbi_signed"
-    copy_zbi_manifest = "${image_name}_copy_zbi_manifest"
-    copy_images = "${image_name}_copy_images"
-    config_data = "${image_name}_config-data"
-    shell_commands = "${image_name}_shell_commands"
-    assembly_inputs = "${image_name}_assembly_inputs"
-    fshost_config = "${image_name}_fshost_config"
+        "${image_name}.compare_image_assembly_configs"
+    images_config = "${image_name}.images_config"
+    product_assembler = "${image_name}.product_assembler"
+    image_assembler = "${image_name}.image_assembler"
+    copy_vbmeta = "${image_name}.copy_vbmeta"
+    copy_zbi = "${image_name}.copy_zbi"
+    copy_zbi_signed = "${image_name}.copy_zbi_signed"
+    copy_zbi_manifest = "${image_name}.copy_zbi_manifest"
+    copy_images = "${image_name}.copy_images"
+    config_data = "${image_name}.config-data"
+    shell_commands = "${image_name}.shell_commands"
+    assembly_inputs = "${image_name}.assembly_inputs"
+    fshost_config = "${image_name}.fshost_config"
     pkgfs_package_label = "//src/sys/pkg/bin/pkgfs"
-    compare_command_logs = "${image_name}_compare_command_logs"
-    compare_images_manifests = "${image_name}_compare_images_manifests"
+    compare_command_logs = "${image_name}.compare_command_logs"
+    compare_images_manifests = "${image_name}.compare_images_manifests"
     platform_aib = "//build/assembly"
   }
 
@@ -281,11 +281,11 @@ template("assemble_system") {
       product_assembly_config = "//build/assembly/empty_product_config.json"
     }
     image_assembly_config =
-        "$target_out_dir/${image_name}_image_assembly_config.json"
+        "$target_out_dir/${image_name}.image_assembly_config.json"
     image_assembly_inputs =
-        "$target_out_dir/${image_name}_image_assembly_inputs"
+        "$target_out_dir/${image_name}.image_assembly_inputs"
 
-    images_config = "$target_out_dir/${image_name}_images_config.json"
+    images_config = "$target_out_dir/${image_name}.images_config.json"
 
     outdir = "$target_out_dir/$image_name"
     gendir = "$outdir/gen"
@@ -398,7 +398,7 @@ template("assemble_system") {
   # Generate the base driver manifest file that lists all available drivers
   # collected from _base_driver_packages dependency tree. This manifest file
   # will be included in the driver-manager-base-config package.
-  base_driver_manifest_label = "${image_name}_base-driver-manifest"
+  base_driver_manifest_label = "${image_name}.base-driver-manifest"
   combined_driver_manifest(base_driver_manifest_label) {
     forward_variables_from(invoker, [ "testonly" ])
     manifest_name = "base-driver-manifest.json"
@@ -407,7 +407,7 @@ template("assemble_system") {
 
   # The driver-manager-base-config package is read by Driver Manager to
   # discover where the base drivers are located.
-  driver_manager_base_config_label = "${image_name}_driver-manager-base-config"
+  driver_manager_base_config_label = "${image_name}.driver-manager-base-config"
   fuchsia_package(driver_manager_base_config_label) {
     forward_variables_from(invoker,
                            [
@@ -437,7 +437,7 @@ template("assemble_system") {
   }
 
   # For details, see //docs/development/components/component_id_index.md#system-assembly
-  component_id_index_config("${image_name}_component_id_index_config") {
+  component_id_index_config("${image_name}.component_id_index_config") {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -457,9 +457,9 @@ template("assemble_system") {
   include_component_index = defined(invoker.include_component_id_index) &&
                             invoker.include_component_id_index
   if (include_component_index) {
-    component_id_index_dep = [ ":${image_name}_component_id_index_config" ]
+    component_id_index_dep = [ ":${image_name}.component_id_index_config" ]
     component_id_index_config_data_dep =
-        [ ":${image_name}_component_id_index_config-config-data" ]
+        [ ":${image_name}.component_id_index_config-config-data" ]
   }
   _meta_packages += component_id_index_dep
 
@@ -947,7 +947,7 @@ template("assemble_system") {
   #
 
   if (defined(invoker.cmdline_goldens)) {
-    verify_kernel_cmdline("${image_name}_cmdline_verify_files") {
+    verify_kernel_cmdline("${image_name}.cmdline_verify_files") {
       forward_variables_from(invoker,
                              [
                                "testonly",
@@ -959,7 +959,7 @@ template("assemble_system") {
     }
   }
   if (defined(invoker.bootfs_goldens)) {
-    verify_bootfs_filelist("${image_name}_bootfs_verify_files") {
+    verify_bootfs_filelist("${image_name}.bootfs_verify_files") {
       forward_variables_from(invoker,
                              [
                                "testonly",
@@ -971,7 +971,7 @@ template("assemble_system") {
     }
   }
   if (defined(invoker.static_pkgs_goldens)) {
-    verify_static_pkgs("${image_name}_static_pkgs_verify_files") {
+    verify_static_pkgs("${image_name}.static_pkgs_verify_files") {
       forward_variables_from(invoker,
                              [
                                "testonly",
@@ -988,7 +988,7 @@ template("assemble_system") {
     assert(
         image_name == "fuchsia",
         "assemble_system() { route_sources_config } is temporarily only available for the `fuchsia` image")
-    verify_route_sources("${image_name}_route_sources_verify_files") {
+    verify_route_sources("${image_name}.route_sources_verify_files") {
       # TODO(fxbug.dev/85664): The testonly and the dependency on pm publish
       # are both temporary; they will be fixed after all collectors use
       # blobfs_manifest as the source of truth for loading blobs.
@@ -1027,13 +1027,13 @@ template("assemble_system") {
 
     deps = []
     if (defined(invoker.cmdline_goldens)) {
-      deps += [ ":${image_name}_cmdline_verify_files" ]
+      deps += [ ":${image_name}.cmdline_verify_files" ]
     }
     if (defined(invoker.bootfs_goldens)) {
-      deps += [ ":${image_name}_bootfs_verify_files" ]
+      deps += [ ":${image_name}.bootfs_verify_files" ]
     }
     if (defined(invoker.static_pkgs_goldens)) {
-      deps += [ ":${image_name}_static_pkgs_verify_files" ]
+      deps += [ ":${image_name}.static_pkgs_verify_files" ]
     }
 
     metadata = {
@@ -1050,7 +1050,7 @@ template("assemble_system") {
       ]
     }
 
-    # Note: "${image_name}_route_sources_verify_files" dependency on pm-publish
+    # Note: "${image_name}.route_sources_verify_files" dependency on pm-publish
     # would create a dependency cycle if it were included here. Instead, it is
     # integrated into the build via //build/images:updates.
   }

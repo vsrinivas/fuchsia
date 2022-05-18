@@ -48,15 +48,15 @@ template("product_assembly_configuration") {
     # So it can be reused.
     target_name = target_name
 
-    assembly_config = "${target_name}_product_assembly_config.json"
+    assembly_config = "${target_name}.product_assembly_config.json"
 
     # This is a publicly visible, test-only target, that allows the assembly
     # config to be used without needing the deps used create it.
     assembly_config_for_validation =
-        "${target_name}_product_assembly_config.json.for_validation"
+        "${target_name}.product_assembly_config.json.for_validation"
 
-    base_package_set = "${target_name}_base_packages"
-    cache_package_set = "${target_name}_cache_packages"
+    base_package_set = "${target_name}.base_packages"
+    cache_package_set = "${target_name}.cache_packages"
 
     # Base packages specified by the invoker, used to create the list of
     # manifests and as the deps for the package set targets.

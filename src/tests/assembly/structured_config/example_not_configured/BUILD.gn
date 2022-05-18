@@ -60,11 +60,11 @@ legacy_assembly_input_bundle("input_bundle") {
 }
 
 # NOTE: target named this way for legacy_assembly_input_bundle's label inference
-generated_image_assembly_config("test_image_assembly_config") {
+generated_image_assembly_config("test.image_assembly_config") {
   testonly = true
 
   # NOTE: legacy_assembly_input_bundle assumes this file path
-  output_path = "$target_out_dir/test_image_assembly_config.json"
+  output_path = "$target_out_dir/test.image_assembly_config.json"
   kernel_image = "//zircon/kernel"
   base_packages = [ "//examples/assembly/structured_config/configured_by_assembly($default_toolchain)" ]
 }

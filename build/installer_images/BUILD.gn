@@ -10,11 +10,11 @@ zedboot_path = "$root_build_dir/zedboot.zbi"
 zedboot_signed_path = "$root_build_dir/zedboot.zbi.signed"
 
 input_partition_labels = [
-  "//build/images/fuchsia:fuchsia_copy_zbi",
-  "//build/images/fuchsia:fuchsia_copy_zbi_signed",
-  "//build/images/fuchsia:fuchsia_image_assembler",
-  "//build/images/zedboot:zedboot_copy_zbi",
-  "//build/images/zedboot:zedboot_copy_zbi_signed",
+  "//build/images/fuchsia:fuchsia.copy_zbi",
+  "//build/images/fuchsia:fuchsia.copy_zbi_signed",
+  "//build/images/fuchsia:fuchsia.image_assembler",
+  "//build/images/zedboot:zedboot.copy_zbi",
+  "//build/images/zedboot:zedboot.copy_zbi_signed",
 ]
 
 input_partition_paths = [

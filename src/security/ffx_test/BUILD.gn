@@ -55,18 +55,18 @@ assemble_system(_assemble_system_recovery_target_name) {
 if (is_host) {
   host_test_data("testdata") {
     deps = [
-      ":${_assemble_system_recovery_target_name}_image_assembler($target_toolchain)",
-      ":${_assemble_system_target_name}_image_assembler($target_toolchain)",
+      ":${_assemble_system_recovery_target_name}.image_assembler($target_toolchain)",
+      ":${_assemble_system_target_name}.image_assembler($target_toolchain)",
     ]
     sources = [
       get_label_info(
-              ":${_assemble_system_target_name}_image_assembler($target_toolchain)",
+              ":${_assemble_system_target_name}.image_assembler($target_toolchain)",
               "target_out_dir") + "/${_assemble_system_target_name}/blob.blk",
       get_label_info(
-              ":${_assemble_system_target_name}_image_assembler($target_toolchain)",
+              ":${_assemble_system_target_name}.image_assembler($target_toolchain)",
               "target_out_dir") + "/${_assemble_system_target_name}/${_assemble_system_target_name}.zbi",
       get_label_info(
-              ":${_assemble_system_recovery_target_name}_image_assembler($target_toolchain)",
+              ":${_assemble_system_recovery_target_name}.image_assembler($target_toolchain)",
               "target_out_dir") + "/${_assemble_system_recovery_target_name}/${_assemble_system_recovery_target_name}.zbi",
     ]
     outputs = [ "$target_out_dir/testdata/{{source_file_part}}" ]

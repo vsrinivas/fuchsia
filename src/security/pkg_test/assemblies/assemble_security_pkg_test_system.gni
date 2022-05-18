@@ -102,15 +102,15 @@ template("assemble_security_pkg_test_system") {
 
   labels = {
     assembly = assembly_name
-    assembly_image_assembler = "${assembly_name}_image_assembler"
+    assembly_image_assembler = "${assembly_name}.image_assembler"
     assembly_partitions_config = "${assembly_name}_partitions_config"
-    base_packages = "${assembly_name}_base_packages"
+    base_packages = "${assembly_name}.base_packages"
     empty_pkgfs = "${assembly_name}_empty_pkgfs"
     build_info = "${assembly_name}_build_info"
     repository_config = "${assembly_name}_repository_config"
     packages_json = "${assembly_name}_packages_json"
     update_package = "${assembly_name}_update_package"
-    meta_packages = "${assembly_name}_meta_packages"
+    meta_packages = "${assembly_name}.meta_packages"
     root_ssl_certificates = "${assembly_name}_root_ssl_certificates"
     root_ssl_certificates_resource_group =
         "${assembly_name}_root_ssl_certificates_resource_group"
