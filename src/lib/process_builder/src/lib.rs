@@ -1099,9 +1099,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_args() -> Result<(), Error> {
         let test_args = vec!["arg0", "arg1", "arg2"];
-        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95066)
         let test_args_cstr =
-            test_args.iter().map(|s| CString::new(s.clone())).collect::<Result<_, _>>()?;
+            test_args.iter().map(|&s| CString::new(s)).collect::<Result<_, _>>()?;
 
         let (mut builder, proxy) = setup_test_util_builder(true)?;
         builder.add_arguments(test_args_cstr);
@@ -1129,9 +1128,8 @@ mod tests {
         // '\0' byte), so let's send 10k of them to be well larger
         // than the initial stack but well within the 64k channel size.
         let test_args = vec!["arg"; 10 * 1000];
-        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95066)
         let test_args_cstr =
-            test_args.iter().map(|s| CString::new(s.clone())).collect::<Result<_, _>>()?;
+            test_args.iter().map(|&s| CString::new(s)).collect::<Result<_, _>>()?;
 
         let (mut builder, proxy) = setup_test_util_builder(true)?;
         builder.add_arguments(test_args_cstr);
@@ -1238,9 +1236,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn set_loader_directly() -> Result<(), Error> {
         let test_args = vec!["arg0", "arg1", "arg2"];
-        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95066)
         let test_args_cstr =
-            test_args.iter().map(|s| CString::new(s.clone())).collect::<Result<_, _>>()?;
+            test_args.iter().map(|&s| CString::new(s)).collect::<Result<_, _>>()?;
 
         let (mut builder, proxy) = setup_test_util_builder(false)?;
         builder.set_loader_service(clone_loader_service()?)?;
@@ -1269,9 +1266,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn set_vdso_directly() -> Result<(), Error> {
         let test_args = vec!["arg0", "arg1", "arg2"];
-        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95066)
         let test_args_cstr =
-            test_args.iter().map(|s| CString::new(s.clone())).collect::<Result<_, _>>()?;
+            test_args.iter().map(|&s| CString::new(s)).collect::<Result<_, _>>()?;
 
         let (mut builder, proxy) = setup_test_util_builder(true)?;
         builder.set_vdso_vmo(get_system_vdso_vmo()?);
@@ -1372,9 +1368,7 @@ mod tests {
         // '\0' byte), so let's send 10k of them to be well larger
         // than the initial stack but well within the 64k channel size.
         let test_env = vec!["a=b"; 10 * 1000];
-        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95066)
-        let test_env_cstr =
-            test_env.iter().map(|s| CString::new(s.clone())).collect::<Result<_, _>>()?;
+        let test_env_cstr = test_env.iter().map(|&s| CString::new(s)).collect::<Result<_, _>>()?;
 
         let (mut builder, proxy) = setup_test_util_builder(true)?;
         builder.add_environment_variables(test_env_cstr);
