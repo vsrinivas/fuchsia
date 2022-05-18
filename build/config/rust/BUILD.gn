@@ -77,6 +77,30 @@ config("one_codegen_unit") {
   }
 }
 
+config("codegen_units_16") {
+  # Enable default codegen parallelism (rustc default).
+  # This will increase code size over `:one_codegen_unit` above.
+  #
+  # Used without any lto option, this will also enable thin-local lto.
+  # https://doc.rust-lang.org/rustc/codegen-options/index.html#lto
+  if (rust_incremental == "") {
+    rustflags = [ "-Ccodegen-units=16" ]
+  }
+}
+
+config("lto_disabled") {
+  # Fully disable lto.
+  #
+  # This is the default when -Ccodegen_units=1 or when optimizations are off
+  # (-Copt-level=0)
+  rustflags = [ "-Clto=off" ]
+}
+
+config("lto_thin") {
+  # Enable "thin" lto across all crates being linked
+  rustflags = [ "-Clto=thin" ]
+}
+
 # Best practices for Rust binaries that go into size-constrained bootfs.
 config("bootfs") {
   # Optimize for size.

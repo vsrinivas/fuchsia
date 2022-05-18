@@ -80,6 +80,11 @@ template("rustc_test_internal") {
     configs = []
     configs = invoker.configs
 
+    # Add test-only configs
+    if (defined(invoker.test_configs)) {
+      configs += invoker.test_configs
+    }
+
     crate_root = source_root
     clippy_crate_type = "bin"
     pass_through = {

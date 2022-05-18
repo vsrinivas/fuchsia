@@ -76,6 +76,11 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_configs = [
+    "//build/config/rust:codegen_units_16",
+    "//build/config/rust:lto_disabled",
+  ]
+
   test_deps = [
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:assert_matches",

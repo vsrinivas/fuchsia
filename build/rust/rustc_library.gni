@@ -46,6 +46,10 @@ import("//build/rust/rustc_test.gni")
 #     Third party crates can be included through paths like
 #     "//third_party/rust_crates:<cratename>",
 #
+#   test_configs (optional)
+#     List of GN config targets to pass to the compilation of this crate's
+#     tests.
+#
 #   test_deps (optional)
 #     List of rust_library GN targets on which this crate's tests depend.
 #
