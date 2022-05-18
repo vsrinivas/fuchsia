@@ -57,6 +57,12 @@ impl From<bool> for SyscallResult {
     }
 }
 
+impl From<u8> for SyscallResult {
+    fn from(value: u8) -> Self {
+        SyscallResult(value as u64)
+    }
+}
+
 impl From<i32> for SyscallResult {
     fn from(value: i32) -> Self {
         SyscallResult(value as u64)

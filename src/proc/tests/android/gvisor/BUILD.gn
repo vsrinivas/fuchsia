@@ -69,13 +69,12 @@ gvisor_tests = [
   "open_create_test",
   "open_test",
   "pipe_test",
-
   "poll_test",
   "ppoll_test",
 
   # "prctl_test",
   "pread64_test",
-
+  "priority_test",
   "proc_test",
 
   # "pselect_test",
