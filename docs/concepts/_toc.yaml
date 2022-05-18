@@ -19,7 +19,7 @@ toc:
 - title: "Components"
   section:
   - include: /docs/concepts/components/_toc.yaml
-- title: "Driverss"
+- title: "Drivers"
   section:
   - include: /docs/concepts/drivers/_toc.yaml
 - title: "Filesystems"
