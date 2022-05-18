@@ -186,16 +186,16 @@ Do the following:
    ffx:
      abi-revision: 0xA56735A6690E09D8
      api-level: 8
-     build-version: 2022-05-10T20:02:12+00:00
-     integration-commit-hash: ab1b36a655790b34953d9b7a456077ff97a03a88
-     integration-commit-time: Tue, 10 May 2022 20:02:12 +0000
+     build-version: 2022-05-11T14:03:19+00:00
+     integration-commit-hash: 89d2e94c4ce66fe7abe0350bbf5b4440ff4719e6
+     integration-commit-time: Wed, 11 May 2022 14:03:19 +0000
 
    daemon:
      abi-revision: 0xA56735A6690E09D8
      api-level: 8
-     build-version: 2022-05-10T20:02:12+00:00
-     integration-commit-hash: ab1b36a655790b34953d9b7a456077ff97a03a88
-     integration-commit-time: Tue, 10 May 2022 20:02:12 +0000
+     build-version: 2022-05-11T14:03:19+00:00
+     integration-commit-hash: 89d2e94c4ce66fe7abe0350bbf5b4440ff4719e6
+     integration-commit-time: Wed, 11 May 2022 14:03:19 +0000
    ```
 
    At this point, you only need to confirm that you can run this `ffx` command
@@ -258,7 +258,7 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx emu start workstation.qemu-x64 --headless --kernel-args "driver_manager.use_driver_framework_v2=true" --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" -- kernel-args "devmgr.enable-ephemeral=true"
-   Logging to "/usr/local/google/home/alice/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
+   Logging to "/home/alice/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
    Waiting for Fuchsia to start (up to 60 seconds).
    Emulator is ready.
    ```
@@ -364,23 +364,25 @@ Do the following:
 2. Build and publish the `qemu_edu` driver component:
 
    ```posix-terminal
-   bazel run --config=fuchsia_x64 src/qemu_edu:pkg.component
+   bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ bazel run --config=fuchsia_x64 src/qemu_edu:pkg.component
+   $ bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
    INFO: Analyzed target //src/qemu_edu:pkg.component (7 packages loaded, 164 targets configured).
    INFO: Found 1 target...
    Target //src/qemu_edu:pkg.component up-to-date:
      bazel-bin/src/qemu_edu/pkg.component_run_component.sh
-   INFO: Elapsed time: 1.784s, Critical Path: 0.42s
-   INFO: 21 processes: 12 internal, 8 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 21 total actions
-   INFO: Build completed successfully, 21 total actions
+   INFO: Elapsed time: 1.353s, Critical Path: 0.60s
+   INFO: 6 processes: 1 internal, 4 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 6 total actions
+   INFO: Build completed successfully, 6 total actions
    added repository bazel.pkg.component
-   Notifying the driver manager that there might be a new version of fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
+   Registering fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
+   Successfully bound:
+   Node 'root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_', Driver 'fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm'.
    ```
 
 3. Verify that the `qemu_edu` driver is now loaded to the Fuchsia emulator
@@ -813,7 +815,7 @@ Do the following:
 1. Rebuild and run the modified sample driver:
 
    ```posix-terminal
-   bazel run --config=fuchsia_x64 src/qemu_edu:pkg.component
+   bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
    ```
 
 1. Run the tools component:
