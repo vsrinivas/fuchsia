@@ -21,16 +21,16 @@ use packet_formats::{
 };
 
 use crate::{
-    context::{FrameContext, InstantContext},
+    context::{CounterContext, FrameContext, InstantContext},
     error::ExistsError,
     ip::{
         self,
         device::{
             self, add_ipv6_addr_subnet,
             dad::{DadHandler, Ipv6DeviceDadContext, Ipv6LayerDadContext},
-            del_ipv6_addr_core, get_ipv4_addr_subnet, get_ipv4_device_state, get_ipv6_device_state,
-            get_ipv6_hop_limit, is_ipv4_routing_enabled, is_ipv6_routing_enabled,
-            iter_ipv4_devices, iter_ipv6_devices,
+            del_ipv6_addr_with_reason, get_ipv4_addr_subnet, get_ipv4_device_state,
+            get_ipv6_device_state, get_ipv6_hop_limit, is_ipv4_routing_enabled,
+            is_ipv6_routing_enabled, iter_ipv4_devices, iter_ipv6_devices,
             route_discovery::{Ipv6RouteDiscoveryState, Ipv6RouteDiscoveryStateContext},
             router_solicitation::{Ipv6DeviceRsContext, Ipv6LayerRsContext},
             send_ip_frame,
@@ -38,7 +38,7 @@ use crate::{
                 SlaacAddressEntry, SlaacAddressEntryMut, SlaacConfiguration, SlaacStateContext,
             },
             state::{
-                AddrConfig, AddressState, IpDeviceConfiguration, IpDeviceState,
+                AddrConfig, AddressState, DelIpv6AddrReason, IpDeviceConfiguration, IpDeviceState,
                 Ipv4DeviceConfiguration, Ipv6AddressEntry, Ipv6DeviceConfiguration, SlaacConfig,
             },
             IpDeviceIpExt,
@@ -66,7 +66,9 @@ use crate::{
 /// [RFC 4861 section 4.5]: https://tools.ietf.org/html/rfc4861#section-4.5
 pub(super) const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
 
-impl<C: device::Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler> SlaacStateContext for C {
+impl<C: device::Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler + CounterContext>
+    SlaacStateContext for C
+{
     fn get_config(&self, device_id: Self::DeviceId) -> SlaacConfiguration {
         let Ipv6DeviceConfiguration {
             dad_transmits: _,
@@ -140,8 +142,14 @@ impl<C: device::Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler> SlaacStateCon
     }
 
     fn remove_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>) {
-        let _: Ipv6AddressEntry<_> =
-            del_ipv6_addr_core(self, &mut (), device_id, &addr.into_specified()).unwrap();
+        del_ipv6_addr_with_reason(
+            self,
+            &mut (),
+            device_id,
+            &addr.into_specified(),
+            DelIpv6AddrReason::ManualAction,
+        )
+        .unwrap()
     }
 }
 

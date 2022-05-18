@@ -18,7 +18,7 @@ use core::{num::NonZeroU8, time::Duration};
 use net_types::ip::IpVersion;
 use net_types::{
     ip::{AddrSubnet, Ip, IpAddress as _, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
-    MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
+    MulticastAddr, SpecifiedAddr,
 };
 use packet::{BufferMut, EmptyBuf, Serializer};
 
@@ -392,6 +392,8 @@ fn disable_ipv6_device<
     ctx: &mut C,
     device_id: SC::DeviceId,
 ) {
+    SlaacHandler::remove_all_slaac_addresses(sync_ctx, device_id);
+
     RouteDiscoveryHandler::invalidate_routes(sync_ctx, device_id);
 
     RsHandler::stop_router_solicitation(sync_ctx, device_id);
@@ -800,32 +802,6 @@ pub(crate) fn del_ipv4_addr<
         .map(|addr| sync_ctx.on_event(IpDeviceEvent::AddressUnassigned { device: device_id, addr }))
 }
 
-fn del_ipv6_addr_core<SC: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler, C>(
-    sync_ctx: &mut SC,
-    _ctx: &mut C,
-    device_id: SC::DeviceId,
-    addr: &SpecifiedAddr<Ipv6Addr>,
-) -> Result<Ipv6AddressEntry<SC::Instant>, NotFoundError> {
-    let entry = sync_ctx.get_ip_device_state_mut(device_id).ip_state.remove_addr(&addr)?;
-    // TODO(https://fxbug.dev/69196): Give `addr` the type
-    // `UnicastAddr<Ipv6Addr>` for IPv6 instead of doing this
-    // dynamic check here and statically guarantee only unicast
-    // addresses are added for IPv6.
-    let addr = UnicastAddr::new(addr.get()).expect("unicast address");
-    DadHandler::stop_duplicate_address_detection(sync_ctx, device_id, addr);
-    leave_ip_multicast(sync_ctx, &mut (), device_id, addr.to_solicited_node_address());
-
-    match entry.state {
-        AddressState::Assigned => sync_ctx.on_event(IpDeviceEvent::AddressUnassigned {
-            device: device_id,
-            addr: entry.addr_sub.to_witness(),
-        }),
-        AddressState::Tentative { .. } => {}
-    }
-
-    Ok(entry)
-}
-
 /// Removes an IPv6 address and associated subnet from this device.
 pub(crate) fn del_ipv6_addr_with_reason<
     SC: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler + SlaacHandler,
@@ -837,11 +813,23 @@ pub(crate) fn del_ipv6_addr_with_reason<
     addr: &SpecifiedAddr<Ipv6Addr>,
     reason: DelIpv6AddrReason,
 ) -> Result<(), NotFoundError> {
-    let entry = del_ipv6_addr_core(sync_ctx, &mut (), device_id, addr)?;
+    let Ipv6AddressEntry { addr_sub, state, config, deprecated: _ } =
+        sync_ctx.get_ip_device_state_mut(device_id).ip_state.remove_addr(&addr)?;
+    let addr = addr_sub.addr();
+    DadHandler::stop_duplicate_address_detection(sync_ctx, device_id, addr);
+    leave_ip_multicast(sync_ctx, &mut (), device_id, addr.to_solicited_node_address());
 
-    match entry.config {
+    match state {
+        AddressState::Assigned => sync_ctx.on_event(IpDeviceEvent::AddressUnassigned {
+            device: device_id,
+            addr: addr_sub.to_witness(),
+        }),
+        AddressState::Tentative { .. } => {}
+    }
+
+    match config {
         AddrConfig::Slaac(s) => {
-            SlaacHandler::on_address_removed(sync_ctx, device_id, *entry.addr_sub(), s, reason)
+            SlaacHandler::on_address_removed(sync_ctx, device_id, addr_sub, s, reason)
         }
         AddrConfig::Manual => {}
     }

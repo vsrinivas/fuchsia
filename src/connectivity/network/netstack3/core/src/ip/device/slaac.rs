@@ -236,6 +236,9 @@ pub(crate) trait SlaacHandler: IpDeviceIdContext<Ipv6> + InstantContext {
         state: SlaacConfig<Self::Instant>,
         reason: DelIpv6AddrReason,
     );
+
+    /// Removes all SLAAC addresses assigned to the device.
+    fn remove_all_slaac_addresses(&mut self, device_id: Self::DeviceId);
 }
 
 impl<C: SlaacContext> SlaacHandler for C {
@@ -719,6 +722,16 @@ impl<C: SlaacContext> SlaacHandler for C {
             NonZeroDuration::new(preferred_for).map(NonZeroNdpLifetime::Finite),
             &addr_sub.subnet(),
         );
+    }
+
+    fn remove_all_slaac_addresses(&mut self, device_id: Self::DeviceId) {
+        self.iter_slaac_addrs(device_id)
+            .map(|a| a.addr_sub.addr())
+            .collect::<Vec<_>>()
+            .into_iter()
+            .for_each(|addr| {
+                self.remove_slaac_addr(device_id, &addr);
+            })
     }
 }
 
@@ -1378,14 +1391,40 @@ fn add_slaac_addr_sub<C: SlaacContext>(
 mod tests {
     use core::convert::TryFrom as _;
 
+    use assert_matches::assert_matches;
     use net_declare::net::ip_v6;
+    use net_types::{ethernet::Mac, ip::Ip as _, LinkLocalAddress as _};
+    use packet::{Buf, InnerPacketBuilder as _, Serializer as _};
+    use packet_formats::{
+        icmp::{
+            ndp::{
+                options::{NdpOptionBuilder, PrefixInformation},
+                OptionSequenceBuilder, RouterAdvertisement,
+            },
+            IcmpPacketBuilder, IcmpUnusedCode,
+        },
+        ip::Ipv6Proto,
+        ipv6::Ipv6PacketBuilder,
+    };
     use test_case::test_case;
 
     use super::*;
     use crate::{
-        context::testutil::{DummyCtx, DummyInstant, DummyTimerCtxExt as _},
-        ip::DummyDeviceId,
-        testutil::{assert_empty, FakeCryptoRng},
+        context::testutil::{
+            DummyCtx, DummyInstant, DummyInstantRange as _v, DummyTimerCtxExt as _,
+        },
+        device::FrameDestination,
+        ip::{
+            device::{
+                get_assigned_ipv6_addr_subnets, integration::REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
+            },
+            receive_ipv6_packet, DummyDeviceId,
+        },
+        testutil::{
+            assert_empty, DummyEventDispatcher, DummyEventDispatcherConfig, FakeCryptoRng,
+            TestIpExt as _,
+        },
+        Ctx, StackStateBuilder,
     };
 
     struct MockSlaacContext {
@@ -2365,5 +2404,190 @@ mod tests {
             (third_invalidate_timer_id, third_valid_until),
             (third_regenerate_timer_id, third_preferred_until - regen_advance.get()),
         ]);
+    }
+
+    fn build_slaac_ra_packet(
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+        prefix: Ipv6Addr,
+        prefix_length: u8,
+        preferred_lifetime_secs: u32,
+        valid_lifetime_secs: u32,
+    ) -> Buf<Vec<u8>> {
+        let p = PrefixInformation::new(
+            prefix_length,
+            false, /* on_link_flag */
+            true,  /* autonomous_address_configuration_flag */
+            valid_lifetime_secs,
+            preferred_lifetime_secs,
+            prefix,
+        );
+        let options = &[NdpOptionBuilder::PrefixInformation(p)];
+        OptionSequenceBuilder::new(options.iter())
+            .into_serializer()
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                src_ip,
+                dst_ip,
+                IcmpUnusedCode,
+                RouterAdvertisement::new(0, false, false, 0, 0, 0),
+            ))
+            .encapsulate(Ipv6PacketBuilder::new(
+                src_ip,
+                dst_ip,
+                REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
+                Ipv6Proto::Icmpv6,
+            ))
+            .serialize_vec_outer()
+            .unwrap()
+            .unwrap_b()
+    }
+
+    #[test]
+    fn integration_remove_all_addresses_on_ipv6_disable() {
+        let DummyEventDispatcherConfig {
+            local_mac,
+            remote_mac,
+            local_ip: _,
+            remote_ip: _,
+            subnet: _,
+        } = Ipv6::DUMMY_CONFIG;
+
+        const ONE_HOUR: NonZeroDuration = NonZeroDuration::from_nonzero_secs(
+            const_unwrap::const_unwrap_option(NonZeroU64::new(ONE_HOUR_AS_SECS as u64)),
+        );
+        const TWO_HOURS: NonZeroDuration = NonZeroDuration::from_nonzero_secs(
+            const_unwrap::const_unwrap_option(NonZeroU64::new(TWO_HOURS_AS_SECS as u64)),
+        );
+
+        let mut ctx: crate::testutil::DummyCtx = Ctx::new(
+            {
+                let mut stack_builder = StackStateBuilder::default();
+
+                let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
+                ipv6_config.dad_transmits = None;
+                ipv6_config.max_router_solicitations = None;
+                ipv6_config.slaac_config = SlaacConfiguration {
+                    enable_stable_addresses: true,
+                    temporary_address_configuration: Some(TemporarySlaacAddressConfiguration {
+                        temp_valid_lifetime: ONE_HOUR,
+                        temp_preferred_lifetime: ONE_HOUR,
+                        temp_idgen_retries: 0,
+                        secret_key: SECRET_KEY,
+                    }),
+                };
+                stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
+
+                stack_builder.build()
+            },
+            DummyEventDispatcher::default(),
+            Default::default(),
+        );
+        let device_id =
+            ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let set_ip_enabled = |ctx: &mut crate::testutil::DummyCtx, enabled| {
+            crate::ip::device::set_ipv6_configuration(ctx, &mut (), device_id, {
+                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
+                config.ip_config.ip_enabled = enabled;
+                config
+            })
+        };
+        set_ip_enabled(&mut ctx, true /* enabled */);
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
+
+        // Generate stable and temporary SLAAC addresses.
+        receive_ipv6_packet(
+            &mut ctx,
+            device_id,
+            FrameDestination::Multicast,
+            build_slaac_ra_packet(
+                remote_mac.to_ipv6_link_local().addr().get(),
+                Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+                SUBNET.network(),
+                SUBNET.prefix(),
+                u32::try_from(TWO_HOURS.get().as_secs()).unwrap(),
+                u32::try_from(TWO_HOURS.get().as_secs()).unwrap(),
+            ),
+        );
+
+        let stable_addr_sub =
+            calculate_addr_sub(SUBNET, local_mac.to_eui64_with_magic(Mac::DEFAULT_EUI_MAGIC));
+
+        let addrs = get_assigned_ipv6_addr_subnets(&ctx, &mut (), device_id)
+            .filter(|a| !a.addr().is_link_local())
+            .collect::<Vec<_>>();
+        let (stable_addr_sub, temp_addr_sub) = assert_matches!(
+            addrs[..],
+            [a1, a2] => {
+                let a1 = a1.to_unicast();
+                let a2 = a2.to_unicast();
+
+                assert_eq!(a1.subnet(), SUBNET);
+                assert_eq!(a2.subnet(), SUBNET);
+                assert_ne!(a1, a2);
+
+                if a1 == stable_addr_sub {
+                    (a1, a2)
+                } else {
+                    (a2, a1)
+                }
+            }
+        );
+        let now = ctx.now();
+        let stable_addr_lifetime_until = now + TWO_HOURS.get();
+        let temp_addr_lifetime_until = now + ONE_HOUR.get();
+
+        // Account for the desync factor:
+        //
+        // Per RFC 8981 Section 3.8:
+        //    MAX_DESYNC_FACTOR
+        //       0.4 * TEMP_PREFERRED_LIFETIME.  Upper bound on DESYNC_FACTOR.
+        //
+        //       |  Rationale: Setting MAX_DESYNC_FACTOR to 0.4
+        //       |  TEMP_PREFERRED_LIFETIME results in addresses that have
+        //       |  statistically different lifetimes, and a maximum of three
+        //       |  concurrent temporary addresses when the default values
+        //       |  specified in this section are employed.
+        //    DESYNC_FACTOR
+        //       A random value within the range 0 - MAX_DESYNC_FACTOR.  It
+        //       is computed each time a temporary address is generated, and
+        //       is associated with the corresponding address.  It MUST be
+        //       smaller than (TEMP_PREFERRED_LIFETIME - REGEN_ADVANCE).
+        let temp_addr_preferred_until_end = now + ONE_HOUR.get();
+        let temp_addr_preferred_until_start =
+            temp_addr_preferred_until_end - ((ONE_HOUR.get() * 3) / 5);
+        ctx.ctx.timer_ctx().assert_some_timers_installed([
+            (
+                SlaacTimerId::new_invalidate_slaac_address(device_id, stable_addr_sub.addr())
+                    .into(),
+                stable_addr_lifetime_until.as_dyn(),
+            ),
+            (
+                SlaacTimerId::new_deprecate_slaac_address(device_id, stable_addr_sub.addr()).into(),
+                stable_addr_lifetime_until.as_dyn(),
+            ),
+            (
+                SlaacTimerId::new_invalidate_slaac_address(device_id, temp_addr_sub.addr()).into(),
+                temp_addr_lifetime_until.as_dyn(),
+            ),
+            (
+                SlaacTimerId::new_deprecate_slaac_address(device_id, temp_addr_sub.addr()).into(),
+                (temp_addr_preferred_until_start..temp_addr_preferred_until_end).as_dyn(),
+            ),
+            (
+                SlaacTimerId::new_regenerate_temporary_slaac_address(device_id, temp_addr_sub)
+                    .into(),
+                (temp_addr_preferred_until_start - MIN_REGEN_ADVANCE.get()
+                    ..temp_addr_preferred_until_end - MIN_REGEN_ADVANCE.get())
+                    .as_dyn(),
+            ),
+        ]);
+
+        // Disabling IP should remove all the SLAAC addresses.
+        set_ip_enabled(&mut ctx, false /* enabled */);
+        let addrs = get_assigned_ipv6_addr_subnets(&ctx, &mut (), device_id)
+            .filter(|a| !a.addr().is_link_local())
+            .collect::<Vec<_>>();
+        assert_matches!(addrs[..], []);
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
     }
 }

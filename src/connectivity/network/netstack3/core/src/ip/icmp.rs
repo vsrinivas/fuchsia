@@ -3782,6 +3782,10 @@ mod tests {
         ) {
             unimplemented!()
         }
+
+        fn remove_all_slaac_addresses(&mut self, _device_id: Self::DeviceId) {
+            unimplemented!()
+        }
     }
 
     #[test]
