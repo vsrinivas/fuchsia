@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_hardware_block_volume::VolumeManagerMarker,
     fidl_fuchsia_identity_account::{AccountManagerMarker, AccountManagerProxy, AccountProxy},
-    fidl_fuchsia_identity_credential::{CredentialManagerMarker, CredentialManagerProxy},
+    fidl_fuchsia_identity_credential::{ManagerMarker, ManagerProxy},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_tpm_cr50::PinWeaverMarker,
     fuchsia_async::{
@@ -140,7 +140,7 @@ impl TestEnv {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol::<CredentialManagerMarker>())
+                    .capability(Capability::protocol::<ManagerMarker>())
                     .from(&credential_manager)
                     .to(&password_authenticator),
             )
@@ -152,7 +152,7 @@ impl TestEnv {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol::<CredentialManagerMarker>())
+                    .capability(Capability::protocol::<ManagerMarker>())
                     .from(&credential_manager)
                     .to(Ref::parent()),
             )
@@ -366,10 +366,10 @@ impl TestEnv {
             .expect("connect to account manager")
     }
 
-    pub fn credential_manager(&self) -> CredentialManagerProxy {
+    pub fn credential_manager(&self) -> ManagerProxy {
         self.realm_instance
             .root
-            .connect_to_protocol_at_exposed_dir::<CredentialManagerMarker>()
+            .connect_to_protocol_at_exposed_dir::<ManagerMarker>()
             .expect("connect to credential manager")
     }
 }

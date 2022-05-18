@@ -495,7 +495,7 @@
             {
                 source_moniker: "/core/account/credential_manager",
                 source: "component",
-                source_name: "fuchsia.identity.credential.CredentialManager",
+                source_name: "fuchsia.identity.credential.Manager",
                 capability: "protocol",
                 target_monikers: [
                     "/core/account/credential_manager",

@@ -10,7 +10,7 @@ mod pinweaver;
 mod provision;
 
 use anyhow::{Context, Error};
-use fidl_fuchsia_identity_credential::{CredentialManagerRequestStream, ResetRequestStream};
+use fidl_fuchsia_identity_credential::{ManagerRequestStream, ResetRequestStream};
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_tpm_cr50::PinWeaverMarker;
 use fuchsia_async as fasync;
@@ -33,7 +33,7 @@ use crate::{
 pub const HASH_TREE_PATH: &str = "/data/hash_tree";
 
 enum Services {
-    CredentialManager(CredentialManagerRequestStream),
+    CredentialManager(ManagerRequestStream),
     Reset(ResetRequestStream),
 }
 

@@ -12,8 +12,8 @@ use {
     },
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_identity_credential::{
-        self as fcred, CredentialError, CredentialManagerRequest, CredentialManagerRequestStream,
-        ResetError, ResetRequest, ResetRequestStream,
+        self as fcred, CredentialError, ManagerRequest, ManagerRequestStream, ResetError,
+        ResetRequest, ResetRequestStream,
     },
     fidl_fuchsia_tpm_cr50::TryAuthResponse,
     futures::{lock::Mutex, prelude::*},
@@ -71,10 +71,7 @@ where
     }
 
     /// Serially process a stream of incoming CredentialManager FIDL requests.
-    pub async fn handle_requests_for_stream(
-        &self,
-        mut request_stream: CredentialManagerRequestStream,
-    ) {
+    pub async fn handle_requests_for_stream(&self, mut request_stream: ManagerRequestStream) {
         while let Some(request) = request_stream.try_next().await.expect("read request") {
             self.handle_request(request)
                 .unwrap_or_else(|e| {
@@ -100,9 +97,9 @@ where
     /// This request can either add, remove or check a credential. It is important
     /// that only one request is processed at a time as the |pinweaver| protocol
     /// can only handle communicating with a single object.
-    async fn handle_request(&self, request: CredentialManagerRequest) -> Result<(), Error> {
+    async fn handle_request(&self, request: ManagerRequest) -> Result<(), Error> {
         match request {
-            CredentialManagerRequest::AddCredential { params, responder } => {
+            ManagerRequest::AddCredential { params, responder } => {
                 let mut resp = self.add_credential(&params).await;
                 responder.send(&mut resp).context("sending AddCredential response")?;
                 self.diagnostics.incoming_manager_outcome(
@@ -110,13 +107,13 @@ where
                     resp.map(|_| ()),
                 );
             }
-            CredentialManagerRequest::RemoveCredential { label, responder } => {
+            ManagerRequest::RemoveCredential { label, responder } => {
                 let mut resp = self.remove_credential(label).await;
                 responder.send(&mut resp).context("sending RemoveLabel response")?;
                 self.diagnostics
                     .incoming_manager_outcome(IncomingManagerMethod::RemoveCredential, resp);
             }
-            CredentialManagerRequest::CheckCredential { params, responder } => {
+            ManagerRequest::CheckCredential { params, responder } => {
                 let mut resp = self.check_credential(&params).await;
                 responder.send(&mut resp).context("sending CheckCredential response")?;
                 self.diagnostics.incoming_manager_outcome(
@@ -296,7 +293,7 @@ mod test {
         },
         assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_identity_credential::{CredentialError as CE, CredentialManagerMarker},
+        fidl_fuchsia_identity_credential::{CredentialError as CE, ManagerMarker},
         fidl_fuchsia_tpm_cr50::{TryAuthFailed, TryAuthRateLimited, TryAuthSuccess},
         fuchsia_async as fasync,
         tempfile::TempDir,
@@ -695,7 +692,7 @@ mod test {
         params.lookup_table.expect_write().times(1).returning(|_, _| Ok(()));
         let test = TestHarness::create(params).await;
 
-        let (proxy, request_stream) = create_proxy_and_stream::<CredentialManagerMarker>().unwrap();
+        let (proxy, request_stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
         fasync::Task::spawn(async move {
             proxy
                 .add_credential(fcred::AddCredentialParams {

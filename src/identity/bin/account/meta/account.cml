@@ -34,7 +34,7 @@
             to: "#credential_manager",
         },
         {
-            protocol: [ "fuchsia.identity.credential.CredentialManager" ],
+            protocol: [ "fuchsia.identity.credential.Manager" ],
             from: "#credential_manager",
             to: "#password_authenticator",
         },

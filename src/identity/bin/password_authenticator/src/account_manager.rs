@@ -18,7 +18,7 @@ use fidl::endpoints::{ControlHandle, ServerEnd};
 use fidl_fuchsia_identity_account::{
     self as faccount, AccountManagerRequest, AccountManagerRequestStream, AccountMarker,
 };
-use fidl_fuchsia_identity_credential::{CredentialManagerMarker, CredentialManagerProxy};
+use fidl_fuchsia_identity_credential::{ManagerMarker, ManagerProxy};
 use fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream};
 use fuchsia_component::client::connect_to_protocol;
 use futures::{lock::Mutex, prelude::*};
@@ -48,10 +48,10 @@ pub struct EnvCredManagerProvider {}
 /// A CredManagerProvider that opens a new connection to the CredentialManager in our incoming
 /// namespace whenever a CredManager instance is requested.
 impl CredManagerProvider for EnvCredManagerProvider {
-    type CM = CredentialManagerProxy;
+    type CM = ManagerProxy;
 
     fn new_cred_manager(&self) -> Result<Self::CM, anyhow::Error> {
-        let proxy = connect_to_protocol::<CredentialManagerMarker>().map_err(|err| {
+        let proxy = connect_to_protocol::<ManagerMarker>().map_err(|err| {
             error!("unable to connect to credential manager from environment: {:?}", err);
             err
         })?;

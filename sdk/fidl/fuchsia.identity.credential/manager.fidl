@@ -36,16 +36,16 @@ type CheckCredentialResponse = table {
     1: he_secret HeSecret;
 };
 
-/// CredentialManager manages the overall state of low entropy secrets,
+/// Manager manages the overall state of low entropy secrets,
 /// such as knowleged-based authentication factors, on a Fuchsia device.
 /// This includes inserting, deleting and validating credentials. With
 /// anti-hammering support built in to prevent pin brute forcing.
 ///
-/// The CredentialManager is the core of the credential management system and
+/// The Manager is the core of the credential management system and
 /// is intended only for use by highly trusted components such as the
 /// Password Authenticator.
 @discoverable
-protocol CredentialManager {
+protocol Manager {
     /// Adds a low entropy credential into the system.
     /// `params` see `AddCredentialParams`.
     /// Success returns a label for the newly provisioned credential. This

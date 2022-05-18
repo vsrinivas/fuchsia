@@ -11,7 +11,7 @@ use {
         scrypt::{ScryptError, ScryptParams},
     },
     async_trait::async_trait,
-    fidl_fuchsia_identity_credential::{self as fcred, CredentialManagerProxy},
+    fidl_fuchsia_identity_credential::{self as fcred, ManagerProxy},
     fuchsia_zircon as zx,
     hmac::{Hmac, Mac, NewMac},
     lazy_static::lazy_static,
@@ -132,7 +132,7 @@ lazy_static! {
 }
 
 #[async_trait]
-impl CredManager for CredentialManagerProxy {
+impl CredManager for ManagerProxy {
     /// Makes a request to the `CredentialManager` server represented by `self` to add the
     /// high-entropy secret `he_secret`, guarded by the low-entropy secret `le_secret`, with a
     /// delay schedule that rate-limits retrieval attempts.
