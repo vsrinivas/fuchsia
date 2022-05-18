@@ -2,8 +2,50 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::format_err;
+use fidl::endpoints::Proxy;
+use fidl_fuchsia_device::ControllerMarker;
 use fidl_fuchsia_io as fio;
 use fuchsia_async::futures::TryStreamExt;
+
+/// Waits for a device to appear within `dev_dir` that has a topological path
+/// that matches `topo_path`. Returns the path of the found device within
+/// `dev_dir`. If no topological path match is found this function will wait
+/// forever.
+pub async fn wait_for_device_topo_path(
+    dev_dir: &fio::DirectoryProxy,
+    topo_path: &str,
+) -> Result<String, anyhow::Error> {
+    let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
+        dev_dir,
+        fio::OpenFlags::RIGHT_READABLE,
+    )?)
+    .await?;
+
+    while let Some(msg) = watcher.try_next().await? {
+        if msg.event != fuchsia_vfs_watcher::WatchEvent::EXISTING
+            && msg.event != fuchsia_vfs_watcher::WatchEvent::ADD_FILE
+        {
+            continue;
+        }
+
+        let filename = msg.filename.to_str().ok_or(format_err!("to_str for filename failed"))?;
+
+        let (controller_proxy, server_end) = fidl::endpoints::create_proxy::<ControllerMarker>()?;
+        fdio::service_connect_at(
+            dev_dir.as_channel().as_ref(),
+            filename,
+            server_end.into_channel().into(),
+        )?;
+
+        if let Ok(Ok(path)) = controller_proxy.get_topological_path().await {
+            if path == topo_path {
+                return Ok(filename.to_string());
+            }
+        }
+    }
+    unreachable!();
+}
 
 async fn wait_for_file(dir: &fio::DirectoryProxy, name: &str) -> Result<(), anyhow::Error> {
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
@@ -76,8 +118,76 @@ pub async fn recursive_wait_and_open_node(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_device as fdev;
     use fuchsia_async as fasync;
-    use vfs::directory::entry::DirectoryEntry;
+    use std::sync::Arc;
+    use vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::vmo::read_only_static,
+    };
+
+    fn create_controller_service(topo_path: String) -> Arc<vfs::service::Service> {
+        vfs::service::host(move |mut stream: fdev::ControllerRequestStream| {
+            let topo_path = topo_path.clone();
+            async move {
+                match stream.try_next().await.unwrap() {
+                    Some(fdev::ControllerRequest::GetTopologicalPath { responder }) => {
+                        let _ = responder.send(&mut Ok(topo_path));
+                    }
+                    e => panic!("Unexpected request: {:?}", e),
+                }
+            }
+        })
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn wait_for_device_by_topological_path() {
+        let dir = vfs::pseudo_directory! {
+          "a" => create_controller_service("/dev/test0/a/dev".to_string()),
+          "1" => create_controller_service("/dev/test1/1/dev".to_string()),
+          "x" => create_controller_service("/dev/test2/x/dev".to_string()),
+          "y" => create_controller_service("/dev/test3/y/dev".to_string()),
+        };
+
+        let (dir_proxy, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let scope = ExecutionScope::new();
+        dir.open(
+            scope,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            vfs::path::Path::dot(),
+            fidl::endpoints::ServerEnd::new(remote.into_channel()),
+        );
+
+        let path = wait_for_device_topo_path(&dir_proxy, "/dev/test2/x/dev").await.unwrap();
+        assert_eq!("x", path);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn wait_for_device_topo_path_allows_files_and_dirs() {
+        let dir = vfs::pseudo_directory! {
+          "1" => vfs::pseudo_directory! {
+            "test" => read_only_static("test file 1"),
+            "test2" => read_only_static("test file 2"),
+          },
+          "2" => read_only_static("file 2"),
+          "x" => create_controller_service("/dev/test2/x/dev".to_string()),
+          "3" => read_only_static("file 3"),
+        };
+
+        let (dir_proxy, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let scope = ExecutionScope::new();
+        dir.open(
+            scope,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            vfs::path::Path::dot(),
+            fidl::endpoints::ServerEnd::new(remote.into_channel()),
+        );
+
+        let path = wait_for_device_topo_path(&dir_proxy, "/dev/test2/x/dev").await.unwrap();
+        assert_eq!("x", path);
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn open_two_directories() {
