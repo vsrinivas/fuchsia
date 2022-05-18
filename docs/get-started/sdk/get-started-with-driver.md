@@ -742,28 +742,37 @@ instance.
 
 The tasks include:
 
-*   Reboot the emulator instance to unload the `qemu_edu` driver.
+*   Restart the emulator instance to unload the `qemu_edu` driver.
 *   Update the source code of the `qemu_edu` driver.
 *   Load the updated driver.
 *   Run the tools component to verify the change.
 
 Do the following:
 
-1. Reboot the emulator instance:
+1. Stop the emulator instance:
 
    ```posix-terminal
-   tools/ffx target reboot
+   tools/ffx emu stop
    ```
 
-   This command exits silently without output.
+   This command stops the currently running emulator instance.
 
-2. Use a text editor to open the source code of the sample driver, for example:
+1. Start a new instance of the Fuchsia emulator:
+
+   ```posix-terminal
+   tools/ffx emu start workstation.qemu-x64 --headless --kernel-args "driver_manager.use_driver_framework_v2=true" --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" --kernel-args "devmgr.enable-ephemeral=true"
+   ```
+
+   This command starts a headless emulator instance running the Workstation
+   prebuilt image.
+
+1. Use a text editor to open the source code of the sample driver, for example:
 
    ```posix-terminal
    nano src/qemu_edu/qemu_edu.cc
    ```
 
-3. In the `QemuEduDriver::ComputeFactorial` function,
+1. In the `QemuEduDriver::ComputeFactorial` function,
    between the line
    `uint32_t factorial = mmio_->Read32(regs::kFactorialCompoutationOffset);`
    (Line 192) and the `FDF_SLOG()` call (Line 194), add the following line:
@@ -799,21 +808,21 @@ Do the following:
 
    The function is now updated to return the value of `12345` only.
 
-4. Save the file and close the text editor.
+1. Save the file and close the text editor.
 
-5. Rebuild and run the modified sample driver:
+1. Rebuild and run the modified sample driver:
 
    ```posix-terminal
    bazel run --config=fuchsia_x64 src/qemu_edu:pkg.component
    ```
 
-6. Run the tools component:
+1. Run the tools component:
 
    ```posix-terminal
    bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
    ```
 
-7. To verify that change, view the device logs of the tools component:
+1. To verify that change, view the device logs of the tools component:
 
    ```posix-terminal
    tools/ffx log --filter eductl dump
