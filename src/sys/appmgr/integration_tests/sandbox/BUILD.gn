@@ -2,13 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
 import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 group("sandbox") {
   testonly = true
   deps = [
     ":has_pkg",
-    ":path-traversal-escape",
+    ":path-traversal-escape-package",
     "features",
     "services",
   ]
@@ -42,12 +43,34 @@ sandbox_test_package("has_pkg") {
   environments = basic_envs
 }
 
-sandbox_test_package("path-traversal-escape") {
+test("path_traversal_escape") {
   sources = [ "path_traversal_escape.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_llcpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fidl",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
-  environments = basic_envs
+}
+
+fuchsia_test_component("path-traversal-escape") {
+  manifest = "meta/path-traversal-escape.cml"
+  deps = [ ":path_traversal_escape" ]
+}
+
+# This is specifically a CFv1 component to test the path behavior of appmgr. Do
+# not convert this component to CFv2. This can be deleted when appmgr is
+# deleted.
+fuchsia_test_component("path-traversal-escape-child") {
+  manifest = "meta/path-traversal-escape-child.cmx"
+  deps = [ ":path_traversal_escape" ]
+}
+
+fuchsia_test_package("path-traversal-escape-package") {
+  package_name = "path-traversal-escape"
+  test_components = [ ":path-traversal-escape" ]
+  deps = [ ":path-traversal-escape-child" ]
 }

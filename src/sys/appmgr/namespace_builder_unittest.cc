@@ -24,10 +24,8 @@ TEST(NamespaceBuilder, SystemData) {
   rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
   rapidjson::Value system_array(rapidjson::kArrayType);
   system_array.PushBack("deprecated-data", allocator);
-  system_array.PushBack("deprecated-data/", allocator);
   system_array.PushBack("deprecated-data/subdir", allocator);
   system_array.PushBack("data", allocator);
-  system_array.PushBack("data/", allocator);
   system_array.PushBack("data/subdir", allocator);
   document.AddMember("system", system_array, allocator);
   rapidjson::Value services_array(rapidjson::kArrayType);
@@ -35,7 +33,8 @@ TEST(NamespaceBuilder, SystemData) {
   SandboxMetadata sandbox;
 
   json::JSONParser parser;
-  EXPECT_TRUE(sandbox.Parse(document, &parser));
+  sandbox.Parse(document, &parser);
+  EXPECT_FALSE(parser.HasError()) << parser.error_str();
 
   fbl::unique_fd dir(open(".", O_RDONLY));
   NamespaceBuilder builder = NamespaceBuilder(std::move(dir), "test_namespace");

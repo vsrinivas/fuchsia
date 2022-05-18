@@ -18,23 +18,23 @@ namespace {
 class SandboxMetadataTest : public ::testing::Test {
  protected:
   void ExpectFailedParse(const std::string& json, const std::string& expected_error) {
-    std::string error;
     SandboxMetadata sandbox;
-    EXPECT_FALSE(ParseFrom(&sandbox, json, &error));
+    std::optional parse_error = ParseFrom(&sandbox, json);
     EXPECT_TRUE(sandbox.IsNull());
-    EXPECT_THAT(error, ::testing::HasSubstr(expected_error));
+    ASSERT_TRUE(parse_error.has_value());
+    EXPECT_THAT(*parse_error, ::testing::HasSubstr(expected_error));
   }
 
-  bool ParseFrom(SandboxMetadata* sandbox, const std::string& json, std::string* error) {
+  std::optional<std::string> ParseFrom(SandboxMetadata* sandbox, const std::string& json) {
     json::JSONParser parser;
     rapidjson::Document document = parser.ParseFromString(json, "test_file");
     EXPECT_FALSE(parser.HasError());
     EXPECT_TRUE(sandbox->IsNull());
-    const bool ret = sandbox->Parse(document, &parser);
+    sandbox->Parse(document, &parser);
     if (parser.HasError()) {
-      *error = parser.error_str();
+      return parser.error_str();
     }
-    return ret;
+    return std::nullopt;
   }
 };
 
@@ -45,9 +45,8 @@ TEST_F(SandboxMetadataTest, Parse) {
       "dev": [ "class/input" ]
     })JSON";
     SandboxMetadata sandbox;
-    std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
-    EXPECT_EQ(error, "");
+    std::optional parse_error = ParseFrom(&sandbox, json);
+    EXPECT_FALSE(parse_error.has_value()) << *parse_error;
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.dev(), ::testing::ElementsAre("class/input"));
   }
@@ -58,9 +57,8 @@ TEST_F(SandboxMetadataTest, Parse) {
       "system": [ "data" ]
     })JSON";
     SandboxMetadata sandbox;
-    std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
-    EXPECT_EQ(error, "");
+    std::optional parse_error = ParseFrom(&sandbox, json);
+    EXPECT_FALSE(parse_error.has_value()) << *parse_error;
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.system(), ::testing::ElementsAre("data"));
   }
@@ -71,9 +69,8 @@ TEST_F(SandboxMetadataTest, Parse) {
       "services": [ "fuchsia.sys.Launcher" ]
     })JSON";
     SandboxMetadata sandbox;
-    std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
-    EXPECT_EQ(error, "");
+    std::optional parse_error = ParseFrom(&sandbox, json);
+    EXPECT_FALSE(parse_error.has_value()) << *parse_error;
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.services(), ::testing::ElementsAre("fuchsia.sys.Launcher"));
     EXPECT_TRUE(sandbox.HasService("fuchsia.sys.Launcher"));
@@ -86,9 +83,8 @@ TEST_F(SandboxMetadataTest, Parse) {
       "pkgfs": [ "packages", "versions"]
     })JSON";
     SandboxMetadata sandbox;
-    std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
-    EXPECT_EQ(error, "");
+    std::optional parse_error = ParseFrom(&sandbox, json);
+    EXPECT_FALSE(parse_error.has_value()) << *parse_error;
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.pkgfs(), ::testing::ElementsAre("packages", "versions"));
     EXPECT_TRUE(sandbox.HasPkgFsPath("packages"));
@@ -102,9 +98,8 @@ TEST_F(SandboxMetadataTest, Parse) {
       "features": [ "vulkan", "shell" ]
     })JSON";
     SandboxMetadata sandbox;
-    std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
-    EXPECT_EQ(error, "");
+    std::optional parse_error = ParseFrom(&sandbox, json);
+    EXPECT_FALSE(parse_error.has_value()) << *parse_error;
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.features(), ::testing::ElementsAre("vulkan", "shell"));
     EXPECT_TRUE(sandbox.HasFeature("vulkan"));
@@ -118,9 +113,8 @@ TEST_F(SandboxMetadataTest, Parse) {
       "boot": [ "log" ]
     })JSON";
     SandboxMetadata sandbox;
-    std::string error;
-    EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
-    EXPECT_EQ(error, "");
+    std::optional parse_error = ParseFrom(&sandbox, json);
+    EXPECT_FALSE(parse_error.has_value()) << *parse_error;
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.boot(), ::testing::ElementsAre("log"));
   }

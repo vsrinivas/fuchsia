@@ -4,6 +4,7 @@
 
 #include "src/lib/cmx/program.h"
 
+#include <optional>
 #include <string>
 
 #include <gmock/gmock.h>
@@ -18,25 +19,25 @@ namespace {
 class ProgramMetadataTest : public ::testing::Test {
  protected:
   void ExpectFailedParse(const std::string& json, const std::string& expected_error) {
-    std::string error;
     ProgramMetadata program;
-    EXPECT_FALSE(ParseFrom(&program, json, &error));
+    std::optional parse_error = ParseFrom(&program, json);
     EXPECT_TRUE(program.IsBinaryNull());
     EXPECT_TRUE(program.IsDataNull());
-    EXPECT_THAT(error, ::testing::HasSubstr(expected_error));
+    ASSERT_TRUE(parse_error.has_value());
+    EXPECT_THAT(*parse_error, ::testing::HasSubstr(expected_error));
   }
 
-  bool ParseFrom(ProgramMetadata* program, const std::string& json, std::string* error) {
+  std::optional<std::string> ParseFrom(ProgramMetadata* program, const std::string& json) {
     json::JSONParser parser;
     rapidjson::Document document = parser.ParseFromString(json, "test_file");
     EXPECT_FALSE(parser.HasError());
     EXPECT_TRUE(program->IsBinaryNull());
     EXPECT_TRUE(program->IsDataNull());
-    const bool ret = program->Parse(document, &parser);
+    program->Parse(document, &parser);
     if (parser.HasError()) {
-      *error = parser.error_str();
+      return parser.error_str();
     }
-    return ret;
+    return std::nullopt;
   }
 };
 
@@ -44,9 +45,8 @@ TEST_F(ProgramMetadataTest, ParseBinary) {
   ProgramMetadata program;
   EXPECT_TRUE(program.IsBinaryNull());
   EXPECT_TRUE(program.IsDataNull());
-  std::string error;
-  EXPECT_TRUE(ParseFrom(&program, R"JSON({ "binary": "bin/app" })JSON", &error));
-  EXPECT_FALSE(program.IsBinaryNull());
+  std::optional parse_error = ParseFrom(&program, R"JSON({ "binary": "bin/app" })JSON");
+  EXPECT_FALSE(parse_error.has_value()) << *parse_error;
   EXPECT_TRUE(program.IsDataNull());
   EXPECT_EQ("bin/app", program.binary());
 }
@@ -56,9 +56,9 @@ TEST_F(ProgramMetadataTest, ParseBinaryArgs) {
   EXPECT_TRUE(program.IsBinaryNull());
   EXPECT_TRUE(program.IsArgsNull());
   EXPECT_TRUE(program.IsDataNull());
-  std::string error;
-  EXPECT_TRUE(
-      ParseFrom(&program, R"JSON({ "binary": "bin/app", "args": ["-v", "-q"] })JSON", &error));
+  std::optional parse_error =
+      ParseFrom(&program, R"JSON({ "binary": "bin/app", "args": ["-v", "-q"] })JSON");
+  EXPECT_FALSE(parse_error.has_value()) << *parse_error;
   EXPECT_FALSE(program.IsBinaryNull());
   EXPECT_FALSE(program.IsArgsNull());
   EXPECT_TRUE(program.IsDataNull());
@@ -68,10 +68,11 @@ TEST_F(ProgramMetadataTest, ParseBinaryArgs) {
 }
 
 TEST_F(ProgramMetadataTest, ParseBinaryArgsWithErrors) {
-  std::string error;
   ProgramMetadata program;
-  EXPECT_FALSE(ParseFrom(&program, R"JSON({ "binary": "bin/app", "args": [0, 1] })JSON", &error));
-  EXPECT_THAT(error, ::testing::HasSubstr("'args' contains an item that's not a string"));
+  std::optional parse_error =
+      ParseFrom(&program, R"JSON({ "binary": "bin/app", "args": [0, 1] })JSON");
+  ASSERT_TRUE(parse_error.has_value());
+  EXPECT_THAT(*parse_error, ::testing::HasSubstr("'args' contains an item that's not a string"));
 }
 
 TEST_F(ProgramMetadataTest, ParseBinaryEnvVars) {
@@ -79,9 +80,9 @@ TEST_F(ProgramMetadataTest, ParseBinaryEnvVars) {
   EXPECT_TRUE(program.IsBinaryNull());
   EXPECT_TRUE(program.IsEnvVarsNull());
   EXPECT_TRUE(program.IsDataNull());
-  std::string error;
-  EXPECT_TRUE(ParseFrom(
-      &program, R"JSON({ "binary": "bin/app", "env_vars": ["FOO=1", "BAR=0"] })JSON", &error));
+  std::optional parse_error =
+      ParseFrom(&program, R"JSON({ "binary": "bin/app", "env_vars": ["FOO=1", "BAR=0"] })JSON");
+  EXPECT_FALSE(parse_error.has_value()) << *parse_error;
   EXPECT_FALSE(program.IsBinaryNull());
   EXPECT_FALSE(program.IsEnvVarsNull());
   EXPECT_TRUE(program.IsDataNull());
@@ -91,19 +92,20 @@ TEST_F(ProgramMetadataTest, ParseBinaryEnvVars) {
 }
 
 TEST_F(ProgramMetadataTest, ParseBinaryEnvVarsWithErrors) {
-  std::string error;
   ProgramMetadata program;
-  EXPECT_FALSE(
-      ParseFrom(&program, R"JSON({ "binary": "bin/app", "env_vars": [0, 1] })JSON", &error));
-  EXPECT_THAT(error, ::testing::HasSubstr("'env_vars' contains an item that's not a string"));
+  std::optional parse_error =
+      ParseFrom(&program, R"JSON({ "binary": "bin/app", "env_vars": [0, 1] })JSON");
+  ASSERT_TRUE(parse_error.has_value());
+  EXPECT_THAT(*parse_error,
+              ::testing::HasSubstr("'env_vars' contains an item that's not a string"));
 }
 
 TEST_F(ProgramMetadataTest, ParseData) {
   ProgramMetadata program;
   EXPECT_TRUE(program.IsBinaryNull());
   EXPECT_TRUE(program.IsDataNull());
-  std::string error;
-  EXPECT_TRUE(ParseFrom(&program, R"JSON({ "data": "data/component" })JSON", &error));
+  std::optional parse_error = ParseFrom(&program, R"JSON({ "data": "data/component" })JSON");
+  EXPECT_FALSE(parse_error.has_value()) << *parse_error;
   EXPECT_FALSE(program.IsDataNull());
   EXPECT_TRUE(program.IsBinaryNull());
   EXPECT_EQ("data/component", program.data());
@@ -113,9 +115,9 @@ TEST_F(ProgramMetadataTest, ParseDataWithArgs) {
   ProgramMetadata program;
   EXPECT_TRUE(program.IsBinaryNull());
   EXPECT_TRUE(program.IsDataNull());
-  std::string error;
-  EXPECT_TRUE(
-      ParseFrom(&program, R"JSON({ "data": "data/component", "args": ["-v", "-q"] })JSON", &error));
+  std::optional parse_error =
+      ParseFrom(&program, R"JSON({ "data": "data/component", "args": ["-v", "-q"] })JSON");
+  EXPECT_FALSE(parse_error.has_value()) << *parse_error;
   EXPECT_FALSE(program.IsDataNull());
   EXPECT_TRUE(program.IsBinaryNull());
   EXPECT_EQ("data/component", program.data());
@@ -127,9 +129,9 @@ TEST_F(ProgramMetadataTest, ParseBinaryAndData) {
   ProgramMetadata program;
   EXPECT_TRUE(program.IsBinaryNull());
   EXPECT_TRUE(program.IsDataNull());
-  std::string error;
-  EXPECT_TRUE(
-      ParseFrom(&program, R"JSON({ "binary": "bin/app", "data": "data/component" })JSON", &error));
+  std::optional parse_error =
+      ParseFrom(&program, R"JSON({ "binary": "bin/app", "data": "data/component" })JSON");
+  EXPECT_FALSE(parse_error.has_value()) << *parse_error;
   EXPECT_FALSE(program.IsBinaryNull());
   EXPECT_FALSE(program.IsDataNull());
   EXPECT_EQ("bin/app", program.binary());
@@ -139,9 +141,9 @@ TEST_F(ProgramMetadataTest, ParseBinaryAndData) {
 TEST_F(ProgramMetadataTest, ParseUnknownAttributes) {
   ProgramMetadata program;
   EXPECT_TRUE(program.IsDataNull());
-  std::string error;
-  EXPECT_TRUE(ParseFrom(&program, R"JSON({ "data": "data/runner_data", "flabble": "frobble" })JSON",
-                        &error));
+  std::optional parse_error =
+      ParseFrom(&program, R"JSON({ "data": "data/runner_data", "flabble": "frobble" })JSON");
+  EXPECT_FALSE(parse_error.has_value()) << *parse_error;
   EXPECT_FALSE(program.IsDataNull());
   EXPECT_FALSE(program.IsDataNull());
   ProgramMetadata::Attributes expected_attributes = {{"flabble", "frobble"}};
@@ -151,10 +153,10 @@ TEST_F(ProgramMetadataTest, ParseUnknownAttributes) {
 TEST_F(ProgramMetadataTest, ParseUnknownAttributesWithNonStringValues) {
   ProgramMetadata program;
   EXPECT_TRUE(program.IsDataNull());
-  std::string error;
-  EXPECT_FALSE(
-      ParseFrom(&program, R"JSON({ "data": "data/runner_data", "number": 4 })JSON", &error));
-  EXPECT_THAT(error,
+  std::optional parse_error =
+      ParseFrom(&program, R"JSON({ "data": "data/runner_data", "number": 4 })JSON");
+  ASSERT_TRUE(parse_error.has_value());
+  EXPECT_THAT(*parse_error,
               ::testing::HasSubstr("Extra attributes in 'program' must have string values."));
 }
 

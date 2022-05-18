@@ -16,7 +16,7 @@ constexpr char kArgs[] = "args";
 constexpr char kEnvVars[] = "env_vars";
 constexpr char kData[] = "data";
 
-bool ProgramMetadata::Parse(const rapidjson::Value& program_value, json::JSONParser* json_parser) {
+void ProgramMetadata::Parse(const rapidjson::Value& program_value, json::JSONParser* json_parser) {
   binary_.clear();
   args_.clear();
   data_.clear();
@@ -26,14 +26,14 @@ bool ProgramMetadata::Parse(const rapidjson::Value& program_value, json::JSONPar
 
   if (!program_value.IsObject()) {
     json_parser->ReportError("Program is not an object.");
-    return false;
+    return;
   }
 
   const bool parsed_binary = ParseBinary(program_value, json_parser);
   const bool parsed_data = ParseData(program_value, json_parser);
   if (!parsed_binary && !parsed_data) {
     json_parser->ReportError("Both 'binary' and 'data' in program are missing.");
-    return false;
+    return;
   }
 
   const auto args = program_value.FindMember(kArgs);
@@ -48,11 +48,10 @@ bool ProgramMetadata::Parse(const rapidjson::Value& program_value, json::JSONPar
     }
     if (!member.value.IsString()) {
       json_parser->ReportError("Extra attributes in 'program' must have string values.");
-      return false;
+      return;
     }
     unknown_attributes_.push_back({member.name.GetString(), member.value.GetString()});
   }
-  return !json_parser->HasError();
 }
 
 bool ProgramMetadata::ParseBinary(const rapidjson::Value& program_value,

@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 
+#include <optional>
 #include <string>
 
 #include <gmock/gmock.h>
@@ -21,29 +22,29 @@ namespace {
 class RuntimeMetadataTest : public ::testing::Test {
  protected:
   void ExpectFailedParse(const std::string& json, std::string expected_error) {
-    std::string error;
     RuntimeMetadata runtime;
     std::string json_basename;
-    EXPECT_FALSE(ParseFrom(&runtime, json, &error, &json_basename));
+    std::optional parse_error = ParseFrom(&runtime, json, &json_basename);
     EXPECT_TRUE(runtime.IsNull());
-    EXPECT_THAT(error, ::testing::HasSubstr(expected_error));
+    ASSERT_TRUE(parse_error.has_value());
+    EXPECT_THAT(*parse_error, ::testing::HasSubstr(expected_error));
   }
 
-  bool ParseFrom(RuntimeMetadata* runtime, const std::string& json, std::string* error,
-                 std::string* json_basename) {
+  std::optional<std::string> ParseFrom(RuntimeMetadata* runtime, const std::string& json,
+                                       std::string* json_basename) {
     EXPECT_TRUE(runtime->IsNull());
     json::JSONParser parser;
     std::string json_path;
     if (!tmp_dir_.NewTempFileWithData(json, &json_path)) {
-      return false;
+      return "could not create temporary file";
     }
     *json_basename = files::GetBaseName(json_path);
     const int dirfd = open(tmp_dir_.path().c_str(), O_RDONLY);
-    const bool ret = runtime->ParseFromFileAt(dirfd, files::GetBaseName(json_path), &parser);
+    runtime->ParseFromFileAt(dirfd, files::GetBaseName(json_path), &parser);
     if (parser.HasError()) {
-      *error = parser.error_str();
+      return parser.error_str();
     }
-    return ret;
+    return std::nullopt;
   }
 
  private:
@@ -54,9 +55,9 @@ TEST_F(RuntimeMetadataTest, Parse) {
   // empty
   {
     RuntimeMetadata runtime;
-    std::string error;
     std::string file_unused;
-    EXPECT_TRUE(ParseFrom(&runtime, R"JSON({})JSON", &error, &file_unused));
+    std::optional parse_error = ParseFrom(&runtime, R"JSON({})JSON", &file_unused);
+    EXPECT_FALSE(parse_error.has_value()) << *parse_error;
     EXPECT_TRUE(runtime.IsNull());
     EXPECT_EQ(runtime.runner(), "");
   }
@@ -64,10 +65,10 @@ TEST_F(RuntimeMetadataTest, Parse) {
   // runner
   {
     RuntimeMetadata runtime;
-    std::string error;
     std::string file_unused;
-    EXPECT_TRUE(
-        ParseFrom(&runtime, R"JSON({ "runner": "dart_runner" })JSON", &error, &file_unused));
+    std::optional parse_error =
+        ParseFrom(&runtime, R"JSON({ "runner": "dart_runner" })JSON", &file_unused);
+    EXPECT_FALSE(parse_error.has_value()) << *parse_error;
     EXPECT_FALSE(runtime.IsNull());
     EXPECT_EQ("dart_runner", runtime.runner());
   }

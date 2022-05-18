@@ -215,6 +215,8 @@ The `sandbox` property is a JSON object with the following schema:
 }
 ```
 
+All items must be valid paths in canonical form as defined by fuchsia.io/Path.
+
 The `dev` array contains a list of well-known device directories that are
 provided to the component. For example, if the string `class/input` appears in
 the `dev` array, then `/dev/class/input` will appear in the namespaces of components

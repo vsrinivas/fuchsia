@@ -20,8 +20,8 @@ namespace component {
 class ProgramMetadata {
  public:
   // Takes in a parsed value assumed to be corresponding to the "program"
-  // attribute. Returns false if parsing failed.
-  bool Parse(const rapidjson::Value& program_value, json::JSONParser* json_parser);
+  // attribute. |json_parser| is used to report any errors.
+  void Parse(const rapidjson::Value& program_value, json::JSONParser* json_parser);
 
   bool IsBinaryNull() const { return binary_null_; }
   bool IsArgsNull() const { return args_null_; }
