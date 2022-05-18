@@ -38,8 +38,6 @@ class VirtualAudioUtil {
 
  private:
   enum class Command {
-    ENABLE_VIRTUAL_AUDIO,
-    DISABLE_VIRTUAL_AUDIO,
     GET_NUM_VIRTUAL_DEVICES,
 
     SET_DEVICE_NAME,
@@ -79,8 +77,6 @@ class VirtualAudioUtil {
     const char* name;
     Command cmd;
   } COMMANDS[] = {
-      {"enable", Command::ENABLE_VIRTUAL_AUDIO},
-      {"disable", Command::DISABLE_VIRTUAL_AUDIO},
       {"num-devs", Command::GET_NUM_VIRTUAL_DEVICES},
 
       {"dev", Command::SET_DEVICE_NAME},
@@ -156,8 +152,8 @@ class VirtualAudioUtil {
   bool ExecuteCommand(Command cmd, const std::string& value);
 
   // Methods using the FIDL Service interface
-  bool Enable(bool enable);
   bool GetNumDevices();
+  bool AddDevice();
 
   // Methods using the FIDL Configuration interface
   bool SetDeviceName(const std::string& name);
@@ -174,8 +170,6 @@ class VirtualAudioUtil {
   bool SetGainProps(const std::string& gain_props_str);
   bool SetPlugProps(const std::string& plug_props_str);
   bool ResetConfiguration();
-
-  bool AddDevice();
 
   // Methods using the FIDL Device interface
   bool RemoveDevice();
@@ -200,7 +194,6 @@ class VirtualAudioUtil {
 
   bool configuring_output_ = true;
   static zx::vmo ring_buffer_vmo_;
-  static uint64_t ring_buffer_size_;
 
   static uint32_t BytesPerSample(uint32_t format);
   static void UpdateRunningPosition(uint32_t rb_pos, bool is_output_);
@@ -252,7 +245,6 @@ class VirtualAudioUtil {
 ::async::Loop* VirtualAudioUtil::loop_;
 bool VirtualAudioUtil::received_callback_;
 zx::vmo VirtualAudioUtil::ring_buffer_vmo_;
-uint64_t VirtualAudioUtil::ring_buffer_size_ = 0;
 
 size_t VirtualAudioUtil::rb_size_[2];
 uint32_t VirtualAudioUtil::last_rb_position_[2];
@@ -374,13 +366,9 @@ bool VirtualAudioUtil::WaitForKey() {
 }
 
 bool VirtualAudioUtil::ConnectToController() {
-  if (controller_.is_bound()) {
-    return true;
-  }
-
-  auto status = fdio_service_connect(fuchsia::virtualaudio::CONTROL_NODE_NAME,
-                                     controller_.NewRequest().TakeChannel().release());
-  if (!status) {
+  zx_status_t status = fdio_service_connect(fuchsia::virtualaudio::CONTROL_NODE_NAME,
+                                            controller_.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
     printf("Failed to connect to '%s', status = %d\n", fuchsia::virtualaudio::CONTROL_NODE_NAME,
            status);
     return false;
@@ -422,6 +410,10 @@ void VirtualAudioUtil::ParseAndExecute(fxl::CommandLine* cmdline) {
   // Looks like we will interact with the service; get ready to connect to it.
   component_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
+  if (!ConnectToController()) {
+    return;
+  }
+
   for (auto option : cmdline->options()) {
     bool success = false;
     Command cmd = Command::INVALID;
@@ -453,12 +445,6 @@ bool VirtualAudioUtil::ExecuteCommand(Command cmd, const std::string& value) {
   bool success;
   switch (cmd) {
     // FIDL Service methods
-    case Command::ENABLE_VIRTUAL_AUDIO:
-      success = Enable(true);
-      break;
-    case Command::DISABLE_VIRTUAL_AUDIO:
-      success = Enable(false);
-      break;
     case Command::GET_NUM_VIRTUAL_DEVICES:
       success = GetNumDevices();
       break;
@@ -562,22 +548,10 @@ bool VirtualAudioUtil::ExecuteCommand(Command cmd, const std::string& value) {
   return success;
 }
 
-bool VirtualAudioUtil::Enable(bool enable) {
-  if (enable) {
-    return ConnectToController();
-  }
-  controller_.Unbind();
-  return true;
-}
-
 bool VirtualAudioUtil::GetNumDevices() {
-  if (!ConnectToController()) {
-    return false;
-  }
-
   uint32_t num_inputs;
   uint32_t num_outputs;
-  auto status = controller_->GetNumDevices(&num_inputs, &num_outputs);
+  zx_status_t status = controller_->GetNumDevices(&num_inputs, &num_outputs);
   if (status != ZX_OK) {
     printf("GetNumDevices failed, status = %d", status);
     return false;
@@ -905,20 +879,26 @@ bool VirtualAudioUtil::ResetConfiguration() {
 
 bool VirtualAudioUtil::AddDevice() {
   fuchsia::virtualaudio::Configuration cfg;
-  auto status = config()->Clone(&cfg);
+  zx_status_t status = config()->Clone(&cfg);
   FX_CHECK(status == ZX_OK);
 
   if (configuring_output_) {
-    status = controller_->AddOutput(std::move(cfg), output_device_.NewRequest(), nullptr);
+    fuchsia::virtualaudio::Control_AddOutput_Result result;
+    status = controller_->AddOutput(std::move(cfg), output_device_.NewRequest(), &result);
+    if (result.is_err()) {
+      status = result.err();
+    }
   } else {
-    status = controller_->AddInput(std::move(cfg), input_device_.NewRequest(), nullptr);
+    fuchsia::virtualaudio::Control_AddInput_Result result;
+    status = controller_->AddInput(std::move(cfg), input_device_.NewRequest(), &result);
+    if (result.is_err()) {
+      status = result.err();
+    }
   }
   if (status != ZX_OK) {
     printf("Failed to add %s device, status = %d\n", configuring_output_ ? "output" : "input",
            status);
-    if (status == ZX_ERR_PEER_CLOSED) {
-      QuitLoop();
-    }
+    QuitLoop();
     return false;
   }
 
@@ -1011,8 +991,9 @@ bool VirtualAudioUtil::WriteBuffer(const std::string& write_value_str) {
     }
   }
 
-  for (size_t offset = 0; offset < ring_buffer_size_; offset += sizeof(value_to_write)) {
-    auto status = ring_buffer_vmo_.write(&value_to_write, offset, sizeof(value_to_write));
+  auto rb_size = rb_size_[configuring_output_ ? kOutput : kInput];
+  for (size_t offset = 0; offset < rb_size; offset += sizeof(value_to_write)) {
+    zx_status_t status = ring_buffer_vmo_.write(&value_to_write, offset, sizeof(value_to_write));
     if (status != ZX_OK) {
       printf("Writing 0x%016zX to rb_vmo[%zu] failed (%d)\n", value_to_write, offset, status);
       return false;

@@ -155,9 +155,9 @@ VirtualAudioStream::GetBufferForVA() {
   }
 
   zx::vmo dup_vmo;
-  auto status = ring_buffer_vmo_.duplicate(
+  zx_status_t status = ring_buffer_vmo_.duplicate(
       ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &dup_vmo);
-  if (!status) {
+  if (status != ZX_OK) {
     zxlogf(ERROR, "%s: %p ring buffer creation failed with status %d", __func__, this, status);
     return fitx::error(ErrorT::kInternal);
   }
@@ -177,7 +177,7 @@ VirtualAudioStream::GetPositionForVA() {
   }
 
   zx::time ref_now;
-  auto status = reference_clock_.read(ref_now.get_address());
+  zx_status_t status = reference_clock_.read(ref_now.get_address());
   ZX_ASSERT_MSG(status == ZX_OK, "reference_clock::read returned error (%d)", status);
 
   auto mono_now = MonoTimeFromRefTime(reference_clock_, ref_now);
@@ -206,7 +206,8 @@ void VirtualAudioStream::SetNotificationFrequencyFromVA(uint32_t notifications_p
 
   if (va_client_notifications_per_ring_.has_value() &&
       (va_client_notifications_per_ring_.value() > 0)) {
-    auto status = reference_clock_.read(target_va_client_ref_notification_time_.get_address());
+    zx_status_t status =
+        reference_clock_.read(target_va_client_ref_notification_time_.get_address());
     ZX_ASSERT_MSG(status == ZX_OK, "reference_clock::read returned error (%d)", status);
 
     PostForVaClientNotifyAt(target_va_client_ref_notification_time_);
@@ -373,7 +374,7 @@ zx_status_t VirtualAudioStream::SetGain(const audio::audio_proto::SetGainReq& re
 // Drivers *must* report the time (on CLOCK_MONOTONIC timeline) at which the first frame will be
 // clocked out, not including any external delay.
 zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
-  auto status = reference_clock_.read(ref_start_time_.get_address());
+  zx_status_t status = reference_clock_.read(ref_start_time_.get_address());
   ZX_ASSERT_MSG(status == ZX_OK, "reference_clock::read returned error (%d)", status);
 
   // Incorporate delay caused by fifo_depth_
@@ -412,7 +413,7 @@ void VirtualAudioStream::ProcessRingNotification() {
   ZX_ASSERT(target_mono_notification_time_.get() > 0);
 
   zx::time ref_now;
-  auto status = reference_clock_.read(ref_now.get_address());
+  zx_status_t status = reference_clock_.read(ref_now.get_address());
   ZX_ASSERT_MSG(status == ZX_OK, "reference_clock::read returned error (%d)", status);
 
   // We should wake up close to target_ref_notification_time_
@@ -457,7 +458,7 @@ void VirtualAudioStream::ProcessVaClientRingNotification() {
   ZX_ASSERT(target_va_client_mono_notification_time_.get() > 0);
 
   zx::time ref_now;
-  auto status = reference_clock_.read(ref_now.get_address());
+  zx_status_t status = reference_clock_.read(ref_now.get_address());
   ZX_ASSERT_MSG(status == ZX_OK, "reference_clock::read returned error (%d)", status);
 
   // We should wake up close to target_ref_notification_time_
@@ -484,7 +485,7 @@ void VirtualAudioStream::ProcessVaClientRingNotification() {
 
 zx_status_t VirtualAudioStream::Stop() {
   zx::time ref_stop_time;
-  auto status = reference_clock_.read(ref_stop_time.get_address());
+  zx_status_t status = reference_clock_.read(ref_stop_time.get_address());
 
   notify_timer_.Cancel();
   va_client_notify_timer_.Cancel();

@@ -109,18 +109,19 @@ void VirtualAudioDeviceImpl::GetFormat(GetFormatRequestView request,
 // Deliver SetFormat notification on binding's thread, if binding is valid.
 void VirtualAudioDeviceImpl::NotifySetFormat(uint32_t frames_per_second, uint32_t sample_format,
                                              uint32_t num_channels, zx_duration_t external_delay) {
-  PostToDispatcher([weak = weak_from_this(), frames_per_second, sample_format, num_channels,
-                    external_delay]() {
-    auto self = weak.lock();
-    if (!self) {
-      return;
-    }
-    auto status = fidl::WireSendEvent(self->binding_.value())
-                      ->OnSetFormat(frames_per_second, sample_format, num_channels, external_delay);
-    if (status.status() != ZX_OK) {
-      zxlogf(WARNING, "OnSetFormat failed with status %s", status.status_string());
-    }
-  });
+  PostToDispatcher(
+      [weak = weak_from_this(), frames_per_second, sample_format, num_channels, external_delay]() {
+        auto self = weak.lock();
+        if (!self) {
+          return;
+        }
+        fidl::Status status =
+            fidl::WireSendEvent(self->binding_.value())
+                ->OnSetFormat(frames_per_second, sample_format, num_channels, external_delay);
+        if (status.status() != ZX_OK) {
+          zxlogf(WARNING, "OnSetFormat failed with status %s", status.status_string());
+        }
+      });
 }
 
 void VirtualAudioDeviceImpl::GetGain(GetGainRequestView request,
@@ -144,8 +145,8 @@ void VirtualAudioDeviceImpl::NotifySetGain(bool current_mute, bool current_agc,
     if (!self) {
       return;
     }
-    auto status = fidl::WireSendEvent(self->binding_.value())
-                      ->OnSetGain(current_mute, current_agc, current_gain_db);
+    fidl::Status status = fidl::WireSendEvent(self->binding_.value())
+                              ->OnSetGain(current_mute, current_agc, current_gain_db);
     if (status.status() != ZX_OK) {
       zxlogf(WARNING, "OnSetGain failed with status %s", status.status_string());
     }
@@ -180,9 +181,9 @@ void VirtualAudioDeviceImpl::NotifyBufferCreated(zx::vmo ring_buffer_vmo,
     if (!self) {
       return;
     }
-    auto status = fidl::WireSendEvent(self->binding_.value())
-                      ->OnBufferCreated(std::move(ring_buffer_vmo), num_ring_buffer_frames,
-                                        notifications_per_ring);
+    fidl::Status status = fidl::WireSendEvent(self->binding_.value())
+                              ->OnBufferCreated(std::move(ring_buffer_vmo), num_ring_buffer_frames,
+                                                notifications_per_ring);
     if (status.status() != ZX_OK) {
       zxlogf(WARNING, "OnBufferCreated failed with status %s", status.status_string());
     }
@@ -211,7 +212,7 @@ void VirtualAudioDeviceImpl::NotifyStart(zx_time_t start_time) {
     if (!self) {
       return;
     }
-    auto status = fidl::WireSendEvent(self->binding_.value())->OnStart(start_time);
+    fidl::Status status = fidl::WireSendEvent(self->binding_.value())->OnStart(start_time);
     if (status.status() != ZX_OK) {
       zxlogf(WARNING, "OnStart failed with status %s", status.status_string());
     }
@@ -224,7 +225,7 @@ void VirtualAudioDeviceImpl::NotifyStop(zx_time_t stop_time, uint32_t ring_buffe
     if (!self) {
       return;
     }
-    auto status =
+    fidl::Status status =
         fidl::WireSendEvent(self->binding_.value())->OnStop(stop_time, ring_buffer_position);
     if (status.status() != ZX_OK) {
       zxlogf(WARNING, "OnStop failed with status %s", status.status_string());
@@ -258,8 +259,8 @@ void VirtualAudioDeviceImpl::NotifyPosition(zx_time_t monotonic_time,
     if (!self) {
       return;
     }
-    auto status = fidl::WireSendEvent(self->binding_.value())
-                      ->OnPositionNotify(monotonic_time, ring_buffer_position);
+    fidl::Status status = fidl::WireSendEvent(self->binding_.value())
+                              ->OnPositionNotify(monotonic_time, ring_buffer_position);
     if (status.status() != ZX_OK) {
       zxlogf(WARNING, "OnPositionNotify failed with status %s", status.status_string());
     }
