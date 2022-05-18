@@ -110,6 +110,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/wire_messaging.h",
                     "lib/fidl/llcpp/wire_encoder.h",
                     "lib/fidl/llcpp/wire_decoder.h",
+                    "lib/fidl/llcpp/wire_coding_common.h",
                     "lib/fidl/llcpp/wire_messaging_declarations.h",
                     "lib/fidl/llcpp/wire_types.h",
                     "lib/fidl/llcpp/internal/arrow.h",
