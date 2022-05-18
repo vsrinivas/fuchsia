@@ -29,7 +29,7 @@ A node has the following properties:
 *   [Capabilities][capabilities]: FIDL capabilities that are offered to a driver
     when it is bound to the node. These can be both in-process and
     out-of-process capabilities.
-*   [Symbols][symbols]: Key-value pairs where the keys are strings and th
+*   [Symbols][symbols]: Key-value pairs where the keys are strings and the
     values are virtual addresses. A driver uses these symbols to hand pointers
     to a child driver for [in-process communication][driver-runtime]. The
     symbols are only provided to a driver if it is co-located in the same
@@ -60,7 +60,7 @@ child nodes – there’s no limit on how many children a node can have. The dri
 that are bound to these child nodes often create their own children. As a
 result, these nodes form a single node topology, expressed
 in a directed acyclic graph, which describes all the hardware
-and software devices discovered in a Fuchsia system. 
+and virtual devices discovered in a Fuchsia system.
 
 ![alt_text](images/diagram_node_topology_02.svg "USB bug node topology")
 
