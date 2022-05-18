@@ -46,7 +46,6 @@ pub async fn interface_discovery(
     e: events::Queue<DaemonEvent>,
     discovery_interval: Duration,
 ) {
-    log::debug!("Starting Zedboot discovery");
     // See fxbug.dev/62617#c10 for details. A macOS system can end up in
     // a situation where the default routes for protocols are on
     // non-functional interfaces, and under such conditions the wildcard
@@ -61,6 +60,11 @@ pub async fn interface_discovery(
     // only. Click apply, then restart the ffx daemon.
     let mut should_log_v6_listen_error = true;
     let mut v6_listen_socket: Weak<UdpSocket> = Weak::new();
+
+    if ffx_config::get("discovery.zedboot.enabled").await.unwrap_or(false) {
+        log::debug!("Starting Zedboot discovery loop");
+    };
+
     loop {
         // fxb/90219 - disabled by default
         let is_enabled: bool = ffx_config::get("discovery.zedboot.enabled").await.unwrap_or(false);
