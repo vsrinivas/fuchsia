@@ -46,9 +46,9 @@ pub struct IncomingNamespace {
 }
 
 impl IncomingNamespace {
-    pub fn new(package: Option<Package>) -> Result<Self, ModelError> {
+    pub fn new(package: Option<Package>) -> Self {
         let package_dir = package.map(|p| p.package_dir);
-        Ok(Self { package_dir, dir_waiters: vec![], logger: None })
+        Self { package_dir, dir_waiters: vec![], logger: None }
     }
 
     /// Returns a Logger whose output is attributed to this component's
@@ -624,7 +624,7 @@ pub mod test {
     /// Tests that the logger is connected to when it is in a subdirectory of a
     /// namespace entry.
     async fn test_logger_at_root_of_entry() {
-        let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
+        let incoming_ns = IncomingNamespace::new(None);
         let log_decl = UseProtocolDecl {
             source: UseSource::Parent,
             source_name: "logsink".into(),
@@ -661,7 +661,7 @@ pub mod test {
     /// Tests that the logger is connected to when it is in a subdirectory of a
     /// namespace entry.
     async fn test_logger_at_subdir_of_entry() {
-        let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
+        let incoming_ns = IncomingNamespace::new(None);
         let log_decl = UseProtocolDecl {
             source: UseSource::Parent,
             source_name: "logsink".into(),
@@ -697,7 +697,7 @@ pub mod test {
 
     #[fuchsia::test]
     async fn test_multiple_namespace_entries() {
-        let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
+        let incoming_ns = IncomingNamespace::new(None);
         let log_decl = UseProtocolDecl {
             source: UseSource::Parent,
             source_name: "logsink".into(),
@@ -750,7 +750,7 @@ pub mod test {
 
     #[fuchsia::test]
     async fn test_no_connect_on_empty_namespace() {
-        let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
+        let incoming_ns = IncomingNamespace::new(None);
         let log_decl = UseProtocolDecl {
             source: UseSource::Parent,
             source_name: "logsink".into(),
@@ -772,7 +772,7 @@ pub mod test {
 
     #[fuchsia::test]
     async fn test_logsink_dir_not_in_namespace() {
-        let incoming_ns = IncomingNamespace::new(None).expect("namespace failed to create");
+        let incoming_ns = IncomingNamespace::new(None);
         let log_decl = UseProtocolDecl {
             source: UseSource::Parent,
             source_name: "logsink".into(),

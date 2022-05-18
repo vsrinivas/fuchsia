@@ -267,7 +267,7 @@ async fn make_execution_runtime(
         zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
     let (runtime_dir_client, runtime_dir_server) =
         zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-    let mut namespace = IncomingNamespace::new(package)?;
+    let mut namespace = IncomingNamespace::new(package);
     let ns = namespace.populate(component.as_weak(), decl).await?;
 
     let (controller_client, controller_server) =
