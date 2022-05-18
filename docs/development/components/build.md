@@ -25,7 +25,7 @@ ELF binary under the path `bin/hello_world`, and a JSON file under the path
 these files to the device.
 
 **[Components][glossary.component]** are the unit of software execution on
-Fuchsia. All software on Fuchsia except for the kernel image and usermode
+Fuchsia. All software on Fuchsia except for the kernel image and user mode
 bootstrap program is defined as a component.
 
 A component is defined by a
@@ -234,30 +234,6 @@ In the example above it would have been repetitive to name the shard
 `sdk/lib/fonts/fonts.shard.cml`, which is repetitive. Instead the file is
 named `client.shard.cml`, to indicate that it is to be used by clients of the
 SDK library for fonts.
-
-#### Troubleshooting client library includes
-
-If there is a dependency path between your component's build target and an
-`expect_includes()` target, but your component's manifest does not include the
-expected component manifest shard, you will encounter a build-time error in this
-form:
-
-```none
-Error: "your_manifest.cml" must include "some.shard.cml".
-```
-
-You can fix the problem by adding the missing include to your component's
-manifest. If you're not sure why you're required to include the shard, you can
-use this GN tool to find a dependency path:
-
-```posix-terminal
-fx gn path $(fx get-build-dir) {{ '<var>your component target</var>' }} {{ '<var>expect_includes target</var>' }} --with-data
-```
-
-You can find the `expect_includes()` target for instance by searching for
-`BUILD.gn` files that reference the missing shard by filename. Usually you will
-find the target in the same directory as the shard file itself, or in a parent
-directory.
 
 ## Component package GN templates {#component-package}
 
@@ -929,7 +905,7 @@ the use of two [`resource.gni`](/build/dist/resource.gni) templates,
 
 ### Example: fonts
 
-{# Disable variable substition to avoid {{ being interpreted by the template engine #}
+{# Disable variable substitution to avoid {{ being interpreted by the template engine #}
 {% verbatim %}
 
 ```gn
@@ -956,7 +932,7 @@ fuchsia_component("text_viewer") {
 }
 ```
 
-{# Re-enable variable substition #}
+{# Re-enable variable substitution #}
 {% endverbatim %}
 
 In the example above, six files are provided to be packaged under `data/fonts/`,
@@ -978,7 +954,7 @@ integration test where a test component acts as the client of the minifier
 component, and compares the result for a given JSON file to be minified against
 a known good result (or a "golden file").
 
-{# Disable variable substition to avoid {{ being interpreted by the template engine #}
+{# Disable variable substitution to avoid {{ being interpreted by the template engine #}
 {% verbatim %}
 
 ```gn
@@ -1015,7 +991,7 @@ fuchsia_test_package("minifier_integration_test") {
 }
 ```
 
-{# Re-enable variable substition #}
+{# Re-enable variable substitution #}
 {% endverbatim %}
 
 Note that we place the `resource()` dependency on the test component. From the
@@ -1089,15 +1065,324 @@ Use of restricted features are restricted to an allowlist.
 You must add your component to the allowlist for the feature in
 [`//tools/cmc/build/restricted_features/BUILD.gn`][allowlist].
 
+## Troubleshooting {#troubleshooting}
+
+This section contains common issues you may encounter while building your components.
+
+### Missing shard includes {#troubleshoot-build-include}
+
+The `check_includes` action fails the build with the following error if your
+[component manifest][glossary.component-manifest] is missing an `include` for a
+required [manifest shard](#component-manifest-shards):
+
+```none {:.devsite-disable-click-to-copy}
+Error at ../../examples/components/echo_server/meta/echo_server.cml:
+"../../examples/components/echo_server/meta/echo_server.cml" must include "../../sdk/lib/inspect/client.shard.cml".
+```
+
+This occurs when a library in your component's dependency chain has an
+[`expect_includes`](#component-manifest-includes) requirement and the required
+`include` was not found in your component manifest. Consider the following example
+using [Inspect][doc-inspect]:
+
+* {C++}
+
+  1.  Your component depends on `//sdk/lib/sys/inspect/cpp`:
+
+      ```gn {:.devsite-disable-click-to-copy}
+      executable("bin") {
+        output_name = "echo_server_cpp"
+        sources = [ "main.cc" ]
+
+        deps = [
+          "//examples/components/routing/fidl:echo",
+          "//sdk/lib/sys/cpp",
+          {{ '<strong>' }}# This library requires "inspect/client.shard.cml" {{ '</strong>' }}
+          {{ '<strong>' }}"//sdk/lib/sys/inspect/cpp", {{ '</strong>' }}
+          "//zircon/system/ulib/async-loop:async-loop-cpp",
+          "//zircon/system/ulib/async-loop:async-loop-default",
+        ]
+      }
+      ```
+
+  1.  [`//sdk/lib/sys/inspect/cpp`][src-inspect-cpp] depends on
+      [`//sdk/lib/inspect:client_includes`][src-inspect-include], which is an
+      `expect_includes()` rule.
+
+* {Rust}
+
+  1.  Your component depends on `//src/lib/diagnostics/inspect/runtime/rust`:
+
+      ```gn
+      rustc_binary("echo_server") {
+        edition = "2018"
+        deps = [
+          "//examples/components/routing/fidl:echo-rustc",
+          {{ '<strong>' }}# This library requires "inspect/client.shard.cml" {{ '</strong>' }}
+          {{ '<strong>' }}"//src/lib/diagnostics/inspect/runtime/rust", {{ '</strong>' }}
+          "//src/lib/diagnostics/inspect/rust",
+          "//src/lib/fuchsia",
+          "//src/lib/fuchsia-component",
+          "//third_party/rust_crates:anyhow",
+          "//third_party/rust_crates:futures",
+        ]
+
+        sources = [ "src/main.rs" ]
+      }
+      ```
+
+  1.  [`//src/lib/diagnostics/inspect/runtime/rust`][src-inspect-rust] depends on
+      [`//sdk/lib/inspect:client_includes`][src-inspect-include], which is an
+      `expect_includes()` rule.
+
+To address the issue, add the missing `include` in your component manifest. For example:
+
+```json5 {:.devsite-disable-click-to-copy}
+{
+    include: [
+        {{ '<strong>' }}// Add this required include {{ '</strong>' }}
+        {{ '<strong>' }}"inspect/client.shard.cml", {{ '</strong>' }}
+
+        // Enable logging on stdout
+        "syslog/elf_stdio.shard.cml",
+    ],
+
+    // ...
+}
+```
+
+For additional detail on the source of the required includes, you can use the `gn path`
+command to explore the dependency path:
+
+```posix-terminal
+fx gn path $(fx get-build-dir) {{ '<var>my-component</var>' }} {{ '<var>expect_includes target</var>' }} --with-data
+```
+
+Note: You can find the `expect_includes()` target by searching for `BUILD.gn` files that
+reference the missing shard by filename.
+
+The command prints output similar to the following, showing the path to the library that
+required the include:
+
+* {C++}
+
+  ```none {:.devsite-disable-click-to-copy}
+  $ fx gn path $(fx get-build-dir) //examples/components/routing/cpp/echo_server //sdk/lib/inspect:client_includes --with-data
+  //examples/components/echo_server:bin --[private]-->
+  //sdk/lib/sys/inspect/cpp:cpp --[data]-->
+  //sdk/lib/inspect:client_includes
+  ```
+
+* {Rust}
+
+  ```none {:.devsite-disable-click-to-copy}
+  $ fx gn path $(fx get-build-dir) //examples/components/routing/rust/echo_server //sdk/lib/inspect:client_includes --with-data
+  //examples/components/routing/rust/echo_server:echo_server --[public]-->
+  //examples/components/routing/rust/echo_server:echo_server.actual --[private]-->
+  //src/lib/diagnostics/inspect/runtime/rust:rust --[public]-->
+  //src/lib/diagnostics/inspect/runtime/rust:lib --[public]-->
+  //src/lib/diagnostics/inspect/runtime/rust:lib.actual --[private]-->
+  //sdk/lib/inspect:client_includes
+  ```
+
+### Failed to validate manifest {#troubleshoot-build-references}
+
+The `cmc_validate_references` action fails the build with the following error if your
+[component manifest][glossary.component-manifest] contains references to resources that
+cannot be found in the component's package:
+
+```none {:.devsite-disable-click-to-copy}
+Error found in: //examples/components/echo/rust:rust-component_cmc_validate_references(//build/toolchain/fuchsia:x64)
+	Failed to validate manifest: "obj/examples/components/echo/rust/cml/rust-component_manifest_compile/echo_rust.cm"
+program.binary=bin/echo_example_oops but bin/echo_example_oops is not provided by deps!
+
+Did you mean bin/echo_example?
+
+Try any of the following:
+...
+```
+
+This occurs when the `binary` field in your component manifest [`program`][cml-program] block
+references a file path that is not present in your `fuchsia_package()`.
+
+To address the issue, verify the following:
+
+1.  Reference paths in your component manifest are entered correctly.
+
+    ```json5 {:.devsite-disable-click-to-copy}
+    {
+        // ...
+
+        // Information about the program to run.
+        program: {
+            // Use the built-in ELF runner.
+            runner: "elf",
+
+            {{ '<strong>' }}// The binary to run for this component. {{ '</strong>' }}
+            {{ '<strong>' }}binary: "bin/echo_example_oops", {{ '</strong>' }}
+        },
+    }
+    ```
+
+1.  The component executable target is part of the `deps` chain connected to your
+    `fuchsia_package()`:
+
+    * {C++}
+
+      ```gn {:.devsite-disable-click-to-copy}
+      executable("bin") {
+        output_name = "echo_example"
+        sources = [ "main.cc" ]
+
+        deps = [ ... ]
+      }
+
+      {{ '<strong>' }}# Neither the component or package depend on ":bin" {{ '</strong>' }}
+      fuchsia_component("component") {
+        manifest = "meta/echo_example.cml"
+        {{ '<strong>' }}deps = [] {{ '</strong>' }}
+      }
+
+      fuchsia_package("package") {
+        package_name = "echo_example"
+        {{ '<strong>' }}deps = [ ":component" ] {{ '</strong>' }}
+      }
+      ```
+
+    * {Rust}
+
+      ```gn
+      rustc_binary("echo_example") {
+        edition = "2018"
+        sources = [ "src/main.rs" ]
+
+        deps = [ ... ]
+      }
+
+      {{ '<strong>' }}# Neither the component or package depend on ":echo_example" {{ '</strong>' }}
+      fuchsia_component("component") {
+        manifest = "meta/echo_example.cml"
+        {{ '<strong>' }}deps = [] {{ '</strong>' }}
+      }
+
+      fuchsia_package("package") {
+        package_name = "echo_example"
+        {{ '<strong>' }}deps = [ ":component" ] {{ '</strong>' }}
+      }
+      ```
+
+### Static capability analyzer {#troubleshoot-build-analyzer}
+
+The Scrutiny static analyzer fails the build with the following error when it is unable
+to verify each the [capability routes][glossary.capability-routing] in the
+[component topology][glossary.component-topology]:
+
+```none {:.devsite-disable-click-to-copy}
+Static Capability Flow Analysis Error:
+The route verifier failed to verify all capability routes in this build.
+...
+
+Verification Errors:
+[
+  {
+    "capability_type": "directory",
+    "results": { ... }
+  },
+  {
+    "capability_type": "protocol",
+    "results": { ... }
+  },
+]
+```
+
+This occurs when the analyze cannot successfully trace a capability route from its source
+to the component requesting the capability through a valid chain of [`expose`][cml-expose]
+and [`offer`][cml-offer] component manifest declarations.
+
+In the following example, the error occurs due to the component `/core/echo` requesting to
+`use` the `fuchsia.logger.LogSink` protocol without a corresponding `offer` for that capability
+from the parent:
+
+```none {:.devsite-disable-click-to-copy}
+"errors": [
+  {
+    "using_node": "/core/echo",
+    "capability": "fuchsia.logger.LogSink",
+    "error": {
+      "error": {
+        "analyzer_model_error": {
+          "routing_error": {
+            "use_from_parent_not_found": {
+              "moniker": {
+                "path": [
+                  {
+                    "name": "core",
+                    "collection": null,
+                    "rep": "core"
+                  },
+                  {
+                    "name": "echo",
+                    "collection": null,
+                    "rep": "echo"
+                  }
+                ]
+              },
+              "capability_id": "fuchsia.logger.LogSink"
+            }
+          }
+        }
+      },
+      "message": "A `use from parent` declaration was found at `/core/echo` for `fuchsia.logger.LogSink`, but no matching `offer` declaration was found in the parent"
+    }
+  }
+]
+```
+
+To address this issue explore the error details provided in the build failure to discover the
+source of the routing error, then add or correct the invalid declarations in the routing chain.
+In the previous example error, an `offer` should be added in the parent component's manifest:
+
+```json5
+{
+    // ...
+
+    children: [
+        // ...
+        {
+            name: "echo",
+            url: "#meta/echo.cm",
+        },
+    ],
+    offer: [
+        // ...
+        {{ '<strong>' }}{ {{ '</strong>' }}
+            {{ '<strong>' }}protocol: "fuchsia.logger.LogSink", {{ '</strong>' }}
+            {{ '<strong>' }}from: "parent", {{ '</strong>' }}
+            {{ '<strong>' }}to: "#echo", {{ '</strong>' }}
+        {{ '<strong>' }}}, {{ '</strong>' }}
+    ],
+}
+```
+
+For more details on building capability routes, see [Connect components][doc-connect].
+
 [allowlist]: /tools/cmc/build/restricted_features/BUILD.gn
+[cml-expose]: https://fuchsia.dev/reference/cml#expose
+[cml-offer]: https://fuchsia.dev/reference/cml#offer
+[cml-program]: https://fuchsia.dev/reference/cml#program
 [components-migration]: /docs/contribute/open_projects/components/migration.md
 [cpp-syslog]: /docs/development/languages/c-cpp/logging.md#component_manifest_dependency
+[doc-connect]: /docs/development/components/connect.md
+[doc-inspect]: /docs/development/diagnostics/inspect/README.md
 [executable]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_executable
-[fx-test]: https://www.fuchsia.dev/reference/tools/fx/cmd/test.md
+[ffx-scrutiny]: https://fuchsia.dev/reference/tools/sdk/ffx#scrutiny
+[fx-test]: https://fuchsia.dev/reference/tools/fx/cmd/test.md
 [fxb-55739]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=55739
+[glossary.capability-routing]: /docs/glossary/README.md#capability-routing
 [glossary.component]: /docs/glossary/README.md#component
 [glossary.component-instance]: /docs/glossary/README.md#component-instance
 [glossary.component-manifest]: /docs/glossary/README.md#component-manifest
+[glossary.component-topology]: /docs/glossary/README.md#component-topology
 [glossary.component-url]: /docs/glossary/README.md#component-url
 [glossary.fuchsia-pkg-url]: /docs/glossary/README.md#fuchsia-pkg-url
 [glossary.gn]: /docs/glossary/README.md#gn
@@ -1108,6 +1393,9 @@ You must add your component to the allowlist for the feature in
 [rustc-test]: /build/rust/rustc_test.gni
 [source-code-layout]: /docs/development/source_code/layout.md
 [source-expansion-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders
+[src-inspect-cpp]: /sdk/lib/sys/inspect/cpp/BUILD.gn
+[src-inspect-include]: /sdk/lib/inspect/BUILD.gn
+[src-inspect-rust]: /src/lib/diagnostics/inspect/runtime/rust/BUILD.gn
 [test-environments]: /docs/contribute/testing/environments.md
 [v2-test-component]: /docs/development/testing/components/test_component.md
 [working-with-packages]: /docs/development/idk/documentation/packages.md
