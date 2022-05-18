@@ -28,7 +28,7 @@
 
 namespace fpty = fuchsia_hardware_pty;
 
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect2_Result;
 
 std::optional<fpty::wire::WindowSize> get_window_size(zx::unowned_channel pty) {
   auto result = fidl::WireCall<fpty::Device>(pty)->GetWindowSize();
@@ -628,20 +628,13 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t>
   fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
   realm->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
-  // Open a socket to the guest's vsock port where vshd should be listening
-  zx::socket socket, remote_socket;
-  status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
-  if (status != ZX_OK) {
-    std::cerr << "Failed to create socket: " << zx_status_get_string(status) << '\n';
-    return status;
-  }
-
-  HostVsockEndpoint_Connect_Result result;
-  vsock_endpoint->Connect(cid, port, std::move(remote_socket), &result);
+  HostVsockEndpoint_Connect2_Result result;
+  vsock_endpoint->Connect2(port, &result);
   if (result.is_err()) {
     std::cerr << "Failed to connect: " << zx_status_get_string(result.err()) << '\n';
     return result.err();
   }
+  zx::socket socket = std::move(result.response().socket);
 
   // Helper injection is likely undesirable if we aren't connecting to the default VM login shell.
   bool inject_helper = args.empty();

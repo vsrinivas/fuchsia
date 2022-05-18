@@ -17,7 +17,6 @@ namespace {
 using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Response;
 using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Result;
 using ::fuchsia::virtualization::HostVsockEndpoint_Connect2_Result;
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
 using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
 
 template <class T>

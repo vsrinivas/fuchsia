@@ -4,7 +4,7 @@
 
 #include "src/virtualization/lib/guest_interaction/client/guest_discovery_service.h"
 
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect2_Result;
 
 GuestDiscoveryServiceImpl::GuestDiscoveryServiceImpl(async_dispatcher_t* dispatcher)
     : context_(sys::ServiceDirectory::CreateFromNamespace(), dispatcher), executor_(dispatcher) {
@@ -92,13 +92,6 @@ void GuestDiscoveryServiceImpl::GetGuest(
                   variant);
             }
 
-            // We're the first to request a connection to this guest.
-            zx::socket socket, remote_socket;
-            if (zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
-                status != ZX_OK) {
-              return fpromise::make_result_promise<FuchsiaGuestInteractionService*, zx_status_t>(
-                  fpromise::error(status));
-            }
             fuchsia::virtualization::RealmSyncPtr realm;
             manager_->Connect(guest_info.realm_id, realm.NewRequest());
 
@@ -111,9 +104,9 @@ void GuestDiscoveryServiceImpl::GetGuest(
                 [completer](zx_status_t status) { completer->complete_error(status); });
             realm->GetHostVsockEndpoint(ep.NewRequest(executor_.dispatcher()));
 
-            auto completers_cb = [this, guest_info, &variant, completer,
-                                  socket = std::move(socket)](GuestCompleters completers,
-                                                              zx_status_t status) mutable {
+            auto completers_cb = [this, guest_info, &variant, completer](
+                                     GuestCompleters completers, zx::socket socket,
+                                     zx_status_t status) mutable {
               if (status != ZX_OK) {
                 // Connecting to the guest failed; notify pending completers and remove the entry to
                 // allow retries.
@@ -135,25 +128,29 @@ void GuestDiscoveryServiceImpl::GetGuest(
               }
             };
 
-            ep->Connect(guest_info.guest_cid, GUEST_INTERACTION_PORT, std::move(remote_socket),
-                        [completer, completers_cb = std::move(completers_cb),
-                         &variant](HostVsockEndpoint_Connect_Result result) mutable {
-                          std::visit(
-                              overloaded{
-                                  [completer](FuchsiaGuestInteractionService& guest) {
-                                    // We completed the connection to the guest and
-                                    // discovered an already-existing connection. This should
-                                    // never happen.
-                                    FX_LOGS(ERROR) << "existing connection in connection callback";
-                                    completer->complete_ok(&guest);
-                                  },
-                                  [&](GuestCompleters& completers) {
-                                    completers_cb(std::move(completers),
-                                                  result.is_response() ? ZX_OK : result.err());
-                                  },
-                              },
-                              variant);
-                        });
+            auto connect_cb = [completer, completers_cb = std::move(completers_cb),
+                               &variant](HostVsockEndpoint_Connect2_Result result) mutable {
+              std::visit(overloaded{
+                             [completer](FuchsiaGuestInteractionService& guest) {
+                               // We completed the connection to the guest and
+                               // discovered an already-existing connection. This should
+                               // never happen.
+                               FX_LOGS(ERROR) << "existing connection in connection callback";
+                               completer->complete_ok(&guest);
+                             },
+                             [&](GuestCompleters& completers) {
+                               if (result.is_response()) {
+                                 completers_cb(std::move(completers),
+                                               std::move(result.response().socket), ZX_OK);
+                               } else {
+                                 completers_cb(std::move(completers), zx::socket(), result.err());
+                               }
+                             },
+                         },
+                         variant);
+            };
+
+            ep->Connect2(GUEST_INTERACTION_PORT, std::move(connect_cb));
 
             return bridge.consumer.promise().inspect(
                 [ep = std::move(ep)](
