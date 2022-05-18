@@ -164,11 +164,11 @@ A node removal takes place when one of the following event occurs:
 *   The component framework shuts down the driver component, therefore removes
     the driver bound to the node.
 
-In the directed acyclic node graph, nodes are removed from the bottom first.
-Before a node is removed, if the node is bound to a driver, the driver is
-stopped. If a node to be removed is in the middle of the node topology, the
-driver framework ensures that all the child drivers are stopped and all the
-child nodes are removed before the target node is removed.
+In the node topology, nodes are removed from the bottom first. If a node is bound
+to a driver, then the driver must be stopped before the node can be removed. And
+if the node to be removed is in the middle of the node topology, the driver framework
+ensures that all the child drivers are stopped and all the child nodes are removed
+before the target node is removed.
 
 ## Composite nodes
 

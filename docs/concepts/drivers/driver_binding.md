@@ -22,7 +22,7 @@ the driver framework allows the driver to bind to the node.
 ## Binding sequence
 
 When a Fuchsia system boots up, the driver manager tries to construct a node
-topology that represents all the hardware and software devices in the system,
+topology that represents all the hardware and virtual devices in the system,
 and the [driver index][driver-index] enumerates all the drivers known to
 the system.
 

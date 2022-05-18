@@ -4,13 +4,14 @@ Important: This page contains information that is specific to the new
 version of the driver framework (DFv2).
 
 In Fuchsia, all communication occurs over FIDL calls, for both drivers and
-non-drivers. What differs is how driver services are discovered and how
+non-drivers. What differs is how drivers' services are discovered and how
 connection is established.
 
-For driver to driver communication, Fuchsia makes use of the node topology to
-place the capabilities of parent nodes in a child node's incoming FIDL namespace
-(under `/svc` as directories and files). This setup enables a driver (bound to
-a node) to access FIDL services inherited from the parent nodes.
+For driver-to-driver communication, Fuchsia uses the
+[node topology][node-topology] to place parent nodes' capabilities in a child
+node's incoming FIDL namespace (that is, under `/svc` as directories and files).
+This setup enables a driver (once bound to the child node) to access FIDL
+services inherited from the parent nodes.
 
 However, communication from a non-driver component to a driver takes place in
 two phases:
@@ -18,10 +19,10 @@ two phases:
 1. [Service discovery (using devfs)](#service_discovery_using_devfs)
 1. [FIDL communication](#fidl_communication)
 
-For non-driver components, the first task is to discover which driver services
+For non-driver components, the first task is to discover which drivers' services
 are available in the system. These services are provided by the drivers that are
-currently serving hardware (or software) devices in the system. A virtual
-filesystem known as `devfs` provides a mechanism for discovering these services.
+currently bound to nodes representing hardware or virtual devices in the system.
+A filesystem known as `devfs` provides a mechanism for discovering these services.
 
 The following events take place for non-driver to driver communication:
 
@@ -63,9 +64,9 @@ the client may receive a channel that speaks the `fuchsia.input.report` FIDL.
 
 Drivers can use the [`fuchsia.device.fs`][fuchsia-device-fs] protocol to export
 themselves into `devfs`. The path under the `/dev` directory for a driver is the
-direct reflection of the path in the [node topology][node-topology]. Therefore,
-if a driver wants to show up in the right place in `devfs`, it needs to make
-sure that its topological path and protocol correspond correctly.
+direct reflection of the path in the node topology. Therefore, if a driver wants
+to show up in the right place in `devfs`, it needs to make sure that its
+topological path and protocol correspond correctly.
 
 ## FIDL communication
 
