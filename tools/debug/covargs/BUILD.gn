@@ -40,19 +40,16 @@ go_library("covargs_lib") {
 
 go_library("main") {
   source_dir = "cmd"
-  sources = [ "main.go" ]
+  sources = [
+    "main.go",
+    "main_test.go",
+  ]
 
   deps = [
     ":covargs_lib",
-    ":llvm_api",
-    "//third_party/golibs:golang.org/x/sync",
-    "//tools/debug/elflib",
-    "//tools/debug/symbolize:symbolize_lib",
     "//tools/lib/cache",
     "//tools/lib/color",
     "//tools/lib/flagmisc",
-    "//tools/lib/logger",
-    "//tools/testing/runtests",
   ]
 }
 
@@ -62,18 +59,20 @@ go_binary("covargs") {
   cgo = false
 }
 
-go_test("covargs_tests") {
+go_test("covargs_lib_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/covargs" ]
-  deps = [
-    ":codecoverage_api",
-    ":covargs_lib",
-    ":llvm_api",
-    "//tools/debug/elflib",
-    "//tools/debug/symbolize:symbolize_lib",
-  ]
+  deps = [ ":covargs_lib" ]
+}
+
+go_test("covargs_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/covargs/cmd" ]
+  deps = [ ":main" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":covargs_tests($host_toolchain)" ]
+  deps = [
+    ":covargs_lib_tests($host_toolchain)",
+    ":covargs_tests($host_toolchain)",
+  ]
 }

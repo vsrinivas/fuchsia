@@ -75,7 +75,8 @@ func init() {
 
 	flag.Var(&colors, "color", "can be never, auto, always")
 	flag.Var(&level, "level", "can be fatal, error, warning, info, debug or trace")
-	flag.Var(&summaryFile, "summary", "path to summary.json file")
+	flag.Var(&summaryFile, "summary", "path to summary.json file. If given as `<path>=<version>`, the version should correspond "+
+		"to the llvm-profdata required to run with the profiles from this summary.json")
 	flag.Var(&buildIDDirPaths, "build-id-dir", "path to .build-id directory")
 	flag.Var(&symbolServers, "symbol-server", "a GCS URL or bucket name that contains debug binaries indexed by build ID")
 	flag.StringVar(&symbolCache, "symbol-cache", "", "path to directory to store cached debug binaries in")
@@ -83,7 +84,8 @@ func init() {
 	flag.BoolVar(&dryRun, "dry-run", false, "if set the system prints out commands that would be run instead of running them")
 	flag.BoolVar(&skipFunctions, "skip-functions", true, "if set, the coverage report enabled by the `report-dir` flag will not include function coverage")
 	flag.StringVar(&outputDir, "output-dir", "", "the directory to output results to")
-	flag.Var(&llvmProfdata, "llvm-profdata", "the location of llvm-profdata")
+	flag.Var(&llvmProfdata, "llvm-profdata", "the location of llvm-profdata. If given as `<path>=<version>`, the version should correspond "+
+		"to the summary containing profiles that this llvm-profdata tool should be used to run with")
 	flag.StringVar(&llvmCov, "llvm-cov", "llvm-cov", "the location of llvm-cov")
 	flag.StringVar(&outputFormat, "format", "html", "the output format used for llvm-cov")
 	flag.StringVar(&jsonOutput, "json-output", "", "outputs profile information to the specified file")
@@ -101,11 +103,25 @@ func init() {
 
 const llvmProfileSinkType = "llvm-profile"
 
+func splitVersion(arg string) (version, value string) {
+	version = ""
+	s := strings.SplitN(arg, "=", 2)
+	if len(s) > 1 {
+		version = s[1]
+	}
+	return version, s[0]
+}
+
 // Output is indexed by dump name
-func readSummary(summaryFiles []string) (runtests.DataSinkMap, error) {
-	sinks := make(runtests.DataSinkMap)
+func readSummary(summaryFiles []string) (map[string]runtests.DataSinkMap, error) {
+	versionedSinks := make(map[string]runtests.DataSinkMap)
 
 	for _, summaryFile := range summaryFiles {
+		version, summaryFile := splitVersion(summaryFile)
+		sinks, ok := versionedSinks[version]
+		if !ok {
+			sinks = make(runtests.DataSinkMap)
+		}
 		// TODO(phosek): process these in parallel using goroutines.
 		file, err := os.Open(summaryFile)
 		if err != nil {
@@ -129,9 +145,10 @@ func readSummary(summaryFiles []string) (runtests.DataSinkMap, error) {
 				}
 			}
 		}
+		versionedSinks[version] = sinks
 	}
 
-	return sinks, nil
+	return versionedSinks, nil
 }
 
 type Action struct {
@@ -160,16 +177,16 @@ const instrProfRawMagic = uint64(255)<<56 | uint64('l')<<48 |
 	uint64('p')<<40 | uint64('r')<<32 | uint64('o')<<24 |
 	uint64('f')<<16 | uint64('r')<<8 | uint64(129)
 
-type versionFetcher struct {
+type profrawVersionFetcher struct {
 	mu    sync.RWMutex
 	cache map[string]uint64
 }
 
-func newVersionFetcher() *versionFetcher {
-	return &versionFetcher{cache: make(map[string]uint64)}
+func newProfrawVersionFetcher() *profrawVersionFetcher {
+	return &profrawVersionFetcher{cache: make(map[string]uint64)}
 }
 
-func (f *versionFetcher) getVersion(filepath string) (uint64, error) {
+func (f *profrawVersionFetcher) getVersion(filepath string) (uint64, error) {
 	f.mu.RLock()
 	v, ok := f.cache[filepath]
 	f.mu.RUnlock()
@@ -270,37 +287,65 @@ type profileEntry struct {
 	Module  string `json:"module"`
 }
 
+// for testability.
+type versionFetcher interface {
+	getVersion(filepath string) (uint64, error)
+}
+
 // mergeEntries combines data from runtests and build ids embedded in profiles
 // returning a sequence of entries, where each entry contains
 // a raw profile and module specified by build ID present in that profile.
-func mergeEntries(ctx context.Context, vf *versionFetcher, summary runtests.DataSinkMap, partitions map[uint64]*partition) ([]profileEntry, error) {
+// It also modifies partitions in-place by appending each profile to the
+// appropriate partition.
+func mergeEntries(ctx context.Context, vf versionFetcher, versionedSummaries map[string]runtests.DataSinkMap, partitions map[string]*partition) ([]profileEntry, error) {
 	// Dedupe profiles so we only fetch build IDs once for each.
-	profiles := make(map[string]struct{})
-	for _, sink := range summary[llvmProfileSinkType] {
-		profiles[sink.File] = struct{}{}
+	profiles := make(map[string]string)
+	useVersionFetcher := true
+	for version, summary := range versionedSummaries {
+		if version != "" {
+			useVersionFetcher = false
+		}
+		for _, sink := range summary[llvmProfileSinkType] {
+			profiles[sink.File] = version
+		}
 	}
 
+	var partitionLock sync.Mutex
 	profileEntryChan := make(chan profileEntry, len(profiles))
 	sems := make(chan struct{}, jobs)
 	var eg errgroup.Group
-	for profile := range profiles {
+	for profile, version := range profiles {
 		profile := profile // capture range variable.
+		version := version
 		sems <- struct{}{}
 		eg.Go(func() error {
 			defer func() { <-sems }()
 
-			version, err := vf.getVersion(profile)
-			if err != nil {
-				// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
-				// Once resolved, return an error.
-				logger.Warningf(ctx, "cannot read version from profile %q: %s", profile, err)
-				return nil
+			if useVersionFetcher {
+				llvmVersion, err := vf.getVersion(profile)
+				if err != nil {
+					// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
+					// Once resolved, return an error.
+					logger.Warningf(ctx, "cannot read version from profile %q: %s", profile, err)
+					return nil
+				}
+				if llvmVersion > 0 {
+					version = strconv.Itoa(int(llvmVersion))
+				}
 			}
 
 			// Find the associated llvm-profdata tool.
 			partition, ok := partitions[version]
 			if !ok {
-				partition = partitions[0]
+				// Only use the default partition if we are using the versionFetcher, meaning
+				// no versions were specified with the summary files. Otherwise, if a summary file
+				// has been specified with a version, there must also be an llvm-profdata specified
+				// with the same version.
+				if useVersionFetcher {
+					partition = partitions[""]
+				} else {
+					return fmt.Errorf("no llvm-profdata has been specified for version %q", version)
+				}
 			}
 
 			// Read embedded build ids, which are enabled for profile versions 7 and above.
@@ -320,6 +365,9 @@ func mergeEntries(ctx context.Context, vf *versionFetcher, summary runtests.Data
 				Profile: profile,
 				Module:  embeddedBuildId,
 			}
+			partitionLock.Lock()
+			partition.profiles = append(partition.profiles, profile)
+			partitionLock.Unlock()
 			return nil
 		})
 	}
@@ -337,35 +385,28 @@ func mergeEntries(ctx context.Context, vf *versionFetcher, summary runtests.Data
 }
 
 func process(ctx context.Context, repo symbolize.Repository) error {
-	partitions := make(map[uint64]*partition)
+	partitions := make(map[string]*partition)
 	var err error
 
 	for _, profdata := range llvmProfdata {
-		var version uint64
-		s := strings.SplitN(profdata, "=", 2)
-		if len(s) > 1 {
-			version, err = strconv.ParseUint(s[1], 10, 64)
-			if err != nil {
-				return fmt.Errorf("invalid version number %q: %w", s[1], err)
-			}
-		}
-		partitions[version] = &partition{tool: s[0]}
+		version, tool := splitVersion(profdata)
+		partitions[version] = &partition{tool: tool}
 	}
 
-	if _, ok := partitions[0]; !ok {
+	if _, ok := partitions[""]; !ok {
 		return fmt.Errorf("missing default llvm-profdata tool path")
 	}
 
 	// Read in all the data in summary file
-	summary, err := readSummary(summaryFile)
+	summaries, err := readSummary(summaryFile)
 	if err != nil {
 		return fmt.Errorf("parsing info: %w", err)
 	}
 
-	vf := newVersionFetcher()
+	vf := newProfrawVersionFetcher()
 
 	// Merge all the information
-	entries, err := mergeEntries(ctx, vf, summary, partitions)
+	entries, err := mergeEntries(ctx, vf, summaries, partitions)
 
 	if err != nil {
 		return fmt.Errorf("merging info: %w", err)
@@ -391,29 +432,14 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		}
 	}
 
-	for _, entry := range entries {
-		version, err := vf.getVersion(entry.Profile)
-		if err != nil {
-			// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
-			// Once resolved, return error below.
-			logger.Warningf(ctx, "cannot read version from profile %q: %s", entry.Profile, err)
-			continue
-		}
-		partition, ok := partitions[version]
-		if !ok {
-			partition = partitions[0]
-		}
-		partition.profiles = append(partition.profiles, entry.Profile)
-	}
-
 	profdataFiles := []string{}
 	for version, partition := range partitions {
 		if len(partition.profiles) == 0 {
 			continue
 		}
 
-		// Make the llvm-profdata response file
-		profdataFile, err := os.Create(filepath.Join(tempDir, "llvm-profdata.rsp"))
+		// Make the llvm-profdata response file.
+		profdataFile, err := os.Create(filepath.Join(tempDir, fmt.Sprintf("llvm-profdata%s.rsp", version)))
 		if err != nil {
 			return fmt.Errorf("creating llvm-profdata.rsp file: %w", err)
 		}
@@ -423,8 +449,8 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		}
 		profdataFile.Close()
 
-		// Merge all raw profiles
-		mergedFile := filepath.Join(tempDir, fmt.Sprintf("merged%d.profdata", version))
+		// Merge all raw profiles.
+		mergedFile := filepath.Join(tempDir, fmt.Sprintf("merged%s.profdata", version))
 		args := []string{
 			"merge",
 			"--failure-mode=any",
@@ -454,7 +480,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		args = append(args, "--num-threads", strconv.Itoa(numThreads))
 	}
 	args = append(args, profdataFiles...)
-	mergeCmd := Action{Path: partitions[0].tool, Args: args}
+	mergeCmd := Action{Path: partitions[""].tool, Args: args}
 	data, err := mergeCmd.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("%s failed with %v:\n%s", mergeCmd.String(), err, string(data))
