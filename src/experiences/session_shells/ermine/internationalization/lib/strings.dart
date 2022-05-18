@@ -1205,20 +1205,23 @@ class Strings {
             'Tooltip text for the wifi toggle warning icon when turning off wifi fails.',
       );
 
-  static String get usageDiagnostics => Intl.message('Usage & Diagnostics',
-      name: 'usage and diagnostics',
-      desc: 'The title for "Usage & Diagnostics" menu in Quick Settings');
-
-  static String get enabled => Intl.message(
-        'Enabled',
-        name: 'enabled',
-        desc: 'A text indicator for enabled feature',
+  static String get usageAndDiagnostics => Intl.message(
+        'Usage & Diagnostics',
+        name: 'usage and diagnostics',
+        desc:
+            'The title for "Usage & Diagnostics Sharing" menu in Quick Settings',
       );
 
-  static String get disabled => Intl.message(
-        'Disabled',
-        name: 'disabled',
-        desc: 'A text indicator for disabled feature',
+  static String get sharingOn => Intl.message(
+        'Sharing on',
+        name: 'sharing on',
+        desc: 'A text indicator of the data sharing opt-in status',
+      );
+
+  static String get sharingOff => Intl.message(
+        'Sharing off',
+        name: 'sharing off',
+        desc: 'A text indicator of the data sharing opt-out status',
       );
 
   static String get helpFuchsia => Intl.message(
@@ -1234,19 +1237,19 @@ class Strings {
         desc: 'The text link to the Google\'s privacy and terms webpage.',
       );
 
-  static String get enableDataSharingTitle => Intl.message(
-        'Enable Usage & Diagnostics to send feedback',
-        name: 'the title for enable usage & diagnostics',
-        desc: 'The title for the alert that pops up when the user tries to '
+  static String get turnOnDataSharingTitle => Intl.message(
+        'Turn on sharing to send feedback',
+        name: 'the title of the alert dialog to turn on data sharing',
+        desc: 'The title of the alert that pops up when the user tries to '
             'open User Feedback when the data sharing is disabled',
       );
 
-  static String get enableDataSharingBody => Intl.message(
-        'User Feedback is available only when you have consented to sharing '
+  static String get turnOnDataSharingBody => Intl.message(
+        'Report an Issue is available only when you have consented to sharing '
         'usage and diagnostics data. You can update the preference in Quick '
         'Settings > Usage & Diagnostics.',
-        name: 'the body text for enable usage & diagnostics',
-        desc: 'The body text for the alert that pops up when the user tries to '
+        name: 'the body text of the alert dialog to turn on data sharing',
+        desc: 'The body text of the alert that pops up when the user tries to '
             'open User Feedback when the data sharing is disabled',
       );
 
@@ -1274,9 +1277,9 @@ class Strings {
             'first-time dialog',
       );
 
-  static String get acknowledged => Intl.message(
-        'Acknowledged',
-        name: 'acknowledged',
+  static String get okGotIt => Intl.message(
+        'OK, got it',
+        name: 'ok got it',
         desc: 'The label of the button on the user feedback first-time dialog',
       );
 
@@ -1287,17 +1290,17 @@ class Strings {
       );
 
   static String get noPII => Intl.message(
-        'Please do not include personal information in the summary or '
-        'description unless it is necessary to describe the issue.',
+        'Please do not include personal information in the description unless '
+        'it is necessary to describe the issue.',
         name: 'noPII',
         desc:
             'A warning message not to include personal data in the user feedback form',
       );
 
-  static String get summary => Intl.message(
-        'Summary',
-        name: 'issue summary',
-        desc: 'The label for the issue summary input field',
+  static String get issueTitle => Intl.message(
+        'Issue Title',
+        name: 'issue title',
+        desc: 'The label for the issue title input field',
       );
 
   static String get description => Intl.message(
@@ -1326,25 +1329,22 @@ class Strings {
         desc: 'The lable of the Submit button',
       );
 
-  static String get submittedTitle =>
-      Intl.message('Your feedback report is on its way.',
-          name: 'user feedback submitted title',
-          desc: 'The title for the user feedback submission complete page');
-
-  static String get submittedDesc1 => Intl.message(
-        'Thanks for taking the time to submit your report. '
-        'It is successfully filed and you will be able to see the submitted data '
-        'on crash once the upload is done. Here is the UUID of the report:',
-        name: 'user feedback submission description 1',
-        desc:
-            'The first sentence of the description on the user feedback submission complete page',
+  static String get submittedTitle => Intl.message(
+        'Feedback has been sent.',
+        name: 'feedback submitted title',
+        desc: 'The title for the user feedback submission complete page',
       );
 
-  static String get submittedDesc2 => Intl.message(
-        'You will also be notified when its auto-created Monorail bug is ready.',
-        name: 'user feedback submission description 2',
-        desc:
-            'The second sentence of the description on the user feedback submission complete page',
+  static String submittedDesc(String id) => Intl.message(
+        'Thanks for submitting your report. It has been filed successfully and '
+        'will appear on the crash server when the upload is complete.\n\n'
+        'This report will also create a Monorail bug. You\'ll be notified by '
+        'email when the bug is ready.\n\n'
+        'Report ID: $id',
+        name: 'user feedback submission description',
+        desc: 'The description on the user feedback submission complete page',
+        examples: const {'id': '271649084504292-5ts4-8ew5'},
+        args: [id],
       );
 
   static String dataSharingLegalStatement(String legalHelpUrl,

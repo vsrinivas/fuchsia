@@ -23,7 +23,7 @@ class DataSharingConsentSettings extends StatelessWidget {
             ? 'https://policies.google.com/privacy'
             : 'https://policies.google.com/privacy?hl=${app.simpleLocale}';
         return SettingDetails(
-          title: Strings.usageDiagnostics,
+          title: Strings.usageAndDiagnostics,
           onBack: state.showAllSettings,
           trailing: Switch(
             value: state.dataSharingConsentEnabled,

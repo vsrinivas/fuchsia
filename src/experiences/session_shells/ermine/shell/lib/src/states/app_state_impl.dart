@@ -436,8 +436,8 @@ class AppStateImpl with Disposable implements AppState {
   void showUserFeedback() async {
     if (!settingsState.dataSharingConsentEnabled) {
       _displayDialog(AlertDialogInfo(
-        title: Strings.enableDataSharingTitle,
-        body: Strings.enableDataSharingBody,
+        title: Strings.turnOnDataSharingTitle,
+        body: Strings.turnOnDataSharingBody,
         actions: [Strings.close],
         width: 714,
       ));
@@ -464,8 +464,8 @@ class AppStateImpl with Disposable implements AppState {
               _feedbackPage.value = FeedbackPage.ready;
             });
           },
-          actions: [Strings.acknowledged],
-          defaultAction: Strings.acknowledged,
+          actions: [Strings.okGotIt],
+          defaultAction: Strings.okGotIt,
           width: 790,
         ));
 
@@ -489,8 +489,8 @@ class AppStateImpl with Disposable implements AppState {
   void userFeedbackSubmit(
       {required String desc,
       required String username,
-      String summary = 'New user feedback for Workstation'}) {
-    userFeedbackService.submit(summary, desc, username);
+      String title = 'New user feedback for Workstation'}) {
+    userFeedbackService.submit(title, desc, username);
   }
 
   @override

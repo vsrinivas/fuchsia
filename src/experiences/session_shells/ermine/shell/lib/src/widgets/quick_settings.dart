@@ -339,13 +339,13 @@ class _ListSettings extends StatelessWidget {
                     title: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(Strings.usageDiagnostics),
+                        Text(Strings.usageAndDiagnostics),
                         SizedBox(width: 48),
                         Expanded(
                           child: Text(
                             appState.settingsState.dataSharingConsentEnabled
-                                ? Strings.enabled
-                                : Strings.disabled,
+                                ? Strings.sharingOn
+                                : Strings.sharingOff,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.right,
                             maxLines: 1,

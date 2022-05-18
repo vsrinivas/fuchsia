@@ -81,7 +81,7 @@ abstract class AppState {
   void launchLicense();
   void checkingForUpdatesAlert();
   void userFeedbackSubmit(
-      {required String desc, required String username, String summary});
+      {required String desc, required String username, String title});
   void setScale(double scale);
   void dismissDialogs();
 

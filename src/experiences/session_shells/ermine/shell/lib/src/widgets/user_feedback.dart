@@ -47,7 +47,7 @@ class UserFeedbackForm extends StatelessWidget {
   final AppState app;
   final bool isOutFocused;
   final _formKey = GlobalKey<FormState>();
-  final _summaryController = TextEditingController();
+  final _titleController = TextEditingController();
   final _descController = TextEditingController();
   final _usernameController = TextEditingController();
   final _descFocusNode = FocusNode();
@@ -88,13 +88,6 @@ class UserFeedbackForm extends StatelessWidget {
                           Strings.sendFeedback,
                           style: Theme.of(context).textTheme.headline5,
                         ),
-                        SizedBox(height: 24),
-                        // Warning
-                        Text(
-                          Strings.noPII,
-                          style: _theme.textTheme.bodyText1!
-                              .copyWith(color: _theme.errorColor),
-                        ),
                         SizedBox(height: 40),
                       ]),
 
@@ -107,13 +100,13 @@ class UserFeedbackForm extends StatelessWidget {
                           key: _formKey,
                           child: Column(
                             children: [
-                              // Summary
+                              // IssueTitle
                               TextFormField(
                                 maxLines: 1,
-                                controller: _summaryController,
+                                controller: _titleController,
                                 autofocus: !isOutFocused,
                                 decoration: InputDecoration(
-                                  labelText: Strings.summary,
+                                  labelText: Strings.issueTitle,
                                   border: OutlineInputBorder(
                                       borderRadius: BorderRadius.zero),
                                 ),
@@ -132,6 +125,7 @@ class UserFeedbackForm extends StatelessWidget {
                                     AutovalidateMode.onUserInteraction,
                                 decoration: InputDecoration(
                                   labelText: '${Strings.description}*',
+                                  hintText: Strings.noPII,
                                   alignLabelWithHint: true,
                                   border: OutlineInputBorder(
                                       borderRadius: BorderRadius.zero),
@@ -216,7 +210,7 @@ class UserFeedbackForm extends StatelessWidget {
                         onPressed: () =>
                             _formKey.currentState?.validate() ?? false
                                 ? app.userFeedbackSubmit(
-                                    summary: _summaryController.text,
+                                    title: _titleController.text,
                                     desc: _descController.text,
                                     username: _usernameController.text,
                                   )
@@ -259,13 +253,7 @@ class UserFeedbackSubmitted extends StatelessWidget {
                         Text(Strings.submittedTitle,
                             style: Theme.of(context).textTheme.headline5),
                         SizedBox(height: 32),
-                        Text(Strings.submittedDesc1,
-                            style: Theme.of(context).textTheme.bodyText1),
-                        SizedBox(height: 24),
-                        Text(app.feedbackUuid,
-                            style: Theme.of(context).textTheme.headline6),
-                        SizedBox(height: 24),
-                        Text(Strings.submittedDesc2,
+                        Text(Strings.submittedDesc(app.feedbackUuid),
                             style: Theme.of(context).textTheme.bodyText1),
                       ],
                     ),

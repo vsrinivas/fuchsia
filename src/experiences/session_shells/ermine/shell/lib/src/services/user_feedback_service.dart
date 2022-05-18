@@ -15,7 +15,7 @@ class UserFeedbackService {
   late final FeedbackSubmitCallback onSubmit;
   late final VoidCallback onError;
 
-  Future<void> submit(String summary, String desc, String username) async {
+  Future<void> submit(String title, String desc, String username) async {
     final uptime = zircon.System.clockGetMonotonic();
 
     final eventId = Uuid().v4();
@@ -28,7 +28,7 @@ class UserFeedbackService {
       crashSignature: crashSignature,
       annotations: [
         Annotation(key: 'feedback.description', value: desc),
-        Annotation(key: 'feedback.summary', value: summary),
+        Annotation(key: 'feedback.summary', value: title),
         Annotation(key: 'feedback.username', value: username),
       ],
     );
