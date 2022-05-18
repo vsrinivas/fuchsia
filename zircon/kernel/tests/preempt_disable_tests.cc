@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
@@ -350,6 +351,120 @@ static bool test_auto_preempt_disabler() {
   END_TEST;
 }
 
+// Verify that in certain contexts where preemption cannot immediately occur, unblocking a thread
+// pinned to the current CPU will mark the CPU for preemption.
+//
+// This test covers three cases:
+//
+// 1. preemption is disabled
+// 2. a spinlock is held
+// 3. blocking is disallowed via |arch_set_blocking_disallowed|.
+//
+// See fxbug.dev/100545 for motivation.
+static bool test_local_preempt_pending() {
+  BEGIN_TEST;
+
+  // First, define the common code that will be used in all cases.
+  //
+  // |setup_and_run_with| is used to setup test conditions and run the |func| test case.
+  //
+  // |func| receives an Event that it should signal to unblock the |waiter| thread (see below).
+  using Func = bool(Event&);
+  auto setup_and_run_with = [](Func func) -> bool {
+    BEGIN_TEST;
+
+    // Make sure we restore this thread's affinity.
+    auto cleanup = fit::defer([affinity = Thread::Current::Get()->GetCpuAffinity()]() {
+      Thread::Current::Get()->SetCpuAffinity(affinity);
+    });
+
+    struct Args {
+      Event event;
+      ktl::atomic<bool> started{false};
+    } args;
+
+    auto waiter = [](void* void_args) -> int {
+      auto* args = reinterpret_cast<Args*>(void_args);
+      // Let the other thread know that we're up and running and then wait to be signaled.
+      args->started.store(true);
+      args->event.Wait();
+      return 0;
+    };
+
+    const cpu_num_t target_cpu = BOOT_CPU_ID;
+
+    // Migrate the current thread to the target CPU and bind a |waiter| thread to the same CPU.
+    const cpu_mask_t mask = cpu_num_to_mask(target_cpu);
+    Thread::Current::Get()->SetCpuAffinity(mask);
+    Thread* t = Thread::Create("test_local_preempt_pending", waiter, &args, DEFAULT_PRIORITY);
+    auto cleanup_waiter = fit::defer([t, &args]() {
+      args.event.Signal();
+      t->Join(nullptr, ZX_TIME_INFINITE);
+    });
+    t->SetCpuAffinity(mask);
+
+    // Start the |waiter| and spin until we know that it has started running and then blocked.
+    t->Resume();
+    while (true) {
+      Thread::Current::Yield();
+      Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+      if (args.started.load() && t->scheduler_state().state() == THREAD_BLOCKED) {
+        break;
+      }
+    }
+
+    // At this point we know the |waiter| is blocked on the event.
+    EXPECT_TRUE(func(args.event));
+
+    END_TEST;
+  };
+
+  // Now test each case using the common code above.
+
+  // 1. Preemption disabled should cause a preemption event to become pending.
+  EXPECT_TRUE(setup_and_run_with([](Event& event) -> bool {
+    BEGIN_TEST;
+    AutoPreemptDisabler apd;
+    // Unblock the |waiter|.  Because we've got preemption disabled, a preemption event for the
+    // local CPU should become pending.
+    event.Signal();
+    cpu_mask_t pending = Thread::Current::preemption_state().preempts_pending();
+    EXPECT_NE(0u, pending);
+    EXPECT_TRUE(pending | cpu_num_to_mask(arch_curr_cpu_num()));
+    END_TEST;
+  }));
+
+  // 2. Holding a spinlock should cause a preemption event to become pending.
+  EXPECT_TRUE(setup_and_run_with([](Event& event) {
+    BEGIN_TEST;
+    DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(local_lock, MonitoredSpinLock);
+    Guard<MonitoredSpinLock, IrqSave> guard{local_lock::Get(), SOURCE_TAG};
+    // Unblock the |waiter|.  Because we're holding a spinlock, a preemption event for the local CPU
+    // should become pending.
+    event.Signal();
+    cpu_mask_t pending = Thread::Current::preemption_state().preempts_pending();
+    EXPECT_NE(0u, pending);
+    EXPECT_TRUE(pending | cpu_num_to_mask(arch_curr_cpu_num()));
+    END_TEST;
+  }));
+
+  // 3. arch_blocking_disallowed() should cause a preemption event to become pending.
+  EXPECT_TRUE(setup_and_run_with([](Event& event) {
+    BEGIN_TEST;
+    arch_set_blocking_disallowed(true);
+    auto cleanup = fit::defer([]() { arch_set_blocking_disallowed(false); });
+    // Unblock the |waiter|.  Because blocking is disallowed, a preemption event for the local CPU
+    // should become pending.
+    event.Signal();
+    cpu_mask_t pending = Thread::Current::preemption_state().preempts_pending();
+    EXPECT_NE(0u, pending);
+    EXPECT_TRUE(pending | cpu_num_to_mask(arch_curr_cpu_num()));
+    END_TEST;
+  }));
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(preempt_disable_tests)
 UNITTEST("test_in_timer_callback", test_in_timer_callback)
 UNITTEST("test_inc_dec_disable_counts", test_inc_dec_disable_counts)
@@ -358,4 +473,5 @@ UNITTEST("test_blocking_clears_preempt_pending", test_blocking_clears_preempt_pe
 UNITTEST("test_interrupt_preserves_preempt_pending", test_interrupt_preserves_preempt_pending)
 UNITTEST("test_interrupt_with_preempt_disable", test_interrupt_with_preempt_disable)
 UNITTEST("test_auto_preempt_disabler", test_auto_preempt_disabler)
+UNITTEST("test_local_preempt_pending", test_local_preempt_pending)
 UNITTEST_END_TESTCASE(preempt_disable_tests, "preempt_disable_tests", "preempt_disable_tests")
