@@ -15,6 +15,7 @@ use crate::handler::setting_handler::Command;
 use crate::handler::setting_handler::{
     ControllerError, Event, ExitResult, SettingHandlerResult, State,
 };
+use crate::inspect::listener_logger::ListenerInspectLogger;
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::trace::TracingNonce;
@@ -181,6 +182,9 @@ pub(crate) struct SettingProxy {
     error_node: fuchsia_inspect::Node,
     node_errors: VecDeque<NodeError>,
     error_count: usize,
+
+    /// Inspect logger for active listener counts.
+    listener_logger: Arc<Mutex<ListenerInspectLogger>>,
 }
 
 struct NodeError {
@@ -199,6 +203,7 @@ macro_rules! publish {
 impl SettingProxy {
     /// Creates a SettingProxy that is listening to requests from the
     /// provided receiver and will send responses/updates on the given sender.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn create(
         setting_type: SettingType,
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
@@ -208,6 +213,7 @@ impl SettingProxy {
         request_timeout: Option<Duration>,
         retry_on_timeout: bool,
         node: fuchsia_inspect::Node,
+        listener_logger: Arc<Mutex<ListenerInspectLogger>>,
     ) -> Result<service::message::Signature, Error> {
         let (messenger, receptor) = delegate
             .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
@@ -255,6 +261,7 @@ impl SettingProxy {
             error_node,
             node_errors: VecDeque::new(),
             error_count: 0,
+            listener_logger,
         };
 
         // Main task loop for receiving and processing incoming messages.
@@ -375,6 +382,7 @@ impl SettingProxy {
             }
             ProxyRequest::EndListen(request_info) => {
                 trace!(nonce, "handle end listen");
+                self.listener_logger.lock().await.remove_listener(self.setting_type);
                 self.handle_end_listen(request_info).await;
             }
         }
@@ -671,6 +679,9 @@ impl SettingProxy {
 
         if matches!(request, Request::Listen) {
             let info = active_request.get_info();
+
+            // Increment the active listener count in inspect.
+            self.listener_logger.lock().await.add_listener(self.setting_type);
 
             // Add a callback when the client side goes out of scope. Panic if the unbounded_send
             // failed, which indicates the channel got dropped and requests cannot be processed

@@ -51,6 +51,7 @@ use crate::handler::setting_proxy::SettingProxy;
 use crate::ingress::fidl;
 use crate::ingress::registration::Registrant;
 use crate::input::input_controller::InputController;
+use crate::inspect::listener_logger::ListenerInspectLogger;
 use crate::intl::intl_controller::IntlController;
 use crate::job::manager::Manager;
 use crate::job::source::Seeder;
@@ -239,6 +240,7 @@ pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     handlers: HashMap<SettingType, GenerateHandler>,
     resource_monitors: Vec<monitor_base::monitor::Generate>,
     setting_proxy_inspect_info: Option<&'static fuchsia_inspect::Node>,
+    active_listener_inspect_logger: Option<Arc<Mutex<ListenerInspectLogger>>>,
 }
 
 impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
@@ -257,6 +259,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             settings: vec![],
             resource_monitors: vec![],
             setting_proxy_inspect_info: None,
+            active_listener_inspect_logger: None,
         }
     }
 
@@ -358,12 +361,15 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
-    /// Sets the inspect node for setting proxy inspect information.
+    /// Sets the inspect node for setting proxy inspect information and any required
+    /// inspect loggers.
     pub fn setting_proxy_inspect_info(
         mut self,
         setting_proxy_inspect_info: &'static fuchsia_inspect::Node,
+        active_listener_inspect_logger: Arc<Mutex<ListenerInspectLogger>>,
     ) -> EnvironmentBuilder<T> {
         self.setting_proxy_inspect_info = Some(setting_proxy_inspect_info);
+        self.active_listener_inspect_logger = Some(active_listener_inspect_logger);
         self
     }
 
@@ -489,6 +495,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             Arc::new(Mutex::new(policy_handler_factory)),
             self.storage_factory,
             self.setting_proxy_inspect_info.unwrap_or_else(|| component::inspector().root()),
+            self.active_listener_inspect_logger
+                .unwrap_or_else(|| Arc::new(Mutex::new(ListenerInspectLogger::new()))),
         )
         .await
         .context("Could not create environment")?;
@@ -733,6 +741,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
     storage_factory: Arc<T>,
     setting_proxies_node: &'static fuchsia_inspect::Node,
+    listener_logger: Arc<Mutex<ListenerInspectLogger>>,
 ) -> Result<HashSet<Entity>, Error> {
     for blueprint in event_subscriber_blueprints {
         blueprint.create(delegate.clone()).await;
@@ -758,6 +767,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             Some(DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS.millis()),
             true,
             setting_proxies_node.create_child(format!("{:?}", setting_type)),
+            listener_logger.clone(),
         )
         .await?;
 

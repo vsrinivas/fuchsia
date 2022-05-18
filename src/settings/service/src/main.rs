@@ -9,6 +9,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_inspect::{self as inspect, component};
 use fuchsia_syslog::{self as syslog, fx_log_info};
+use futures::lock::Mutex;
 use lazy_static::lazy_static;
 use settings::agent::storage::storage_factory::StashDeviceStorageFactory;
 use settings::agent::BlueprintHandle as AgentBlueprintHandle;
@@ -16,6 +17,7 @@ use settings::base::get_default_interfaces;
 use settings::config::base::{get_default_agent_types, AgentType};
 use settings::config::default_settings::DefaultSetting;
 use settings::handler::setting_proxy_inspect_info::SettingProxyInspectInfo;
+use settings::inspect::listener_logger::ListenerInspectLogger;
 use settings::inspect::stash_logger::StashInspectLoggerHandle;
 use settings::AgentConfiguration;
 use settings::EnabledInterfacesConfiguration;
@@ -31,6 +33,9 @@ lazy_static! {
     // TODO(fxb/93842): replace with a dependency injected value instead of a static.
     static ref SETTING_PROXY_INSPECT_INFO: SettingProxyInspectInfo =
         SettingProxyInspectInfo::new(component::inspector().root());
+
+    static ref LISTENER_INSPECT_LOGGER: Arc<Mutex<ListenerInspectLogger>> =
+        Arc::new(Mutex::new(ListenerInspectLogger::new()));
 }
 
 fn main() -> Result<(), Error> {
@@ -91,7 +96,10 @@ fn main() -> Result<(), Error> {
     EnvironmentBuilder::new(Arc::new(storage_factory))
         .configuration(configuration)
         .agent_mapping(<AgentBlueprintHandle as From<AgentType>>::from)
-        .setting_proxy_inspect_info(SETTING_PROXY_INSPECT_INFO.node())
+        .setting_proxy_inspect_info(
+            SETTING_PROXY_INSPECT_INFO.node(),
+            LISTENER_INSPECT_LOGGER.clone(),
+        )
         .spawn(executor)
         .context("Failed to spawn environment for setui")
 }

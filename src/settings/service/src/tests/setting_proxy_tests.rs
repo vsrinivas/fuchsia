@@ -27,14 +27,21 @@ use crate::handler::setting_handler::{
     self, Command, ControllerError, Event, ExitResult, SettingHandlerResult, State,
 };
 use crate::handler::setting_proxy::{SettingProxy, MAX_NODE_ERRORS};
+use crate::inspect::listener_logger::ListenerInspectLogger;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
+use crate::message::receptor::Receptor;
 use crate::message::MessageHubUtil;
-use crate::service::{self, message, TryFromWithClient};
+use crate::service::{
+    self, message, Address as ServiceAddress, Payload as ServicePayload, Role as ServiceRole,
+    TryFromWithClient,
+};
 use crate::{clock, event, Payload};
 
 const TEARDOWN_TIMEOUT: Duration = Duration::from_seconds(5);
 const SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
 const SETTING_PROXY_TIMEOUT_MS: i64 = 1;
+
+type ListenReceptor = Receptor<ServicePayload, ServiceAddress, ServiceRole>;
 
 struct SettingHandler {
     setting_type: SettingType,
@@ -233,6 +240,7 @@ impl TestEnvironmentBuilder {
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new(delegate.clone())));
 
         let inspector = Inspector::new();
+        let listener_logger = Arc::new(Mutex::new(ListenerInspectLogger::new()));
         let proxy_handler_signature = SettingProxy::create(
             self.setting_type,
             handler_factory.clone(),
@@ -242,6 +250,7 @@ impl TestEnvironmentBuilder {
             self.timeout.map(|(duration, _)| duration),
             self.timeout.map_or(true, |(_, retry)| retry),
             inspector.root().create_child("test"),
+            listener_logger.clone(),
         )
         .await
         .expect("proxy creation should succeed");
@@ -268,6 +277,7 @@ impl TestEnvironmentBuilder {
             setting_handler: handler,
             setting_type: self.setting_type,
             delegate,
+            listener_logger,
         }
     }
 }
@@ -280,6 +290,7 @@ struct TestEnvironment {
     setting_handler: Arc<Mutex<SettingHandler>>,
     setting_type: SettingType,
     delegate: service::message::Delegate,
+    listener_logger: Arc<Mutex<ListenerInspectLogger>>,
 }
 
 impl TestEnvironment {
@@ -300,6 +311,49 @@ impl TestEnvironment {
     }
 }
 
+// Initializes an environment set up to handle Listen requests.
+async fn init_listen_env() -> (TestEnvironment, ListenReceptor) {
+    let setting_type = SettingType::Unknown;
+    let environment = TestEnvironmentBuilder::new(setting_type).build().await;
+
+    // Send a listen state and make sure sink is notified.
+    let mut listen_receptor = environment
+        .service_client
+        .message(
+            service::Payload::Setting(HandlerPayload::Request(Request::Listen)),
+            Audience::Address(service::Address::Handler(setting_type)),
+        )
+        .send();
+
+    assert!(listen_receptor.wait_for_acknowledge().await.is_ok(), "ack should be sent");
+    (environment, listen_receptor)
+}
+
+// Executes a Listen request.
+async fn run_listen(env: Arc<Mutex<TestEnvironment>>) {
+    let mut environment = env.lock().await;
+    environment.setting_handler.lock().await.notify();
+
+    if let Some(state) = environment.setting_handler_rx.next().await {
+        assert_eq!(state, State::Listen);
+    } else {
+        panic!("should have received state update");
+    }
+}
+
+// Executes an EndListen request.
+async fn run_end_listen(env: Arc<Mutex<TestEnvironment>>, listen_receptor: ListenReceptor) {
+    let mut environment = env.lock().await;
+    // Drop the listener so the service transitions into teardown.
+    drop(listen_receptor);
+
+    if let Some(state) = environment.setting_handler_rx.next().await {
+        assert_eq!(state, State::EndListen);
+    } else {
+        panic!("should have received EndListen state update");
+    }
+}
+
 // Ensures setting proxy registers with the MessageHub.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_message_hub_presence() {
@@ -315,56 +369,50 @@ async fn test_message_hub_presence() {
 
 #[test]
 fn test_notify() {
-    async fn run_to_end_listen() -> TestEnvironment {
-        let setting_type = SettingType::Unknown;
-        let mut environment = TestEnvironmentBuilder::new(setting_type).build().await;
-        // Send a listen state and make sure sink is notified.
-        let mut listen_receptor = environment
-            .service_client
-            .message(
-                service::Payload::Setting(HandlerPayload::Request(Request::Listen)),
-                Audience::Address(service::Address::Handler(setting_type)),
-            )
-            .send();
-
-        assert!(listen_receptor.wait_for_acknowledge().await.is_ok(), "ack should be sent");
-
-        environment.setting_handler.lock().await.notify();
-
-        if let Some(state) = environment.setting_handler_rx.next().await {
-            assert_eq!(state, State::Listen);
-        } else {
-            panic!("should have received state update");
-        }
-        // Drop the listener so the service transitions into teardown.
-        drop(listen_receptor);
-
-        if let Some(state) = environment.setting_handler_rx.next().await {
-            assert_eq!(state, State::EndListen);
-        } else {
-            panic!("should have received EndListen state update");
-        }
-
-        environment
-    }
-
     let mut executor =
         fasync::TestExecutor::new_with_fake_time().expect("Failed to create executor");
 
-    let environment_fut = run_to_end_listen();
+    let environment_fut = init_listen_env();
     futures::pin_mut!(environment_fut);
-    let mut environment = if let Poll::Ready(env) = executor.run_until_stalled(&mut environment_fut)
-    {
-        env
+    let (environment, receptor) =
+        if let Poll::Ready((env, receptor)) = executor.run_until_stalled(&mut environment_fut) {
+            (env, receptor)
+        } else {
+            panic!("environment creation stalled");
+        };
+
+    let env_handle = Arc::new(Mutex::new(environment));
+
+    let listen_fut = run_listen(env_handle.clone());
+    futures::pin_mut!(listen_fut);
+    let _ = if let Poll::Ready(res) = executor.run_until_stalled(&mut listen_fut) {
+        res
     } else {
-        panic!("environment creation stalled");
+        panic!("Listen failed");
+    };
+
+    let end_listen_fut = run_end_listen(env_handle.clone(), receptor);
+    futures::pin_mut!(end_listen_fut);
+    let _ = if let Poll::Ready(res) = executor.run_until_stalled(&mut end_listen_fut) {
+        res
+    } else {
+        panic!("EndListen failed");
     };
 
     // Validate that the teardown timeout matches the constant.
     let deadline = crate::clock::now() + TEARDOWN_TIMEOUT;
     assert_eq!(Some(deadline), executor.wake_next_timer().map(Into::into));
 
-    let state_fut = environment.setting_handler_rx.next();
+    let env_fut = env_handle.lock();
+    futures::pin_mut!(env_fut);
+    let mut environment_lock =
+        if let Poll::Ready(env_lock) = executor.run_until_stalled(&mut env_fut) {
+            env_lock
+        } else {
+            panic!("Failed to acquire environment lock");
+        };
+
+    let state_fut = environment_lock.setting_handler_rx.next();
     futures::pin_mut!(state_fut);
     let state = if let Poll::Ready(state) = executor.run_until_stalled(&mut state_fut) {
         state
@@ -505,6 +553,7 @@ async fn inspect_catches_errors() {
         None,
         false,
         inspector.root().create_child("test"),
+        Arc::new(Mutex::new(ListenerInspectLogger::new())),
     )
     .await
     .expect("proxy creation should succeed");
@@ -537,6 +586,43 @@ async fn inspect_catches_errors() {
 }
 
 #[fasync::run_until_stalled(test)]
+async fn test_active_listener_inspect() {
+    let (env, receptor) = init_listen_env().await;
+    let env_handle = Arc::new(Mutex::new(env));
+    run_listen(env_handle.clone()).await;
+
+    // Logger handle must be locally scoped so the lock doesn't deadlock with the code under test.
+    {
+        let env_handle_clone = env_handle.clone();
+        let env_lock = env_handle_clone.lock().await;
+        let logger = env_lock.listener_logger.lock().await;
+        assert_data_tree!(logger.inspector, root: {
+            active_listeners: {
+                "Unknown": {
+                    count: 1u64,
+                }
+            }
+        });
+    }
+
+    run_end_listen(env_handle.clone(), receptor).await;
+
+    // Logger handle must be locally scoped so the lock doesn't deadlock with the code under test.
+    {
+        let env_handle_clone = env_handle.clone();
+        let env_lock = env_handle_clone.lock().await;
+        let logger = env_lock.listener_logger.lock().await;
+        assert_data_tree!(logger.inspector, root: {
+            active_listeners: {
+                "Unknown": {
+                    count: 0u64,
+                }
+            }
+        });
+    }
+}
+
+#[fasync::run_until_stalled(test)]
 async fn inspect_errors_roll_after_limit() {
     // Set the clock so that timestamps will always be 0.
     clock::mock::set(Time::from_nanos(0));
@@ -555,6 +641,7 @@ async fn inspect_errors_roll_after_limit() {
         None,
         false,
         inspector.root().create_child("test"),
+        Arc::new(Mutex::new(ListenerInspectLogger::new())),
     )
     .await
     .expect("proxy creation should succeed");
