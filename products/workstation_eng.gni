@@ -137,3 +137,9 @@ fuchsia_product_assembly_config_file = "${root_build_dir}/obj/products/workstati
 
 # Use Fxfs for the data partition.
 data_filesystem_format = "fxfs"
+
+# Remove some packages.
+legacy_base_package_labels -= [
+  "//src/virtualization/packages/termina_guest",
+  "//src/connectivity/wlan/drivers:iwlwifi",
+]

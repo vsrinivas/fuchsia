@@ -5,9 +5,3 @@
 # TODO(fxbug.dev/98011): Remove this file when it can be replaced by workstation_eng.
 
 import("//products/workstation_eng.gni")
-
-# Remove some packages.
-legacy_base_package_labels -= [
-  "//src/virtualization/packages/termina_guest",
-  "//src/connectivity/wlan/drivers:iwlwifi",
-]
