@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/group_with_inputs.gni")
+
 # Create a product assembly config file from the lists of packages and config
 # passed into the template.
 #
@@ -145,39 +147,17 @@ template("product_assembly_configuration") {
     contents = _assembly_config
   }
 
-  # An internal helper template that acts like a group, but also validates that
-  # its dependencies produces a set of files (the `inputs`).
-  #
-  # This is used to catch, at GN-time, that the deps don't correspond to a set
-  # of input files (the deps can be larger than the set of files, but not the
-  # other way around).
-  #
-  # This template is used here to validate that the computed package manifest
-  # paths actually all exist as outputs of the targets that were used to produce
-  # those paths.
-  template("_check_manifests_for_assembly") {
-    action(target_name) {
-      forward_variables_from(invoker,
-                             "*",
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-      forward_variables_from(invoker, [ "testonly" ])
-      assert(defined(inputs), "Must provide inputs to manifests")
-      assert(defined(deps) || defined(public_deps),
-             "Must provide deps for packages")
-      visibility = [ ":${labels.target_name}" ]
-      script = "//build/assembly/scripts/check_package_manifests.sh"
-      outputs = [ "$target_out_dir/$target_name.check" ]
-      args = [ rebase_path(outputs[0], root_build_dir) ]
-    }
-  }
+  # These are used to detect if the deps don't correspond to a set of input
+  # files (the deps can be larger than the set of files, but not the other way
+  # around).  Since we're computing the manifest paths from the labels, if the
+  # label to something other than a package is added, we'll compute a manifest
+  # path that doesn't exist.  This catches it here, instead of inside a build
+  # action which can't explain why it can't find a file.
 
   # Create a target for the base packages, so they appear in the dep graph
   # as distinct from the cache packages, and validate that they produce all of
   # the manifests whose paths were computed from the labels.
-  _check_manifests_for_assembly(labels.base_package_set) {
+  group_with_inputs(labels.base_package_set) {
     inputs = files.base_package_manifests
     deps = labels.base_package_labels
   }
@@ -185,7 +165,7 @@ template("product_assembly_configuration") {
   # Create a target for the cache packages, so they appear in the dep graph
   # as distinct from the cache packages, and validate that they produce all of
   # the manifests whose paths were computed from the labels.
-  _check_manifests_for_assembly(labels.cache_package_set) {
+  group_with_inputs(labels.cache_package_set) {
     inputs = files.cache_package_manifests
     deps = labels.cache_package_labels
   }
