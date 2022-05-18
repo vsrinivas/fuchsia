@@ -4,6 +4,7 @@
 
 use anyhow::{format_err, Error};
 use fidl::endpoints::Proxy;
+use fidl_fuchsia_hardware_audio::*;
 use fidl_fuchsia_io as fio;
 use fuchsia_zircon as zx;
 use futures::TryFutureExt;
@@ -57,6 +58,11 @@ impl CodecInterface {
     /// Reset codec.
     pub async fn reset(&self) -> Result<(), Error> {
         self.get_proxy()?.clone().reset().err_into().await
+    }
+
+    /// Set the gain state.
+    pub async fn set_gain_state(&self, gain_state: GainState) -> Result<(), Error> {
+        Ok(self.get_proxy()?.clone().set_gain_state(gain_state)?)
     }
 
     /// Get supported DAI formats.

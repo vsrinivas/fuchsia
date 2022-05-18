@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::configurator::Configurator;
-use async_trait::async_trait;
+use {crate::configurator::Configurator, async_trait::async_trait, fidl_fuchsia_hardware_audio::*};
 
 /// This configurator uses the first element of the DAI formats reported by the codec and
 /// configures one channel to be used per codec.
@@ -35,6 +34,19 @@ impl Configurator for DefaultConfigurator {
         let _ = match device.reset().await {
             Err(e) => {
                 tracing::warn!("Couldn't reset device: {:?}", e);
+                return;
+            }
+            Ok(()) => (),
+        };
+        let default_gain = GainState {
+            muted: Some(false),
+            agc_enabled: Some(false),
+            gain_db: Some(0.0f32),
+            ..GainState::EMPTY
+        };
+        let _ = match device.set_gain_state(default_gain).await {
+            Err(e) => {
+                tracing::warn!("Couldn't set gain: {:?}", e);
                 return;
             }
             Ok(()) => (),
