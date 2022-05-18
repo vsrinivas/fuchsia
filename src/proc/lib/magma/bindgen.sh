@@ -27,7 +27,7 @@ PATH="$PWD/prebuilt/third_party/rust/linux-x64/bin:$PATH" \
   src/proc/lib/magma/wrapper.h \
   -- \
   -I zircon/system/public \
-  -I out/default/gen/src/graphics/lib/magma/include \
+  -I out/default/linux_x64/gen/src/graphics/lib/magma/include \
   -I src/graphics/lib/magma/src \
   -I src/graphics/lib/magma/include
 

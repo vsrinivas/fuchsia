@@ -124,7 +124,6 @@ pub const WINT_MIN: u32 = 0;
 pub const WINT_MAX: u32 = 4294967295;
 pub const MAGMA_QUERY_VENDOR_ID: u32 = 0;
 pub const MAGMA_QUERY_DEVICE_ID: u32 = 1;
-pub const MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED: u32 = 2;
 pub const MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED: u32 = 3;
 pub const MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS: u32 = 5;
 pub const MAGMA_QUERY_VENDOR_PARAM_0: u32 = 10000;
@@ -907,7 +906,24 @@ extern "C" {
 }
 extern "C" {
     #[doc = ""]
-    #[doc = " \\brief Performs a query and returns a result synchronously."]
+    #[doc = " \\brief Performs a query synchronously. On MAGMA_STATUS_OK, a given query |id| will return either"]
+    #[doc = "        a buffer in |result_buffer_out|, or a value in |result_out|. A NULL pointer may be"]
+    #[doc = "        provided for whichever result parameter is not needed."]
+    #[doc = " \\param device An open device."]
+    #[doc = " \\param id A vendor-specific ID."]
+    #[doc = " \\param result_buffer_out Handle to the returned buffer."]
+    #[doc = " \\param result_out Pointer to a uint64 result."]
+    #[doc = ""]
+    pub fn magma_query(
+        device: magma_device_t,
+        id: u64,
+        result_buffer_out: *mut magma_handle_t,
+        result_out: *mut u64,
+    ) -> magma_status_t;
+}
+extern "C" {
+    #[doc = ""]
+    #[doc = " \\brief DEPRECATED. Performs a query and returns a result synchronously."]
     #[doc = " \\param device An open device."]
     #[doc = " \\param id Either MAGMA_QUERY_DEVICE_ID, or a vendor-specific id starting from"]
     #[doc = "        MAGMA_QUERY_VENDOR_PARAM_0."]
@@ -917,8 +933,8 @@ extern "C" {
 }
 extern "C" {
     #[doc = ""]
-    #[doc = " \\brief Performs a query for a large amount of data and puts that into a buffer. Returns"]
-    #[doc = "        synchronously"]
+    #[doc = " \\brief DEPRECATED. Performs a query for a large amount of data and puts that into a buffer."]
+    #[doc = "        Returns synchronously"]
     #[doc = " \\param device An open device."]
     #[doc = " \\param id A vendor-specific ID."]
     #[doc = " \\param handle_out Handle to the returned buffer."]
@@ -1293,6 +1309,7 @@ pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_GET_NOTIFICATION_CHANNEL_HANDL
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_INITIALIZE_TRACING: virtio_magma_ctrl_type = 4141;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_DEVICE_IMPORT: virtio_magma_ctrl_type = 4142;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_DEVICE_RELEASE: virtio_magma_ctrl_type = 4143;
+pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_QUERY: virtio_magma_ctrl_type = 4177;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_QUERY2: virtio_magma_ctrl_type = 4144;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_QUERY_RETURNS_BUFFER2: virtio_magma_ctrl_type =
     4145;
@@ -1362,6 +1379,7 @@ pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_INITIALIZE_TRACING: virtio_ma
     8237;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_DEVICE_IMPORT: virtio_magma_ctrl_type = 8238;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_DEVICE_RELEASE: virtio_magma_ctrl_type = 8239;
+pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_QUERY: virtio_magma_ctrl_type = 8273;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_QUERY2: virtio_magma_ctrl_type = 8240;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_QUERY_RETURNS_BUFFER2: virtio_magma_ctrl_type =
     8241;
@@ -1826,6 +1844,23 @@ pub struct virtio_magma_device_release_resp {
     pub hdr: virtio_magma_ctrl_hdr_t,
 }
 pub type virtio_magma_device_release_resp_t = virtio_magma_device_release_resp;
+#[repr(C, packed)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct virtio_magma_query_ctrl {
+    pub hdr: virtio_magma_ctrl_hdr_t,
+    pub device: u64,
+    pub id: u64,
+}
+pub type virtio_magma_query_ctrl_t = virtio_magma_query_ctrl;
+#[repr(C, packed)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct virtio_magma_query_resp {
+    pub hdr: virtio_magma_ctrl_hdr_t,
+    pub result_buffer_out: u64,
+    pub result_out: u64,
+    pub result_return: u64,
+}
+pub type virtio_magma_query_resp_t = virtio_magma_query_resp;
 #[repr(C, packed)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct virtio_magma_query2_ctrl {
