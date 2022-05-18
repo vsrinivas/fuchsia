@@ -14,7 +14,6 @@ go_library("testsharder_lib") {
     "durations_test.go",
     "images.go",
     "images_test.go",
-    "mode.go",
     "postprocess.go",
     "postprocess_test.go",
     "preprocess.go",

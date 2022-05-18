@@ -78,7 +78,6 @@ func TestMakeShards(t *testing.T) {
 	}
 
 	basicOpts := &ShardOptions{
-		Mode: Normal,
 		Tags: []string{},
 	}
 
@@ -141,7 +140,6 @@ func TestMakeShards(t *testing.T) {
 			},
 			nil,
 			&ShardOptions{
-				Mode: Normal,
 				Tags: []string{"A", "C"},
 			},
 		)
@@ -172,31 +170,6 @@ func TestMakeShards(t *testing.T) {
 			fuchsiaShard(env1, 1),
 			fuchsiaShard(withAcct(env1, "acct1"), 1),
 			fuchsiaShard(withAcct(env1, "acct2"), 1),
-		}
-		assertEqual(t, expected, actual)
-	})
-
-	t.Run("restricted mode is respected", func(t *testing.T) {
-		withAcct := func(env build.Environment, acct string) build.Environment {
-			env2 := env
-			env2.ServiceAccount = acct
-			return env2
-		}
-
-		actual := MakeShards(
-			[]build.TestSpec{
-				spec(1, env1),
-				spec(2, withAcct(env1, "acct1")),
-				spec(3, withAcct(env1, "acct2")),
-			},
-			nil,
-			&ShardOptions{
-				Mode: Restricted,
-				Tags: []string{},
-			},
-		)
-		expected := []*Shard{
-			fuchsiaShard(env1, 1),
 		}
 		assertEqual(t, expected, actual)
 	})

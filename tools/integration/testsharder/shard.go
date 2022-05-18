@@ -133,10 +133,6 @@ func dedupe(l []string) []string {
 
 // ShardOptions parametrize sharding behavior.
 type ShardOptions struct {
-	// Mode is a general mode in which the testsharder will be run. See mode.go
-	// for more details.
-	Mode Mode
-
 	// Tags is the list of tags that the sharded Environments must match; those
 	// that don't match all tags will be ignored.
 	Tags []string
@@ -156,9 +152,6 @@ func MakeShards(specs []build.TestSpec, testListEntries map[string]build.TestLis
 	for _, spec := range specs {
 		for _, env := range spec.Envs {
 			if !stringSlicesEq(opts.Tags, env.Tags) {
-				continue
-			}
-			if opts.Mode == Restricted && env.ServiceAccount != "" {
 				continue
 			}
 

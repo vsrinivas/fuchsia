@@ -27,15 +27,12 @@ func usage() {
 	fmt.Printf(`testsharder [flags]
 
 Shards tests produced by a build.
-For more information on the modes in which the testsharder may be run, see
-https://pkg.go.dev/go.fuchsia.dev/fuchsia/tools/integration/testsharder#Mode.
 `)
 }
 
 type testsharderFlags struct {
 	buildDir                       string
 	outputFile                     string
-	mode                           testsharder.Mode
 	tags                           flagmisc.StringsValue
 	modifiersPath                  string
 	targetTestCount                int
@@ -57,7 +54,6 @@ func parseFlags() testsharderFlags {
 	var flags testsharderFlags
 	flag.StringVar(&flags.buildDir, "build-dir", "", "path to the fuchsia build directory root (required)")
 	flag.StringVar(&flags.outputFile, "output-file", "", "path to a file which will contain the shards as JSON, default is stdout")
-	flag.Var(&flags.mode, "mode", "mode in which to run the testsharder (e.g., normal or restricted).")
 	flag.Var(&flags.tags, "tag", "environment tags on which to filter; only the tests that match all tags will be sharded")
 	flag.StringVar(&flags.modifiersPath, "modifiers", "", "path to the json manifest containing tests to modify")
 	flag.IntVar(&flags.targetDurationSecs, "target-duration-secs", 0, "approximate duration that each shard should run in")
@@ -147,7 +143,6 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 	}
 
 	opts := &testsharder.ShardOptions{
-		Mode: flags.mode,
 		Tags: flags.tags,
 	}
 	// Pass in the test-list to carry over tags to the shards.
