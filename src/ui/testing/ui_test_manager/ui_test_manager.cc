@@ -201,6 +201,9 @@ void UITestManager::ConfigureAccessibility() {
       << "Real a11y manager not currently supported";
 
   realm_builder_.AddChild(kA11yManagerName, kFakeA11yManagerUrl);
+  RouteServices({fuchsia::logger::LogSink::Name_},
+                /* source = */ ParentRef(),
+                /* targets = */ {ChildRef{kA11yManagerName}});
   RouteServices({fuchsia::accessibility::semantics::SemanticsManager::Name_,
                  test::accessibility::Magnifier::Name_},
                 /* source = */ ChildRef{kA11yManagerName},

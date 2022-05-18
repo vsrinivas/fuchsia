@@ -68,6 +68,8 @@ FlatlandAccessibilityView::FlatlandAccessibilityView(fuchsia::ui::composition::F
 void FlatlandAccessibilityView::CreateView(
     fuchsia::ui::views::ViewCreationToken a11y_view_token,
     fuchsia::ui::views::ViewportCreationToken proxy_viewport_token) {
+  FX_LOGS(INFO) << "A11y received `CreateView` request";
+
   // Set up view-bound protocols for flatland instance.
   fuchsia::ui::composition::ViewBoundProtocols view_bound_protocols;
   view_bound_protocols.set_view_focuser(focuser_.NewRequest());
@@ -92,6 +94,7 @@ void FlatlandAccessibilityView::CreateView(
   // viewport.
   parent_watcher_->GetLayout([this, proxy_viewport_token = std::move(proxy_viewport_token)](
                                  fuchsia::ui::composition::LayoutInfo layout_info) mutable {
+    FX_LOGS(INFO) << "A11y view received layout info";
     layout_info_ = std::move(layout_info);
 
     InvokeViewPropertiesChangedCallbacks(*layout_info_, &view_properties_changed_callbacks_);

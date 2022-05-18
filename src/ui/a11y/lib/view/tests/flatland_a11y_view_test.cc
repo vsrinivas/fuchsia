@@ -90,6 +90,7 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
   sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
 
   void WatchProxyViewStatus() {
+    FX_LOGS(INFO) << "Watching proxy view status";
     proxy_viewport_watcher_->GetStatus(
         [this](fuchsia::ui::composition::ParentViewportStatus status) {
           if (status == fuchsia::ui::composition::ParentViewportStatus::CONNECTED_TO_DISPLAY) {
