@@ -27,6 +27,7 @@ class __EXPORT MountedFilesystem {
 
   const fidl::ClientEnd<fuchsia_io::Directory>& export_root() const { return export_root_; }
   const std::string& mount_path() const { return mount_path_; }
+  void set_mount_path(std::string_view mount_path) { mount_path_ = std::string(mount_path); }
 
   zx::status<> Unmount() && { return UnmountImpl(); }
   fidl::ClientEnd<fuchsia_io::Directory> TakeExportRoot() && { return std::move(export_root_); }

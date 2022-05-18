@@ -204,8 +204,9 @@ std::string StripTrailingSlash(const std::string& in) {
 }  // namespace
 
 MountedFilesystem::~MountedFilesystem() {
-  if (export_root_.is_valid()) [[maybe_unused]]
-    auto result = UnmountImpl();
+  if (export_root_.is_valid()) {
+    [[maybe_unused]] auto result = UnmountImpl();
+  }
 }
 
 zx::status<> MountedFilesystem::UnmountImpl() {
@@ -247,6 +248,8 @@ zx::status<MountedFilesystem> Mount(fbl::unique_fd device_fd, const char* mount_
     return result.take_error();
   auto [export_root, data_root] = *std::move(result);
 
+  auto fs = MountedFilesystem(std::move(export_root), {});
+
   if (mount_path) {
     fdio_ns_t* ns;
     if (zx_status_t status = fdio_ns_get_installed(&ns); status != ZX_OK)
@@ -254,9 +257,10 @@ zx::status<MountedFilesystem> Mount(fbl::unique_fd device_fd, const char* mount_
     if (zx_status_t status = fdio_ns_bind(ns, mount_path, data_root.TakeChannel().release());
         status != ZX_OK)
       return zx::error(status);
+    fs.set_mount_path(mount_path);
   }
 
-  return zx::ok(MountedFilesystem(std::move(export_root), mount_path ? mount_path : ""));
+  return zx::ok(std::move(fs));
 }
 
 }  // namespace fs_management
