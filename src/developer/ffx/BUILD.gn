@@ -8,6 +8,11 @@ import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
 import("./build/ffx.gni")
 
+# A note for developers interested in generating a Cargo.toml file for this tool:
+# FFX generates a `ffx_bin_unversioned` rule, which is what should be used as the target for
+# cargo gen. The appropriate command is:
+# `fx gen-cargo '//src/developer/ffx:ffx_bin_unversioned(//build/toolchain:host_x64)'`
+
 group("ffx") {
   testonly = true
 
