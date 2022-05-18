@@ -1,0 +1,26 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("service_hub_connector") {
+  sources = [ "service_hub_connector.h" ]
+  public_deps = [
+    ":service_reconnector",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/backoff",
+    "//src/lib/fidl/cpp",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
+}
+
+source_set("service_reconnector") {
+  sources = [ "service_reconnector.h" ]
+  public_deps = [
+    "//src/lib/backoff",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-default",
+  ]
+}

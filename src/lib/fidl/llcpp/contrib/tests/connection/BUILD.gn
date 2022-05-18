@@ -1,0 +1,57 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+
+fidl("test.protocol") {
+  sdk_category = "internal"
+  api = "test.protocol"
+  sources = [ "test.protocol.test.fidl" ]
+}
+
+test("service_hub_connector_tests_bin") {
+  output_name = "service_hub_connector_tests_bin"
+  sources = [ "service_hub_connector_test.cc" ]
+  deps = [
+    ":test.protocol_cpp",
+    "//sdk/lib/sys/component/llcpp",
+    "//src/lib/fidl/llcpp/contrib/connection:service_hub_connector",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+test("service_reconnector_tests_bin") {
+  output_name = "service_reconnector_tests_bin"
+  sources = [ "service_reconnector_test.cc" ]
+  deps = [
+    ":test.protocol_cpp",
+    "//sdk/lib/sys/component/llcpp",
+    "//src/lib/fidl/llcpp/contrib/connection:service_reconnector",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_unittest_package("service_hub_connector_tests") {
+  deps = [ ":service_hub_connector_tests_bin" ]
+}
+
+fuchsia_unittest_package("service_reconnector_tests") {
+  deps = [ ":service_reconnector_tests_bin" ]
+}
+
+group("connection") {
+  testonly = true
+  deps = [
+    ":service_hub_connector_tests",
+    ":service_reconnector_tests",
+  ]
+}

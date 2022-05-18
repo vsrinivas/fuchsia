@@ -10,6 +10,7 @@ group("tests") {
     "cpp/examples:tests",
     "cpp/tests",
     "dart/gidl:tests",
+    "llcpp/contrib:tests",
     "llcpp/tests",
     "rust:tests",
   ]

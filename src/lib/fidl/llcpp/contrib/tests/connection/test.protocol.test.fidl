@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.protocol;
+
+type Error = strict enum : int32 {
+    PERMANENT = 1;
+    TRANSIENT = 2;
+};
+
+@discoverable
+protocol ProtocolFactory {
+    CreateProtocol(resource struct {
+        protocol server_end:Protocol;
+    }) -> (struct {}) error Error;
+};
+
+protocol Protocol {
+    DoAction() -> (struct {}) error Error;
+};
+
+@discoverable
+protocol SimpleProtocol {
+    DoAction() -> (struct {}) error Error;
+};
