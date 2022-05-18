@@ -37,6 +37,7 @@ ffx_plugin("ffx_assembly") {
     "//third_party/rust_crates:serde_json",
   ]
   deps = [
+    "//src/developer/ffx/lib/fastboot",
     "//src/lib/assembly/base_package",
     "//src/lib/assembly/blobfs",
     "//src/lib/assembly/config",
