@@ -49,7 +49,7 @@ executable("intl_lookup_cpp_unittests") {
 }
 
 fuchsia_package_with_single_component("intl-lookup-cpp") {
-  manifest = "meta/intl-lookup-cpp.cmx"
+  manifest = "meta/intl-lookup-cpp.cml"
   deps = [ ":bin" ]
   testonly = true
 }

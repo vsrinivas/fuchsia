@@ -22,3 +22,15 @@ class Lookup {
 
 };  // namespace intl
 ```
+
+## Sample program
+
+A sample stand-alone program that demonstrates how lookup works. Sadly it
+can not be run as a CFv2 component on the device, apparently. So it is for
+illustrative purposes only.
+
+### Prerequisites
+
+* `--with=//src/lib/intl` in your `fx set` command line.
+* `fx build`
+
