@@ -64,8 +64,8 @@ struct Allow {
 
 fn main() -> Result<(), Error> {
     let args: Args = argh::from_env();
-    if args.lint.is_empty() && !args.dryrun {
-        return Err(anyhow!("Must filter on at least one lint or category with '--lint <name>'"));
+    if args.lint.is_empty() {
+        return Err(anyhow!("Must filter on at least one lint or category with '--lint'"));
     }
     let mut reader: Box<dyn BufRead> = if let Some(f) = &args.lint_file {
         Box::new(BufReader::new(File::open(f).unwrap()))
@@ -74,7 +74,7 @@ fn main() -> Result<(), Error> {
     };
     let root = &args
         .fuchsia_dir
-        .or_else(|| option_env!("FUCHSIA_DIR").map(Into::into))
+        .or_else(|| env::var("FUCHSIA_DIR").ok().map(Into::into))
         .map(|d| {
             env::set_current_dir(&d).expect("couldn't change dir");
             d

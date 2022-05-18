@@ -5,6 +5,10 @@
 import("//build/rust/rustc_binary.gni")
 
 if (is_host) {
+  config("env") {
+    rustenv = [ "RUST_SYSROOT=$out_rust_sysroot" ]
+  }
+
   rustc_binary("shush") {
     with_unit_tests = true
     deps = [
@@ -27,6 +31,12 @@ if (is_host) {
       "src/owners.rs",
       "src/span.rs",
     ]
+
+    # Specify clippy-driver path from our prebuilts for tests
+    test_deps = [ "//build/rust:prebuilt_toolchain_host_test_data" ]
+
+    # TODO(josephry): update this to just use rustenv after http://fxrev.dev/667908 lands
+    configs += [ ":env" ]
   }
 
   copy("install") {

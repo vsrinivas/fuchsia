@@ -31,30 +31,56 @@ const HOST_OS: &str = "mac";
 /// Returns a mapping of the lint categories (all, style, etc.) to the individual
 /// names of the lints they contain by parsing the output of `clippy-driver -Whelp`.
 pub fn get_categories() -> HashMap<String, HashSet<String>> {
-    let output = Command::new(format!(
-        "prebuilt/third_party/rust/{}-{}/bin/clippy-driver",
-        HOST_OS, HOST_ARCH
-    ))
-    .arg("-Whelp")
-    .output()
-    .expect("Couldn't run clippy-driver");
-    let output = String::from_utf8_lossy(&output.stdout);
-    let mut lines = output.lines().map(str::trim).filter(|l| !l.is_empty());
-    lines
-        .find(|s| s.starts_with("Lint groups provided by plugins"))
-        .expect("Couldn't parse clippy-driver help output");
-    lines
-        .map(|line| {
-            if let [category, lints] = line.splitn(2, ' ').collect::<Vec<_>>()[..] {
-                (
-                    category.to_owned(),
-                    lints.split(',').map(|s| s.trim().replace('-', "_")).collect(),
-                )
-            } else {
-                panic!("Malformed lint category output")
-            }
-        })
-        .collect()
+    let sysroot = option_env!("RUST_SYSROOT").map(str::to_string).unwrap_or_else(|| {
+        format!(
+            "{}prebuilt/third_party/rust/{}-{}",
+            if cfg!(test) { "../../" } else { "" },
+            HOST_OS,
+            HOST_ARCH
+        )
+    });
+    let output = Command::new(format!("{}/bin/clippy-driver", sysroot))
+        .arg("--sysroot")
+        .arg(&sysroot)
+        .arg("-Whelp")
+        .output()
+        .expect("Couldn't run clippy-driver");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut lines = stdout.lines().map(str::trim);
+    let parse_categories = |line: &str| {
+        if let [category, lints] = line.splitn(2, ' ').collect::<Vec<_>>()[..] {
+            (category.to_owned(), lints.split(',').map(|s| s.trim().replace('-', "_")).collect())
+        } else {
+            panic!("Malformed lint category output")
+        }
+    };
+    lines.find(|s| s.starts_with("Lint groups provided by rustc")).expect(&format!(
+        "Couldn't parse clippy-driver help output:\nstdout: {}\nstderr:{}\n",
+        stdout,
+        &String::from_utf8_lossy(&output.stderr)
+    ));
+    // Skip the expected header from table
+    assert_eq!(
+        lines.by_ref().take(4).collect::<Vec<_>>(),
+        vec![
+            "",
+            "name  sub-lints",
+            "----  ---------",
+            "warnings  all lints that are set to issue warnings"
+        ]
+    );
+    let mut categories = lines
+        .by_ref()
+        .take_while(|line| !line.is_empty())
+        .map(parse_categories)
+        .collect::<HashMap<_, _>>();
+    lines.find(|s| s.starts_with("Lint groups provided by plugins")).expect(&format!(
+        "Couldn't parse clippy-driver help output:\nstdout: {}\nstderr:{}\n",
+        stdout,
+        &String::from_utf8_lossy(&output.stderr)
+    ));
+    categories.extend(lines.skip(1).take_while(|line| !line.is_empty()).map(parse_categories));
+    categories
 }
 
 /// Constructs a map of source files to lints contained in them, filtering on
@@ -94,4 +120,23 @@ pub fn filter_lints<R: BufRead>(input: &mut R, filter: &[String]) -> HashMap<Str
             }
         });
     files
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rustc_categories() {
+        let c = get_categories();
+        assert!(c["future-incompatible"].contains("forbidden_lint_groups"));
+        assert!(c["rust-2021-compatibility"].contains("non_fmt_panics"));
+    }
+
+    #[test]
+    fn test_clippy_categories() {
+        let c = get_categories();
+        assert!(c["clippy::complexity"].contains("clippy::zero_divided_by_zero"));
+        assert!(c["clippy::suspicious"].contains("clippy::print_in_format_impl"));
+    }
 }
