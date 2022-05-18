@@ -9,9 +9,7 @@
 
 #include <utility>
 
-#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback/redactor_factory.h"
-#include "src/developer/forensics/feedback_data/annotations/annotation_provider_factory.h"
 #include "src/developer/forensics/feedback_data/annotations/static_annotations.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/inspect.h"
@@ -32,7 +30,6 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
                      RedactorBase* redactor, const AnnotationKeys& annotation_allowlist,
                      const AttachmentKeys& attachment_allowlist,
                      feedback::AnnotationManager* annotation_manager,
-                     feedback::DeviceIdProvider* device_id_provider,
                      InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
       services_(services),
@@ -44,8 +41,6 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       annotation_manager_(annotation_manager),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
       system_log_(dispatcher_, services_, &clock_, redactor_, kActiveLoggingPeriod),
-      reusable_annotation_providers_(
-          GetReusableProviders(dispatcher_, services_, device_id_provider)),
       inspect_data_budget_(inspect_data_budget) {
   FX_CHECK(annotation_allowlist_.size() <= kMaxNumPlatformAnnotations)
       << "Requesting more platform annotations than the maximum number of platform annotations "
@@ -63,7 +58,6 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
 
 Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services,
-                     feedback::DeviceIdProvider* device_id_provider,
                      const char* limit_data_flag_path)
     : dispatcher_(dispatcher),
       services_(services),
@@ -79,49 +73,27 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       // is intended for tests.
       annotation_manager_(nullptr),
       static_attachments_({}),
-      system_log_(dispatcher_, services_, &clock_, redactor_, zx::sec(30)),
-      reusable_annotation_providers_(
-          GetReusableProviders(dispatcher_, services_, device_id_provider)) {}
+      system_log_(dispatcher_, services_, &clock_, redactor_, zx::sec(30)) {}
 
 ::fpromise::promise<Annotations> Datastore::GetAnnotations(const zx::duration timeout) {
   if (annotation_allowlist_.empty()) {
     return ::fpromise::make_result_promise<Annotations>(::fpromise::error());
   }
 
-  std::vector<::fpromise::promise<Annotations>> annotations;
-
-  // We seed the returned annotations with the annotations from the annotation manager.
-  //
-  // The number of platform and non-platform annotations are capped so this is safe to do.
-  annotations.push_back(annotation_manager_->GetAll(timeout));
-
-  for (auto& provider : reusable_annotation_providers_) {
-    annotations.push_back(provider->GetAnnotations(timeout, annotation_allowlist_));
-  }
-
-  return ::fpromise::join_promise_vector(std::move(annotations))
-      .and_then([this](std::vector<::fpromise::result<Annotations>>& annotations)
-                    -> ::fpromise::result<Annotations> {
-        Annotations ok_annotations;
-
-        // We then augment the returned annotations with the dynamic platform annotations.
-        for (auto& result : annotations) {
-          if (result.is_ok()) {
-            for (const auto& [key, value] : result.take_value()) {
-              ok_annotations.insert({key, value});
-            }
-          }
-        }
-
+  // Copying annotations from the AnnotationManager is safe because the number of platform and
+  // non-platform annotations is bounded by the number of annotations permitted by
+  // fuchsia.feedback.DataProvider.
+  return annotation_manager_->GetAll(timeout).and_then(
+      [this](Annotations& result) -> ::fpromise::result<Annotations> {
         for (const auto& key : annotation_allowlist_) {
-          if (ok_annotations.find(key) == ok_annotations.end()) {
+          if (result.find(key) == result.end()) {
             FX_LOGS(ERROR) << "No provider collected annotation " << key;
-            ok_annotations.insert({key, Error::kMissingValue});
+            result.insert({key, Error::kMissingValue});
           }
         }
-        annotation_metrics_.LogMetrics(ok_annotations);
+        annotation_metrics_.LogMetrics(result);
 
-        return ::fpromise::ok(ok_annotations);
+        return ::fpromise::ok(std::move(result));
       });
 }
 

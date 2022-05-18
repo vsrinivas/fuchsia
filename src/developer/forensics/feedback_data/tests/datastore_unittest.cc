@@ -31,7 +31,6 @@
 #include "src/developer/forensics/testing/log_message.h"
 #include "src/developer/forensics/testing/stubs/channel_control.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
-#include "src/developer/forensics/testing/stubs/device_id_provider.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -76,8 +75,6 @@ class DatastoreTest : public UnitTestFixture {
   DatastoreTest() : executor_(dispatcher()) {}
 
   void SetUp() override {
-    device_id_provider_ =
-        std::make_unique<feedback::RemoteDeviceIdProvider>(dispatcher(), services());
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services(), &clock_);
 
@@ -100,15 +97,7 @@ class DatastoreTest : public UnitTestFixture {
         std::make_unique<feedback::AnnotationManager>(dispatcher(), allowlist, startup_annotations);
     datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), &redactor_,
                                              annotation_allowlist, attachment_allowlist,
-                                             annotation_manager_.get(), device_id_provider_.get(),
-                                             inspect_data_budget_.get());
-  }
-
-  void SetUpDeviceIdProviderServer(std::unique_ptr<stubs::DeviceIdProviderBase> server) {
-    device_id_provider_server_ = std::move(server);
-    if (device_id_provider_server_) {
-      InjectServiceProvider(device_id_provider_server_.get());
-    }
+                                             annotation_manager_.get(), inspect_data_budget_.get());
   }
 
   void SetUpDiagnosticsServer(const std::string& inspect_chunk) {
@@ -169,7 +158,6 @@ class DatastoreTest : public UnitTestFixture {
   async::Executor executor_;
   timekeeper::TestClock clock_;
   std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
-  std::unique_ptr<feedback::DeviceIdProvider> device_id_provider_;
   std::unique_ptr<cobalt::Logger> cobalt_;
   IdentityRedactor redactor_{inspect::BoolProperty()};
 
@@ -181,7 +169,6 @@ class DatastoreTest : public UnitTestFixture {
   std::unique_ptr<InspectDataBudget> inspect_data_budget_;
 
   // Stubs servers.
-  std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
   std::unique_ptr<stubs::DiagnosticsArchiveBase> diagnostics_server_;
 };
 
@@ -241,19 +228,6 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
   GetStaticAttachments();
   GetAnnotations();
   GetAttachments();
-}
-
-TEST_F(DatastoreTest, GetAnnotations_DeviceId) {
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>("device-id"));
-  SetUpDatastore({kAnnotationDeviceFeedbackId}, kDefaultAttachmentsToAvoidSpuriousLogs);
-
-  ::fpromise::result<Annotations> annotations = GetAnnotations();
-  ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), ElementsAreArray({
-                                            Pair(kAnnotationDeviceFeedbackId, "device-id"),
-                                        }));
-
-  ASSERT_TRUE(files::DeletePath(kDeviceIdPath, /*recursive=*/false));
 }
 
 TEST_F(DatastoreTest, GetAnnotations_FailOn_EmptyAnnotationAllowlist) {

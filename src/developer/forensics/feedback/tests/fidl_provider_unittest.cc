@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/feedback/annotations/fidl_provider.h"
 
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/update/channelcontrol/cpp/fidl.h>
 #include <lib/zx/time.h>
 
@@ -13,6 +14,7 @@
 #include "src/developer/forensics/feedback/annotations/fidl_provider.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/testing/stubs/channel_control.h"
+#include "src/developer/forensics/testing/stubs/device_id_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/backoff/backoff.h"
 
@@ -164,6 +166,101 @@ TEST_F(DynamicSingleFidlMethodAnnotationProviderTest, Reconnects) {
 
   RunLoopUntilIdle();
   EXPECT_EQ(channel_server->NumConnections(), 0u);
+}
+
+constexpr char kDeviceIdKey[] = "current_device_id";
+constexpr std::array<const char*, 2> kDeviceIdValues = {
+    "device_id_1",
+    "device_id_2",
+};
+
+struct ConvertDeviceId {
+  Annotations operator()(const ErrorOr<std::string>& device_id) {
+    return {{kDeviceIdKey, device_id}};
+  }
+};
+
+class HangingGetDeviceIdProvider
+    : public HangingGetSingleFidlMethodAnnotationProvider<
+          fuchsia::feedback::DeviceIdProvider, &fuchsia::feedback::DeviceIdProvider::GetId,
+          ConvertDeviceId> {
+ public:
+  using HangingGetSingleFidlMethodAnnotationProvider::HangingGetSingleFidlMethodAnnotationProvider;
+
+  std::set<std::string> GetKeys() const override { return {kDeviceIdKey}; }
+};
+
+class HangingGetSingleFidlMethodAnnotationProviderTest : public UnitTestFixture {
+ protected:
+  void SetUpDeviceIdProviderServer(
+      std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server) {
+    device_id_provider_server_ = std::move(device_id_provider_server);
+    if (device_id_provider_server_) {
+      InjectServiceProvider(device_id_provider_server_.get());
+    }
+  }
+
+  std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
+};
+
+TEST_F(HangingGetSingleFidlMethodAnnotationProviderTest, Get) {
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDeviceIdValues[0]));
+  HangingGetDeviceIdProvider device_id_provider(dispatcher(), services(),
+                                                std::make_unique<MonotonicBackoff>());
+
+  Annotations annotations;
+  device_id_provider.GetOnUpdate(
+      [&annotations](Annotations result) { annotations = std::move(result); });
+
+  // |annotations| should be empty because the call hasn't completed.
+  EXPECT_THAT(annotations, IsEmpty());
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                               Pair(kDeviceIdKey, kDeviceIdValues[0]),
+                           }));
+
+  device_id_provider_server_->SetDeviceId(kDeviceIdValues[1]);
+
+  // |annotations| should the old value because the change hasn't propagated yet.
+  EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                               Pair(kDeviceIdKey, kDeviceIdValues[0]),
+                           }));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                               Pair(kDeviceIdKey, kDeviceIdValues[1]),
+                           }));
+
+  device_id_provider_server_->CloseConnection();
+
+  // |annotations| should contain the old value because the disconnection hasn't propagated.
+  EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                               Pair(kDeviceIdKey, kDeviceIdValues[1]),
+                           }));
+}
+
+TEST_F(HangingGetSingleFidlMethodAnnotationProviderTest, Reconnects) {
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProviderNeverReturns>());
+  HangingGetDeviceIdProvider device_id_provider(dispatcher(), services(),
+                                                std::make_unique<MonotonicBackoff>());
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(device_id_provider_server_->IsBound());
+
+  Annotations annotations;
+  device_id_provider.GetOnUpdate(
+      [&annotations](Annotations result) { annotations = std::move(result); });
+
+  device_id_provider_server_->CloseConnection();
+  ASSERT_FALSE(device_id_provider_server_->IsBound());
+
+  RunLoopUntilIdle();
+
+  // The outstanding request should complete with a connection error.
+  EXPECT_THAT(annotations, IsEmpty());
+  RunLoopFor(zx::sec(1));
+  ASSERT_TRUE(device_id_provider_server_->IsBound());
 }
 
 }  // namespace

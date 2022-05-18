@@ -13,7 +13,6 @@ namespace forensics::feedback {
 CrashReports::CrashReports(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services,
                            timekeeper::Clock* clock, inspect::Node* inspect_root,
-                           DeviceIdProvider* device_id_provider,
                            feedback::AnnotationManager* annotation_manager,
                            fuchsia::feedback::DataProvider* data_provider, const Options options)
     : dispatcher_(dispatcher),
@@ -28,7 +27,7 @@ CrashReports::CrashReports(async_dispatcher_t* dispatcher,
       crash_register_(info_context_, kCrashRegisterPath),
       crash_reporter_(dispatcher, services, clock, info_context_, options.config,
                       annotation_manager, &crash_register_, &tags_, &snapshot_manager_,
-                      &crash_server_, device_id_provider),
+                      &crash_server_),
       info_(info_context_) {
   info_.ExposeConfig(options.config);
 }

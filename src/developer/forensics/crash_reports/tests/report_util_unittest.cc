@@ -82,8 +82,8 @@ TEST(MakeReport, AddsManagedSnapshotAnnotations) {
   const auto report =
       MakeReport(std::move(crash_report), /*report_id=*/0, "snapshot_uuid",
                  ManagedSnapshot(annotations, presence_annotations),
-                 /*current_time=*/std::nullopt, ::fpromise::ok("device_id"),
-                 AnnotationMap({{"key", "value"}}), product, /*is_hourly_report=*/false);
+                 /*current_time=*/std::nullopt, "device_id", AnnotationMap({{"key", "value"}}),
+                 product, /*is_hourly_report=*/false);
   ASSERT_TRUE(report.has_value());
   EXPECT_EQ(report.value().Annotations().Get("snapshot_annotation_key"),
             "snapshot_annotation_value");
@@ -112,8 +112,8 @@ TEST(MakeReport, AddsMissingSnapshotAnnotations) {
   const auto report =
       MakeReport(std::move(crash_report), /*report_id=*/0, "snapshot_uuid",
                  MissingSnapshot(annotations, presence_annotations),
-                 /*current_time=*/std::nullopt, ::fpromise::ok("device_id"),
-                 AnnotationMap({{"key", "value"}}), product, /*is_hourly_report=*/false);
+                 /*current_time=*/std::nullopt, "device_id", AnnotationMap({{"key", "value"}}),
+                 product, /*is_hourly_report=*/false);
   ASSERT_TRUE(report.has_value());
   EXPECT_EQ(report.value().Annotations().Get("snapshot_annotation_key"),
             "snapshot_annotation_value");

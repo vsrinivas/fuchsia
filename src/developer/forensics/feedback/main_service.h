@@ -64,8 +64,6 @@ class MainService {
   cobalt::Logger* cobalt_;
   std::unique_ptr<RedactorBase> redactor_;
 
-  std::unique_ptr<DeviceIdProvider> device_id_provider_;
-
   InspectNodeManager inspect_node_manager_;
 
   AnnotationProviders annotations_;
@@ -80,7 +78,6 @@ class MainService {
   InspectProtocolStats component_data_register_stats_;
   InspectProtocolStats data_provider_stats_;
   InspectProtocolStats data_provider_controller_stats_;
-  InspectProtocolStats device_id_provider_stats_;
 };
 
 }  // namespace forensics::feedback

@@ -8,7 +8,6 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback/constants.h"
-#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/config.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -25,17 +24,13 @@ namespace {
 
 class FeedbackDataTest : public UnitTestFixture {
  public:
-  FeedbackDataTest()
-      : clock_(dispatcher()),
-        cobalt_(dispatcher(), services(), &clock_),
-        device_id_provider_(dispatcher(), services()) {
+  FeedbackDataTest() : clock_(dispatcher()), cobalt_(dispatcher(), services(), &clock_) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
   }
 
   timekeeper::Clock* Clock() { return &clock_; }
   cobalt::Logger* Cobalt() { return &cobalt_; }
   RedactorBase* Redactor() { return &redactor_; }
-  DeviceIdProvider* DeviceIdProvider() { return &device_id_provider_; }
 
   ~FeedbackDataTest() { FX_CHECK(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/true)); }
 
@@ -43,7 +38,6 @@ class FeedbackDataTest : public UnitTestFixture {
   timekeeper::AsyncTestClock clock_;
   cobalt::Logger cobalt_;
   IdentityRedactor redactor_{inspect::BoolProperty()};
-  RemoteDeviceIdProvider device_id_provider_;
 };
 
 TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
@@ -53,14 +47,13 @@ TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
   AnnotationManager annotation_manager(dispatcher(), {});
   {
     FeedbackData feedback_data(dispatcher(), services(), Clock(), &InspectRoot(), Cobalt(),
-                               Redactor(), &annotation_manager, DeviceIdProvider(),
+                               Redactor(), &annotation_manager,
                                FeedbackData::Options{
                                    .config = {},
                                    .is_first_instance = true,
                                    .limit_inspect_data = false,
                                    .spawn_system_log_recorder = false,
                                    .delete_previous_boot_logs_time = std::nullopt,
-                                   .device_id_path = "n/a",
                                });
 
     RunLoopFor(kDeletePreviousBootLogsTime);
@@ -69,14 +62,13 @@ TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
 
   {
     FeedbackData feedback_data(dispatcher(), services(), Clock(), &InspectRoot(), Cobalt(),
-                               Redactor(), &annotation_manager, DeviceIdProvider(),
+                               Redactor(), &annotation_manager,
                                FeedbackData::Options{
                                    .config = {},
                                    .is_first_instance = true,
                                    .limit_inspect_data = false,
                                    .spawn_system_log_recorder = false,
                                    .delete_previous_boot_logs_time = kDeletePreviousBootLogsTime,
-                                   .device_id_path = "n/a",
                                });
 
     RunLoopFor(kDeletePreviousBootLogsTime);

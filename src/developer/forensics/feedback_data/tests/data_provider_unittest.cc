@@ -25,7 +25,6 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
-#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
@@ -141,8 +140,6 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 class DataProviderTest : public UnitTestFixture {
  public:
   void SetUp() override {
-    device_id_provider_ =
-        std::make_unique<feedback::RemoteDeviceIdProvider>(dispatcher(), services());
     cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services(), &clock_);
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
@@ -164,8 +161,7 @@ class DataProviderTest : public UnitTestFixture {
         std::make_unique<feedback::AnnotationManager>(dispatcher(), allowlist, startup_annotations);
     datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), &redactor_,
                                              annotation_allowlist, attachment_allowlist,
-                                             annotation_manager_.get(), device_id_provider_.get(),
-                                             inspect_data_budget_.get());
+                                             annotation_manager_.get(), inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), &clock_, &redactor_, /*is_first_instance=*/true,
         annotation_allowlist, attachment_allowlist, cobalt_.get(), annotation_manager_.get(),
@@ -226,7 +222,6 @@ class DataProviderTest : public UnitTestFixture {
  private:
   timekeeper::TestClock clock_;
   std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
-  std::unique_ptr<feedback::DeviceIdProvider> device_id_provider_;
   std::unique_ptr<cobalt::Logger> cobalt_;
   IdentityRedactor redactor_{inspect::BoolProperty()};
   std::unique_ptr<Datastore> datastore_;

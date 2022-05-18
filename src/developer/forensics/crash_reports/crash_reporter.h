@@ -27,7 +27,6 @@
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
-#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/utc_time_provider.h"
 #include "src/lib/fxl/macros.h"
@@ -42,8 +41,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
                 const std::shared_ptr<sys::ServiceDirectory>& services, timekeeper::Clock* clock,
                 const std::shared_ptr<InfoContext>& info_context, Config config,
                 feedback::AnnotationManager* annotation_manager, CrashRegister* crash_register,
-                LogTags* tags, SnapshotManager* snapshot_manager, CrashServer* crash_server,
-                feedback::DeviceIdProvider* device_id_provider);
+                LogTags* tags, SnapshotManager* snapshot_manager, CrashServer* crash_server);
 
   // The crash reporter should stop uploading crash reports and persist any future and pending crash
   // reports.
@@ -71,7 +69,6 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashReporterInfo info_;
   NetworkWatcher network_watcher_;
   std::unique_ptr<ReportingPolicyWatcher> reporting_policy_watcher_;
-  feedback::DeviceIdProvider* device_id_provider_;
 
   ReportId next_report_id_;
 };

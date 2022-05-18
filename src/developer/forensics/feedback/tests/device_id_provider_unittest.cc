@@ -1,19 +1,17 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback/device_id_provider.h"
+#include "src/developer/forensics/feedback/annotations/device_id_provider.h"
 
-#include <lib/async/cpp/executor.h>
-#include <lib/fpromise/result.h>
-
+#include <memory>
 #include <optional>
 #include <string>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/testing/stubs/device_id_provider.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -22,94 +20,84 @@
 namespace forensics::feedback {
 namespace {
 
-constexpr zx::duration kDefaultTimeout = zx::sec(35);
+using ::testing::Not;
+using ::testing::Pair;
+using ::testing::UnorderedElementsAreArray;
 
 constexpr char kDefaultDeviceId[] = "00000000-0000-4000-a000-000000000001";
 constexpr char kInvalidDeviceId[] = "INVALID";
 
-class DeviceIdProviderTest : public UnitTestFixture {
- public:
-  DeviceIdProviderTest() : UnitTestFixture(), executor_(dispatcher()) {}
+using RemoteDeviceIdProviderTest = UnitTestFixture;
 
- protected:
-  void SetUpDeviceIdProviderServer(
-      std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server) {
-    device_id_provider_server_ = std::move(device_id_provider_server);
-    if (device_id_provider_server_) {
-      InjectServiceProvider(device_id_provider_server_.get());
-    }
-  }
+TEST_F(RemoteDeviceIdProviderTest, GetKeys) {
+  RemoteDeviceIdProvider device_id_provider(dispatcher(), services(), nullptr);
+  EXPECT_THAT(device_id_provider.GetKeys(), UnorderedElementsAreArray({
+                                                kDeviceFeedbackIdKey,
+                                            }));
+}
 
-  std::string ReadFile(const std::string& path) {
+TEST_F(RemoteDeviceIdProviderTest, DeviceIdToAnnotations) {
+  DeviceIdToAnnotations convert;
+
+  EXPECT_THAT(convert(""), UnorderedElementsAreArray({
+                               Pair(kDeviceFeedbackIdKey, ErrorOr<std::string>("")),
+                           }));
+  EXPECT_THAT(convert("id"), UnorderedElementsAreArray({
+                                 Pair(kDeviceFeedbackIdKey, ErrorOr<std::string>("id")),
+                             }));
+}
+
+TEST(LocalDeviceIdProviderTest, GetOnUpdate) {
+  files::ScopedTempDir tmp_dir;
+  auto ReadFile = [](const std::string& path) {
     std::string file_contents;
     FX_CHECK(files::ReadFileToString(path, &file_contents));
     return file_contents;
-  }
+  };
 
-  std::optional<std::string> GetId(::fpromise::promise<std::string, Error> get_id) {
-    bool is_called = false;
-    std::optional<std::string> device_id = std::nullopt;
-    executor_.schedule_task(
-        get_id.then([&device_id, &is_called](::fpromise::result<std::string, Error>& result) {
-          is_called = true;
-
-          if (result.is_ok()) {
-            device_id = result.take_value();
-          }
-        }));
-    RunLoopUntilIdle();
-    FX_CHECK(is_called) << "The promise chain was never executed";
-
-    return device_id;
-  }
-
-  async::Executor executor_;
-  files::ScopedTempDir tmp_dir_;
-
-  std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
-};
-
-TEST_F(DeviceIdProviderTest, RemoteDeviceIdProvider_CachesDeviceId) {
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
-  RunLoopUntilIdle();
-
-  RemoteDeviceIdProvider device_id_provider(dispatcher(), services());
-
-  const std::optional<std::string> id = GetId(device_id_provider.GetId(kDefaultTimeout));
-  EXPECT_EQ(id, kDefaultDeviceId);
-}
-
-TEST_F(DeviceIdProviderTest, LocalDeviceIdProvider_WHAT) {
   {
     std::string device_id_path;
 
-    ASSERT_TRUE(tmp_dir_.NewTempFileWithData(kDefaultDeviceId, &device_id_path));
+    ASSERT_TRUE(tmp_dir.NewTempFileWithData(kDefaultDeviceId, &device_id_path));
     LocalDeviceIdProvider device_id_provider(device_id_path);
 
-    const std::optional<std::string> id = GetId(device_id_provider.GetId(kDefaultTimeout));
-    EXPECT_EQ(id, kDefaultDeviceId);
+    Annotations annotations;
+    device_id_provider.GetOnUpdate(
+        [&annotations](Annotations result) { annotations = std::move(result); });
+
+    EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                                 Pair(kDeviceFeedbackIdKey, kDefaultDeviceId),
+                             }));
     EXPECT_EQ(ReadFile(device_id_path), kDefaultDeviceId);
   }
 
   {
     std::string device_id_path;
 
-    ASSERT_TRUE(tmp_dir_.NewTempFileWithData(kInvalidDeviceId, &device_id_path));
+    ASSERT_TRUE(tmp_dir.NewTempFileWithData(kInvalidDeviceId, &device_id_path));
     LocalDeviceIdProvider device_id_provider(device_id_path);
 
-    const std::optional<std::string> id = GetId(device_id_provider.GetId(kDefaultTimeout));
-    EXPECT_NE(id, kInvalidDeviceId);
-    EXPECT_EQ(ReadFile(device_id_path), id);
+    Annotations annotations;
+
+    device_id_provider.GetOnUpdate(
+        [&annotations](Annotations result) { annotations = std::move(result); });
+
+    ASSERT_TRUE(annotations.at(kDeviceFeedbackIdKey).HasValue());
+    EXPECT_NE(annotations.at(kDeviceFeedbackIdKey).Value(), kInvalidDeviceId);
+    EXPECT_EQ(ReadFile(device_id_path), annotations.at(kDeviceFeedbackIdKey).Value());
   }
 
   {
-    std::string device_id_path = files::JoinPath(tmp_dir_.path(), "device_id_file.txt");
+    std::string device_id_path = files::JoinPath(tmp_dir.path(), "device_id_file.txt");
 
     LocalDeviceIdProvider device_id_provider(device_id_path);
 
-    const std::optional<std::string> id = GetId(device_id_provider.GetId(kDefaultTimeout));
-    EXPECT_TRUE(id.has_value());
-    EXPECT_EQ(ReadFile(device_id_path), id);
+    Annotations annotations;
+    device_id_provider.GetOnUpdate(
+        [&annotations](Annotations result) { annotations = std::move(result); });
+
+    EXPECT_NE(annotations.count(kDeviceFeedbackIdKey), 0u);
+    EXPECT_EQ(ReadFile(device_id_path), annotations.at(kDeviceFeedbackIdKey).Value());
   }
 }
 

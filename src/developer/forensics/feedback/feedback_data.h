@@ -19,7 +19,6 @@
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/constants.h"
-#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/config.h"
 #include "src/developer/forensics/feedback_data/data_provider.h"
 #include "src/developer/forensics/feedback_data/data_provider_controller.h"
@@ -39,13 +38,12 @@ class FeedbackData {
     bool limit_inspect_data;
     bool spawn_system_log_recorder;
     std::optional<zx::duration> delete_previous_boot_logs_time;
-    std::string device_id_path;
   };
 
   FeedbackData(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                timekeeper::Clock* clock, inspect::Node* inspect_root, cobalt::Logger* cobalt,
                RedactorBase* redactor, feedback::AnnotationManager* annotation_manager,
-               DeviceIdProvider* device_id_provider, Options options);
+               Options options);
 
   void Handle(::fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request,
               ::fit::function<void(zx_status_t)> error_handler);

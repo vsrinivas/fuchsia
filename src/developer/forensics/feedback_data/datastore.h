@@ -15,8 +15,6 @@
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/metrics.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
-#include "src/developer/forensics/feedback/device_id_provider.h"
-#include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/system_log.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
@@ -51,14 +49,14 @@ class Datastore {
             cobalt::Logger* cobalt, RedactorBase* redactor,
             const AnnotationKeys& annotation_allowlist, const AttachmentKeys& attachment_allowlist,
             feedback::AnnotationManager* annotation_manager,
-            feedback::DeviceIdProvider* device_id_provider, InspectDataBudget* inspect_data_budget);
+            InspectDataBudget* inspect_data_budget);
 
   ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout);
   ::fpromise::promise<Attachments> GetAttachments(zx::duration timeout);
 
   // Exposed for testing purposes.
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-            feedback::DeviceIdProvider* device_id_provider, const char* limit_data_flag_path);
+            const char* limit_data_flag_path);
 
   Annotations GetImmediatelyAvailableAnnotations() {
     return annotation_manager_->ImmediatelyAvailable();
@@ -86,7 +84,6 @@ class Datastore {
   Attachments static_attachments_;
 
   SystemLog system_log_;
-  std::vector<std::unique_ptr<AnnotationProvider>> reusable_annotation_providers_;
 
   InspectDataBudget* inspect_data_budget_;
 };

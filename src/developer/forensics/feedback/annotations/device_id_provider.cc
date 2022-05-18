@@ -1,33 +1,20 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback/device_id_provider.h"
+#include "src/developer/forensics/feedback/annotations/device_id_provider.h"
 
 #include <lib/syslog/cpp/macros.h>
 
 #include <optional>
 
-#include "lib/fpromise/promise.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/uuid/uuid.h"
 
 namespace forensics::feedback {
-
-RemoteDeviceIdProvider::RemoteDeviceIdProvider(async_dispatcher_t* dispatcher,
-                                               std::shared_ptr<sys::ServiceDirectory> services)
-    : connection_(dispatcher, services, [this] { MakeCall(); }) {}
-
-::fpromise::promise<std::string, Error> RemoteDeviceIdProvider::GetId(const zx::duration timeout) {
-  return connection_.GetValue(fit::Timeout(timeout));
-}
-
-void RemoteDeviceIdProvider::MakeCall() {
-  connection_->GetId([this](std::string feedback_id) { connection_.SetValue(feedback_id); });
-}
-
 namespace {
 
 // Reads a device id from the file at |path|. If the device id doesn't exist or is invalid, return
@@ -66,8 +53,16 @@ std::string InitializeDeviceId(const std::string& path) {
 LocalDeviceIdProvider::LocalDeviceIdProvider(const std::string& path)
     : device_id_(InitializeDeviceId(path)) {}
 
-::fpromise::promise<std::string, Error> LocalDeviceIdProvider::GetId(zx::duration timeout) {
-  return ::fpromise::make_result_promise<std::string, Error>(::fpromise::ok(device_id_));
+std::set<std::string> LocalDeviceIdProvider::GetKeys() const { return {kDeviceFeedbackIdKey}; }
+
+void LocalDeviceIdProvider::GetOnUpdate(::fit::function<void(Annotations)> callback) {
+  callback(DeviceIdToAnnotations()(device_id_));
 }
+
+Annotations DeviceIdToAnnotations::operator()(const ErrorOr<std::string>& device_id) {
+  return {{kDeviceFeedbackIdKey, device_id}};
+}
+
+std::set<std::string> RemoteDeviceIdProvider::GetKeys() const { return {kDeviceFeedbackIdKey}; }
 
 }  // namespace forensics::feedback

@@ -18,9 +18,11 @@
 #include "src/developer/forensics/feedback/annotations/current_channel_provider.h"
 #include "src/developer/forensics/feedback/annotations/data_register.h"
 #include "src/developer/forensics/feedback/annotations/product_info_provider.h"
+#include "src/developer/forensics/feedback/annotations/provider.h"
 #include "src/developer/forensics/feedback/annotations/target_channel_provider.h"
 #include "src/developer/forensics/feedback/annotations/time_provider.h"
 #include "src/developer/forensics/feedback/annotations/timezone_provider.h"
+#include "src/lib/backoff/backoff.h"
 
 namespace forensics::feedback {
 
@@ -29,12 +31,15 @@ class AnnotationProviders {
  public:
   AnnotationProviders(async_dispatcher_t* dispatcher,
                       std::shared_ptr<sys::ServiceDirectory> services,
-                      std::set<std::string> allowlist, Annotations static_annotations);
+                      std::set<std::string> allowlist, Annotations static_annotations,
+                      std::unique_ptr<CachedAsyncAnnotationProvider> device_id_provider);
 
   AnnotationManager* GetAnnotationManager() { return &annotation_manager_; }
 
   void Handle(::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request,
               ::fit::function<void(zx_status_t)> error_handler);
+
+  static std::unique_ptr<backoff::Backoff> AnnotationProviderBackoff();
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -45,6 +50,7 @@ class AnnotationProviders {
   ProductInfoProvider product_info_provider_;
   CurrentChannelProvider current_channel_provider_;
   TimezoneProvider timezone_provider_;
+  std::unique_ptr<CachedAsyncAnnotationProvider> device_id_provider_;
   TargetChannelProvider target_channel_provider_;
 
   AnnotationManager annotation_manager_;

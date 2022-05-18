@@ -11,14 +11,17 @@
 #include <vector>
 
 #include "src/developer/forensics/feedback/annotations/constants.h"
+#include "src/developer/forensics/feedback/annotations/device_id_provider.h"
+#include "src/developer/forensics/feedback/annotations/provider.h"
 #include "src/developer/forensics/feedback/redactor_factory.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics::feedback {
 namespace {
 
-std::unique_ptr<DeviceIdProvider> MakeDeviceIdProvider(
+std::unique_ptr<CachedAsyncAnnotationProvider> MakeDeviceIdProvider(
     const std::optional<std::string>& local_device_id_path, async_dispatcher_t* dispatcher,
     const std::shared_ptr<sys::ServiceDirectory>& services) {
   if (local_device_id_path.has_value()) {
@@ -27,7 +30,8 @@ std::unique_ptr<DeviceIdProvider> MakeDeviceIdProvider(
   }
 
   FX_LOGS(INFO) << "Using remote device id provider";
-  return std::make_unique<RemoteDeviceIdProvider>(dispatcher, services);
+  return std::make_unique<RemoteDeviceIdProvider>(dispatcher, services,
+                                                  AnnotationProviders::AnnotationProviderBackoff());
 }
 
 }  // namespace
@@ -42,15 +46,13 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       inspect_root_(inspect_root),
       cobalt_(cobalt),
       redactor_(RedactorFromConfig(inspect_root)),
-      device_id_provider_(
-          MakeDeviceIdProvider(options.local_device_id_path, dispatcher_, services_)),
       inspect_node_manager_(inspect_root),
       annotations_(dispatcher_, services_,
-                   options.feedback_data_options.config.annotation_allowlist, startup_annotations),
+                   options.feedback_data_options.config.annotation_allowlist, startup_annotations,
+                   MakeDeviceIdProvider(options.local_device_id_path, dispatcher_, services_)),
       feedback_data_(dispatcher_, services_, clock_, inspect_root_, cobalt_, redactor_.get(),
-                     annotations_.GetAnnotationManager(), device_id_provider_.get(),
-                     options.feedback_data_options),
-      crash_reports_(dispatcher_, services_, clock_, inspect_root_, device_id_provider_.get(),
+                     annotations_.GetAnnotationManager(), options.feedback_data_options),
+      crash_reports_(dispatcher_, services_, clock_, inspect_root_,
                      annotations_.GetAnnotationManager(), feedback_data_.DataProvider(),
                      options.crash_reports_options),
 
@@ -65,9 +67,7 @@ MainService::MainService(async_dispatcher_t* dispatcher,
                                      "/fidl/fuchsia.feedback.ComponentDataRegister"),
       data_provider_stats_(&inspect_node_manager_, "/fidl/fuchsia.feedback.DataProvider"),
       data_provider_controller_stats_(&inspect_node_manager_,
-                                      "/fidl/fuchsia.feedback.DataProviderController"),
-      device_id_provider_stats_(&inspect_node_manager_, "/fidl/fuchsia.feedback.DeviceIdProvider") {
-}
+                                      "/fidl/fuchsia.feedback.DataProviderController") {}
 
 void MainService::ReportMigrationError(const std::map<std::string, std::string>& annotations) {
   fuchsia::feedback::CrashReport crash_report;

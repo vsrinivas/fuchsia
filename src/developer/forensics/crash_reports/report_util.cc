@@ -251,8 +251,8 @@ void AddSnapshotAnnotations(const SnapshotUuid& snapshot_uuid, const Snapshot& s
 
 void AddCrashServerAnnotations(const std::string& program_name,
                                const std::optional<timekeeper::time_utc>& current_time,
-                               const ::fpromise::result<std::string, Error>& device_id,
-                               const Product& product, AnnotationMap* annotations) {
+                               const ErrorOr<std::string>& device_id, const Product& product,
+                               AnnotationMap* annotations) {
   // Product.
   annotations->Set("product", product.name)
       .Set("version", product.version)
@@ -272,10 +272,10 @@ void AddCrashServerAnnotations(const std::string& program_name,
   }
 
   // We set the device's global unique identifier only if the device has one.
-  if (device_id.is_ok()) {
-    annotations->Set("guid", device_id.value());
+  if (device_id.HasValue()) {
+    annotations->Set("guid", device_id.Value());
   } else {
-    annotations->Set("debug.guid.set", false).Set("debug.device-id.error", device_id.error());
+    annotations->Set("debug.guid.set", false).Set("debug.device-id.error", device_id.Error());
   }
 }
 
@@ -284,7 +284,7 @@ void AddCrashServerAnnotations(const std::string& program_name,
 std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const ReportId report_id,
                                  const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
                                  const std::optional<timekeeper::time_utc>& current_time,
-                                 const ::fpromise::result<std::string, Error>& device_id,
+                                 const ErrorOr<std::string>& device_id,
                                  const AnnotationMap& default_annotations, const Product& product,
                                  const bool is_hourly_report) {
   const std::string program_name = report.program_name();

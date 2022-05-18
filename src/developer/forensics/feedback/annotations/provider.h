@@ -55,6 +55,8 @@ class DynamicAsyncAnnotationProvider {
 // Collects safe-to-cache but dynamic annotations asynchronously.
 class CachedAsyncAnnotationProvider {
  public:
+  virtual ~CachedAsyncAnnotationProvider() = default;
+
   virtual std::set<std::string> GetKeys() const = 0;
 
   // Returns the annotations this provider collects via |callback| when they change.

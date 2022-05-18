@@ -31,12 +31,10 @@
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/constants.h"
-#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/testing/fakes/privacy_settings.h"
 #include "src/developer/forensics/testing/stubs/channel_control.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
-#include "src/developer/forensics/testing/stubs/device_id_provider.h"
 #include "src/developer/forensics/testing/stubs/network_reachability_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/event.h"
@@ -165,6 +163,7 @@ class CrashReporterTest : public UnitTestFixture {
             feedback::kBuildBoardKey,
             feedback::kBuildProductKey,
             feedback::kBuildLatestCommitDateKey,
+            feedback::kDeviceFeedbackIdKey,
             feedback::kSystemUpdateChannelCurrentKey,
         },
         feedback::Annotations{
@@ -172,6 +171,7 @@ class CrashReporterTest : public UnitTestFixture {
             {feedback::kBuildBoardKey, kBuildBoard},
             {feedback::kBuildProductKey, kBuildProduct},
             {feedback::kBuildLatestCommitDateKey, kBuildLatestCommitDate},
+            {feedback::kDeviceFeedbackIdKey, kDefaultDeviceId},
             {feedback::kSystemUpdateChannelCurrentKey, kDefaultChannel},
         });
     snapshot_manager_ = std::make_unique<SnapshotManager>(
@@ -180,13 +180,10 @@ class CrashReporterTest : public UnitTestFixture {
         StorageSize::Gigabytes(1u)),
     crash_server_ =
         std::make_unique<StubCrashServer>(dispatcher(), services(), upload_attempt_results);
-    device_id_provider_ =
-        std::make_unique<feedback::RemoteDeviceIdProvider>(dispatcher(), services());
 
     crash_reporter_ = std::make_unique<CrashReporter>(
         dispatcher(), services(), &clock_, info_context_, config, annotation_manager_.get(),
-        crash_register_.get(), &tags_, snapshot_manager_.get(), crash_server_.get(),
-        device_id_provider_.get());
+        crash_register_.get(), &tags_, snapshot_manager_.get(), crash_server_.get());
     FX_CHECK(crash_reporter_);
   }
 
@@ -205,13 +202,6 @@ class CrashReporterTest : public UnitTestFixture {
 
   void SetUpDataProviderServer(std::unique_ptr<stubs::DataProviderBase> server) {
     data_provider_server_ = std::move(server);
-  }
-
-  void SetUpDeviceIdProviderServer(std::unique_ptr<stubs::DeviceIdProviderBase> server) {
-    device_id_provider_server_ = std::move(server);
-    if (device_id_provider_server_) {
-      InjectServiceProvider(device_id_provider_server_.get());
-    }
   }
 
   void SetUpNetworkReachabilityProviderServer() {
@@ -423,7 +413,6 @@ class CrashReporterTest : public UnitTestFixture {
   // Stubs and fake servers.
   std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
-  std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_server_;
   std::unique_ptr<fakes::PrivacySettings> privacy_settings_server_;
 
@@ -438,7 +427,6 @@ class CrashReporterTest : public UnitTestFixture {
   std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
   std::unique_ptr<SnapshotManager> snapshot_manager_;
   std::unique_ptr<CrashRegister> crash_register_;
-  std::unique_ptr<feedback::DeviceIdProvider> device_id_provider_;
   std::unique_ptr<CrashReporter> crash_reporter_;
 };
 
@@ -446,7 +434,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReport) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
   CheckAnnotationsOnServer(kDefaultAnnotations);
@@ -458,7 +445,6 @@ TEST_F(CrashReporterTest, EnforcesQuota) {
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig(
       std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota, kUploadSuccessful));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   for (size_t i = 0; i < kDailyPerProductQuota + 1; ++i) {
     ASSERT_TRUE(FileOneCrashReport().is_ok());
@@ -470,7 +456,6 @@ TEST_F(CrashReporterTest, ResetsQuota) {
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig(
       std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota * 2, kUploadSuccessful));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
     ASSERT_TRUE(FileOneCrashReport().is_ok());
@@ -494,7 +479,6 @@ TEST_F(CrashReporterTest, NoQuota) {
              /*houry_snapshot=*/true},
       std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota + 1 /*first hourly snapshot*/,
                                              kUploadSuccessful));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
     ASSERT_TRUE(FileOneCrashReport().is_ok());
@@ -505,7 +489,6 @@ TEST_F(CrashReporterTest, Check_RegisteredProduct) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   fuchsia::feedback::CrashReportingProduct product;
   product.set_name("some name");
@@ -527,7 +510,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   std::vector<Attachment> attachments;
   attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, kSingleAttachmentValue));
@@ -549,7 +531,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithEventId) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   CrashReport report;
   report.set_program_name(kProgramName);
@@ -566,7 +547,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithProgramUptime) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   CrashReport report;
   report.set_program_name(kProgramName);
@@ -585,7 +565,6 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   fuchsia::mem::Buffer minidump;
   fsl::VmoFromString("minidump", &minidump);
@@ -604,7 +583,6 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt, std::nullopt).is_ok());
   CheckAnnotationsOnServer({
@@ -621,7 +599,6 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidumpButCras
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt, "some-signature").is_ok());
   CheckAnnotationsOnServer({
@@ -638,7 +615,6 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReport) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   fuchsia::mem::Buffer stack_trace;
   fsl::VmoFromString("#0", &stack_trace);
@@ -658,7 +634,6 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_ok());
   CheckAnnotationsOnServer({
@@ -672,7 +647,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithSignature) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   ASSERT_TRUE(FileOneCrashReportWithSignature("some-signature").is_ok());
   CheckAnnotationsOnServer({
@@ -684,7 +658,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithSignature) {
 TEST_F(CrashReporterTest, Fail_OnInvalidInputCrashReport) {
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsEmptySnapshot>());
   SetUpCrashReporterDefaultConfig();
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
 }
@@ -693,7 +666,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithIsFatalTrue) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   ASSERT_TRUE(FileOneCrashReportWithIsFatal(true).is_ok());
   CheckAnnotationsOnServer({
@@ -706,7 +678,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithIsFatalFalse) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   ASSERT_TRUE(FileOneCrashReportWithIsFatal(false).is_ok());
   CheckAnnotationsOnServer({
@@ -726,7 +697,6 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
              /*daily_per_product_quota=*/kDailyPerProductQuota,
              /*houry_snapshot=*/true},
       std::vector({kUploadSuccessful}));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
   SetPrivacySettings(kUserOptInDataSharing);
 
@@ -744,7 +714,6 @@ TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
       },
       /*daily_per_product_quota=*/kDailyPerProductQuota,
       /*houry_snapshot=*/true});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
   SetPrivacySettings(kUserOptOutDataSharing);
   RunLoopUntilIdle();
@@ -763,7 +732,6 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
              /*daily_per_product_quota=*/kDailyPerProductQuota,
              /*hourly_snapshot=*/true},
       std::vector({kUploadSuccessful}));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
@@ -787,7 +755,6 @@ TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
              /*daily_per_product_quota=*/kDailyPerProductQuota,
              /*hourly_snapshot=*/true},
       std::vector({kUploadFailed}));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 }
@@ -803,7 +770,6 @@ TEST_F(CrashReporterTest, Succeed_OnThrottledUpload) {
              /*daily_per_product_quota=*/kDailyPerProductQuota,
              /*hourly_snapshot=*/true},
       std::vector({kUploadThrottled}));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 }
@@ -817,7 +783,6 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
                             },
                             /*daily_per_product_quota=*/kDailyPerProductQuota,
                             /*hourly_snapshot=*/true});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 }
@@ -826,7 +791,6 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAttachments) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProviderReturnsNoAttachment>(kDefaultAnnotations));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAnnotationsOnServer(kDefaultAnnotations);
@@ -837,7 +801,6 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProviderReturnsNoAnnotation>(kEmptyAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAnnotationsOnServer();
@@ -847,7 +810,6 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsEmptySnapshot>());
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAnnotationsOnServer({
@@ -860,7 +822,6 @@ TEST_F(CrashReporterTest, Upload_HourlySnapshot) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful, kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   RunLoopFor(zx::min(5));
   EXPECT_THAT(crash_server_->latest_annotations().Raw(),
@@ -892,7 +853,6 @@ TEST_F(CrashReporterTest, Skip_HourlySnapshotIfPending) {
       kUploadFailed,
       kUploadFailed,
   });
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   RunLoopFor(zx::min(5));
   RunLoopFor(zx::hour(1));
@@ -916,7 +876,6 @@ TEST_F(CrashReporterTest, Skip_HourlySnapshotIfNegativeConsent) {
              /*daily_per_product_quota=*/kDailyPerProductQuota,
              /*houry_snapshot=*/true},
       std::vector<CrashServer::UploadStatus>({}));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
   SetPrivacySettings(kUserOptOutDataSharing);
 
@@ -927,7 +886,6 @@ TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 
@@ -949,7 +907,6 @@ TEST_F(CrashReporterTest, Check_CobaltAfterQuotaReached) {
                             },
                             /*daily_per_product_quota=*/0u,
                             /*hourly_snapshot=*/true});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
@@ -960,7 +917,6 @@ TEST_F(CrashReporterTest, Check_CobaltAfterQuotaReached) {
 TEST_F(CrashReporterTest, Check_CobaltAfterInvalidInputCrashReport) {
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsEmptySnapshot>());
   SetUpCrashReporterDefaultConfig();
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
@@ -1007,7 +963,6 @@ TEST_F(CrashReporterTestWithClock, Check_UtcTimeIsNotReady) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});

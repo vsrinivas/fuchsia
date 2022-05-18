@@ -31,10 +31,9 @@
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
-#include "src/developer/forensics/feedback/device_id_provider.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/errors.h"
-#include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics {
@@ -44,7 +43,6 @@ namespace {
 using FidlSnapshot = fuchsia::feedback::Snapshot;
 using fuchsia::feedback::CrashReport;
 
-constexpr zx::duration kDeviceIdTimeout = zx::sec(30);
 constexpr zx::duration kSnapshotTimeout = zx::min(2);
 
 // Returns what the initial ReportId should be, based on the contents of the store in the
@@ -86,8 +84,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
                              const std::shared_ptr<InfoContext>& info_context, Config config,
                              feedback::AnnotationManager* annotation_manager,
                              CrashRegister* crash_register, LogTags* tags,
-                             SnapshotManager* snapshot_manager, CrashServer* crash_server,
-                             feedback::DeviceIdProvider* device_id_provider)
+                             SnapshotManager* snapshot_manager, CrashServer* crash_server)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
@@ -101,8 +98,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       product_quotas_(dispatcher_, config.daily_per_product_quota),
       info_(info_context),
       network_watcher_(dispatcher_, *services_),
-      reporting_policy_watcher_(MakeReportingPolicyWatcher(dispatcher_, services, config)),
-      device_id_provider_(device_id_provider) {
+      reporting_policy_watcher_(MakeReportingPolicyWatcher(dispatcher_, services, config)) {
   FX_CHECK(dispatcher_);
   FX_CHECK(services_);
   FX_CHECK(crash_register_);
@@ -179,47 +175,46 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
     FX_LOGST(INFO, tags_->Get(report_id)) << "Generating report";
   }
 
-  auto join = ::fpromise::join_promises(snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout),
-                                        device_id_provider_->GetId(kDeviceIdTimeout));
-  using results_t = decltype(join)::value_type;
-
   auto p =
-      join.and_then([this, fidl_report = std::move(report), product = std::move(product), report_id,
-                     is_hourly_snapshot, record_failure](const results_t& results) mutable {
-        const auto snapshot_uuid = std::get<0>(results).value();
-        const auto device_id = std::get<1>(results);
-        const auto snapshot = snapshot_manager_->GetSnapshot(snapshot_uuid);
-        const auto current_time = utc_provider_.CurrentTime();
-        const auto annotations = annotation_manager_->ImmediatelyAvailable();
+      snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout)
+          .and_then([this, fidl_report = std::move(report), product = std::move(product), report_id,
+                     is_hourly_snapshot, record_failure](const std::string& snapshot_uuid) mutable {
+            const auto snapshot = snapshot_manager_->GetSnapshot(snapshot_uuid);
+            const auto current_time = utc_provider_.CurrentTime();
+            const auto annotations = annotation_manager_->ImmediatelyAvailable();
 
-        // Update the default product with the immediately available annotations (which should
-        // contain the version and channel).
-        if (product.IsDefaultPlatformProduct()) {
-          CrashRegister::AddVersionAndChannel(product, annotations);
-        }
+            // Update the default product with the immediately available annotations (which should
+            // contain the version and channel).
+            if (product.IsDefaultPlatformProduct()) {
+              CrashRegister::AddVersionAndChannel(product, annotations);
+            }
 
-        auto report = MakeReport(std::move(fidl_report), report_id, snapshot_uuid, snapshot,
-                                 current_time, device_id, BuildDefaultAnnotations(annotations),
-                                 product, is_hourly_snapshot);
+            const auto device_id = (annotations.count(feedback::kDeviceFeedbackIdKey) != 0)
+                                       ? annotations.at(feedback::kDeviceFeedbackIdKey)
+                                       : ErrorOr<std::string>(Error::kMissingValue);
 
-        if (is_hourly_snapshot) {
-          FX_LOGST(INFO, tags_->Get(report_id)) << "Generated hourly snapshot";
-        } else {
-          FX_LOGST(INFO, tags_->Get(report_id)) << "Generated report";
-        }
+            auto report = MakeReport(std::move(fidl_report), report_id, snapshot_uuid, snapshot,
+                                     current_time, device_id, BuildDefaultAnnotations(annotations),
+                                     product, is_hourly_snapshot);
 
-        if (!report.has_value()) {
-          return record_failure(cobalt::CrashState::kDropped,
-                                "Failed to file report: MakeReport failed. Won't retry");
-        }
+            if (is_hourly_snapshot) {
+              FX_LOGST(INFO, tags_->Get(report_id)) << "Generated hourly snapshot";
+            } else {
+              FX_LOGST(INFO, tags_->Get(report_id)) << "Generated report";
+            }
 
-        if (!queue_.Add(std::move(*report))) {
-          return record_failure(cobalt::CrashState::kDropped,
-                                "Failed to file report: Queue::Add failed. Won't retry");
-        }
+            if (!report.has_value()) {
+              return record_failure(cobalt::CrashState::kDropped,
+                                    "Failed to file report: MakeReport failed. Won't retry");
+            }
 
-        info_.LogCrashState(cobalt::CrashState::kFiled);
-      });
+            if (!queue_.Add(std::move(*report))) {
+              return record_failure(cobalt::CrashState::kDropped,
+                                    "Failed to file report: Queue::Add failed. Won't retry");
+            }
+
+            info_.LogCrashState(cobalt::CrashState::kFiled);
+          });
 
   executor_.schedule_task(std::move(p));
 }

@@ -78,6 +78,29 @@ class DynamicSingleFidlMethodAnnotationProvider : public DynamicAsyncAnnotationP
 };
 
 template <typename Interface, auto method, typename Convert>
+class HangingGetSingleFidlMethodAnnotationProvider : public CachedAsyncAnnotationProvider {
+ public:
+  HangingGetSingleFidlMethodAnnotationProvider(async_dispatcher_t* dispatcher,
+                                               std::shared_ptr<sys::ServiceDirectory> services,
+                                               std::unique_ptr<backoff::Backoff> backoff);
+
+  void GetOnUpdate(::fit::function<void(Annotations)> callback) override;
+
+ private:
+  void Call();
+
+  async_dispatcher_t* dispatcher_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
+  std::unique_ptr<backoff::Backoff> backoff_;
+  std::optional<Annotations> last_annotations_;
+  Convert convert_;
+
+  ::fidl::InterfacePtr<Interface> ptr_;
+  ::fit::function<void(Annotations)> on_update_;
+  fxl::WeakPtrFactory<HangingGetSingleFidlMethodAnnotationProvider> ptr_factory_{this};
+};
+
+template <typename Interface, auto method, typename Convert>
 StaticSingleFidlMethodAnnotationProvider<Interface, method, Convert>::
     StaticSingleFidlMethodAnnotationProvider(async_dispatcher_t* dispatcher,
                                              std::shared_ptr<sys::ServiceDirectory> services,
@@ -171,6 +194,54 @@ void DynamicSingleFidlMethodAnnotationProvider<Interface, method, Convert>::Clea
                                     return callback == nullptr;
                                   }),
                    callbacks_.end());
+}
+
+template <typename Interface, auto method, typename Convert>
+HangingGetSingleFidlMethodAnnotationProvider<Interface, method, Convert>::
+    HangingGetSingleFidlMethodAnnotationProvider(async_dispatcher_t* dispatcher,
+                                                 std::shared_ptr<sys::ServiceDirectory> services,
+                                                 std::unique_ptr<backoff::Backoff> backoff)
+    : dispatcher_(dispatcher), services_(std::move(services)), backoff_(std::move(backoff)) {
+  ptr_.set_error_handler([this](const zx_status_t status) {
+    FX_LOGS(WARNING) << "Lost connection to " << Interface::Name_;
+
+    async::PostDelayedTask(
+        dispatcher_,
+        [self = ptr_factory_.GetWeakPtr()] {
+          if (self) {
+            self->services_->Connect(self->ptr_.NewRequest(self->dispatcher_));
+            self->Call();
+          }
+        },
+        backoff_->GetNext());
+  });
+
+  services_->Connect(ptr_.NewRequest(dispatcher_));
+  Call();
+}
+
+template <typename Interface, auto method, typename Convert>
+void HangingGetSingleFidlMethodAnnotationProvider<Interface, method, Convert>::GetOnUpdate(
+    ::fit::function<void(Annotations)> callback) {
+  FX_CHECK(on_update_ == nullptr) << "GetOnUpdate can only be called once";
+  on_update_ = std::move(callback);
+
+  if (last_annotations_.has_value()) {
+    on_update_(*last_annotations_);
+  }
+}
+
+template <typename Interface, auto method, typename Convert>
+void HangingGetSingleFidlMethodAnnotationProvider<Interface, method, Convert>::Call() {
+  FX_CHECK(ptr_.is_bound()) << "Attempting to make call to " << Interface::Name_
+                            << " while reconnecting";
+
+  ((*ptr_).*method)([this](auto&&... result) mutable {
+    last_annotations_ = convert_(result...);
+    on_update_(*last_annotations_);
+
+    Call();
+  });
 }
 
 }  // namespace forensics::feedback

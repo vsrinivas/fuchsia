@@ -86,6 +86,29 @@ source_set("data_register") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
+source_set("device_id_provider") {
+  sources = [
+    "device_id_provider.cc",
+    "device_id_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/feedback/annotations",
+    "//src/developer/forensics/feedback/annotations:fidl_provider",
+    "//src/developer/forensics/utils:errors",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/zx",
+  ]
+
+  deps = [
+    "//src/lib/files",
+    "//src/lib/uuid",
+  ]
+}
+
 source_set("fidl_provider") {
   sources = [ "fidl_provider.h" ]
 

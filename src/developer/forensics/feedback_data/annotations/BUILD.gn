@@ -7,36 +7,6 @@ visibility = [ "//src/developer/forensics/feedback_data/*" ]
 ###############################################################################
 # SOURCES
 ###############################################################################
-source_set("annotation_providers") {
-  public = [
-    "annotation_provider.h",
-    "annotation_provider_factory.h",
-  ]
-
-  sources = [
-    "annotation_provider.h",
-    "annotation_provider_factory.cc",
-    "annotation_provider_factory.h",
-    "device_id_provider.cc",
-    "device_id_provider.h",
-  ]
-
-  deps = [
-    ":types",
-    ":utils",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback:device_id_provider",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils:time",
-    "//src/lib/fxl",
-    "//src/lib/timekeeper",
-    "//src/lib/timekeeper:system",
-  ]
-}
-
 source_set("static_annotations") {
   public = [ "static_annotations.h" ]
 

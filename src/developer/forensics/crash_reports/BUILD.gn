@@ -90,7 +90,6 @@ source_set("crash_reporter") {
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/crash_reports/info",
-    "//src/developer/forensics/feedback:device_id_provider",
     "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils:utc_time_provider",
