@@ -88,15 +88,6 @@ protocol HostVsockEndpoint {
         acceptor client_end:HostVsockAcceptor;
     }) -> (struct {}) error zx.status;
 
-    /// Similar to `HostVsockConnector.Connect` except the `src_cid` is
-    /// `HOST_CID` and `src_port` is generated automatically.
-    @transitional
-    Connect(resource struct {
-        cid uint32;
-        port uint32;
-        socket zx.handle:SOCKET;
-    }) -> (struct {}) error zx.status;
-
     /// Attempts to create a vsock connection to a guest on 'guest_port'. Uses a dynamically chosen
     /// ephemeral host port.
     ///
