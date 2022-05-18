@@ -201,5 +201,15 @@
             "description": "Zoom Out",
             "localizedDescription": "zoomOutKeyboardShortcut"
         }
+    ],
+    "reportAnIssue": [
+        {
+            "char": "i",
+            "chord": "Shift + Ctrl + i",
+            "modifier": "shift + control",
+            "exclusive": false,
+            "description": "Report an Issue",
+            "localizedDescription": "reportAnIssueKeyboardShortcut"
+        }
     ]
 }

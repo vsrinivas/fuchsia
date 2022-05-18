@@ -587,34 +587,42 @@ class AppStateImpl with Disposable implements AppState {
   }.asAction();
 
   // Map key shortcuts to corresponding actions.
-  Map<String, dynamic> get _actions => {
-        'launcher': showOverlay,
-        'switchNext': switchNext,
-        'switchPrev': switchPrev,
-        'cancel': cancel,
-        'close': closeView,
-        'closeAll': closeAll,
-        'settings': showOverlay,
-        'shortcuts': () {
-          settingsState.showShortcutSettings();
-          showOverlay();
-        },
-        'screenSaver': showScreenSaver,
-        'inspect': () => json.encode(_getInspectData()),
-        'navigateBack': () {
-          if (!settingsState.allSettingsPageVisible) {
-            settingsState.showAllSettings();
-          }
-        },
-        'increaseBrightness': () => settingsState.increaseBrightness(),
-        'decreaseBrightness': () => settingsState.decreaseBrightness(),
-        'increaseVolume': () => settingsState.increaseVolume(),
-        'decreaseVolume': () => settingsState.decreaseVolume(),
-        'muteVolume': () => settingsState.toggleMute(),
-        'logout': logout,
-        'zoomIn': preferencesService.zoomIn,
-        'zoomOut': preferencesService.zoomOut,
-      };
+  Map<String, dynamic> get _actions {
+    final actions = {
+      'launcher': showOverlay,
+      'switchNext': switchNext,
+      'switchPrev': switchPrev,
+      'cancel': cancel,
+      'close': closeView,
+      'closeAll': closeAll,
+      'settings': showOverlay,
+      'shortcuts': () {
+        settingsState.showShortcutSettings();
+        showOverlay();
+      },
+      'screenSaver': showScreenSaver,
+      'inspect': () => json.encode(_getInspectData()),
+      'navigateBack': () {
+        if (!settingsState.allSettingsPageVisible) {
+          settingsState.showAllSettings();
+        }
+      },
+      'increaseBrightness': () => settingsState.increaseBrightness(),
+      'decreaseBrightness': () => settingsState.decreaseBrightness(),
+      'increaseVolume': () => settingsState.increaseVolume(),
+      'decreaseVolume': () => settingsState.decreaseVolume(),
+      'muteVolume': () => settingsState.toggleMute(),
+      'logout': logout,
+      'zoomIn': preferencesService.zoomIn,
+      'zoomOut': preferencesService.zoomOut,
+    };
+
+    if (isUserFeedbackEnabled) {
+      actions.addAll({'reportAnIssue': showUserFeedback});
+    }
+
+    return actions;
+  }
 
   final _focusedView = Observable<ViewHandle?>(null);
   void _onFocusMoved(ViewHandle viewHandle) {

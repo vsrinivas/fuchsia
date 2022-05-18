@@ -1442,6 +1442,9 @@ class Strings {
       'muteVolumeKeyboardShortcut': muteVolumeKeyboardShortcut,
       'decreaseVolumeKeyboardShortcut': decreaseVolumeKeyboardShortcut,
       'increaseVolumeKeyboardShortcut': increaseVolumeKeyboardShortcut,
+      'zoomInKeyboardShortcut': zoomInShortcut,
+      'zoomOutKeyboardShortcut': zoomOutShortcut,
+      'reportAnIssueKeyboardShortcut': reportAnIssue,
     };
     return _messages[name];
   }
