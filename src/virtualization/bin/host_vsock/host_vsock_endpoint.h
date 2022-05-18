@@ -40,13 +40,9 @@ class HostVsockEndpoint : public fuchsia::virtualization::HostVsockConnector,
 
   fidl::InterfaceRequestHandler<fuchsia::virtualization::HostVsockEndpoint> GetHandler();
 
-// |fuchsia::virtualization::HostVsockConnector|
-// NOTE: These pragmas are only needed until we remove Connect from HostVsockEndpoint.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Woverloaded-virtual"
+  // |fuchsia::virtualization::HostVsockConnector|
   void Connect(uint32_t src_cid, uint32_t src_port, uint32_t cid, uint32_t port,
                fuchsia::virtualization::HostVsockConnector::ConnectCallback callback) override;
-#pragma clang diagnostic pop
 
   // |fuchsia::virtualization::HostVsockEndpoint|
   void Listen(uint32_t port,
