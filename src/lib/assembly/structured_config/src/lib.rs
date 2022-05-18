@@ -10,7 +10,6 @@ use fidl::encoding::{decode_persistent, Persistable};
 use fuchsia_pkg::{PackageBuilder, PackageManifest};
 use std::{
     collections::BTreeMap,
-    error::Error,
     fmt::Debug,
     path::{Path, PathBuf},
 };
@@ -111,10 +110,10 @@ static SUPPORTED_RUNNERS: &[&str] = &["driver", "elf"];
 /// value file and that together they can produce a valid configuration for the component.
 ///
 /// Also ensures that the component is using a runner which supports structured config.
-pub fn validate_component<Ns: PkgNamespace>(
+pub fn validate_component(
     manifest_path: &str,
-    reader: &mut Ns,
-) -> Result<(), ValidationError<Ns::Err>> {
+    reader: &mut impl PkgNamespace,
+) -> Result<(), ValidationError> {
     // get the manifest and validate it
     let manifest_bytes =
         reader.read_file(manifest_path).map_err(ValidationError::ManifestMissing)?;
@@ -154,13 +153,13 @@ pub fn validate_component<Ns: PkgNamespace>(
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum ValidationError<NamespaceError: Debug + Error + 'static> {
+pub enum ValidationError {
     #[error("Couldn't read manifest.")]
-    ManifestMissing(#[source] NamespaceError),
+    ManifestMissing(#[source] assembly_validate_util::ReadError),
     #[error("Couldn't parse manifest.")]
     ParseManifest(#[source] PersistentFidlError),
     #[error("Couldn't find component's config values in package.")]
-    ConfigValuesMissing(#[source] NamespaceError),
+    ConfigValuesMissing(#[source] assembly_validate_util::ReadError),
     #[error("Couldn't parse config values.")]
     ParseConfig(#[source] PersistentFidlError),
     #[error("Couldn't resolve config.")]
