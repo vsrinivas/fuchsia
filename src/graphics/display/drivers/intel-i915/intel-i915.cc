@@ -33,6 +33,7 @@
 
 #include <fbl/vector.h>
 
+#include "src/graphics/display/drivers/intel-i915/clock/cdclk.h"
 #include "src/graphics/display/drivers/intel-i915/ddi.h"
 #include "src/graphics/display/drivers/intel-i915/dp-display.h"
 #include "src/graphics/display/drivers/intel-i915/dpll.h"
@@ -287,12 +288,6 @@ bool Controller::BringUpDisplayEngine(bool resume) {
   // something special (i.e. for eDP), assume that the BIOS already enabled it.
   auto dpll_enable = registers::DpllEnable::Get(registers::DPLL_0).ReadFrom(mmio_space());
   if (!dpll_enable.enable_dpll()) {
-    // Set the cd_clk frequency to the minimum
-    auto cd_clk = registers::CdClockCtl::Get().ReadFrom(mmio_space());
-    cd_clk.set_cd_freq_select(cd_clk.kFreqSelect3XX);
-    cd_clk.set_cd_freq_decimal(cd_clk.kFreqDecimal3375);
-    cd_clk.WriteTo(mmio_space());
-
     // Configure DPLL0
     auto dpll_ctl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
     dpll_ctl1.SetLinkRate(registers::DPLL_0, registers::DpllControl1::LinkRate::k810Mhz);
@@ -309,41 +304,15 @@ bool Controller::BringUpDisplayEngine(bool resume) {
       return false;
     }
 
-    // Do the magic sequence for Changing CD Clock Frequency specified on
-    // intel-gfx-prm-osrc-skl-vol12-display.pdf p.138-139
-    constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
-    constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
-    constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
-    mmio_space()->Write32(kGtDriverMailboxData0, 0x3);
-    mmio_space()->Write32(kGtDriverMailboxData1, 0x0);
-    mmio_space()->Write32(kGtDriverMailboxInterface, 0x80000007);
-
-    int count = 0;
-    for (;;) {
-      if (!WAIT_ON_US(mmio_space()->Read32(kGtDriverMailboxInterface) & 0x80000000, 150)) {
-        zxlogf(ERROR, "GT Driver Mailbox driver busy");
-        return false;
-      }
-      if (mmio_space()->Read32(kGtDriverMailboxData0) & 0x1) {
-        break;
-      }
-      if (count++ == 3) {
-        zxlogf(ERROR, "Failed to set cd_clk");
-        return false;
-      }
-      zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+    // Enable cd_clk and set the frequency to minimum.
+    cd_clk_ = std::make_unique<SklCoreDisplayClock>(mmio_space());
+    if (!cd_clk_->SetFrequency(337'500)) {
+      zxlogf(ERROR, "Failed to configure CD clock frequency");
+      return false;
     }
-
-    cd_clk.WriteTo(mmio_space());
-
-    // Write 0x0 to inform the power manager of the move to 337.5MHz
-    mmio_space()->Write32(kGtDriverMailboxData0, 0x0);
-    mmio_space()->Write32(kGtDriverMailboxData1, 0x0);
-    mmio_space()->Write32(kGtDriverMailboxInterface, 0x80000007);
   } else {
-    auto cd_clk = registers::CdClockCtl::Get().ReadFrom(mmio_space());
-    zxlogf(INFO, "CDCLK already assigned by BIOS: freq select: %u, freq decimal: %u",
-           cd_clk.cd_freq_select(), cd_clk.cd_freq_decimal());
+    cd_clk_ = std::make_unique<SklCoreDisplayClock>(mmio_space());
+    zxlogf(INFO, "CDCLK already assigned by BIOS: frequency: %u KHz", cd_clk_->current_freq_khz());
   }
 
   // Enable and wait for DBUF

@@ -20,6 +20,7 @@
 
 #include <fbl/vector.h>
 
+#include "src/graphics/display/drivers/intel-i915/clock/cdclk.h"
 #include "src/graphics/display/drivers/intel-i915/display-device.h"
 #include "src/graphics/display/drivers/intel-i915/dp-display.h"
 #include "src/graphics/display/drivers/intel-i915/dpll.h"
@@ -256,6 +257,7 @@ class Controller : public DeviceType,
   fbl::Vector<Pipe> pipes_ __TA_GUARDED(display_lock_);
 
   PowerWellRef cd_clk_power_well_;
+  std::unique_ptr<CoreDisplayClock> cd_clk_;
 
   std::unique_ptr<DisplayPllManager> dpll_manager_;
 

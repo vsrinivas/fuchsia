@@ -23,6 +23,7 @@ source_set("common_srcs") {
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   sources = [
+    "clock/cdclk.cc",
     "ddi.cc",
     "display-device.cc",
     "dp-display.cc",
