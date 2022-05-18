@@ -24,7 +24,7 @@
 
 namespace {
 
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect2_Result;
 
 constexpr size_t kBufferSize = 100;
 
@@ -58,14 +58,18 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   fuchsia::virtualization::HostVsockEndpointPtr ep;
   realm()->GetHostVsockEndpoint(ep.NewRequest());
 
-  zx::socket local_socket, remote_socket;
-  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &local_socket, &remote_socket));
-
+  zx::socket local_socket;
   std::optional<zx_status_t> status;
-  ep->Connect(cid(), GUEST_INTERACTION_PORT, std::move(remote_socket),
-              [&status](HostVsockEndpoint_Connect_Result result) {
-                status = result.is_response() ? ZX_OK : result.err();
-              });
+  auto callback = [&status, &local_socket](HostVsockEndpoint_Connect2_Result result) {
+    if (result.is_response()) {
+      local_socket = std::move(result.response().socket);
+      status = ZX_OK;
+    } else {
+      status = result.err();
+    }
+  };
+  ep->Connect2(GUEST_INTERACTION_PORT, std::move(callback));
+
   RunLoopUntil([&status]() { return status.has_value(); });
   ASSERT_OK(status.value());
 
@@ -219,14 +223,18 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
   fuchsia::virtualization::HostVsockEndpointPtr ep;
   realm()->GetHostVsockEndpoint(ep.NewRequest());
 
-  zx::socket local_socket, remote_socket;
-  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &local_socket, &remote_socket));
-
+  zx::socket local_socket;
   std::optional<zx_status_t> status;
-  ep->Connect(cid(), GUEST_INTERACTION_PORT, std::move(remote_socket),
-              [&status](HostVsockEndpoint_Connect_Result result) {
-                status = result.is_response() ? ZX_OK : result.err();
-              });
+  auto callback = [&status, &local_socket](HostVsockEndpoint_Connect2_Result result) {
+    if (result.is_response()) {
+      local_socket = std::move(result.response().socket);
+      status = ZX_OK;
+    } else {
+      status = result.err();
+    }
+  };
+  ep->Connect2(GUEST_INTERACTION_PORT, std::move(callback));
+
   RunLoopUntil([&status] { return status.has_value(); });
   ASSERT_TRUE(status.has_value());
   ASSERT_OK(status.value());
