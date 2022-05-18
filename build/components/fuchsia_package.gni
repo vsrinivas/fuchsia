@@ -280,6 +280,11 @@ template("fuchsia_package") {
     # is possible for package targets to be expanded in other toolchains (host,
     # variant, etc.). In these cases, make fuchsia_package expand to nothing.
     group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
     }
 
     # Suppress unused variable warnings.

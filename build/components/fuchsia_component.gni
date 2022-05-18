@@ -108,7 +108,11 @@ template("fuchsia_component_manifest") {
     }
   } else {
     group(target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       deps = [ ":$target_name($default_toolchain)" ]
     }
     not_needed(invoker, "*")

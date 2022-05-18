@@ -135,6 +135,7 @@ template("fuchsia_unittest_component") {
   } else {
     group(target_name) {
       testonly = true
+      forward_variables_from(invoker, [ "visibility" ])
       deps = [ ":$target_name($default_toolchain)" ]
     }
     not_needed(invoker, "*")

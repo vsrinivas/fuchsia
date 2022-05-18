@@ -78,6 +78,7 @@ template("fuchsia_test") {
     group(target_name) {
       testonly = true
       deps = [ ":$target_name($default_toolchain)" ]
+      forward_variables_from(invoker, [ "visibility" ])
     }
     not_needed(invoker, "*")
   }
