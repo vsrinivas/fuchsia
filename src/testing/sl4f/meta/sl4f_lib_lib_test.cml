@@ -1,0 +1,83 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/sl4f_lib_lib_test",
+    },
+    children: [
+        {
+            name: "fake_alpha",
+            url: "#meta/fake_alpha.cm",
+        },
+        {
+            name: "fake_cast",
+            url: "#meta/fake_cast.cm",
+        },
+        {
+            name: "fake_misc",
+            url: "#meta/fake_misc.cm",
+        },
+        {
+            name: "fake_playready",
+            url: "#meta/fake_playready.cm",
+        },
+        {
+            name: "fake_weave",
+            url: "#meta/fake_weave.cm",
+        },
+        {
+            name: "fake_widevine",
+            url: "#meta/fake_widevine.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.factory.AlphaFactoryStoreProvider" ],
+            from: "#fake_alpha",
+        },
+        {
+            protocol: [ "fuchsia.factory.CastCredentialsFactoryStoreProvider" ],
+            from: "#fake_cast",
+        },
+        {
+            protocol: [ "fuchsia.factory.MiscFactoryStoreProvider" ],
+            from: "#fake_misc",
+        },
+        {
+            protocol: [ "fuchsia.factory.PlayReadyFactoryStoreProvider" ],
+            from: "#fake_playready",
+        },
+        {
+            protocol: [ "fuchsia.factory.WeaveFactoryStoreProvider" ],
+            from: "#fake_weave",
+        },
+        {
+            protocol: [ "fuchsia.factory.WidevineFactoryStoreProvider" ],
+            from: "#fake_widevine",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#fake_alpha",
+                "#fake_cast",
+                "#fake_misc",
+                "#fake_playready",
+                "#fake_weave",
+                "#fake_widevine",
+            ],
+        },
+    ],
+}

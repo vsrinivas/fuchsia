@@ -381,23 +381,35 @@ resource("sl4f-server-tests-files") {
 }
 
 fuchsia_unittest_package("sl4f-service-tests") {
-  manifest = "meta/sl4f_lib_lib_test.cmx"
+  manifest = "meta/sl4f_lib_lib_test.cml"
   deps = [
+    ":fake_alpha",
+    ":fake_cast",
+    ":fake_misc",
+    ":fake_playready",
+    ":fake_weave",
+    ":fake_widevine",
     ":lib_test",
     ":sl4f-server-tests-files",
   ]
 }
 
-config_data("fake-factory-store-providers-config") {
-  for_pkg = "fake_factory_store_providers"
-  sources = [
-    "testdata/alpha_factory_store.config",
-    "testdata/cast_factory_store.config",
-    "testdata/misc_factory_store.config",
-    "testdata/playready_factory_store.config",
-    "testdata/weave_factory_store.config",
-    "testdata/widevine_factory_store.config",
-  ]
+components = [
+  "alpha",
+  "cast",
+  "misc",
+  "playready",
+  "weave",
+  "widevine",
+]
+
+foreach(comp, components) {
+  fuchsia_component("fake_${comp}") {
+    testonly = true
+    component_name = "fake_${comp}"
+    manifest = "meta/fake_${comp}_providers.cml"
+    deps = [ "//src/factory/fake_factory_store_providers:bin" ]
+  }
 }
 
 fuchsia_unittest_package("sl4f-tests") {
@@ -406,11 +418,7 @@ fuchsia_unittest_package("sl4f-tests") {
 
 group("service-tests") {
   testonly = true
-  deps = [
-    ":fake-factory-store-providers-config",
-    ":sl4f-service-tests",
-    "//src/factory/fake_factory_store_providers",
-  ]
+  deps = [ ":sl4f-service-tests" ]
 }
 
 group("tests") {
