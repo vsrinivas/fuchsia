@@ -268,7 +268,7 @@ The following code review guidelines are adopted within the Netstack team:
   simultaneously to requesting review from owners. You can choose any team
   member you want, consider the following criteria:
   - Ramping up in the target area.
-  - Working in tangentially related area.
+  - Working in tangentially related areas.
   - Language/patterns experience.
   - _TODO(https://fxbug.dev/97920): create review queue rules_.
 - Acquiring +2 from both reviewers is strongly recommended, but not strictly

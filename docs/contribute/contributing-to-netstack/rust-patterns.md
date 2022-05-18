@@ -109,7 +109,7 @@ short non doc comment before it or at the top of the function's body explaining
 what this test is exercising. We use non-doc comments because we expect the
 target audience to be readers of the code, and not of the public API.
 
-Tests should always be in a module called `tests` or one of its descendents.
+Tests should always be in a module named `tests` or one of its descendents.
 Crates that contain only integration tests do not need a `tests` module, e.g.
 [network/tests/integration], [network/tests/fidl].
 
@@ -244,7 +244,7 @@ should, thus, be avoided.
 
 ```rust
 // Don't attempt to match exhaustively, exhaustive enumeration is prone to
-// becoming stale and mislead future readers if `Foo` takes more variants.
+// becoming stale and misleading future readers if `Foo` takes more variants.
 fn bad_flexible_match(foo: fidl_foo::FlexibleFoo) {
     match foo {
         fidl_foo::FlexibleFoo::Bar => { /* ... */ },
@@ -314,7 +314,7 @@ Follow the steps below to propose a change.
 
 1. Author and publish a CL changing this page.
 1. *\[optional\]* Socialize with a small group and iterate.
-1. Request review from the entire team through e-mail and chat. Non-Googlers can
+1. Request review from the entire team through email and chat. Non-Googlers can
    reach out through [discussion groups].
 1. Iterate on the CL based on review comments and offline sessions.
    Remember to publish outcomes of offline sessions back to the CL.

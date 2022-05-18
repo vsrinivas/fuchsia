@@ -19,7 +19,7 @@ We actively avoid the trap of "invented here", always designing with a guarantee
 for compatibility with known networking APIs. We prefer to use Fuchsia concepts
 to empower and improve on common networking concepts and APIs rather than invent
 new ones for novelty's sake. We allow reinvention when needed, but compatibility
-must be always be addressed.
+must always be addressed.
 
 We encode our compliance and compatibility requirements by authoring tests that
 run against other platforms as well as Fuchsia. That ensures that Fuchsia's
