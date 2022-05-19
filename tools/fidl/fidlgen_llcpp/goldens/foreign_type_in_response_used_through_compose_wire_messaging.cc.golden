@@ -20,29 +20,8 @@ extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
                    client,
                ::fidl::internal::TransactionalRequest<
                    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
-                   request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<
-    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
-    WireResult(::fidl::UnownedClientEnd<
-                   ::test_foreigntypeinresponseusedthroughcompose::Top>
-                   client,
-               ::fidl::internal::TransactionalRequest<
-                   ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
                    request,
-               zx_time_t deadline) {
+               std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -50,11 +29,20 @@ extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_foreigntypeinresponseusedthroughcompose {
 #endif  // __Fuchsia__
@@ -76,7 +64,7 @@ namespace test_foreigntypeinresponseusedthroughcompose {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -94,11 +82,19 @@ namespace test_foreigntypeinresponseusedthroughcompose {
           ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_foreigntypeinresponseusedthroughcompose {
 #endif  // __Fuchsia__

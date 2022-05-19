@@ -33,29 +33,8 @@ extern "C" const fidl_type_t
     WireResult(::fidl::UnownedClientEnd<::test_union::TestProtocol> client,
                ::fidl::internal::TransactionalRequest<
                    ::test_union::TestProtocol::
-                       StrictXUnionHenceResponseMayBeStackAllocated>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_union::TestProtocol::
-              StrictXUnionHenceResponseMayBeStackAllocated>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocated>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<
-    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::
-    WireResult(::fidl::UnownedClientEnd<::test_union::TestProtocol> client,
-               ::fidl::internal::TransactionalRequest<
-                   ::test_union::TestProtocol::
                        StrictXUnionHenceResponseMayBeStackAllocated>* request,
-               zx_time_t deadline) {
+               std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -64,12 +43,21 @@ extern "C" const fidl_type_t
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocated>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_union {
 #endif  // __Fuchsia__
@@ -90,7 +78,7 @@ namespace test_union {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -110,12 +98,20 @@ namespace test_union {
               StrictXUnionHenceResponseMayBeStackAllocated>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocated>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_union {
 #endif  // __Fuchsia__
@@ -124,33 +120,11 @@ namespace test_union {
 }  // namespace test_union
 ::fidl::WireResult<::test_union::TestProtocol::
                        FlexibleXUnionHenceResponseMustBeHeapAllocated>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_union::TestProtocol> client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_union::TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocated>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocated>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<::test_union::TestProtocol::
-                       FlexibleXUnionHenceResponseMustBeHeapAllocated>::
     WireResult(::fidl::UnownedClientEnd<::test_union::TestProtocol> client,
                ::fidl::internal::TransactionalRequest<
                    ::test_union::TestProtocol::
                        FlexibleXUnionHenceResponseMustBeHeapAllocated>* request,
-               zx_time_t deadline) {
+               std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -159,12 +133,22 @@ namespace test_union {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
       ::test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_union {
 #endif  // __Fuchsia__
@@ -185,7 +169,7 @@ namespace test_union {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -205,12 +189,21 @@ namespace test_union {
               FlexibleXUnionHenceResponseMustBeHeapAllocated>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
       ::test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_union {
 #endif  // __Fuchsia__

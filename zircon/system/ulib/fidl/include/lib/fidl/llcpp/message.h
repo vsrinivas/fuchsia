@@ -221,31 +221,9 @@ class OutgoingMessage : public ::fidl::Status {
           std::move(options));
   }
 
-  // Makes a call on a transport that expects the caller to provide read
-  // buffers, then decodes them.
-  // TODO(fxbug.dev/60240): To support both wire and natural types using the
-  // same calling mechanism, decoding should be domain object family-specific
-  // and moved out of |Call|.
-  template <typename FidlType, typename TransportObject,
-            typename = std::enable_if_t<
-                !internal::AssociatedTransport<TransportObject>::kTransportProvidesReadBuffer>>
-  void Call(TransportObject&& transport, uint8_t* result_bytes, uint32_t result_byte_capacity,
-            CallOptions options = {}) {
-    fidl_handle_t result_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-    typename internal::AssociatedTransport<TransportObject>::HandleMetadata
-        result_handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-    CallImplForCallerProvidedBuffer(
-        internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
-        internal::TopLevelCodingTraits<FidlType>::inline_size,
-        fidl::TypeTraits<FidlType>::kHasEnvelope, internal::MakeTopLevelDecodeFn<FidlType>(),
-        fidl::TypeTraits<FidlType>::kHasResponseBody, result_bytes, result_byte_capacity,
-        result_handles, reinterpret_cast<fidl_handle_metadata_t*>(result_handle_metadata),
-        ZX_CHANNEL_MAX_MSG_HANDLES, std::move(options));
-  }
-
   // Makes a call on a transport whose messages read are associated with their
   // own buffers, then decodes them.
-  // TODO(fxbug.dev/60240): To support both wire and natural types using the
+  // TODO(fxbug.dev/100472): To support both wire and natural types using the
   // same calling mechanism, decoding should be domain object family-specific
   // and moved out of |Call|.
   template <typename FidlType, typename TransportObject,
@@ -262,7 +240,7 @@ class OutgoingMessage : public ::fidl::Status {
 
   // Makes a call and returns the response read from the transport, without
   // decoding.
-  // TODO(fxbug.dev/60240): Move every user to this overload of |Call|.
+  // TODO(fxbug.dev/100472): Move every user to this overload of |Call|.
   template <typename TransportObject>
   auto Call(TransportObject&& transport,
             typename internal::AssociatedTransport<TransportObject>::MessageStorageView storage,
@@ -643,8 +621,10 @@ class DecodedMessageBase : public ::fidl::Status {
   explicit DecodedMessageBase(IsTransactional<true>, ::fidl::IncomingMessage&& msg,
                               size_t inline_size, bool contains_envelope,
                               fidl::internal::TopLevelDecodeFn decode_fn) {
-    msg.Decode(inline_size, contains_envelope, decode_fn);
-    bytes_ = msg.bytes();
+    if (msg.ok()) {
+      msg.Decode(inline_size, contains_envelope, decode_fn);
+      bytes_ = msg.bytes();
+    }
     SetStatus(msg);
   }
 
@@ -655,8 +635,10 @@ class DecodedMessageBase : public ::fidl::Status {
                               internal::WireFormatVersion wire_format_version,
                               ::fidl::IncomingMessage&& msg, size_t inline_size,
                               fidl::internal::TopLevelDecodeFn decode_fn) {
-    msg.Decode(inline_size, decode_fn, wire_format_version, false);
-    bytes_ = msg.bytes();
+    if (msg.ok()) {
+      msg.Decode(inline_size, decode_fn, wire_format_version, false);
+      bytes_ = msg.bytes();
+    }
     SetStatus(msg);
   }
 
@@ -673,6 +655,50 @@ class DecodedMessageBase : public ::fidl::Status {
 
  private:
   uint8_t* bytes_ = nullptr;
+};
+
+// |DecodedValue| is a RAII wrapper around a FIDL value that ensures that the
+// handles within the object tree rooted at value are closed when the object
+// goes out of scope.
+template <typename FidlType>
+class DecodedValue {
+ public:
+  // Constructs an empty |DecodedValue|.
+  DecodedValue() = default;
+
+  // Adopts an existing decoded |value|, claiming handles located within this tree.
+  explicit DecodedValue(FidlType* value) : value_(value) {}
+
+  ~DecodedValue() {
+    if constexpr (::fidl::IsResource<FidlType>::value) {
+      if (Value() != nullptr) {
+        Value()->_CloseHandles();
+      }
+    }
+  }
+
+  DecodedValue(DecodedValue&& other) noexcept {
+    value_ = other.value_;
+    other.value_ = nullptr;
+  }
+
+  DecodedValue& operator=(DecodedValue&& other) noexcept {
+    if (this != &other) {
+      value_ = other.value_;
+      other.value_ = nullptr;
+    }
+    return *this;
+  }
+
+  FidlType* Value() { return value_; }
+  const FidlType* Value() const { return value_; }
+
+  // Release the ownership of the decoded value. The handles won't be closed
+  // when the current object is destroyed.
+  void Release() { value_ = nullptr; }
+
+ private:
+  FidlType* value_ = nullptr;
 };
 
 // This type exists because of class initialization order.
@@ -878,7 +904,7 @@ class DecodedMessage;
 template <typename FidlType, typename Transport>
 class DecodedMessage<FidlType, Transport,
                      std::void_t<decltype(fidl::TypeTraits<FidlType>::kMessageKind)>>
-    final : public ::fidl::internal::DecodedMessageBase {
+    : public ::fidl::internal::DecodedMessageBase {
   using Base = ::fidl::internal::DecodedMessageBase;
 
  public:
@@ -912,13 +938,20 @@ class DecodedMessage<FidlType, Transport,
   // When the object is destroyed.
   // After calling this method, the |DecodedMessage| object should not be used anymore.
   void ReleasePrimaryObject() { Base::ResetBytes(); }
+
+  ::fidl::internal::DecodedValue<FidlType> Take() {
+    ZX_ASSERT(Base::ok());
+    FidlType* value = PrimaryObject();
+    ReleasePrimaryObject();
+    return ::fidl::internal::DecodedValue<FidlType>(value);
+  }
 };
 
 // Specialization for non-transactional types (tables, structs, unions).
 template <typename FidlType, typename Transport>
 class DecodedMessage<FidlType, Transport,
                      std::enable_if_t<::fidl::IsFidlObject<FidlType>::value, void>>
-    final : public ::fidl::internal::DecodedMessageBase {
+    : public ::fidl::internal::DecodedMessageBase {
   using Base = ::fidl::internal::DecodedMessageBase;
 
  public:
@@ -976,6 +1009,13 @@ class DecodedMessage<FidlType, Transport,
   // When the object is destroyed.
   // After calling this method, the |DecodedMessage| object should not be used anymore.
   void ReleasePrimaryObject() { Base::ResetBytes(); }
+
+  ::fidl::internal::DecodedValue<FidlType> Take() {
+    ZX_ASSERT(Base::ok());
+    FidlType* value = PrimaryObject();
+    ReleasePrimaryObject();
+    return ::fidl::internal::DecodedValue<FidlType>(value);
+  }
 };
 
 }  // namespace unstable

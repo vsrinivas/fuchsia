@@ -49,7 +49,7 @@ namespace test_doccomments {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -62,7 +62,7 @@ namespace test_doccomments {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Status::operator=(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_doccomments {
 #endif  // __Fuchsia__

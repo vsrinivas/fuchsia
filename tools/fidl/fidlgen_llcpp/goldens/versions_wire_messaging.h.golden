@@ -293,6 +293,7 @@ struct TypeTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>> {
 };
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<::test_versions::Protocol::Foo> final
     : public ::fidl::Status {
@@ -301,15 +302,15 @@ class [[nodiscard]] ::fidl::WireResult<::test_versions::Protocol::Foo> final
       ::fidl::UnownedClientEnd<::test_versions::Protocol> client,
       ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>*
           request);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
- private:
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_versions::Protocol::Foo>
     final : public ::fidl::Status {
@@ -319,12 +320,13 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_versions::Protocol::Foo>
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>*
           request);
+
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
 template <>

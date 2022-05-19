@@ -264,6 +264,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_inheritancewithrecursivedecl::Parent::First>
@@ -274,15 +275,15 @@ class [[nodiscard]] ::fidl::WireResult<
           client,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Parent::First>* request);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
- private:
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_inheritancewithrecursivedecl::Parent::First>
@@ -294,12 +295,13 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Parent::First>* request);
+
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
 template <>
@@ -892,6 +894,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_inheritancewithrecursivedecl::Child::First>
@@ -902,15 +905,15 @@ class [[nodiscard]] ::fidl::WireResult<
           client,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Child::First>* request);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
- private:
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_inheritancewithrecursivedecl::Child::First>
@@ -922,14 +925,16 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Child::First>* request);
+
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_inheritancewithrecursivedecl::Child::Second>
@@ -940,15 +945,15 @@ class [[nodiscard]] ::fidl::WireResult<
           client,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Child::Second>* request);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
- private:
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_inheritancewithrecursivedecl::Child::Second>
@@ -960,12 +965,13 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Child::Second>* request);
+
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
 template <>

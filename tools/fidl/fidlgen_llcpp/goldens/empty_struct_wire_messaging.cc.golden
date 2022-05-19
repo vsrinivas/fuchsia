@@ -67,7 +67,7 @@ namespace test_emptystruct {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -80,7 +80,7 @@ namespace test_emptystruct {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Status::operator=(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_emptystruct {
 #endif  // __Fuchsia__
@@ -91,26 +91,8 @@ namespace test_emptystruct {
     WireResult(
         ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
         ::fidl::internal::TransactionalRequest<
-            ::test_emptystruct::EmptyProtocol::SendAndReceive>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_emptystruct::EmptyProtocol::SendAndReceive>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_emptystruct::EmptyProtocol::SendAndReceive>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
-        ::fidl::internal::TransactionalRequest<
             ::test_emptystruct::EmptyProtocol::SendAndReceive>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -118,11 +100,20 @@ namespace test_emptystruct {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_emptystruct::EmptyProtocol::SendAndReceive>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_emptystruct::EmptyProtocol::SendAndReceive>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_emptystruct::EmptyProtocol::SendAndReceive>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_emptystruct {
 #endif  // __Fuchsia__
@@ -140,7 +131,7 @@ namespace test_emptystruct {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -158,11 +149,19 @@ namespace test_emptystruct {
           ::test_emptystruct::EmptyProtocol::SendAndReceive>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_emptystruct::EmptyProtocol::SendAndReceive>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_emptystruct::EmptyProtocol::SendAndReceive>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_emptystruct::EmptyProtocol::SendAndReceive>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_emptystruct {
 #endif  // __Fuchsia__

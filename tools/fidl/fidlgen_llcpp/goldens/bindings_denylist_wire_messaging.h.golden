@@ -474,6 +474,24 @@ struct TypeTraits<
 };
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+struct ::fidl::internal::IncomingHandleStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+            LibfuzzerNeedsNonemptyProtocol>>
+    final : public ::fidl::internal::ChannelHandleStorageBase<
+                ::fidl::internal::IncomingHandleStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                            LibfuzzerNeedsNonemptyProtocol>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                               LibfuzzerNeedsNonemptyProtocol>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 
 template <>
 struct ::fidl::internal::IncomingMessageStorage<
@@ -485,15 +503,14 @@ struct ::fidl::internal::IncomingMessageStorage<
                     ::fidl::internal::TransactionalResponse<
                         ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                             LibfuzzerNeedsNonemptyProtocol>>> {
-  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
-      ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                               LibfuzzerNeedsNonemptyProtocol>,
-      fidl::MessageDirection::kReceiving>();
-
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
-  ::std::array<zx_handle_t, kNumHandles> handles_;
-  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>>
+      handles_storage_;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -505,24 +522,24 @@ class [[nodiscard]] ::fidl::WireResult<
           client,
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-              LibfuzzerNeedsNonemptyProtocol>* request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-          client,
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
               LibfuzzerNeedsNonemptyProtocol>* request,
-      zx_time_t _deadline);
+      std::optional<zx::time> deadline = std::nullopt);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
 
  private:
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocol>>
+      decoded_;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -539,30 +556,32 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<
                              ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                  LibfuzzerNeedsNonemptyProtocol>* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {}
+
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
               LibfuzzerNeedsNonemptyProtocol>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded) {
+      : fidl::Status(decoded) {
     if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
-    } else {
-      bytes_ = nullptr;
+      decoded_ = decoded.Take();
     }
-    decoded.ReleasePrimaryObject();
   }
+
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 
  private:
-  uint8_t* bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocol>>
+      decoded_;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -1182,6 +1201,7 @@ struct TypeTraits<
 };
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
@@ -1193,15 +1213,15 @@ class [[nodiscard]] ::fidl::WireResult<
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>*
           request);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
- private:
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
@@ -1214,14 +1234,16 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>*
           request);
+
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::ImportsSameNameContext::
@@ -1234,15 +1256,15 @@ class [[nodiscard]] ::fidl::WireResult<
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::ImportsSameNameContext::
               AlwaysAppearsInImportingLibrary>* request);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
- private:
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::ImportsSameNameContext::
@@ -1256,12 +1278,13 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::ImportsSameNameContext::
               AlwaysAppearsInImportingLibrary>* request);
+
   explicit WireUnownedResult(const ::fidl::Status& result)
       : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
 template <>
@@ -3603,6 +3626,23 @@ static_assert(
              result) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+struct ::fidl::internal::IncomingHandleStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+    final
+    : public ::fidl::internal::ChannelHandleStorageBase<
+          ::fidl::internal::IncomingHandleStorage<
+              ::fidl::internal::TransactionalResponse<
+                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 
 template <>
 struct ::fidl::internal::IncomingMessageStorage<
@@ -3613,12 +3653,26 @@ struct ::fidl::internal::IncomingMessageStorage<
           ::fidl::internal::IncomingMessageStorage<
               ::fidl::internal::TransactionalResponse<
                   ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>> {
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+      handles_storage_;
+};
+template <>
+struct ::fidl::internal::IncomingHandleStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+    final
+    : public ::fidl::internal::ChannelHandleStorageBase<
+          ::fidl::internal::IncomingHandleStorage<
+              ::fidl::internal::TransactionalResponse<
+                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>> {
   static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
       ::fidl::WireResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
       fidl::MessageDirection::kReceiving>();
 
-  ::fidl::internal::InlineMessageBuffer<48> bytes_;
   ::std::array<zx_handle_t, kNumHandles> handles_;
   ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
 };
@@ -3632,12 +3686,26 @@ struct ::fidl::internal::IncomingMessageStorage<
           ::fidl::internal::IncomingMessageStorage<
               ::fidl::internal::TransactionalResponse<
                   ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>> {
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+      handles_storage_;
+};
+template <>
+struct ::fidl::internal::IncomingHandleStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+    final : public ::fidl::internal::ChannelHandleStorageBase<
+                ::fidl::internal::IncomingHandleStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_bindingsdenylist::DenyEachBinding::
+                            OnlyDenyLibfuzzer>>> {
   static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
       ::fidl::WireResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
       fidl::MessageDirection::kReceiving>();
 
-  ::fidl::internal::InlineMessageBuffer<48> bytes_;
   ::std::array<zx_handle_t, kNumHandles> handles_;
   ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
 };
@@ -3651,12 +3719,26 @@ struct ::fidl::internal::IncomingMessageStorage<
                     ::fidl::internal::TransactionalResponse<
                         ::test_bindingsdenylist::DenyEachBinding::
                             OnlyDenyLibfuzzer>>> {
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+      handles_storage_;
+};
+template <>
+struct ::fidl::internal::IncomingHandleStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+    final
+    : public ::fidl::internal::ChannelHandleStorageBase<
+          ::fidl::internal::IncomingHandleStorage<
+              ::fidl::internal::TransactionalResponse<
+                  ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>> {
   static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
       ::fidl::WireResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
       fidl::MessageDirection::kReceiving>();
 
-  ::fidl::internal::InlineMessageBuffer<48> bytes_;
   ::std::array<zx_handle_t, kNumHandles> handles_;
   ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
 };
@@ -3670,12 +3752,26 @@ struct ::fidl::internal::IncomingMessageStorage<
           ::fidl::internal::IncomingMessageStorage<
               ::fidl::internal::TransactionalResponse<
                   ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>> {
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+      handles_storage_;
+};
+template <>
+struct ::fidl::internal::IncomingHandleStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+    final : public ::fidl::internal::ChannelHandleStorageBase<
+                ::fidl::internal::IncomingHandleStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_bindingsdenylist::DenyEachBinding::
+                            OnlyDenySyzkaller>>> {
   static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
       ::fidl::WireResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
       fidl::MessageDirection::kReceiving>();
 
-  ::fidl::internal::InlineMessageBuffer<48> bytes_;
   ::std::array<zx_handle_t, kNumHandles> handles_;
   ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
 };
@@ -3689,15 +3785,13 @@ struct ::fidl::internal::IncomingMessageStorage<
                     ::fidl::internal::TransactionalResponse<
                         ::test_bindingsdenylist::DenyEachBinding::
                             OnlyDenySyzkaller>>> {
-  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
-      ::fidl::WireResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
-      fidl::MessageDirection::kReceiving>();
-
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::std::array<zx_handle_t, kNumHandles> handles_;
-  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+      handles_storage_;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
@@ -3706,32 +3800,25 @@ class [[nodiscard]] ::fidl::WireResult<
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
       ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
-      ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request,
-      zx_time_t _deadline);
+      std::optional<zx::time> deadline = std::nullopt);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<
@@ -3792,11 +3879,15 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
@@ -3811,59 +3902,48 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded) {
+      : fidl::Status(decoded) {
     if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
-      auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(
-          bytes_ + sizeof(fidl_message_header_t));
+      decoded_ = decoded.Take();
+      auto* raw_response = &decoded_.Value()->body;
       if (raw_response->result.is_err()) {
         result_ = fitx::error(raw_response->result.err());
       } else if (raw_response->result.is_response()) {
         result_ = fitx::ok(&(raw_response->result.response()));
       }
-    } else {
-      bytes_ = nullptr;
     }
-    decoded.ReleasePrimaryObject();
   }
+
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(
-        reinterpret_cast<::fidl::internal::TransactionalResponse<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(bytes_)
-            ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(
-        reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(bytes_)
-            ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<
@@ -3923,12 +4003,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
  private:
-  uint8_t* bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
@@ -3937,32 +4020,25 @@ class [[nodiscard]] ::fidl::WireResult<
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
       ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
-      ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* request,
-      zx_time_t _deadline);
+      std::optional<zx::time> deadline = std::nullopt);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<
@@ -4023,11 +4099,15 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
@@ -4042,57 +4122,48 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded) {
+      : fidl::Status(decoded) {
     if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
-      auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(
-          bytes_ + sizeof(fidl_message_header_t));
+      decoded_ = decoded.Take();
+      auto* raw_response = &decoded_.Value()->body;
       if (raw_response->result.is_err()) {
         result_ = fitx::error(raw_response->result.err());
       } else if (raw_response->result.is_response()) {
         result_ = fitx::ok(&(raw_response->result.response()));
       }
-    } else {
-      bytes_ = nullptr;
     }
-    decoded.ReleasePrimaryObject();
   }
+
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
-                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<
@@ -4152,12 +4223,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
  private:
-  uint8_t* bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
@@ -4166,34 +4240,26 @@ class [[nodiscard]] ::fidl::WireResult<
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
       ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
-          request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
-      ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>* request,
-      zx_time_t _deadline);
+      std::optional<zx::time> deadline = std::nullopt);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
   ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<
@@ -4257,11 +4323,15 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
@@ -4278,61 +4348,50 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
           response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded) {
+      : fidl::Status(decoded) {
     if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
-      auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
-          bytes_ + sizeof(fidl_message_header_t));
+      decoded_ = decoded.Take();
+      auto* raw_response = &decoded_.Value()->body;
       if (raw_response->result.is_err()) {
         result_ = fitx::error(raw_response->result.err());
       } else if (raw_response->result.is_response()) {
         result_ = fitx::ok(&(raw_response->result.response()));
       }
-    } else {
-      bytes_ = nullptr;
     }
-    decoded.ReleasePrimaryObject();
   }
+
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
   ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
-                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
-                 bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
-                 bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<
@@ -4395,12 +4454,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
  private:
-  uint8_t* bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
@@ -4409,32 +4471,25 @@ class [[nodiscard]] ::fidl::WireResult<
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
       ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
-      ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request,
-      zx_time_t _deadline);
+      std::optional<zx::time> deadline = std::nullopt);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<
@@ -4495,11 +4550,15 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
@@ -4514,59 +4573,48 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded) {
+      : fidl::Status(decoded) {
     if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
-      auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(
-          bytes_ + sizeof(fidl_message_header_t));
+      decoded_ = decoded.Take();
+      auto* raw_response = &decoded_.Value()->body;
       if (raw_response->result.is_err()) {
         result_ = fitx::error(raw_response->result.err());
       } else if (raw_response->result.is_response()) {
         result_ = fitx::ok(&(raw_response->result.response()));
       }
-    } else {
-      bytes_ = nullptr;
     }
-    decoded.ReleasePrimaryObject();
   }
+
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
   ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(
-        reinterpret_cast<::fidl::internal::TransactionalResponse<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(bytes_)
-            ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(
-        reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(bytes_)
-            ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<
@@ -4626,12 +4674,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
  private:
-  uint8_t* bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
@@ -4640,34 +4691,26 @@ class [[nodiscard]] ::fidl::WireResult<
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
       ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
-          request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
-      ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>* request,
-      zx_time_t _deadline);
+      std::optional<zx::time> deadline = std::nullopt);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
   ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<
@@ -4731,11 +4774,15 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
@@ -4752,61 +4799,50 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
           response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded) {
+      : fidl::Status(decoded) {
     if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
-      auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
-          bytes_ + sizeof(fidl_message_header_t));
+      decoded_ = decoded.Take();
+      auto* raw_response = &decoded_.Value()->body;
       if (raw_response->result.is_err()) {
         result_ = fitx::error(raw_response->result.err());
       } else if (raw_response->result.is_response()) {
         result_ = fitx::ok(&(raw_response->result.response()));
       }
-    } else {
-      bytes_ = nullptr;
     }
-    decoded.ReleasePrimaryObject();
   }
+
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
   ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
-                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
-                 bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-                 ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
-                 bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<
@@ -4869,7 +4905,9 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
  private:
-  uint8_t* bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>>

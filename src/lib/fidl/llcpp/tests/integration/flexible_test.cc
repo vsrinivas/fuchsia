@@ -49,16 +49,15 @@ class RewriteTransaction : public fidl::Transaction {
                     fidl::WriteOptions write_options) override {
     ZX_ASSERT(txid_ != 0);
     auto indicator_msg_bytes = indicator_msg->CopyBytes();
-    ZX_ASSERT(indicator_msg_bytes.size() >=
-              sizeof(fidl::internal::TransactionalResponse<
-                     test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>));
 
     char real_msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES] = {};
     zx_handle_t real_msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
     fidl_channel_handle_metadata_t real_msg_handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
+    // Copy from original header to get magic, flags, and ordinals.
+    ZX_ASSERT(indicator_msg_bytes.size() >= sizeof(fidl_message_header_t));
+    memcpy(real_msg_bytes, indicator_msg_bytes.data(), sizeof(fidl_message_header_t));
     fidl_message_header_t* header = reinterpret_cast<fidl_message_header_t*>(real_msg_bytes);
     header->txid = txid_;
-    header->at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
     fidl_outgoing_msg_t real_msg = {
         .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
         .byte =
@@ -72,6 +71,9 @@ class RewriteTransaction : public fidl::Transaction {
             },
     };
 
+    ZX_ASSERT(indicator_msg_bytes.size() >=
+              sizeof(fidl::internal::TransactionalResponse<
+                     test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>));
     // Determine if |indicator_msg| has a xunion or a table, by inspecting the first few bytes.
     auto maybe_vector = reinterpret_cast<const fidl_vector_t*>(indicator_msg_bytes.data() +
                                                                sizeof(fidl_message_header_t));

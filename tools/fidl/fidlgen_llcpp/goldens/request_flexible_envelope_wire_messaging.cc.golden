@@ -39,30 +39,8 @@ extern "C" const fidl_type_t
             client,
         ::fidl::internal::TransactionalRequest<
             ::test_requestflexibleenvelope::Protocol::
-                RequestStrictResponseFlexible>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_requestflexibleenvelope::Protocol::
-              RequestStrictResponseFlexible>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<
-    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>
-            client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_requestflexibleenvelope::Protocol::
                 RequestStrictResponseFlexible>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -71,11 +49,21 @@ extern "C" const fidl_type_t
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_requestflexibleenvelope::Protocol::
+              RequestStrictResponseFlexible>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_requestflexibleenvelope {
 #endif  // __Fuchsia__
@@ -97,7 +85,7 @@ namespace test_requestflexibleenvelope {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -117,11 +105,20 @@ namespace test_requestflexibleenvelope {
               RequestStrictResponseFlexible>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_requestflexibleenvelope::Protocol::
+              RequestStrictResponseFlexible>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_requestflexibleenvelope {
 #endif  // __Fuchsia__
@@ -135,30 +132,8 @@ namespace test_requestflexibleenvelope {
             client,
         ::fidl::internal::TransactionalRequest<
             ::test_requestflexibleenvelope::Protocol::
-                RequestFlexibleResponseStrict>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_requestflexibleenvelope::Protocol::
-              RequestFlexibleResponseStrict>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<
-    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>
-            client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_requestflexibleenvelope::Protocol::
                 RequestFlexibleResponseStrict>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -167,11 +142,21 @@ namespace test_requestflexibleenvelope {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_requestflexibleenvelope::Protocol::
+              RequestFlexibleResponseStrict>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_requestflexibleenvelope {
 #endif  // __Fuchsia__
@@ -193,7 +178,7 @@ namespace test_requestflexibleenvelope {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -213,11 +198,20 @@ namespace test_requestflexibleenvelope {
               RequestFlexibleResponseStrict>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_requestflexibleenvelope::Protocol::
+              RequestFlexibleResponseStrict>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_requestflexibleenvelope {
 #endif  // __Fuchsia__

@@ -377,6 +377,21 @@ static_assert(
         foo) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+struct ::fidl::internal::IncomingHandleStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_transitivedependenciescompose::Top::GetFoo>>
+    final : public ::fidl::internal::ChannelHandleStorageBase<
+                ::fidl::internal::IncomingHandleStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_transitivedependenciescompose::Top::GetFoo>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 
 template <>
 struct ::fidl::internal::IncomingMessageStorage<
@@ -386,14 +401,13 @@ struct ::fidl::internal::IncomingMessageStorage<
                 ::fidl::internal::IncomingMessageStorage<
                     ::fidl::internal::TransactionalResponse<
                         ::test_transitivedependenciescompose::Top::GetFoo>>> {
-  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
-      ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>,
-      fidl::MessageDirection::kReceiving>();
-
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
-  ::std::array<zx_handle_t, kNumHandles> handles_;
-  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_transitivedependenciescompose::Top::GetFoo>>
+      handles_storage_;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_transitivedependenciescompose::Top::GetFoo>
@@ -402,46 +416,35 @@ class [[nodiscard]] ::fidl::WireResult<
   WireResult(::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top>
                  client,
              ::fidl::internal::TransactionalRequest<
-                 ::test_transitivedependenciescompose::Top::GetFoo>* request);
-  WireResult(::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top>
-                 client,
-             ::fidl::internal::TransactionalRequest<
                  ::test_transitivedependenciescompose::Top::GetFoo>* request,
-             zx_time_t _deadline);
+             std::optional<zx::time> deadline = std::nullopt);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_transitivedependenciescompose::Top::GetFoo>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_transitivedependenciescompose::Top::GetFoo>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap_NEW() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_transitivedependenciescompose::Top::GetFoo>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap_NEW() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_transitivedependenciescompose::Top::GetFoo>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>&
@@ -482,7 +485,11 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_transitivedependenciescompose::Top::GetFoo>>
+      decoded_;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_transitivedependenciescompose::Top::GetFoo>
@@ -497,54 +504,45 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::internal::TransactionalResponse<
           ::test_transitivedependenciescompose::Top::GetFoo>* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {}
+
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_transitivedependenciescompose::Top::GetFoo>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded) {
+      : fidl::Status(decoded) {
     if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
-    } else {
-      bytes_ = nullptr;
+      decoded_ = decoded.Take();
     }
-    decoded.ReleasePrimaryObject();
   }
+
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
-                 ::test_transitivedependenciescompose::Top::GetFoo>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-                 ::test_transitivedependenciescompose::Top::GetFoo>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap_NEW() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
-                 ::test_transitivedependenciescompose::Top::GetFoo>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap_NEW() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-                 ::test_transitivedependenciescompose::Top::GetFoo>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>&
@@ -584,7 +582,9 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
  private:
-  uint8_t* bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_transitivedependenciescompose::Top::GetFoo>>
+      decoded_;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<

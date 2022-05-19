@@ -921,6 +921,24 @@ static_assert(
              f) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+struct ::fidl::internal::IncomingHandleStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_requestflexibleenvelope::Protocol::
+            RequestStrictResponseFlexible>>
+    final : public ::fidl::internal::ChannelHandleStorageBase<
+                ::fidl::internal::IncomingHandleStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexible>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                               RequestStrictResponseFlexible>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 
 template <>
 struct ::fidl::internal::IncomingMessageStorage<
@@ -932,12 +950,28 @@ struct ::fidl::internal::IncomingMessageStorage<
                     ::fidl::internal::TransactionalResponse<
                         ::test_requestflexibleenvelope::Protocol::
                             RequestStrictResponseFlexible>>> {
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_requestflexibleenvelope::Protocol::
+              RequestStrictResponseFlexible>>
+      handles_storage_;
+};
+template <>
+struct ::fidl::internal::IncomingHandleStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_requestflexibleenvelope::Protocol::
+            RequestFlexibleResponseStrict>>
+    final : public ::fidl::internal::ChannelHandleStorageBase<
+                ::fidl::internal::IncomingHandleStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrict>>> {
   static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
       ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                               RequestStrictResponseFlexible>,
+                               RequestFlexibleResponseStrict>,
       fidl::MessageDirection::kReceiving>();
 
-  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
   ::std::array<zx_handle_t, kNumHandles> handles_;
   ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
 };
@@ -952,15 +986,14 @@ struct ::fidl::internal::IncomingMessageStorage<
                     ::fidl::internal::TransactionalResponse<
                         ::test_requestflexibleenvelope::Protocol::
                             RequestFlexibleResponseStrict>>> {
-  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
-      ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                               RequestFlexibleResponseStrict>,
-      fidl::MessageDirection::kReceiving>();
-
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-  ::std::array<zx_handle_t, kNumHandles> handles_;
-  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_requestflexibleenvelope::Protocol::
+              RequestFlexibleResponseStrict>>
+      handles_storage_;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
@@ -970,55 +1003,39 @@ class [[nodiscard]] ::fidl::WireResult<
       ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
       ::fidl::internal::TransactionalRequest<
           ::test_requestflexibleenvelope::Protocol::
-              RequestStrictResponseFlexible>* request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
-      ::fidl::internal::TransactionalRequest<
-          ::test_requestflexibleenvelope::Protocol::
               RequestStrictResponseFlexible>* request,
-      zx_time_t _deadline);
+      std::optional<zx::time> deadline = std::nullopt);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
   ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                       RequestStrictResponseFlexible>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap_NEW() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap_NEW() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                       RequestStrictResponseFlexible>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<
@@ -1067,7 +1084,11 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
+      decoded_;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
@@ -1083,63 +1104,50 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<
                              ::test_requestflexibleenvelope::Protocol::
                                  RequestStrictResponseFlexible>* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {}
+
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_requestflexibleenvelope::Protocol::
               RequestStrictResponseFlexible>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded) {
+      : fidl::Status(decoded) {
     if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
-    } else {
-      bytes_ = nullptr;
+      decoded_ = decoded.Take();
     }
-    decoded.ReleasePrimaryObject();
   }
+
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
   ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
-                 ::test_requestflexibleenvelope::Protocol::
-                     RequestStrictResponseFlexible>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-                 ::test_requestflexibleenvelope::Protocol::
-                     RequestStrictResponseFlexible>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap_NEW() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
-                 ::test_requestflexibleenvelope::Protocol::
-                     RequestStrictResponseFlexible>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap_NEW() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-                 ::test_requestflexibleenvelope::Protocol::
-                     RequestStrictResponseFlexible>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<
@@ -1187,8 +1195,11 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
  private:
-  uint8_t* bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
+      decoded_;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
@@ -1198,55 +1209,39 @@ class [[nodiscard]] ::fidl::WireResult<
       ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
       ::fidl::internal::TransactionalRequest<
           ::test_requestflexibleenvelope::Protocol::
-              RequestFlexibleResponseStrict>* request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
-      ::fidl::internal::TransactionalRequest<
-          ::test_requestflexibleenvelope::Protocol::
               RequestFlexibleResponseStrict>* request,
-      zx_time_t _deadline);
+      std::optional<zx::time> deadline = std::nullopt);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
   ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                       RequestFlexibleResponseStrict>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap_NEW() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap_NEW() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                       RequestFlexibleResponseStrict>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<
@@ -1295,7 +1290,11 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
+      decoded_;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
@@ -1311,63 +1310,50 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<
                              ::test_requestflexibleenvelope::Protocol::
                                  RequestFlexibleResponseStrict>* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {}
+
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_requestflexibleenvelope::Protocol::
               RequestFlexibleResponseStrict>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded) {
+      : fidl::Status(decoded) {
     if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
-    } else {
-      bytes_ = nullptr;
+      decoded_ = decoded.Take();
     }
-    decoded.ReleasePrimaryObject();
   }
+
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
   ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
-                 ::test_requestflexibleenvelope::Protocol::
-                     RequestFlexibleResponseStrict>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-                 ::test_requestflexibleenvelope::Protocol::
-                     RequestFlexibleResponseStrict>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap_NEW() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
-                 ::test_requestflexibleenvelope::Protocol::
-                     RequestFlexibleResponseStrict>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap_NEW() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-                 ::test_requestflexibleenvelope::Protocol::
-                     RequestFlexibleResponseStrict>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fidl::WireResponse<
@@ -1415,7 +1401,9 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
  private:
-  uint8_t* bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
+      decoded_;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<

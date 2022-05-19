@@ -6,84 +6,74 @@
 
 {{- define "Method:Result:WireMessagingHeader" }}
 {{- EnsureNamespace "" }}
+
 template<>
 class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
-  public:
-    {{ .WireResult.Self }}(::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
-        {{ .WireTransactionalRequest }}* request);
-   {{- if .HasResponse }}
-    {{ .WireResult.Self }}(::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
-        {{ .WireTransactionalRequest }}* request, zx_time_t _deadline);
-   {{- end }}
-   explicit {{ .WireResult.Self }}(const ::fidl::Status& result) : ::fidl::Status(result) {}
-   {{ .WireResult.Self }}({{ .WireResult.Self }}&&) = delete;
-   {{ .WireResult.Self }}(const {{ .WireResult.Self }}&) = delete;
-   {{ .WireResult.Self }}* operator=({{ .WireResult.Self }}&&) = delete;
-   {{ .WireResult.Self }}* operator=(const {{ .WireResult.Self }}&) = delete;
-   {{- if and .HasResponse .Response.IsResource }}
-   ~{{ .WireResult.Self }}() {
-     if (ok()) {
-     Unwrap()->_CloseHandles();
-     }
-   }
-   {{- else }}
-   ~{{ .WireResult.Self }}() = default;
-   {{- end }}
-   {{- if .HasResponse }}
+ public:
+  {{ .WireResult.Self }}(
+      ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
+      {{ .WireTransactionalRequest }}* request
+      {{- if .HasResponse }}, std::optional<zx::time> deadline = std::nullopt{{ end }}
+  );
 
-   {{- if .ResponseArgs }}
-   {{ .WireResponse }}* Unwrap() {
-     ZX_DEBUG_ASSERT(ok());
-     return reinterpret_cast<{{ .WireResponse }}*>(bytes_.data() + sizeof(fidl_message_header_t));
-   }
-   const {{ .WireResponse }}* Unwrap() const {
-     ZX_DEBUG_ASSERT(ok());
-     return reinterpret_cast<const {{ .WireResponse }}*>(bytes_.data() + sizeof(fidl_message_header_t));
-   }
+  explicit {{ .WireResult.Self }}(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  {{ .WireResult.Self }}({{ .WireResult.Self }}&&) = delete;
+  {{ .WireResult.Self }}(const {{ .WireResult.Self }}&) = delete;
+  {{ .WireResult.Self }}& operator=({{ .WireResult.Self }}&&) = delete;
+  {{ .WireResult.Self }}& operator=(const {{ .WireResult.Self }}&) = delete;
+  ~{{ .WireResult.Self }}() = default;
 
-   {{ .WireResultBase }}* Unwrap_NEW() {
-     {{- if .Result }}
-       return &result_.value();
-     {{- else }}
-       ZX_DEBUG_ASSERT(ok());
-       return reinterpret_cast<{{ .WireResponse }}*>(bytes_.data() + sizeof(fidl_message_header_t));
-     {{- end }}
-   }
-   const {{ .WireResultBase }}* Unwrap_NEW() const {
-     {{- if .Result }}
-       return &result_.value();
-     {{- else }}
-       ZX_DEBUG_ASSERT(ok());
-       return reinterpret_cast<const {{ .WireResponse }}*>(bytes_.data() + sizeof(fidl_message_header_t));
-     {{- end }}
-   }
+  {{- if .ResponseArgs }}
+    {{ .WireResponse }}* Unwrap() {
+      ZX_ASSERT(ok());
+      return &decoded_.Value()->body;
+    }
+    const {{ .WireResponse }}* Unwrap() const {
+      ZX_ASSERT(ok());
+      return &decoded_.Value()->body;
+    }
 
-   {{ .WireResponse }}& value() { return *Unwrap(); }
-   const {{ .WireResponse }}& value() const { return *Unwrap(); }
+    {{ .WireResultBase }}* Unwrap_NEW() {
+      {{- if .Result }}
+        return &result_.value();
+      {{- else }}
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
+      {{- end }}
+    }
+    const {{ .WireResultBase }}* Unwrap_NEW() const {
+      {{- if .Result }}
+        return &result_.value();
+      {{- else }}
+        ZX_ASSERT(ok());
+        return &decoded_.Value()->body;
+      {{- end }}
+    }
 
-   {{ .WireResultBase }}& value_NEW() { return *Unwrap_NEW(); }
-   const {{ .WireResultBase }}& value_NEW() const { return *Unwrap_NEW(); }
+    {{ .WireResponse }}& value() { return *Unwrap(); }
+    const {{ .WireResponse }}& value() const { return *Unwrap(); }
 
-   {{ .WireResponse }}* operator->() { return &value(); }
-   const {{ .WireResponse }}* operator->() const { return &value(); }
+    {{ .WireResultBase }}& value_NEW() { return *Unwrap_NEW(); }
+    const {{ .WireResultBase }}& value_NEW() const { return *Unwrap_NEW(); }
 
-   {{ .WireResponse }}& operator*() { return value(); }
-   const {{ .WireResponse }}& operator*() const { return value(); }
-   {{- end }}
-   {{- end }}
+    {{ .WireResponse }}* operator->() { return &value(); }
+    const {{ .WireResponse }}* operator->() const { return &value(); }
 
-  private:
-   {{- if .HasResponse }}
-   {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
-   {{- end }}
-   {{- if .Result }}
-   std::optional<{{ .WireResultBase }}> result_ = std::nullopt;
-   {{- end }}
+    {{ .WireResponse }}& operator*() { return value(); }
+    const {{ .WireResponse }}& operator*() const { return value(); }
+  {{- end }}
+
+  {{- if .HasResponse }}
+   private:
+    {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
+    ::fidl::internal::DecodedValue<{{ .WireTransactionalResponse }}> decoded_;
+    {{- if .Result }}
+      std::optional<{{ .WireResultBase }}> result_ = std::nullopt;
+    {{- end }}
+  {{- end }}
 };
+
 {{- end }}
-
-
-
 
 
 
@@ -92,64 +82,46 @@ class [[nodiscard]] {{ .WireResult }} final : public ::fidl::Status {
 {{- EnsureNamespace "" }}
 {{ .WireResult }}::{{ .WireResult.Self }}(
     ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
-    {{ .WireTransactionalRequest }}* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<{{ .WireTransactionalRequest }}, {{ .Transport.Type }}> request_message(
-      ::fidl::internal::AllowUnownedInputRef{},
-      request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  {{- if .HasResponse }}
-  outgoing.Call<{{ .WireTransactionalResponse }}>(
-    client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  {{- else }}
-  outgoing.Write(client.handle());
-  {{- end }}
-  SetStatus(outgoing);
-  {{- if .Result }}
-    if (ok()) {
-      auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
-          bytes_.data() + sizeof(fidl_message_header_t));
-      if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
-      } else if (raw_response->result.is_response()) {
-        result_ = fitx::ok(
-          {{- if .Result.ValueParameters -}}
-            &(raw_response->result.response())
-          {{- end -}}
-        );
-      }
-    }
-  {{- end }}
-}
-  {{- if .HasResponse }}
-
-{{ .WireResult }}::{{ .WireResult.Self }}(
-    ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
-    {{ .WireTransactionalRequest }}* request, zx_time_t deadline) {
+    {{ .WireTransactionalRequest }}* request
+    {{- if .HasResponse }}, std::optional<zx::time> deadline{{ end }}
+) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<{{ .WireTransactionalRequest }}, {{ .Transport.Type }}> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<{{ .WireTransactionalResponse }}>(
-    client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()), fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
-  {{- if .Result }}
+
+  {{- if .HasResponse }}
+    {{ .IncomingHandleStorageForResponse }} handle_storage;
+    ::fidl::unstable::DecodedMessage<{{ .WireTransactionalResponse }}> decoded{
+        outgoing.Call(
+            client.handle(), handle_storage.view(bytes_.view()),
+            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
+        )
+    };
+    SetStatus(decoded);
     if (ok()) {
-      auto* raw_response = reinterpret_cast<{{ .WireResponse }} *>(
-          bytes_.data() + sizeof(fidl_message_header_t));
-      if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
-      } else if (raw_response->result.is_response()) {
-        result_ = fitx::ok(
-          {{- if .Result.ValueParameters -}}
-            &(raw_response->result.response())
-          {{- end -}}
-        );
-      }
+      decoded_ = decoded.Take();
     }
+
+    {{- if .Result }}
+      if (ok()) {
+        auto* raw_response = &decoded_.Value()->body;
+        if (raw_response->result.is_err()) {
+          result_ = fitx::error(raw_response->result.err());
+        } else if (raw_response->result.is_response()) {
+          result_ = fitx::ok(
+            {{- if .Result.ValueParameters -}}
+              &(raw_response->result.response())
+            {{- end -}}
+          );
+        }
+      }
+    {{- end }}
+  {{- else }}
+    outgoing.Write(client.handle());
+    SetStatus(outgoing);
   {{- end }}
 }
-  {{- end }}
+
 {{- EndifFuchsia -}}
 {{- end }}
-

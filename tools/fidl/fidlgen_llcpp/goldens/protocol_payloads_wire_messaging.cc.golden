@@ -258,7 +258,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -271,7 +271,7 @@ namespace test_protocolpayloads {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Status::operator=(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -282,26 +282,8 @@ namespace test_protocolpayloads {
     WireResult(
         ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
         ::fidl::internal::TransactionalRequest<
-            ::test_protocolpayloads::MainProtocol::TwoWayComposed>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposed>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposed>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-        ::fidl::internal::TransactionalRequest<
             ::test_protocolpayloads::MainProtocol::TwoWayComposed>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -309,11 +291,20 @@ namespace test_protocolpayloads {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposed>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayComposed>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposed>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -333,7 +324,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -351,11 +342,19 @@ namespace test_protocolpayloads {
           ::test_protocolpayloads::MainProtocol::TwoWayComposed>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposed>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayComposed>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposed>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -368,38 +367,8 @@ namespace test_protocolpayloads {
         ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
         ::fidl::internal::TransactionalRequest<
             ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*
-            request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<
-    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*
             request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -407,15 +376,22 @@ namespace test_protocolpayloads {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -442,7 +418,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -460,21 +436,27 @@ namespace test_protocolpayloads {
           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -513,7 +495,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -526,7 +508,7 @@ namespace test_protocolpayloads {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Status::operator=(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -537,26 +519,8 @@ namespace test_protocolpayloads {
     WireResult(
         ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
         ::fidl::internal::TransactionalRequest<
-            ::test_protocolpayloads::MainProtocol::TwoWayLocal>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocolpayloads::MainProtocol::TwoWayLocal>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocal>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-        ::fidl::internal::TransactionalRequest<
             ::test_protocolpayloads::MainProtocol::TwoWayLocal>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -564,11 +528,20 @@ namespace test_protocolpayloads {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocal>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -587,7 +560,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -605,11 +578,19 @@ namespace test_protocolpayloads {
           ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocal>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -622,38 +603,8 @@ namespace test_protocolpayloads {
         ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
         ::fidl::internal::TransactionalRequest<
             ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*
-            request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<
-    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*
             request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -661,15 +612,22 @@ namespace test_protocolpayloads {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -696,7 +654,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -714,21 +672,27 @@ namespace test_protocolpayloads {
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -767,7 +731,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -780,7 +744,7 @@ namespace test_protocolpayloads {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Status::operator=(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -791,26 +755,8 @@ namespace test_protocolpayloads {
     WireResult(
         ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
         ::fidl::internal::TransactionalRequest<
-            ::test_protocolpayloads::MainProtocol::TwoWayImport>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocolpayloads::MainProtocol::TwoWayImport>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayImport>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayImport>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-        ::fidl::internal::TransactionalRequest<
             ::test_protocolpayloads::MainProtocol::TwoWayImport>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -818,11 +764,20 @@ namespace test_protocolpayloads {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayImport>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayImport>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayImport>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -841,7 +796,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -859,11 +814,19 @@ namespace test_protocolpayloads {
           ::test_protocolpayloads::MainProtocol::TwoWayImport>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayImport>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayImport>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayImport>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -876,38 +839,8 @@ namespace test_protocolpayloads {
         ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
         ::fidl::internal::TransactionalRequest<
             ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*
-            request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<
-    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*
             request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -915,15 +848,22 @@ namespace test_protocolpayloads {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -950,7 +890,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -968,21 +908,27 @@ namespace test_protocolpayloads {
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -1021,7 +967,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -1034,7 +980,7 @@ namespace test_protocolpayloads {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Status::operator=(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -1045,26 +991,8 @@ namespace test_protocolpayloads {
     WireResult(
         ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
         ::fidl::internal::TransactionalRequest<
-            ::test_protocolpayloads::MainProtocol::TwoWayAnon>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocolpayloads::MainProtocol::TwoWayAnon>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnon>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-        ::fidl::internal::TransactionalRequest<
             ::test_protocolpayloads::MainProtocol::TwoWayAnon>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -1072,11 +1000,20 @@ namespace test_protocolpayloads {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnon>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -1095,7 +1032,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -1113,11 +1050,19 @@ namespace test_protocolpayloads {
           ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnon>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -1129,37 +1074,8 @@ namespace test_protocolpayloads {
         ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
         ::fidl::internal::TransactionalRequest<
             ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*
-            request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*
             request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -1167,15 +1083,22 @@ namespace test_protocolpayloads {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -1202,7 +1125,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -1220,21 +1143,27 @@ namespace test_protocolpayloads {
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__

@@ -196,6 +196,7 @@ var (
 
 	// Type related
 	IncomingMessageStorage = internalNs.member("IncomingMessageStorage")
+	IncomingHandleStorage  = internalNs.member("IncomingHandleStorage")
 )
 
 type wireTypeNames struct {
@@ -558,6 +559,7 @@ type methodInner struct {
 
 	// IncomingMessageStorageForResponse is shared between wire and unified messaging.
 	IncomingMessageStorageForResponse name
+	IncomingHandleStorageForResponse  name
 
 	baseCodingTableName string
 	requestTypeShapeV1  TypeShape
@@ -936,6 +938,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			wireMethod:                        wireMethod,
 			unifiedMethod:                     unifiedMethod,
 			IncomingMessageStorageForResponse: IncomingMessageStorage.template(wireMethod.WireTransactionalResponse),
+			IncomingHandleStorageForResponse:  IncomingHandleStorage.template(wireMethod.WireTransactionalResponse),
 			Attributes:                        Attributes{v.Attributes},
 			// TODO(fxbug.dev/84834): Use the functionality in //tools/fidl/lib/fidlgen/identifiers.go
 			FullyQualifiedName:        fmt.Sprintf("%s.%s", p.Name, v.Name),

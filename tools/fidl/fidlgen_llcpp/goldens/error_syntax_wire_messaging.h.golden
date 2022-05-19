@@ -930,6 +930,23 @@ static_assert(
              result) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+struct ::fidl::internal::IncomingHandleStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+    final : public ::fidl::internal::ChannelHandleStorageBase<
+                ::fidl::internal::IncomingHandleStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                            ComposedCallWhichMayFail>>> {
+  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
+      ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                               ComposedCallWhichMayFail>,
+      fidl::MessageDirection::kReceiving>();
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
 
 template <>
 struct ::fidl::internal::IncomingMessageStorage<
@@ -940,12 +957,27 @@ struct ::fidl::internal::IncomingMessageStorage<
                     ::fidl::internal::TransactionalResponse<
                         ::test_errorsyntax::ExampleUseOfErrorSyntax::
                             ComposedCallWhichMayFail>>> {
+  ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>>
+      handles_storage_;
+};
+template <>
+struct ::fidl::internal::IncomingHandleStorage<
+    ::fidl::internal::TransactionalResponse<
+        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+    final : public ::fidl::internal::ChannelHandleStorageBase<
+                ::fidl::internal::IncomingHandleStorage<
+                    ::fidl::internal::TransactionalResponse<
+                        ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                            CallWhichMayFail>>> {
   static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
-      ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                               ComposedCallWhichMayFail>,
+      ::fidl::WireResponse<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
       fidl::MessageDirection::kReceiving>();
 
-  ::fidl::internal::InlineMessageBuffer<48> bytes_;
   ::std::array<zx_handle_t, kNumHandles> handles_;
   ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
 };
@@ -959,15 +991,13 @@ struct ::fidl::internal::IncomingMessageStorage<
                     ::fidl::internal::TransactionalResponse<
                         ::test_errorsyntax::ExampleUseOfErrorSyntax::
                             CallWhichMayFail>>> {
-  static constexpr uint32_t kNumHandles = fidl::internal::ClampedHandleCount<
-      ::fidl::WireResponse<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
-      fidl::MessageDirection::kReceiving>();
-
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::std::array<zx_handle_t, kNumHandles> handles_;
-  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+      handles_storage_;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
@@ -978,37 +1008,26 @@ class [[nodiscard]] ::fidl::WireResult<
           client,
       ::fidl::internal::TransactionalRequest<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::
-              ComposedCallWhichMayFail>* request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>
-          client,
-      ::fidl::internal::TransactionalRequest<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::
               ComposedCallWhichMayFail>* request,
-      zx_time_t _deadline);
+      std::optional<zx::time> deadline = std::nullopt);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
   ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                 ComposedCallWhichMayFail>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        const ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                       ComposedCallWhichMayFail>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<uint32_t,
@@ -1072,11 +1091,15 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t, ::test_errorsyntax_parent::wire::
                     ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
@@ -1092,63 +1115,50 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<
                              ::test_errorsyntax::ExampleUseOfErrorSyntax::
                                  ComposedCallWhichMayFail>* response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {
-    auto* raw_response = reinterpret_cast<
-        ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                 ComposedCallWhichMayFail>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::
               ComposedCallWhichMayFail>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded) {
+      : fidl::Status(decoded) {
     if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
-      auto* raw_response = reinterpret_cast<
-          ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                   ComposedCallWhichMayFail>*>(
-          bytes_ + sizeof(fidl_message_header_t));
+      decoded_ = decoded.Take();
+      auto* raw_response = &decoded_.Value()->body;
       if (raw_response->result.is_err()) {
         result_ = fitx::error(raw_response->result.err());
       } else if (raw_response->result.is_response()) {
         result_ = fitx::ok(&(raw_response->result.response()));
       }
-    } else {
-      bytes_ = nullptr;
     }
-    decoded.ReleasePrimaryObject();
   }
+
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
   ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
-                 ::test_errorsyntax::ExampleUseOfErrorSyntax::
-                     ComposedCallWhichMayFail>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-                 ::test_errorsyntax::ExampleUseOfErrorSyntax::
-                     ComposedCallWhichMayFail>*>(bytes_)
-                 ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<uint32_t,
@@ -1211,12 +1221,15 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
  private:
-  uint8_t* bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t, ::test_errorsyntax_parent::wire::
                     ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
@@ -1227,35 +1240,26 @@ class [[nodiscard]] ::fidl::WireResult<
           client,
       ::fidl::internal::TransactionalRequest<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
-          request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>
-          client,
-      ::fidl::internal::TransactionalRequest<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
           request,
-      zx_time_t _deadline);
+      std::optional<zx::time> deadline = std::nullopt);
+
   explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
+  WireResult& operator=(WireResult&&) = delete;
+  WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
   ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<uint32_t,
@@ -1319,11 +1323,15 @@ class [[nodiscard]] ::fidl::WireResult<
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t, ::test_errorsyntax::wire::
                     ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>>
       result_ = std::nullopt;
 };
+
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
@@ -1340,63 +1348,50 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
           response)
-      : bytes_(reinterpret_cast<uint8_t*>(response)) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  explicit WireUnownedResult(const ::fidl::Status& result)
-      : ::fidl::Status(result) {}
+
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Status(decoded) {
+      : fidl::Status(decoded) {
     if (decoded.ok()) {
-      bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
-      auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-          bytes_ + sizeof(fidl_message_header_t));
+      decoded_ = decoded.Take();
+      auto* raw_response = &decoded_.Value()->body;
       if (raw_response->result.is_err()) {
         result_ = fitx::error(raw_response->result.err());
       } else if (raw_response->result.is_response()) {
         result_ = fitx::ok(&(raw_response->result.response()));
       }
-    } else {
-      bytes_ = nullptr;
     }
-    decoded.ReleasePrimaryObject();
   }
+
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
   ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
   Unwrap() {
-    ZX_DEBUG_ASSERT(ok());
-    return &(
-        reinterpret_cast<::fidl::internal::TransactionalResponse<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-            bytes_)
-            ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
   const ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
   Unwrap() const {
-    ZX_DEBUG_ASSERT(ok());
-    return &(
-        reinterpret_cast<const ::fidl::internal::TransactionalResponse<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-            bytes_)
-            ->body);
+    ZX_ASSERT(ok());
+    return &decoded_.Value()->body;
   }
 
   ::fitx::result<uint32_t,
@@ -1459,7 +1454,9 @@ class [[nodiscard]] ::fidl::WireUnownedResult<
   }
 
  private:
-  uint8_t* bytes_;
+  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+      decoded_;
   std::optional<::fitx::result<
       uint32_t, ::test_errorsyntax::wire::
                     ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>>

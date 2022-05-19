@@ -40,41 +40,8 @@ extern "C" const fidl_type_t
             client,
         ::fidl::internal::TransactionalRequest<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::
-                ComposedCallWhichMayFail>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::
-              ComposedCallWhichMayFail>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<
-        ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                 ComposedCallWhichMayFail>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>
-            client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::
                 ComposedCallWhichMayFail>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -83,16 +50,23 @@ extern "C" const fidl_type_t
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<
-        ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                 ComposedCallWhichMayFail>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -119,7 +93,7 @@ namespace test_errorsyntax {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -139,22 +113,28 @@ namespace test_errorsyntax {
               ComposedCallWhichMayFail>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<
-        ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                 ComposedCallWhichMayFail>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_errorsyntax {
 #endif  // __Fuchsia__
@@ -168,39 +148,8 @@ namespace test_errorsyntax {
             client,
         ::fidl::internal::TransactionalRequest<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
-            request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>
-            client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
             request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -208,15 +157,22 @@ namespace test_errorsyntax {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -243,7 +199,7 @@ namespace test_errorsyntax {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -261,21 +217,27 @@ namespace test_errorsyntax {
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_errorsyntax {
 #endif  // __Fuchsia__

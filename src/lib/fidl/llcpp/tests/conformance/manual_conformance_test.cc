@@ -268,7 +268,6 @@ TEST(InputExceeds64KiB, EncodeUnsupported) {
     fidl::unstable::OwnedEncodedMessage<manual_conformance_large::wire::LargeTable> encoded{
         fidl::internal::WireFormatVersion::kV2, &table};
     EXPECT_FALSE(encoded.ok());
-    // TODO(fxbug.dev/74362): Consistently propagate ZX_ERR_BUFFER_TOO_SMALL.
     EXPECT_EQ(encoded.status(), ZX_ERR_BUFFER_TOO_SMALL);
     EXPECT_STREQ(encoded.lossy_description(), "backing buffer size exceeded");
   }

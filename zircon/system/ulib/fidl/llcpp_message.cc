@@ -212,6 +212,7 @@ void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOption
   }
 }
 
+// TODO(fxbug.dev/100472): Replace usages with |DecodedMessage|.
 void OutgoingMessage::DecodeImplForCall(size_t inline_size, bool contains_envelope,
                                         internal::TopLevelDecodeFn decode_fn,
                                         const internal::CodingConfig& coding_config, uint8_t* bytes,
@@ -447,8 +448,12 @@ void IncomingMessage::Decode(size_t inline_size, bool contains_envelope,
   // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
   // contain envelopes and are compatible with V2.
   // TODO(fxbug.dev/99738) Remove this logic.
-  ZX_DEBUG_ASSERT(!contains_envelope || (header()->at_rest_flags[0] &
-                                         FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) != 0);
+  if ((header()->at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) == 0 &&
+      contains_envelope) {
+    SetStatus(fidl::Status::DecodeError(
+        ZX_ERR_INVALID_ARGS, "wire format v1 header received with unsupported envelope"));
+    return;
+  }
   Decode(inline_size, decode_fn, internal::WireFormatVersion::kV2, true);
 }
 

@@ -126,31 +126,8 @@ namespace test_bindingsdenylist {
             client,
         ::fidl::internal::TransactionalRequest<
             ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                LibfuzzerNeedsNonemptyProtocol>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-              LibfuzzerNeedsNonemptyProtocol>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocol>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                       LibfuzzerNeedsNonemptyProtocol>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-            client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                 LibfuzzerNeedsNonemptyProtocol>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -159,12 +136,22 @@ namespace test_bindingsdenylist {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
       ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocol>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+          LibfuzzerNeedsNonemptyProtocol>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
@@ -186,7 +173,7 @@ namespace test_bindingsdenylist {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -206,12 +193,21 @@ namespace test_bindingsdenylist {
               LibfuzzerNeedsNonemptyProtocol>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
       ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocol>>(client_end.handle(), response_bytes,
-                                           response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+          LibfuzzerNeedsNonemptyProtocol>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
@@ -638,7 +634,7 @@ namespace test_bindingsdenylist {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -651,7 +647,7 @@ namespace test_bindingsdenylist {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Status::operator=(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
@@ -697,7 +693,7 @@ namespace test_bindingsdenylist {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -711,7 +707,7 @@ namespace test_bindingsdenylist {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Status::operator=(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
@@ -1035,37 +1031,8 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
             client,
         ::fidl::internal::TransactionalRequest<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
-            client,
-        ::fidl::internal::TransactionalRequest<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -1073,15 +1040,22 @@ extern "C" const fidl_type_t
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -1107,7 +1081,7 @@ namespace test_bindingsdenylist {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -1125,21 +1099,27 @@ namespace test_bindingsdenylist {
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
@@ -1151,37 +1131,8 @@ namespace test_bindingsdenylist {
         ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
             client,
         ::fidl::internal::TransactionalRequest<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
-            client,
-        ::fidl::internal::TransactionalRequest<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -1189,15 +1140,22 @@ namespace test_bindingsdenylist {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -1223,7 +1181,7 @@ namespace test_bindingsdenylist {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -1241,21 +1199,27 @@ namespace test_bindingsdenylist {
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
@@ -1269,39 +1233,8 @@ namespace test_bindingsdenylist {
             client,
         ::fidl::internal::TransactionalRequest<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
-            request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<
-    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
-            client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
             request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -1309,15 +1242,22 @@ namespace test_bindingsdenylist {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -1344,7 +1284,7 @@ namespace test_bindingsdenylist {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -1362,21 +1302,27 @@ namespace test_bindingsdenylist {
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
@@ -1388,37 +1334,8 @@ namespace test_bindingsdenylist {
         ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
             client,
         ::fidl::internal::TransactionalRequest<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
-            client,
-        ::fidl::internal::TransactionalRequest<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -1426,15 +1343,22 @@ namespace test_bindingsdenylist {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -1460,7 +1384,7 @@ namespace test_bindingsdenylist {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -1478,21 +1402,27 @@ namespace test_bindingsdenylist {
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
@@ -1506,39 +1436,8 @@ namespace test_bindingsdenylist {
             client,
         ::fidl::internal::TransactionalRequest<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
-            request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<
-    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
-            client,
-        ::fidl::internal::TransactionalRequest<
-            ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
             request,
-        zx_time_t deadline) {
+        std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -1546,15 +1445,22 @@ namespace test_bindingsdenylist {
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -1581,7 +1487,7 @@ namespace test_bindingsdenylist {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -1599,21 +1505,27 @@ namespace test_bindingsdenylist {
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<::fidl::WireResponse<
-        ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__

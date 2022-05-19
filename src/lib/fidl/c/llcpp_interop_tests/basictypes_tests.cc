@@ -171,11 +171,19 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
 
   FIDL_ALIGNDECL uint8_t response_storage[512];
   // Do the call and decode the received response.
-  encoded.GetOutgoingMessage()
-      .Call<fidl::internal::TransactionalResponse<basictypes::TestInterface::ConsumeSimpleStruct>>(
-          zx::unowned_channel(client.get()), response_storage, sizeof(response_storage));
+  fidl::internal::ChannelMessageStorageView response_storage_view{
+      .bytes = fidl::BufferSpan(response_storage, sizeof(response_storage)),
+      .handles = nullptr,
+      .handle_metadata = nullptr,
+      .handle_capacity = 0,
+  };
+  fidl::IncomingMessage response_message =
+      encoded.GetOutgoingMessage().Call(zx::unowned_channel(client.get()), response_storage_view);
+  fidl::unstable::DecodedMessage<
+      fidl::internal::TransactionalResponse<basictypes::TestInterface::ConsumeSimpleStruct>>
+      decoded{std::move(response_message)};
 
-  ASSERT_TRUE(encoded.ok());
+  ASSERT_TRUE(decoded.ok());
 
   auto response = reinterpret_cast<
       fidl::internal::TransactionalResponse<basictypes::TestInterface::ConsumeSimpleStruct>*>(
@@ -202,13 +210,21 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
 
   FIDL_ALIGNDECL uint8_t response_storage[512];
   // Do the call and decode the received response.
-  encoded.GetOutgoingMessage()
-      .Call<fidl::WireResponse<basictypes::TestInterface::ConsumeSimpleStruct>>(
-          zx::unowned_channel(client.get()), response_storage, sizeof(response_storage),
-          fidl::CallOptions{.deadline = ZX_TIME_INFINITE_PAST});
+  fidl::internal::ChannelMessageStorageView response_storage_view{
+      .bytes = fidl::BufferSpan(response_storage, sizeof(response_storage)),
+      .handles = nullptr,
+      .handle_metadata = nullptr,
+      .handle_capacity = 0,
+  };
+  fidl::IncomingMessage response_message =
+      encoded.GetOutgoingMessage().Call(zx::unowned_channel(client.get()), response_storage_view,
+                                        fidl::CallOptions{.deadline = ZX_TIME_INFINITE_PAST});
+  fidl::unstable::DecodedMessage<
+      fidl::internal::TransactionalResponse<basictypes::TestInterface::ConsumeSimpleStruct>>
+      decoded{std::move(response_message)};
 
-  ASSERT_EQ(encoded.status(), ZX_ERR_TIMED_OUT, "Expected timeout, got %s",
-            encoded.FormatDescription().c_str());
+  ASSERT_EQ(decoded.status(), ZX_ERR_TIMED_OUT, "Expected timeout, got %s",
+            decoded.FormatDescription().c_str());
 
   TearDownAsyncCServerHelper(loop);
 }

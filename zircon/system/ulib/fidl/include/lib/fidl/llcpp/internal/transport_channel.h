@@ -128,14 +128,26 @@ struct ChannelMessageStorageView : public MessageStorageViewBase {
   uint32_t handle_capacity;
 };
 
-// Base class with common functionality for all storage classes backing messages
-// read from a Zircon channel.
+// Base class with common functionality for bytes and handles storage classes
+// backing messages read from a Zircon channel.
 template <typename Derived>
 struct ChannelMessageStorageBase {
   ChannelMessageStorageView view() {
     auto* derived = static_cast<Derived*>(this);
+    return derived->handles_storage_.view(derived->bytes_.view());
+  }
+};
+
+// Base class with common functionality for handle storage classes backing
+// messages read from a Zircon channel. After receiving a message, handle
+// storage is no longer required after decoding; hence handles can be allocated
+// with a shorter lifetime.
+template <typename Derived>
+struct ChannelHandleStorageBase {
+  ChannelMessageStorageView view(fidl::BufferSpan bytes) {
+    auto* derived = static_cast<Derived*>(this);
     return ChannelMessageStorageView{
-        .bytes = derived->bytes_.view(),
+        .bytes = bytes,
         .handles = derived->handles_.data(),
         .handle_metadata = derived->handle_metadata_.data(),
         .handle_capacity = Derived::kNumHandles,

@@ -66,54 +66,10 @@ zx_status_t channel_read(fidl_handle_t handle, const ReadOptions& read_options, 
 zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
                          const CallMethodArgs& cargs, uint32_t* out_data_actual_count,
                          uint32_t* out_handles_actual_count) {
-  if (cargs.rd_view != nullptr) {
-    ZX_DEBUG_ASSERT(cargs.out_rd_data != nullptr);
-    ZX_DEBUG_ASSERT(cargs.rd_data == nullptr);
-    ChannelMessageStorageView* rd_view = static_cast<ChannelMessageStorageView*>(cargs.rd_view);
-
-    zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
-    const fidl_channel_handle_metadata_t* wr_metadata =
-        reinterpret_cast<const fidl_channel_handle_metadata_t*>(cargs.wr_handle_metadata);
-    for (uint32_t i = 0; i < cargs.wr_handles_count; i++) {
-      hds[i] = zx_handle_disposition_t{
-          .operation = ZX_HANDLE_OP_MOVE,
-          .handle = cargs.wr_handles[i],
-          .type = wr_metadata[i].obj_type,
-          .rights = wr_metadata[i].rights,
-          .result = ZX_OK,
-      };
-    }
-    zx_handle_info_t his[ZX_CHANNEL_MAX_MSG_HANDLES];
-    zx_channel_call_etc_args_t args = {
-        .wr_bytes = cargs.wr_data,
-        .wr_handles = hds,
-        .rd_bytes = rd_view->bytes.data,
-        .rd_handles = his,
-        .wr_num_bytes = cargs.wr_data_count,
-        .wr_num_handles = cargs.wr_handles_count,
-        .rd_num_bytes = rd_view->bytes.capacity,
-        .rd_num_handles = rd_view->handle_capacity,
-    };
-
-    zx_status_t status =
-        zx_channel_call_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, call_options.deadline, &args,
-                            out_data_actual_count, out_handles_actual_count);
-    *cargs.out_rd_data = rd_view->bytes.data;
-    fidl_channel_handle_metadata_t* rd_metadata = rd_view->handle_metadata;
-    zx_handle_t* rd_handles = rd_view->handles;
-    for (uint32_t i = 0; i < *out_handles_actual_count; i++) {
-      rd_handles[i] = his[i].handle;
-      rd_metadata[i] = fidl_channel_handle_metadata_t{
-          .obj_type = his[i].type,
-          .rights = his[i].rights,
-      };
-    }
-    return status;
-  }
-
-  // TODO(fxbug.dev/100472): Move every user (e.g. wire sync calls) to |rd_view|.
-  ZX_DEBUG_ASSERT(cargs.out_rd_data == nullptr);
-  ZX_DEBUG_ASSERT(cargs.rd_data != nullptr);
+  ZX_DEBUG_ASSERT(cargs.rd_view != nullptr);
+  ZX_DEBUG_ASSERT(cargs.out_rd_data != nullptr);
+  ZX_DEBUG_ASSERT(cargs.rd_data == nullptr);
+  ChannelMessageStorageView* rd_view = static_cast<ChannelMessageStorageView*>(cargs.rd_view);
 
   zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
   const fidl_channel_handle_metadata_t* wr_metadata =
@@ -131,20 +87,25 @@ zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
   zx_channel_call_etc_args_t args = {
       .wr_bytes = cargs.wr_data,
       .wr_handles = hds,
-      .rd_bytes = cargs.rd_data,
+      .rd_bytes = rd_view->bytes.data,
       .rd_handles = his,
       .wr_num_bytes = cargs.wr_data_count,
       .wr_num_handles = cargs.wr_handles_count,
-      .rd_num_bytes = cargs.rd_data_capacity,
-      .rd_num_handles = cargs.rd_handles_capacity,
+      .rd_num_bytes = rd_view->bytes.capacity,
+      .rd_num_handles = rd_view->handle_capacity,
   };
+
   zx_status_t status =
       zx_channel_call_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, call_options.deadline, &args,
                           out_data_actual_count, out_handles_actual_count);
-  fidl_channel_handle_metadata_t* rd_metadata =
-      reinterpret_cast<fidl_channel_handle_metadata_t*>(cargs.rd_handle_metadata);
+  *cargs.out_rd_data = rd_view->bytes.data;
+  *cargs.out_rd_handles = rd_view->handles;
+  *cargs.out_rd_handle_metadata =
+      reinterpret_cast<fidl_handle_metadata_t*>(rd_view->handle_metadata);
+  fidl_channel_handle_metadata_t* rd_metadata = rd_view->handle_metadata;
+  zx_handle_t* rd_handles = rd_view->handles;
   for (uint32_t i = 0; i < *out_handles_actual_count; i++) {
-    cargs.rd_handles[i] = his[i].handle;
+    rd_handles[i] = his[i].handle;
     rd_metadata[i] = fidl_channel_handle_metadata_t{
         .obj_type = his[i].type,
         .rights = his[i].rights,

@@ -21,35 +21,8 @@ extern "C" const fidl_type_t
 ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>::WireResult(
     ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client,
     ::fidl::internal::TransactionalRequest<
-        ::test_anonymous::SomeProtocol::SomeMethod>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<
-          ::test_anonymous::SomeProtocol::SomeMethod>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_anonymous::SomeProtocol::SomeMethod>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-  if (ok()) {
-    auto* raw_response = reinterpret_cast<
-        ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
-  }
-}
-
-::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>::WireResult(
-    ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client,
-    ::fidl::internal::TransactionalRequest<
         ::test_anonymous::SomeProtocol::SomeMethod>* request,
-    zx_time_t deadline) {
+    std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
@@ -57,15 +30,22 @@ extern "C" const fidl_type_t
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_anonymous::SomeProtocol::SomeMethod>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_anonymous::SomeProtocol::SomeMethod>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_anonymous::SomeProtocol::SomeMethod>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
   if (ok()) {
-    auto* raw_response = reinterpret_cast<
-        ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*>(
-        bytes_.data() + sizeof(fidl_message_header_t));
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
@@ -89,7 +69,7 @@ namespace test_anonymous {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -107,21 +87,27 @@ namespace test_anonymous {
           ::test_anonymous::SomeProtocol::SomeMethod>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::internal::TransactionalResponse<
-      ::test_anonymous::SomeProtocol::SomeMethod>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  if (outgoing.ok()) {
-    auto* raw_response = reinterpret_cast<
-        ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*>(
-        bytes_ + sizeof(fidl_message_header_t));
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_anonymous::SomeProtocol::SomeMethod>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+      ::test_anonymous::SomeProtocol::SomeMethod>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
+  if (ok()) {
+    auto* raw_response = &decoded_.Value()->body;
     if (raw_response->result.is_err()) {
       result_ = fitx::error(raw_response->result.err());
     } else if (raw_response->result.is_response()) {
       result_ = fitx::ok(&(raw_response->result.response()));
     }
   }
-  ::fidl::Status::operator=(outgoing);
 }
 namespace test_anonymous {
 #endif  // __Fuchsia__

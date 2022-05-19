@@ -78,22 +78,26 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
 
 {{- EnsureNamespace "" }}
 {{- range .TwoWayMethods -}}
-{{/* TODO(fxbug.dev/60240): Syncronous wire messaging should use this storage
-     when receiving a response to be decoded. */}}
-{{/* TODO(fxbug.dev/60240): Add a specialization for driver transport,
-     containing an arena which backs both the bytes and handles. */}}
-{{- if eq .Transport.Name "Channel" }}
-template<>
-struct {{ .IncomingMessageStorageForResponse }} final
-    : public ::fidl::internal::ChannelMessageStorageBase<{{ .IncomingMessageStorageForResponse }}> {
-  static constexpr uint32_t kNumHandles =
-      fidl::internal::ClampedHandleCount<{{ .WireResponse }}, fidl::MessageDirection::kReceiving>();
+  {{/* TODO(fxbug.dev/100472): Add a specialization for driver transport,
+       containing an arena which backs both the bytes and handles. */}}
+  {{- if eq .Transport.Name "Channel" }}
+    template<>
+    struct {{ .IncomingHandleStorageForResponse }} final
+        : public ::fidl::internal::ChannelHandleStorageBase<{{ .IncomingHandleStorageForResponse }}> {
+      static constexpr uint32_t kNumHandles =
+          fidl::internal::ClampedHandleCount<{{ .WireResponse }}, fidl::MessageDirection::kReceiving>();
 
-  {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
-  ::std::array<zx_handle_t, kNumHandles> handles_;
-  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
-};
-{{- end }}
+      ::std::array<zx_handle_t, kNumHandles> handles_;
+      ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+    };
+
+    template<>
+    struct {{ .IncomingMessageStorageForResponse }} final
+        : public ::fidl::internal::ChannelMessageStorageBase<{{ .IncomingMessageStorageForResponse }}> {
+      {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
+      {{ .IncomingHandleStorageForResponse }} handles_storage_;
+    };
+  {{- end }}
 {{- end }}
 
 

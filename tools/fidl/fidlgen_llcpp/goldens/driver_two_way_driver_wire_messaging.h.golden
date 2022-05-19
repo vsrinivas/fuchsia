@@ -419,7 +419,6 @@ static_assert(offsetof(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>,
                        sum) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
-
 template <>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>
     final : public ::fidl::Status {

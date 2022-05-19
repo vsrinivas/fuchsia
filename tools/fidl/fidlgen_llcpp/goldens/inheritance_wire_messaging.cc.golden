@@ -18,35 +18,27 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 ::fidl::WireResult<::test_inheritance::Super::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::test_inheritance::Super> client,
     ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>*
-        request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<
-      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<::test_inheritance::Super::Foo>::WireResult(
-    ::fidl::UnownedClientEnd<::test_inheritance::Super> client,
-    ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>*
         request,
-    zx_time_t deadline) {
+    std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<
-      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_inheritance {
 #endif  // __Fuchsia__
@@ -63,7 +55,7 @@ namespace test_inheritance {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -79,11 +71,18 @@ namespace test_inheritance {
       ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<
-      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_inheritance {
 #endif  // __Fuchsia__
@@ -311,35 +310,27 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 ::fidl::WireResult<::test_inheritance::Sub::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::test_inheritance::Sub> client,
     ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>*
-        request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>,
-      ::fidl::internal::ChannelTransport>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<
-      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetStatus(outgoing);
-}
-
-::fidl::WireResult<::test_inheritance::Sub::Foo>::WireResult(
-    ::fidl::UnownedClientEnd<::test_inheritance::Sub> client,
-    ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>*
         request,
-    zx_time_t deadline) {
+    std::optional<zx::time> deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<
-      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>(
-      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetStatus(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>
+      decoded{outgoing.Call(client.handle(), handle_storage.view(bytes_.view()),
+                            deadline.has_value()
+                                ? fidl::CallOptions{.deadline = deadline->get()}
+                                : fidl::CallOptions{})};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_inheritance {
 #endif  // __Fuchsia__
@@ -356,7 +347,7 @@ namespace test_inheritance {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Status::operator=(allocation.error_value());
+    SetStatus(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -372,11 +363,18 @@ namespace test_inheritance {
       ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<
-      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>(
-      client_end.handle(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Status::operator=(outgoing);
+  ::fidl::internal::IncomingHandleStorage<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>
+      handle_storage;
+  ::fidl::unstable::DecodedMessage<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>
+      decoded{outgoing.Call(client_end.handle(),
+                            handle_storage.view(fidl::BufferSpan(
+                                response_bytes, response_byte_capacity)))};
+  SetStatus(decoded);
+  if (ok()) {
+    decoded_ = decoded.Take();
+  }
 }
 namespace test_inheritance {
 #endif  // __Fuchsia__

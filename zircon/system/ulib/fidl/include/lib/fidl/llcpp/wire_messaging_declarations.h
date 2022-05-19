@@ -96,6 +96,18 @@ struct WireOrdinal;
 template <typename FidlType>
 struct IncomingMessageStorage;
 
+// |IncomingHandleStorage| allocates the necessary storage for receiving the
+// handles for a transactional message of type |FidlType| from its corresponding
+// transport. It is useful for allocating bespoke amount of memory when the code
+// path is certain what is the message type, such as during synchronous calls.
+//
+// |FidlType| must be a specialization of |TransactionalResponse|.
+//
+// This class is shared between wire and natural types - both receive messages
+// of the same shapes and then perform their own decoding.
+template <typename FidlType>
+struct IncomingHandleStorage;
+
 #ifdef __Fuchsia__
 
 // |WireWeakEventSender| borrows the server endpoint from a binding object and
