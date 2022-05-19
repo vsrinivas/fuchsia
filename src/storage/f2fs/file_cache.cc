@@ -14,21 +14,18 @@ VnodeF2fs &Page::GetVnode() const { return file_cache_->GetVnode(); }
 FileCache &Page::GetFileCache() const { return *file_cache_; }
 
 Page::~Page() {
-  ZX_DEBUG_ASSERT(IsAllocated() == true);
   ZX_DEBUG_ASSERT(IsWriteback() == false);
   ZX_DEBUG_ASSERT(InContainer() == false);
   ZX_DEBUG_ASSERT(IsDirty() == false);
-  ZX_DEBUG_ASSERT(IsMapped() == false);
   ZX_DEBUG_ASSERT(IsLocked() == false);
   ZX_DEBUG_ASSERT(IsMmapped() == false);
 }
 
 void Page::RecyclePage() {
-  ZX_ASSERT(Unmap() == ZX_OK);
-  ZX_ASSERT(VmoOpUnlock() == ZX_OK);
-  // For active Pages, we evict them with strong references, so it is safe to call InContainer()
-  // without the tree lock.
+  // Since active Pages are evicted only when having strong references,
+  // it is safe to call InContainer().
   if (InContainer()) {
+    ZX_ASSERT(VmoOpUnlock() == ZX_OK);
     file_cache_->Downgrade(this);
   } else {
     delete this;
@@ -38,115 +35,81 @@ void Page::RecyclePage() {
 bool Page::SetDirty() {
   SetUptodate();
   if (!flags_[static_cast<uint8_t>(PageFlag::kPageDirty)].test_and_set(std::memory_order_acquire)) {
-    ZX_ASSERT(VmoOpLock() == ZX_OK);
     VnodeF2fs &vnode = GetVnode();
     SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
     vnode.MarkInodeDirty();
+    vnode.IncreaseDirtyPageCount();
     if (vnode.IsNode()) {
       superblock_info.IncreasePageCount(CountType::kDirtyNodes);
     } else if (vnode.IsDir()) {
       superblock_info.IncreasePageCount(CountType::kDirtyDents);
       superblock_info.IncreaseDirtyDir();
-      vnode.IncreaseDirtyPageCount();
     } else if (vnode.IsMeta()) {
       superblock_info.IncreasePageCount(CountType::kDirtyMeta);
       superblock_info.SetDirty();
     } else {
       superblock_info.IncreasePageCount(CountType::kDirtyData);
-      vnode.IncreaseDirtyPageCount();
     }
     return false;
   }
   return true;
 }
 
-bool Page::ClearDirtyForIo(bool for_writeback) {
+bool Page::ClearDirtyForIo() {
   ZX_DEBUG_ASSERT(IsLocked());
   VnodeF2fs &vnode = GetVnode();
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   if (IsDirty()) {
     ClearFlag(PageFlag::kPageDirty);
-    if (!for_writeback) {
-      ZX_ASSERT(VmoOpUnlock() == ZX_OK);
-    }
+    vnode.DecreaseDirtyPageCount();
     if (vnode.IsNode()) {
       superblock_info.DecreasePageCount(CountType::kDirtyNodes);
     } else if (vnode.IsDir()) {
       superblock_info.DecreasePageCount(CountType::kDirtyDents);
       superblock_info.DecreaseDirtyDir();
-      vnode.DecreaseDirtyPageCount();
     } else if (vnode.IsMeta()) {
       superblock_info.DecreasePageCount(CountType::kDirtyMeta);
     } else {
       superblock_info.DecreasePageCount(CountType::kDirtyData);
-      vnode.DecreaseDirtyPageCount();
     }
     return true;
   }
   return false;
 }
 
-zx_status_t Page::GetPage(bool need_vmo_lock) {
-  zx_status_t ret = ZX_OK;
-  auto clear_flag = fit::defer([&] { ClearFlag(PageFlag::kPageAlloc); });
-
-  if (!flags_[static_cast<uint8_t>(PageFlag::kPageAlloc)].test_and_set(std::memory_order_acquire)) {
-    ZX_DEBUG_ASSERT(!IsDirty());
-    ZX_DEBUG_ASSERT(!IsWriteback());
-    ClearFlag(PageFlag::kPageUptodate);
-#ifdef __Fuchsia__
-    if (ret = vmo_.create(BlockSize(), ZX_VMO_DISCARDABLE, &vmo_); ret != ZX_OK) {
-      return ret;
-    }
-#endif  // __Fuchsia__
-    if (ret = VmoOpLock(true); ret != ZX_OK) {
-      return ret;
-    }
-  } else if (need_vmo_lock) {
-    if (ret = VmoOpLock(); ret != ZX_OK) {
-      ZX_DEBUG_ASSERT(ret == ZX_ERR_UNAVAILABLE);
+zx_status_t Page::GetPage() {
+  ZX_DEBUG_ASSERT(IsLocked());
+  auto committed_or = VmoOpLock();
+  if (committed_or.is_ok()) {
+    if (!committed_or.value()) {
       ZX_DEBUG_ASSERT(!IsDirty());
       ZX_DEBUG_ASSERT(!IsWriteback());
       ClearFlag(PageFlag::kPageUptodate);
-      if (ret = VmoOpLock(true); ret != ZX_OK) {
-        return ret;
-      }
+      ClearMapped();
     }
+    ZX_ASSERT(Map() == ZX_OK);
   }
-
-  // TODO: Remove it when we use a per-file vmo.
-  ZX_ASSERT(Map() == ZX_OK);
-  clear_flag.cancel();
-  return ret;
-}
-
-zx_status_t Page::Unmap() {
-  zx_status_t ret = ZX_OK;
-  if (IsMapped()) {
-    ClearMapped();
-#ifdef __Fuchsia__
-    ret = zx::vmar::root_self()->unmap(address_, BlockSize());
-#endif  // __Fuchsia__
-  }
-  return ret;
+  return committed_or.status_value();
 }
 
 zx_status_t Page::Map() {
-  zx_status_t ret = ZX_OK;
   if (!SetFlag(PageFlag::kPageMapped)) {
 #ifdef __Fuchsia__
-    ret = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_, 0, BlockSize(),
-                                     &address_);
+    auto address_or = file_cache_->GetVmoManager().GetAddress(index_);
+    if (address_or.is_ok()) {
+      address_ = address_or.value();
+    }
+    return address_or.status_value();
 #else   // __Fuchsia__
     address_ = reinterpret_cast<zx_vaddr_t>(blk_.GetData());
 #endif  // __Fuchsia__
   }
-  return ret;
+  return ZX_OK;
 }
 
 void Page::Invalidate() {
   ZX_DEBUG_ASSERT(IsLocked());
-  ClearDirtyForIo(false);
+  ClearDirtyForIo();
   if (ClearMmapped()) {
     ZX_ASSERT(GetVnode().InvalidatePagedVmo(GetIndex() * kBlockSize, kBlockSize) == ZX_OK);
   }
@@ -203,40 +166,37 @@ bool Page::ClearMmapped() {
 }
 
 #ifdef __Fuchsia__
-zx_status_t Page::VmoWrite(const void *buffer, uint64_t offset, size_t buffer_size) {
-  return vmo_.write(buffer, offset, buffer_size);
-}
-
-zx_status_t Page::VmoRead(void *buffer, uint64_t offset, size_t buffer_size) {
-  return vmo_.read(buffer, offset, buffer_size);
-}
-
-zx_status_t Page::VmoOpUnlock() {
-  ZX_DEBUG_ASSERT(IsAllocated());
-  return vmo_.op_range(ZX_VMO_OP_UNLOCK, 0, BlockSize(), nullptr, 0);
-}
-
-zx_status_t Page::VmoOpLock(bool commit) {
-  uint32_t op = ZX_VMO_OP_TRY_LOCK;
-  if (commit) {
-    op |= ZX_VMO_OP_COMMIT;
+zx_status_t Page::VmoOpUnlock(bool evict) {
+  ZX_DEBUG_ASSERT(InContainer());
+  // |evict| can be true only when the Page is clean or subject to invalidation.
+  if ((!IsDirty() || evict) && IsVmoLocked()) {
+    ClearFlag(PageFlag::kPageVmoLocked);
+    return file_cache_->GetVmoManager().UnlockVmo(index_, evict);
   }
-  return vmo_.op_range(op, 0, BlockSize(), nullptr, 0);
-}
-#else   // __Fuchsia__
-// Do nothing on Linux.
-zx_status_t Page::VmoWrite(const void *buffer, uint64_t offset, size_t buffer_size) {
   return ZX_OK;
 }
 
-zx_status_t Page::VmoRead(void *buffer, uint64_t offset, size_t buffer_size) { return ZX_OK; }
+zx::status<bool> Page::VmoOpLock() {
+  ZX_DEBUG_ASSERT(InContainer());
+  ZX_DEBUG_ASSERT(IsLocked());
+  if (!SetFlag(PageFlag::kPageVmoLocked)) {
+    return file_cache_->GetVmoManager().CreateAndLockVmo(index_);
+  }
+  return zx::ok(true);
+}
+#else   // __Fuchsia__
+// Do nothing on Linux.
+zx_status_t Page::VmoOpUnlock(bool evict) { return ZX_OK; }
 
-zx_status_t Page::VmoOpUnlock() { return ZX_OK; }
-
-zx_status_t Page::VmoOpLock(bool commit) { return ZX_OK; }
+zx::status<bool> Page::VmoOpLock() { return zx::ok(true); }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+FileCache::FileCache(VnodeF2fs *vnode, VmoManager *vmo_manager)
+    : vnode_(vnode), vmo_manager_(vmo_manager) {}
+#else   // __Fuchsia__
 FileCache::FileCache(VnodeF2fs *vnode) : vnode_(vnode) {}
+#endif  // __Fuchsia__
 
 FileCache::~FileCache() {
   Reset();
@@ -267,25 +227,20 @@ zx_status_t FileCache::AddPageUnsafe(const fbl::RefPtr<Page> &page) {
 }
 
 zx_status_t FileCache::GetPage(const pgoff_t index, LockedPage *out) {
-  bool need_vmo_lock = true;
   fbl::RefPtr<Page> page;
-  {
-    std::lock_guard tree_lock(tree_lock_);
-    auto ret = GetPageUnsafe(index, &page);
-    if (ret.is_error()) {
-      if (GetVnode().IsNode()) {
-        page = fbl::MakeRefCounted<NodePage>(this, index);
-      } else {
-        page = fbl::MakeRefCounted<Page>(this, index);
-      }
-      ZX_ASSERT(AddPageUnsafe(page) == ZX_OK);
-      page->SetActive();
+  std::lock_guard tree_lock(tree_lock_);
+  auto ret = GetPageUnsafe(index, &page);
+  if (ret.is_error()) {
+    if (GetVnode().IsNode()) {
+      page = fbl::MakeRefCounted<NodePage>(this, index);
     } else {
-      need_vmo_lock = ret.value();
+      page = fbl::MakeRefCounted<Page>(this, index);
     }
+    ZX_ASSERT(AddPageUnsafe(page) == ZX_OK);
+    page->SetActive();
   }
   LockedPage locked_page(page);
-  if (zx_status_t ret = locked_page->GetPage(need_vmo_lock); ret != ZX_OK) {
+  if (zx_status_t ret = locked_page->GetPage(); ret != ZX_OK) {
     return ret;
   }
   *out = std::move(locked_page);
@@ -293,19 +248,13 @@ zx_status_t FileCache::GetPage(const pgoff_t index, LockedPage *out) {
 }
 
 zx_status_t FileCache::FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) {
-  bool need_vmo_lock = true;
-  {
-    std::lock_guard tree_lock(tree_lock_);
-    auto ret = GetPageUnsafe(index, out);
-    if (ret.is_error()) {
-      return ret.error_value();
-    }
-    need_vmo_lock = ret.value();
+  std::lock_guard tree_lock(tree_lock_);
+  auto ret = GetPageUnsafe(index, out);
+  if (ret.is_error()) {
+    return ret.error_value();
   }
-
   LockedPage locked_page(*out);
-  zx_status_t ret = locked_page->GetPage(need_vmo_lock);
-  return ret;
+  return locked_page->GetPage();
 }
 
 zx::status<bool> FileCache::GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page> *out) {
@@ -336,14 +285,16 @@ zx_status_t FileCache::EvictUnsafe(Page *page) {
   if (!page->InContainer()) {
     return ZX_ERR_NOT_FOUND;
   }
+  // Before eviction, check if it requires VMO_OP_UNLOCK
+  // since Page::RecyclePage() tries VMO_OP_UNLOCK only when |page| keeps in FileCache.
+  ZX_ASSERT(page->VmoOpUnlock(true) == ZX_OK);
   page_tree_.erase(*page);
   return ZX_OK;
 }
 
-std::vector<fbl::RefPtr<Page>> FileCache::CleanupPagesUnsafe(pgoff_t start, pgoff_t end,
-                                                             bool invalidate) {
+std::vector<LockedPage> FileCache::CleanupPagesUnsafe(pgoff_t start, pgoff_t end) {
   pgoff_t prev_key = kPgOffMax;
-  std::vector<fbl::RefPtr<Page>> pages;
+  std::vector<LockedPage> pages;
   while (!page_tree_.is_empty()) {
     // Acquire Pages from the the lower bound of |start| to |end|.
     auto key = (prev_key < kPgOffMax) ? prev_key : start;
@@ -352,59 +303,52 @@ std::vector<fbl::RefPtr<Page>> FileCache::CleanupPagesUnsafe(pgoff_t start, pgof
       break;
     }
     if (!current->IsActive()) {
-      // No other reference it |current|. It is safe to release it.
+      // No reference to |current|. It is safe to make a reference.
       prev_key = current->GetKey();
-      EvictUnsafe(&(*current));
-      if (invalidate || current->IsMmapped()) {
-        ZX_ASSERT(!current->TryLock());
-        current->Invalidate();
-        current->Unlock();
-      }
-      delete &(*current);
+      LockedPage locked_page(fbl::ImportFromRawPtr(&(*current)));
+      locked_page->SetActive();
+      EvictUnsafe(locked_page.get());
+      pages.push_back(std::move(locked_page));
     } else {
       auto page = fbl::MakeRefPtrUpgradeFromRaw(&(*current), tree_lock_);
-      // When it is being recycled, we should wait.
-      // Try again.
+      // When it is being recycled, wait and try it again.
       if (page == nullptr) {
         recycle_cvar_.wait(tree_lock_);
         continue;
       }
-      // Keep |page| alive in |pages| to prevent |page| from coming into fbl_recycle().
-      // When a caller resets the reference after doing some necessary work, they will be
-      // released.
       prev_key = page->GetKey();
-      EvictUnsafe(page.get());
-      pages.push_back(std::move(page));
+      LockedPage locked_page(std::move(page));
+      EvictUnsafe(locked_page.get());
+      pages.push_back(std::move(locked_page));
     }
   }
   return pages;
 }
 
 void FileCache::InvalidatePages(pgoff_t start, pgoff_t end) {
-  std::vector<fbl::RefPtr<Page>> pages;
+  std::vector<LockedPage> pages;
   {
     std::lock_guard tree_lock(tree_lock_);
-    pages = CleanupPagesUnsafe(start, end, true);
+    pages = CleanupPagesUnsafe(start, end);
   }
   for (auto &page : pages) {
-    // Invalidate acitve Pages.
-    LockedPage locked_page(page);
-    locked_page->Invalidate();
+    page->Invalidate();
   }
 }
 
 void FileCache::Reset() {
-  std::vector<fbl::RefPtr<Page>> pages;
+  std::vector<LockedPage> pages;
   {
     std::lock_guard tree_lock(tree_lock_);
     pages = CleanupPagesUnsafe();
   }
   for (auto &page : pages) {
-    // Wait for active Pages to be written.
     page->WaitOnWriteback();
-    // Decrease mmap page count
-    LockedPage locked_page(page);
-    locked_page->ClearMmapped();
+    if (page->IsDirty()) {
+      FX_LOGS(WARNING) << "[f2fs] An unexpected dirty page found..";
+      page->Invalidate();
+    }
+    page->ClearMmapped();
   }
 }
 
@@ -442,25 +386,22 @@ std::vector<LockedPage> FileCache::GetLockedDirtyPagesUnsafe(const WritebackOper
       ZX_DEBUG_ASSERT(page->IsLastReference());
       auto page_ref = page.CopyRefPtr();
       if (!operation.if_page || operation.if_page(page_ref) == ZX_OK) {
-        ZX_DEBUG_ASSERT(page->IsUptodate());
         page->SetActive();
+        ZX_DEBUG_ASSERT(page->IsUptodate());
+        ZX_DEBUG_ASSERT(page->IsVmoLocked());
         pages.push_back(std::move(page));
         ++nwritten;
-      } else {
-        // It prevents |page_ref| from entering RecyclePage() and
-        // keeps |page| alive in FileCache.
-        fbl::RefPtr<Page> unlocked = page.release();
-        __UNUSED auto leak = fbl::ExportToRawPtr(&unlocked);
       }
     } else if (!page->IsMmapped() && (operation.bReleasePages || !vnode_->IsActive())) {
       // There is no other reference. It is safe to release it.
-      fbl::RefPtr<Page> unlocked = page.release();
-      __UNUSED auto leak = fbl::ExportToRawPtr(&unlocked);
-      EvictUnsafe(raw_page);
-      delete raw_page;
-    } else {
-      fbl::RefPtr<Page> unlocked = page.release();
-      __UNUSED auto leak = fbl::ExportToRawPtr(&unlocked);
+      page->SetActive();
+      EvictUnsafe(page.get());
+    }
+    if (page && !page->IsActive()) {
+      auto page_ref = page.release();
+      // It prevents |page| from entering RecyclePage() and
+      // keeps |page| alive in FileCache.
+      __UNUSED auto leak = fbl::ExportToRawPtr(&page_ref);
     }
   }
   return pages;
@@ -488,10 +429,6 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
 
     ZX_DEBUG_ASSERT(page->IsUptodate());
     ZX_DEBUG_ASSERT(page->IsLocked());
-    // All node pages require mappings to log the next address in their footer.
-    if (vnode_->IsNode()) {
-      ZX_ASSERT(page->Map() == ZX_OK);
-    }
     zx_status_t ret = vnode_->WriteDirtyPage(page, false);
     if (ret != ZX_OK) {
       if (ret != ZX_ERR_NOT_FOUND && ret != ZX_ERR_OUT_OF_RANGE) {

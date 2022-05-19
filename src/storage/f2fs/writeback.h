@@ -36,6 +36,14 @@ class SegmentWriteBuffer {
   ~SegmentWriteBuffer();
 
   PageOperations TakeOperations() __TA_EXCLUDES(mutex_);
+  // It tries to reserve |buffer_| space for |page| subject to writeback. If successful,
+  // it unlocks |page| and moves its ownership to |pages_| after copying it to the space,
+  // and then PageOperaions will transfers the part of |buffer_| related to |pages_| to disk
+  // when a certain condition is met. To allow users to access |page| during writeback,
+  // |page| gets unlocked in |pages_| with kWriteback flag set. So, any writers who want to access
+  // |page| wait for its writeback by calling Page::WaitOnWriteback(), but readers are free to
+  // access to it. If successful, it returns the number of Pages in |pages_|, and a caller
+  // must not access |page|.
   zx::status<size_t> ReserveOperation(storage::Operation &operation, LockedPage &page)
       __TA_EXCLUDES(mutex_);
   void ReleaseBuffers(const PageOperations &operation) __TA_EXCLUDES(mutex_);

@@ -183,7 +183,7 @@ zx_status_t Dir::ConvertInlineDir() {
 #endif
   page->SetDirty();
   // TODO: Use writeback() while keeping the lock
-  if (page->ClearDirtyForIo(false)) {
+  if (page->ClearDirtyForIo()) {
     page->SetWriteback();
     Vfs()->GetSegmentManager().WriteDataPage(this, page, ipage->NidOfNode(), ofs_in_dnode,
                                              data_blkaddr, &data_blkaddr);

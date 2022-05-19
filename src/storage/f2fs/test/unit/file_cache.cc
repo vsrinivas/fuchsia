@@ -24,9 +24,13 @@ TEST_F(FileCacheTest, WaitOnLock) {
 
     vn->GrabCachePage(0, &page);
     ASSERT_EQ(page->TryLock(), true);
-    std::thread thread([&]() { page->Unlock(); });
+
+    fbl::RefPtr<Page> unlocked_page = page.release();
+    ASSERT_EQ(unlocked_page->TryLock(), false);
+
+    std::thread thread([&]() { unlocked_page->Unlock(); });
     // Wait for |thread| to unlock |page|.
-    page->Lock();
+    page = unlocked_page;
     thread.join();
   }
 
@@ -84,10 +88,10 @@ TEST_F(FileCacheTest, Map) {
     // Otherwise, |page| is unmapped when there is no reference except for FileCache.
   }
 
-  // After LockedPage is destructed, |page| should be unmapped since kPageDirty is clear and there
-  // is no reference but for FileCache.
+  // Even after LockedPage is destructed, the mapping is maintained
+  // since VmoManager keeps the mapping of VmoNode as long as its vnode is active.
   ASSERT_EQ(raw_ptr->IsLocked(), false);
-  ASSERT_EQ(raw_ptr->IsMapped(), false);
+  ASSERT_EQ(raw_ptr->IsMapped(), true);
 
   {
     LockedPage page;
@@ -135,31 +139,28 @@ TEST_F(FileCacheTest, WritebackOperation) {
   root_dir_->Create("test", S_IFREG, &test_file);
   fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
   char buf[kPageSize];
-  WritebackOperation op;
   pgoff_t key;
+  WritebackOperation op = {.start = 0,
+                           .end = 2,
+                           .to_write = 2,
+                           .bSync = false,
+                           .if_page = [&key](fbl::RefPtr<Page> page) {
+                             if (page->GetKey() <= key) {
+                               return ZX_OK;
+                             }
+                             return ZX_ERR_NEXT;
+                           }};
 
   // |vn| should not have any dirty Pages.
   ASSERT_EQ(vn->GetDirtyPageCount(), 0);
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
-
   // Get the Page of 2nd block.
   {
     LockedPage page;
     vn->GrabCachePage(1, &page);
     ASSERT_EQ(vn->GetDirtyPageCount(), 2);
-
     key = page->GetKey();
-    op = {.start = 0,
-          .end = 2,
-          .to_write = 2,
-          .bSync = false,
-          .if_page = [&key](fbl::RefPtr<Page> page) {
-            if (page->GetKey() <= key) {
-              return ZX_OK;
-            }
-            return ZX_ERR_NEXT;
-          }};
 
     // Request writeback for dirty Pages. The Page of 1st block should be written out.
     ASSERT_EQ(vn->Writeback(op), 1UL);
@@ -273,14 +274,13 @@ TEST_F(FileCacheTest, Recycle) {
   thread1.join();
   thread2.join();
 
-  // Test FileCache::Downgrade() and FileCache::Reset() with multiple threads
-  // Before FileCache::Reset(), a caller should ensure that there is no dirty Pages in FileCache.
   {
     LockedPage locked_page;
     vn->GrabCachePage(0, &locked_page);
     locked_page->Invalidate();
   }
 
+  // Test FileCache::Downgrade() and FileCache::Reset() with multiple threads.
   std::thread thread_get_page([&]() {
     bool bStop = false;
     std::thread thread_reset([&]() {
@@ -316,21 +316,14 @@ TEST_F(FileCacheTest, Basic) {
   // All pages should not be uptodated.
   for (uint16_t i = 0; i < nblocks; ++i) {
     LockedPage page;
-    uint8_t r_buf[kPageSize], w_buf[kPageSize];
     vn->GrabCachePage(i, &page);
     // A newly created page should have kPageUptodate/kPageDirty/kPageWriteback flags clear.
     ASSERT_EQ(page->IsUptodate(), false);
     ASSERT_EQ(page->IsDirty(), false);
-    ASSERT_EQ(page->IsMapped(), true);
-    ASSERT_EQ(page->IsAllocated(), true);
     ASSERT_EQ(page->IsWriteback(), false);
+    // Every page should have a mapping.
+    ASSERT_EQ(page->IsMapped(), true);
     ASSERT_EQ(page->IsLocked(), true);
-
-    // Sanity checks for interfaces to Page::vmo_.
-    memset(w_buf, i, kPageSize);
-    ASSERT_EQ(page->VmoWrite(w_buf, 0, kPageSize), ZX_OK);
-    ASSERT_EQ(page->VmoRead(r_buf, 0, kPageSize), ZX_OK);
-    ASSERT_EQ(memcmp(r_buf, w_buf, kPageSize), 0);
   }
 
   // Append |nblocks| * |kPageSize|.

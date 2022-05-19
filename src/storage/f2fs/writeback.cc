@@ -36,9 +36,6 @@ void SegmentWriteBuffer::ReleaseBuffers(const PageOperations &operation) {
 
 zx::status<size_t> SegmentWriteBuffer::ReserveOperation(storage::Operation &operation,
                                                         LockedPage &page) {
-  // It will be unmapped when there is no reference.
-  ZX_ASSERT(page->Map() == ZX_OK);
-
   std::lock_guard lock(mutex_);
   // Wait until there is a room in |buffer_|.
   while (count_ == buffer_.capacity()) {

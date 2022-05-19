@@ -433,9 +433,13 @@ class VnodeF2fs : public fs::Vnode,
   void SetPagedVmoName() __TA_REQUIRES(mutex_);
   void ReportPagerError(const uint64_t offset, const uint64_t length, const zx_status_t err)
       __TA_REQUIRES_SHARED(mutex_);
+
+  VmoManager vmo_manager_;
+  FileCache file_cache_{this, &vmo_manager_};
+#else   // __Fuchsia__
+  FileCache file_cache_{this};
 #endif  // __Fuchsia__
 
-  FileCache file_cache_{this};
   InodeInfo fi_;
   uid_t uid_ = 0;
   gid_t gid_ = 0;

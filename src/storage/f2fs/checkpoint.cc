@@ -42,7 +42,7 @@ zx_status_t F2fs::F2fsWriteMetaPage(LockedPage &page, bool is_reclaim) {
 
   page->WaitOnWriteback();
 
-  if (page->ClearDirtyForIo(true)) {
+  if (page->ClearDirtyForIo()) {
     page->SetWriteback();
 
     if (err = this->GetSegmentManager().WriteMetaPage(page, is_reclaim); err != ZX_OK) {

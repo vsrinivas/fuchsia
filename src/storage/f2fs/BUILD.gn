@@ -98,9 +98,15 @@ static_library("f2fs") {
   }
 
   if (is_fuchsia) {
-    sources += [ "inspect.cc" ]
+    sources += [
+      "inspect.cc",
+      "vmo_manager.cc",
+    ]
 
-    public += [ "inspect.h" ]
+    public += [
+      "inspect.h",
+      "vmo_manager.h",
+    ]
 
     public_deps += [
       "//src/lib/storage/block_client/cpp",

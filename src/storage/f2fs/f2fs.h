@@ -63,6 +63,9 @@
 #include "src/storage/f2fs/f2fs_types.h"
 #include "src/storage/f2fs/f2fs_lib.h"
 #include "src/storage/f2fs/f2fs_layout.h"
+#ifdef __Fuchsia__
+#include "src/storage/f2fs/vmo_manager.h"
+#endif  // __Fuchsia__
 #include "src/storage/f2fs/file_cache.h"
 #include "src/storage/f2fs/node_page.h"
 #include "src/storage/f2fs/f2fs_internal.h"

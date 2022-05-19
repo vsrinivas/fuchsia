@@ -376,11 +376,17 @@ void VnodeF2fs::RecycleNode() {
     // when there is no dirty Page for the vnode at checkpoint time.
     ZX_ASSERT(GetDirtyPageCount() == 0);
     file_cache_.Reset();
+#ifdef __Fuchsia__
+    vmo_manager_.Reset();
+#endif  // __Fuchsia__
     Vfs()->GetVCache().Downgrade(this);
   } else {
     EvictVnode();
     Deactivate();
     file_cache_.Reset();
+#ifdef __Fuchsia__
+    vmo_manager_.Reset();
+#endif  // __Fuchsia__
     delete this;
   }
 }

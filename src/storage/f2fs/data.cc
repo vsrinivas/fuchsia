@@ -402,13 +402,11 @@ zx_status_t VnodeF2fs::WriteDataPage(LockedPage &page, bool is_reclaim) {
     // this page does not have to be written to disk.
     unsigned offset = GetSize() & (kPageSize - 1);
     if ((page->GetIndex() >= end_index + 1) || !offset) {
-      if (page->ClearDirtyForIo(false)) {
+      if (page->ClearDirtyForIo()) {
         page->SetWriteback();
       }
       return ZX_ERR_OUT_OF_RANGE;
     }
-    // Writeback Pages for dir/vnode do not have mappings.
-    ZX_ASSERT(page->Map() == ZX_OK);
     page->ZeroUserSegment(offset, kPageSize);
   }
 
@@ -421,7 +419,7 @@ zx_status_t VnodeF2fs::WriteDataPage(LockedPage &page, bool is_reclaim) {
   // return kAopWritepageActivate;
   //}
 
-  if (page->ClearDirtyForIo(true)) {
+  if (page->ClearDirtyForIo()) {
     page->SetWriteback();
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     if (zx_status_t err = DoWriteDataPage(page); err != ZX_OK) {
