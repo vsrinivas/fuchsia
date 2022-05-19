@@ -15,7 +15,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/metadata_schema.h"
@@ -158,7 +157,7 @@ class MetadataTest : public UnitTestFixture {
     files::DeletePath(files::JoinPath("/cache", kUtcMonotonicDifferenceFile), /*recursive=*/false);
   }
 
-  void SetUpMetadata(const AnnotationKeys& annotation_allowlist,
+  void SetUpMetadata(const std::set<std::string>& annotation_allowlist,
                      const AttachmentKeys& attachment_allowlist) {
     metadata_ =
         std::make_unique<Metadata>(dispatcher(), &clock_, &redactor_, /*is_first_instance=*/true,
@@ -167,7 +166,7 @@ class MetadataTest : public UnitTestFixture {
 
   // Get the integrity metadata for the provided annotations and attachments, check that it adheres
   // to the schema, and turn it into a json document
-  rapidjson::Document MakeJsonReport(const ::fpromise::result<Annotations>& annotations,
+  rapidjson::Document MakeJsonReport(const ::fpromise::result<feedback::Annotations>& annotations,
                                      const ::fpromise::result<Attachments>& attachments,
                                      const bool missing_non_platform_annotations = false) {
     FX_CHECK(metadata_);
@@ -199,7 +198,7 @@ class MetadataTest : public UnitTestFixture {
 };
 
 TEST_F(MetadataTest, Check_AddsMissingAnnotationsOnNoAnnotations) {
-  const AnnotationKeys annotation_allowlist = {
+  const std::set<std::string> annotation_allowlist = {
       "annotation 1",
   };
 
@@ -210,13 +209,14 @@ TEST_F(MetadataTest, Check_AddsMissingAnnotationsOnNoAnnotations) {
 }
 
 TEST_F(MetadataTest, Check_AddsMissingAnnotationsOnEmptyAnnotations) {
-  const AnnotationKeys annotation_allowlist = {
+  const std::set<std::string> annotation_allowlist = {
       "annotation 1",
   };
 
   SetUpMetadata(annotation_allowlist, /*attachment_allowlist=*/{});
 
-  const auto metadata_json = MakeJsonReport(::fpromise::ok<Annotations>({}), ::fpromise::error());
+  const auto metadata_json =
+      MakeJsonReport(::fpromise::ok<feedback::Annotations>({}), ::fpromise::error());
   HAS_MISSING_ANNOTATION(metadata_json, "annotation 1", "feedback logic error");
 }
 
@@ -243,14 +243,14 @@ TEST_F(MetadataTest, Check_AddsMissingAttachmentsOnEmptyAttachments) {
 }
 
 TEST_F(MetadataTest, Check_FormatAnnotationsProperly) {
-  const AnnotationKeys annotation_allowlist = {
+  const std::set<std::string> annotation_allowlist = {
       "present annotation 1",
       "present annotation 2",
       "missing annotation 1",
       "missing annotation 2",
   };
 
-  const Annotations annotations = {
+  const feedback::Annotations annotations = {
       {"present annotation 1", ""},
       {"present annotation 2", ""},
       {"missing annotation 1", Error::kConnectionError},
@@ -302,7 +302,7 @@ TEST_F(MetadataTest, Check_FormatAttachmentsProperly) {
 }
 
 TEST_F(MetadataTest, Check_NonPlatformAnnotationsComplete) {
-  const Annotations annotations = {
+  const feedback::Annotations annotations = {
       {"non-platform annotation", ""},
   };
 
@@ -315,7 +315,7 @@ TEST_F(MetadataTest, Check_NonPlatformAnnotationsComplete) {
 }
 
 TEST_F(MetadataTest, Check_NonPlatformAnnotationsPartial) {
-  const Annotations annotations = {
+  const feedback::Annotations annotations = {
       {"non-platform annotation", ""},
   };
 
@@ -340,12 +340,12 @@ TEST_F(MetadataTest, Check_NonPlatformAnnotationsMissing) {
 }
 
 TEST_F(MetadataTest, Check_SmokeTest) {
-  const AnnotationKeys annotation_allowlist = {
+  const std::set<std::string> annotation_allowlist = {
       "present annotation 1", "present annotation 2", "missing annotation 1",
       "missing annotation 2", "missing annotation 3",
   };
 
-  const Annotations annotations = {
+  const feedback::Annotations annotations = {
       {"present annotation 1", ""},
       {"present annotation 2", ""},
       {"missing annotation 1", Error::kConnectionError},
@@ -369,9 +369,10 @@ TEST_F(MetadataTest, Check_SmokeTest) {
 
   SetUpMetadata(annotation_allowlist, attachment_allowlist);
 
-  const auto metadata_json = MakeJsonReport(::fpromise::ok<Annotations>(std::move(annotations)),
-                                            ::fpromise::ok<Attachments>(std::move(attachments)),
-                                            /*missing_non_platform_annotations=*/true);
+  const auto metadata_json =
+      MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
+                     ::fpromise::ok<Attachments>(std::move(attachments)),
+                     /*missing_non_platform_annotations=*/true);
 
   HAS_COMPLETE_ATTACHMENT(metadata_json, "complete attachment 1");
   HAS_COMPLETE_ATTACHMENT(metadata_json, "complete attachment 2");
@@ -425,7 +426,7 @@ TEST_F(MetadataTest, Check_EmptySnapshot) {
 }
 
 TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
-  const AnnotationKeys annotation_allowlist = {
+  const std::set<std::string> annotation_allowlist = {
       "annotation 1",
   };
 
@@ -436,7 +437,7 @@ TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
       kPreviousLogsFilePath,
   };
 
-  const Annotations annotations = {
+  const feedback::Annotations annotations = {
       {"annotation 1", "annotation"},
   };
 
@@ -460,8 +461,9 @@ TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
   monotonic = clock_.Now();
   ASSERT_EQ(clock_.UtcNow(&utc), ZX_OK);
 
-  const auto metadata_json = MakeJsonReport(::fpromise::ok<Annotations>(std::move(annotations)),
-                                            ::fpromise::ok<Attachments>(std::move(attachments)));
+  const auto metadata_json =
+      MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
+                     ::fpromise::ok<Attachments>(std::move(attachments)));
 
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentInspect, utc_monotonic_difference);
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentLogKernel, utc_monotonic_difference);
@@ -475,7 +477,7 @@ TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
 }
 
 TEST_F(MetadataTest, Check_NoUtcMontonicDifferenceAvailable) {
-  const AnnotationKeys annotation_allowlist = {
+  const std::set<std::string> annotation_allowlist = {
       "annotation 1",
   };
 
@@ -483,7 +485,7 @@ TEST_F(MetadataTest, Check_NoUtcMontonicDifferenceAvailable) {
       "attachment 1",
   };
 
-  const Annotations annotations = {
+  const feedback::Annotations annotations = {
       {"annotation 1", ""},
   };
 
@@ -493,8 +495,9 @@ TEST_F(MetadataTest, Check_NoUtcMontonicDifferenceAvailable) {
 
   SetUpMetadata(annotation_allowlist, attachment_allowlist);
 
-  const auto metadata_json = MakeJsonReport(::fpromise::ok<Annotations>(std::move(annotations)),
-                                            ::fpromise::ok<Attachments>(std::move(attachments)));
+  const auto metadata_json =
+      MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
+                     ::fpromise::ok<Attachments>(std::move(attachments)));
 
   ASSERT_TRUE(metadata_json["files"].HasMember(kAttachmentAnnotations));
   ASSERT_FALSE(
@@ -505,7 +508,7 @@ TEST_F(MetadataTest, Check_NoUtcMontonicDifferenceAvailable) {
 }
 
 TEST_F(MetadataTest, Check_NoUtcMonotonicDifferenceMissingFile) {
-  const AnnotationKeys annotation_allowlist = {
+  const std::set<std::string> annotation_allowlist = {
       "annotation 1",
   };
 
@@ -516,7 +519,7 @@ TEST_F(MetadataTest, Check_NoUtcMonotonicDifferenceMissingFile) {
       kPreviousLogsFilePath,
   };
 
-  const Annotations annotations = {
+  const feedback::Annotations annotations = {
       {"annotation 1", "annotation"},
   };
 
@@ -540,8 +543,9 @@ TEST_F(MetadataTest, Check_NoUtcMonotonicDifferenceMissingFile) {
   monotonic = clock_.Now();
   ASSERT_EQ(clock_.UtcNow(&utc), ZX_OK);
 
-  const auto metadata_json = MakeJsonReport(::fpromise::ok<Annotations>(std::move(annotations)),
-                                            ::fpromise::ok<Attachments>(std::move(attachments)));
+  const auto metadata_json =
+      MakeJsonReport(::fpromise::ok<feedback::Annotations>(std::move(annotations)),
+                     ::fpromise::ok<Attachments>(std::move(attachments)));
 
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentInspect, utc_monotonic_difference);
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentLogKernel, utc_monotonic_difference);
@@ -558,8 +562,8 @@ TEST_F(MetadataTest, Check_NoUtcMonotonicDifferenceMissingFile) {
 
 struct TestParam {
   std::string test_name;
-  AnnotationKeys annotation_allowlist;
-  Annotations annotations;
+  std::set<std::string> annotation_allowlist;
+  feedback::Annotations annotations;
   bool missing_non_platform_annotations;
   std::string state;
 };

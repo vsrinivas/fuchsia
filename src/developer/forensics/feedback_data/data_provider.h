@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/metrics.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/metadata.h"
@@ -45,7 +46,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
  public:
   DataProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                timekeeper::Clock* clock, RedactorBase* redactor, bool is_first_instance,
-               const AnnotationKeys& annotation_allowlist,
+               const std::set<std::string>& annotation_allowlist,
                const AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
                feedback::AnnotationManager* annotation_manager, Datastore* datastore,
                InspectDataBudget* inspect_data_budget);
@@ -61,13 +62,18 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   size_t NumCurrentServedArchives() { return served_archives_.size(); }
 
  private:
+  ::fpromise::promise<feedback::Annotations> GetAnnotations(const zx::duration timeout);
+
   bool ServeArchive(fsl::SizedVmo archive, zx::channel server_end);
 
   async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;
   Metadata metadata_;
   cobalt::Logger* cobalt_;
+
   feedback::AnnotationManager* annotation_manager_;
+  feedback::AnnotationMetrics annotation_metrics_;
+
   Datastore* datastore_;
   async::Executor executor_;
   InspectDataBudget* inspect_data_budget_;

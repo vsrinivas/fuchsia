@@ -102,6 +102,20 @@ executable("device_id_provider_unittest_exe") {
   ]
 }
 
+executable("encode_unittest_exe") {
+  testonly = true
+
+  sources = [ "encode_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback/annotations",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("feedback_data_unittest_exe") {
   testonly = true
 
@@ -344,6 +358,10 @@ fuchsia_unittest_component("device_id_provider_unittest") {
   ]
 }
 
+fuchsia_unittest_component("encode_unittest") {
+  deps = [ ":encode_unittest_exe" ]
+}
+
 fuchsia_unittest_component("feedback_data_unittest") {
   deps = [
     ":feedback_data_unittest_exe",
@@ -416,6 +434,7 @@ fuchsia_test_package("feedback-tests") {
     ":current_channel_provider_unittest",
     ":data_register_unittest",
     ":device_id_provider_unittest",
+    ":encode_unittest",
     ":feedback_data_unittest",
     ":fidl_provider_unittest",
     ":last_reboot_unittest",

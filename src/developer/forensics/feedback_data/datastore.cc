@@ -10,8 +10,6 @@
 #include <utility>
 
 #include "src/developer/forensics/feedback/redactor_factory.h"
-#include "src/developer/forensics/feedback_data/annotations/static_annotations.h"
-#include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/inspect.h"
 #include "src/developer/forensics/feedback_data/attachments/kernel_log_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/static_attachments.h"
@@ -27,29 +25,16 @@ namespace feedback_data {
 
 Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
-                     RedactorBase* redactor, const AnnotationKeys& annotation_allowlist,
-                     const AttachmentKeys& attachment_allowlist,
-                     feedback::AnnotationManager* annotation_manager,
+                     RedactorBase* redactor, const AttachmentKeys& attachment_allowlist,
                      InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
       redactor_(redactor),
-      annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      annotation_metrics_(cobalt_),
-      annotation_manager_(annotation_manager),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
       system_log_(dispatcher_, services_, &clock_, redactor_, kActiveLoggingPeriod),
       inspect_data_budget_(inspect_data_budget) {
-  FX_CHECK(annotation_allowlist_.size() <= kMaxNumPlatformAnnotations)
-      << "Requesting more platform annotations than the maximum number of platform annotations "
-         "allowed";
-
-  if (annotation_allowlist_.empty()) {
-    FX_LOGS(WARNING)
-        << "Annotation allowlist is empty, no platform annotations will be collected or returned";
-  }
   if (attachment_allowlist_.empty()) {
     FX_LOGS(WARNING)
         << "Attachment allowlist is empty, no platform attachments will be collected or returned";
@@ -66,36 +51,11 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       cobalt_(nullptr),
       // Somewhat risky, but redaction isn't needed in tests that use this constructor.
       redactor_(nullptr),
-      annotation_allowlist_({}),
       attachment_allowlist_({}),
-      annotation_metrics_(cobalt_),
       // Somewhat risky, but the AnnotationManager depends on a bunch of stuff and this constructor
       // is intended for tests.
-      annotation_manager_(nullptr),
       static_attachments_({}),
       system_log_(dispatcher_, services_, &clock_, redactor_, zx::sec(30)) {}
-
-::fpromise::promise<Annotations> Datastore::GetAnnotations(const zx::duration timeout) {
-  if (annotation_allowlist_.empty()) {
-    return ::fpromise::make_result_promise<Annotations>(::fpromise::error());
-  }
-
-  // Copying annotations from the AnnotationManager is safe because the number of platform and
-  // non-platform annotations is bounded by the number of annotations permitted by
-  // fuchsia.feedback.DataProvider.
-  return annotation_manager_->GetAll(timeout).and_then(
-      [this](Annotations& result) -> ::fpromise::result<Annotations> {
-        for (const auto& key : annotation_allowlist_) {
-          if (result.find(key) == result.end()) {
-            FX_LOGS(ERROR) << "No provider collected annotation " << key;
-            result.insert({key, Error::kMissingValue});
-          }
-        }
-        annotation_metrics_.LogMetrics(result);
-
-        return ::fpromise::ok(std::move(result));
-      });
-}
 
 ::fpromise::promise<Attachments> Datastore::GetAttachments(const zx::duration timeout) {
   if (attachment_allowlist_.empty()) {

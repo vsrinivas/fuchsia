@@ -13,9 +13,7 @@
 #include <memory>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
-#include "src/developer/forensics/feedback/annotations/metrics.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
-#include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/system_log.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
@@ -47,20 +45,14 @@ class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             cobalt::Logger* cobalt, RedactorBase* redactor,
-            const AnnotationKeys& annotation_allowlist, const AttachmentKeys& attachment_allowlist,
-            feedback::AnnotationManager* annotation_manager,
-            InspectDataBudget* inspect_data_budget);
+            const AttachmentKeys& attachment_allowlist, InspectDataBudget* inspect_data_budget);
 
-  ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout);
   ::fpromise::promise<Attachments> GetAttachments(zx::duration timeout);
 
   // Exposed for testing purposes.
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             const char* limit_data_flag_path);
 
-  Annotations GetImmediatelyAvailableAnnotations() {
-    return annotation_manager_->ImmediatelyAvailable();
-  }
   const Attachments& GetStaticAttachments() const { return static_attachments_; }
 
   void DropStaticAttachment(const AttachmentKey& key, Error error);
@@ -76,11 +68,8 @@ class Datastore {
   cobalt::Logger* cobalt_;
   RedactorBase* redactor_;
   timekeeper::SystemClock clock_;
-  const AnnotationKeys annotation_allowlist_;
   AttachmentKeys attachment_allowlist_;
 
-  feedback::AnnotationMetrics annotation_metrics_;
-  feedback::AnnotationManager* annotation_manager_;
   Attachments static_attachments_;
 
   SystemLog system_log_;

@@ -9,7 +9,6 @@
 
 #include <string>
 
-#include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 
 namespace forensics {
@@ -18,7 +17,7 @@ namespace feedback_data {
 // Feedback data provider configuration.
 struct Config {
   // Set of annotation keys to return data for in fuchsia.feedback.DataProvider/GetSnapshot.
-  AnnotationKeys annotation_allowlist;
+  std::set<std::string> annotation_allowlist;
 
   // Set of attachment keys to return data for in fuchsia.feedback.DataProvider/GetSnapshot.
   AttachmentKeys attachment_allowlist;

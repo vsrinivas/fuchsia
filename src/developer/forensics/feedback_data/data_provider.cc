@@ -18,8 +18,7 @@
 #include <memory>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
-#include "src/developer/forensics/feedback_data/annotations/types.h"
-#include "src/developer/forensics/feedback_data/annotations/utils.h"
+#include "src/developer/forensics/feedback/annotations/encode.h"
 #include "src/developer/forensics/feedback_data/attachments/screenshot_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
@@ -53,7 +52,8 @@ const zx::duration kScreenshotTimeout = zx::sec(10);
 DataProvider::DataProvider(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services,
                            timekeeper::Clock* clock, RedactorBase* redactor,
-                           const bool is_first_instance, const AnnotationKeys& annotation_allowlist,
+                           const bool is_first_instance,
+                           const std::set<std::string>& annotation_allowlist,
                            const AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
                            feedback::AnnotationManager* annotation_manager, Datastore* datastore,
                            InspectDataBudget* inspect_data_budget)
@@ -63,25 +63,30 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
                 attachment_allowlist),
       cobalt_(cobalt),
       annotation_manager_(annotation_manager),
+      annotation_metrics_(cobalt_),
       datastore_(datastore),
       executor_(dispatcher_),
       inspect_data_budget_(inspect_data_budget) {}
 
+::fpromise::promise<feedback::Annotations> DataProvider::GetAnnotations(
+    const zx::duration timeout) {
+  return annotation_manager_->GetAll(timeout).and_then([this](feedback::Annotations& annotations) {
+    annotation_metrics_.LogMetrics(annotations);
+    return ::fpromise::ok(std::move(annotations));
+  });
+}
+
 void DataProvider::GetAnnotations(fuchsia::feedback::GetAnnotationsParameters params,
                                   GetAnnotationsCallback callback) {
-  const zx::duration timeout = (params.has_collection_timeout_per_annotation())
-                                   ? zx::duration(params.collection_timeout_per_annotation())
-                                   : kDefaultDataTimeout;
-
-  auto promise = datastore_->GetAnnotations(timeout).and_then(
-      [callback = std::move(callback)](Annotations& annotations) {
-        callback(std::move(fuchsia::feedback::Annotations().set_annotations(
-            ToFeedbackAnnotationVector(annotations))));
-      });
+  const auto timeout = (params.has_collection_timeout_per_annotation())
+                           ? zx::duration(params.collection_timeout_per_annotation())
+                           : kDefaultDataTimeout;
 
   // TODO(fxbug.dev/74102): Track how long GetAnnotations took via Cobalt.
-
-  executor_.schedule_task(std::move(promise));
+  executor_.schedule_task(GetAnnotations(timeout).and_then(
+      [callback = std::move(callback)](feedback::Annotations& annotations) {
+        callback(feedback::Encode<fuchsia::feedback::Annotations>(annotations));
+      }));
 }
 
 void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
@@ -97,65 +102,60 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
 
   const uint64_t timer_id = cobalt_->StartTimer();
   auto promise =
-      ::fpromise::join_promises(datastore_->GetAnnotations(timeout),
-                                datastore_->GetAttachments(timeout))
-          .and_then(
-              [this, channel = std::move(channel)](
-                  std::tuple<::fpromise::result<Annotations>, ::fpromise::result<Attachments>>&
-                      annotations_and_attachments) mutable {
-                Snapshot snapshot;
-                std::map<std::string, std::string> attachments;
+      ::fpromise::join_promises(GetAnnotations(timeout), datastore_->GetAttachments(timeout))
+          .and_then([this, channel = std::move(channel)](
+                        std::tuple<::fpromise::result<feedback::Annotations>,
+                                   ::fpromise::result<Attachments>>& results) mutable {
+            Snapshot snapshot;
+            std::map<std::string, std::string> snapshot_files;
 
-                const auto& annotations_result = std::get<0>(annotations_and_attachments);
-                if (annotations_result.is_ok()) {
-                  snapshot.set_annotations(ToFeedbackAnnotationVector(annotations_result.value()));
+            // Add the annotations to the FIDL object and as file in the snapshot itself.
+            if (const auto& result = std::get<0>(results); result.is_ok()) {
+              const auto& annotations = result.value();
+
+              if (auto fidl = feedback::Encode<fuchsia::feedback::Annotations>(annotations);
+                  fidl.has_annotations()) {
+                snapshot.set_annotations(std::move(fidl.annotations()));
+              }
+
+              auto file = feedback::Encode<std::string>(annotations);
+              snapshot_files[kAttachmentAnnotations] = std::move(file);
+            } else {
+              FX_LOGS(WARNING) << "Failed to retrieve any annotations";
+            }
+
+            if (const auto& result = std::get<1>(results); result.is_ok()) {
+              for (const auto& [key, value] : result.value()) {
+                if (value.HasValue()) {
+                  snapshot_files[key] = value.Value();
+                }
+              }
+            } else {
+              FX_LOGS(WARNING) << "Failed to retrieve any snapshot files";
+            }
+
+            snapshot_files[kAttachmentMetadata] =
+                metadata_.MakeMetadata(std::get<0>(results), std::get<1>(results), uuid::Generate(),
+                                       annotation_manager_->IsMissingNonPlatformAnnotations());
+
+            // We bundle the attachments into a single archive.
+            if (!snapshot_files.empty()) {
+              fsl::SizedVmo archive;
+              std::map<std::string, ArchiveFileStats> file_size_stats;
+              if (Archive(snapshot_files, &archive, &file_size_stats)) {
+                inspect_data_budget_->UpdateBudget(file_size_stats);
+                cobalt_->LogCount(SnapshotVersion::kCobalt, (uint64_t)archive.size());
+                if (channel) {
+                  ServeArchive(std::move(archive), std::move(channel.value()));
                 } else {
-                  FX_LOGS(WARNING) << "Failed to retrieve any annotations";
+                  snapshot.set_archive(
+                      {.key = kSnapshotFilename, .value = std::move(archive).ToTransport()});
                 }
+              }
+            }
 
-                const auto& attachments_result = std::get<1>(annotations_and_attachments);
-                if (attachments_result.is_ok()) {
-                  for (const auto& [key, value] : attachments_result.value()) {
-                    if (value.HasValue()) {
-                      attachments[key] = value.Value();
-                    }
-                  }
-                } else {
-                  FX_LOGS(WARNING) << "Failed to retrieve any attachments";
-                }
-
-                // We also add the annotations as a single extra attachment.
-                // This is useful for clients that surface the annotations differently in the UI
-                // but still want all the annotations to be easily downloadable in one file.
-                if (snapshot.has_annotations()) {
-                  const auto annotations_json = ToJsonString(snapshot.annotations());
-                  if (annotations_json.has_value()) {
-                    attachments[kAttachmentAnnotations] = annotations_json.value();
-                  }
-                }
-
-                attachments[kAttachmentMetadata] =
-                    metadata_.MakeMetadata(annotations_result, attachments_result, uuid::Generate(),
-                                           annotation_manager_->IsMissingNonPlatformAnnotations());
-
-                // We bundle the attachments into a single archive.
-                if (!attachments.empty()) {
-                  fsl::SizedVmo archive;
-                  std::map<std::string, ArchiveFileStats> file_size_stats;
-                  if (Archive(attachments, &archive, &file_size_stats)) {
-                    inspect_data_budget_->UpdateBudget(file_size_stats);
-                    cobalt_->LogCount(SnapshotVersion::kCobalt, (uint64_t)archive.size());
-                    if (channel) {
-                      ServeArchive(std::move(archive), std::move(channel.value()));
-                    } else {
-                      snapshot.set_archive(
-                          {.key = kSnapshotFilename, .value = std::move(archive).ToTransport()});
-                    }
-                  }
-                }
-
-                return ::fpromise::ok(std::move(snapshot));
-              })
+            return ::fpromise::ok(std::move(snapshot));
+          })
           .then([this, callback = std::move(callback),
                  timer_id](::fpromise::result<Snapshot>& result) {
             if (result.is_error()) {

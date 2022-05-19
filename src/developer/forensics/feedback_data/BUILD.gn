@@ -42,7 +42,6 @@ source_set("config") {
   ]
 
   public_deps = [
-    "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//zircon/system/ulib/zx",
   ]
@@ -80,6 +79,7 @@ source_set("data_provider") {
     ":metadata",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/utils/cobalt",
     "//src/developer/forensics/utils/redact",
     "//src/lib/timekeeper:system",
@@ -95,8 +95,6 @@ source_set("data_provider") {
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data/annotations:types",
-    "//src/developer/forensics/feedback_data/annotations:utils",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:archive",
@@ -137,7 +135,6 @@ source_set("datastore") {
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback:redactor_factory",
-    "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:previous_boot_file",
@@ -150,7 +147,6 @@ source_set("datastore") {
   deps = [
     ":constants",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data/annotations:static_annotations",
     "//src/developer/forensics/feedback_data/attachments:static_attachments",
   ]
 }
@@ -233,7 +229,6 @@ source_set("metadata") {
 
   public_deps = [
     "//sdk/lib/fit-promise",
-    "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:utc_time_provider",
     "//src/developer/forensics/utils/redact",

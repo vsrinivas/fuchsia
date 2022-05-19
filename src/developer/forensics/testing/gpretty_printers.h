@@ -15,7 +15,6 @@
 #include <src/lib/fostr/fidl/fuchsia/mem/formatting.h>
 #include <src/lib/fostr/indent.h>
 
-#include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -84,18 +83,6 @@ inline std::string Format(const std::string& input) {
 }
 
 }  // namespace pretty
-
-inline void PrintTo(const AnnotationOr& value, std::ostream* os) {
-  *os << fostr::Indent;
-  *os << "{ ";
-  if (value.HasValue()) {
-    *os << "HAS VALUE : " << value.Value();
-  } else {
-    *os << "ERROR : " << ToString(value.Error());
-  }
-  *os << " }";
-  *os << fostr::Outdent;
-}
 
 inline void PrintTo(const AttachmentValue& value, std::ostream* os) {
   *os << fostr::Indent;

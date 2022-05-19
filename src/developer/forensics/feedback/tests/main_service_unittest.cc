@@ -185,9 +185,11 @@ TEST_F(MainServiceTest, FeedbackData) {
   component_data_ptr_->Upsert(fuchsia::feedback::ComponentData{},
                               [&component_data_called]() { component_data_called = true; });
 
+  fuchsia::feedback::GetSnapshotParameters snapshot_params;
+  snapshot_params.set_collection_timeout_per_data(0u);
   bool data_provider_called = false;
   data_provider_ptr_->GetSnapshot(
-      fuchsia::feedback::GetSnapshotParameters{},
+      std::move(snapshot_params),
       [&data_provider_called](fuchsia::feedback::Snapshot) { data_provider_called = true; });
 
   bool data_provider_controller_called = false;

@@ -21,8 +21,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
-#include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
@@ -58,12 +56,6 @@ using ::testing::UnorderedElementsAreArray;
 
 constexpr zx::duration kTimeout = zx::sec(30);
 
-// Allowlist to use in test cases where the annotations don't matter, but where we want to avoid
-// spurious logs due to empty annotation allowlist.
-const AnnotationKeys kDefaultAnnotationsToAvoidSpuriousLogs = {
-    kAnnotationBuildIsDebug,
-    kAnnotationDeviceNumCPUs,
-};
 // Allowlist to use in test cases where the attachments don't matter, but where we want to avoid
 // spurious logs due to empty attachment allowlist.
 const AttachmentKeys kDefaultAttachmentsToAvoidSpuriousLogs = {
@@ -86,18 +78,14 @@ class DatastoreTest : public UnitTestFixture {
   void TearDown() override { FX_CHECK(files::DeletePath(kCurrentLogsDir, /*recursive=*/true)); }
 
  protected:
-  void SetUpDatastore(const AnnotationKeys& annotation_allowlist,
-                      const AttachmentKeys& attachment_allowlist,
+  void SetUpDatastore(const AttachmentKeys& attachment_allowlist,
                       const std::map<std::string, ErrorOr<std::string>>& startup_annotations = {}) {
     std::set<std::string> allowlist;
     for (const auto& [k, _] : startup_annotations) {
       allowlist.insert(k);
     }
-    annotation_manager_ =
-        std::make_unique<feedback::AnnotationManager>(dispatcher(), allowlist, startup_annotations);
     datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), &redactor_,
-                                             annotation_allowlist, attachment_allowlist,
-                                             annotation_manager_.get(), inspect_data_budget_.get());
+                                             attachment_allowlist, inspect_data_budget_.get());
   }
 
   void SetUpDiagnosticsServer(const std::string& inspect_chunk) {
@@ -129,16 +117,6 @@ class DatastoreTest : public UnitTestFixture {
     FX_CHECK(files::WriteFile(filepath, content.c_str(), content.size()));
   }
 
-  ::fpromise::result<Annotations> GetAnnotations() {
-    FX_CHECK(datastore_);
-
-    ::fpromise::result<Annotations> result;
-    executor_.schedule_task(datastore_->GetAnnotations(kTimeout).then(
-        [&result](::fpromise::result<Annotations>& res) { result = std::move(res); }));
-    RunLoopFor(kTimeout);
-    return result;
-  }
-
   ::fpromise::result<Attachments> GetAttachments() {
     FX_CHECK(datastore_);
 
@@ -149,15 +127,11 @@ class DatastoreTest : public UnitTestFixture {
     return result;
   }
 
-  Annotations GetImmediatelyAvailableAnnotations() {
-    return datastore_->GetImmediatelyAvailableAnnotations();
-  }
   Attachments GetStaticAttachments() { return datastore_->GetStaticAttachments(); }
 
  private:
   async::Executor executor_;
   timekeeper::TestClock clock_;
-  std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
   std::unique_ptr<cobalt::Logger> cobalt_;
   IdentityRedactor redactor_{inspect::BoolProperty()};
 
@@ -172,91 +146,11 @@ class DatastoreTest : public UnitTestFixture {
   std::unique_ptr<stubs::DiagnosticsArchiveBase> diagnostics_server_;
 };
 
-TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
-  // We list the annotations and attachments that are likely on every build to minimize the logspam.
-  SetUpDatastore(
-      {
-          kAnnotationBuildBoard,
-          kAnnotationBuildProduct,
-          kAnnotationBuildLatestCommitDate,
-          kAnnotationBuildVersion,
-          kAnnotationBuildVersionPreviousBoot,
-          kAnnotationBuildIsDebug,
-          kAnnotationDeviceBoardName,
-          kAnnotationDeviceNumCPUs,
-          kAnnotationSystemBootIdCurrent,
-          kAnnotationSystemBootIdPrevious,
-          kAnnotationSystemLastRebootReason,
-          kAnnotationSystemLastRebootUptime,
-      },
-      {
-          kAttachmentBuildSnapshot,
-      },
-      {
-          {kAnnotationBuildBoard, "board"},
-          {kAnnotationBuildProduct, Error::kTimeout},
-          {kAnnotationBuildLatestCommitDate, "commit-date"},
-          {kAnnotationBuildVersion, "version"},
-          {kAnnotationBuildVersionPreviousBoot, Error::kMissingValue},
-          {kAnnotationBuildIsDebug, "true"},
-          {kAnnotationDeviceBoardName, "board-name"},
-          {kAnnotationDeviceNumCPUs, "4"},
-          {kAnnotationSystemBootIdCurrent, "boot-id"},
-          {kAnnotationSystemBootIdPrevious, "previous-boot-id"},
-          {kAnnotationSystemLastRebootReason, Error::kMissingValue},
-          {kAnnotationSystemLastRebootUptime, Error::kMissingValue},
-      });
-
-  // There is not much we can assert here as no missing annotation nor attachment is fatal and we
-  // cannot expect annotations or attachments to be present.
-  EXPECT_THAT(
-      GetImmediatelyAvailableAnnotations(),
-      UnorderedElementsAreArray({
-          Pair(kAnnotationBuildBoard, ErrorOr<std::string>("board")),
-          Pair(kAnnotationBuildProduct, ErrorOr<std::string>(Error::kTimeout)),
-          Pair(kAnnotationBuildLatestCommitDate, ErrorOr<std::string>("commit-date")),
-          Pair(kAnnotationBuildVersion, ErrorOr<std::string>("version")),
-          Pair(kAnnotationBuildVersionPreviousBoot, ErrorOr<std::string>(Error::kMissingValue)),
-          Pair(kAnnotationBuildIsDebug, ErrorOr<std::string>("true")),
-          Pair(kAnnotationDeviceBoardName, ErrorOr<std::string>("board-name")),
-          Pair(kAnnotationDeviceNumCPUs, ErrorOr<std::string>("4")),
-          Pair(kAnnotationSystemBootIdCurrent, ErrorOr<std::string>("boot-id")),
-          Pair(kAnnotationSystemBootIdPrevious, ErrorOr<std::string>("previous-boot-id")),
-          Pair(kAnnotationSystemLastRebootReason, ErrorOr<std::string>(Error::kMissingValue)),
-          Pair(kAnnotationSystemLastRebootUptime, ErrorOr<std::string>(Error::kMissingValue)),
-      }));
-  GetStaticAttachments();
-  GetAnnotations();
-  GetAttachments();
-}
-
-TEST_F(DatastoreTest, GetAnnotations_FailOn_EmptyAnnotationAllowlist) {
-  SetUpDatastore({}, kDefaultAttachmentsToAvoidSpuriousLogs);
-
-  ::fpromise::result<Annotations> annotations = GetAnnotations();
-  ASSERT_TRUE(annotations.is_error());
-
-  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
-}
-
-TEST_F(DatastoreTest, GetAnnotations_FailOn_OnlyUnknownAnnotationInAllowlist) {
-  SetUpDatastore({"unknown.annotation"}, kDefaultAttachmentsToAvoidSpuriousLogs);
-
-  ::fpromise::result<Annotations> annotations = GetAnnotations();
-
-  ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.value(), ElementsAreArray({
-                                       Pair("unknown.annotation", Error::kMissingValue),
-                                   }));
-
-  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
-}
-
 TEST_F(DatastoreTest, GetAttachments_Inspect) {
   // CollectInspectData() has its own set of unit tests so we only cover one chunk of Inspect data
   // here to check that we are attaching the Inspect data.
   SetUpDiagnosticsServer("foo");
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentInspect});
+  SetUpDatastore({kAttachmentInspect});
 
   ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
@@ -269,7 +163,7 @@ TEST_F(DatastoreTest, GetAttachments_Inspect) {
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
   const std::string previous_log_contents = "LAST SYSTEM LOG";
   WriteFile(kPreviousLogsFilePath, previous_log_contents);
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
+  SetUpDatastore({kAttachmentLogSystemPrevious});
 
   ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
@@ -287,7 +181,7 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslogIsEmpty) {
   const std::string previous_log_contents = "";
   WriteFile(kPreviousLogsFilePath, previous_log_contents);
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
+  SetUpDatastore({kAttachmentLogSystemPrevious});
 
   ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
@@ -305,7 +199,7 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogIsEmpty) {
 TEST_F(DatastoreTest, GetAttachments_DropPreviousSyslog) {
   const std::string previous_log_contents = "LAST SYSTEM LOG";
   WriteFile(kPreviousLogsFilePath, previous_log_contents);
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
+  SetUpDatastore({kAttachmentLogSystemPrevious});
 
   datastore_->DropStaticAttachment(kAttachmentLogSystemPrevious, Error::kCustom);
 
@@ -341,7 +235,7 @@ TEST_F(DatastoreTest, GetAttachments_SysLog) {
   }
 ]
 )JSON");
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystem});
+  SetUpDatastore({kAttachmentLogSystem});
 
   ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
@@ -354,7 +248,7 @@ TEST_F(DatastoreTest, GetAttachments_SysLog) {
 }
 
 TEST_F(DatastoreTest, GetAttachments_FailOn_EmptyAttachmentAllowlist) {
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {});
+  SetUpDatastore({});
 
   ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_error());
@@ -363,7 +257,7 @@ TEST_F(DatastoreTest, GetAttachments_FailOn_EmptyAttachmentAllowlist) {
 }
 
 TEST_F(DatastoreTest, GetAttachments_FailOn_OnlyUnknownAttachmentInAllowlist) {
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {"unknown.attachment"});
+  SetUpDatastore({"unknown.attachment"});
 
   ::fpromise::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_error());
@@ -378,9 +272,9 @@ TEST_F(DatastoreTest, GetAttachments_CobaltLogsTimeouts) {
   //
   // Inspect and system log share the same stub server so we only test one of the two (i.e.
   // Inspect).
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {
-                                                             kAttachmentInspect,
-                                                         });
+  SetUpDatastore({
+      kAttachmentInspect,
+  });
 
   SetUpDiagnosticsServer(std::make_unique<stubs::DiagnosticsArchive>(
       std::make_unique<stubs::DiagnosticsBatchIteratorNeverResponds>()));

@@ -25,7 +25,6 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
-#include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/metadata.h"
@@ -54,10 +53,9 @@ using fuchsia::feedback::Screenshot;
 using fuchsia::feedback::Snapshot;
 using testing::UnorderedElementsAreArray;
 
-const AnnotationKeys kDefaultAnnotations = {
-    kAnnotationBuildBoard,   kAnnotationBuildLatestCommitDate, kAnnotationBuildProduct,
-    kAnnotationBuildVersion, kAnnotationDeviceBoardName,
-};
+const std::set<std::string> kDefaultAnnotations = {
+    feedback::kBuildBoardKey, feedback::kBuildLatestCommitDateKey, feedback::kBuildProductKey,
+    feedback::kBuildVersionKey, feedback::kDeviceBoardNameKey};
 const AttachmentKeys kDefaultAttachments = {
     kAttachmentBuildSnapshot,
 };
@@ -150,7 +148,7 @@ class DataProviderTest : public UnitTestFixture {
 
  protected:
   void SetUpDataProvider(
-      const AnnotationKeys& annotation_allowlist = kDefaultAnnotations,
+      const std::set<std::string>& annotation_allowlist = kDefaultAnnotations,
       const AttachmentKeys& attachment_allowlist = kDefaultAttachments,
       const std::map<std::string, ErrorOr<std::string>>& startup_annotations = {}) {
     std::set<std::string> allowlist;
@@ -160,8 +158,7 @@ class DataProviderTest : public UnitTestFixture {
     annotation_manager_ =
         std::make_unique<feedback::AnnotationManager>(dispatcher(), allowlist, startup_annotations);
     datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), &redactor_,
-                                             annotation_allowlist, attachment_allowlist,
-                                             annotation_manager_.get(), inspect_data_budget_.get());
+                                             attachment_allowlist, inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), &clock_, &redactor_, /*is_first_instance=*/true,
         annotation_allowlist, attachment_allowlist, cobalt_.get(), annotation_manager_.get(),
@@ -487,10 +484,9 @@ TEST_F(DataProviderTest, GetSnapshot_AnnotationsAsAttachment) {
   rapidjson::Document json;
   ASSERT_FALSE(json.Parse(annotations_json.c_str()).HasParseError());
   rapidjson::Document schema_json;
-  ASSERT_FALSE(
-      schema_json
-          .Parse(fxl::StringPrintf(
-              R"({
+  ASSERT_FALSE(schema_json
+                   .Parse(fxl::StringPrintf(
+                       R"({
   "type": "object",
  "properties": {
     "%s": {
@@ -514,9 +510,10 @@ TEST_F(DataProviderTest, GetSnapshot_AnnotationsAsAttachment) {
   },
   "additionalProperties": false
 })",
-              kAnnotationBuildBoard, kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
-              kAnnotationBuildProduct, kAnnotationBuildVersion, kAnnotationDeviceBoardName))
-          .HasParseError());
+                       feedback::kBuildBoardKey, feedback::kBuildIsDebugKey,
+                       feedback::kBuildLatestCommitDateKey, feedback::kBuildProductKey,
+                       feedback::kBuildVersionKey, feedback::kDeviceBoardNameKey))
+                   .HasParseError());
   rapidjson::SchemaDocument schema(schema_json);
   rapidjson::SchemaValidator validator(schema);
   EXPECT_TRUE(json.Accept(validator));
@@ -537,7 +534,7 @@ TEST_F(DataProviderTest, GetSnapshot_SingleAttachmentOnEmptyAttachmentAllowlist)
 
   Snapshot snapshot = GetSnapshot();
   auto unpacked_attachments = UnpackSnapshot(snapshot);
-  ASSERT_NE(unpacked_attachments.find(kAttachmentAnnotations), unpacked_attachments.end());
+  EXPECT_EQ(unpacked_attachments.count(kAttachmentAnnotations), 1u);
 }
 
 }  // namespace

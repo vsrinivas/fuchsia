@@ -11,7 +11,7 @@
 #include <optional>
 #include <string>
 
-#include "src/developer/forensics/feedback_data/annotations/types.h"
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/developer/forensics/utils/utc_time_provider.h"
@@ -24,7 +24,7 @@ namespace feedback_data {
 class Metadata {
  public:
   Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock, RedactorBase* redactor,
-           bool is_first_instance, const AnnotationKeys& annotation_allowlist,
+           bool is_first_instance, const std::set<std::string>& annotation_allowlist,
            const AttachmentKeys& attachment_allowlist);
 
   // Return a JSON metadata string.
@@ -32,7 +32,7 @@ class Metadata {
   // |missing_non_platform_annotations| indicates whether some non-platform annotations are
   // missing, i.e. whether clients tried to insert more non-platform annotations than the maximum
   // number of non-platform annotations the Datastore can hold.
-  std::string MakeMetadata(const ::fpromise::result<Annotations>& annotations,
+  std::string MakeMetadata(const ::fpromise::result<feedback::Annotations>& annotations,
                            const ::fpromise::result<Attachments>& attachments,
                            const std::string& snapshot_uuid, bool missing_non_platform_annotations);
 
@@ -40,7 +40,7 @@ class Metadata {
 
  private:
   std::string log_redaction_canary_;
-  AnnotationKeys annotation_allowlist_;
+  std::set<std::string> annotation_allowlist_;
   AttachmentKeys attachment_allowlist_;
 
   UtcTimeProvider utc_provider_;

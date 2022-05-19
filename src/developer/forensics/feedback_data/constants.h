@@ -21,51 +21,6 @@ namespace forensics {
 namespace feedback_data {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// Annotations
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-const uint32_t kMaxNumPlatformAnnotations = 30u;
-const uint32_t kMaxNumDebugAnnotations = 2u;
-static_assert(kMaxNumPlatformAnnotations + feedback::kMaxNumPlatformAnnotations +
-                      feedback::kMaxNumNonPlatformAnnotations + kMaxNumDebugAnnotations ==
-                  fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED,
-              "The max number of provided annotations has to be split between a max number of "
-              "platform annotations, a max number of non-platform annotations, and a max number of "
-              "debug annotations");
-
-// Platform annotation keys.
-constexpr const char* kAnnotationBuildBoard = feedback::kBuildBoardKey;
-constexpr const char* kAnnotationBuildIsDebug = feedback::kBuildIsDebugKey;
-constexpr const char* kAnnotationBuildLatestCommitDate = feedback::kBuildLatestCommitDateKey;
-constexpr const char* kAnnotationBuildProduct = feedback::kBuildProductKey;
-constexpr const char* kAnnotationBuildVersion = feedback::kBuildVersionKey;
-constexpr const char* kAnnotationBuildVersionPreviousBoot = feedback::kBuildVersionPreviousBootKey;
-constexpr const char* kAnnotationDeviceBoardName = feedback::kDeviceBoardNameKey;
-constexpr const char* kAnnotationDeviceFeedbackId = feedback::kDeviceFeedbackIdKey;
-constexpr const char* kAnnotationDeviceNumCPUs = feedback::kDeviceNumCPUsKey;
-constexpr const char* kAnnotationHardwareBoardName = feedback::kHardwareBoardNameKey;
-constexpr const char* kAnnotationHardwareBoardRevision = feedback::kHardwareBoardRevisionKey;
-constexpr const char* kAnnotationHardwareProductLanguage = feedback::kHardwareProductLanguageKey;
-constexpr const char* kAnnotationHardwareProductLocaleList =
-    feedback::kHardwareProductLocaleListKey;
-constexpr const char* kAnnotationHardwareProductManufacturer =
-    feedback::kHardwareProductManufacturerKey;
-constexpr const char* kAnnotationHardwareProductModel = feedback::kHardwareProductModelKey;
-constexpr const char* kAnnotationHardwareProductName = feedback::kHardwareProductNameKey;
-constexpr const char* kAnnotationHardwareProductRegulatoryDomain =
-    feedback::kHardwareProductRegulatoryDomainKey;
-constexpr const char* kAnnotationHardwareProductSKU = feedback::kHardwareProductSKUKey;
-constexpr const char* kAnnotationSystemBootIdCurrent = feedback::kSystemBootIdCurrentKey;
-constexpr const char* kAnnotationSystemBootIdPrevious = feedback::kSystemBootIdPreviousKey;
-constexpr const char* kAnnotationSystemLastRebootReason = feedback::kSystemLastRebootReasonKey;
-constexpr const char* kAnnotationSystemLastRebootUptime = feedback::kSystemLastRebootUptimeKey;
-constexpr const char* kAnnotationSystemTimezonePrimary = feedback::kSystemTimezonePrimaryKey;
-constexpr const char* kAnnotationSystemUpdateChannelCurrent =
-    feedback::kSystemUpdateChannelCurrentKey;
-constexpr const char* kAnnotationSystemUpdateChannelTarget =
-    feedback::kSystemUpdateChannelTargetKey;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
 // Attachments
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 

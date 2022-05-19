@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_CONSTANTS_H_
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_CONSTANTS_H_
 
+#include <fuchsia/feedback/cpp/fidl.h>
+
 #include <set>
 #include <string>
 
@@ -49,11 +51,20 @@ constexpr const char kSystemUpdateChannelTargetKey[] = "system.update-channel.ta
 // RESTRICTIONS
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Only 30 non-platform annotations can be registered.
-const uint32_t kMaxNumNonPlatformAnnotations = 30u;
+// 32 annotations may be collected by the platform.
+constexpr uint32_t kMaxNumPlatformAnnotations = 32u;
 
-// Only 2 platform annotations are provided by the AnnotationManager.
-const uint32_t kMaxNumPlatformAnnotations = 2u;
+// 30 non-platform annotations may be registered by non-platform components.
+constexpr uint32_t kMaxNumNonPlatformAnnotations = 30u;
+
+// 2 annotations are permitted to be from Feedback itself for debugging purposes.
+constexpr uint32_t kMaxNumDebugAnnotations = 2u;
+
+static_assert(kMaxNumPlatformAnnotations + kMaxNumNonPlatformAnnotations +
+                      kMaxNumDebugAnnotations ==
+                  fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED,
+              "Annotations must be allocated to the platform, non-platform components, and "
+              "Feedback itself (for debugging)");
 
 // Reserved namespaces for platform annotations. Components are not allowed to use these namespaces
 // when supplying non-platform annotations.

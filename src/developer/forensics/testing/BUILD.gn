@@ -65,7 +65,6 @@ source_set("gpretty_printers") {
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/cobalt",

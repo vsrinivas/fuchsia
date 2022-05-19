@@ -30,7 +30,15 @@ AnnotationProviders::AnnotationProviders(
       annotation_manager_(
           dispatcher_, allowlist, static_annotations, &data_register_, {&time_provider_},
           {&board_info_provider_, &product_info_provider_, &current_channel_provider_},
-          {&timezone_provider_, device_id_provider_.get()}, {&target_channel_provider_}) {}
+          {&timezone_provider_, device_id_provider_.get()}, {&target_channel_provider_}) {
+  FX_CHECK(allowlist.size() <= kMaxNumPlatformAnnotations)
+      << "Requesting " << allowlist.size() << " annotations when " << kMaxNumPlatformAnnotations
+      << " are alloted for the platform";
+
+  if (allowlist.empty()) {
+    FX_LOGS(WARNING) << "Annotation allowlist is empty, no platform annotations will be collected";
+  }
+}
 
 void AnnotationProviders::Handle(
     ::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request,

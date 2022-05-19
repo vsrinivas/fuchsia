@@ -49,9 +49,10 @@ std::string ToString(const enum AttachmentValue::State state) {
 }
 
 // Create a complete list set of annotations from the collected annotations and the allowlist.
-Annotations AllAnnotations(const AnnotationKeys& allowlist,
-                           const ::fpromise::result<Annotations>& annotations_result) {
-  Annotations all_annotations;
+feedback::Annotations AllAnnotations(
+    const std::set<std::string>& allowlist,
+    const ::fpromise::result<feedback::Annotations>& annotations_result) {
+  feedback::Annotations all_annotations;
   if (annotations_result.is_ok()) {
     all_annotations.insert(annotations_result.value().cbegin(), annotations_result.value().cend());
   }
@@ -156,10 +157,11 @@ void AddAttachments(const AttachmentKeys& attachment_allowlist,
   }
 }
 
-void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
-                        const ::fpromise::result<Annotations>& annotations_result,
+void AddAnnotationsJson(const std::set<std::string>& annotation_allowlist,
+                        const ::fpromise::result<feedback::Annotations>& annotations_result,
                         const bool missing_non_platform_annotations, Document* metadata_json) {
-  const Annotations all_annotations = AllAnnotations(annotation_allowlist, annotations_result);
+  const feedback::Annotations all_annotations =
+      AllAnnotations(annotation_allowlist, annotations_result);
 
   bool has_non_platform = all_annotations.size() > annotation_allowlist.size();
   if (annotation_allowlist.empty() && !(has_non_platform || missing_non_platform_annotations)) {
@@ -231,7 +233,7 @@ void AddLogRedactionCanary(const std::string& log_redaction_canary, Document* me
 }  // namespace
 
 Metadata::Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock, RedactorBase* redactor,
-                   const bool is_first_instance, const AnnotationKeys& annotation_allowlist,
+                   const bool is_first_instance, const std::set<std::string>& annotation_allowlist,
                    const AttachmentKeys& attachment_allowlist)
     : log_redaction_canary_(redactor->UnredactedCanary()),
       annotation_allowlist_(annotation_allowlist),
@@ -241,10 +243,10 @@ Metadata::Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock, Red
   redactor->Redact(log_redaction_canary_);
 }
 
-std::string Metadata::MakeMetadata(const ::fpromise::result<Annotations>& annotations_result,
-                                   const ::fpromise::result<Attachments>& attachments_result,
-                                   const std::string& snapshot_uuid,
-                                   bool missing_non_platform_annotations) {
+std::string Metadata::MakeMetadata(
+    const ::fpromise::result<feedback::Annotations>& annotations_result,
+    const ::fpromise::result<Attachments>& attachments_result, const std::string& snapshot_uuid,
+    bool missing_non_platform_annotations) {
   Document metadata_json(kObjectType);
   auto& allocator = metadata_json.GetAllocator();
 
