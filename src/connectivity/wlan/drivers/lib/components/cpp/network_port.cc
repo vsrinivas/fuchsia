@@ -1,7 +1,9 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include <wlan/drivers/components/network_port.h>
+#include "src/connectivity/wlan/drivers/lib/components/cpp/include/wlan/drivers/components/network_port.h"
+
+#include <lib/ddk/debug.h>
 
 namespace wlan::drivers::components {
 
@@ -14,6 +16,10 @@ NetworkPort::NetworkPort(network_device_ifc_protocol_t netdev_ifc, Callbacks& if
 NetworkPort::~NetworkPort() {
   if (netdev_ifc_.is_valid()) {
     netdev_ifc_.RemovePort(port_id_);
+    zx_status_t status = port_removed_.Wait();
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to wait for port removed completion: %s", zx_status_get_string(status));
+    }
   }
 }
 
@@ -76,7 +82,11 @@ void NetworkPort::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) {
       .ctx = this,
   };
 }
-void NetworkPort::NetworkPortRemoved() { iface_.PortRemoved(); }
+void NetworkPort::NetworkPortRemoved() {
+  iface_.PortRemoved();
+  netdev_ifc_.clear();
+  port_removed_.Signal();
+}
 
 void NetworkPort::MacAddrGetAddress(uint8_t out_mac[6]) { iface_.MacGetAddress(out_mac); }
 

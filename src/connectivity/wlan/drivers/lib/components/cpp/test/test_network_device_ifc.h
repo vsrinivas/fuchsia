@@ -7,6 +7,8 @@
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <lib/mock-function/mock-function.h>
 
+#include <optional>
+
 namespace wlan::drivers::components::test {
 
 // Test implementation of network_device_ifc_protocol_t that contains mock calls useful for
@@ -24,6 +26,9 @@ class TestNetworkDeviceIfc : public ::ddk::NetworkDeviceIfcProtocol<TestNetworkD
     }
   }
   void NetworkDeviceIfcAddPort(uint8_t id, const network_port_protocol_t* port) {
+    if (port) {
+      port_proto_ = *port;
+    }
     if (add_port_.HasExpectations()) {
       add_port_.Call(id, port);
     }
@@ -31,6 +36,9 @@ class TestNetworkDeviceIfc : public ::ddk::NetworkDeviceIfcProtocol<TestNetworkD
   void NetworkDeviceIfcRemovePort(uint8_t id) {
     if (remove_port_.HasExpectations()) {
       remove_port_.Call(id);
+    }
+    if (port_proto_.has_value()) {
+      network_port_removed(&port_proto_.value());
     }
   }
   void NetworkDeviceIfcCompleteRx(const rx_buffer_t* rx_list, size_t rx_count) {
@@ -58,6 +66,7 @@ class TestNetworkDeviceIfc : public ::ddk::NetworkDeviceIfcProtocol<TestNetworkD
 
  private:
   network_device_ifc_protocol_t proto_;
+  std::optional<network_port_protocol_t> port_proto_;
 };
 
 }  // namespace wlan::drivers::components::test

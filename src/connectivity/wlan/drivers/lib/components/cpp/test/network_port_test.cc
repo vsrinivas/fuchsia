@@ -36,20 +36,24 @@ class TestNetworkPortInterface : public NetworkPort::Callbacks {
 
 TEST(NetworkPortTest, Init) {
   TestNetworkPortInterface port_ifc;
-  TestNetworkDeviceIfc netdev_ifc;
-  constexpr uint8_t kPortId = 13;
+  {
+    TestNetworkDeviceIfc netdev_ifc;
+    constexpr uint8_t kPortId = 13;
 
-  NetworkPort port_(netdev_ifc.GetProto(), port_ifc, kPortId);
+    NetworkPort port_(netdev_ifc.GetProto(), port_ifc, kPortId);
 
-  netdev_ifc.add_port_.ExpectCallWithMatcher(
-      [&](uint8_t port_id, const network_port_protocol_t* proto) {
-        EXPECT_EQ(port_id, kPortId);
-        EXPECT_EQ(proto->ctx, &port_);
-        EXPECT_NOT_NULL(proto->ops);
-      });
+    netdev_ifc.add_port_.ExpectCallWithMatcher(
+        [&](uint8_t port_id, const network_port_protocol_t* proto) {
+          EXPECT_EQ(port_id, kPortId);
+          EXPECT_EQ(proto->ctx, &port_);
+          EXPECT_NOT_NULL(proto->ops);
+        });
 
-  port_.Init(NetworkPort::Role::Client);
-  netdev_ifc.add_port_.VerifyAndClear();
+    port_.Init(NetworkPort::Role::Client);
+    netdev_ifc.add_port_.VerifyAndClear();
+    port_ifc.removed_.ExpectCall();
+  }
+  port_ifc.removed_.VerifyAndClear();
 }
 
 TEST(NetworkPortTest, Destructor) {
@@ -64,10 +68,12 @@ TEST(NetworkPortTest, Destructor) {
   port->Init(NetworkPort::Role::Client);
   netdev_ifc.add_port_.VerifyAndClear();
 
-  // When the port is destroyed it should call remove port
+  // When the port is destroyed it should call remove port which should call removed.
   netdev_ifc.remove_port_.ExpectCall(kPortId);
+  port_ifc.removed_.ExpectCall();
   port.reset();
   netdev_ifc.remove_port_.VerifyAndClear();
+  port_ifc.removed_.VerifyAndClear();
 }
 
 TEST(NetworkPortTest, PortWithEmptyProto) {
@@ -80,49 +86,66 @@ TEST(NetworkPortTest, PortWithEmptyProto) {
 
 TEST(NetworkPortTest, GetInfoClient) {
   TestNetworkPortInterface port_ifc;
-  TestNetworkDeviceIfc netdev_ifc;
-  constexpr uint8_t kPortId = 7;
+  {
+    TestNetworkDeviceIfc netdev_ifc;
+    constexpr uint8_t kPortId = 7;
 
-  NetworkPort port(netdev_ifc.GetProto(), port_ifc, kPortId);
+    NetworkPort port(netdev_ifc.GetProto(), port_ifc, kPortId);
 
-  port.Init(NetworkPort::Role::Client);
+    port.Init(NetworkPort::Role::Client);
 
-  port_info_t info;
-  port.NetworkPortGetInfo(&info);
+    port_info_t info;
+    port.NetworkPortGetInfo(&info);
 
-  EXPECT_EQ(info.port_class,
-            static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kWlan));
+    EXPECT_EQ(info.port_class,
+              static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kWlan));
+    port_ifc.removed_.ExpectCall();
+  }
+  port_ifc.removed_.VerifyAndClear();
 }
 
 TEST(NetworkPortTest, GetInfoAp) {
   TestNetworkPortInterface port_ifc;
-  TestNetworkDeviceIfc netdev_ifc;
-  constexpr uint8_t kPortId = 7;
+  {
+    TestNetworkDeviceIfc netdev_ifc;
+    constexpr uint8_t kPortId = 7;
 
-  NetworkPort port(netdev_ifc.GetProto(), port_ifc, kPortId);
+    NetworkPort port(netdev_ifc.GetProto(), port_ifc, kPortId);
 
-  port.Init(NetworkPort::Role::Ap);
+    port.Init(NetworkPort::Role::Ap);
 
-  port_info_t info;
-  port.NetworkPortGetInfo(&info);
+    port_info_t info;
+    port.NetworkPortGetInfo(&info);
 
-  EXPECT_EQ(info.port_class,
-            static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kWlanAp));
+    EXPECT_EQ(info.port_class,
+              static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kWlanAp));
+    port_ifc.removed_.ExpectCall();
+  }
+  port_ifc.removed_.VerifyAndClear();
 }
 
 struct NetworkPortTestFixture : public ::zxtest::Test {
   static constexpr uint8_t kPortId = 13;
 
-  NetworkPortTestFixture() : port_(netdev_ifc_.GetProto(), port_ifc_, kPortId) {
-    port_.Init(NetworkPort::Role::Client);
+  NetworkPortTestFixture()
+      : port_(std::make_unique<NetworkPort>(netdev_ifc_.GetProto(), port_ifc_, kPortId)) {
+    port_->Init(NetworkPort::Role::Client);
+  }
+
+  void TearDown() override {
+    // Expect the call to 'removed' as part of the destruction of NetworkPort, destroy it manually
+    // so that afterwards we can verify that the 'removed' call happened.
+    port_ifc_.removed_.ExpectCall();
+    port_.reset();
+    port_ifc_.removed_.VerifyAndClear();
   }
 
   TestNetworkPortInterface port_ifc_;
   TestNetworkDeviceIfc netdev_ifc_;
-  NetworkPort port_;
+  std::unique_ptr<NetworkPort> port_;
 };
 
-TEST_F(NetworkPortTestFixture, PortId) { EXPECT_EQ(port_.PortId(), kPortId); }
+TEST_F(NetworkPortTestFixture, PortId) { EXPECT_EQ(port_->PortId(), kPortId); }
 
 TEST_F(NetworkPortTestFixture, GetInfo) {
   constexpr uint8_t kEthFrame =
@@ -130,7 +153,7 @@ TEST_F(NetworkPortTestFixture, GetInfo) {
   constexpr uint32_t kRawFrameFeature = fuchsia_hardware_network::wire::kFrameFeaturesRaw;
 
   port_info_t info;
-  port_.NetworkPortGetInfo(&info);
+  port_->NetworkPortGetInfo(&info);
   // Should be a WLAN port in the default setting
   EXPECT_EQ(info.port_class,
             static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kWlan));
@@ -148,11 +171,11 @@ TEST_F(NetworkPortTestFixture, GetInfo) {
 }
 
 TEST_F(NetworkPortTestFixture, GetPortStatus) {
-  ASSERT_FALSE(port_.IsOnline());
+  ASSERT_FALSE(port_->IsOnline());
 
   port_status_t status;
   port_ifc_.port_get_status_.ExpectCall(&status);
-  port_.NetworkPortGetStatus(&status);
+  port_->NetworkPortGetStatus(&status);
   // After construction status should be offline, which means flags are zero.
   EXPECT_EQ(status.flags, 0u);
   EXPECT_EQ(status.mtu, kTestMtu);
@@ -163,7 +186,7 @@ TEST_F(NetworkPortTestFixture, PortStatus) {
   constexpr uint32_t kOnline =
       static_cast<uint32_t>(fuchsia_hardware_network::wire::StatusFlags::kOnline);
 
-  ASSERT_FALSE(port_.IsOnline());
+  ASSERT_FALSE(port_->IsOnline());
   // When the port goes online it should call PortStatusChanged and the flags field should now
   // indicate that the port is online.
   const port_status_t* changed_status = nullptr;
@@ -179,18 +202,18 @@ TEST_F(NetworkPortTestFixture, PortStatus) {
     EXPECT_EQ(status->flags, kOnline);
     get_status = status;
   });
-  port_.SetPortOnline(true);
+  port_->SetPortOnline(true);
   // Ensure that the interface implementation gets to modify the same status if it wants to.
   EXPECT_NOT_NULL(changed_status);
   EXPECT_NOT_NULL(get_status);
   EXPECT_EQ(changed_status, get_status);
-  EXPECT_TRUE(port_.IsOnline());
+  EXPECT_TRUE(port_->IsOnline());
 
   // Setting the port status to online again should NOT have any effect or call anything.
   netdev_ifc_.port_status_changed_.ExpectNoCall();
   port_ifc_.port_get_status_.ExpectNoCall();
-  port_.SetPortOnline(true);
-  EXPECT_TRUE(port_.IsOnline());
+  port_->SetPortOnline(true);
+  EXPECT_TRUE(port_->IsOnline());
 
   // Setting the port to offline should clear the flags field.
   netdev_ifc_.port_status_changed_.ExpectCallWithMatcher(
@@ -200,23 +223,17 @@ TEST_F(NetworkPortTestFixture, PortStatus) {
       });
   port_ifc_.port_get_status_.ExpectCallWithMatcher(
       [](port_status_t* status) { EXPECT_EQ(status->flags, 0u); });
-  port_.SetPortOnline(false);
-  EXPECT_FALSE(port_.IsOnline());
+  port_->SetPortOnline(false);
+  EXPECT_FALSE(port_->IsOnline());
 
   netdev_ifc_.port_status_changed_.VerifyAndClear();
   port_ifc_.port_get_status_.VerifyAndClear();
 }
 
-TEST_F(NetworkPortTestFixture, PortRemoved) {
-  port_ifc_.removed_.ExpectCall();
-  port_.NetworkPortRemoved();
-  port_ifc_.removed_.VerifyAndClear();
-}
-
 TEST_F(NetworkPortTestFixture, MacGetProto) {
   mac_addr_protocol_t mac_ifc;
-  port_.NetworkPortGetMac(&mac_ifc);
-  EXPECT_EQ(mac_ifc.ctx, &port_);
+  port_->NetworkPortGetMac(&mac_ifc);
+  EXPECT_EQ(mac_ifc.ctx, port_.get());
   ASSERT_NOT_NULL(mac_ifc.ops);
 }
 
@@ -225,7 +242,7 @@ struct NetworkPortMacTestFixture : public NetworkPortTestFixture {
 
   mac_addr_protocol_t GetMacProto() {
     mac_addr_protocol_t mac_proto;
-    port_.NetworkPortGetMac(&mac_proto);
+    port_->NetworkPortGetMac(&mac_proto);
     return mac_proto;
   }
 

@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <fuchsia/hardware/network/mac/cpp/banjo.h>
 #include <lib/stdcompat/span.h>
+#include <lib/sync/cpp/completion.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 
@@ -92,6 +93,7 @@ class NetworkPort : public ::ddk::NetworkPortProtocol<NetworkPort>,
   uint8_t port_id_;
   mutable std::mutex online_mutex_;
   bool online_ __TA_GUARDED(online_mutex_) = false;
+  libsync::Completion port_removed_;
 };
 
 }  // namespace wlan::drivers::components
