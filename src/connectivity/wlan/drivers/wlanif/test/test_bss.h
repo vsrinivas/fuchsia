@@ -5,7 +5,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_TEST_TEST_BSS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_TEST_TEST_BSS_H_
 
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>

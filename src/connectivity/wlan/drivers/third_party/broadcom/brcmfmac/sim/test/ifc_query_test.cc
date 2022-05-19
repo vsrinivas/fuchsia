@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <zircon/errors.h>
@@ -51,10 +50,6 @@ TEST_F(SimTest, ClientIfcQuery) {
     // Band id should be in valid range
     EXPECT_TRUE(band_cap->band == WLAN_BAND_TWO_GHZ || band_cap->band == WLAN_BAND_FIVE_GHZ);
   }
-
-  // Verify driver features from if query.
-  EXPECT_NE(0U, ifc_query_result.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS);
-  EXPECT_NE(0U, ifc_query_result.driver_features & WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH);
 }
 
 // Verify that we can retrieve interface attributes even if the nchain iovar value is too large

@@ -445,8 +445,6 @@ type WlanFullmacQueryInfo = struct {
     features uint32;
     band_cap_list array<WlanFullmacBandCapability, fuchsia.wlan.common.MAX_BANDS>;
     band_cap_count uint8;
-    /// WLAN_DRIVER_FEATURE_*
-    driver_features uint32;
 };
 
 type WlanFullmacCounter = struct {

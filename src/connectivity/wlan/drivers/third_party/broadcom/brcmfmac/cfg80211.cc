@@ -19,7 +19,6 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 
 #include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
@@ -4301,21 +4300,6 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
 
   // role
   info->role = wdev->iftype;
-
-  // features
-  security_support_t security_support;
-  brcmf_if_query_security_support(ndev, &security_support);
-  if (security_support.sae.sme_handler_supported) {
-    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH;
-  }
-  if (security_support.mfp.supported) {
-    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_MFP;
-  }
-  spectrum_management_support_t spectrum_management_support;
-  brcmf_if_query_spectrum_management_support(ndev, &spectrum_management_support);
-  if (spectrum_management_support.dfs.supported) {
-    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_DFS;
-  }
 
   // bands
   uint32_t bandlist[3];

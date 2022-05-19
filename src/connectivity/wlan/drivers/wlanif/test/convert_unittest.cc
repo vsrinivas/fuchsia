@@ -4,7 +4,6 @@
 
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
@@ -276,24 +275,21 @@ TEST(ConvertTest, ToFidlDeviceInfo) {
   auto fidl_vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
   ConvertVhtCapabilities(fidl_vht_cap.get(), vht_cap);
 
-  wlan_fullmac_query_info_t query_info_some_driver_features = {
-      .sta_addr = {1, 2, 3, 4, 5, 6},
-      .role = WLAN_MAC_ROLE_CLIENT,
-      .features = fuzzing::rand32(rng),
-      .band_cap_list = {{
-          .band = WLAN_BAND_TWO_GHZ,
-          .basic_rate_count = 3,
-          .basic_rate_list = {2, 4, 11},
-          .ht_supported = true,
-          .ht_caps = ht_cap,
-          .vht_supported = false,
-          .operating_channel_count = 3,
-          .operating_channel_list = {1, 6, 11},
-      }},
-      .band_cap_count = 1,
-      .driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_DFS |
-                         WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH | WLAN_INFO_DRIVER_FEATURE_MFP};
-  ConvertQueryInfoToDeviceInfo(&fidl_resp, query_info_some_driver_features);
+  wlan_fullmac_query_info_t query_info = {.sta_addr = {1, 2, 3, 4, 5, 6},
+                                          .role = WLAN_MAC_ROLE_CLIENT,
+                                          .features = fuzzing::rand32(rng),
+                                          .band_cap_list = {{
+                                              .band = WLAN_BAND_TWO_GHZ,
+                                              .basic_rate_count = 3,
+                                              .basic_rate_list = {2, 4, 11},
+                                              .ht_supported = true,
+                                              .ht_caps = ht_cap,
+                                              .vht_supported = false,
+                                              .operating_channel_count = 3,
+                                              .operating_channel_list = {1, 6, 11},
+                                          }},
+                                          .band_cap_count = 1};
+  ConvertQueryInfoToDeviceInfo(&fidl_resp, query_info);
 
   EXPECT_EQ(fidl_resp.sta_addr, expected_sta_addr);
   EXPECT_EQ(fidl_resp.role, wlan_common::WlanMacRole::CLIENT);
@@ -304,57 +300,6 @@ TEST(ConvertTest, ToFidlDeviceInfo) {
   EXPECT_EQ(fidl_resp.bands[0].ht_cap->bytes, fidl_ht_cap->bytes);
   EXPECT_EQ(fidl_resp.bands[0].vht_cap, nullptr);
   EXPECT_THAT(fidl_resp.bands[0].operating_channels, UnorderedElementsAre(1, 6, 11));
-  EXPECT_THAT(fidl_resp.driver_features,
-              UnorderedElementsAre(
-                  wlan_common::DriverFeature::SCAN_OFFLOAD, wlan_common::DriverFeature::DFS,
-                  wlan_common::DriverFeature::SAE_SME_AUTH, wlan_common::DriverFeature::MFP));
-  // TODO(fxbug.dev/88315): This field will be replaced in the new driver features
-  // framework.
-  EXPECT_EQ(fidl_resp.softmac_hardware_capability, 0u);
-  // TODO(fxbug.dev/43938): This field is stubbed out for future use.
-  EXPECT_EQ(fidl_resp.qos_capable, false);
-
-  wlan_fullmac_query_info_t query_info_all_driver_features = {
-      .sta_addr = {1, 2, 3, 4, 5, 6},
-      .role = WLAN_MAC_ROLE_CLIENT,
-      .features = fuzzing::rand32(rng),
-      .band_cap_list = {{
-          .band = WLAN_BAND_TWO_GHZ,
-          .basic_rate_count = 3,
-          .basic_rate_list = {2, 4, 11},
-          .ht_supported = true,
-          .ht_caps = ht_cap,
-          .vht_supported = false,
-          .operating_channel_count = 3,
-          .operating_channel_list = {1, 6, 11},
-      }},
-      .band_cap_count = 1,
-      .driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD |
-                         WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION | WLAN_INFO_DRIVER_FEATURE_SYNTH |
-                         WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT | WLAN_INFO_DRIVER_FEATURE_DFS |
-                         WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH |
-                         WLAN_INFO_DRIVER_FEATURE_SAE_DRIVER_AUTH | WLAN_INFO_DRIVER_FEATURE_MFP |
-                         WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD,
-  };
-  ConvertQueryInfoToDeviceInfo(&fidl_resp, query_info_all_driver_features);
-
-  EXPECT_EQ(fidl_resp.sta_addr, expected_sta_addr);
-  EXPECT_EQ(fidl_resp.role, wlan_common::WlanMacRole::CLIENT);
-  ASSERT_EQ(fidl_resp.bands.size(), 1u);
-  EXPECT_EQ(fidl_resp.bands[0].band, wlan_common::WlanBand::TWO_GHZ);
-  EXPECT_THAT(fidl_resp.bands[0].basic_rates, UnorderedElementsAre(2, 4, 11));
-  ASSERT_NE(fidl_resp.bands[0].ht_cap, nullptr);
-  EXPECT_EQ(fidl_resp.bands[0].ht_cap->bytes, fidl_ht_cap->bytes);
-  EXPECT_EQ(fidl_resp.bands[0].vht_cap, nullptr);
-  EXPECT_THAT(fidl_resp.bands[0].operating_channels, UnorderedElementsAre(1, 6, 11));
-  EXPECT_THAT(
-      fidl_resp.driver_features,
-      UnorderedElementsAre(
-          wlan_common::DriverFeature::SCAN_OFFLOAD, wlan_common::DriverFeature::RATE_SELECTION,
-          wlan_common::DriverFeature::SYNTH, wlan_common::DriverFeature::TX_STATUS_REPORT,
-          wlan_common::DriverFeature::DFS, wlan_common::DriverFeature::SAE_SME_AUTH,
-          wlan_common::DriverFeature::SAE_DRIVER_AUTH, wlan_common::DriverFeature::MFP,
-          wlan_common::DriverFeature::PROBE_RESP_OFFLOAD));
   // TODO(fxbug.dev/88315): This field will be replaced in the new driver features
   // framework.
   EXPECT_EQ(fidl_resp.softmac_hardware_capability, 0u);

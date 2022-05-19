@@ -4,7 +4,6 @@
 
 #include "convert.h"
 
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
@@ -585,35 +584,6 @@ void ConvertQueryInfoToDeviceInfo(wlan_mlme::DeviceInfo* fidl_device_info,
   fidl_device_info->bands.resize(query_info.band_cap_count);
   for (size_t i = 0; i < query_info.band_cap_count; ++i) {
     ConvertBandCapability(&fidl_device_info->bands[i], query_info.band_cap_list[i]);
-  }
-
-  fidl_device_info->driver_features.resize(0);
-  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD) {
-    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::SCAN_OFFLOAD);
-  }
-  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION) {
-    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::RATE_SELECTION);
-  }
-  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
-    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::SYNTH);
-  }
-  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) {
-    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
-  }
-  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS) {
-    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::DFS);
-  }
-  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH) {
-    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::SAE_SME_AUTH);
-  }
-  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SAE_DRIVER_AUTH) {
-    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::SAE_DRIVER_AUTH);
-  }
-  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_MFP) {
-    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::MFP);
-  }
-  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD) {
-    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::PROBE_RESP_OFFLOAD);
   }
 
   // TODO(fxbug.dev/88315): This field will be replaced in the new driver features
