@@ -15,6 +15,7 @@ driver_bind_rules("e1000_bind") {
   tests = "bind-tests.json"
   deps = [
     ":fuchsia.intel.e1000",
+    "//src/devices/bind/fuchsia.driver.framework",
     "//src/devices/bind/fuchsia.pci",
   ]
 }
@@ -64,6 +65,7 @@ fuchsia_driver_component("e1000") {
   deps = [ ":e1000-driver" ]
   info = "e1000-info.json"
   colocate = true
+  root_resource = true
 }
 
 group("tests") {
