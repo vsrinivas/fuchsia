@@ -24,8 +24,16 @@ __BEGIN_CDECLS
 
 __EXPORT
 zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t flags, zx_handle_t request) {
-  auto remote = fidl::ClientEnd<fuchsia_io::Node>(zx::channel(request));
-  return ns->Connect(path, static_cast<fuchsia_io::wire::OpenFlags>(flags), std::move(remote));
+  if (path == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  fdio_internal::PathBuffer clean;
+  bool is_dir;
+  if (!fdio_internal::CleanPath(path, &clean, &is_dir)) {
+    return ZX_ERR_BAD_PATH;
+  }
+  auto remote = fidl::ServerEnd<fuchsia_io::Node>(zx::channel(request));
+  return ns->Connect(clean, static_cast<fuchsia_io::wire::OpenFlags>(flags), std::move(remote));
 }
 
 __EXPORT
@@ -48,15 +56,43 @@ zx_status_t fdio_ns_destroy(fdio_ns_t* raw_ns) {
 
 __EXPORT
 zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t remote_raw) {
+  if (path == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  fdio_internal::PathBuffer clean;
+  bool is_dir;
+  if (!fdio_internal::CleanPath(path, &clean, &is_dir)) {
+    return ZX_ERR_BAD_PATH;
+  }
   auto remote = fidl::ClientEnd<fuchsia_io::Directory>(zx::channel(remote_raw));
-  return ns->Bind(path, std::move(remote));
+  return ns->Bind(clean, std::move(remote));
 }
 
 __EXPORT
-zx_status_t fdio_ns_unbind(fdio_ns_t* ns, const char* path) { return ns->Unbind(path); }
+zx_status_t fdio_ns_unbind(fdio_ns_t* ns, const char* path) {
+  if (path == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  fdio_internal::PathBuffer clean;
+  bool is_dir;
+  if (!fdio_internal::CleanPath(path, &clean, &is_dir)) {
+    return ZX_ERR_BAD_PATH;
+  }
+  return ns->Unbind(clean);
+}
 
 __EXPORT
-bool fdio_ns_is_bound(fdio_ns_t* ns, const char* path) { return ns->IsBound(path); }
+bool fdio_ns_is_bound(fdio_ns_t* ns, const char* path) {
+  if (path == nullptr) {
+    return false;
+  }
+  fdio_internal::PathBuffer clean;
+  bool is_dir;
+  if (!fdio_internal::CleanPath(path, &clean, &is_dir)) {
+    return false;
+  }
+  return ns->IsBound(clean);
+}
 
 __EXPORT
 zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd) {

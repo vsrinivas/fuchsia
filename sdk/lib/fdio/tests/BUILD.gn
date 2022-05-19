@@ -86,6 +86,7 @@ test("fdio-test") {
       "fdio_handle_fd.cc",
       "fdio_io.cc",
       "fdio_memfd.cc",
+      "fdio_namespace.cc",
       "fdio_null_namespace.cc",
       "fdio_open_max.cc",
       "fdio_pipe.cc",

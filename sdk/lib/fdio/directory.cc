@@ -74,30 +74,41 @@ zx_status_t fdio_open(const char* path, uint32_t flags, zx_handle_t request) {
 constexpr uint32_t kArbitraryMode =
     S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
-__EXPORT
-zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
-                         zx_handle_t raw_request) {
-  auto request = fidl::ServerEnd<fio::Node>(zx::channel(raw_request));
-  auto directory = fidl::UnownedClientEnd<fio::Directory>(dir);
+namespace fdio_internal {
+
+// TODO(https://fxbug.dev/97878): This should reuse the logic used by openat().
+zx_status_t fdio_open_at(fidl::UnownedClientEnd<fio::Directory> directory, std::string_view path,
+                         fuchsia_io::wire::OpenFlags flags, fidl::ServerEnd<fio::Node> request) {
   if (!directory.is_valid()) {
     return ZX_ERR_UNAVAILABLE;
   }
 
+  if (flags & fio::wire::OpenFlags::kDescribe) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return fidl::WireCall(directory)
+      ->Open(flags, kArbitraryMode, fidl::StringView::FromExternal(path), std::move(request))
+      .status();
+}
+
+}  // namespace fdio_internal
+
+__EXPORT
+zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
+                         zx_handle_t raw_request) {
   size_t length;
   zx_status_t status = fdio_validate_path(path, &length);
   if (status != ZX_OK) {
     return status;
   }
 
-  fio::wire::OpenFlags fio_flags = static_cast<fio::wire::OpenFlags>(flags);
-  if (fio_flags & fio::wire::OpenFlags::kDescribe) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+  fidl::UnownedClientEnd<fio::Directory> directory(dir);
+  fidl::ServerEnd<fio::Node> request((zx::channel(raw_request)));
+  auto fio_flags = static_cast<fio::wire::OpenFlags>(flags);
 
-  return fidl::WireCall(directory)
-      ->Open(fio_flags, kArbitraryMode, fidl::StringView::FromExternal(path, length),
-             std::move(request))
-      .status();
+  return fdio_internal::fdio_open_at(directory, std::string_view(path, length), fio_flags,
+                                     std::move(request));
 }
 
 namespace {

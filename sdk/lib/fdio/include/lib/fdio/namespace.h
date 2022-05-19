@@ -27,19 +27,26 @@ zx_status_t fdio_ns_destroy(fdio_ns_t* ns) ZX_AVAILABLE_SINCE(1);
 
 // Create a new directory within a namespace, bound to the
 // directory-protocol-compatible handle h
-// The path must be an absolute path, like "/x/y/z", containing
-// no "." nor ".." entries.  It is relative to the root of the
-// namespace.
+// The path must be an absolute path like "/x/y/z". It is relative to the root
+// of the namespace.
 //
 // Ownership of |h| is transferred to |ns|: it is closed on error.
+// Errors:
+// ZX_ERR_BAD_STATE: Namespace is already in use and immutable.
+// ZX_ERR_ALREADY_EXISTS: There is already a mounted directory there.
+// ZX_ERR_NOT_SUPPORTED: |path| would shadow a mounted directory.
+// ZX_ERR_INVALID_ARGS: |path| is null or is not an absolute path.
+// ZX_ERR_BAD_PATH: |path| is not a valid path.
 zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t h) ZX_AVAILABLE_SINCE(1);
 
 // Unbinds |path| from a namespace, closing the handle within |ns| that
 // corresponds to that path when all references to the node go out of scope.
 //
-// Returns ZX_ERR_NOT_FOUND if |path| is not a remote.
-// Returns ZX_ERR_NOT_SUPPORTED if |path| is the root of the namespace.
-// Returns ZX_ERR_INVALID_ARGS if |path| is otherwise invalid.
+// Errors:
+// ZX_ERR_NOT_FOUND: |path| is not a remote.
+// ZX_ERR_NOT_SUPPORTED: |path| is the root of the namespace.
+// ZX_ERR_INVALID_ARGS: |path| is null or not an absolute path.
+// ZX_ERR_BAD_PATH: |path| is not a valid path.
 zx_status_t fdio_ns_unbind(fdio_ns_t* ns, const char* path) ZX_AVAILABLE_SINCE(1);
 
 // Whether |path| is bound to a remote directory in |ns|.
@@ -47,17 +54,23 @@ bool fdio_ns_is_bound(fdio_ns_t* ns, const char* path) ZX_AVAILABLE_SINCE(1);
 
 // Create a new directory within a namespace, bound to the
 // directory referenced by the file descriptor fd.
-// The path must be an absolute path, like "/x/y/z", containing
-// no "." nor ".." entries.  It is relative to the root of the
-// namespace.
+// The path must be an absolute path like "/x/y/z".  It is relative to the root
+// of the namespace.
 //
 // |fd| is borrowed by this function, but is not closed on success or error.
 // Closing the fd after success does not affect namespace.
 //
-// Failures:
-// ZX_ERR_BAD_STATE: Namespace is already in use and immutable.
+// Errors:
+// ZX_ERR_BAD_STATE: Namespace is already in use and immutable or |fd| cannot be
+//   cloned in its current state.
 // ZX_ERR_ALREADY_EXISTS: There is already a mounted directory there.
-// ZX_ERR_NOT_SUPPORTED: This path would shadow a mounted directory.
+// ZX_ERR_NOT_SUPPORTED: |path| would shadow a mounted directory or |fd| cannot
+//   be represented as a handle.
+// ZX_ERR_INVALID_ARGS: |path| is null or is not an absolute path or |fd| is not
+//   a valid file descriptor.
+// ZX_ERR_BAD_PATH: |path| is not a valid path.
+// ZX_ERR_ACCESS_DENIED: |fd| has insufficient rights to clone the underlying
+// object.
 zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd) ZX_AVAILABLE_SINCE(1);
 
 // Open the root directory of the namespace as a file descriptor
@@ -93,8 +106,7 @@ zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out) ZX_AVAILABLE_SINCE(
 // Attempt to connect to a service through the namespace.
 // The handle is always consumed.  It will be closed on error
 // or passed to the remote service on success.
-// The path must be an absolute path starting with / and containing
-// no ".." or "." or empty segments.
+// The path must be an absolute path starting with /.
 zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t flags, zx_handle_t request)
     ZX_AVAILABLE_SINCE(1);
 

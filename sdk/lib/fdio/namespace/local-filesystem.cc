@@ -41,14 +41,12 @@ struct ExportState {
   char** path;
 };
 
-zx_status_t ValidateName(const cpp17::string_view& name) {
-  if ((name.length() == 0) || (name.length() > NAME_MAX)) {
-    return ZX_ERR_INVALID_ARGS;
+std::pair<std::string_view, bool> FindNextPathSegment(std::string_view path) {
+  auto next_slash = path.find('/');
+  if (next_slash == std::string_view::npos) {
+    return {path, true};
   }
-  if (name == cpp17::string_view(".") || name == cpp17::string_view("..")) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  return ZX_OK;
+  return {std::string_view(path.data(), next_slash), false};
 }
 
 }  // namespace
@@ -61,29 +59,27 @@ fdio_namespace::~fdio_namespace() {
 }
 
 zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
-                                       const char** in_out_path) const {
+                                       std::string_view* in_out_path) const {
   fbl::RefPtr<LocalVnode> vn = *in_out_vn;
-  const char* path = *in_out_path;
+  std::string_view path_remaining = *in_out_path;
 
   // Empty path or "." matches initial node.
-  if ((path[0] == 0) || ((path[0] == '.') && (path[1] == 0))) {
+  if (path_remaining.empty() || path_remaining == ".") {
     return ZX_OK;
   }
 
   for (;;) {
     // Find the next path segment.
-    const char* name = path;
-    const char* next = strchr(path, '/');
-    size_t len = next ? static_cast<size_t>(next - path) : strlen(path);
+    auto [next_path_segment, is_last_segment] = FindNextPathSegment(path_remaining);
 
-    // Path segments may not be empty.
-    if (len == 0) {
+    // Path segments may not longer than NAME_MAX.
+    if (next_path_segment.length() > NAME_MAX) {
       return ZX_ERR_BAD_PATH;
     }
 
     // "." matches current node.
-    if (!((path[0] == '.') && (path[1] == 0))) {
-      fbl::RefPtr<LocalVnode> child = vn->Lookup(cpp17::string_view(name, len));
+    if (next_path_segment != ".") {
+      fbl::RefPtr<LocalVnode> child = vn->Lookup(next_path_segment);
       if (child == nullptr) {
         // If no child exists with this name, we either failed to lookup a node,
         // or we must transmit this request to the remote node.
@@ -92,13 +88,13 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
         }
 
         *in_out_vn = vn;
-        *in_out_path = path;
+        *in_out_path = path_remaining;
         return ZX_OK;
       }
       vn = child;
     }
 
-    if (!next) {
+    if (is_last_segment) {
       // Lookup has completed successfully for all nodes, and no path remains.
       // Return the requested local node.
       *in_out_vn = vn;
@@ -107,7 +103,7 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
     }
 
     // Lookup completed successfully, but more segments exist.
-    path = next + 1;
+    path_remaining.remove_prefix(next_path_segment.length() + 1);
   }
 }
 
@@ -120,7 +116,7 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
 // appropriate object to interact with the remote object.
 //
 // Otherwise, this function creates a generic "remote" object.
-zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char* path,
+zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, std::string_view path,
                                           fio::wire::OpenFlags flags, uint32_t mode) const {
   {
     fbl::AutoLock lock(&lock_);
@@ -137,14 +133,8 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
 
   // If we're trying to mkdir over top of a mount point,
   // the correct error is EEXIST
-  if ((flags & fio::wire::OpenFlags::kCreate) && !strcmp(path, ".")) {
+  if ((flags & fio::wire::OpenFlags::kCreate) && path == ".") {
     return zx::error(ZX_ERR_ALREADY_EXISTS);
-  }
-
-  size_t length;
-  zx_status_t status = fdio_validate_path(path, &length);
-  if (status != ZX_OK) {
-    return zx::error(status);
   }
 
   zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
@@ -154,8 +144,9 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
 
   // Active remote connections are immutable, so referencing remote here
   // is safe. We don't want to do a blocking open under the ns lock.
-  status = zxio_open_async(vn->Remote(), static_cast<uint32_t>(flags), mode, path, length,
-                           endpoints->server.TakeChannel().release());
+  zx_status_t status =
+      zxio_open_async(vn->Remote(), static_cast<uint32_t>(flags), mode, path.data(), path.length(),
+                      endpoints->server.TakeChannel().release());
 
   if (status != ZX_OK) {
     return zx::error(status);
@@ -168,7 +159,7 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
   return fdio_internal::remote::create(std::move(endpoints->client));
 }
 
-zx_status_t fdio_namespace::AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, const char* path,
+zx_status_t fdio_namespace::AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, std::string_view path,
                                              uint32_t mask, uint32_t watch_descriptor,
                                              zx::socket socket) const {
   fbl::AutoLock lock(&lock_);
@@ -185,15 +176,9 @@ zx_status_t fdio_namespace::AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, const c
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  size_t length;
-  status = fdio_validate_path(path, &length);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   // Active remote connections are immutable, so referencing remote here
   // is safe. But we do not want to do a blocking call under the ns lock.
-  return zxio_add_inotify_filter(vn->Remote(), path, length, mask, watch_descriptor,
+  return zxio_add_inotify_filter(vn->Remote(), path.data(), path.length(), mask, watch_descriptor,
                                  socket.release());
 }
 
@@ -201,7 +186,7 @@ zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* s
                                     zxio_dirent_t* inout_entry) const {
   fbl::AutoLock lock(&lock_);
 
-  auto populate_entry = [](zxio_dirent_t* inout_entry, cpp17::string_view name) {
+  auto populate_entry = [](zxio_dirent_t* inout_entry, std::string_view name) {
     if (name.size() > NAME_MAX) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -214,7 +199,7 @@ zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* s
   };
 
   if (!state->encountered_dot) {
-    zx_status_t status = populate_entry(inout_entry, cpp17::string_view("."));
+    zx_status_t status = populate_entry(inout_entry, std::string_view("."));
     if (status != ZX_OK) {
       return status;
     }
@@ -233,13 +218,14 @@ zx::status<fdio_ptr> fdio_namespace::CreateConnection(fbl::RefPtr<LocalVnode> vn
   return fdio_internal::CreateLocalConnection(fbl::RefPtr(this), std::move(vn));
 }
 
-zx_status_t fdio_namespace::Connect(const char* path, fio::wire::OpenFlags flags,
-                                    fidl::ClientEnd<fio::Node> client_end) const {
+zx_status_t fdio_namespace::Connect(std::string_view path, fio::wire::OpenFlags flags,
+                                    fidl::ServerEnd<fio::Node> server_end) const {
   // Require that we start at /
-  if (path[0] != '/') {
+  if (!cpp20::starts_with(path, '/')) {
     return ZX_ERR_NOT_FOUND;
   }
-  path++;
+  // Skip leading slash.
+  path.remove_prefix(1);
 
   fbl::RefPtr<LocalVnode> vn;
   {
@@ -262,19 +248,20 @@ zx_status_t fdio_namespace::Connect(const char* path, fio::wire::OpenFlags flags
     return status;
   }
 
-  return fdio_open_at(borrowed_handle, path, static_cast<uint32_t>(flags),
-                      client_end.channel().release());
+  fidl::UnownedClientEnd<fio::Directory> directory(borrowed_handle);
+
+  return fdio_internal::fdio_open_at(directory, path, flags, std::move(server_end));
 }
 
-zx_status_t fdio_namespace::Unbind(const char* path) {
-  if ((path == nullptr) || (path[0] != '/')) {
+zx_status_t fdio_namespace::Unbind(std::string_view path) {
+  if (!cpp20::starts_with(path, '/')) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Skip leading slash.
-  path++;
+  path.remove_prefix(1);
 
-  if (path[0] == 0) {
+  if (path.empty()) {
     // The path was "/" so we're trying to unbind to the root vnode.
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -286,11 +273,10 @@ zx_status_t fdio_namespace::Unbind(const char* path) {
   fbl::RefPtr<LocalVnode> removable_origin_vn;
 
   for (;;) {
-    const char* next = strchr(path, '/');
-    cpp17::string_view name(path, next ? (next - path) : strlen(path));
-    zx_status_t status = ValidateName(name);
-    if (status != ZX_OK) {
-      return status;
+    auto [next_path_segment, is_last_segment] = FindNextPathSegment(path);
+
+    if (next_path_segment.length() > NAME_MAX) {
+      return ZX_ERR_BAD_PATH;
     }
 
     if (vn->RemoteValid()) {
@@ -298,7 +284,7 @@ zx_status_t fdio_namespace::Unbind(const char* path) {
       return ZX_ERR_NOT_FOUND;
     }
 
-    vn = vn->Lookup(name);
+    vn = vn->Lookup(next_path_segment);
     if (vn == nullptr) {
       return ZX_ERR_NOT_FOUND;
     }
@@ -322,7 +308,7 @@ zx_status_t fdio_namespace::Unbind(const char* path) {
       removable_origin_vn = vn;
     }
 
-    if (!next) {
+    if (is_last_segment) {
       // This is the last segment; we must match.
       if (!vn->RemoteValid()) {
         return ZX_ERR_NOT_FOUND;
@@ -334,15 +320,15 @@ zx_status_t fdio_namespace::Unbind(const char* path) {
       return ZX_OK;
     }
 
-    path = next + 1;
+    path.remove_prefix(next_path_segment.length() + 1);
   }
 }
 
-bool fdio_namespace::IsBound(const char* path) {
-  if ((path == nullptr) || (path[0] != '/')) {
+bool fdio_namespace::IsBound(std::string_view path) {
+  if (!cpp20::starts_with(path, '/')) {
     return false;
   }
-  path++;
+  path.remove_prefix(1);
 
   fbl::AutoLock lock(&lock_);
   fbl::RefPtr<LocalVnode> vn = root_;
@@ -350,22 +336,22 @@ bool fdio_namespace::IsBound(const char* path) {
   if (status != ZX_OK) {
     return false;
   }
-  return strcmp(path, ".") == 0 && vn->RemoteValid();
+  return path == "." && vn->RemoteValid();
 }
 
-zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Directory> remote) {
+zx_status_t fdio_namespace::Bind(std::string_view path, fidl::ClientEnd<fio::Directory> remote) {
   if (!remote.is_valid()) {
     return ZX_ERR_BAD_HANDLE;
   }
-  if ((path == nullptr) || (path[0] != '/')) {
+  if (!cpp20::starts_with(path, '/')) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Skip leading slash.
-  path++;
+  path.remove_prefix(1);
 
   fbl::AutoLock lock(&lock_);
-  if (path[0] == 0) {
+  if (path.empty()) {
     if (root_->RemoteValid()) {
       // Cannot re-bind after initial bind.
       return ZX_ERR_ALREADY_EXISTS;
@@ -379,7 +365,6 @@ zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Director
     return ZX_OK;
   }
 
-  zx_status_t status = ZX_OK;
   fbl::RefPtr<LocalVnode> vn = root_;
   fbl::RefPtr<LocalVnode> first_new_node = nullptr;
 
@@ -392,11 +377,10 @@ zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Director
   });
 
   for (;;) {
-    const char* next = strchr(path, '/');
-    cpp17::string_view name(path, next ? (next - path) : strlen(path));
-    status = ValidateName(name);
-    if (status != ZX_OK) {
-      return status;
+    auto [next_path_segment, is_last_segment] = FindNextPathSegment(path);
+
+    if (next_path_segment.length() > NAME_MAX) {
+      return ZX_ERR_BAD_PATH;
     }
 
     if (vn->RemoteValid()) {
@@ -404,12 +388,19 @@ zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Director
       return ZX_ERR_NOT_SUPPORTED;
     }
 
-    if (next) {
+    if (is_last_segment) {
+      // Final segment. Create the leaf vnode and stop.
+      if (vn->Lookup(next_path_segment) != nullptr) {
+        return ZX_ERR_ALREADY_EXISTS;
+      }
+      vn = LocalVnode::Create(vn, std::move(remote), fbl::String(next_path_segment));
+      break;
+    } else {
       // Not the final segment.
-      fbl::RefPtr<LocalVnode> child = vn->Lookup(name);
+      fbl::RefPtr<LocalVnode> child = vn->Lookup(next_path_segment);
       if (child == nullptr) {
         // Create a new intermediate node.
-        vn = LocalVnode::Create(vn, {}, fbl::String(name));
+        vn = LocalVnode::Create(vn, {}, fbl::String(next_path_segment));
 
         // Keep track of the first node we create. If any subsequent
         // operation fails during bind, we will need to delete all nodes
@@ -421,14 +412,7 @@ zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Director
         // Re-use an existing intermediate node.
         vn = child;
       }
-      path = next + 1;
-    } else {
-      // Final segment. Create the leaf vnode and stop.
-      if (vn->Lookup(name) != nullptr) {
-        return ZX_ERR_ALREADY_EXISTS;
-      }
-      vn = LocalVnode::Create(vn, std::move(remote), fbl::String(name));
-      break;
+      path.remove_prefix(next_path_segment.length() + 1);
     }
   }
 
@@ -497,7 +481,7 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
     return root_;
   }();
 
-  auto count_callback = [&es](const cpp17::string_view& path, zxio_t* remote) {
+  auto count_callback = [&es](std::string_view path, zxio_t* remote) {
     // Each entry needs one slot in the handle table,
     // one slot in the type table, and one slot in the
     // path table, plus storage for the path and NUL
@@ -524,7 +508,7 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
   es.buffer = reinterpret_cast<char*>(es.path + es.count);
   es.count = 0;
 
-  auto export_callback = [&es](const cpp17::string_view& path, zxio_t* remote) {
+  auto export_callback = [&es](std::string_view path, zxio_t* remote) {
     zx::channel remote_clone;
     zx_status_t status = zxio_clone(remote, remote_clone.reset_and_get_address());
     if (status != ZX_OK) {

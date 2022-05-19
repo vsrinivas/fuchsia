@@ -57,33 +57,33 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   // Create a new object referring to the object at |path|.
   //
   // This object may represent either a local node, or a remote object.
-  zx::status<fdio_ptr> Open(fbl::RefPtr<LocalVnode> vn, const char* path,
+  zx::status<fdio_ptr> Open(fbl::RefPtr<LocalVnode> vn, std::string_view path,
                             fuchsia_io::wire::OpenFlags flags, uint32_t mode) const;
 
   // Walk local namespace and send inotify filter request to remote server.
   //
   // This object may represent either a local node, or a remote object.
-  zx_status_t AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, const char* path, uint32_t mask,
+  zx_status_t AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, std::string_view path, uint32_t mask,
                                uint32_t watch_descriptor, zx::socket socket) const;
 
   // Connect to a remote object within the namespace.
   //
   // Returns an error if |path| does not exist.
   // Returns an error if |path| references a non-remote object.
-  zx_status_t Connect(const char* path, fuchsia_io::wire::OpenFlags flags,
-                      fidl::ClientEnd<fuchsia_io::Node> client_end) const;
+  zx_status_t Connect(std::string_view path, fuchsia_io::wire::OpenFlags flags,
+                      fidl::ServerEnd<fuchsia_io::Node> server_end) const;
 
   // Attaches |remote| to |path| within the current namespace.
-  zx_status_t Bind(const char* path, fidl::ClientEnd<fuchsia_io::Directory> remote);
+  zx_status_t Bind(std::string_view path, fidl::ClientEnd<fuchsia_io::Directory> remote);
 
   // Detaches a remote object from |path| within the current namespace.
   //
   // Returns ZX_ERR_NOT_FOUND if |path| does not correspond with a bound remote.
   // Returns ZX_ERR_NOT_SUPPORTED if |path| is the root of the namespace.
   // Returns ZX_ERR_INVALID_ARGS for an unsupported |path|.
-  zx_status_t Unbind(const char* path);
+  zx_status_t Unbind(std::string_view path);
 
-  bool IsBound(const char* path);
+  bool IsBound(std::string_view path);
 
  private:
   fdio_namespace();
@@ -95,8 +95,8 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
 
   // Lookup repeatedly to traverse vnodes within the local filesystem.
   //
-  // |vn| and |path| are input and output parameters.
-  zx_status_t WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn, const char** in_out_path) const
+  // |in_out_vn| and |in_out_path| are input and output parameters.
+  zx_status_t WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn, std::string_view* in_out_path) const
       __TA_REQUIRES(lock_);
 
   mutable fbl::Mutex lock_;

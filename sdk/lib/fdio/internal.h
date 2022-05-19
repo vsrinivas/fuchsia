@@ -296,6 +296,10 @@ namespace fdio_internal {
 
 using base = fdio_t;
 
+zx_status_t fdio_open_at(fidl::UnownedClientEnd<fuchsia_io::Directory> directory,
+                         std::string_view path, fuchsia_io::wire::OpenFlags flags,
+                         fidl::ServerEnd<fuchsia_io::Node> request);
+
 }  // namespace fdio_internal
 
 // TODO(tamird): every operation on this type should require the global lock.
