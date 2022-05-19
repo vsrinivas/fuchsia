@@ -322,13 +322,14 @@ impl Journal {
             }
             Mutation::ObjectStore(_) => {}
             Mutation::EncryptedObjectStore(_) => {}
-            Mutation::Allocator(AllocatorMutation::Allocate { device_range, .. }) => {
-                // TODO(https://fxbug.dev/99477): Add validation of owner_object_id
-                return Ok(device_range.valid());
+            Mutation::Allocator(AllocatorMutation::Allocate { device_range, owner_object_id }) => {
+                return Ok(device_range.valid() && *owner_object_id != INVALID_OBJECT_ID);
             }
-            Mutation::Allocator(AllocatorMutation::Deallocate { device_range, .. }) => {
-                // TODO(https://fxbug.dev/99477): Add validation of owner_object_id
-                return Ok(device_range.valid());
+            Mutation::Allocator(AllocatorMutation::Deallocate {
+                device_range,
+                owner_object_id,
+            }) => {
+                return Ok(device_range.valid() && *owner_object_id != INVALID_OBJECT_ID);
             }
             Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
                 return Ok(*owner_object_id != INVALID_OBJECT_ID);
