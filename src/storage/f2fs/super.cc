@@ -17,6 +17,13 @@ void F2fs::PutSuper() {
 #endif
 
   WriteCheckpoint(false, true);
+  if (superblock_info_->TestCpFlags(CpFlag::kCpErrorFlag)) {
+    // In the checkpoint error case, flush the dirty vnode list.
+    GetVCache().ForDirtyVnodesIf([&](fbl::RefPtr<VnodeF2fs> &vnode) {
+      GetVCache().RemoveDirty(vnode.get());
+      return ZX_OK;
+    });
+  }
   writer_.reset();
   ResetPsuedoVnodes();
   GetVCache().Reset();

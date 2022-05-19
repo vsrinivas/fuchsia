@@ -133,12 +133,15 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
 }
 
 zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
-  VnodeF2fs *target = static_cast<VnodeF2fs *>(new_child.get());
+  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+    return ZX_ERR_BAD_STATE;
+  }
 
   if (!fs::IsValidName(name)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  fbl::RefPtr<VnodeF2fs> target = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(new_child));
   if (target->IsDir())
     return ZX_ERR_NOT_FILE;
 
@@ -153,7 +156,7 @@ zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
   {
     fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
     target->SetFlag(InodeInfoFlag::kIncLink);
-    if (zx_status_t err = AddLink(name, target); err != ZX_OK) {
+    if (zx_status_t err = AddLink(name, target.get()); err != ZX_OK) {
       target->ClearFlag(InodeInfoFlag::kIncLink);
       return err;
     }
@@ -366,6 +369,10 @@ zx::status<bool> Dir::IsSubdir(Dir *possible_dir) {
 
 zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname,
                         std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir) {
+  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+    return ZX_ERR_BAD_STATE;
+  }
+
   fbl::RefPtr<VnodeF2fs> old_vn_ref;
   fbl::RefPtr<VnodeF2fs> new_vn_ref;
   Dir *old_dir = this;
@@ -547,7 +554,9 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
 }
 
 zx_status_t Dir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode> *out) {
-  zx_status_t status = ZX_OK;
+  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+    return ZX_ERR_BAD_STATE;
+  }
 
   if (!fs::IsValidName(name)) {
     return ZX_ERR_INVALID_ARGS;
@@ -560,28 +569,29 @@ zx_status_t Dir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vn
     return ZX_ERR_ALREADY_EXISTS;
   }
 
+  zx_status_t status = ZX_OK;
   if (S_ISDIR(mode)) {
     status = Mkdir(name, mode, out);
   } else {
     status = DoCreate(name, mode, out);
   }
-
-  if (status != ZX_OK)
-    return status;
-
-  status = (*out)->OpenValidating(fs::VnodeConnectionOptions(), nullptr);
+  if (status == ZX_OK) {
+    status = (*out)->OpenValidating(fs::VnodeConnectionOptions(), nullptr);
+  }
   return status;
 }
 
 zx_status_t Dir::Unlink(std::string_view name, bool must_be_dir) {
-  fbl::RefPtr<fs::Vnode> vn;
+  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+    return ZX_ERR_BAD_STATE;
+  }
 
+  fbl::RefPtr<fs::Vnode> vn;
   if (zx_status_t status = DoLookup(name, &vn); status != ZX_OK) {
     return status;
   }
 
   VnodeF2fs *vnode = (VnodeF2fs *)vn.get();
-
   if (vnode->IsDir())
     return Rmdir(static_cast<Dir *>(vnode), name);
 

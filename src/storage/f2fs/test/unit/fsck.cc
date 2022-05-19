@@ -170,7 +170,7 @@ TEST(FsckTest, UnreachableNatEntryInJournal) {
   ASSERT_EQ(fsck.ReadBlock(*checkpoint_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)),
             ZX_OK);
   auto checkpoint_ptr = reinterpret_cast<Checkpoint *>(checkpoint_block.get());
-  ASSERT_FALSE(checkpoint_ptr->ckpt_flags & kCpCompactSumFlag);
+  ASSERT_FALSE(checkpoint_ptr->ckpt_flags & static_cast<uint32_t>(CpFlag::kCpCompactSumFlag));
   auto summary_offset = checkpoint_ptr->cp_pack_start_sum;
 
   // Read the hot data summary.
@@ -296,7 +296,7 @@ TEST(FsckTest, UnreachableSitEntryInJournal) {
   auto fs_block = std::make_unique<FsBlock>();
   ASSERT_EQ(fsck.ReadBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)), ZX_OK);
   auto cp_ptr = reinterpret_cast<Checkpoint *>(fs_block.get());
-  ASSERT_FALSE(cp_ptr->ckpt_flags & kCpCompactSumFlag);
+  ASSERT_FALSE(cp_ptr->ckpt_flags & static_cast<uint32_t>(CpFlag::kCpCompactSumFlag));
   auto offset = LeToCpu(superblock_pointer->cp_blkaddr) + LeToCpu(cp_ptr->cp_pack_start_sum) + 2;
 
   // Read the cold data summary.

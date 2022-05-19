@@ -33,7 +33,7 @@ TEST(OrphanInode, RecoverOrphanInode) {
   FileTester::CreateRoot(fs.get(), &root);
   fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
-  ASSERT_FALSE(fs->GetSuperblockInfo().GetCheckpoint().ckpt_flags & kCpOrphanPresentFlag);
+  ASSERT_FALSE(fs->GetSuperblockInfo().TestCpFlags(CpFlag::kCpOrphanPresentFlag));
 
   // 1. Create files
   std::vector<fbl::RefPtr<VnodeF2fs>> vnodes;

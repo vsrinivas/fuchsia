@@ -125,10 +125,12 @@ struct Superblock {
 } __attribute__((packed));
 
 // For checkpoint
-constexpr uint64_t kCpErrorFlag = 0x00000008;
-constexpr uint64_t kCpCompactSumFlag = 0x00000004;
-constexpr uint64_t kCpOrphanPresentFlag = 0x00000002;
-constexpr uint64_t kCpUmountFlag = 0x00000001;
+enum class CpFlag {
+  kCpErrorFlag = 0x8,
+  kCpCompactSumFlag = 0x4,
+  kCpOrphanPresentFlag = 0x2,
+  kCpUmountFlag = 0x1,
+};
 
 struct Checkpoint {
   uint64_t checkpoint_ver = 0;          // checkpoint block version number

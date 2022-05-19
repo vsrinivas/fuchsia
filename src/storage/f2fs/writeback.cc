@@ -95,26 +95,31 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType 
     }
     return fpromise::make_ok_promise();
   }
-  return fpromise::make_promise([this, completion, operations = std::move(operations)]() mutable {
-    zx_status_t ret = ZX_OK;
-    if (ret = transaction_handler_->RunRequests(operations.TakeOperations()); ret != ZX_OK) {
-      FX_LOGS(WARNING) << "[f2fs] RunRequest fails..Redirty Pages..";
-    }
-    operations.Completion([ret](fbl::RefPtr<Page> page) {
-      if (ret != ZX_OK && page->IsUptodate()) {
-        // Just redirty it in case of IO failure.
-        LockedPage locked_page(std::move(page));
-        locked_page->SetDirty();
-        locked_page->ClearWriteback();
-        return ret;
-      }
-      page->ClearWriteback();
-      return ZX_OK;
-    });
-    if (completion) {
-      sync_completion_signal(completion);
-    }
-  });
+  return fpromise::make_promise(
+      [this, completion, type, operations = std::move(operations)]() mutable {
+        zx_status_t ret = ZX_OK;
+        if (ret = transaction_handler_->RunRequests(operations.TakeOperations()); ret != ZX_OK) {
+          FX_LOGS(WARNING) << "[f2fs] RunRequest fails with " << ret;
+        }
+        operations.Completion([ret, type](fbl::RefPtr<Page> page) {
+          if (ret != ZX_OK && page->IsUptodate()) {
+            if (type == PageType::kMeta) {
+              // When it fails to write metadata blocks, it set kCpErrorFlag.
+              page->GetVnode().Vfs()->GetSuperblockInfo().SetCpFlags(CpFlag::kCpErrorFlag);
+            }
+            // Just redirty it in case of IO failure.
+            LockedPage locked_page(std::move(page));
+            locked_page->SetDirty();
+            locked_page->ClearWriteback();
+            return ret;
+          }
+          page->ClearWriteback();
+          return ZX_OK;
+        });
+        if (completion) {
+          sync_completion_signal(completion);
+        }
+      });
 }
 
 void Writer::ScheduleTask(fpromise::pending_task task) {

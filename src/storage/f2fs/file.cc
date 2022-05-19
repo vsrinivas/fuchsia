@@ -445,19 +445,28 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
 }
 
 zx_status_t File::Write(const void *data, size_t len, size_t offset, size_t *out_actual) {
+  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+    return ZX_ERR_BAD_STATE;
+  }
   return DoWrite(data, len, offset, out_actual);
 }
 
 zx_status_t File::Append(const void *data, size_t len, size_t *out_end, size_t *out_actual) {
   size_t off = GetSize();
+  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+    *out_end = off;
+    return ZX_ERR_BAD_STATE;
+  }
   zx_status_t ret = DoWrite(data, len, off, out_actual);
-
   *out_end = off + *out_actual;
-
   return ret;
 }
 
 zx_status_t File::Truncate(size_t len) {
+  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+    return ZX_ERR_BAD_STATE;
+  }
+
   if (len == GetSize())
     return ZX_OK;
 

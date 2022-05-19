@@ -374,7 +374,14 @@ void VnodeF2fs::RecycleNode() {
   if (GetNlink()) {
     // f2fs removes the last reference to a dirty vnode from the dirty vnode list
     // when there is no dirty Page for the vnode at checkpoint time.
-    ZX_ASSERT(GetDirtyPageCount() == 0);
+    if (GetDirtyPageCount()) {
+      // It can happen only when CpFlag::kCpErrorFlag is set.
+      FX_LOGS(WARNING) << "RecycleNode[" << GetNameView().data() << ":" << GetKey()
+                       << "]: GetDirtyPageCount() must be zero but " << GetDirtyPageCount()
+                       << ", Checkpoint error flag: "
+                       << (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag) ? "true"
+                                                                                        : "false");
+    }
     file_cache_.Reset();
 #ifdef __Fuchsia__
     vmo_manager_.Reset();

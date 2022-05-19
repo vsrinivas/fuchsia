@@ -115,6 +115,34 @@ class SuperblockInfo {
   void SetDirty() { is_dirty_ = true; }
   void ClearDirty() { is_dirty_ = false; }
 
+  void SetCpFlags(CpFlag flag) __TA_EXCLUDES(mutex_) {
+    std::lock_guard lock(mutex_);
+    SetCpFlagsUnsafe(flag);
+  }
+
+  void SetCpFlagsUnsafe(CpFlag flag) __TA_REQUIRES(mutex_) {
+    uint32_t flags = LeToCpu(GetCheckpoint().ckpt_flags);
+    flags |= static_cast<uint32_t>(flag);
+    GetCheckpoint().ckpt_flags = CpuToLe(flags);
+  }
+
+  void ClearCpFlags(CpFlag flag) __TA_EXCLUDES(mutex_) {
+    std::lock_guard lock(mutex_);
+    ClearCpFlagsUnsafe(flag);
+  }
+
+  void ClearCpFlagsUnsafe(CpFlag flag) __TA_REQUIRES(mutex_) {
+    uint32_t flags = LeToCpu(GetCheckpoint().ckpt_flags);
+    flags &= (~static_cast<uint32_t>(flag));
+    GetCheckpoint().ckpt_flags = CpuToLe(flags);
+  }
+
+  bool TestCpFlags(CpFlag flag) __TA_EXCLUDES(mutex_) {
+    fs::SharedLock lock(mutex_);
+    uint32_t flags = LeToCpu(GetCheckpoint().ckpt_flags);
+    return flags & static_cast<uint32_t>(flag);
+  }
+
   Checkpoint &GetCheckpoint() { return checkpoint_block_.checkpoint_; }
   const std::vector<FsBlock> &GetCheckpointTrailer() const { return checkpoint_trailer_; }
   void SetCheckpointTrailer(std::vector<FsBlock> checkpoint_trailer) {
@@ -328,6 +356,7 @@ class SuperblockInfo {
 
   std::vector<FsBlock> checkpoint_trailer_;
 
+  fs::SharedMutex mutex_;                                             // for checkpoint data
   std::mutex checkpoint_mutex_;                                       // for checkpoint procedure
   fs::SharedMutex fs_lock_[static_cast<int>(LockType::kNrLockType)];  // for blocking FS operations
 
@@ -386,11 +415,6 @@ class SuperblockInfo {
 };
 
 constexpr uint32_t kDefaultAllocatedBlocks = 1;
-
-inline bool IsSetCkptFlags(Checkpoint *cp, uint32_t f) {
-  uint32_t ckpt_flags = LeToCpu(cp->ckpt_flags);
-  return ckpt_flags & f;
-}
 
 inline bool RawIsInode(Node &node) { return node.footer.nid == node.footer.ino; }
 

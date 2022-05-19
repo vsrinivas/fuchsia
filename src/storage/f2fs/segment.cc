@@ -1111,14 +1111,14 @@ zx_status_t SegmentManager::ReadNormalSummaries(int type) {
   if (IsDataSeg(static_cast<CursegType>(type))) {
     segno = LeToCpu(ckpt.cur_data_segno[type]);
     blk_off = LeToCpu(ckpt.cur_data_blkoff[type - static_cast<int>(CursegType::kCursegHotData)]);
-    if (ckpt.ckpt_flags & kCpUmountFlag) {
+    if (superblock_info_->TestCpFlags(CpFlag::kCpUmountFlag)) {
       blk_addr = SumBlkAddr(kNrCursegType, type);
     } else
       blk_addr = SumBlkAddr(kNrCursegDataType, type);
   } else {
     segno = LeToCpu(ckpt.cur_node_segno[type - static_cast<int>(CursegType::kCursegHotNode)]);
     blk_off = LeToCpu(ckpt.cur_node_blkoff[type - static_cast<int>(CursegType::kCursegHotNode)]);
-    if (ckpt.ckpt_flags & kCpUmountFlag) {
+    if (superblock_info_->TestCpFlags(CpFlag::kCpUmountFlag)) {
       blk_addr = SumBlkAddr(kNrCursegNodeType, type - static_cast<int>(CursegType::kCursegHotNode));
     } else
       blk_addr = GetSumBlock(segno);
@@ -1129,7 +1129,7 @@ zx_status_t SegmentManager::ReadNormalSummaries(int type) {
   sum = new_page->GetAddress<SummaryBlock>();
 
   if (IsNodeSeg(static_cast<CursegType>(type))) {
-    if (ckpt.ckpt_flags & kCpUmountFlag) {
+    if (superblock_info_->TestCpFlags(CpFlag::kCpUmountFlag)) {
       Summary *ns = &sum->entries[0];
       for (uint32_t i = 0; i < superblock_info_->GetBlocksPerSeg(); ++i, ++ns) {
         ns->version = 0;
@@ -1158,7 +1158,7 @@ zx_status_t SegmentManager::ReadNormalSummaries(int type) {
 zx_status_t SegmentManager::RestoreCursegSummaries() {
   int type = static_cast<int>(CursegType::kCursegHotData);
 
-  if (superblock_info_->GetCheckpoint().ckpt_flags & kCpCompactSumFlag) {
+  if (superblock_info_->TestCpFlags(CpFlag::kCpCompactSumFlag)) {
     // restore for compacted data summary
     if (ReadCompactedSummaries())
       return ZX_ERR_INVALID_ARGS;
@@ -1240,7 +1240,7 @@ void SegmentManager::WriteNormalSummaries(block_t blkaddr, CursegType type) {
 }
 
 void SegmentManager::WriteDataSummaries(block_t start_blk) {
-  if (superblock_info_->GetCheckpoint().ckpt_flags & kCpCompactSumFlag) {
+  if (superblock_info_->TestCpFlags(CpFlag::kCpCompactSumFlag)) {
     WriteCompactedSummaries(start_blk);
   } else {
     WriteNormalSummaries(start_blk, CursegType::kCursegHotData);
@@ -1248,7 +1248,7 @@ void SegmentManager::WriteDataSummaries(block_t start_blk) {
 }
 
 void SegmentManager::WriteNodeSummaries(block_t start_blk) {
-  if (superblock_info_->GetCheckpoint().ckpt_flags & kCpUmountFlag)
+  if (superblock_info_->TestCpFlags(CpFlag::kCpUmountFlag))
     WriteNormalSummaries(start_blk, CursegType::kCursegHotNode);
 }
 

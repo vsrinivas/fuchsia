@@ -691,7 +691,7 @@ zx_status_t FsckWorker::CheckOrphanNodes() {
   block_t start_blk, orphan_blkaddr;
   auto fs_block = std::make_unique<FsBlock>();
 
-  if (!IsSetCkptFlags(&superblock_info_.GetCheckpoint(), kCpOrphanPresentFlag)) {
+  if (!superblock_info_.TestCpFlags(CpFlag::kCpOrphanPresentFlag)) {
     return ZX_OK;
   }
 
@@ -969,7 +969,7 @@ zx_status_t FsckWorker::RepairNat() {
   }
 
   if (need_journal_update) {
-    if (IsSetCkptFlags(&superblock_info_.GetCheckpoint(), kCpCompactSumFlag)) {
+    if (superblock_info_.TestCpFlags(CpFlag::kCpCompactSumFlag)) {
       block_t summary_addr = StartSummaryBlock();
       auto fs_block = std::make_unique<FsBlock>();
       ReadBlock(*fs_block, summary_addr);
@@ -980,7 +980,7 @@ zx_status_t FsckWorker::RepairNat() {
 #endif  // __Fuchsia__
       return WriteBlock(*fs_block, summary_addr);
     } else {
-      if (IsSetCkptFlags(&superblock_info_.GetCheckpoint(), kCpUmountFlag)) {
+      if (superblock_info_.TestCpFlags(CpFlag::kCpUmountFlag)) {
         return WriteBlock(
             *reinterpret_cast<FsBlock *>(summary_block),
             SummaryBlockAddress(kNrCursegType, static_cast<int>(CursegType::kCursegHotData)));
@@ -1052,7 +1052,7 @@ zx_status_t FsckWorker::RepairSit() {
 
   if (need_journal_update) {
     // Write the summary.
-    if (IsSetCkptFlags(&superblock_info_.GetCheckpoint(), kCpCompactSumFlag)) {
+    if (superblock_info_.TestCpFlags(CpFlag::kCpCompactSumFlag)) {
       block_t summary_addr = StartSummaryBlock();
       auto fs_block = std::make_unique<FsBlock>();
       ReadBlock(*fs_block, summary_addr);
@@ -1063,7 +1063,7 @@ zx_status_t FsckWorker::RepairSit() {
 #endif  // __Fuchsia__
       return WriteBlock(*fs_block, summary_addr);
     } else {
-      if (IsSetCkptFlags(&superblock_info_.GetCheckpoint(), kCpUmountFlag)) {
+      if (superblock_info_.TestCpFlags(CpFlag::kCpUmountFlag)) {
         return WriteBlock(
             *reinterpret_cast<FsBlock *>(summary_block),
             SummaryBlockAddress(kNrCursegType, static_cast<int>(CursegType::kCursegColdData)));
@@ -1765,7 +1765,7 @@ zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
     segno = LeToCpu(ckpt.cur_data_segno[static_cast<int>(type)]);
     blk_off = LeToCpu(ckpt.cur_data_blkoff[type - CursegType::kCursegHotData]);
 
-    if (IsSetCkptFlags(&ckpt, kCpUmountFlag)) {
+    if (superblock_info_.TestCpFlags(CpFlag::kCpUmountFlag)) {
       block_address = SummaryBlockAddress(kNrCursegType, static_cast<int>(type));
     } else {
       block_address = SummaryBlockAddress(kNrCursegDataType, static_cast<int>(type));
@@ -1774,7 +1774,7 @@ zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
     segno = LeToCpu(ckpt.cur_node_segno[type - CursegType::kCursegHotNode]);
     blk_off = LeToCpu(ckpt.cur_node_blkoff[type - CursegType::kCursegHotNode]);
 
-    if (IsSetCkptFlags(&ckpt, kCpUmountFlag)) {
+    if (superblock_info_.TestCpFlags(CpFlag::kCpUmountFlag)) {
       block_address = SummaryBlockAddress(kNrCursegNodeType, type - CursegType::kCursegHotNode);
     } else {
       block_address = segment_manager_->GetSumBlock(segno);
@@ -1789,7 +1789,7 @@ zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
 #endif  // __Fuchsia__
 
   if (segment_manager_->IsNodeSeg(type)) {
-    if (IsSetCkptFlags(&ckpt, kCpUmountFlag)) {
+    if (superblock_info_.TestCpFlags(CpFlag::kCpUmountFlag)) {
 #if 0  // do not change original value
       Summary *sum_entry = &sum_blk->entries[0];
       for (uint64_t i = 0; i < superblock_info->GetBlocksPerSeg(); ++i, ++sum_entry) {
@@ -1817,7 +1817,7 @@ zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
 zx_status_t FsckWorker::RestoreCursegSummaries() {
   int32_t type = static_cast<int32_t>(CursegType::kCursegHotData);
 
-  if (IsSetCkptFlags(&superblock_info_.GetCheckpoint(), kCpCompactSumFlag)) {
+  if (superblock_info_.TestCpFlags(CpFlag::kCpCompactSumFlag)) {
     if (zx_status_t ret = ReadCompactedSummaries(); ret != ZX_OK) {
       return ret;
     }

@@ -19,6 +19,7 @@ namespace f2fs {
 namespace {
 
 using block_client::FakeBlockDevice;
+using CheckpointTestF = F2fsFakeDevTestFixture;
 
 constexpr uint64_t kBlockCount = 4194304;  // 2GB for SIT Bitmap TC
 
@@ -309,7 +310,7 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
     pgoff_t start_blk = cp_page->GetIndex() + 1;
     block_t orphan_blkaddr = cp->cp_pack_start_sum - 1;
 
-    ASSERT_EQ(cp->ckpt_flags & kCpOrphanPresentFlag, kCpOrphanPresentFlag);
+    ASSERT_TRUE(fs->GetSuperblockInfo().TestCpFlags(CpFlag::kCpOrphanPresentFlag));
 
     for (auto ino : exp_inos) {
       fs->RemoveOrphanInode(ino);
@@ -387,7 +388,7 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
     pgoff_t start_blk = cp_page->GetIndex() + 1;
     block_t orphan_blkaddr = cp->cp_pack_start_sum - 1;
 
-    ASSERT_EQ(cp->ckpt_flags & kCpOrphanPresentFlag, kCpOrphanPresentFlag);
+    ASSERT_TRUE(fs->GetSuperblockInfo().TestCpFlags(CpFlag::kCpOrphanPresentFlag));
 
     for (block_t i = 0; i < orphan_blkaddr; ++i) {
       LockedPage page;
@@ -447,7 +448,7 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
 
   if (!after_mkfs) {
     // 2. Check recovery orphan inodes
-    ASSERT_EQ(cp->ckpt_flags & kCpOrphanPresentFlag, kCpOrphanPresentFlag);
+    ASSERT_TRUE(fs->GetSuperblockInfo().TestCpFlags(CpFlag::kCpOrphanPresentFlag));
     ASSERT_EQ(vnodes.size(), orphan_inos);
 
     for (auto &vnode_refptr : vnodes) {
@@ -520,7 +521,7 @@ void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uin
     }
 
     // 3. Recover compacted data summaries
-    ASSERT_EQ(cp->ckpt_flags & kCpCompactSumFlag, kCpCompactSumFlag);
+    ASSERT_TRUE(fs->GetSuperblockInfo().TestCpFlags(CpFlag::kCpCompactSumFlag));
     ASSERT_EQ(fs->GetSegmentManager().ReadCompactedSummaries(), 0);
 
     // 4. Check recovered active summary info
@@ -600,7 +601,7 @@ void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32
     }
 
     // 2. Recover normal data summary
-    ASSERT_NE(cp->ckpt_flags & kCpCompactSumFlag, kCpCompactSumFlag);
+    ASSERT_FALSE(fs->GetSuperblockInfo().TestCpFlags(CpFlag::kCpCompactSumFlag));
     for (int type = static_cast<int>(CursegType::kCursegHotData);
          type <= static_cast<int>(CursegType::kCursegColdNode); ++type) {
       ASSERT_EQ(fs->GetSegmentManager().ReadNormalSummaries(type), ZX_OK);
@@ -664,7 +665,7 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 
   if (!after_mkfs) {
     // 2. Recover compacted data summaries
-    ASSERT_EQ(cp->ckpt_flags & kCpCompactSumFlag, kCpCompactSumFlag);
+    ASSERT_TRUE(fs->GetSuperblockInfo().TestCpFlags(CpFlag::kCpCompactSumFlag));
     ASSERT_EQ(fs->GetSegmentManager().ReadCompactedSummaries(), 0);
 
     // 3. Check recovered journal
@@ -733,7 +734,7 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 
   if (!after_mkfs) {
     // 2. Recover compacted data summaries
-    ASSERT_EQ(cp->ckpt_flags & kCpCompactSumFlag, kCpCompactSumFlag);
+    ASSERT_TRUE(fs->GetSuperblockInfo().TestCpFlags(CpFlag::kCpCompactSumFlag));
     ASSERT_EQ(fs->GetSegmentManager().ReadCompactedSummaries(), 0);
 
     // 3. Check recovered journal
@@ -903,6 +904,60 @@ TEST(CheckpointTest, UmountFlag) {
 
   FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
   FileTester::Unmount(std::move(fs), &bc);
+}
+
+TEST_F(CheckpointTestF, CpError) {
+  fbl::RefPtr<fs::Vnode> test_file;
+  root_dir_->Create("test", S_IFREG, &test_file);
+  fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
+  char wbuf[] = "Checkpoint error test";
+  char rbuf[kBlockSize];
+  block_t fault_lba = 0x1;
+
+  // Make dirty data, node, and meta Pages.
+  FileTester::AppendToFile(vn.get(), wbuf, sizeof(wbuf));
+  {
+    LockedPage page;
+    ASSERT_EQ(fs_->GrabMetaPage(fault_lba, &page), ZX_OK);
+    page->SetDirty();
+  }
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyNodes), 1);
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 1);
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyMeta), 1);
+  ASSERT_FALSE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+
+  // Set a hook to trigger an io error with a meta Page at |fault_lba| on FakeBlockDevice.
+  // It causes that f2fs sets the checkpoint error flag.
+  auto hook = [&bc = fs_->GetBc(), fault_lba](const block_fifo_request_t &_req,
+                                              const zx::vmo *_vmo) {
+    if (_req.dev_offset == bc.BlockNumberToDevice(fault_lba)) {
+      return ZX_ERR_IO;
+    }
+    return ZX_OK;
+  };
+  static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
+  WritebackOperation operation = {.bSync = true};
+  fs_->GetMetaVnode().Writeback(operation);
+
+  ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+
+  // All operations causing dirty pages are not allowed.
+  size_t end = 0, out = 0;
+  ASSERT_EQ(vn->Append(wbuf, kBlockSize, &end, &out), ZX_ERR_BAD_STATE);
+  ASSERT_EQ(vn->Write(wbuf, kBlockSize, 0, &out), ZX_ERR_BAD_STATE);
+  ASSERT_EQ(vn->Truncate(0), ZX_ERR_BAD_STATE);
+  ASSERT_EQ(root_dir_->Unlink("test", false), ZX_ERR_BAD_STATE);
+  ASSERT_EQ(root_dir_->Create("test2", S_IFREG, &test_file), ZX_ERR_BAD_STATE);
+  ASSERT_EQ(root_dir_->Rename(root_dir_, "test", "test1", false, false), ZX_ERR_BAD_STATE);
+  ASSERT_EQ(root_dir_->Link("test", vn), ZX_ERR_BAD_STATE);
+
+  // Read operations should succeed.
+  FileTester::ReadFromFile(vn.get(), rbuf, sizeof(wbuf), 0);
+  ASSERT_EQ(root_dir_->Lookup("test", &test_file), ZX_OK);
+  ASSERT_EQ(strcmp(wbuf, rbuf), 0);
+
+  vn->Close();
+  vn = nullptr;
 }
 
 }  // namespace

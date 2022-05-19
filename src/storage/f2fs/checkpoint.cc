@@ -175,7 +175,7 @@ zx_status_t F2fs::RecoverOrphanInodes() {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   block_t start_blk, orphan_blkaddr;
 
-  if (!(superblock_info.GetCheckpoint().ckpt_flags & kCpOrphanPresentFlag))
+  if (!(superblock_info.TestCpFlags(CpFlag::kCpOrphanPresentFlag)))
     return ZX_OK;
   superblock_info.SetOnRecovery();
   start_blk = superblock_info.StartCpAddr() + LeToCpu(raw_sb_->cp_payload) + 1;
@@ -198,7 +198,7 @@ zx_status_t F2fs::RecoverOrphanInodes() {
     }
   }
   // clear Orphan Flag
-  superblock_info.GetCheckpoint().ckpt_flags &= (~kCpOrphanPresentFlag);
+  superblock_info.ClearCpFlags(CpFlag::kCpOrphanPresentFlag);
   superblock_info.ClearOnRecovery();
   return ZX_OK;
 }
@@ -461,9 +461,9 @@ void F2fs::DoCheckpoint(bool is_umount) {
   // 2 cp  + n data seg summary + orphan inode blocks
   data_sum_blocks = GetSegmentManager().NpagesForSummaryFlush();
   if (data_sum_blocks < 3) {
-    ckpt.ckpt_flags |= kCpCompactSumFlag;
+    superblock_info.SetCpFlags(CpFlag::kCpCompactSumFlag);
   } else {
-    ckpt.ckpt_flags &= (~kCpCompactSumFlag);
+    superblock_info.ClearCpFlags(CpFlag::kCpCompactSumFlag);
   }
 
   orphan_blocks = static_cast<uint32_t>((superblock_info.GetOrphanCount() + kOrphansPerBlock - 1) /
@@ -473,16 +473,16 @@ void F2fs::DoCheckpoint(bool is_umount) {
       2 + data_sum_blocks + orphan_blocks + LeToCpu(raw_sb_->cp_payload);
 
   if (is_umount) {
-    ckpt.ckpt_flags |= kCpUmountFlag;
+    superblock_info.SetCpFlags(CpFlag::kCpUmountFlag);
     ckpt.cp_pack_total_block_count += kNrCursegNodeType;
   } else {
-    ckpt.ckpt_flags &= (~kCpUmountFlag);
+    superblock_info.ClearCpFlags(CpFlag::kCpUmountFlag);
   }
 
   if (superblock_info.GetOrphanCount() > 0) {
-    ckpt.ckpt_flags |= kCpOrphanPresentFlag;
+    superblock_info.SetCpFlags(CpFlag::kCpOrphanPresentFlag);
   } else {
-    ckpt.ckpt_flags &= (~kCpOrphanPresentFlag);
+    superblock_info.ClearCpFlags(CpFlag::kCpOrphanPresentFlag);
   }
 
   // update SIT/NAT bitmap
@@ -545,16 +545,12 @@ void F2fs::DoCheckpoint(bool is_umount) {
   WritebackOperation op = {.bSync = true};
   SyncMetaPages(op);
 
-#if 0  // porting needed
-  // if (superblock_info.ckpt.ckpt_flags & kCpErrorFlag)
-  //	superblock_info->sb->s_flags |= MS_RDONLY;
-#endif
-
   GetSegmentManager().ClearPrefreeSegments();
   superblock_info.ClearDirty();
 
-  ZX_ASSERT(superblock_info_->GetPageCount(CountType::kDirtyMeta) == 0);
-  meta_vnode_->InvalidatePages();
+  if (!superblock_info.TestCpFlags(CpFlag::kCpErrorFlag)) {
+    meta_vnode_->InvalidatePages();
+  }
 }
 
 // We guarantee that this checkpoint procedure should not fail.
@@ -563,9 +559,12 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   Checkpoint &ckpt = superblock_info.GetCheckpoint();
   uint64_t ckpt_ver;
 
+  if (superblock_info.TestCpFlags(CpFlag::kCpErrorFlag)) {
+    return;
+  }
+
   std::lock_guard cp_lock(superblock_info.GetCheckpointMutex());
   BlockOperations();
-
   ScheduleWriterSubmitPages();
 
   // update checkpoint pack index
@@ -583,7 +582,7 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   // unlock all the fs_lock[] in do_checkpoint()
   DoCheckpoint(is_umount);
 
-  if (is_umount) {
+  if (is_umount && !(superblock_info.TestCpFlags(CpFlag::kCpErrorFlag))) {
     ZX_ASSERT(superblock_info_->GetPageCount(CountType::kDirtyDents) == 0);
     ZX_ASSERT(superblock_info_->GetPageCount(CountType::kDirtyData) == 0);
     ZX_ASSERT(superblock_info_->GetPageCount(CountType::kWriteback) == 0);
