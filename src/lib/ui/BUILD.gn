@@ -18,18 +18,14 @@ group("ui") {
 group("tests") {
   testonly = true
   public_deps = [
-    ":rust-ui-crates-tests",
     "carnelian:carnelian-tests",
     "flatland-frame-scheduling:tests",
     "fuchsia-framebuffer:fuchsia-framebuffer-tests",
+    "fuchsia-scenic:fuchsia-scenic-tests",
     "fuchsia-vulkan:fuchsia_vulkan_tests",
     "input-synthesis:tests",
     "keymaps:tests",
     "terminal:tests",
     "wayland:tests",
   ]
-}
-
-fuchsia_unittest_package("rust-ui-crates-tests") {
-  deps = [ "fuchsia-scenic:fuchsia-scenic_test" ]
 }

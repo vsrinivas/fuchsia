@@ -1253,8 +1253,11 @@ impl XdgToplevel {
         let control_handle = stream.control_handle();
         fasync::Task::local(
             async move {
-                #[allow(clippy::never_loop)] // TODO(fxbug.dev/95062)
-                while let Some(request) = stream.try_next().await.unwrap() {
+                // This only supports a single view, so this is an "if" instead of a "while".  For
+                // example, we move `flatland` into the XdgSurfaceView we create below, so it
+                // wouldn't be available for a subsequent iteration of the loop.  This would need to
+                // be restructured to handle subsequent requests.
+                if let Some(request) = stream.try_next().await.unwrap() {
                     match request {
                         ViewProviderRequest::CreateView2 { args, .. } => {
                             let mut view_creation_token = args.view_creation_token.unwrap();
@@ -1335,13 +1338,14 @@ impl XdgToplevel {
                             panic!("unsupported view provider request: {:?}", request)
                         }
                     }
-                    // We only support a single view, so we'll stop handling
-                    // CreateView requests after we create the first view.
-                    while let Some(request) = stream.try_next().await.unwrap() {
-                        panic!("unsupported view provider request: {:?}", request)
-                    }
-                    break;
                 }
+
+                // See previous comment about only supporting a single view.  Here, we ensure that
+                // our client never asks us to create a second view.
+                while let Some(request) = stream.try_next().await.unwrap() {
+                    panic!("unsupported view provider request: {:?}", request)
+                }
+
                 task_queue.post(|_client| {
                     // Returning an error causes the client connection to be
                     // closed (and that typically closes the application).
@@ -1661,7 +1665,6 @@ impl XdgSurfaceView {
         geometry: &Rect,
     ) -> (i32, i32) {
         // Use local offset if we have a parent view.
-        #[allow(clippy::eq_op)] // TODO(fxbug.dev/95062)
         parent.as_ref().map_or_else(
             ||
             // Center in available space if geometry is non-zero.
@@ -1682,7 +1685,7 @@ impl XdgSurfaceView {
                 // local offset is set.
                 local_offset.map_or_else(
                     || {
-                        if physical_size.width != 0 && physical_size.width != 0 {
+                        if physical_size.width != 0 && physical_size.height != 0 {
                             (
                                 (physical_size.width as i32 - geometry.width) / 2,
                                 (physical_size.height as i32 - geometry.height) / 2,

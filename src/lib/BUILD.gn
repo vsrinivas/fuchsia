@@ -151,7 +151,6 @@ group("tests") {
     "timekeeper:tests",
     "trace:tests",
     "trivial-allocator:tests",
-    "ui:rust-ui-crates-tests",
     "ui:tests",
     "usb_bulk:tests",
     "utf_conversion:tests",
