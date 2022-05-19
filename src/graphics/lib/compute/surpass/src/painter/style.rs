@@ -379,10 +379,13 @@ fn to_linear(l: u8) -> f32 {
 
 #[derive(Clone, Debug)]
 pub struct Image {
+    /// Pixels RGBA.
     data: Box<[[cf16; 4]]>,
+    /// Largest x coordinate within the Image.
     max_x: f32,
+    /// Largest y coordinate within the Image.
     max_y: f32,
-    /// Width of the image.
+    /// Width of the image in pixels.
     width: u32,
 }
 
@@ -407,11 +410,7 @@ impl hash::Hash for Image {
 impl Image {
     /// Creates an image from sRGB color channels and linear alpha.
     /// The boxed array size must match the image dimensions.
-    pub fn from_srgba(
-        data: Box<[[u8; 4]]>,
-        width: usize,
-        height: usize,
-    ) -> Result<Self, ImageError> {
+    pub fn from_srgba(data: &[[u8; 4]], width: usize, height: usize) -> Result<Self, ImageError> {
         let to_alpha = |a| (a as f32) * (u8::MAX as f32).recip();
         let data = data
             .iter()
@@ -423,7 +422,7 @@ impl Image {
     }
 
     pub fn from_linear_rgba(
-        data: Box<[[f32; 4]]>,
+        data: &[[f32; 4]],
         width: usize,
         height: usize,
     ) -> Result<Self, ImageError> {
@@ -1262,6 +1261,7 @@ mod tests {
         let max = color.max();
         assert_eq!(max, 3.0);
     }
+
     const C00: Color = Color { r: 0.0000, g: 0.03125, b: 0.0625, a: 0.09375 };
     const C01: Color = Color { r: 0.1250, g: 0.15625, b: 0.1875, a: 0.21875 };
     const C10: Color = Color { r: 0.2500, g: 0.28125, b: 0.3125, a: 0.34375 };
@@ -1270,14 +1270,8 @@ mod tests {
     const C21: Color = Color { r: 0.6250, g: 0.65625, b: 0.6875, a: 0.71875 };
 
     fn apply_texture_color_at(transform: AffineTransform) -> Vec<[f32; 8]> {
-        let image = Arc::new(
-            Image::from_linear_rgba(
-                [C00, C01, C10, C11, C20, C21].iter().map(|c| c.to_array()).collect(),
-                2,
-                3,
-            )
-            .unwrap(),
-        );
+        let data: Vec<_> = [C00, C01, C10, C11, C20, C21].iter().map(|c| c.to_array()).collect();
+        let image = Arc::new(Image::from_linear_rgba(&data[..], 2, 3).unwrap());
         let texture = Texture { transform, image };
         texture.color_at(-2.0, -2.0).iter().map(|v| v.to_array().clone()).collect()
     }
