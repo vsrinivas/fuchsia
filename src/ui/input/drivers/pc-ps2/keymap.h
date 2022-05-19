@@ -72,7 +72,7 @@ inline constexpr std::optional<fuchsia_input::wire::Key> kSet1UsageMap[128] = {
     fuchsia_input::wire::Key::kSlash,
     fuchsia_input::wire::Key::kRightShift,
     fuchsia_input::wire::Key::kKeypadAsterisk,
-    /* 0x38 */ fuchsia_input::wire::Key::kLeftShift,
+    /* 0x38 */ fuchsia_input::wire::Key::kLeftAlt,
     fuchsia_input::wire::Key::kSpace,
     fuchsia_input::wire::Key::kCapsLock,
     fuchsia_input::wire::Key::kF1,
