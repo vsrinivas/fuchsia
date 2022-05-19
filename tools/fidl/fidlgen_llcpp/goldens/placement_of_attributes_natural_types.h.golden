@@ -427,14 +427,6 @@ struct IsFidlType<::test_placementofattributes::ExampleStruct>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_placementofattributes::ExampleStruct>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_placementofattributes_ExampleStructTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_placementofattributes::ExampleStruct,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -449,15 +441,6 @@ struct IsFidlType<::test_placementofattributes::ExampleProtocolMethodRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_placementofattributes::ExampleProtocolMethodRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_placementofattributes_ExampleProtocolMethodRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_placementofattributes::ExampleProtocolMethodRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -470,14 +453,6 @@ extern "C" const fidl_type_t test_placementofattributes_ExampleTableTable;
 template <>
 struct IsFidlType<::test_placementofattributes::ExampleTable>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_placementofattributes::ExampleTable>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_placementofattributes_ExampleTableTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -496,14 +471,6 @@ struct IsUnion<::test_placementofattributes::ExampleXUnion>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_placementofattributes::ExampleXUnion>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_placementofattributes_ExampleXUnionTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_placementofattributes::ExampleXUnion,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -518,14 +485,6 @@ struct IsFidlType<::test_placementofattributes::ExampleUnion>
 template <>
 struct IsUnion<::test_placementofattributes::ExampleUnion>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_placementofattributes::ExampleUnion>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_placementofattributes_ExampleUnionTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

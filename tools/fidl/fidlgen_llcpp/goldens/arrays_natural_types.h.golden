@@ -460,13 +460,6 @@ template <>
 struct IsFidlType<::test_arrays::StructSmallArray> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_arrays::StructSmallArray> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_arrays_StructSmallArrayTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_arrays::StructSmallArray,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -477,13 +470,6 @@ extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
 
 template <>
 struct IsFidlType<::test_arrays::StructLargeArray> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_arrays::StructLargeArray> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_arrays_StructLargeArrayTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -498,13 +484,6 @@ template <>
 struct IsFidlType<::test_arrays::TableSmallArray> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_arrays::TableSmallArray> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_arrays_TableSmallArrayTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_arrays::TableSmallArray,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -515,13 +494,6 @@ extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
 
 template <>
 struct IsFidlType<::test_arrays::TableLargeArray> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_arrays::TableLargeArray> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_arrays_TableLargeArrayTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -538,13 +510,6 @@ template <>
 struct IsUnion<::test_arrays::UnionSmallArray> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_arrays::UnionSmallArray> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_arrays_UnionSmallArrayTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_arrays::UnionSmallArray,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -557,13 +522,6 @@ template <>
 struct IsFidlType<::test_arrays::UnionLargeArray> : public std::true_type {};
 template <>
 struct IsUnion<::test_arrays::UnionLargeArray> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_arrays::UnionLargeArray> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_arrays_UnionLargeArrayTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

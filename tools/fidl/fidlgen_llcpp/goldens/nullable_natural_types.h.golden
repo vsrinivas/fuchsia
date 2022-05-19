@@ -838,14 +838,6 @@ struct IsFidlType<::test_nullable::StructWithNullableVector>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableVector>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_nullable_StructWithNullableVectorTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_nullable::StructWithNullableVector,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -857,14 +849,6 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
 template <>
 struct IsFidlType<::test_nullable::StructWithNullableUnion>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableUnion>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_nullable_StructWithNullableUnionTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -880,14 +864,6 @@ struct IsFidlType<::test_nullable::StructWithNullableStruct>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableStruct>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_nullable_StructWithNullableStructTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_nullable::StructWithNullableStruct,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -899,14 +875,6 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 template <>
 struct IsFidlType<::test_nullable::StructWithNullableString>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableString>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_nullable_StructWithNullableStringTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -925,14 +893,6 @@ struct IsResource<::test_nullable::StructWithNullableRequest>
 template <>
 struct IsFidlType<::test_nullable::StructWithNullableRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_nullable_StructWithNullableRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -955,14 +915,6 @@ struct IsFidlType<::test_nullable::StructWithNullableProtocol>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableProtocol>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_nullable_StructWithNullableProtocolTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_nullable::StructWithNullableProtocol,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -983,14 +935,6 @@ struct IsFidlType<::test_nullable::StructWithNullableHandle>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableHandle>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_nullable_StructWithNullableHandleTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_nullable::StructWithNullableHandle,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -1006,15 +950,6 @@ struct IsFidlType<::test_nullable::SimpleProtocolAddTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_nullable::SimpleProtocolAddTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_nullable_SimpleProtocolAddTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_nullable::SimpleProtocolAddTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -1026,14 +961,6 @@ extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 template <>
 struct IsFidlType<::test_nullable::SimpleProtocolAddRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_nullable::SimpleProtocolAddRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_nullable_SimpleProtocolAddRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -1048,13 +975,6 @@ template <>
 struct IsFidlType<::test_nullable::Int32Wrapper> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_nullable::Int32Wrapper> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_nullable_Int32WrapperTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_nullable::Int32Wrapper,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -1067,13 +987,6 @@ template <>
 struct IsFidlType<::test_nullable::SimpleUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_nullable::SimpleUnion> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_nullable::SimpleUnion> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_nullable_SimpleUnionTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

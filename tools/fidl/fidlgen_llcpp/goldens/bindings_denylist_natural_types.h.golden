@@ -2161,15 +2161,6 @@ struct IsFidlType<::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2185,15 +2176,6 @@ struct IsFidlType<::test_bindingsdenylist::OnlyAppearsInImportingLibrary>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_OnlyAppearsInImportingLibraryTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::OnlyAppearsInImportingLibrary,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2207,15 +2189,6 @@ template <>
 struct IsFidlType<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2235,15 +2208,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2260,15 +2224,6 @@ struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2283,15 +2238,6 @@ template <>
 struct IsFidlType<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2311,15 +2257,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2335,15 +2272,6 @@ template <>
 struct IsFidlType<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2362,15 +2290,6 @@ struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2384,15 +2303,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2410,15 +2320,6 @@ struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2433,15 +2334,6 @@ template <>
 struct IsFidlType<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2461,15 +2353,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2484,15 +2367,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2511,15 +2385,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2534,15 +2399,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2560,15 +2416,6 @@ struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2583,13 +2430,6 @@ struct IsFidlType<::test_bindingsdenylist::OnlyLlcpp> : public std::true_type {
 };
 template <>
 struct IsUnion<::test_bindingsdenylist::OnlyLlcpp> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_bindingsdenylist::OnlyLlcpp> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_OnlyLlcppTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2610,15 +2450,6 @@ struct IsUnion<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2635,15 +2466,6 @@ struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>
 template <>
 struct IsUnion<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2664,15 +2486,6 @@ struct IsUnion<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2691,15 +2504,6 @@ struct IsUnion<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2715,15 +2519,6 @@ struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult>
 template <>
 struct IsUnion<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

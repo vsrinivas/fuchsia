@@ -175,12 +175,6 @@ template <>
 struct IsFidlType<::test_struct::Simple> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_struct::Simple> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable = &test_struct_SimpleTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_struct::Simple, ::fidl::internal::NaturalCodingConstraintEmpty>
     final
@@ -191,13 +185,6 @@ extern "C" const fidl_type_t test_struct_BasicStructTable;
 
 template <>
 struct IsFidlType<::test_struct::BasicStruct> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_struct::BasicStruct> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_struct_BasicStructTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

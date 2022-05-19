@@ -12,12 +12,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-// These correspond to templated classes forward-declared in
-// //src/lib/fidl/include/lib/fidl/cpp/internal/natural_types.h
-var (
-	TypeTraits = internalNs.member("TypeTraits")
-)
-
 type Struct struct {
 	Attributes
 	fidlgen.Resourceness
@@ -39,9 +33,6 @@ type Struct struct {
 
 	TypeShapeV1 TypeShape
 	TypeShapeV2 TypeShape
-
-	// TypeTraits contains information about a natural domain object.
-	TypeTraits name
 
 	isEmptyStruct                bool
 	isAnonymousRequestOrResponse bool
@@ -229,7 +220,6 @@ func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
 			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
 		IsInResult: false,
-		TypeTraits: TypeTraits.template(name.Unified),
 		PaddingV1:  toStructPaddings(val.BuildPaddingMarkers(fidlgen.WireFormatVersionV1)),
 		PaddingV2:  toStructPaddings(val.BuildPaddingMarkers(fidlgen.WireFormatVersionV2)),
 	}

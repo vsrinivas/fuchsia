@@ -962,13 +962,6 @@ template <>
 struct IsFidlType<::test_table::TableWithAttributes> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_table::TableWithAttributes> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_table_TableWithAttributesTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_table::TableWithAttributes,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -981,13 +974,6 @@ template <>
 struct IsFidlType<::test_table::SimpleTable> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_table::SimpleTable> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_table_SimpleTableTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_table::SimpleTable, ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
@@ -997,13 +983,6 @@ extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
 
 template <>
 struct IsFidlType<::test_table::ReverseOrdinalTable> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_table::ReverseOrdinalTable> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_table_ReverseOrdinalTableTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -1018,13 +997,6 @@ template <>
 struct IsFidlType<::test_table::OlderSimpleTable> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_table::OlderSimpleTable> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_table_OlderSimpleTableTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_table::OlderSimpleTable,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -1037,13 +1009,6 @@ template <>
 struct IsFidlType<::test_table::NewerSimpleTable> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_table::NewerSimpleTable> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_table_NewerSimpleTableTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_table::NewerSimpleTable,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -1054,13 +1019,6 @@ extern "C" const fidl_type_t test_table_ExtensionTableTable;
 
 template <>
 struct IsFidlType<::test_table::ExtensionTable> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_table::ExtensionTable> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_table_ExtensionTableTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -1076,13 +1034,6 @@ struct IsFidlType<::test_table::SixtyFourOrdinalTable> : public std::true_type {
 };
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_table::SixtyFourOrdinalTable> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_table_SixtyFourOrdinalTableTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_table::SixtyFourOrdinalTable,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -1093,13 +1044,6 @@ extern "C" const fidl_type_t test_table_EmptyTableTable;
 
 template <>
 struct IsFidlType<::test_table::EmptyTable> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_table::EmptyTable> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_table_EmptyTableTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

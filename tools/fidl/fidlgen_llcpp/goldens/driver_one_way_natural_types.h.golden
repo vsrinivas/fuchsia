@@ -158,13 +158,6 @@ template <>
 struct IsFidlType<::test_driveroneway::Payload> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_driveroneway::Payload> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_driveroneway_PayloadTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_driveroneway::Payload,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -176,14 +169,6 @@ extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 template <>
 struct IsFidlType<::test_driveroneway::OneWaySendRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_driveroneway::OneWaySendRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_driveroneway_OneWaySendRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

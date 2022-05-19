@@ -244,12 +244,6 @@ template <>
 struct IsFidlType<::test_versions::Struct> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_versions::Struct> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable = &test_versions_StructTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_versions::Struct, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
@@ -259,12 +253,6 @@ extern "C" const fidl_type_t test_versions_TableTable;
 
 template <>
 struct IsFidlType<::test_versions::Table> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_versions::Table> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable = &test_versions_TableTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -278,12 +266,6 @@ template <>
 struct IsFidlType<::test_versions::Union> : public std::true_type {};
 template <>
 struct IsUnion<::test_versions::Union> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_versions::Union> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable = &test_versions_UnionTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

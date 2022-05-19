@@ -62,9 +62,6 @@ type Table struct {
 	TypeShapeV1         TypeShape
 	TypeShapeV2         TypeShape
 
-	// TypeTraits contains information about a natural domain object.
-	TypeTraits name
-
 	// WireTableFrame is the name of the table frame type associated with
 	// this table in wire domain objects.
 	WireTableFrame name
@@ -152,7 +149,6 @@ func (c *compiler) compileTable(val fidlgen.Table) *Table {
 			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
 		WireTableFrame:           WireTableFrame.template(name.Wire),
-		TypeTraits:               TypeTraits.template(name.Unified),
 		WireTableBuilder:         WireTableBuilder.template(name.Wire),
 		WireTableExternalBuilder: WireTableExternalBuilder.template(name.Wire),
 	}

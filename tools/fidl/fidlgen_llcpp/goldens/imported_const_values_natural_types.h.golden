@@ -98,14 +98,6 @@ struct IsFidlType<::test_importedconstvalues::MyStruct>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_importedconstvalues::MyStruct>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_importedconstvalues_MyStructTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_importedconstvalues::MyStruct,
     ::fidl::internal::NaturalCodingConstraintEmpty>

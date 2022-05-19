@@ -94,14 +94,6 @@ struct IsFidlType<::test_escaping::DocCommentWithQuotes>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_escaping::DocCommentWithQuotes>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_escaping_DocCommentWithQuotesTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_escaping::DocCommentWithQuotes,
     ::fidl::internal::NaturalCodingConstraintEmpty>

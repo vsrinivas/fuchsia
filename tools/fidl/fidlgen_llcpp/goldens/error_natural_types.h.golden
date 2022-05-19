@@ -344,13 +344,6 @@ template <>
 struct IsFidlType<::test_error::ExampleFooResponse> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_error::ExampleFooResponse> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_error_Example_foo_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_error::ExampleFooResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -361,13 +354,6 @@ extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
 template <>
 struct IsFidlType<::test_error::ExampleFooTopResponse> : public std::true_type {
-};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_error::ExampleFooTopResponse> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_error_ExampleFooTopResponseTable;
 };
 
 template <>
@@ -383,13 +369,6 @@ template <>
 struct IsFidlType<::test_error::ExampleFooRequest> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_error::ExampleFooRequest> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_error_ExampleFooRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_error::ExampleFooRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -402,13 +381,6 @@ template <>
 struct IsFidlType<::test_error::ExampleFooResult> : public std::true_type {};
 template <>
 struct IsUnion<::test_error::ExampleFooResult> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_error::ExampleFooResult> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_error_Example_foo_ResultTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

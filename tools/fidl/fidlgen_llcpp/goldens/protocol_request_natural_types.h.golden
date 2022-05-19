@@ -286,15 +286,6 @@ struct IsFidlType<::test_protocolrequest::ParentTakeChildRequestRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolrequest::ParentTakeChildRequestRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolrequest_ParentTakeChildRequestRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolrequest::ParentTakeChildRequestRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -313,15 +304,6 @@ struct IsResource<::test_protocolrequest::ParentTakeChildRequest>
 template <>
 struct IsFidlType<::test_protocolrequest::ParentTakeChildRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolrequest::ParentTakeChildRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolrequest_ParentTakeChildRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -345,15 +327,6 @@ struct IsFidlType<::test_protocolrequest::ParentGetChildTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolrequest::ParentGetChildTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolrequest_ParentGetChildTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolrequest::ParentGetChildTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -373,15 +346,6 @@ struct IsResource<::test_protocolrequest::ParentGetChildRequestTopResponse>
 template <>
 struct IsFidlType<::test_protocolrequest::ParentGetChildRequestTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolrequest::ParentGetChildRequestTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolrequest_ParentGetChildRequestTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

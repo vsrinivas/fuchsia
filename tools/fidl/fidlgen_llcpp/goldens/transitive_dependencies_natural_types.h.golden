@@ -91,13 +91,6 @@ struct IsFidlType<::test_transitivedependencies::Baz> : public std::true_type {
 };
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_transitivedependencies::Baz> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_transitivedependencies_BazTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_transitivedependencies::Baz,
     ::fidl::internal::NaturalCodingConstraintEmpty>

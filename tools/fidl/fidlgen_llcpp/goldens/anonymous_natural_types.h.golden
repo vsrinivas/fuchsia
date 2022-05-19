@@ -965,13 +965,6 @@ template <>
 struct IsFidlType<::test_anonymous::TableData> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_anonymous::TableData> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_anonymous_TableDataTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_anonymous::TableData, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
@@ -984,15 +977,6 @@ struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_anonymous::SomeProtocolSomeMethodRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_anonymous_SomeProtocolSomeMethodRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_anonymous::SomeProtocolSomeMethodRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -1003,13 +987,6 @@ extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
 
 template <>
 struct IsFidlType<::test_anonymous::OverrideTest> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_anonymous::OverrideTest> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_anonymous_OverrideTestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -1026,15 +1003,6 @@ struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_anonymous::SomeProtocolSomeMethodResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_anonymous::SomeProtocolSomeMethodResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -1049,15 +1017,6 @@ struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_anonymous::SomeProtocolSomeMethodTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_anonymous_SomeProtocolSomeMethodTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_anonymous::SomeProtocolSomeMethodTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -1068,13 +1027,6 @@ extern "C" const fidl_type_t test_anonymous_TableMemberTable;
 
 template <>
 struct IsFidlType<::test_anonymous::TableMember> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_anonymous::TableMember> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_anonymous_TableMemberTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -1088,14 +1040,6 @@ extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
 template <>
 struct IsFidlType<::test_anonymous::FunctionApplication>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_anonymous::FunctionApplication>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_anonymous_FunctionApplicationTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -1112,13 +1056,6 @@ template <>
 struct IsUnion<::test_anonymous::UnionMember> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_anonymous::UnionMember> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_anonymous_UnionMemberTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_anonymous::UnionMember,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -1131,13 +1068,6 @@ template <>
 struct IsFidlType<::test_anonymous::Expression> : public std::true_type {};
 template <>
 struct IsUnion<::test_anonymous::Expression> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_anonymous::Expression> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_anonymous_ExpressionTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -1154,15 +1084,6 @@ struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodResult>
 template <>
 struct IsUnion<::test_anonymous::SomeProtocolSomeMethodResult>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_anonymous::SomeProtocolSomeMethodResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_anonymous_SomeProtocol_SomeMethod_ResultTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

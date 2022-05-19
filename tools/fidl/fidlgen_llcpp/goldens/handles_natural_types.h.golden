@@ -640,12 +640,6 @@ template <>
 struct IsFidlType<::test_handles::Handles> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_handles::Handles> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable = &test_handles_HandlesTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_handles::Handles, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
@@ -661,13 +655,6 @@ template <>
 struct IsResource<::test_handles::FdfHandles> : public std::true_type {};
 template <>
 struct IsFidlType<::test_handles::FdfHandles> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_handles::FdfHandles> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_handles_FdfHandlesTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

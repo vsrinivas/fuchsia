@@ -413,15 +413,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -439,15 +430,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -463,15 +445,6 @@ template <>
 struct IsFidlType<
     ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -493,15 +466,6 @@ template <>
 struct IsUnion<
     ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

@@ -159,14 +159,6 @@ struct IsFidlType<::test_inheritance::SuperFooTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_inheritance::SuperFooTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_inheritance_SuperFooTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_inheritance::SuperFooTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -177,13 +169,6 @@ extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
 template <>
 struct IsFidlType<::test_inheritance::SuperFooRequest> : public std::true_type {
-};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_inheritance::SuperFooRequest> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_inheritance_SuperFooRequestTable;
 };
 
 template <>

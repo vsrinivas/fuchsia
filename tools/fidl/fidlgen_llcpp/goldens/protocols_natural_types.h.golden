@@ -3728,15 +3728,6 @@ struct IsFidlType<::test_protocols::WithProtocolEndsServerEndsTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithProtocolEndsServerEndsTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithProtocolEndsServerEndsTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithProtocolEndsServerEndsTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3756,15 +3747,6 @@ struct IsResource<::test_protocols::WithProtocolEndsServerEndsRequest>
 template <>
 struct IsFidlType<::test_protocols::WithProtocolEndsServerEndsRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithProtocolEndsServerEndsRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithProtocolEndsServerEndsRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3788,15 +3770,6 @@ struct IsFidlType<::test_protocols::WithProtocolEndsClientEndsTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithProtocolEndsClientEndsTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithProtocolEndsClientEndsTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithProtocolEndsClientEndsTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3818,15 +3791,6 @@ struct IsFidlType<::test_protocols::WithProtocolEndsClientEndsRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithProtocolEndsClientEndsRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithProtocolEndsClientEndsRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithProtocolEndsClientEndsRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3843,15 +3807,6 @@ struct IsFidlType<::test_protocols::WithErrorSyntaxResponseAsStructResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxResponseAsStructResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithErrorSyntaxResponseAsStructResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3865,15 +3820,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntaxResponseAsStructTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3894,15 +3840,6 @@ struct IsResource<::test_protocols::WithErrorSyntaxHandleInResultResponse>
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntaxHandleInResultResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxHandleInResultResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3926,15 +3863,6 @@ struct IsFidlType<::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithErrorSyntaxHandleInResultTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3952,15 +3880,6 @@ struct IsFidlType<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3973,15 +3892,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3999,15 +3909,6 @@ struct IsFidlType<::test_protocols::WithErrorSyntaxErrorAsEnumResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxErrorAsEnumResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithErrorSyntaxErrorAsEnumResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4022,16 +3923,6 @@ struct IsFidlType<
     ::test_protocols::
         WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4054,16 +3945,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::
         WithAndWithoutRequestResponseWithRequestWithResponseRequest,
@@ -4082,15 +3963,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4107,16 +3979,6 @@ struct IsFidlType<
     ::test_protocols::
         WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4138,15 +4000,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4163,16 +4016,6 @@ struct IsFidlType<
     ::test_protocols::
         WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::
-        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4192,15 +4035,6 @@ struct IsFidlType<::test_protocols::TransitionalRequestTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::TransitionalRequestTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_TransitionalRequestTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::TransitionalRequestTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4212,15 +4046,6 @@ extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
 template <>
 struct IsFidlType<::test_protocols::TransitionalRequestRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::TransitionalRequestRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_TransitionalRequestRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4236,14 +4061,6 @@ struct IsFidlType<::test_protocols::TransitionalOneWayRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_protocols::TransitionalOneWayRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_TransitionalOneWayRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::TransitionalOneWayRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4255,14 +4072,6 @@ extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
 template <>
 struct IsFidlType<::test_protocols::TransitionalEventRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_protocols::TransitionalEventRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_TransitionalEventRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4279,15 +4088,6 @@ struct IsFidlType<::test_protocols::MethodWithUnionUnionMethodRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::MethodWithUnionUnionMethodRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_MethodWithUnionUnionMethodRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::MethodWithUnionUnionMethodRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4299,15 +4099,6 @@ extern "C" const fidl_type_t test_protocols_SyscallProtocolMethodCRequestTable;
 template <>
 struct IsFidlType<::test_protocols::SyscallProtocolMethodCRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::SyscallProtocolMethodCRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_SyscallProtocolMethodCRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4324,13 +4115,6 @@ template <>
 struct IsResource<::test_protocols::ProtocolEnds> : public std::true_type {};
 template <>
 struct IsFidlType<::test_protocols::ProtocolEnds> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_protocols::ProtocolEnds> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ProtocolEndsTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4356,15 +4140,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4388,15 +4163,6 @@ struct IsFidlType<::test_protocols::WithProtocolEndsStructContainingEndsRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithProtocolEndsStructContainingEndsRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithProtocolEndsStructContainingEndsRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4411,15 +4177,6 @@ extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 template <>
 struct IsFidlType<::test_protocols::ManyParametersFifteenRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::ManyParametersFifteenRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ManyParametersFifteenRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4441,15 +4198,6 @@ template <>
 struct IsFidlType<
     ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4475,15 +4223,6 @@ struct IsFidlType<::test_protocols::HandleRightsProtocolResponseMethodRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::HandleRightsProtocolResponseMethodRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_HandleRightsProtocolResponseMethodRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::HandleRightsProtocolResponseMethodRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4504,15 +4243,6 @@ struct IsResource<::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
 template <>
 struct IsFidlType<::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4537,15 +4267,6 @@ struct IsFidlType<::test_protocols::HandleRightsProtocolAnEventRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::HandleRightsProtocolAnEventRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_HandleRightsProtocolAnEventRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::HandleRightsProtocolAnEventRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4560,15 +4281,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4588,15 +4300,6 @@ struct IsResource<::test_protocols::ChannelProtocolTakeHandleRequest>
 template <>
 struct IsFidlType<::test_protocols::ChannelProtocolTakeHandleRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::ChannelProtocolTakeHandleRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ChannelProtocolTakeHandleRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4620,15 +4323,6 @@ struct IsFidlType<::test_protocols::ChannelProtocolMutateSocketTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::ChannelProtocolMutateSocketTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ChannelProtocolMutateSocketTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::ChannelProtocolMutateSocketTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4650,15 +4344,6 @@ struct IsFidlType<::test_protocols::ChannelProtocolMutateSocketRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::ChannelProtocolMutateSocketRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ChannelProtocolMutateSocketRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::ChannelProtocolMutateSocketRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4675,15 +4360,6 @@ struct IsFidlType<::test_protocols::ChannelProtocolMethodBTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::ChannelProtocolMethodBTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ChannelProtocolMethodBTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::ChannelProtocolMethodBTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4695,15 +4371,6 @@ extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
 template <>
 struct IsFidlType<::test_protocols::ChannelProtocolMethodBRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::ChannelProtocolMethodBRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ChannelProtocolMethodBRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4719,15 +4386,6 @@ struct IsFidlType<::test_protocols::ChannelProtocolMethodARequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::ChannelProtocolMethodARequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ChannelProtocolMethodARequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::ChannelProtocolMethodARequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4739,15 +4397,6 @@ extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
 template <>
 struct IsFidlType<::test_protocols::ChannelProtocolEventARequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::ChannelProtocolEventARequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_ChannelProtocolEventARequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4765,15 +4414,6 @@ struct IsFidlType<::test_protocols::WithErrorSyntaxResponseAsStructResult>
 template <>
 struct IsUnion<::test_protocols::WithErrorSyntaxResponseAsStructResult>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxResponseAsStructResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4798,15 +4438,6 @@ struct IsUnion<::test_protocols::WithErrorSyntaxHandleInResultResult>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxHandleInResultResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithErrorSyntaxHandleInResultResult,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4826,15 +4457,6 @@ struct IsUnion<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -4847,13 +4469,6 @@ template <>
 struct IsFidlType<::test_protocols::TheUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_protocols::TheUnion> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_protocols::TheUnion> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_TheUnionTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -4870,15 +4485,6 @@ struct IsFidlType<::test_protocols::WithErrorSyntaxErrorAsEnumResult>
 template <>
 struct IsUnion<::test_protocols::WithErrorSyntaxErrorAsEnumResult>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocols::WithErrorSyntaxErrorAsEnumResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

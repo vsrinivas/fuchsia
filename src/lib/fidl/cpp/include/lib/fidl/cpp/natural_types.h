@@ -27,13 +27,6 @@ class Decoder;
 
 namespace internal {
 
-// |TypeTraits| contains information about a natural domain object:
-//
-// - fidl_type_t* kCodingTable: pointer to the coding table.
-//
-template <typename FidlType>
-struct TypeTraits;
-
 // |UnionMemberView| is a helper class for union members.
 // It's returned by various accessor methods on union natural domain objects.
 // It holds a shared_ptr reference to the underlying variant of the union.

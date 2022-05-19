@@ -143,13 +143,6 @@ template <>
 struct IsFidlType<::test_byteandbytes::ByteAndBytes> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_byteandbytes::ByteAndBytes> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_byteandbytes_ByteAndBytesTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_byteandbytes::ByteAndBytes,
     ::fidl::internal::NaturalCodingConstraintEmpty>

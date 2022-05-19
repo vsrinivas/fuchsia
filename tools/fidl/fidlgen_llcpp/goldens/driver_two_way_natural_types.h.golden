@@ -171,14 +171,6 @@ struct IsFidlType<::test_drivertwoway::TwoWayAddTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_drivertwoway::TwoWayAddTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_drivertwoway_TwoWayAddTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_drivertwoway::TwoWayAddTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -190,14 +182,6 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 template <>
 struct IsFidlType<::test_drivertwoway::TwoWayAddRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_drivertwoway::TwoWayAddRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_drivertwoway_TwoWayAddRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

@@ -523,15 +523,6 @@ struct IsFidlType<::test_encapsulatedstructs::NonInlineStructTestStruct>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_encapsulatedstructs::NonInlineStructTestStruct>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_encapsulatedstructs_NonInlineStructTestStructTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_encapsulatedstructs::NonInlineStructTestStruct,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -547,14 +538,6 @@ struct IsFidlType<::test_encapsulatedstructs::Int8Int32>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::Int8Int32>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_encapsulatedstructs_Int8Int32Table;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_encapsulatedstructs::Int8Int32,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -566,14 +549,6 @@ extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
 template <>
 struct IsFidlType<::test_encapsulatedstructs::Int16Int8>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::Int16Int8>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_encapsulatedstructs_Int16Int8Table;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -589,14 +564,6 @@ struct IsFidlType<::test_encapsulatedstructs::ArrayInt16Int8>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::ArrayInt16Int8>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_encapsulatedstructs_ArrayInt16Int8Table;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_encapsulatedstructs::ArrayInt16Int8,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -609,15 +576,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_encapsulatedstructs::StructPaddingTestStruct>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_encapsulatedstructs::StructPaddingTestStruct>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_encapsulatedstructs_StructPaddingTestStructTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -636,14 +594,6 @@ struct IsResource<::test_encapsulatedstructs::TopLevelStruct>
 template <>
 struct IsFidlType<::test_encapsulatedstructs::TopLevelStruct>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::TopLevelStruct>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_encapsulatedstructs_TopLevelStructTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

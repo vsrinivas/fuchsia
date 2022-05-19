@@ -96,15 +96,6 @@ struct IsFidlType<::test_structdefaultvalueenumlibraryreference::Foo>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_structdefaultvalueenumlibraryreference::Foo>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_structdefaultvalueenumlibraryreference_FooTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_structdefaultvalueenumlibraryreference::Foo,
     ::fidl::internal::NaturalCodingConstraintEmpty>

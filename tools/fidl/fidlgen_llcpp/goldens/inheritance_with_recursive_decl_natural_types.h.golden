@@ -165,15 +165,6 @@ struct IsFidlType<::test_inheritancewithrecursivedecl::ParentFirstRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_inheritancewithrecursivedecl::ParentFirstRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_inheritancewithrecursivedecl_ParentFirstRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_inheritancewithrecursivedecl::ParentFirstRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -193,15 +184,6 @@ struct IsResource<::test_inheritancewithrecursivedecl::ChildSecondRequest>
 template <>
 struct IsFidlType<::test_inheritancewithrecursivedecl::ChildSecondRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_inheritancewithrecursivedecl::ChildSecondRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_inheritancewithrecursivedecl_ChildSecondRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

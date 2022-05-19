@@ -316,15 +316,6 @@ struct IsFidlType<::test_unknowninteractions::ExampleFlexibleTwoWayResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_unknowninteractions::ExampleFlexibleTwoWayResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_unknowninteractions_Example_FlexibleTwoWay_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_unknowninteractions::ExampleFlexibleTwoWayResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -337,15 +328,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -364,15 +346,6 @@ struct IsFidlType<::test_unknowninteractions::ExampleFlexibleTwoWayResult>
 template <>
 struct IsUnion<::test_unknowninteractions::ExampleFlexibleTwoWayResult>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_unknowninteractions::ExampleFlexibleTwoWayResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

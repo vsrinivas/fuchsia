@@ -3157,14 +3157,6 @@ struct IsFidlType<::test_union::StructWithNullableXUnion>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::StructWithNullableXUnion>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_StructWithNullableXUnionTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::StructWithNullableXUnion,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3179,16 +3171,6 @@ struct IsFidlType<
     ::test_union::
         TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_union::
-        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3207,12 +3189,6 @@ template <>
 struct IsFidlType<::test_union::Pizza> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::Pizza> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable = &test_union_PizzaTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::Pizza, ::fidl::internal::NaturalCodingConstraintEmpty>
     final
@@ -3223,12 +3199,6 @@ extern "C" const fidl_type_t test_union_PastaTable;
 
 template <>
 struct IsFidlType<::test_union::Pasta> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::Pasta> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable = &test_union_PastaTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3247,16 +3217,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_union::
-        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::
         TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
@@ -3273,13 +3233,6 @@ template <>
 struct IsFidlType<::test_union::NullableUnionStruct> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::NullableUnionStruct> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_NullableUnionStructTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::NullableUnionStruct,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3290,13 +3243,6 @@ extern "C" const fidl_type_t test_union_UnionSandwichTable;
 
 template <>
 struct IsFidlType<::test_union::UnionSandwich> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::UnionSandwich> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_UnionSandwichTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3310,12 +3256,6 @@ template <>
 struct IsFidlType<::test_union::Empty> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::Empty> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable = &test_union_EmptyTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::Empty, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
@@ -3327,13 +3267,6 @@ template <>
 struct IsFidlType<::test_union::UnionWithAttributes> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::UnionWithAttributes> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::UnionWithAttributes> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_UnionWithAttributesTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3350,12 +3283,6 @@ template <>
 struct IsUnion<::test_union::Union> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::Union> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable = &test_union_UnionTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::Union, ::fidl::internal::NaturalCodingConstraintEmpty>
     final
@@ -3369,13 +3296,6 @@ template <>
 struct IsUnion<::test_union::StrictUnion> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::StrictUnion> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_StrictUnionTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::StrictUnion, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -3387,13 +3307,6 @@ template <>
 struct IsFidlType<::test_union::StrictSimpleXUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::StrictSimpleXUnion> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::StrictSimpleXUnion> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_StrictSimpleXUnionTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3410,12 +3323,6 @@ template <>
 struct IsUnion<::test_union::StrictFoo> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::StrictFoo> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable = &test_union_StrictFooTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::StrictFoo, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -3427,13 +3334,6 @@ template <>
 struct IsFidlType<::test_union::StrictBoundedXUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::StrictBoundedXUnion> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::StrictBoundedXUnion> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_StrictBoundedXUnionTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3450,13 +3350,6 @@ template <>
 struct IsUnion<::test_union::ReverseOrdinalUnion> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::ReverseOrdinalUnion> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_ReverseOrdinalUnionTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::ReverseOrdinalUnion,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3469,13 +3362,6 @@ template <>
 struct IsFidlType<::test_union::StrictPizzaOrPasta> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::StrictPizzaOrPasta> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::StrictPizzaOrPasta> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_StrictPizzaOrPastaTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3492,13 +3378,6 @@ template <>
 struct IsUnion<::test_union::PizzaOrPasta> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::PizzaOrPasta> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_PizzaOrPastaTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::PizzaOrPasta, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -3511,13 +3390,6 @@ struct IsFidlType<::test_union::FlexiblePizzaOrPasta> : public std::true_type {
 };
 template <>
 struct IsUnion<::test_union::FlexiblePizzaOrPasta> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::FlexiblePizzaOrPasta> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_FlexiblePizzaOrPastaTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3535,13 +3407,6 @@ template <>
 struct IsUnion<::test_union::ExplicitPizzaOrPasta> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::ExplicitPizzaOrPasta> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_ExplicitPizzaOrPastaTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::ExplicitPizzaOrPasta,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3554,13 +3419,6 @@ template <>
 struct IsFidlType<::test_union::OlderSimpleUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::OlderSimpleUnion> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::OlderSimpleUnion> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_OlderSimpleUnionTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3577,13 +3435,6 @@ template <>
 struct IsUnion<::test_union::NewerSimpleUnion> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::NewerSimpleUnion> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_NewerSimpleUnionTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::NewerSimpleUnion,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3596,13 +3447,6 @@ template <>
 struct IsFidlType<::test_union::FlexibleUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::FlexibleUnion> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::FlexibleUnion> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_FlexibleUnionTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3618,13 +3462,6 @@ template <>
 struct IsUnion<::test_union::FlexibleFoo> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::FlexibleFoo> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_FlexibleFooTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::FlexibleFoo, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -3636,13 +3473,6 @@ template <>
 struct IsFidlType<::test_union::FieldCollision> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::FieldCollision> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::FieldCollision> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_FieldCollisionTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3659,13 +3489,6 @@ template <>
 struct IsUnion<::test_union::ExplicitXUnion> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::ExplicitXUnion> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_ExplicitXUnionTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::ExplicitXUnion,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -3680,13 +3503,6 @@ template <>
 struct IsUnion<::test_union::ExplicitUnion> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::ExplicitUnion> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_ExplicitUnionTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::ExplicitUnion, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -3698,13 +3514,6 @@ template <>
 struct IsFidlType<::test_union::ExplicitStrictFoo> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::ExplicitStrictFoo> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::ExplicitStrictFoo> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_ExplicitStrictFooTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -3721,13 +3530,6 @@ template <>
 struct IsUnion<::test_union::ExplicitFoo> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_union::ExplicitFoo> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_ExplicitFooTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_union::ExplicitFoo, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -3741,14 +3543,6 @@ struct IsFidlType<::test_union::XUnionContainingEmptyStruct>
 template <>
 struct IsUnion<::test_union::XUnionContainingEmptyStruct>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_union::XUnionContainingEmptyStruct>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_union_XUnionContainingEmptyStructTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

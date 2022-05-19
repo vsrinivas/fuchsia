@@ -607,16 +607,6 @@ struct IsFidlType<::test_requestflexibleenvelope::
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_requestflexibleenvelope::
         ProtocolRequestStrictResponseFlexibleRequest,
@@ -633,16 +623,6 @@ template <>
 struct IsFidlType<::test_requestflexibleenvelope::
                       ProtocolRequestFlexibleResponseStrictTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -663,16 +643,6 @@ struct IsFidlType<::test_requestflexibleenvelope::
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_requestflexibleenvelope::
         ProtocolRequestStrictResponseFlexibleTopResponse,
@@ -689,16 +659,6 @@ template <>
 struct IsFidlType<::test_requestflexibleenvelope::
                       ProtocolRequestFlexibleResponseStrictRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -720,14 +680,6 @@ struct IsUnion<::test_requestflexibleenvelope::StrictFoo>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_requestflexibleenvelope::StrictFoo>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_requestflexibleenvelope_StrictFooTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_requestflexibleenvelope::StrictFoo,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -742,14 +694,6 @@ struct IsFidlType<::test_requestflexibleenvelope::FlexibleFoo>
 template <>
 struct IsUnion<::test_requestflexibleenvelope::FlexibleFoo>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_requestflexibleenvelope::FlexibleFoo>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_requestflexibleenvelope_FlexibleFooTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

@@ -2026,15 +2026,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2050,15 +2041,6 @@ template <>
 struct IsFidlType<
     ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2078,15 +2060,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2101,15 +2074,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_protocolpayloads::MainProtocolOnImportWithErrorRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2127,15 +2091,6 @@ struct IsFidlType<::test_protocolpayloads::MainProtocolOnAnonWithErrorResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolOnAnonWithErrorResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolOnAnonWithErrorResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2149,15 +2104,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2176,15 +2122,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2199,15 +2136,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2225,15 +2153,6 @@ struct IsFidlType<::test_protocolpayloads::MainProtocolTwoWayAnonRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolTwoWayAnonRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolTwoWayAnonRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2246,15 +2165,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_protocolpayloads::MainProtocolOneWayAnonRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolOneWayAnonRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2271,15 +2181,6 @@ struct IsFidlType<::test_protocolpayloads::MainProtocolOnAnonRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolOnAnonRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocolOnAnonRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolOnAnonRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2291,14 +2192,6 @@ extern "C" const fidl_type_t test_protocolpayloads_LocalStructPayloadTable;
 template <>
 struct IsFidlType<::test_protocolpayloads::LocalStructPayload>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_protocolpayloads::LocalStructPayload>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_LocalStructPayloadTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2316,15 +2209,6 @@ struct IsFidlType<
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2339,15 +2223,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2369,15 +2244,6 @@ struct IsUnion<::test_protocolpayloads::MainProtocolTwoWayImportWithErrorResult>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorResult,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2395,15 +2261,6 @@ struct IsFidlType<
 template <>
 struct IsUnion<::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2424,15 +2281,6 @@ struct IsUnion<::test_protocolpayloads::MainProtocolOnImportWithErrorResult>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolOnImportWithErrorResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocol_OnImportWithError_ResultTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolOnImportWithErrorResult,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2449,15 +2297,6 @@ struct IsFidlType<::test_protocolpayloads::MainProtocolOnAnonWithErrorResult>
 template <>
 struct IsUnion<::test_protocolpayloads::MainProtocolOnAnonWithErrorResult>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolOnAnonWithErrorResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocol_OnAnonWithError_ResultTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -2478,15 +2317,6 @@ struct IsUnion<::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -2503,15 +2333,6 @@ struct IsFidlType<::test_protocolpayloads::MainProtocolOnLocalWithErrorResult>
 template <>
 struct IsUnion<::test_protocolpayloads::MainProtocolOnLocalWithErrorResult>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_protocolpayloads::MainProtocolOnLocalWithErrorResult>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_protocolpayloads_MainProtocol_OnLocalWithError_ResultTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

@@ -283,15 +283,6 @@ struct IsFidlType<::test_driverhandle::HandlesInProtocolSendHandlesRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_driverhandle::HandlesInProtocolSendHandlesRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_driverhandle::HandlesInProtocolSendHandlesRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -311,14 +302,6 @@ struct IsResource<::test_driverhandle::ServerEndWrapper>
 template <>
 struct IsFidlType<::test_driverhandle::ServerEndWrapper>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_driverhandle::ServerEndWrapper>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_driverhandle_ServerEndWrapperTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -341,14 +324,6 @@ struct IsFidlType<::test_driverhandle::ClientEndWrapper>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_driverhandle::ClientEndWrapper>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_driverhandle_ClientEndWrapperTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_driverhandle::ClientEndWrapper,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -365,12 +340,6 @@ template <>
 struct IsResource<::test_driverhandle::T> : public std::true_type {};
 template <>
 struct IsFidlType<::test_driverhandle::T> : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::test_driverhandle::T> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable = &test_driverhandle_TTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

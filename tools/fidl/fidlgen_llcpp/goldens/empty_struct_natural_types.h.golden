@@ -386,13 +386,6 @@ template <>
 struct IsFidlType<::test_emptystruct::Empty> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_emptystruct::Empty> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_emptystruct_EmptyTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_emptystruct::Empty, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalEmptyStructCodingTraits<
@@ -403,15 +396,6 @@ extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 template <>
 struct IsFidlType<::test_emptystruct::EmptyProtocolSendRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_emptystruct::EmptyProtocolSendRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_emptystruct_EmptyProtocolSendRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -426,15 +410,6 @@ extern "C" const fidl_type_t
 template <>
 struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -452,15 +427,6 @@ struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_emptystruct::EmptyProtocolSendAndReceiveRequest,
     ::fidl::internal::NaturalCodingConstraintEmpty>
@@ -472,15 +438,6 @@ extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
 template <>
 struct IsFidlType<::test_emptystruct::EmptyProtocolReceiveRequest>
     : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<
-    ::test_emptystruct::EmptyProtocolReceiveRequest>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_emptystruct_EmptyProtocolReceiveRequestTable;
-};
 
 template <>
 struct internal::NaturalCodingTraits<

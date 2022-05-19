@@ -223,14 +223,6 @@ struct IsFidlType<::test_typealiases::ExampleOfUseOfAliases>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_typealiases::ExampleOfUseOfAliases>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_typealiases_ExampleOfUseOfAliasesTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_typealiases::ExampleOfUseOfAliases,
     ::fidl::internal::NaturalCodingConstraintEmpty>

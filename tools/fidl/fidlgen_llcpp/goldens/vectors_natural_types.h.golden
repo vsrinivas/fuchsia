@@ -117,13 +117,6 @@ struct IsFidlType<::test_vectors::ExampleUseOfVectors> : public std::true_type {
 };
 
 template <>
-struct ::fidl::internal::TypeTraits<::test_vectors::ExampleUseOfVectors> final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &test_vectors_ExampleUseOfVectorsTable;
-};
-
-template <>
 struct internal::NaturalCodingTraits<
     ::test_vectors::ExampleUseOfVectors,
     ::fidl::internal::NaturalCodingConstraintEmpty>

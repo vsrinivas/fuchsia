@@ -159,12 +159,6 @@ class {{ .Name }} {
   struct IsUnion<{{ . }}> : public std::true_type {};
 
   template <>
-  struct {{ .TypeTraits }} final {
-  public:
-    static constexpr const fidl_type_t* kCodingTable = &{{ .CodingTableType.Self }};
-  };
-
-  template <>
   struct internal::NaturalCodingTraits<{{ . }}, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalUnionCodingTraits<{{ . }}> {};
 

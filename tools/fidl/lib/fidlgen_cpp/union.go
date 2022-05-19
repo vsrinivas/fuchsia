@@ -55,9 +55,6 @@ type Union struct {
 	TypeShapeV1         TypeShape
 	TypeShapeV2         TypeShape
 
-	// TypeTraits contains information about a natural domain object.
-	TypeTraits name
-
 	// Result points to the Result this union is being used to represent, if this
 	// is in fact a Result wrapper.
 	Result *Result
@@ -115,7 +112,6 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 		BackingBufferTypeV2: computeAllocation(
 			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
-		TypeTraits: TypeTraits.template(name.Unified),
 	}
 
 	naturalIndex := 1
