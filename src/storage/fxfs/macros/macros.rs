@@ -97,17 +97,23 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
 
     // The latest version should implement VersionedLatest.
     if let Some((major, ident)) = versions.iter().last() {
+        // Generate some static assertions up front to check the versions are sensible.
+        let assertions = arms.iter().map(|x| x.pat.lo_value()).map(|v| {
+            quote! {
+                static_assertions::const_assert!(#v <= LATEST_VERSION.major);
+            }
+        });
         // We order versions in their original match order.
-        let iter = arms
-            .iter()
-            .map(|x| (x.pat.lo_value(), x.ident.clone()))
-            .map(|(v, i)| quote! { #v.. => Ok(#i::deserialize_from(reader, version)?.into()), });
+        let match_iter = arms.iter().map(|x| (x.pat.lo_value(), x.ident.clone())).map(|(v, i)| {
+            quote! { #v.. => Ok(#i::deserialize_from(reader, version)?.into()), }
+        });
         out = quote! {
             #out
             impl VersionedLatest for #ident {
                 fn deserialize_from_version<R>(
                     reader: &mut R, version: Version) -> anyhow::Result<Self>
                 where R: std::io::Read, Self: Sized {
+                    #(#assertions)*
                     assert!(#major <= LATEST_VERSION.major,
                         "Found version > LATEST_VERSION for {}.", stringify!(#ident));
                     const future_ver : u32 = LATEST_VERSION.major + 1;
@@ -115,7 +121,7 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
                         future_ver.. => anyhow::bail!(format!(
                                 "Invalid future version {} > {} deserializing {}.",
                                 version, LATEST_VERSION, stringify!(#ident))),
-                        #(#iter)*
+                        #(#match_iter)*
                         x => anyhow::bail!(format!(
                                 "Unsupported version {} for {}.", x, stringify!(#ident))),
                     }
