@@ -83,7 +83,7 @@ def main():
                     continue  # TODO: handle macro expansion spans
                 if lint["level"] == "error":
                     returncode = 1
-                lints[lint["rendered"]] = lint
+                lints[fingerprint_diagnostic(lint)] = lint
 
     for lint in lints.values():
         print(json.dumps(fix_paths(lint)) if args.raw else lint["rendered"])
@@ -91,6 +91,17 @@ def main():
         print(len(lints), "warning(s) emitted\n")
 
     return returncode
+
+
+# To deduplicate lints, use the message, code, and all top level spans
+def fingerprint_diagnostic(lint):
+    return (
+        lint["message"],
+        lint["code"]["code"] if "code" in lint else None,
+        frozenset(
+            (x["file_name"], x["byte_start"], x["byte_end"]) for x in lint["spans"]
+        ),
+    )
 
 
 # Rewrite paths in a diagnostic to be relative to the current directory.
