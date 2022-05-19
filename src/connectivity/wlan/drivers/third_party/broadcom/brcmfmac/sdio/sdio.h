@@ -490,6 +490,7 @@ struct brcmf_sdio_count {
   uint rx_hdrfail;        /* SDIO errors on header reads */
   uint rx_badhdr;         /* Bad received headers (roosync?) */
   uint rx_badseq;         /* Mismatched rx sequence number */
+  uint rx_nobufs;         /* Not enough RX buffers */
   uint fc_rcvd;           /* Number of flow-control events received */
   uint fc_xoff;           /* Number which turned on flow-control */
   uint fc_xon;            /* Number which turned off flow-control */

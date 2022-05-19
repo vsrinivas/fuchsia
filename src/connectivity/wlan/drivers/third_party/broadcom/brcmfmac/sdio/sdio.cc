@@ -1270,7 +1270,7 @@ static void brcmf_sdio_hdpack(struct brcmf_sdio* bus, uint8_t* header,
   sw_hdr[1] = 0;
 }
 
-static void brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
+static zx_status_t brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
   // We have a valid glom descriptor, generate frames to receive into
   TRACE_DURATION("brcmfmac:isr", "glom_desc");
 
@@ -1282,7 +1282,7 @@ static void brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
   uint32_t num_entries = length / 2;
   if (length == 0 || (length & 0x01) != 0) {
     BRCMF_ERR("Bad glom descriptor length %u, ignoring descriptor", length);
-    return;
+    return ZX_ERR_INTERNAL;
   }
   auto glom_data = reinterpret_cast<const uint16_t*>(glom_desc.Data());
 
@@ -1293,7 +1293,8 @@ static void brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
       brcmf_sdio_acquire_rx_space(bus, num_entries);
   if (glom_frames.size() != num_entries) {
     BRCMF_ERR("Failed to acquire RX space for %u glom entries", num_entries);
-    return;
+    ++bus->sdcnt.rx_nobufs;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   uint16_t total_len = 0;
@@ -1302,7 +1303,7 @@ static void brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
     uint16_t sub_frame_len = glom_data[entry];
     if (sub_frame_len < SDPCM_HDRLEN || (entry == 0 && sub_frame_len < 2 * SDPCM_HDRLEN)) {
       BRCMF_ERR("Descriptor %u has bad length %u", entry, sub_frame_len);
-      return;
+      return ZX_ERR_INTERNAL;
     }
     total_len += sub_frame_len;
 
@@ -1331,7 +1332,7 @@ static void brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
           brcmf_sdio_acquire_internal_rx_space(bus);
       if (!internal_frame) {
         BRCMF_ERR("Failed to acquire internal frame for event in RX glom chain");
-        return;
+        return ZX_ERR_NO_RESOURCES;
       }
       capacity = internal_frame->Size();
 
@@ -1343,7 +1344,7 @@ static void brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
       if (frame->Size() > capacity) {
         BRCMF_ERR("Required subframe length %u in RX glom chain exceeds maximum capacity %u",
                   frame->Size(), capacity);
-        return;
+        return ZX_ERR_INTERNAL;
       }
     }
   }
@@ -1351,13 +1352,19 @@ static void brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
   // At this point our glom chain is complete, move it to the rx_glom struct so the rest of the code
   // can pick it up.
   bus->rx_glom->glom_frames = std::move(glom_frames);
+
+  return ZX_OK;
 }
 
 static uint8_t brcmf_sdio_rxglom_frames(struct brcmf_sdio* bus, uint8_t rxseq) {
   TRACE_DURATION("brcmfmac:isr", "sdio_rxglom_frames");
 
   if (bus->rx_glom->glom_desc.Size() > 0) {
-    brcmf_sdio_prepare_rxglom_frames(bus);
+    zx_status_t status = brcmf_sdio_prepare_rxglom_frames(bus);
+    if (status != ZX_OK) {
+      brcmf_sdio_rxfail(bus, false, false);
+      return 0;
+    }
   }
 
   if (bus->rx_glom->glom_frames.empty()) {
@@ -1606,7 +1613,8 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
       if (!frame) {
         BRCMF_ERR("Failed to acquire frame for RX");
         ++bus->sdcnt.rx_hdrfail;
-        brcmf_sdio_rxfail(bus, true, true);
+        ++bus->sdcnt.rx_nobufs;
+        brcmf_sdio_rxfail(bus, false, false);
         continue;
       }
 
@@ -1643,6 +1651,8 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
       frame = brcmf_sdio_acquire_single_rx_space(bus);
       if (!frame) {
         BRCMF_ERR("Failed to acquire rx frame");
+        brcmf_sdio_rxfail(bus, false, false);
+        ++bus->sdcnt.rx_nobufs;
         break;
       }
     }
