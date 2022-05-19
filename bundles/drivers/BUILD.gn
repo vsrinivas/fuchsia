@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/zbi/kernel_cmdline.gni")
+
 group("bootstrap") {
   deps = [
     "//src/connectivity/ethernet/drivers/ethernet",
@@ -13,6 +15,10 @@ group("bootstrap") {
     "//src/ui/input/drivers/hid-buttons",
     "//src/ui/input/drivers/hid-input-report",
   ]
+}
+
+kernel_cmdline("disable.i2c-hid-dfv2") {
+  args = [ "devmgr.disabled-drivers=fuchsia-boot:///#meta/i2c-hid-dfv2.cm" ]
 }
 
 group("bootstrap-dfv2") {
