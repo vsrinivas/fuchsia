@@ -230,15 +230,6 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
     request->Init(fbl::RefPtr<PageRequestInterface>(this), offset, page_request_type::READ,
                   vmo_debug_info);
     LTRACEF_LEVEL(2, "%p offset %lx\n", this, offset);
-  } else {
-    // The user should never have been trying to keep using a PageRequest that ended up in any state
-    // other than Accepting.
-    DEBUG_ASSERT(request->batch_state_ == PageRequest::BatchState::Accepting);
-    if (request->src_.get() != static_cast<PageRequestInterface*>(this)) {
-      // Ask the correct page source to finalize the request as we cannot add our page to it, and
-      // the caller should stop trying to use it.
-      return request->FinalizeRequest();
-    }
   }
 
   return PopulateRequestLocked(request, offset);
@@ -259,9 +250,9 @@ zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t off
 #endif  // DEBUG_ASSERT_IMPLEMENTED
 
   bool send_request = false;
-  zx_status_t res = ZX_ERR_SHOULD_WAIT;
+  zx_status_t res;
   DEBUG_ASSERT(!request->provider_owned_);
-  if (request->batch_state_ == PageRequest::BatchState::Accepting || internal_batching) {
+  if (request->allow_batching_ || internal_batching) {
     // If possible, append the page directly to the current request. Else have the
     // caller try again with a new request.
     if (request->offset_ + request->len_ == offset) {
@@ -289,23 +280,21 @@ zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t off
 
       if (end_batch) {
         send_request = true;
-      } else if (internal_batching) {
+        res = ZX_ERR_SHOULD_WAIT;
+      } else {
         res = ZX_ERR_NEXT;
       }
     } else {
       send_request = true;
+      res = ZX_ERR_SHOULD_WAIT;
     }
   } else {
     request->len_ = PAGE_SIZE;
     send_request = true;
+    res = ZX_ERR_SHOULD_WAIT;
   }
 
   if (send_request) {
-    if (request->batch_state_ == PageRequest::BatchState::Accepting) {
-      // Sending the request means it's finalized and we do not want the caller attempting to add
-      // further pages or finalizing.
-      request->batch_state_ = PageRequest::BatchState::Finalized;
-    }
     SendRequestToProviderLocked(request);
   }
 
@@ -344,9 +333,7 @@ bool PageSource::DebugIsPageOk(vm_page_t* page, uint64_t offset) {
 void PageSource::SendRequestToProviderLocked(PageRequest* request) {
   LTRACEF_LEVEL(2, "%p %p\n", this, request);
   DEBUG_ASSERT(request->type_ < page_request_type::COUNT);
-  DEBUG_ASSERT(request->offset_ != UINT64_MAX);
   DEBUG_ASSERT(page_provider_->SupportsPageRequestType(request->type_));
-  DEBUG_ASSERT(request->batch_state_ != PageRequest::BatchState::Accepting);
   // Find the node with the smallest endpoint greater than offset and then
   // check to see if offset falls within that node.
   auto overlap = outstanding_requests_[request->type_].upper_bound(request->offset_);
@@ -513,9 +500,6 @@ void PageRequest::Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset,
   DEBUG_ASSERT(type < page_request_type::COUNT);
   type_ = type;
   src_ = ktl::move(src);
-  if (batch_state_ != BatchState::Unbatched) {
-    batch_state_ = BatchState::Accepting;
-  }
 
   event_.Unsignal();
 }
@@ -523,9 +507,6 @@ void PageRequest::Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset,
 zx_status_t PageRequest::Wait() {
   lockdep::AssertNoLocksHeld();
   VM_KTRACE_DURATION(1, "page_request_wait", offset_, len_);
-  // Ensure this request was both initialized, and if it's a batched request that it was finalized.
-  ASSERT(offset_ != UINT64_MAX);
-  ASSERT(batch_state_ != BatchState::Accepting);
   zx_status_t status = src_->WaitOnRequest(this);
   VM_KTRACE_FLOW_END(1, "page_request_signal", reinterpret_cast<uintptr_t>(this));
   if (status != ZX_OK && !PageSource::IsValidInternalFailureCode(status)) {
@@ -536,8 +517,6 @@ zx_status_t PageRequest::Wait() {
 
 zx_status_t PageRequest::FinalizeRequest() {
   DEBUG_ASSERT(src_);
-  DEBUG_ASSERT(batch_state_ == BatchState::Accepting);
-  batch_state_ = BatchState::Finalized;
 
   return src_->FinalizeRequest(this);
 }

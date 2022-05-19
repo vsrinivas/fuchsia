@@ -2548,34 +2548,32 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
       zx_status_t res = LookupPagesLocked(offset, flags, DirtyTrackingAction::None, 1, &page_list,
                                           page_request, &lookup_info);
       if (unlikely(res == ZX_ERR_SHOULD_WAIT)) {
-        if (page_request->get()->BatchAccepting()) {
-          // In batch mode, will need to finalize the request later.
-          if (!have_page_request) {
-            // Stash how much we have committed right now, as we are going to have to reprocess this
-            // range so we do not want to claim it was committed.
-            *committed_len = offset - start_offset;
-            have_page_request = true;
-          }
-        } else {
-          // We can end up here in two cases:
-          // 1. We were in batch mode but had to terminate the batch early.
-          // 2. We hit the first missing page and we were not in batch mode.
-          //
-          // If we do have a page request, that means the batch was terminated early by
-          // pre-populated pages (case 1). Return immediately.
-          //
-          // Do not update the |committed_len| for case 1 as we are returning on encountering
-          // pre-populated pages while processing a batch. When that happens, we will terminate the
-          // batch we were processing and send out a page request for the contiguous range we've
-          // accumulated in the batch so far. And we will need to come back into this function again
-          // to reprocess the range the page request spanned, so we cannot claim any pages have been
-          // committed yet.
-          if (!have_page_request) {
-            // Not running in batch mode, and this is the first missing page (case 2). Update the
-            // committed length we have so far and return.
-            *committed_len = offset - start_offset;
-          }
-          return ZX_ERR_SHOULD_WAIT;
+        // We can end up here in two cases:
+        // 1. We were in batch mode but had to terminate the batch early.
+        // 2. We hit the first missing page and we were not in batch mode.
+        //
+        // If we do have a page request, that means the batch was terminated early by pre-populated
+        // pages (case 1). Return immediately.
+        //
+        // Do not update the |committed_len| for case 1 as we are returning on encountering
+        // pre-populated pages while processing a batch. When that happens, we will terminate the
+        // batch we were processing and send out a page request for the contiguous range we've
+        // accumulated in the batch so far. And we will need to come back into this function again
+        // to reprocess the range the page request spanned, so we cannot claim any pages have been
+        // committed yet.
+        if (!have_page_request) {
+          // Not running in batch mode, and this is the first missing page (case 2). Update the
+          // committed length we have so far and return.
+          *committed_len = offset - start_offset;
+        }
+        return ZX_ERR_SHOULD_WAIT;
+      } else if (unlikely(res == ZX_ERR_NEXT)) {
+        // In batch mode, will need to finalize the request later.
+        if (!have_page_request) {
+          // Stash how much we have committed right now, as we are going to have to reprocess this
+          // range so we do not want to claim it was committed.
+          *committed_len = offset - start_offset;
+          have_page_request = true;
         }
       } else if (unlikely(res != ZX_OK)) {
         VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());

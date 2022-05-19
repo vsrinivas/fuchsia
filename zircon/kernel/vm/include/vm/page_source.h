@@ -201,8 +201,8 @@ class PageRequestInterface : public fbl::RefCounted<PageRequestInterface> {
   // tolerant of having already been detached/closed.
   virtual zx_status_t WaitOnRequest(PageRequest* request) = 0;
 
-  // Called to complete a batched PageRequest if the last call to GetPage returned
-  // ZX_ERR_SHOULD_WAIT *and* the |request->BatchAccepting| is true.
+  // Called to complete a batched PageRequest if the last call to GetPage
+  // returned ZX_ERR_NEXT.
   //
   // Returns ZX_ERR_SHOULD_WAIT if the PageRequest will be fulfilled after
   // being waited upon.
@@ -246,12 +246,11 @@ class PageSource final : public PageRequestInterface {
   // Sends a request to the backing source to provide the requested page.
   //
   // Returns ZX_OK if the request was synchronously fulfilled.
+  // Returns ZX_ERR_SHOULD_WAIT if the request will be asynchronously
+  // fulfilled. The caller should wait on |req|.
+  // Returns ZX_ERR_NEXT if the PageRequest is in batch mode and the caller
+  // can continue to add more pages to the request.
   // Returns ZX_ERR_NOT_FOUND if the request cannot be fulfilled.
-  // Returns ZX_ERR_SHOULD_WAIT if the request will be asynchronously fulfilled. If
-  // |req->BatchAccepting| is true then additional calls to |GetPage| may be performed to add more
-  // pages to the request, or if no more pages want to be added the request should be finalized by
-  // |req->FinalizeRequest|. If |BatchAccepting| was false, or |req| was finalized, then the caller
-  // should wait on |req|.
   zx_status_t GetPage(uint64_t offset, PageRequest* req, VmoDebugInfo vmo_debug_info,
                       vm_page_t** const page_out, paddr_t* const pa_out);
 
@@ -364,20 +363,23 @@ class PageSource final : public PageRequestInterface {
   // Helper that adds page at |offset| to |request| and potentially forwards it to the provider.
   // |request| must already be initialized. |offset| must be page-aligned.
   //
-  // Returns ZX_ERR_NEXT if |internal_batching| is true and more pages can be added to the request,
-  // in which case the caller of this function within PageSource *must* handle ZX_ERR_NEXT itself
-  // before returning from PageSource. This option is used for request types that want to operate in
-  // batch mode by default (e.g. DIRTY requests), where pages are added to the batch internally in
-  // PageSource without involving the external caller.
+  // Returns ZX_ERR_SHOULD_WAIT if the request will be asynchronously fulfilled. The caller should
+  // wait on |request|.
   //
-  // Otherwise this method always returns ZX_ERR_SHOULD_WAIT, and transitions the
-  // PageRequest::batch_state_ as required.
+  // Returns ZX_ERR_NEXT if the request is in batch mode and the caller can continue
+  // to add more pages to the request. The request can be in batch mode under two scenarios:
+  // 1) The request was created with |allow_batching_| set. The external caller into PageSource
+  // will handle the ZX_ERR_NEXT in this case, and add more pages.
+  // 2) |internal_batching| is true, in which case the caller of this function within PageSource
+  // *must* handle ZX_ERR_NEXT itself before returning from PageSource. This option is used for
+  // request types that want to operate in batch mode by default (e.g. DIRTY requests), where pages
+  // are added to the batch internally in PageSource without involving the external caller.
   // TODO(rashaeqbal): Figure out if internal_batching can be unified with allow_batching_.
   zx_status_t PopulateRequestLocked(PageRequest* request, uint64_t offset,
                                     bool internal_batching = false) TA_REQ(page_source_mtx_);
 
   // Helper used to complete a batched page request if the last call to PopulateRequestLocked
-  // left the page request in the BatchRequest::Accepting state.
+  // returned ZX_ERR_NEXT.
   zx_status_t FinalizeRequestLocked(PageRequest* request) TA_REQ(page_source_mtx_);
 
   // Sends a request to the backing source, or adds the request to the overlap_ list if
@@ -415,8 +417,7 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
  public:
   // If |allow_batching| is true, then a single request can be used to service
   // multiple consecutive pages.
-  explicit PageRequest(bool allow_batching = false)
-      : batch_state_(allow_batching ? BatchState::Accepting : BatchState::Unbatched) {}
+  explicit PageRequest(bool allow_batching = false) : allow_batching_(allow_batching) {}
   ~PageRequest();
 
   // Returns ZX_OK on success, or a permitted error code if the backing page provider explicitly
@@ -425,12 +426,6 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
 
   // Forwards to the underlying PageRequestInterface::FinalizeRequest, see that for details.
   zx_status_t FinalizeRequest();
-
-  // Returns |true| if this is a batch request that can still accept additional requests. If |true|
-  // the |FinalizeRequest| method must be called before |Wait| can be used. If this is |false| then
-  // either this is not a batch request, or the batch request has already been closed and does not
-  // need to be finalized.
-  bool BatchAccepting() const { return batch_state_ == BatchState::Accepting; }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PageRequest);
 
@@ -441,20 +436,7 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   void Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset, page_request_type type,
             VmoDebugInfo vmo_debug_info);
 
-  // The batch state is used both to implement a stateful query of whether a batch page request is
-  // finished taking new requests or not, and to implement assertions to catch misuse of the request
-  // API.
-  enum class BatchState {
-    // Does not support batching.
-    Unbatched,
-    // Supports batching and can keep taking new requests. A request in this state must have
-    // FinalizeRequest called before it can be waited on.
-    Accepting,
-    // This was a batched request that has been finalized and may be waited on.
-    Finalized
-  };
-
-  BatchState batch_state_;
+  const bool allow_batching_;
 
   // The page source this request is currently associated with.
   fbl::RefPtr<PageRequestInterface> src_;
