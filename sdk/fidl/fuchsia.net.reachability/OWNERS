@@ -1,0 +1,3 @@
+include /src/connectivity/network/policy/OWNERS
+
+# COMPONENT: ConnectivityPolicy>NetworkPolicy

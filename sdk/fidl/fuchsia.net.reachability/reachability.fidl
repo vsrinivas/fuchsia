@@ -1,0 +1,46 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+@available(added=8)
+library fuchsia.net.reachability;
+
+/// Protocol providing access to a watcher providing snapshots of system
+/// reachability state upon changes.
+@discoverable
+protocol State {
+    /// Acquire and initialize a watcher for reachability state updates.
+    ///
+    /// + request `options` specifies the behavior of the [`Watcher`].
+    /// + request `watcher` grants access to an [`Watcher`].
+    GetWatcher(resource struct {
+        /// Options for configuring the reachability state watcher.
+        // This is currently empty, but is expected to grow to include the
+        // ability to request detailed, per-interface configuration state,
+        // and to filter results on various criteria.
+        options @generated_name("WatcherOptions") table {};
+        watcher server_end:Watcher;
+    });
+};
+
+/// Watcher protocol providing snapshots of reachability state.
+protocol Watcher {
+    /// Hanging-get API for changes in network reachability state.
+    ///
+    /// `Watch` returns a snapshot of the system's most recent reachability
+    /// state information. A call to `Watch` blocks until the
+    /// previously-observed state changes.
+    ///
+    /// It is not valid to call `Watch` concurrently. Calling `Watch` while
+    /// another call over the same server end is in flight will result in the
+    /// server end being closed.
+    ///
+    /// - response `snapshot` a snapshot of current system reachability state.
+    Watch() -> (struct {
+        /// Snapshot holds information about network configuration and apparent
+        /// reachability of external networks.
+        snapshot @generated_name("Snapshot") table {
+            /// Signifies whether internet reachability is available.
+            1: internet_available bool;
+        };
+    });
+};
