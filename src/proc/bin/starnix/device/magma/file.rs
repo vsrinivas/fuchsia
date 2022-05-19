@@ -798,6 +798,17 @@ impl FileOps for MagmaFile {
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXECUTE_COMMAND as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_QUERY => {
+                let (control, mut response): (
+                    virtio_magma_query_ctrl_t,
+                    virtio_magma_query_resp_t,
+                ) = read_control_and_response(current_task, &command)?;
+
+                query(current_task, control, &mut response)?;
+
+                response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_QUERY as u32;
+                current_task.mm.write_object(UserRef::new(response_address), &response)
+            }
             t => {
                 tracing::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)

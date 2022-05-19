@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::sync::Arc;
+
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use magma::*;
 use zerocopy::{AsBytes, FromBytes};
 
+use crate::fs::{anon_fs, Anon, FdFlags, VmoFileObject};
 use crate::task::CurrentTask;
 use crate::types::*;
 
@@ -96,6 +99,8 @@ struct WireDescriptor {
 /// This function bridges between the virtmagma structs and the magma structures. It also copies the
 /// data into starnix in order to be able to pass pointers to the resources, command buffers, and
 /// semaphore ids to magma.
+///
+/// SAFETY: Makes an FFI call to populate the fields of `response`.
 pub fn execute_command(
     current_task: &CurrentTask,
     control: virtio_magma_execute_command_ctrl_t,
@@ -153,6 +158,42 @@ pub fn execute_command(
             &mut magma_command_descriptor as *mut magma_command_descriptor,
         ) as u64
     };
+
+    Ok(())
+}
+
+/// Runs a magma query.
+///
+/// This function will create a new file in `current_task.files` if the magma query returns a VMO
+/// handle. The file takes ownership of the VMO handle, and the file descriptor of the file is
+/// returned to the client via `response`.
+///
+/// SAFETY: Makes an FFI call to populate the fields of `response`.
+pub fn query(
+    current_task: &CurrentTask,
+    control: virtio_magma_query_ctrl_t,
+    response: &mut virtio_magma_query_resp_t,
+) -> Result<(), Errno> {
+    let mut result_buffer_out = 0;
+    let mut result_out = 0;
+    response.result_return = unsafe {
+        magma_query(control.device, control.id, &mut result_buffer_out, &mut result_out) as u64
+    };
+
+    if result_buffer_out != zx::sys::ZX_HANDLE_INVALID {
+        let vmo = unsafe { zx::Vmo::from(zx::Handle::from_raw(result_buffer_out)) };
+        let file = Anon::new_file(
+            anon_fs(current_task.kernel()),
+            Box::new(VmoFileObject::new(Arc::new(vmo))),
+            OpenFlags::RDWR,
+        );
+        let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
+        response.result_buffer_out = fd.raw() as u64;
+    } else {
+        response.result_buffer_out = u64::MAX;
+    }
+
+    response.result_out = result_out;
 
     Ok(())
 }
