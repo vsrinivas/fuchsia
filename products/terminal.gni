@@ -5,30 +5,22 @@
 import("//products/core.gni")
 
 core_realm_package_name = "core-terminal"
-core_realm_shards += [ "//src/intl/intl_services:intl_services_shard" ]
 
 legacy_base_package_labels += [
-  "//src/devices/sysmem/bin/sysmem_connector",
-  "//src/ui/bin/root_presenter",
-  "//src/ui/bin/root_presenter:configs",
-  "//src/ui/scenic:configs",
   "//src/fonts",
-  "//src/graphics/bin/vulkan_loader",
   "//src/intl/intl_services/config:sysmgr",
   "//src/intl/intl_services:pkg",
-  "//src/ui/a11y",
-
-  # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to
-  # text_manager.
-  "//src/ui/bin/text:ime_service",
-  "//src/ui/bin/text:text_manager",
 ]
 legacy_base_package_labels -= [
   # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
   "//src/intl/intl_services/config:sysmgr_small",
 ]
 
+# Add UI core shard on terminal.
+core_realm_shards += [ "//src/ui:ui_with_root_presenter_core_shard" ]
+
 # Remove intl_services default shards that were added in core.gni.
+core_realm_shards += [ "//src/intl/intl_services:intl_services_shard" ]
 core_realm_shards -= [ "//src/intl/intl_services:intl_services_small_shard" ]
 
 # Add build type config data
@@ -39,8 +31,8 @@ legacy_base_package_labels += [
 
 legacy_cache_package_labels += [
   "//src/fonts/collections:small-open-fonts-collection",
+  "//src/ui:runtime_with_root_presenter",
   "//src/ui/bin/terminal",
-  "//src/ui/scenic",
   "//src/ui/tools/tiles",
 ]
 

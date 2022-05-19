@@ -29,7 +29,7 @@ _developer_packages = [
   "//src/intl/intl_services:pkg",
   "//src/media/audio/bundles:services",
   "//src/power:battery",
-  "//src/ui:workstation",
+  "//src/ui:runtime_with_scene_manager",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/screensaver",
   "//src/ui/bin/shortcut",

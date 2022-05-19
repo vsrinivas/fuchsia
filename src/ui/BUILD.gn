@@ -35,11 +35,6 @@ group("tests") {
   ]
 }
 
-# Deprecated. Please use ui_core_shard instead.
-core_shard("ui-core-shard") {
-  shard_file = "meta/ui.core_shard.cml"
-}
-
 core_shard("ui_core_shard") {
   shard_file = "meta/ui.core_shard.cml"
 }
@@ -95,11 +90,6 @@ fuchsia_package("ui_headless_pkg") {
   package_name = "ui"
 
   deps = [ ":ui_headless_component" ]
-}
-
-# Deprecated. Please use runtime_with_scene_manager instead.
-group("workstation") {
-  deps = [ ":runtime_with_scene_manager" ]
 }
 
 # runtime is the set of package dependencies desired for the construction of any
