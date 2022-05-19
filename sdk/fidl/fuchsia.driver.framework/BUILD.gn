@@ -11,7 +11,6 @@ fidl("fuchsia.driver.framework") {
   sources = [
     "device_group.fidl",
     "driver_host.fidl",
-    "driver_index.fidl",
     "overview.fidl",
     "topology.fidl",
   ]

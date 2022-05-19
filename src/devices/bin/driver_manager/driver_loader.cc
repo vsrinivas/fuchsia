@@ -62,7 +62,7 @@ fuchsia_driver_development::wire::DriverInfo CopyDriverInfo(
   return allocated.Build();
 }
 
-zx::status<fdf::wire::MatchedDriverInfo> GetFidlMatchedDriverInfo(fdf::wire::MatchedDriver driver) {
+zx::status<fdi::wire::MatchedDriverInfo> GetFidlMatchedDriverInfo(fdi::wire::MatchedDriver driver) {
   if (driver.is_device_group()) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
@@ -79,7 +79,7 @@ zx::status<fdf::wire::MatchedDriverInfo> GetFidlMatchedDriverInfo(fdf::wire::Mat
 }
 
 MatchedCompositeDevice CreateMatchedCompositeDevice(
-    fdf::wire::MatchedCompositeInfo composite_info) {
+    fdi::wire::MatchedCompositeInfo composite_info) {
   MatchedCompositeDevice composite = {};
   if (composite_info.has_num_nodes()) {
     composite.num_nodes = composite_info.num_nodes();
@@ -109,7 +109,7 @@ MatchedCompositeDevice CreateMatchedCompositeDevice(
 // into a separate struct. This will allow us to reduce the duplicate code
 // between CreateMatchedDeviceGroupInfo() and CreateMatchedCompositeDevice().
 zx::status<MatchedDeviceGroupInfo> CreateMatchedDeviceGroupInfo(
-    fdf::wire::MatchedDeviceGroupInfo device_group_info) {
+    fdi::wire::MatchedDeviceGroupInfo device_group_info) {
   if (!device_group_info.has_topological_path()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -143,9 +143,9 @@ zx::status<MatchedDeviceGroupInfo> CreateMatchedDeviceGroupInfo(
   });
 }
 
-bool ShouldUseUniversalResolver(fdf::wire::DriverPackageType package_type) {
-  return package_type == fdf::wire::DriverPackageType::kUniverse ||
-         package_type == fdf::wire::DriverPackageType::kCached;
+bool ShouldUseUniversalResolver(fdi::wire::DriverPackageType package_type) {
+  return package_type == fdi::wire::DriverPackageType::kUniverse ||
+         package_type == fdi::wire::DriverPackageType::kCached;
 }
 
 }  // namespace
@@ -218,7 +218,7 @@ void DriverLoader::WaitForBaseDrivers(fit::callback<void()> callback) {
 
   driver_index_->WaitForBaseDrivers().Then(
       [this, callback = std::move(callback)](
-          fidl::WireUnownedResult<fdf::DriverIndex::WaitForBaseDrivers>& result) mutable {
+          fidl::WireUnownedResult<fdi::DriverIndex::WaitForBaseDrivers>& result) mutable {
         if (!result.ok()) {
           // Since IsolatedDevmgr doesn't use the ComponentFramework, DriverIndex can be
           // closed before DriverManager during tests, which would mean we would see

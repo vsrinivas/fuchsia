@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
@@ -311,12 +312,12 @@ int main(int argc, char** argv) {
   }
 
   if (driver_manager_args.use_driver_index) {
-    auto driver_index_client = service::Connect<fuchsia_driver_framework::DriverIndex>();
+    auto driver_index_client = service::Connect<fuchsia_driver_index::DriverIndex>();
     if (driver_index_client.is_error()) {
       LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_client.error_value());
       return driver_index_client.error_value();
     }
-    config.driver_index = fidl::WireSharedClient<fdf::DriverIndex>(
+    config.driver_index = fidl::WireSharedClient<fuchsia_driver_index::DriverIndex>(
         std::move(driver_index_client.value()), loop.dispatcher());
   }
 
@@ -411,7 +412,7 @@ int main(int argc, char** argv) {
       return realm_result.error_value();
     }
 
-    auto driver_index_result = service::Connect<fuchsia_driver_framework::DriverIndex>();
+    auto driver_index_result = service::Connect<fuchsia_driver_index::DriverIndex>();
     if (driver_index_result.is_error()) {
       LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_result.error_value());
       return driver_index_result.error_value();

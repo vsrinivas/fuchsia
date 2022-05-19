@@ -18,25 +18,6 @@ struct fuchsia.driver.framework/DriverHost_GetProcessKoid_Response
 union/member fuchsia.driver.framework/DriverHost_GetProcessKoid_Result.err int32
 union/member fuchsia.driver.framework/DriverHost_GetProcessKoid_Result.response fuchsia.driver.framework/DriverHost_GetProcessKoid_Response
 strict union fuchsia.driver.framework/DriverHost_GetProcessKoid_Result
-protocol/member fuchsia.driver.framework/DriverIndex.AddDeviceGroup(string topological_path,vector<fuchsia.driver.framework/DeviceGroupNode> nodes) -> (fuchsia.driver.framework/DriverIndex_AddDeviceGroup_Result result)
-protocol/member fuchsia.driver.framework/DriverIndex.MatchDriver(fuchsia.driver.framework/NodeAddArgs args) -> (fuchsia.driver.framework/DriverIndex_MatchDriver_Result result)
-protocol/member fuchsia.driver.framework/DriverIndex.MatchDriversV1(fuchsia.driver.framework/NodeAddArgs args) -> (fuchsia.driver.framework/DriverIndex_MatchDriversV1_Result result)
-protocol/member fuchsia.driver.framework/DriverIndex.WaitForBaseDrivers() -> ()
-protocol fuchsia.driver.framework/DriverIndex
-struct fuchsia.driver.framework/DriverIndex_AddDeviceGroup_Response
-union/member fuchsia.driver.framework/DriverIndex_AddDeviceGroup_Result.err int32
-union/member fuchsia.driver.framework/DriverIndex_AddDeviceGroup_Result.response fuchsia.driver.framework/DriverIndex_AddDeviceGroup_Response
-strict union fuchsia.driver.framework/DriverIndex_AddDeviceGroup_Result
-struct/member fuchsia.driver.framework/DriverIndex_MatchDriver_Response.driver fuchsia.driver.framework/MatchedDriver
-struct fuchsia.driver.framework/DriverIndex_MatchDriver_Response
-union/member fuchsia.driver.framework/DriverIndex_MatchDriver_Result.err int32
-union/member fuchsia.driver.framework/DriverIndex_MatchDriver_Result.response fuchsia.driver.framework/DriverIndex_MatchDriver_Response
-strict union fuchsia.driver.framework/DriverIndex_MatchDriver_Result
-struct/member fuchsia.driver.framework/DriverIndex_MatchDriversV1_Response.drivers vector<fuchsia.driver.framework/MatchedDriver>
-struct fuchsia.driver.framework/DriverIndex_MatchDriversV1_Response
-union/member fuchsia.driver.framework/DriverIndex_MatchDriversV1_Result.err int32
-union/member fuchsia.driver.framework/DriverIndex_MatchDriversV1_Result.response fuchsia.driver.framework/DriverIndex_MatchDriversV1_Response
-strict union fuchsia.driver.framework/DriverIndex_MatchDriversV1_Result
 table/member fuchsia.driver.framework/DriverStartArgs.config zx/handle:VMO
 table/member fuchsia.driver.framework/DriverStartArgs.node client_end:fuchsia.driver.framework/Node
 table/member fuchsia.driver.framework/DriverStartArgs.ns vector<fuchsia.component.runner/ComponentNamespaceEntry>:32
@@ -52,26 +33,6 @@ const fuchsia.driver.framework/MAX_OFFER_COUNT uint32 128
 const fuchsia.driver.framework/MAX_PROPERTY_COUNT uint8 64
 const fuchsia.driver.framework/MAX_SYMBOL_COUNT uint8 64
 const fuchsia.driver.framework/MAX_SYMBOL_NAME_LENGTH uint8 128
-table/member fuchsia.driver.framework/MatchedCompositeInfo.composite_name string
-table/member fuchsia.driver.framework/MatchedCompositeInfo.driver_info fuchsia.driver.framework/MatchedDriverInfo
-table/member fuchsia.driver.framework/MatchedCompositeInfo.node_index uint32
-table/member fuchsia.driver.framework/MatchedCompositeInfo.node_names vector<string>
-table/member fuchsia.driver.framework/MatchedCompositeInfo.num_nodes uint32
-table fuchsia.driver.framework/MatchedCompositeInfo
-table/member fuchsia.driver.framework/MatchedDeviceGroupInfo.composite_name string
-table/member fuchsia.driver.framework/MatchedDeviceGroupInfo.node_index uint32
-table/member fuchsia.driver.framework/MatchedDeviceGroupInfo.node_names vector<string>
-table/member fuchsia.driver.framework/MatchedDeviceGroupInfo.num_nodes uint32
-table/member fuchsia.driver.framework/MatchedDeviceGroupInfo.topological_path string
-table fuchsia.driver.framework/MatchedDeviceGroupInfo
-union/member fuchsia.driver.framework/MatchedDriver.composite_driver fuchsia.driver.framework/MatchedCompositeInfo
-union/member fuchsia.driver.framework/MatchedDriver.device_group fuchsia.driver.framework/MatchedDeviceGroupInfo
-union/member fuchsia.driver.framework/MatchedDriver.driver fuchsia.driver.framework/MatchedDriverInfo
-flexible union fuchsia.driver.framework/MatchedDriver
-table/member fuchsia.driver.framework/MatchedDriverInfo.colocate bool
-table/member fuchsia.driver.framework/MatchedDriverInfo.driver_url string:4096
-table/member fuchsia.driver.framework/MatchedDriverInfo.url string:4096
-table fuchsia.driver.framework/MatchedDriverInfo
 protocol/member fuchsia.driver.framework/Node.AddChild(fuchsia.driver.framework/NodeAddArgs args,server_end:fuchsia.driver.framework/NodeController controller,server_end:<fuchsia.driver.framework/Node,optional> node) -> (fuchsia.driver.framework/Node_AddChild_Result result)
 protocol fuchsia.driver.framework/Node
 table/member fuchsia.driver.framework/NodeAddArgs.name string:128

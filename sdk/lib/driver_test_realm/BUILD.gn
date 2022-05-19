@@ -40,6 +40,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution_llcpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
+    "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_llcpp",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",

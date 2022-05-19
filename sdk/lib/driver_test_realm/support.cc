@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.diagnostics/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.kernel/cpp/wire.h>
@@ -205,7 +206,7 @@ class FakeBootItems final : public fidl::WireServer<fuchsia_boot::Items> {
   std::string board_name_;
 };
 
-class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::DriverIndex> {
+class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::DriverIndex> {
   void MatchDriver(MatchDriverRequestView request, MatchDriverCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_FOUND);
   }

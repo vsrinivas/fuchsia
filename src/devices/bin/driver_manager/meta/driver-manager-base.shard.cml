@@ -48,7 +48,7 @@
                 "fuchsia.boot.RootResource",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.driver.development.DriverIndex",
-                "fuchsia.driver.framework.DriverIndex",
+                "fuchsia.driver.index.DriverIndex",
                 "fuchsia.driver.registrar.DriverRegistrar",
                 "fuchsia.fshost.Admin",
                 "fuchsia.kernel.RootJob",

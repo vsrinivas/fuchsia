@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <fidl/fuchsia.process/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/driver2/start_args.h>
@@ -30,6 +31,7 @@
 
 namespace fdata = fuchsia_data;
 namespace fdf = fuchsia_driver_framework;
+namespace fdi = fuchsia_driver_index;
 namespace fio = fuchsia_io;
 namespace fprocess = fuchsia_process;
 namespace frunner = fuchsia_component_runner;
@@ -735,7 +737,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
 }
 
 DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
-                           fidl::ClientEnd<fdf::DriverIndex> driver_index,
+                           fidl::ClientEnd<fdi::DriverIndex> driver_index,
                            inspect::Inspector& inspector, async_dispatcher_t* dispatcher)
     : realm_(std::move(realm), dispatcher),
       driver_index_(std::move(driver_index), dispatcher),
@@ -772,14 +774,14 @@ zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDi
 }
 
 zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
-  return StartDriver(*root_node_, url, fdf::DriverPackageType::kBase);
+  return StartDriver(*root_node_, url, fdi::DriverPackageType::kBase);
 }
 
 std::shared_ptr<const Node> DriverRunner::root_node() const { return root_node_; }
 
 void DriverRunner::ScheduleBaseDriversBinding() {
   driver_index_->WaitForBaseDrivers().Then(
-      [this](fidl::WireUnownedResult<fdf::DriverIndex::WaitForBaseDrivers>& result) mutable {
+      [this](fidl::WireUnownedResult<fdi::DriverIndex::WaitForBaseDrivers>& result) mutable {
         if (!result.ok()) {
           // It's possible in tests that the test can finish before WaitForBaseDrivers
           // finishes.
@@ -823,7 +825,7 @@ void DriverRunner::TryBindAllOrphansUntracked() {
 }
 
 zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url,
-                                       fdf::DriverPackageType package_type) {
+                                       fdi::DriverPackageType package_type) {
   zx::event token;
   zx_status_t status = zx::event::create(0, &token);
   if (status != ZX_OK) {
@@ -837,7 +839,7 @@ zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url,
 
   // TODO(fxb/98474) Stop doing the url prefix check and just rely on the package_type.
   auto collection = cpp20::starts_with(url, kBootScheme) ? Collection::kBoot : Collection::kPackage;
-  if (package_type == fdf::DriverPackageType::kUniverse) {
+  if (package_type == fdi::DriverPackageType::kUniverse) {
     collection = Collection::kUniversePackage;
   }
   node.set_collection(collection);
@@ -940,7 +942,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
 
 void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) {
   auto match_callback = [this, weak_node = node.weak_from_this(), result_tracker](
-                            fidl::WireUnownedResult<fdf::DriverIndex::MatchDriver>& result) {
+                            fidl::WireUnownedResult<fdi::DriverIndex::MatchDriver>& result) {
     auto shared_node = weak_node.lock();
 
     auto report_no_bind = fit::defer([&result_tracker]() {
@@ -1024,7 +1026,7 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
     }
 
     auto pkg_type =
-        driver_info.has_package_type() ? driver_info.package_type() : fdf::DriverPackageType::kBase;
+        driver_info.has_package_type() ? driver_info.package_type() : fdi::DriverPackageType::kBase;
     auto start_result = StartDriver(*driver_node, driver_info.url().get(), pkg_type);
     if (start_result.is_error()) {
       orphaned();
@@ -1044,7 +1046,7 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
 }
 
 zx::status<Node*> DriverRunner::CreateCompositeNode(
-    Node& node, const fdf::wire::MatchedCompositeInfo& matched_driver) {
+    Node& node, const fdi::wire::MatchedCompositeInfo& matched_driver) {
   auto it = AddToCompositeArgs(node.name(), matched_driver);
   if (it.is_error()) {
     orphaned_nodes_.push_back(node.weak_from_this());
@@ -1080,7 +1082,7 @@ zx::status<Node*> DriverRunner::CreateCompositeNode(
 }
 
 zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs(
-    const std::string& name, const fdf::wire::MatchedCompositeInfo& composite_info) {
+    const std::string& name, const fdi::wire::MatchedCompositeInfo& composite_info) {
   if (!composite_info.has_node_index() || !composite_info.has_num_nodes()) {
     LOGF(ERROR, "Failed to match Node '%s', missing fields for composite driver", name.data());
     return zx::error(ZX_ERR_INVALID_ARGS);

@@ -402,7 +402,7 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
                          });
                        });
   auto config = NullConfig();
-  config.driver_index = fidl::WireSharedClient<fdf::DriverIndex>(std::move(fake.Connect().value()),
+  config.driver_index = fidl::WireSharedClient<fdi::DriverIndex>(std::move(fake.Connect().value()),
                                                                  loop.dispatcher());
   Coordinator coordinator(std::move(config), &inspect_manager, loop.dispatcher(),
                           loop.dispatcher());
@@ -462,7 +462,7 @@ TEST(MiscTestCase, AddDeviceGroup) {
                                     });
 
   auto config = NullConfig();
-  config.driver_index = fidl::WireSharedClient<fdf::DriverIndex>(
+  config.driver_index = fidl::WireSharedClient<fdi::DriverIndex>(
       std::move(fake_driver_index.Connect().value()), loop.dispatcher());
 
   Coordinator coordinator(std::move(config), &inspect_manager, loop.dispatcher(),

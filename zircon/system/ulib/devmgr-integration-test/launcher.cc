@@ -314,7 +314,7 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(
   ForwardService(svc_loop_state_->root, "fuchsia.logger.LogSink", CloneDirectory(svc_client));
   ForwardService(svc_loop_state_->root, "fuchsia.boot.RootResource", std::move(svc_client));
   ForwardService(svc_loop_state_->root, "fuchsia.fshost.Loader", std::move(fshost_svc_client));
-  ForwardService(svc_loop_state_->root, "fuchsia.driver.framework.DriverIndex",
+  ForwardService(svc_loop_state_->root, "fuchsia.driver.index.DriverIndex",
                  CloneDirectory(driver_index_svc_client));
   ForwardService(svc_loop_state_->root, "fuchsia.driver.development.DriverIndex",
                  std::move(driver_index_svc_client));

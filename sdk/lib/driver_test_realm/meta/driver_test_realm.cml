@@ -107,7 +107,7 @@
         {
             protocol: [
                 "fuchsia.driver.development.DriverIndex",
-                "fuchsia.driver.framework.DriverIndex",
+                "fuchsia.driver.index.DriverIndex",
                 "fuchsia.driver.registrar.DriverRegistrar",
             ],
             from: "#driver-index",

@@ -15,7 +15,7 @@
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
-                "fuchsia.driver.framework.DriverIndex",
+                "fuchsia.driver.index.DriverIndex",
                 "fuchsia.driver.test.Realm",
                 "fuchsia.kernel.RootJob",
                 "fuchsia.power.manager.DriverManagerRegistration",
@@ -51,7 +51,7 @@
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
-                "fuchsia.driver.framework.DriverIndex",
+                "fuchsia.driver.index.DriverIndex",
                 "fuchsia.driver.test.Realm",
                 "fuchsia.kernel.RootJob",
                 "fuchsia.power.manager.DriverManagerRegistration",

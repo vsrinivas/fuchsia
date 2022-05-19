@@ -5,7 +5,7 @@
 use {
     bind::compiler::Symbol,
     bind::interpreter::match_bind::{DeviceProperties, PropertyKey},
-    fidl_fuchsia_driver_framework as fdf,
+    fidl_fuchsia_driver_framework as fdf, fidl_fuchsia_driver_index as fdi,
     fuchsia_zircon::{zx_status_t, Status},
     std::collections::HashMap,
 };
@@ -47,16 +47,16 @@ impl DeviceGroup {
         })
     }
 
-    pub fn matches(&self, properties: &DeviceProperties) -> Option<fdf::MatchedDriver> {
+    pub fn matches(&self, properties: &DeviceProperties) -> Option<fdi::MatchedDriver> {
         for (index, node) in self.nodes.iter().enumerate() {
             if match_node(&node, properties) {
                 let node_names = self.nodes.iter().map(|node| node.name.clone()).collect();
-                return Some(fdf::MatchedDriver::DeviceGroup(fdf::MatchedDeviceGroupInfo {
+                return Some(fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
                     topological_path: Some(self.topological_path.clone()),
                     node_index: Some(index as u32),
                     num_nodes: Some(self.nodes.len() as u32),
                     node_names: Some(node_names),
-                    ..fdf::MatchedDeviceGroupInfo::EMPTY
+                    ..fdi::MatchedDeviceGroupInfo::EMPTY
                 }));
             }
         }
@@ -208,12 +208,12 @@ mod tests {
         );
 
         assert_eq!(
-            Some(fdf::MatchedDriver::DeviceGroup(fdf::MatchedDeviceGroupInfo {
+            Some(fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
                 topological_path: Some("test/path".to_string()),
                 node_index: Some(0),
                 num_nodes: Some(2),
                 node_names: Some(vec!["whimbrel".to_string(), "godwit".to_string()]),
-                ..fdf::MatchedDeviceGroupInfo::EMPTY
+                ..fdi::MatchedDeviceGroupInfo::EMPTY
             })),
             device_group.matches(&device_properties_1)
         );
@@ -232,12 +232,12 @@ mod tests {
         );
 
         assert_eq!(
-            Some(fdf::MatchedDriver::DeviceGroup(fdf::MatchedDeviceGroupInfo {
+            Some(fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
                 topological_path: Some("test/path".to_string()),
                 node_index: Some(1),
                 num_nodes: Some(2),
                 node_names: Some(vec!["whimbrel".to_string(), "godwit".to_string()]),
-                ..fdf::MatchedDeviceGroupInfo::EMPTY
+                ..fdi::MatchedDeviceGroupInfo::EMPTY
             })),
             device_group.matches(&device_properties_2)
         );
@@ -360,12 +360,12 @@ mod tests {
             Symbol::StringValue("lapwing".to_string()),
         );
         assert_eq!(
-            Some(fdf::MatchedDriver::DeviceGroup(fdf::MatchedDeviceGroupInfo {
+            Some(fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
                 topological_path: Some("test/path".to_string()),
                 node_index: Some(0),
                 num_nodes: Some(2),
                 node_names: Some(vec!["whimbrel".to_string(), "godwit".to_string()]),
-                ..fdf::MatchedDeviceGroupInfo::EMPTY
+                ..fdi::MatchedDeviceGroupInfo::EMPTY
             })),
             device_group.matches(&device_properties_1)
         );
@@ -375,12 +375,12 @@ mod tests {
         device_properties_2.insert(PropertyKey::NumberKey(5), Symbol::NumberValue(20));
 
         assert_eq!(
-            Some(fdf::MatchedDriver::DeviceGroup(fdf::MatchedDeviceGroupInfo {
+            Some(fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
                 topological_path: Some("test/path".to_string()),
                 node_index: Some(1),
                 num_nodes: Some(2),
                 node_names: Some(vec!["whimbrel".to_string(), "godwit".to_string()]),
-                ..fdf::MatchedDeviceGroupInfo::EMPTY
+                ..fdi::MatchedDeviceGroupInfo::EMPTY
             })),
             device_group.matches(&device_properties_2)
         );

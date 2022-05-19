@@ -39,6 +39,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework-rustc",
+    "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index-rustc",
     "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",

@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <fidl/fuchsia.driver.registrar/cpp/wire.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
@@ -61,6 +62,7 @@
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 using statecontrol_fidl::wire::SystemPowerState;
 namespace fdf = fuchsia_driver_framework;
+namespace fdi = fuchsia_driver_index;
 
 class BindDriverManager;
 class DebugDump;
@@ -100,7 +102,7 @@ struct CoordinatorConfig {
   // Client for the Arguments service.
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args;
   // Client for the DriverIndex.
-  fidl::WireSharedClient<fdf::DriverIndex> driver_index;
+  fidl::WireSharedClient<fdi::DriverIndex> driver_index;
   // Whether we require /system.
   bool require_system = false;
   // Whether to output logs to debuglog.

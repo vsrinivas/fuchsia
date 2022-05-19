@@ -8,8 +8,8 @@ use {
     crate::resolved_driver::{load_driver, DriverPackageType, ResolvedDriver},
     anyhow::{self, Context},
     fidl_fuchsia_boot as fboot, fidl_fuchsia_driver_development as fdd,
-    fidl_fuchsia_driver_framework as fdf,
-    fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream},
+    fidl_fuchsia_driver_framework as fdf, fidl_fuchsia_driver_index as fdi,
+    fidl_fuchsia_driver_index::{DriverIndexRequest, DriverIndexRequestStream},
     fidl_fuchsia_driver_registrar as fdr, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_component::server::ServiceFs,
@@ -101,7 +101,7 @@ enum BaseRepo {
     // We know that Base won't update so we can store these as resolved.
     Resolved(Vec<ResolvedDriver>),
     // If it's not resolved we store the clients waiting for it.
-    NotResolved(Vec<fdf::DriverIndexWaitForBaseDriversResponder>),
+    NotResolved(Vec<fdi::DriverIndexWaitForBaseDriversResponder>),
 }
 
 struct Indexer {
@@ -156,7 +156,7 @@ impl Indexer {
         self.base_repo.replace(base_repo);
     }
 
-    fn match_driver(&self, args: fdf::NodeAddArgs) -> fdf::DriverIndexMatchDriverResult {
+    fn match_driver(&self, args: fdf::NodeAddArgs) -> fdi::DriverIndexMatchDriverResult {
         if args.properties.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
@@ -181,8 +181,8 @@ impl Indexer {
         // non-fallback base drivers, then fallback boot drivers, then fallback
         // base drivers.
         let (mut fallback, mut non_fallback): (
-            Vec<(bool, fdf::MatchedDriver)>,
-            Vec<(bool, fdf::MatchedDriver)>,
+            Vec<(bool, fdi::MatchedDriver)>,
+            Vec<(bool, fdi::MatchedDriver)>,
         ) = self
             .boot_repo
             .iter()
@@ -218,7 +218,7 @@ impl Indexer {
         }
     }
 
-    fn match_drivers_v1(&self, args: fdf::NodeAddArgs) -> fdf::DriverIndexMatchDriversV1Result {
+    fn match_drivers_v1(&self, args: fdf::NodeAddArgs) -> fdi::DriverIndexMatchDriversV1Result {
         if args.properties.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
@@ -266,7 +266,7 @@ impl Indexer {
         &self,
         topological_path: String,
         nodes: Vec<fdf::DeviceGroupNode>,
-    ) -> fdf::DriverIndexAddDeviceGroupResult {
+    ) -> fdi::DriverIndexAddDeviceGroupResult {
         let mut device_groups = self.device_groups.borrow_mut();
 
         if device_groups.contains_key(&topological_path) {
@@ -695,14 +695,14 @@ mod tests {
         colocate: bool,
         package_type: DriverPackageType,
         fallback: bool,
-    ) -> fdf::MatchedDriverInfo {
-        fdf::MatchedDriverInfo {
+    ) -> fdi::MatchedDriverInfo {
+        fdi::MatchedDriverInfo {
             url: Some(url),
             driver_url: Some(driver_url),
             colocate: Some(colocate),
-            package_type: fdf::DriverPackageType::from_primitive(package_type as u8),
+            package_type: fdi::DriverPackageType::from_primitive(package_type as u8),
             is_fallback: Some(fallback),
-            ..fdf::MatchedDriverInfo::EMPTY
+            ..fdi::MatchedDriverInfo::EMPTY
         }
     }
 
@@ -763,7 +763,7 @@ mod tests {
 
     async fn execute_driver_index_test(
         index: Indexer,
-        stream: fdf::DriverIndexRequestStream,
+        stream: fdi::DriverIndexRequestStream,
         test: impl Future<Output = ()>,
     ) {
         let index = Rc::new(index);
@@ -801,7 +801,7 @@ mod tests {
                 .unwrap();
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let index = Rc::new(Indexer::new(std::vec![], BaseRepo::NotResolved(std::vec![]), false));
 
@@ -840,7 +840,7 @@ mod tests {
             let expected_driver_url =
                 "fuchsia-pkg://fuchsia.com/driver-index-unittests#driver/fake-driver.so"
                     .to_string();
-            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+            let expected_result = fdi::MatchedDriver::Driver(create_matched_driver_info(
                 expected_url,
                 expected_driver_url,
                 true,
@@ -865,7 +865,7 @@ mod tests {
             let expected_driver_url =
                 "fuchsia-pkg://fuchsia.com/driver-index-unittests#driver/fake-driver2.so"
                     .to_string();
-            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+            let expected_result = fdi::MatchedDriver::Driver(create_matched_driver_info(
                 expected_url,
                 expected_driver_url,
                 false,
@@ -928,7 +928,7 @@ mod tests {
         },]);
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
 
@@ -944,12 +944,12 @@ mod tests {
 
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
 
-            let expected_result = vec![fdf::MatchedDriver::Driver(fdf::MatchedDriverInfo {
+            let expected_result = vec![fdi::MatchedDriver::Driver(fdi::MatchedDriverInfo {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
-                package_type: Some(fdf::DriverPackageType::Base),
+                package_type: Some(fdi::DriverPackageType::Base),
                 is_fallback: Some(false),
-                ..fdf::MatchedDriverInfo::EMPTY
+                ..fdi::MatchedDriverInfo::EMPTY
             })];
 
             assert_eq!(expected_result, result);
@@ -997,7 +997,7 @@ mod tests {
         },]);
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
 
@@ -1013,12 +1013,12 @@ mod tests {
 
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
 
-            let expected_result = vec![fdf::MatchedDriver::Driver(fdf::MatchedDriverInfo {
+            let expected_result = vec![fdi::MatchedDriver::Driver(fdi::MatchedDriverInfo {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
-                package_type: Some(fdf::DriverPackageType::Base),
+                package_type: Some(fdi::DriverPackageType::Base),
                 is_fallback: Some(false),
-                ..fdf::MatchedDriverInfo::EMPTY
+                ..fdi::MatchedDriverInfo::EMPTY
             })];
 
             assert_eq!(expected_result, result);
@@ -1076,7 +1076,7 @@ mod tests {
         ]);
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
 
@@ -1102,14 +1102,14 @@ mod tests {
                 "fuchsia-pkg://fuchsia.com/package#meta/my-driver2.so".to_string();
 
             let expected_result = vec![
-                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                fdi::MatchedDriver::Driver(create_matched_driver_info(
                     expected_url_1,
                     expected_driver_url_1,
                     false,
                     DriverPackageType::Base,
                     false,
                 )),
-                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                fdi::MatchedDriver::Driver(create_matched_driver_info(
                     expected_url_2,
                     expected_driver_url_2,
                     false,
@@ -1166,7 +1166,7 @@ mod tests {
         ];
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let index = Rc::new(Indexer::new(boot_repo, BaseRepo::Resolved(std::vec![]), false));
 
@@ -1237,7 +1237,7 @@ mod tests {
         ];
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let index = Rc::new(Indexer::new(boot_repo, BaseRepo::Resolved(std::vec![]), false));
 
@@ -1253,7 +1253,7 @@ mod tests {
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
-            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+            let expected_result = fdi::MatchedDriver::Driver(create_matched_driver_info(
                 NON_FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                 format!(
                     "fuchsia-pkg://fuchsia.com/package#{}",
@@ -1334,7 +1334,7 @@ mod tests {
         ]);
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let index = Rc::new(Indexer::new(boot_repo, base_repo, false));
 
@@ -1350,7 +1350,7 @@ mod tests {
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
-            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+            let expected_result = fdi::MatchedDriver::Driver(create_matched_driver_info(
                 NON_FALLBACK_BASE_DRIVER_COMPONENT_URL.to_owned(),
                 format!(
                     "fuchsia-pkg://fuchsia.com/package#{}",
@@ -1418,7 +1418,7 @@ mod tests {
         ];
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let index = Rc::new(Indexer::new(boot_repo, BaseRepo::Resolved(std::vec![]), false));
 
@@ -1435,14 +1435,14 @@ mod tests {
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
 
             let expected_result = vec![
-                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                fdi::MatchedDriver::Driver(create_matched_driver_info(
                     NON_FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                     format!("fuchsia-boot:///#{}", NON_FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
                     DriverPackageType::Boot,
                     false,
                 )),
-                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                fdi::MatchedDriver::Driver(create_matched_driver_info(
                     FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                     format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
@@ -1520,7 +1520,7 @@ mod tests {
         ]);
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let index = Rc::new(Indexer::new(boot_repo, base_repo, false));
 
@@ -1537,7 +1537,7 @@ mod tests {
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
 
             let expected_result = vec![
-                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                fdi::MatchedDriver::Driver(create_matched_driver_info(
                     NON_FALLBACK_BASE_DRIVER_COMPONENT_URL.to_owned(),
                     format!(
                         "fuchsia-pkg://fuchsia.com/package#{}",
@@ -1547,14 +1547,14 @@ mod tests {
                     DriverPackageType::Base,
                     false,
                 )),
-                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                fdi::MatchedDriver::Driver(create_matched_driver_info(
                     FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                     format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
                     DriverPackageType::Boot,
                     true,
                 )),
-                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                fdi::MatchedDriver::Driver(create_matched_driver_info(
                     FALLBACK_BASE_DRIVER_COMPONENT_URL.to_owned(),
                     format!(
                         "fuchsia-pkg://fuchsia.com/package#{}",
@@ -1746,7 +1746,7 @@ mod tests {
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), true);
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         execute_driver_index_test(index, stream, async move {
             let property = fdf::NodeProperty {
@@ -1780,7 +1780,7 @@ mod tests {
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), false);
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         execute_driver_index_test(index, stream, async move {
             let property = fdf::NodeProperty {
@@ -1792,7 +1792,7 @@ mod tests {
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
-            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+            let expected_result = fdi::MatchedDriver::Driver(create_matched_driver_info(
                 FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                 format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                 false,
@@ -1818,7 +1818,7 @@ mod tests {
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), true);
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         execute_driver_index_test(index, stream, async move {
             let property = fdf::NodeProperty {
@@ -1852,7 +1852,7 @@ mod tests {
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), false);
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         execute_driver_index_test(index, stream, async move {
             let property = fdf::NodeProperty {
@@ -1864,7 +1864,7 @@ mod tests {
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
 
-            let expected_result = vec![fdf::MatchedDriver::Driver(create_matched_driver_info(
+            let expected_result = vec![fdi::MatchedDriver::Driver(create_matched_driver_info(
                 FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                 format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                 false,
@@ -1886,7 +1886,7 @@ mod tests {
         let drivers = load_boot_drivers(boot, &HashSet::new(), &HashSet::new()).await.unwrap();
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let index = Rc::new(Indexer::new(drivers, BaseRepo::NotResolved(vec![]), false));
 
@@ -1904,7 +1904,7 @@ mod tests {
 
             let expected_url = "fuchsia-boot:///#meta/test-bind-component.cm".to_string();
             let expected_driver_url = "fuchsia-boot:///#driver/fake-driver.so".to_string();
-            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+            let expected_result = fdi::MatchedDriver::Driver(create_matched_driver_info(
                 expected_url,
                 expected_driver_url,
                 true,
@@ -1925,7 +1925,7 @@ mod tests {
 
             let expected_url = "fuchsia-boot:///#meta/test-bind2-component.cm".to_string();
             let expected_driver_url = "fuchsia-boot:///#driver/fake-driver2.so".to_string();
-            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+            let expected_result = fdi::MatchedDriver::Driver(create_matched_driver_info(
                 expected_url,
                 expected_driver_url,
                 false,
@@ -2013,7 +2013,7 @@ mod tests {
         },]);
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
 
@@ -2030,20 +2030,20 @@ mod tests {
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
-            let expected_driver_info = fdf::MatchedDriverInfo {
+            let expected_driver_info = fdi::MatchedDriverInfo {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
-                package_type: Some(fdf::DriverPackageType::Base),
+                package_type: Some(fdi::DriverPackageType::Base),
                 is_fallback: Some(false),
-                ..fdf::MatchedDriverInfo::EMPTY
+                ..fdi::MatchedDriverInfo::EMPTY
             };
-            let expected_result = fdf::MatchedDriver::CompositeDriver(fdf::MatchedCompositeInfo {
+            let expected_result = fdi::MatchedDriver::CompositeDriver(fdi::MatchedCompositeInfo {
                 node_index: Some(0),
                 num_nodes: Some(2),
                 composite_name: Some("mimid".to_string()),
                 node_names: Some(vec!["catbird".to_string(), "mockingbird".to_string()]),
                 driver_info: Some(expected_driver_info),
-                ..fdf::MatchedCompositeInfo::EMPTY
+                ..fdi::MatchedCompositeInfo::EMPTY
             });
             assert_eq!(expected_result, result);
 
@@ -2066,20 +2066,20 @@ mod tests {
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
-            let expected_driver_info = fdf::MatchedDriverInfo {
+            let expected_driver_info = fdi::MatchedDriverInfo {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
-                package_type: Some(fdf::DriverPackageType::Base),
+                package_type: Some(fdi::DriverPackageType::Base),
                 is_fallback: Some(false),
-                ..fdf::MatchedDriverInfo::EMPTY
+                ..fdi::MatchedDriverInfo::EMPTY
             };
-            let expected_result = fdf::MatchedDriver::CompositeDriver(fdf::MatchedCompositeInfo {
+            let expected_result = fdi::MatchedDriver::CompositeDriver(fdi::MatchedCompositeInfo {
                 node_index: Some(1),
                 num_nodes: Some(2),
                 composite_name: Some("mimid".to_string()),
                 node_names: Some(vec!["catbird".to_string(), "mockingbird".to_string()]),
                 driver_info: Some(expected_driver_info),
-                ..fdf::MatchedCompositeInfo::EMPTY
+                ..fdi::MatchedCompositeInfo::EMPTY
             });
             assert_eq!(expected_result, result);
         }
@@ -2099,7 +2099,7 @@ mod tests {
         let base_repo = BaseRepo::Resolved(std::vec![]);
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
         let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
         let index_task = run_index_server(index.clone(), stream).fuse();
 
@@ -2146,12 +2146,12 @@ mod tests {
 
             let result = proxy.match_driver(match_args).await.unwrap().unwrap();
             assert_eq!(
-                fdf::MatchedDriver::DeviceGroup(fdf::MatchedDeviceGroupInfo {
+                fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
                     topological_path: Some("test/path".to_string()),
                     node_index: Some(0),
                     num_nodes: Some(1),
                     node_names: Some(vec!["whimbrel".to_string()]),
-                    ..fdf::MatchedDeviceGroupInfo::EMPTY
+                    ..fdi::MatchedDeviceGroupInfo::EMPTY
                 }),
                 result
             );
@@ -2211,7 +2211,7 @@ mod tests {
         },]);
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
         let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
         let index_task = run_index_server(index.clone(), stream).fuse();
 
@@ -2260,21 +2260,21 @@ mod tests {
             assert_eq!(2, result.len());
             assert_eq!(
                 vec![
-                    fdf::MatchedDriver::Driver(fdf::MatchedDriverInfo {
+                    fdi::MatchedDriver::Driver(fdi::MatchedDriverInfo {
                         url: Some(
                             "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()
                         ),
                         colocate: Some(false),
-                        package_type: Some(fdf::DriverPackageType::Base),
+                        package_type: Some(fdi::DriverPackageType::Base),
                         is_fallback: Some(false),
-                        ..fdf::MatchedDriverInfo::EMPTY
+                        ..fdi::MatchedDriverInfo::EMPTY
                     }),
-                    fdf::MatchedDriver::DeviceGroup(fdf::MatchedDeviceGroupInfo {
+                    fdi::MatchedDriver::DeviceGroup(fdi::MatchedDeviceGroupInfo {
                         topological_path: Some("test/path".to_string()),
                         node_index: Some(0),
                         num_nodes: Some(1),
                         node_names: Some(vec!["whimbrel".to_string()]),
-                        ..fdf::MatchedDeviceGroupInfo::EMPTY
+                        ..fdi::MatchedDeviceGroupInfo::EMPTY
                     })
                 ],
                 result
@@ -2300,12 +2300,12 @@ mod tests {
             let result = proxy.match_drivers_v1(mismatch_args).await.unwrap().unwrap();
             assert_eq!(1, result.len());
             assert_eq!(
-                vec![fdf::MatchedDriver::Driver(fdf::MatchedDriverInfo {
+                vec![fdi::MatchedDriver::Driver(fdi::MatchedDriverInfo {
                     url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                     colocate: Some(false),
-                    package_type: Some(fdf::DriverPackageType::Base),
+                    package_type: Some(fdi::DriverPackageType::Base),
                     is_fallback: Some(false),
-                    ..fdf::MatchedDriverInfo::EMPTY
+                    ..fdi::MatchedDriverInfo::EMPTY
                 }),],
                 result
             );
@@ -2345,7 +2345,7 @@ mod tests {
         },]);
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
         let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
         let index_task = run_index_server(index.clone(), stream).fuse();
 
@@ -2423,7 +2423,7 @@ mod tests {
         },]);
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
         let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
         let index_task = run_index_server(index.clone(), stream).fuse();
 
@@ -2473,7 +2473,7 @@ mod tests {
             "fuchsia-pkg://fuchsia.com/driver-index-unittests#driver/fake-driver.so";
 
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
 
         let (registrar_proxy, registrar_stream) =
             fidl::endpoints::create_proxy_and_stream::<fdr::DriverRegistrarMarker>().unwrap();
@@ -2521,7 +2521,7 @@ mod tests {
             let result_v1 = proxy.match_drivers_v1(args.clone()).await.unwrap().unwrap();
             let expected_url = component_manifest_url.to_string();
             let expected_driver_url = driver_library_url.to_string();
-            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+            let expected_result = fdi::MatchedDriver::Driver(create_matched_driver_info(
                 expected_url,
                 expected_driver_url,
                 true,

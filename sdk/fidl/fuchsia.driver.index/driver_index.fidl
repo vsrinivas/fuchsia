@@ -1,8 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.driver.framework;
+library fuchsia.driver.index;
 
+using fuchsia.driver.framework;
 using fuchsia.url;
 
 using zx;
@@ -94,7 +95,7 @@ type MatchedDriver = flexible union {
 protocol DriverIndex {
     /// Match a set of device arguments to a driver package URL.
     MatchDriver(struct {
-        args NodeAddArgs;
+        args fuchsia.driver.framework.NodeAddArgs;
     }) -> (struct {
         driver MatchedDriver;
     }) error zx.status;
@@ -107,7 +108,7 @@ protocol DriverIndex {
     /// This should only be used by DFv1 and should be removed.
     /// If more than MAX drivers match, only MAX drivers will be returned.
     MatchDriversV1(struct {
-        args NodeAddArgs;
+        args fuchsia.driver.framework.NodeAddArgs;
     }) -> (struct {
         drivers vector<MatchedDriver>:MAX;
     }) error zx.status;
@@ -117,6 +118,6 @@ protocol DriverIndex {
     /// groups are included in the driver matching process.
     AddDeviceGroup(struct {
         topological_path string:MAX;
-        nodes vector<DeviceGroupNode>:MAX;
+        nodes vector<fuchsia.driver.framework.DeviceGroupNode>:MAX;
     }) -> (struct {}) error zx.status;
 };

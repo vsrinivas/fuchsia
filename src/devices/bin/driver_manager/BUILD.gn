@@ -273,6 +273,7 @@ source_set("driver_runner") {
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
+    "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_llcpp",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/inspect",
   ]

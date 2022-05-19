@@ -11,7 +11,7 @@ use {
     },
     cm_rust::FidlIntoNative,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_driver_development as fdd,
-    fidl_fuchsia_driver_framework as fdf, fidl_fuchsia_io as fio,
+    fidl_fuchsia_driver_index as fdi, fidl_fuchsia_io as fio,
     futures::TryFutureExt,
 };
 
@@ -92,7 +92,7 @@ impl ResolvedDriver {
     pub fn matches(
         &self,
         properties: &DeviceProperties,
-    ) -> Result<Option<fdf::MatchedDriver>, bind::interpreter::common::BytecodeError> {
+    ) -> Result<Option<fdi::MatchedDriver>, bind::interpreter::common::BytecodeError> {
         match &self.bind_rules {
             DecodedRules::Normal(rules) => {
                 let matches = match_bind(
@@ -111,7 +111,7 @@ impl ResolvedDriver {
                     return Ok(None);
                 }
 
-                Ok(Some(fdf::MatchedDriver::Driver(self.create_matched_driver_info())))
+                Ok(Some(fdi::MatchedDriver::Driver(self.create_matched_driver_info())))
             }
             DecodedRules::Composite(composite) => {
                 let result = matches_composite_device(composite, properties).map_err(|e| {
@@ -131,13 +131,13 @@ impl ResolvedDriver {
                     node_names.push(composite.symbol_table[&node.name_id].clone());
                 }
 
-                Ok(Some(fdf::MatchedDriver::CompositeDriver(fdf::MatchedCompositeInfo {
+                Ok(Some(fdi::MatchedDriver::CompositeDriver(fdi::MatchedCompositeInfo {
                     node_index: Some(node_index),
                     num_nodes: Some((composite.additional_nodes.len() + 1) as u32),
                     composite_name: Some(composite.symbol_table[&composite.device_name_id].clone()),
                     node_names: Some(node_names),
                     driver_info: Some(self.create_matched_driver_info()),
-                    ..fdf::MatchedCompositeInfo::EMPTY
+                    ..fdi::MatchedCompositeInfo::EMPTY
                 })))
             }
         }
@@ -154,14 +154,14 @@ impl ResolvedDriver {
         }
     }
 
-    fn create_matched_driver_info(&self) -> fdf::MatchedDriverInfo {
-        fdf::MatchedDriverInfo {
+    fn create_matched_driver_info(&self) -> fdi::MatchedDriverInfo {
+        fdi::MatchedDriverInfo {
             url: Some(self.component_url.as_str().to_string()),
             driver_url: self.get_driver_url(),
             colocate: Some(self.colocate),
-            package_type: fdf::DriverPackageType::from_primitive(self.package_type as u8),
+            package_type: fdi::DriverPackageType::from_primitive(self.package_type as u8),
             is_fallback: Some(self.fallback),
-            ..fdf::MatchedDriverInfo::EMPTY
+            ..fdi::MatchedDriverInfo::EMPTY
         }
     }
 
@@ -177,7 +177,7 @@ impl ResolvedDriver {
             url: Some(self.component_url.clone().to_string()),
             libname: Some(self.get_libname()),
             bind_rules: bind_rules,
-            package_type: fdf::DriverPackageType::from_primitive(self.package_type as u8),
+            package_type: fdi::DriverPackageType::from_primitive(self.package_type as u8),
             ..fdd::DriverInfo::EMPTY
         }
     }

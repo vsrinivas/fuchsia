@@ -18,13 +18,14 @@
 class Coordinator;
 
 namespace fdf = fuchsia_driver_framework;
+namespace fdi = fuchsia_driver_index;
 
 class DriverLoader {
  public:
   // Takes in an unowned connection to boot arguments. boot_args must outlive DriverLoader.
   // Takes in an unowned connection to base_resolver. base_resolver must outlive DriverLoader.
   explicit DriverLoader(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
-                        fidl::WireSharedClient<fdf::DriverIndex> driver_index,
+                        fidl::WireSharedClient<fdi::DriverIndex> driver_index,
                         internal::PackageResolverInterface* base_resolver,
                         async_dispatcher_t* dispatcher, bool require_system,
                         internal::PackageResolverInterface* universe_resolver)
@@ -80,7 +81,7 @@ class DriverLoader {
 
   internal::PackageResolverInterface* base_resolver_;
   std::optional<std::thread> system_loading_thread_;
-  fidl::WireSharedClient<fdf::DriverIndex> driver_index_;
+  fidl::WireSharedClient<fdi::DriverIndex> driver_index_;
 
   // When this is true we will return DriverIndex fallback drivers.
   // This is true after the system is loaded (or if require_system is false)

@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.component/cpp/wire.h>
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
@@ -271,7 +272,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
                      public DriverBinder {
  public:
   DriverRunner(fidl::ClientEnd<fuchsia_component::Realm> realm,
-               fidl::ClientEnd<fuchsia_driver_framework::DriverIndex> driver_index,
+               fidl::ClientEnd<fuchsia_driver_index::DriverIndex> driver_index,
                inspect::Inspector& inspector, async_dispatcher_t* dispatcher);
 
   fpromise::promise<inspect::Inspector> Inspect() const;
@@ -302,15 +303,15 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
 
   // Create a composite node. Returns a `Node` that is owned by its parents.
   zx::status<Node*> CreateCompositeNode(
-      Node& node, const fuchsia_driver_framework::wire::MatchedCompositeInfo& matched_driver);
+      Node& node, const fuchsia_driver_index::wire::MatchedCompositeInfo& matched_driver);
   // Adds `matched_driver` to an existing set of composite arguments, or creates
   // a new set of composite arguments. Returns an iterator to the set of
   // composite arguments.
   zx::status<CompositeArgsIterator> AddToCompositeArgs(
       const std::string& name,
-      const fuchsia_driver_framework::wire::MatchedCompositeInfo& matched_driver);
+      const fuchsia_driver_index::wire::MatchedCompositeInfo& matched_driver);
   zx::status<> StartDriver(Node& node, std::string_view url,
-                           fuchsia_driver_framework::DriverPackageType package_type);
+                           fuchsia_driver_index::DriverPackageType package_type);
 
   zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();
   // The untracked version of TryBindAllOrphans.
@@ -326,7 +327,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
 
   uint64_t next_driver_host_id_ = 0;
   fidl::WireClient<fuchsia_component::Realm> realm_;
-  fidl::WireClient<fuchsia_driver_framework::DriverIndex> driver_index_;
+  fidl::WireClient<fuchsia_driver_index::DriverIndex> driver_index_;
   async_dispatcher_t* const dispatcher_;
   std::shared_ptr<Node> root_node_;
 
