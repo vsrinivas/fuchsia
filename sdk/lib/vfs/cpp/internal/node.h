@@ -110,6 +110,13 @@ class Node {
   // Return true if |Node| is a VMO.
   bool IsVMO() const { return NodeKind::IsVMO(GetKind()); }
 
+  // Implemented by subclasses that are remote directories. Forwards open requests to the remote
+  // end.
+  virtual void OpenRemote(fuchsia::io::OpenFlags flags, uint32_t mode, std::string_view path,
+                          fidl::InterfaceRequest<fuchsia::io::Node> request) {
+    ZX_PANIC("Unimplemented");
+  }
+
  protected:
   // Return |Kind| of implementing |Node|.
   virtual NodeKind::Type GetKind() const = 0;

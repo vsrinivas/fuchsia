@@ -7,13 +7,13 @@
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/dirent_filler.h": "ee345a473fcd059824371a39bf82a6c5",
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/file.h": "c85b2f82d6348eb33cf8228b9828e447",
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/file_connection.h": "d8b42358cbd41c4449f0a4ed5c7d048c",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/node.h": "4b7c70b0acf08fbeaa2d69bdf8f57881",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/node.h": "9ad0c800d4e6ae5edde119f7f59a1107",
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/node_connection.h": "80e4905328ab44b655eaedd5d2cb4297",
   "pkg/vfs_cpp/include/lib/vfs/cpp/lazy_dir.h": "037bc987ec92596fa222a4632d7bd07b",
   "pkg/vfs_cpp/include/lib/vfs/cpp/node_kind.h": "cb9378c7ef553d0bcbfcffe0c3e518b6",
   "pkg/vfs_cpp/include/lib/vfs/cpp/pseudo_dir.h": "15dc2becad72fbcedfb173da23ea04c1",
   "pkg/vfs_cpp/include/lib/vfs/cpp/pseudo_file.h": "c019425d46d26d5125839d1446255022",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/remote_dir.h": "568e99031f5bf41e52e0bbee2650f827",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/remote_dir.h": "41a5489fac000ed4b78a64fbaf1240ea",
   "pkg/vfs_cpp/include/lib/vfs/cpp/service.h": "81fb56a8bdbcc302723f466a80278253",
   "pkg/vfs_cpp/include/lib/vfs/cpp/vmo_file.h": "4e4cee01b0020916d2e48fcafc1509ff"
 }

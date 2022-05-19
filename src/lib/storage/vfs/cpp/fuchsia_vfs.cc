@@ -346,17 +346,22 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
   if (options->flags.describe) {
     zx::status<VnodeRepresentation> result = internal::Describe(vnode, protocol, *options);
     if (result.is_error()) {
-      // TODO(fxbug.dev/95144) Use the returned fidl::Status's status value.
-      (void)fidl::WireSendEvent(fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)))
-          ->OnOpen(result.status_value(), fio::wire::NodeInfo());
+      // Ignore errors since there is nothing we can do if this fails.
+      [[maybe_unused]] auto unused_result =
+          fidl::WireSendEvent(fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)))
+              ->OnOpen(result.status_value(), fio::wire::NodeInfo());
       return result.status_value();
     }
     ConvertToIoV1NodeInfo(std::move(result).value(), [&](fio::wire::NodeInfo&& info) {
       // The channel may switch from |Node| protocol back to a custom protocol, after sending the
       // event, in the case of |VnodeProtocol::kConnector|.
       fidl::ServerEnd<fuchsia_io::Node> typed_server_end(std::move(server_end));
-      // TODO(fxbug.dev/95144) Use the returned fidl::Status's status value.
-      (void)fidl::WireSendEvent(typed_server_end)->OnOpen(ZX_OK, std::move(info));
+      // We ignore the error and continue here in case the far end has queued open requests and
+      // immediately closed the connection.  If the caller is doing that, they shouldn't have used
+      // the describe flag, but there have been cases where this happened in the past and so we
+      // preserve that behaviour for now.
+      [[maybe_unused]] auto result =
+          fidl::WireSendEvent(typed_server_end)->OnOpen(ZX_OK, std::move(info));
       server_end = typed_server_end.TakeChannel();
     });
   }

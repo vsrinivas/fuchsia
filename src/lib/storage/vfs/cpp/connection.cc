@@ -252,8 +252,9 @@ void Connection::NodeClone(fio::wire::OpenFlags clone_flags,
   auto write_error = [describe = clone_options.flags.describe](fidl::ServerEnd<fio::Node> channel,
                                                                zx_status_t error) {
     if (describe) {
-      // TODO(fxbug.dev/95144) Use the returned fidl::Status's status value.
-      (void)fidl::WireSendEvent(channel)->OnOpen(error, fio::wire::NodeInfo());
+      // Ignore errors since there is nothing we can do if this fails.
+      [[maybe_unused]] auto result =
+          fidl::WireSendEvent(channel)->OnOpen(error, fio::wire::NodeInfo());
       channel.reset();
     }
   };

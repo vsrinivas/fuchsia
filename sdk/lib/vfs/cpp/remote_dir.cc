@@ -35,4 +35,9 @@ zx_status_t RemoteDir::Readdir(uint64_t offset, void* data, uint64_t len, uint64
 
 NodeKind::Type RemoteDir::GetKind() const { return Directory::GetKind() | NodeKind::kRemote; }
 
+void RemoteDir::OpenRemote(fuchsia::io::OpenFlags flags, uint32_t mode, std::string_view path,
+                           fidl::InterfaceRequest<fuchsia::io::Node> request) {
+  dir_ptr_->Open(flags, mode, std::string(path), std::move(request));
+}
+
 }  // namespace vfs

@@ -45,8 +45,9 @@ void OpenAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent,
     using OpenResult = fs::Vfs::OpenResult;
     if constexpr (std::is_same_v<ResultT, OpenResult::Error>) {
       if (describe) {
-        // TODO(fxbug.dev/95144) Use the returned fidl::Status's status value.
-        (void)fidl::WireSendEvent(server_end)->OnOpen(result, fio::wire::NodeInfo());
+        // Ignore errors since there is nothing we can do if this fails.
+        [[maybe_unused]] auto unused_result =
+            fidl::WireSendEvent(server_end)->OnOpen(result, fio::wire::NodeInfo());
         server_end.reset();
       }
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
@@ -208,8 +209,9 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
   auto write_error = [describe = request->flags & fio::wire::OpenFlags::kDescribe](
                          fidl::ServerEnd<fio::Node> channel, zx_status_t error) {
     if (describe) {
-      // TODO(fxbug.dev/95144) Use the returned fidl::Status's status value.
-      (void)fidl::WireSendEvent(channel)->OnOpen(error, fio::wire::NodeInfo());
+      // Ignore errors since there is nothing we can do if this fails.
+      [[maybe_unused]] auto result =
+          fidl::WireSendEvent(channel)->OnOpen(error, fio::wire::NodeInfo());
       channel.reset();
     }
   };
