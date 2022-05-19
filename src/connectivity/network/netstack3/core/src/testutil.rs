@@ -77,15 +77,19 @@ pub(crate) mod benchmarks {
         }
     }
 
-    /// A `Bencher` whose `iter` method runs the provided argument once.
+    /// A `Bencher` whose `iter` method runs the provided argument a small,
+    /// fixed number of times.
     #[cfg(not(feature = "benchmark"))]
     pub(crate) struct TestBencher;
 
     #[cfg(not(feature = "benchmark"))]
     impl Bencher for TestBencher {
         fn iter<T, F: FnMut() -> T>(&mut self, mut inner: F) {
+            const NUM_TEST_ITERS: u32 = 256;
             super::set_logger_for_test();
-            let _: T = inner();
+            for _ in 0..NUM_TEST_ITERS {
+                let _: T = inner();
+            }
         }
     }
 

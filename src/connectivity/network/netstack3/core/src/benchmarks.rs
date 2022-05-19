@@ -189,6 +189,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
                 + core::cmp::max(ETHERNET_MIN_BODY_LEN_NO_TAG, IPV4_MIN_HDR_LEN)
     );
     let body = vec![0; frame_size - (ETHERNET_HDR_LEN_NO_TAG + IPV4_MIN_HDR_LEN)];
+    const TTL: u8 = 64;
     let mut buf = body
         .into_serializer()
         .encapsulate(Ipv4PacketBuilder::new(
@@ -196,7 +197,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
             // forward.
             DUMMY_CONFIG_V4.remote_ip,
             DUMMY_CONFIG_V4.remote_ip,
-            64,
+            TTL,
             IpProto::Udp.into(),
         ))
         .encapsulate(EthernetFrameBuilder::new(
@@ -210,6 +211,12 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let device = DeviceId::new_ethernet(0);
     let buf = buf.as_mut();
     let range = 0..buf.len();
+
+    // Store a copy of the checksum to re-write it later.
+    let ipv4_checksum = [
+        buf[ETHERNET_HDR_LEN_NO_TAG + IPV4_CHECKSUM_OFFSET],
+        buf[ETHERNET_HDR_LEN_NO_TAG + IPV4_CHECKSUM_OFFSET + 1],
+    ];
 
     #[cfg(debug_assertions)]
     let mut iters = 0;
@@ -233,16 +240,17 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
         }
 
         // Since we modified the buffer in-place, it now has the wrong source
-        // and destination MAC addresses and IP TTL. We reset them to their
-        // original values as efficiently as we can to avoid affecting the
+        // and destination MAC addresses and IP TTL/CHECKSUM. We reset them to
+        // their original values as efficiently as we can to avoid affecting the
         // results of the benchmark.
         (&mut buf[ETHERNET_SRC_MAC_BYTE_OFFSET..ETHERNET_SRC_MAC_BYTE_OFFSET + 6])
             .copy_from_slice(&DUMMY_CONFIG_V4.remote_mac.bytes()[..]);
         (&mut buf[ETHERNET_DST_MAC_BYTE_OFFSET..ETHERNET_DST_MAC_BYTE_OFFSET + 6])
             .copy_from_slice(&DUMMY_CONFIG_V4.local_mac.bytes()[..]);
-        buf[ETHERNET_HDR_LEN_NO_TAG + IPV4_TTL_OFFSET] = 64;
-        buf[IPV4_CHECKSUM_OFFSET] = 249;
-        buf[IPV4_CHECKSUM_OFFSET + 1] = 102;
+        let ipv4_buf = &mut buf[ETHERNET_HDR_LEN_NO_TAG..];
+        ipv4_buf[IPV4_TTL_OFFSET] = TTL;
+        ipv4_buf[IPV4_CHECKSUM_OFFSET..IPV4_CHECKSUM_OFFSET + 2]
+            .copy_from_slice(&ipv4_checksum[..]);
     });
 }
 

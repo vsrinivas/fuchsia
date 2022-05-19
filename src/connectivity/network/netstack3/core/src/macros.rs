@@ -97,7 +97,7 @@ macro_rules! impl_timer_context {
 /// benchmark. If the `benchmark` feature is disabled, the function will be
 /// annotated with the `#[test]` attribute, and the provided `$fn` will be
 /// invoked with a `&mut TestBencher`, which has the effect of creating a test
-/// that runs the benchmarked function for a single iteration.
+/// that runs the benchmarked function for a small, fixed number of iterations.
 ///
 /// Note that `$fn` doesn't have to be a named function - it can also be an
 /// anonymous closure.
