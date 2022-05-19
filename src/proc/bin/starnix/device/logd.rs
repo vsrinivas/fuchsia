@@ -29,7 +29,7 @@ pub fn create_socket_and_start_server(kernel: &Arc<Kernel>) {
             SOCKET_NAME,
             logdw_socket.clone(),
             SocketAddress::Unix(SOCKET_NAME.to_vec()),
-            mode!(IFSOCK, 0777),
+            mode!(IFSOCK, 0o777),
         )
         .expect("create /dev/socket/logdw");
 

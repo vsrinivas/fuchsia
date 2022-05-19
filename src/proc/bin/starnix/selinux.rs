@@ -24,16 +24,16 @@ impl SeLinuxFs {
         let fs = FileSystem::new_with_permanent_entries(SeLinuxFs);
         fs.set_root(ROMemoryDirectory);
         let root = fs.root();
-        root.add_node_ops(b"load", mode!(IFREG, 0600), SeLinuxNode::new(|| Ok(SeLoad)))?;
-        root.add_node_ops(b"enforce", mode!(IFREG, 0644), SeLinuxNode::new(|| Ok(SeEnforce)))?;
+        root.add_node_ops(b"load", mode!(IFREG, 0o600), SeLinuxNode::new(|| Ok(SeLoad)))?;
+        root.add_node_ops(b"enforce", mode!(IFREG, 0o644), SeLinuxNode::new(|| Ok(SeEnforce)))?;
         root.add_node_ops(
             b"checkreqprot",
-            mode!(IFREG, 0644),
+            mode!(IFREG, 0o644),
             SeLinuxNode::new(|| Ok(SeCheckReqProt)),
         )?;
         root.add_node_ops(
             b"deny_unknown",
-            mode!(IFREG, 0444),
+            mode!(IFREG, 0o444),
             // Allow all unknown object classes/permissions.
             ByteVecFile::new(b"0:0\n".to_vec()),
         )?;
@@ -44,7 +44,7 @@ impl SeLinuxFs {
         // ["seqlock"](https://en.wikipedia.org/wiki/Seqlock) technique.
         root.add_node_ops(
             b"status",
-            mode!(IFREG, 0444),
+            mode!(IFREG, 0o444),
             VmoFileNode::from_bytes(
                 selinux_status_t { version: SELINUX_STATUS_VERSION, ..Default::default() }
                     .as_bytes(),
