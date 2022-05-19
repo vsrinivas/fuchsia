@@ -17,7 +17,6 @@ group("tests") {
 
   deps = [
     "bin/a11y_manager/tests",
-    "bin/a11y_tts_log_engine/tests",
     "lib:tests",
   ]
 }
