@@ -39,14 +39,14 @@ pub trait IterShadows {
 ///
 /// This can be used to provide a summary value, e.g. even or odd for an
 /// integer-like type.
-pub(crate) trait Tagged {
+pub(crate) trait Tagged<A> {
     type Tag: Copy + Eq + core::fmt::Debug;
 
-    /// Returns the tag value for `self`.
+    /// Returns the tag value for `self` at the given address.
     ///
-    /// This function must be deterministic, such that calling `Tagged::Tag` on
-    /// the same value always returns the same tag value.
-    fn tag(&self) -> Self::Tag;
+    /// This function must be deterministic, such that calling `Tagged::tag` on
+    /// the same values always returns the same tag value.
+    fn tag(&self, address: &A) -> Self::Tag;
 }
 
 /// A map that stores values and summarizes tag counts.
@@ -65,16 +65,16 @@ pub(crate) trait Tagged {
 /// separated into buckets for different tags of type `V::Tag`.
 #[derive(Derivative, Debug)]
 #[derivative(Default(bound = ""))]
-pub(crate) struct SocketMap<A: Hash + Eq, V: Tagged> {
-    map: HashMap<A, MapValue<V>>,
+pub(crate) struct SocketMap<A: Hash + Eq, V: Tagged<A>> {
+    map: HashMap<A, MapValue<V, V::Tag>>,
     len: usize,
 }
 
 #[derive(Derivative, Debug)]
 #[derivative(Default(bound = ""))]
-struct MapValue<V: Tagged> {
+struct MapValue<V, T> {
     value: Option<V>,
-    descendant_counts: DescendantCounts<V::Tag>,
+    descendant_counts: DescendantCounts<T>,
 }
 
 #[derive(Derivative, Debug)]
@@ -94,7 +94,7 @@ struct DescendantCounts<T, const INLINE_SIZE: usize = 1> {
 /// [`SocketMap`] wraps contains a [`MapValue`] whose `value` field is
 /// `Some(v)`.
 #[cfg_attr(test, derive(Debug))]
-pub(crate) struct OccupiedEntry<'a, A: Hash + Eq, V: Tagged>(&'a mut SocketMap<A, V>, A);
+pub(crate) struct OccupiedEntry<'a, A: Hash + Eq, V: Tagged<A>>(&'a mut SocketMap<A, V>, A);
 
 /// An entry for a key in a map that does not have a value.
 ///
@@ -103,11 +103,11 @@ pub(crate) struct OccupiedEntry<'a, A: Hash + Eq, V: Tagged>(&'a mut SocketMap<A
 /// `SocketMap` wraps, either there is no value for key `a` or there is a
 /// `MapValue` whose `value` field is `None`.
 #[cfg_attr(test, derive(Debug))]
-pub(crate) struct VacantEntry<'a, A: Hash + Eq, V: Tagged>(&'a mut SocketMap<A, V>, A);
+pub(crate) struct VacantEntry<'a, A: Hash + Eq, V: Tagged<A>>(&'a mut SocketMap<A, V>, A);
 
 /// An entry in a map that can be used to manipulate the value in-place.
 #[cfg_attr(test, derive(Debug))]
-pub(crate) enum Entry<'a, A: Hash + Eq, V: Tagged> {
+pub(crate) enum Entry<'a, A: Hash + Eq, V: Tagged<A>> {
     // NB: Both `OccupiedEntry` and `VacantEntry` store a reference to the map
     // and a key directly since they need access to the entire map to update
     // descendant counts. This means that any operation on them requires an
@@ -121,7 +121,7 @@ pub(crate) enum Entry<'a, A: Hash + Eq, V: Tagged> {
 impl<A, V> SocketMap<A, V>
 where
     A: IterShadows + Hash + Eq,
-    V: Tagged,
+    V: Tagged<A>,
 {
     /// Gets a reference to the value associated with the given key, if any.
     pub fn get(&self, key: &A) -> Option<&V> {
@@ -169,9 +169,9 @@ where
         let Self { map, len: _ } = self;
         let value =
             map.get_mut(key).and_then(|MapValue { value, descendant_counts: _ }| value.as_mut())?;
-        let old_tag = value.tag();
+        let old_tag = value.tag(key);
         let r = apply(value);
-        let new_tag = value.tag();
+        let new_tag = value.tag(key);
         Self::update_descendant_counts(map, key.iter_shadows(), old_tag, new_tag);
         Some(r)
     }
@@ -202,7 +202,7 @@ where
     }
 
     fn increment_descendant_counts(
-        map: &mut HashMap<A, MapValue<V>>,
+        map: &mut HashMap<A, MapValue<V, V::Tag>>,
         shadows: A::IterShadows,
         tag: V::Tag,
     ) {
@@ -213,7 +213,7 @@ where
     }
 
     fn update_descendant_counts(
-        map: &mut HashMap<A, MapValue<V>>,
+        map: &mut HashMap<A, MapValue<V, V::Tag>>,
         shadows: A::IterShadows,
         old_tag: V::Tag,
         new_tag: V::Tag,
@@ -228,7 +228,7 @@ where
     }
 
     fn decrement_descendant_counts(
-        map: &mut HashMap<A, MapValue<V>>,
+        map: &mut HashMap<A, MapValue<V, V::Tag>>,
         shadows: A::IterShadows,
         old_tag: V::Tag,
     ) {
@@ -240,13 +240,13 @@ where
             let MapValue { descendant_counts, value } = entry.get_mut();
             descendant_counts.decrement(old_tag);
             if descendant_counts.is_empty() && value.is_none() {
-                let _: MapValue<_> = entry.remove();
+                let _: MapValue<_, _> = entry.remove();
             }
         }
     }
 }
 
-impl<'a, K: Eq + Hash + IterShadows, V: Tagged> OccupiedEntry<'a, K, V> {
+impl<'a, K: Eq + Hash + IterShadows, V: Tagged<K>> OccupiedEntry<'a, K, V> {
     /// Retrieves the value referenced by this entry.
     #[todo_unused::todo_unused("https://fxbug.dev/96320")]
     pub(crate) fn get(&self) -> &V {
@@ -268,9 +268,9 @@ impl<'a, K: Eq + Hash + IterShadows, V: Tagged> OccupiedEntry<'a, K, V> {
         let MapValue { descendant_counts: _, value } = map.get_mut(key).unwrap();
         let value = value.as_mut().unwrap();
 
-        let old_tag = value.tag();
+        let old_tag = value.tag(key);
         let r = apply(value);
-        let new_tag = value.tag();
+        let new_tag = value.tag(key);
         SocketMap::update_descendant_counts(map, key.iter_shadows(), old_tag, new_tag);
         r
     }
@@ -283,26 +283,32 @@ impl<'a, K: Eq + Hash + IterShadows, V: Tagged> OccupiedEntry<'a, K, V> {
             hash_map::Entry::Occupied(o) => o,
             hash_map::Entry::Vacant(_) => unreachable!("OccupiedEntry not occupied"),
         };
+        let tag = {
+            let MapValue { descendant_counts: _, value } = entry.get();
+            // unwrap() is guaranteed safe by OccupiedEntry invariant.
+            value.as_ref().unwrap().tag(entry.key())
+        };
+
         let MapValue { descendant_counts, value } = entry.get_mut();
         // unwrap() is guaranteed safe by OccupiedEntry invariant.
         let value =
             value.take().expect("OccupiedEntry invariant violated: expected Some, found None");
         if descendant_counts.is_empty() {
-            let _: MapValue<V> = entry.remove();
+            let _: MapValue<V, V::Tag> = entry.remove();
         }
-        SocketMap::decrement_descendant_counts(map, shadows, value.tag());
+        SocketMap::decrement_descendant_counts(map, shadows, tag);
         *len -= 1;
         value
     }
 }
 
-impl<'a, K: Eq + Hash + IterShadows, V: Tagged> VacantEntry<'a, K, V> {
+impl<'a, K: Eq + Hash + IterShadows, V: Tagged<K>> VacantEntry<'a, K, V> {
     /// Inserts a value for the key referenced by this entry.
     pub(crate) fn insert(self, value: V) {
         let Self(SocketMap { map, len }, key) = self;
         let iter_shadows = key.iter_shadows();
+        let tag = value.tag(&key);
         let MapValue { value: map_value, descendant_counts: _ } = map.entry(key).or_default();
-        let tag = value.tag();
         assert!(map_value.replace(value).is_none());
         *len += 1;
         SocketMap::increment_descendant_counts(map, iter_shadows, tag);
@@ -436,10 +442,10 @@ mod tests {
     #[derive(Eq, PartialEq, Clone, Copy, Debug)]
     struct TV<T, V>(T, V);
 
-    impl<T: Copy + Eq + core::fmt::Debug, V> Tagged for TV<T, V> {
+    impl<T: Copy + Eq + core::fmt::Debug, V> Tagged<Address> for TV<T, V> {
         type Tag = T;
 
-        fn tag(&self) -> Self::Tag {
+        fn tag(&self, _: &Address) -> Self::Tag {
             self.0
         }
     }
@@ -663,7 +669,7 @@ mod tests {
 
             // Fold values into a map from tag to count.
             let expected_tag_counts = descendant_values.fold(HashMap::new(), |mut m, v| {
-                *m.entry(v.tag()).or_default() += 1;
+                *m.entry(v.tag(key)).or_default() += 1;
                 m
             });
 

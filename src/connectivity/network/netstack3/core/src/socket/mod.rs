@@ -150,12 +150,15 @@ pub(crate) trait SocketMapSpec {
     type ConnState;
 
     /// The state stored for a listener socket address.
-    type ListenerAddrState: Tagged<Tag = Self::AddrVecTag>
-        + SocketMapAddrStateSpec<Self::ListenerAddr, Self::ListenerState, Self::ListenerId, Self>;
+    type ListenerAddrState: SocketMapAddrStateSpec<
+        Self::ListenerAddr,
+        Self::ListenerState,
+        Self::ListenerId,
+        Self,
+    >;
 
     /// The state stored for a connected socket address.
-    type ConnAddrState: Tagged<Tag = Self::AddrVecTag>
-        + SocketMapAddrStateSpec<Self::ConnAddr, Self::ConnState, Self::ConnId, Self>;
+    type ConnAddrState: SocketMapAddrStateSpec<Self::ConnAddr, Self::ConnState, Self::ConnId, Self>;
 }
 
 pub(crate) trait SocketMapAddrStateSpec<Addr, State, Id, S: SocketMapSpec + ?Sized> {
@@ -170,7 +173,9 @@ pub(crate) trait SocketMapAddrStateSpec<Addr, State, Id, S: SocketMapSpec + ?Siz
         new_state: &State,
         addr: &Addr,
         socketmap: &SocketMap<AddrVec<S>, Bound<S>>,
-    ) -> Result<(), InsertError>;
+    ) -> Result<(), InsertError>
+    where
+        Bound<S>: Tagged<AddrVec<S>>;
 
     /// Gets the target in the existing socket(s) in `self` for a new socket
     /// with the provided state.
@@ -182,13 +187,7 @@ pub(crate) trait SocketMapAddrStateSpec<Addr, State, Id, S: SocketMapSpec + ?Siz
 
     /// Creates a new `Self` holding the provided socket with the given new
     /// state at the specified address.
-    fn new_addr_state(new_state: &State, addr: &Addr, id: Id) -> Self;
-
-    /// Produces a new state compatible with the given new address.
-    ///
-    /// This can be used to update address-dependent state. If the values of
-    /// `self` do not depend on the address, this should be a no-op.
-    fn for_new_addr(self, new_addr: &Addr) -> Self;
+    fn new_addr_state(new_state: &State, id: Id) -> Self;
 
     /// Removes the given socket from the existing state.
     ///
@@ -216,6 +215,27 @@ pub(crate) enum AddrVec<S: SocketMapSpec + ?Sized> {
     Conn(S::ConnAddr),
 }
 
+impl<S: SocketMapSpec> Tagged<AddrVec<S>> for Bound<S>
+where
+    S::ListenerAddrState: Tagged<S::ListenerAddr, Tag = S::AddrVecTag>,
+    S::ConnAddrState: Tagged<S::ConnAddr, Tag = S::AddrVecTag>,
+{
+    type Tag = S::AddrVecTag;
+
+    fn tag(&self, address: &AddrVec<S>) -> Self::Tag {
+        match (self, address) {
+            (Bound::Listen(l), AddrVec::Listen(addr)) => l.tag(addr),
+            (Bound::Conn(c), AddrVec::Conn(addr)) => c.tag(addr),
+            (Bound::Listen(_), AddrVec::Conn(_)) => {
+                unreachable!("found listen state for conn addr")
+            }
+            (Bound::Conn(_), AddrVec::Listen(_)) => {
+                unreachable!("found conn state for listen addr")
+            }
+        }
+    }
+}
+
 /// The result of attempting to remove a socket from a collection of sockets.
 pub(crate) enum RemoveResult {
     /// The value was removed successfully.
@@ -237,25 +257,18 @@ pub(crate) enum RemoveResult {
 /// space. Conflicts are detected on attempted insertion of new sockets.
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
-pub(crate) struct BoundSocketMap<S: SocketMapSpec> {
+pub(crate) struct BoundSocketMap<S: SocketMapSpec>
+where
+    Bound<S>: Tagged<AddrVec<S>>,
+{
     listener_id_to_sock: IdMap<(S::ListenerState, S::ListenerAddr)>,
     conn_id_to_sock: IdMap<(S::ConnState, S::ConnAddr)>,
     addr_to_state: SocketMap<AddrVec<S>, Bound<S>>,
 }
 
-impl<S: SocketMapSpec + ?Sized> Tagged for Bound<S> {
-    type Tag = S::AddrVecTag;
-
-    fn tag(&self) -> Self::Tag {
-        match self {
-            Bound::Listen(state) => state.tag(),
-            Bound::Conn(state) => state.tag(),
-        }
-    }
-}
-
 impl<S: SocketMapSpec> BoundSocketMap<S>
 where
+    Bound<S>: Tagged<AddrVec<S>>,
     AddrVec<S>: IterShadows,
 {
     pub(crate) fn get_conn_by_addr(&self, addr: &S::ConnAddr) -> Option<&S::ConnAddrState> {
@@ -370,8 +383,8 @@ where
             }
             Entry::Vacant(v) => {
                 let index = id_to_sock.push((state, socket_addr));
-                let (state, addr) = id_to_sock.get(index).unwrap();
-                v.insert(state_to_bound(St::new_addr_state(state, addr, index.into())));
+                let (state, _addr) = id_to_sock.get(index).unwrap();
+                v.insert(state_to_bound(St::new_addr_state(state, index.into())));
                 Ok(index.into())
             }
         }
@@ -390,10 +403,6 @@ where
             AddrVec::Listen(addr.clone()),
             AddrVec::Listen(new_addr.clone()),
             addr_to_state,
-            |bound| match bound {
-                Bound::Listen(state) => Bound::Listen(state.for_new_addr(&new_addr)),
-                Bound::Conn(_) => unreachable!("conn state for listener addr"),
-            },
         )?;
         *addr = new_addr;
 
@@ -413,10 +422,6 @@ where
             AddrVec::Conn(addr.clone()),
             AddrVec::Conn(new_addr.clone()),
             addr_to_state,
-            |bound| match bound {
-                Bound::Conn(state) => Bound::Conn(state.for_new_addr(&new_addr)),
-                Bound::Listen(_) => unreachable!("listen state for conn addr"),
-            },
         )?;
         *addr = new_addr;
 
@@ -427,7 +432,6 @@ where
         addr: AddrVec<S>,
         new_addr: AddrVec<S>,
         addr_to_state: &mut SocketMap<AddrVec<S>, Bound<S>>,
-        new_state: impl FnOnce(Bound<S>) -> Bound<S>,
     ) -> Result<(), ExistsError> {
         let state = addr_to_state.remove(&addr).expect("existing entry not found");
         let result = match addr_to_state.entry(new_addr) {
@@ -436,7 +440,7 @@ where
                 if v.descendant_counts().len() != 0 {
                     Err(state)
                 } else {
-                    v.insert(new_state(state));
+                    v.insert(state);
                     Ok(())
                 }
             }
@@ -521,6 +525,7 @@ pub(crate) enum InsertError {
     ShadowAddrExists,
     Exists,
     ShadowerExists,
+    IndirectConflict,
 }
 
 #[cfg(test)]
@@ -595,9 +600,9 @@ mod tests {
     #[derive(PartialEq, Eq, Debug)]
     struct Multiple<T>(char, Vec<T>);
 
-    impl<T> Tagged for Multiple<T> {
+    impl<T, A> Tagged<A> for Multiple<T> {
         type Tag = char;
-        fn tag(&self) -> Self::Tag {
+        fn tag(&self, _: &A) -> Self::Tag {
             let Multiple(c, _) = self;
             *c
         }
@@ -653,12 +658,8 @@ mod tests {
             (new_state == c).then(|| v).ok_or(())
         }
 
-        fn new_addr_state(new_state: &char, _addr: &A, id: I) -> Self {
+        fn new_addr_state(new_state: &char, id: I) -> Self {
             Self(*new_state, vec![id])
-        }
-
-        fn for_new_addr(self, _new_addr: &A) -> Self {
-            self
         }
 
         fn remove_by_id(&mut self, id: I) -> RemoveResult {

@@ -169,7 +169,7 @@ enum LookupResult<'a, I: Ip, D: IpDeviceId, S> {
 impl<T> PosixAddrState<T> {
     fn select_receiver(&self) -> &T {
         match self {
-            PosixAddrState::Exclusive(id) | PosixAddrState::ExclusiveDevice(id) => id,
+            PosixAddrState::Exclusive(id) => id,
         }
     }
 }

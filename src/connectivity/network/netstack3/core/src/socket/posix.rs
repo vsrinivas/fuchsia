@@ -8,6 +8,7 @@
 
 use alloc::vec::Vec;
 use core::{fmt::Debug, hash::Hash, num::NonZeroUsize};
+use either::Either;
 
 use derivative::Derivative;
 use net_types::{ip::IpAddress, SpecifiedAddr};
@@ -274,22 +275,53 @@ impl<P: PosixSocketMapSpec> IterShadows for AddrVec<P> {
 #[derive(Debug)]
 pub(crate) enum PosixAddrState<T> {
     Exclusive(T),
-    ExclusiveDevice(T),
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-pub(crate) enum PosixAddrVecTag {
-    Exclusive,
-    ExclusiveDevice,
+enum PosixAddrType {
+    AnyListener,
+    SpecificListener,
+    Connected,
 }
 
-impl<T> Tagged for PosixAddrState<T> {
-    type Tag = PosixAddrVecTag;
-    fn tag(&self) -> Self::Tag {
-        match self {
-            PosixAddrState::Exclusive(_) => PosixAddrVecTag::Exclusive,
-            PosixAddrState::ExclusiveDevice(_) => PosixAddrVecTag::ExclusiveDevice,
+impl<'a, P: PosixSocketMapSpec> From<&'a ListenerIpAddr<P>> for PosixAddrType {
+    fn from(ListenerIpAddr { addr, identifier: _ }: &'a ListenerIpAddr<P>) -> Self {
+        match addr {
+            Some(_) => PosixAddrType::SpecificListener,
+            None => PosixAddrType::AnyListener,
         }
+    }
+}
+
+impl<'a, P: PosixSocketMapSpec> From<&'a ConnIpAddr<P>> for PosixAddrType {
+    fn from(_: &'a ConnIpAddr<P>) -> Self {
+        PosixAddrType::Connected
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+pub(crate) struct PosixAddrVecTag {
+    has_device: bool,
+    addr_type: PosixAddrType,
+}
+
+impl<T, P: PosixSocketMapSpec> Tagged<ListenerAddr<P>> for PosixAddrState<T> {
+    type Tag = PosixAddrVecTag;
+
+    fn tag(&self, address: &ListenerAddr<P>) -> Self::Tag {
+        let PosixAddrState::Exclusive(_) = self;
+        let ListenerAddr { ip, device } = address;
+        PosixAddrVecTag { has_device: device.is_some(), addr_type: ip.into() }
+    }
+}
+
+impl<T, P: PosixSocketMapSpec> Tagged<ConnAddr<P>> for PosixAddrState<T> {
+    type Tag = PosixAddrVecTag;
+
+    fn tag(&self, address: &ConnAddr<P>) -> Self::Tag {
+        let PosixAddrState::Exclusive(_) = self;
+        let ConnAddr { ip, device } = address;
+        PosixAddrVecTag { has_device: device.is_some(), addr_type: ip.into() }
     }
 }
 
@@ -311,6 +343,17 @@ impl<P: PosixSocketMapSpec> SocketMapSpec for P {
     type ListenerAddrState = PosixAddrState<P::ListenerId>;
 
     type ConnAddrState = PosixAddrState<P::ConnId>;
+}
+
+impl<'a, P: PosixSocketMapSpec> From<&'a AddrVec<P>>
+    for Either<&'a ListenerAddr<P>, &'a ConnAddr<P>>
+{
+    fn from(p: &'a AddrVec<P>) -> Self {
+        match p {
+            AddrVec::Listen(l) => Self::Left(l),
+            AddrVec::Conn(c) => Self::Right(c),
+        }
+    }
 }
 
 impl<A, St, I, P> SocketMapAddrStateSpec<A, St, I, P> for PosixAddrState<I>
@@ -346,65 +389,260 @@ where
             }
         }
 
-        // Listener addresses with devices present an extra complication: they
-        // can conflict with entries at other addresses even though there's no
-        // direct shadowing relationship. This can happen, for example, if a
-        // connected socket with no device is present, and the target is the
-        // same IP/port with a device specified.
-        match dest {
-            AddrVec::Listen(ListenerAddr { ip, device: Some(_device) }) => {
-                let to_check = ListenerAddr { ip, device: None }.into();
-                if socketmap.descendant_counts(&to_check).any(|(tag, _): &(_, NonZeroUsize)| {
-                    match tag {
-                        PosixAddrVecTag::Exclusive => true,
-                        PosixAddrVecTag::ExclusiveDevice => false,
+        // There are a few combinations of addresses that can conflict with
+        // each other even though there is not a direct shadowing relationship:
+        // - listener address with device and connected address without.
+        // - "any IP" listener with device and specific IP listener without.
+        // - "any IP" listener with device and connected address without.
+        //
+        // The complication is that since these pairs of addresses don't have a
+        // direct shadowing relationship, it's not possible to query for one
+        // from the other in the socketmap without a linear scan. Instead. we
+        // rely on the fact that the tag values in the socket map have different
+        // values for entries with and without device IDs specified.
+        let conflict_exists = |addr, conflicting_tags: &[PosixAddrVecTag]| {
+            socketmap
+                .descendant_counts(&addr)
+                .any(|(tag, _): &(_, NonZeroUsize)| conflicting_tags.contains(tag))
+        };
+        let found_conflict = match dest {
+            // An any-IP listener with a device conflicts with a listening or
+            // connected socket without a device.
+            AddrVec::Listen(ListenerAddr {
+                ip: ListenerIpAddr { addr: None, identifier },
+                device: Some(_device),
+            }) => conflict_exists(
+                ListenerAddr { ip: ListenerIpAddr { addr: None, identifier }, device: None }.into(),
+                &[
+                    PosixAddrVecTag { has_device: false, addr_type: PosixAddrType::SpecificListener },
+                    PosixAddrVecTag { has_device: false, addr_type: PosixAddrType::Connected },
+                ],
+            ),
+            // A listener on a specific IP address with a device conflicts with
+            // a connected socket without a device.
+            AddrVec::Listen(ListenerAddr {
+                ip: ListenerIpAddr { addr: Some(ip), identifier },
+                device: Some(_device),
+            }) => conflict_exists(
+                ListenerAddr { ip: ListenerIpAddr { addr: Some(ip), identifier }, device: None }
+                    .into(),
+                &[PosixAddrVecTag { has_device: false, addr_type: PosixAddrType::Connected }],
+            ),
+            // A listener on a specific IP without a device conflicts with an
+            // any-IP listener with a device.
+            AddrVec::Listen(ListenerAddr {
+                ip: ListenerIpAddr { addr: Some(_), identifier },
+                device: None,
+            }) => conflict_exists(
+                ListenerAddr { ip: ListenerIpAddr { addr: None, identifier }, device: None }.into(),
+                &[PosixAddrVecTag { has_device: true, addr_type: PosixAddrType::AnyListener }],
+            ),
+            // A connected socket without a device conflicts with an any-IP or
+            // specified-IP listening socket with a device.
+            AddrVec::Conn(ConnAddr {
+                ip: ConnIpAddr { local_ip, local_identifier, remote: _ },
+                device: None,
+            }) => {
+                conflict_exists(
+                    ListenerAddr {
+                        ip: ListenerIpAddr {
+                            addr: Some(local_ip),
+                            identifier: local_identifier.clone(),
+                        },
+                        device: None,
                     }
-                }) {
-                    return Err(InsertError::ShadowerExists);
-                }
+                    .into(),
+                    &[PosixAddrVecTag { has_device: true, addr_type: PosixAddrType::SpecificListener }],
+                ) || conflict_exists(
+                    ListenerAddr {
+                        ip: ListenerIpAddr { addr: None, identifier: local_identifier },
+                        device: None,
+                    }
+                    .into(),
+                    &[PosixAddrVecTag { has_device: true, addr_type: PosixAddrType::AnyListener }],
+                )
             }
-            AddrVec::Listen(ListenerAddr { ip: _, device: None }) => (),
-            AddrVec::Conn(_) => (),
+            AddrVec::Listen(ListenerAddr {
+                ip: ListenerIpAddr { addr: None, identifier: _ },
+                device: _,
+            }) => false,
+            AddrVec::Conn(ConnAddr { ip: _, device: Some(_device) }) => false,
+        };
+        if found_conflict {
+            Err(InsertError::IndirectConflict)
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 
     fn try_get_dest<'a, 'b>(&'b mut self, _new_state: &'a St) -> Result<&'b mut Vec<I>, ()> {
         match self {
-            PosixAddrState::Exclusive(_) | PosixAddrState::ExclusiveDevice(_) => Err(()),
+            PosixAddrState::Exclusive(_) => Err(()),
         }
     }
 
-    fn new_addr_state(_new_state: &St, addr: &A, id: I) -> Self {
-        let device = match addr.clone().into() {
-            AddrVec::Conn(ConnAddr { ip: _, device }) => device,
-            AddrVec::Listen(ListenerAddr { ip: _, device }) => device,
-        };
-        match device {
-            Some(_) => Self::ExclusiveDevice(id),
-            None => Self::Exclusive(id),
-        }
-    }
-
-    fn for_new_addr(self, new_addr: &A) -> Self {
-        let new_device = match new_addr.clone().into() {
-            AddrVec::Conn(ConnAddr { ip: _, device }) => device,
-            AddrVec::Listen(ListenerAddr { ip: _, device }) => device,
-        };
-        match (self, new_device) {
-            (PosixAddrState::Exclusive(s), Some(_))
-            | (PosixAddrState::ExclusiveDevice(s), Some(_)) => PosixAddrState::ExclusiveDevice(s),
-            (PosixAddrState::Exclusive(s), None) | (PosixAddrState::ExclusiveDevice(s), None) => {
-                PosixAddrState::Exclusive(s)
-            }
-        }
+    fn new_addr_state(_new_state: &St, id: I) -> Self {
+        Self::Exclusive(id)
     }
 
     fn remove_by_id(&mut self, _id: I) -> RemoveResult {
         match self {
-            PosixAddrState::Exclusive(_) | PosixAddrState::ExclusiveDevice(_) => {
-                RemoveResult::IsLast
-            }
+            PosixAddrState::Exclusive(_) => RemoveResult::IsLast,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::{convert::Infallible as Never, num::NonZeroU16};
+
+    use net_declare::net_ip_v4 as ip_v4;
+    use net_types::ip::{Ip, IpVersionMarker, Ipv4};
+    use test_case::test_case;
+
+    use super::*;
+    use crate::{
+        ip::DummyDeviceId,
+        socket::{BoundSocketMap, InsertError},
+    };
+
+    struct TransportSocketPosixSpec<I: Ip> {
+        _ip: IpVersionMarker<I>,
+        _never: Never,
+    }
+
+    #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+    struct ListenerId(usize);
+
+    #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+    struct ConnId(usize);
+
+    impl From<usize> for ListenerId {
+        fn from(id: usize) -> Self {
+            Self(id)
+        }
+    }
+    impl From<ListenerId> for usize {
+        fn from(ListenerId(id): ListenerId) -> Self {
+            id
+        }
+    }
+    impl From<usize> for ConnId {
+        fn from(id: usize) -> Self {
+            Self(id)
+        }
+    }
+    impl From<ConnId> for usize {
+        fn from(ConnId(id): ConnId) -> Self {
+            id
+        }
+    }
+
+    impl<I: Ip> PosixSocketMapSpec for TransportSocketPosixSpec<I> {
+        type IpAddress = I::Addr;
+        type RemoteAddr = (SpecifiedAddr<I::Addr>, NonZeroU16);
+        type LocalIdentifier = NonZeroU16;
+        type DeviceId = DummyDeviceId;
+        type ListenerId = ListenerId;
+        type ConnId = ConnId;
+        type ListenerState = ();
+        type ConnState = ();
+    }
+
+    fn listen<I: Ip>(ip: I::Addr, port: u16) -> AddrVec<TransportSocketPosixSpec<I>> {
+        let addr = SpecifiedAddr::new(ip);
+        let port = NonZeroU16::new(port).expect("port must be nonzero");
+        AddrVec::Listen(ListenerAddr {
+            ip: ListenerIpAddr { addr, identifier: port },
+            device: None,
+        })
+    }
+
+    fn listen_device<I: Ip>(
+        ip: I::Addr,
+        port: u16,
+        device: DummyDeviceId,
+    ) -> AddrVec<TransportSocketPosixSpec<I>> {
+        let addr = SpecifiedAddr::new(ip);
+        let port = NonZeroU16::new(port).expect("port must be nonzero");
+        AddrVec::Listen(ListenerAddr {
+            ip: ListenerIpAddr { addr, identifier: port },
+            device: Some(device),
+        })
+    }
+
+    fn conn<I: Ip>(
+        local_ip: I::Addr,
+        local_port: u16,
+        remote_ip: I::Addr,
+        remote_port: u16,
+    ) -> AddrVec<TransportSocketPosixSpec<I>> {
+        let local_ip = SpecifiedAddr::new(local_ip).expect("addr must be specified");
+        let local_port = NonZeroU16::new(local_port).expect("port must be nonzero");
+        let remote_ip = SpecifiedAddr::new(remote_ip).expect("addr must be specified");
+        let remote_port = NonZeroU16::new(remote_port).expect("port must be nonzero");
+        AddrVec::Conn(ConnAddr {
+            ip: ConnIpAddr {
+                local_ip,
+                local_identifier: local_port,
+                remote: (remote_ip, remote_port),
+            },
+            device: None,
+        })
+    }
+
+    #[test_case([
+        listen(ip_v4!("0.0.0.0"), 1),
+        listen(ip_v4!("0.0.0.0"), 2)],
+            Ok(()); "listen_any_ip_different_port")]
+    #[test_case([
+        listen(ip_v4!("0.0.0.0"), 1),
+        listen(ip_v4!("0.0.0.0"), 1)],
+            Err(InsertError::Exists); "any_ip_same_port")]
+    #[test_case([
+        listen(ip_v4!("1.1.1.1"), 1),
+        listen(ip_v4!("1.1.1.1"), 1)],
+            Err(InsertError::Exists); "listen_same_specific_ip")]
+    #[test_case([
+        listen(ip_v4!("1.1.1.1"), 1),
+        conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2)],
+            Err(InsertError::ShadowAddrExists); "conn_shadows_listener_exclusive")]
+    #[test_case([
+        listen_device(ip_v4!("1.1.1.1"), 1, DummyDeviceId),
+        conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2)],
+            Err(InsertError::IndirectConflict); "conn_indirect_conflict_specific_listener")]
+    #[test_case([
+        listen_device(ip_v4!("0.0.0.0"), 1, DummyDeviceId),
+        conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2)],
+            Err(InsertError::IndirectConflict); "conn_indirect_conflict_any_listener")]
+    #[test_case([
+        conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2),
+        listen_device(ip_v4!("1.1.1.1"), 1, DummyDeviceId)],
+            Err(InsertError::IndirectConflict); "specific_listener_indirect_conflict_conn")]
+    #[test_case([
+        conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2),
+        listen_device(ip_v4!("0.0.0.0"), 1, DummyDeviceId)],
+            Err(InsertError::IndirectConflict); "any_listener_indirect_conflict_conn")]
+    fn bind_sequence<C: IntoIterator<Item = AddrVec<TransportSocketPosixSpec<Ipv4>>>>(
+        spec: C,
+        expected: Result<(), InsertError>,
+    ) {
+        let mut map = BoundSocketMap::<TransportSocketPosixSpec<Ipv4>>::default();
+        let mut spec = spec.into_iter().peekable();
+        let mut try_insert = |addr| match addr {
+            AddrVec::Conn(c) => map.try_insert_conn(c, ()).map(|_| ()),
+            AddrVec::Listen(l) => map.try_insert_listener(l, ()).map(|_| ()),
+        };
+        let last = loop {
+            let one_spec = spec.next().expect("empty list of test cases");
+            if spec.peek().is_none() {
+                break one_spec;
+            } else {
+                try_insert(one_spec).expect("intermediate bind failed")
+            }
+        };
+
+        let result = try_insert(last);
+        assert_eq!(result, expected);
     }
 }
