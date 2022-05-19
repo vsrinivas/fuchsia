@@ -17,11 +17,18 @@ if (is_host) {
       # interface instead of making this visibility exception.
       "//src/developer/ffx/plugins/scrutiny/verify/*",
     ]
+
+    configs += [
+      # TODO(fxbug.dev/92670): Needed by test.  Remove when fixed.
+      "//build/config/rust:output_dir_sensitive",
+    ]
+
     deps = [
       "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
       "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
       "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
       "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+      "//src/lib/assembly/update_package",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-url",
       "//src/security/scrutiny/config",
@@ -36,6 +43,7 @@ if (is_host) {
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//src/sys/pkg/lib/fuchsia-hash",
       "//src/sys/pkg/lib/fuchsia-merkle",
+      "//src/sys/pkg/lib/update-package",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:base64",
@@ -49,6 +57,7 @@ if (is_host) {
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:serde_json5",
+      "//third_party/rust_crates:sha2",
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:uuid",
       "//tools/lib/cm_fidl_analyzer",
@@ -58,8 +67,10 @@ if (is_host) {
     non_rust_deps = [ "//src/lib/chunked-compression" ]
 
     test_deps = [
+      "//src/lib/zerocopy",
       "//src/security/scrutiny/testing",
       "//src/sys/lib/cm_rust/testing",
+      "//src/sys/lib/fuchsia-zbi/abi",
       "//third_party/rust_crates:tempfile",
     ]
 

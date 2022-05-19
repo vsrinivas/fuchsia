@@ -11,7 +11,10 @@ use {
                 Sysmgr, Zbi,
             },
             package::reader::{PackageReader, PackageServerReader},
-            util::types::{ComponentManifest, PackageDefinition, ServiceMapping, SysManagerConfig},
+            util::{
+                to_package_url,
+                types::{ComponentManifest, PackageDefinition, ServiceMapping, SysManagerConfig},
+            },
         },
         static_pkgs::StaticPkgsCollection,
     },
@@ -37,6 +40,7 @@ use {
         str,
         sync::Arc,
     },
+    update_package::parse_image_packages_json,
 };
 
 // Constants/Statics
@@ -212,39 +216,95 @@ impl PackageDataCollector {
     fn extract_zbi_from_update_package(
         reader: &mut Box<dyn ArtifactReader>,
         package: &PackageDefinition,
+        fuchsia_packages: &Vec<PackageDefinition>,
     ) -> Result<Zbi> {
         info!("Extracting the ZBI from {}", package.url);
-        for (path, merkle) in package.contents.iter() {
-            if path == "zbi" || path == "zbi.signed" {
-                let zbi_data = reader.read_bytes(&Path::new(&format!("blobs/{}", merkle)))?;
-                let mut reader = ZbiReader::new(zbi_data);
-                let sections = reader.parse()?;
-                let mut bootfs = HashMap::new();
-                let mut cmdline = String::new();
-                info!("Extracted {} sections from the ZBI", sections.len());
-                for section in sections.iter() {
-                    info!("Extracted sections {:?}", section.section_type);
-                    if section.section_type == ZbiType::StorageBootfs {
-                        let mut bootfs_reader = BootfsReader::new(section.buffer.clone());
-                        let bootfs_result = bootfs_reader.parse();
-                        if let Err(err) = bootfs_result {
-                            warn!("Bootfs parse failed {}", err);
-                        } else {
-                            bootfs = bootfs_result.unwrap();
-                            info!("Bootfs found {} files", bootfs.len());
-                        }
-                    } else if section.section_type == ZbiType::Cmdline {
-                        let mut cmd_str = std::str::from_utf8(&section.buffer)?;
-                        if let Some(stripped) = cmd_str.strip_suffix("\u{0000}") {
-                            cmd_str = stripped;
-                        }
-                        cmdline.push_str(&cmd_str);
-                    }
+
+        let result_from_update_package = Self::lookup_zbi_hash_in_update_package(package);
+        let result_from_images_json =
+            Self::lookup_zbi_hash_in_images_json(reader, package, fuchsia_packages);
+        let zbi_hash = match (result_from_update_package, result_from_images_json) {
+            (Ok(zbi_hash_from_update_package), Ok(zbi_hash_from_images_json)) => {
+                if zbi_hash_from_update_package != zbi_hash_from_images_json {
+                    return Err(anyhow!(
+                        "Update package and its images manifest contain different fuchsia ZBI images: {} != {}",
+                        zbi_hash_from_update_package,
+                        zbi_hash_from_images_json
+                    ));
                 }
-                return Ok(Zbi { sections, bootfs, cmdline });
+                zbi_hash_from_images_json
+            }
+            (_, Ok(zbi_hash)) => zbi_hash,
+            (Ok(zbi_hash), _) => zbi_hash,
+            (_, Err(err_from_images_json)) => return Err(err_from_images_json),
+        };
+
+        let zbi_data = reader.read_bytes(&Path::new(&format!("blobs/{}", zbi_hash)))?;
+        let mut reader = ZbiReader::new(zbi_data);
+        let sections = reader.parse()?;
+        let mut bootfs = HashMap::new();
+        let mut cmdline = String::new();
+        info!("Extracted {} sections from the ZBI", sections.len());
+        for section in sections.iter() {
+            info!("Extracted sections {:?}", section.section_type);
+            if section.section_type == ZbiType::StorageBootfs {
+                let mut bootfs_reader = BootfsReader::new(section.buffer.clone());
+                let bootfs_result = bootfs_reader.parse();
+                if let Err(err) = bootfs_result {
+                    warn!("Bootfs parse failed {}", err);
+                } else {
+                    bootfs = bootfs_result.unwrap();
+                    info!("Bootfs found {} files", bootfs.len());
+                }
+            } else if section.section_type == ZbiType::Cmdline {
+                let mut cmd_str = std::str::from_utf8(&section.buffer)?;
+                if let Some(stripped) = cmd_str.strip_suffix("\u{0000}") {
+                    cmd_str = stripped;
+                }
+                cmdline.push_str(&cmd_str);
             }
         }
-        return Err(anyhow!("Unable to find a zbi file in the package."));
+        Ok(Zbi { sections, bootfs, cmdline })
+    }
+
+    fn lookup_zbi_hash_in_update_package(package: &PackageDefinition) -> Result<String> {
+        package
+            .contents
+            .get("zbi.signed")
+            .or(package.contents.get("zbi"))
+            .map(String::clone)
+            .ok_or(anyhow!("Update package contains no zbi.signed or zbi entry"))
+    }
+
+    fn lookup_zbi_hash_in_images_json(
+        reader: &mut Box<dyn ArtifactReader>,
+        update_package: &PackageDefinition,
+        fuchsia_packages: &Vec<PackageDefinition>,
+    ) -> Result<String> {
+        let images_json_hash = update_package
+            .contents
+            .get("images.json")
+            .or(update_package.contents.get("images.json.orig"))
+            .ok_or(anyhow!("Update package contains no images manifest entry"))?;
+        let images_json_contents = reader
+            .read_bytes(&Path::new(&format!("blobs/{}", images_json_hash)))
+            .context("Failed to open images manifest blob designated in update package")?;
+        let image_packages_manifest = parse_image_packages_json(images_json_contents.as_slice())
+            .context("Failed to parse images manifest in update package")?;
+        let images_package_url = image_packages_manifest
+            .fuchsia()
+            .ok_or(anyhow!("Update package images manifest contains no fuchsia boot slot images"))?
+            .url();
+        let images_package_url_string = to_package_url(images_package_url.name().as_ref())
+            .with_context(|| format!("Failed to integrate update package images package name into package URL; package_name={}", images_package_url.name()))?;
+        let images_package_hash_string = images_package_url.package_hash().to_string();
+        let images_package = fuchsia_packages.iter().find(|&pkg_def| pkg_def.url == images_package_url_string && pkg_def.merkle == images_package_hash_string)
+            .ok_or_else(|| anyhow!("Failed to locate update package images package with name {} and merkle root {}", images_package_url.name().as_ref(), images_package_hash_string))?;
+        images_package
+            .contents
+            .get("zbi")
+            .map(String::clone)
+            .ok_or(anyhow!("Update package images package contains no zbi.signed or zbi entry"))
     }
 
     fn get_pkg_source<'a>(
@@ -637,6 +697,7 @@ impl PackageDataCollector {
                 let zbi_result = PackageDataCollector::extract_zbi_from_update_package(
                     &mut artifact_reader,
                     &pkg,
+                    &fuchsia_packages,
                 );
                 if let Err(err) = zbi_result {
                     warn!("{}", err);
@@ -791,11 +852,29 @@ pub mod tests {
                 types::PackageDefinition,
             },
         },
+        fuchsia_hash::{Hash, HASH_SIZE},
+        fuchsia_merkle::MerkleTree,
+        fuchsia_url::pkg_url::PinnedPkgUrl,
+        fuchsia_zbi_abi::zbi_container_header,
         maplit::{hashmap, hashset},
         scrutiny_testing::{artifact::MockArtifactReader, fake::fake_model_config},
         scrutiny_utils::artifact::ArtifactReader,
-        std::{collections::HashMap, sync::Arc},
+        sha2::{Digest, Sha256},
+        std::{collections::HashMap, convert::TryInto, sync::Arc},
+        update_package::{ImageMetadata, ImagePackagesManifest},
+        zerocopy::AsBytes,
     };
+
+    fn zero_content_zbi() -> Vec<u8> {
+        zbi_container_header(0).as_bytes().into()
+    }
+
+    // Return the sha256 content hash of bytes, not to be confused with the fuchsia merkle root.
+    fn content_hash(bytes: &[u8]) -> Hash {
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        Hash::from(*AsRef::<[u8; 32]>::as_ref(&hasher.finalize()))
+    }
 
     fn default_pkg() -> PackageDefinition {
         PackageDefinition {
@@ -1726,5 +1805,238 @@ pub mod tests {
             }],
             response.routes
         );
+    }
+
+    #[test]
+    fn test_missing_images_json_fuchsia_zbi() {
+        let zbi_contents = zero_content_zbi();
+        let zbi_hash = MerkleTree::from_reader(zbi_contents.as_slice()).unwrap().root();
+
+        // Create valid images.json, but do not add any images to it. In particular, no "fuchsia"
+        // image added (which code under test will look for).
+        let images_json = ImagePackagesManifest::builder().build();
+        let images_json_contents = serde_json::to_vec(&images_json).unwrap();
+        let images_json_hash =
+            MerkleTree::from_reader(images_json_contents.as_slice()).unwrap().root();
+
+        let update_pkg = create_test_package_with_contents(
+            String::from("fuchsia-pkg://fuchsia.com/update"),
+            hashmap! {
+                // ZBI is designated in update package as "zbi".
+                "zbi".to_string() => zbi_hash.to_string(),
+                // Update package contains images.json defined above.
+                "images.json".to_string() => images_json_hash.to_string(),
+            },
+        );
+
+        let mock_artifact_reader = MockArtifactReader::new();
+
+        // Code under test will read artifacts in the following order:
+        // 1. images.json to determine its ZBI hash;
+        mock_artifact_reader.append_bytes(images_json_contents);
+        // 2. the ZBI designated in update package.
+        mock_artifact_reader.append_bytes(zbi_contents);
+
+        let mut artifact_reader: Box<dyn ArtifactReader> = Box::new(mock_artifact_reader);
+
+        // Extraction should succeed because ZBI in update package is sufficent.
+        let result = PackageDataCollector::extract_zbi_from_update_package(
+            &mut artifact_reader,
+            &update_pkg,
+            &vec![],
+        );
+        match result {
+            Ok(_) => return,
+            Err(err) => panic!("Unexpected error: {:?}", err),
+        };
+    }
+
+    #[test]
+    fn test_missing_update_package_fuchsia_zbi() {
+        let zbi_contents = zero_content_zbi();
+        let zbi_content_hash = content_hash(zbi_contents.as_slice());
+        let zbi_hash = MerkleTree::from_reader(zbi_contents.as_slice()).unwrap().root();
+        let images_pkg_hash = Hash::from([0; HASH_SIZE]);
+
+        // Create valid images.json with "fuchsia" images that includes a ZBI.
+        let mut images_json_builder = ImagePackagesManifest::builder();
+        images_json_builder.fuchsia_package(
+            PinnedPkgUrl::new_package(
+                "fuchsia.com".to_string(),
+                "/update-images-fuchsia/0".to_string(),
+                images_pkg_hash.clone(),
+            )
+            .unwrap(),
+            ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash),
+            None,
+        );
+        let images_json = images_json_builder.build();
+        let images_json_contents = serde_json::to_vec(&images_json).unwrap();
+        let images_json_hash =
+            MerkleTree::from_reader(images_json_contents.as_slice()).unwrap().root();
+
+        let update_pkg = create_test_package_with_contents(
+            String::from("fuchsia-pkg://fuchsia.com/update"),
+            // No ZBI designated in update package (either as "zbi" or "zbi.signed").
+            hashmap! {
+                // Update package contains images.json defined above.
+                "images.json".to_string() => images_json_hash.to_string(),
+            },
+        );
+        let mut images_pkg = create_test_package_with_contents(
+            String::from("fuchsia-pkg://fuchsia.com/update-images-fuchsia"),
+            // Designate a ZBI in images package.
+            hashmap! {
+                "zbi".to_string() => zbi_hash.to_string(),
+            },
+        );
+        images_pkg.merkle = images_pkg_hash.to_string();
+
+        let mock_artifact_reader = MockArtifactReader::new();
+
+        // Code under test will read artifacts in the following order:
+        // 1. images.json to determine its ZBI hash;
+        mock_artifact_reader.append_bytes(images_json_contents);
+        // 2. the ZBI designated in images.json.
+        mock_artifact_reader.append_bytes(zbi_contents);
+
+        let mut artifact_reader: Box<dyn ArtifactReader> = Box::new(mock_artifact_reader);
+
+        // Extraction should succeed because ZBI in images.json is sufficent.
+        let result = PackageDataCollector::extract_zbi_from_update_package(
+            &mut artifact_reader,
+            &update_pkg,
+            &vec![images_pkg],
+        );
+        match result {
+            Ok(_) => return,
+            Err(err) => panic!("Unexpected error: {:?}", err),
+        };
+    }
+
+    #[test]
+    fn test_update_package_vs_images_json_zbi_hash_mismatch() {
+        let zbi_contents = zero_content_zbi();
+        let zbi_content_hash = content_hash(zbi_contents.as_slice());
+        let zbi_hash = MerkleTree::from_reader(zbi_contents.as_slice()).unwrap().root();
+        let zbi_mismatch_hash = Hash::from([9; HASH_SIZE]);
+        let images_pkg_hash = Hash::from([0; HASH_SIZE]);
+        assert!(zbi_hash != zbi_mismatch_hash);
+
+        // Create valid images.json with "fuchsia" images that includes a ZBI.
+        let mut images_json_builder = ImagePackagesManifest::builder();
+        images_json_builder.fuchsia_package(
+            PinnedPkgUrl::new_package(
+                "fuchsia.com".to_string(),
+                "/update-images-fuchsia/0".to_string(),
+                images_pkg_hash.clone(),
+            )
+            .unwrap(),
+            ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash),
+            None,
+        );
+        let images_json = images_json_builder.build();
+        let images_json_contents = serde_json::to_vec(&images_json).unwrap();
+        let images_json_hash =
+            MerkleTree::from_reader(images_json_contents.as_slice()).unwrap().root();
+
+        let update_pkg = create_test_package_with_contents(
+            String::from("fuchsia-pkg://fuchsia.com/update"),
+            // ZBI is designated in update package as "zbi". Note that fake hash string,
+            // "zbi_hash_from_update_package" will not match string for hash
+            // "zbi_hash_from_images_package" designated by `images_pkg` below.
+            hashmap! {
+                "zbi".to_string() => zbi_hash.to_string(),
+                // Update package contains images.json defined above.
+                "images.json".to_string() => images_json_hash.to_string(),
+            },
+        );
+        let mut images_pkg = create_test_package_with_contents(
+            String::from("fuchsia-pkg://fuchsia.com/update-images-fuchsia"),
+            // Designate a ZBI in images package.
+            hashmap! {
+                "zbi".to_string() => zbi_mismatch_hash.to_string(),
+            },
+        );
+        images_pkg.merkle = images_pkg_hash.to_string();
+
+        let mock_artifact_reader = MockArtifactReader::new();
+
+        // Code under test will read one artifact: images.json.
+        mock_artifact_reader.append_bytes(serde_json::to_vec(&images_json).unwrap());
+
+        let mut artifact_reader: Box<dyn ArtifactReader> = Box::new(mock_artifact_reader);
+        assert!(PackageDataCollector::extract_zbi_from_update_package(
+            &mut artifact_reader,
+            &update_pkg,
+            &vec![images_pkg],
+        )
+        .err()
+        .unwrap()
+        .to_string()
+        .contains("Update package and its images manifest contain different fuchsia ZBI images"));
+    }
+
+    #[test]
+    fn test_update_package_vs_images_json_zbi_hash_match() {
+        let zbi_contents = zero_content_zbi();
+        let zbi_content_hash = content_hash(zbi_contents.as_slice());
+        let zbi_hash = MerkleTree::from_reader(zbi_contents.as_slice()).unwrap().root();
+        let images_pkg_hash = Hash::from([0; HASH_SIZE]);
+
+        // Create valid images.json with "fuchsia" images that includes a ZBI.
+        let mut images_json_builder = ImagePackagesManifest::builder();
+        images_json_builder.fuchsia_package(
+            PinnedPkgUrl::new_package(
+                "fuchsia.com".to_string(),
+                "/update-images-fuchsia/0".to_string(),
+                images_pkg_hash.clone(),
+            )
+            .unwrap(),
+            ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash),
+            None,
+        );
+        let images_json = images_json_builder.build();
+        let images_json_contents = serde_json::to_vec(&images_json).unwrap();
+        let images_json_hash =
+            MerkleTree::from_reader(images_json_contents.as_slice()).unwrap().root();
+
+        let update_pkg = create_test_package_with_contents(
+            String::from("fuchsia-pkg://fuchsia.com/update"),
+            hashmap! {
+                // ZBI is designated in update package as "zbi". Hash string value matches hash in
+                // `images_json` above.
+                "zbi".to_string() => zbi_hash.to_string(),
+                // Update package contains images.json defined above.
+                "images.json".to_string() => images_json_hash.to_string(),
+            },
+        );
+        let mut images_pkg = create_test_package_with_contents(
+            String::from("fuchsia-pkg://fuchsia.com/update-images-fuchsia"),
+            // Designate a ZBI in images package.
+            hashmap! {
+                "zbi".to_string() => zbi_hash.to_string(),
+            },
+        );
+        images_pkg.merkle = images_pkg_hash.to_string();
+
+        let mock_artifact_reader = MockArtifactReader::new();
+
+        // Code under test will read artifacts in the following order:
+        // 1. images.json to determine its ZBI hash;
+        mock_artifact_reader.append_bytes(images_json_contents);
+        // 2. the ZBI designated by both the update package and image.json.
+        mock_artifact_reader.append_bytes(zbi_contents);
+
+        let mut artifact_reader: Box<dyn ArtifactReader> = Box::new(mock_artifact_reader);
+        let result = PackageDataCollector::extract_zbi_from_update_package(
+            &mut artifact_reader,
+            &update_pkg,
+            &vec![images_pkg],
+        );
+        match result {
+            Ok(_) => return,
+            Err(err) => panic!("Unexpected error: {:?}", err),
+        };
     }
 }
