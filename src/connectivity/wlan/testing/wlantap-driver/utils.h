@@ -5,7 +5,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_UTILS_H_
 
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
@@ -16,7 +15,6 @@
 namespace wlan {
 
 // Functions for converting between FIDL classes and related wlan C structs
-uint32_t ConvertDriverFeatures(const ::std::vector<::fuchsia::wlan::common::DriverFeature>& dfs);
 wlan_mac_role_t ConvertMacRole(::fuchsia::wlan::common::WlanMacRole role);
 ::fuchsia::wlan::common::WlanMacRole ConvertMacRole(uint16_t role);
 uint32_t ConvertCaps(const ::std::vector<::fuchsia::wlan::device::Capability>& caps);

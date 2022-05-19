@@ -37,46 +37,6 @@ void FillSupportedPhys(
   }
 }
 
-uint32_t ConvertDriverFeatures(const ::std::vector<wlan_common::DriverFeature>& dfs) {
-  uint32_t ret = 0;
-  for (auto df : dfs) {
-    switch (df) {
-      case wlan_common::DriverFeature::SCAN_OFFLOAD:
-        ret |= WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
-        break;
-      case wlan_common::DriverFeature::RATE_SELECTION:
-        ret |= WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION;
-        break;
-      case wlan_common::DriverFeature::SYNTH:
-        ret |= WLAN_INFO_DRIVER_FEATURE_SYNTH;
-        break;
-      case wlan_common::DriverFeature::TX_STATUS_REPORT:
-        ret |= WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT;
-        break;
-      case wlan_common::DriverFeature::DFS:
-        ret |= WLAN_INFO_DRIVER_FEATURE_DFS;
-        break;
-      case wlan_common::DriverFeature::PROBE_RESP_OFFLOAD:
-        ret |= WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD;
-        break;
-      case wlan_common::DriverFeature::SAE_SME_AUTH:
-        ret |= WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH;
-        break;
-      case wlan_common::DriverFeature::SAE_DRIVER_AUTH:
-        ret |= WLAN_INFO_DRIVER_FEATURE_SAE_DRIVER_AUTH;
-        break;
-      case wlan_common::DriverFeature::MFP:
-        ret |= WLAN_INFO_DRIVER_FEATURE_MFP;
-        break;
-        // TODO(fxbug.dev/41640): Remove this flag once FullMAC drivers stop interacting with SME.
-      case wlan_common::DriverFeature::TEMP_SOFTMAC:
-        // Vendor driver has no control over this flag.
-        break;
-    }
-  }
-  return ret;
-}
-
 wlan_mac_role_t ConvertMacRole(wlan_common::WlanMacRole role) {
   switch (role) {
     case wlan_common::WlanMacRole::AP:
@@ -136,7 +96,6 @@ zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
 
   FillSupportedPhys(mac_info->supported_phys_list, &mac_info->supported_phys_count,
                     tap_phy_config.supported_phys);
-  mac_info->driver_features = ConvertDriverFeatures(tap_phy_config.driver_features);
   mac_info->mac_role = ConvertMacRole(tap_phy_config.mac_role);
   mac_info->hardware_capability = tap_phy_config.hardware_capability;
   mac_info->band_cap_count =

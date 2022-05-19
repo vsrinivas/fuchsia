@@ -211,7 +211,6 @@ mod tests {
                 fidl_wlan_common::WlanPhyType::Erp,
                 fidl_wlan_common::WlanPhyType::Ht,
             ],
-            driver_features: vec![],
             mac_role: fidl_wlan_common::WlanMacRole::Client,
             hardware_capability: 0,
             bands: vec![create_2_4_ghz_band_info()],
