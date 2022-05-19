@@ -13,6 +13,7 @@
 
 #include <iostream>
 
+#include "src/devices/bin/driver_playground/src/playground_utils.h"
 #include "src/devices/lib/log/log.h"
 
 namespace fprocess = fuchsia_process;
@@ -75,21 +76,16 @@ zx::status<int> ProcessAwaitTermination(zx::process& process) {
 }  // namespace
 
 void Playground::RunTool(RunToolRequestView request, RunToolCompleter::Sync& completer) {
-  std::vector<std::string> str_argv;
-  str_argv.emplace_back(std::string(request->tool.get()));
-  for (fidl::StringView arg : request->args) {
-    str_argv.emplace_back(std::string(arg.get()));
-  }
+  // This is the default url to be pre-pended to a tool if it is not an absolute url.
+  // Makes running tools that are part of the playground package easy.
+  constexpr std::string_view kDefaultPackageUrl =
+      "fuchsia-pkg://fuchsia.com/driver_playground#bin/";
 
-  std::vector<const char*> argv;
-  argv.reserve(str_argv.size() + 1);
-  for (const std::string& arg : str_argv) {
-    argv.push_back(arg.c_str());
-  }
-
-  argv.push_back(nullptr);
-
-  zx::status<ResolvedProcess> resolve_name_status = ResolveName(std::string_view(argv[0]));
+  std::string_view tool_name = request->tool.get();
+  std::vector<std::string> str_argv = playground_utils::ExtractStringArgs(tool_name, request->args);
+  std::vector<const char*> argv = playground_utils::ConvertToArgv(str_argv);
+  std::string name_for_resolve = playground_utils::GetNameForResolve(kDefaultPackageUrl, tool_name);
+  zx::status<ResolvedProcess> resolve_name_status = ResolveName(name_for_resolve);
   if (resolve_name_status.is_error()) {
     LOGF(ERROR, "failed to resolve name.");
     completer.ReplyError(resolve_name_status.error_value());

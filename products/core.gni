@@ -143,6 +143,7 @@ legacy_cache_package_labels += [ "//src/developer/ffx:runtime" ]
 product_system_image_deps += [ "//bundles:tools-system" ]
 legacy_universe_package_labels += [
   "//bundles:tools",
+  "//src/devices/bin/driver_playground:pkg",
   "//src/testing/metrics-logger",
 ]
 

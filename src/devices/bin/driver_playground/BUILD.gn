@@ -5,25 +5,51 @@
 import("//build/components.gni")
 import("//src/sys/core/build/core_shard.gni")
 
-executable("bin") {
-  output_name = "driver_playground"
+group("tests") {
+  testonly = true
+  deps = [ ":driver-playground-tests" ]
+}
 
+source_set("lib") {
   sources = [
-    "src/main.cc",
     "src/playground.cc",
     "src/playground.h",
+    "src/playground_utils.cc",
+    "src/playground_utils.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.driver.playground:fuchsia.driver.playground_llcpp",
+    "//src/devices/lib/log",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.driver.playground:fuchsia.driver.playground_llcpp",
+    "//bundles/drivers:utils",
     "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fdio:fdio-spawn-actions",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+executable("bin") {
+  output_name = "driver_playground"
+  sources = [ "src/main.cc" ]
+  deps = [
+    ":lib",
     "//sdk/lib/sys/component/llcpp",
-    "//src/devices/lib/log",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+executable("unit_tests") {
+  testonly = true
+  sources = [ "src/tests.cc" ]
+  deps = [
+    ":lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -40,4 +66,8 @@ fuchsia_package("pkg") {
 
 core_shard("driver-playground-core-shard") {
   shard_file = "meta/driver_playground.core_shard.cml"
+}
+
+fuchsia_unittest_package("driver-playground-tests") {
+  deps = [ ":unit_tests" ]
 }
