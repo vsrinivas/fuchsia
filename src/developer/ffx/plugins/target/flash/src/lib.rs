@@ -49,12 +49,12 @@ pub async fn flash_plugin_impl<W: Write>(
                 let key: Option<String> = file("ssh.pub").await?;
                 match key {
                     Some(k) => {
-                        eprintln!("No `--ssh-key` flag, using {}", k);
+                        eprintln!("No `--authorized-keys` flag, using {}", k);
                         cmd.oem_stage.push(OemFile::new(SSH_OEM_COMMAND.to_string(), k));
                     }
                     None => ffx_bail!(
                         "Warning: flashing without a SSH key is not advised. \n\
-                              Use the `--ssh-key` to pass a ssh key."
+                              Use the `--authorized-keys` to pass a ssh key."
                     ),
                 }
             }
