@@ -31,14 +31,12 @@ const HOST_OS: &str = "mac";
 /// Returns a mapping of the lint categories (all, style, etc.) to the individual
 /// names of the lints they contain by parsing the output of `clippy-driver -Whelp`.
 pub fn get_categories() -> HashMap<String, HashSet<String>> {
-    let sysroot = option_env!("RUST_SYSROOT").map(str::to_string).unwrap_or_else(|| {
-        format!(
-            "{}prebuilt/third_party/rust/{}-{}",
-            if cfg!(test) { "../../" } else { "" },
-            HOST_OS,
-            HOST_ARCH
-        )
-    });
+    let sysroot = if cfg!(test) {
+        // TODO(josephry): update this to just use env! after http://fxrev.dev/667908 lands
+        option_env!("RUST_SYSROOT").unwrap().to_owned()
+    } else {
+        format!("prebuilt/third_party/rust/{}-{}", HOST_OS, HOST_ARCH)
+    };
     let output = Command::new(format!("{}/bin/clippy-driver", sysroot))
         .arg("--sysroot")
         .arg(&sysroot)

@@ -14,8 +14,19 @@ use std::{
 pub fn fix<R: BufRead>(lints: &mut R, filter: &[String], dryrun: bool) -> Result<(), Error> {
     let mut all_lints = String::new();
     lints.read_to_string(&mut all_lints)?;
-    let filter: HashSet<String> = filter.iter().cloned().collect();
-    let suggestions = rustfix::get_suggestions_from_json(&all_lints, &filter, Filter::Everything)?;
+    let categories = crate::lint::get_categories();
+    // If a lint category is given, add all lints in that category to the filter
+    let mut filter_lints: HashSet<String> = HashSet::new();
+    for f in filter {
+        if let Some(lints) = categories.get(f) {
+            filter_lints.extend(lints.iter().cloned());
+        } else {
+            filter_lints.insert(f.to_owned());
+        }
+    }
+
+    let suggestions =
+        rustfix::get_suggestions_from_json(&all_lints, &filter_lints, Filter::Everything)?;
     if suggestions.is_empty() {
         return Err(anyhow!("Couldn't find any fixable occurances of those lints"));
     }
