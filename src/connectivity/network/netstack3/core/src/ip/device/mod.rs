@@ -194,22 +194,45 @@ impl<I: Instant, DeviceId> IpDeviceIpExt<I, DeviceId> for Ipv6 {
     type Timer = Ipv6DeviceTimerId<DeviceId>;
 }
 
+/// IP address assignment states.
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub enum IpAddressState {
+    /// The address is assigned to an interface and can be considered bound to
+    /// it (all packets destined to the address will be accepted).
+    Assigned,
+    /// The address is considered unassigned to an interface for normal
+    /// operations, but has the intention of being assigned in the future (e.g.
+    /// once Duplicate Address Detection is completed).
+    Tentative,
+}
+
 #[derive(Debug)]
 /// Events emitted from IP devices.
 pub enum IpDeviceEvent<DeviceId, I: Ip> {
     /// Address was assigned.
-    AddressAssigned {
+    AddressAdded {
         /// The device.
         device: DeviceId,
         /// The new address.
         addr: AddrSubnet<I::Addr>,
+        /// Initial address state.
+        state: IpAddressState,
     },
     /// Address was unassigned.
-    AddressUnassigned {
+    AddressRemoved {
         /// The device.
         device: DeviceId,
         /// The removed address.
-        addr: AddrSubnet<I::Addr>,
+        addr: I::Addr,
+    },
+    /// Address state changed.
+    AddressStateChanged {
+        /// The device.
+        device: DeviceId,
+        /// The address whose state was changed.
+        addr: I::Addr,
+        /// The new address state.
+        state: IpAddressState,
     },
 }
 
@@ -335,6 +358,11 @@ fn enable_ipv6_device<SC: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + Dad
         .collect::<Vec<_>>()
         .into_iter()
         .for_each(|addr| {
+            sync_ctx.on_event(IpDeviceEvent::AddressStateChanged {
+                device: device_id,
+                addr: *addr,
+                state: IpAddressState::Tentative,
+            });
             DadHandler::do_duplicate_address_detection(sync_ctx, device_id, addr);
         });
 
@@ -720,7 +748,11 @@ pub(crate) fn add_ipv4_addr_subnet<
     addr_sub: AddrSubnet<Ipv4Addr>,
 ) -> Result<(), ExistsError> {
     sync_ctx.get_ip_device_state_mut(device_id).ip_state.add_addr(addr_sub).map(|()| {
-        sync_ctx.on_event(IpDeviceEvent::AddressAssigned { device: device_id, addr: addr_sub })
+        sync_ctx.on_event(IpDeviceEvent::AddressAdded {
+            device: device_id,
+            addr: addr_sub,
+            state: IpAddressState::Assigned,
+        })
     })
 }
 
@@ -774,14 +806,17 @@ pub(crate) fn add_ipv6_addr_subnet<SC: Ipv6DeviceContext + GmpHandler<Ipv6> + Da
                 addr_sub.addr().to_solicited_node_address(),
             );
 
+            sync_ctx.on_event(IpDeviceEvent::AddressAdded {
+                device: device_id,
+                addr: addr_sub.to_witness(),
+                state: IpAddressState::Tentative,
+            });
+
             // NB: We don't start DAD if the device is disabled. DAD will be
             // performed when the device is enabled for all addressed.
             if ip_enabled {
                 DadHandler::do_duplicate_address_detection(sync_ctx, device_id, addr_sub.addr());
             }
-
-            // NB: We don't emit an address assigned event here, addresses are
-            // only exposed when they've moved from the Tentative state.
         })
 }
 
@@ -795,11 +830,9 @@ pub(crate) fn del_ipv4_addr<
     device_id: SC::DeviceId,
     addr: &SpecifiedAddr<Ipv4Addr>,
 ) -> Result<(), NotFoundError> {
-    sync_ctx
-        .get_ip_device_state_mut(device_id)
-        .ip_state
-        .remove_addr(&addr)
-        .map(|addr| sync_ctx.on_event(IpDeviceEvent::AddressUnassigned { device: device_id, addr }))
+    sync_ctx.get_ip_device_state_mut(device_id).ip_state.remove_addr(&addr).map(|addr| {
+        sync_ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: *addr.addr() })
+    })
 }
 
 /// Removes an IPv6 address and associated subnet from this device.
@@ -813,19 +846,11 @@ pub(crate) fn del_ipv6_addr_with_reason<
     addr: &SpecifiedAddr<Ipv6Addr>,
     reason: DelIpv6AddrReason,
 ) -> Result<(), NotFoundError> {
-    let Ipv6AddressEntry { addr_sub, state, config, deprecated: _ } =
+    let Ipv6AddressEntry { addr_sub, state: _, config, deprecated: _ } =
         sync_ctx.get_ip_device_state_mut(device_id).ip_state.remove_addr(&addr)?;
     let addr = addr_sub.addr();
     DadHandler::stop_duplicate_address_detection(sync_ctx, device_id, addr);
     leave_ip_multicast(sync_ctx, &mut (), device_id, addr.to_solicited_node_address());
-
-    match state {
-        AddressState::Assigned => sync_ctx.on_event(IpDeviceEvent::AddressUnassigned {
-            device: device_id,
-            addr: addr_sub.to_witness(),
-        }),
-        AddressState::Tentative { .. } => {}
-    }
 
     match config {
         AddrConfig::Slaac(s) => {
@@ -833,6 +858,8 @@ pub(crate) fn del_ipv6_addr_with_reason<
         }
         AddrConfig::Manual => {}
     }
+
+    sync_ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: *addr_sub.addr() });
 
     Ok(())
 }

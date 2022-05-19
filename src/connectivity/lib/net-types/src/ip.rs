@@ -124,6 +124,15 @@ pub enum IpAddr<V4 = Ipv4Addr, V6 = Ipv6Addr> {
     V6(V6),
 }
 
+impl<V4: Display, V6: Display> Display for IpAddr<V4, V6> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::V4(v4) => v4.fmt(f),
+            Self::V6(v6) => v6.fmt(f),
+        }
+    }
+}
+
 impl<V4, V6> IpAddr<V4, V6> {
     /// Transposes an `IpAddr` of a witness type to a witness type of an
     /// `IpAddr`.

@@ -65,7 +65,7 @@ pub use crate::{
             route_discovery::Ipv6RouteDiscoveryEvent,
             slaac::SlaacConfiguration,
             state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
-            IpDeviceEvent,
+            IpAddressState, IpDeviceEvent,
         },
         forwarding::AddRouteError,
         icmp,
