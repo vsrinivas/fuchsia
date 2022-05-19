@@ -403,7 +403,7 @@ where
         }
     }
 
-    unsafe fn rename_from(
+    fn rename_from(
         &self,
         src: String,
         to: Box<dyn FnOnce(Arc<dyn DirectoryEntry>) -> Result<(), Status>>,
@@ -429,7 +429,7 @@ where
         Ok(())
     }
 
-    unsafe fn rename_to(
+    fn rename_to(
         &self,
         dst: String,
         from: Box<dyn FnOnce() -> Result<Arc<dyn DirectoryEntry>, Status>>,

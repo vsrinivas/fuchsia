@@ -16,7 +16,6 @@ use {
     std::sync::Arc,
 };
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99061)
 /// `DirectlyMutable` is a superset of `MutableDirectory` which also allows server-side management
 /// of directory entries (via `add_entry` and `remove_entry`). It also provides `rename_from` and
 /// `rename_to` to support global ordering in rename operations. You may wish to use
@@ -85,21 +84,23 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     /// Renaming needs to be atomic, even accross two distinct directories.  So we need a special
     /// API to handle that.
     ///
-    /// As two distinc directories may mean two mutexes to lock, using it correctly is non-trivial.
+    /// As two distinct directories may mean two mutexes to lock, using it correctly is non-trivial.
     /// In order to avoid a deadlock, we need to decide on a global ordering for the locks.
     /// `rename_from` and [`Self::rename_to`] are used depending on the relative order of the two
     /// directories involved in the operation.
-    ///
-    /// This method is `unsafe`, as `rename_from` and [`Self::rename_to`] should only be called by
-    /// the [`crate::filesystem::FilesystemRename::rename()`], which will establish the global order
-    /// and will call proper method.  It should reduce the chances one will use this API
-    /// incorrectly.
     ///
     /// Implementations are expected to lock this directory, check that the entry exists and pass a
     /// reference to the entry to the `to` callback.  Only if the `to` callback succeed, should the
     /// entry be removed from the current directory.  This will garantee atomic rename from the
     /// standpoint of the client.
-    unsafe fn rename_from(
+    ///
+    /// # Safety
+    ///
+    /// This should only be called by the [`crate::filesystem::FilesystemRename::rename()`], which
+    /// will establish the global order and will call proper method.
+    ///
+    /// See fxbug.dev/99061: unsafe is not for visibility reduction.
+    fn rename_from(
         &self,
         src: String,
         to: Box<dyn FnOnce(Arc<dyn DirectoryEntry>) -> Result<(), Status>>,
@@ -113,7 +114,14 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     /// Implementations are expected to lock this dirctory, check if they can accept an entry named
     /// `dst` (in case there might be any restrictions), then call the `from` callback to obtain a
     /// new entry which must be added into the current directory with no errors.
-    unsafe fn rename_to(
+    ///
+    /// # Safety
+    ///
+    /// This should only be called by the [`crate::filesystem::FilesystemRename::rename()`], which
+    /// will establish the global order and will call proper method.
+    ///
+    /// See fxbug.dev/99061: unsafe is not for visibility reduction.
+    fn rename_to(
         &self,
         dst: String,
         from: Box<dyn FnOnce() -> Result<Arc<dyn DirectoryEntry>, Status>>,
