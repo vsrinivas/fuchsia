@@ -11,7 +11,6 @@ import("//third_party/protobuf/proto_library.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":guest_discovery_service",
     ":guest_interaction_operation_tests",
     ":guest_interaction_tests",
   ]
@@ -19,10 +18,7 @@ group("tests") {
 
 group("guest_interaction") {
   testonly = true
-  deps = [
-    ":debian_guest_interaction_daemon",
-    ":guest_discovery_service",
-  ]
+  deps = [ ":debian_guest_interaction_daemon" ]
 }
 
 proto_library("proto") {
@@ -166,26 +162,17 @@ resource("test_script") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_test_component("guest_interaction_service_test_cmp") {
+fuchsia_test_component("server_daemon_test_cmp") {
   deps = [
-    ":guest_interaction_service_test",
+    ":server_daemon_test",
     ":test_script",
   ]
-  component_name = "guest_interaction_service_test"
-  manifest = "meta/guest_interaction_service_test.cmx"
-}
-
-fuchsia_test_component("server_daemon_test_cmp") {
-  deps = [ ":server_daemon_test" ]
   component_name = "server_daemon_test"
   manifest = "meta/server_daemon_test.cmx"
 }
 
 fuchsia_test_package("guest_interaction_tests") {
-  test_components = [
-    ":guest_interaction_service_test_cmp",
-    ":server_daemon_test_cmp",
-  ]
+  test_components = [ ":server_daemon_test_cmp" ]
   test_specs = {
     environments = guest_envs
     log_settings = {
@@ -238,63 +225,6 @@ fidl("fuchsia.netemul.guest") {
   sdk_category = "internal"
   sources = [ "fidl/fuchsia.netemul.guest_interaction.fidl" ]
   public_deps = [ "//sdk/fidl/fuchsia.io" ]
-}
-
-executable("guest_discovery_service_bin") {
-  output_name = "guest_discovery_service"
-
-  sources = [
-    "client/client_impl.h",
-    "client/guest_discovery_service.cc",
-    "client/guest_discovery_service.h",
-    "client/guest_discovery_service_main.cc",
-    "client/guest_interaction_service.cc",
-    "client/guest_interaction_service.h",
-  ]
-
-  deps = [
-    ":client_lib",
-    ":common",
-    ":fuchsia.netemul.guest",
-    ":platform_interface_posix",
-    "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/lib/fdio",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl",
-    "//src/virtualization/lib/grpc",
-    "//third_party/grpc:grpc++",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-
-  # Enables thrd_create_with_name in <threads.h>.
-  configs += [ "//build/config:all_source" ]
-}
-
-fuchsia_package_with_single_component("guest_discovery_service") {
-  deps = [ ":guest_discovery_service_bin" ]
-  manifest = "meta/guest_discovery_service.cmx"
-}
-
-executable("guest_interaction_service_test") {
-  testonly = true
-
-  sources = [ "test/service_integration_test.cc" ]
-
-  deps = [
-    ":common",
-    ":fuchsia.netemul.guest",
-    ":integration_test_lib",
-    "//sdk/lib/fdio",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/predicates",
-  ]
 }
 
 extras_image = "$target_out_dir/linux/extras.img"

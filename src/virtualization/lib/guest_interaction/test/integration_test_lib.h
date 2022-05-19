@@ -11,8 +11,6 @@
 #include <src/virtualization/tests/fake_netstack.h>
 
 static constexpr char kGuestLabel[] = "debian_guest";
-static constexpr char kGuestDiscoveryUrl[] =
-    "fuchsia-pkg://fuchsia.com/guest_discovery_service#meta/guest_discovery_service.cmx";
 
 // The host will copy kTestScriptSource to kGuestScriptDestination on the
 // guest.  The host will then ask the guest to exec kGuestScriptDestination
