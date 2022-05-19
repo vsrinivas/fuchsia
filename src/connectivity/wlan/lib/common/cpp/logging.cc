@@ -2,22 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 
 #include <map>
 #include <string>
 
 #include <wlan/common/logging.h>
-
-static std::map<wlan_info_driver_feature_t, std::string> driver_feature_flags_string_map = {
-    {WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD, "Scan Offload"},
-    {WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION, "Rate Selection"},
-    {WLAN_INFO_DRIVER_FEATURE_SYNTH, "Synthetic Device"},
-    {WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT, "Tx Status Report"},
-    {WLAN_INFO_DRIVER_FEATURE_DFS, "Dynamic Frequency Selection (DFS)"},
-    {WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD, "Probe Response Offload"},
-};
 
 static std::map<wlan_softmac_hardware_capability_t, std::string>
     softmac_hardware_capability_flags_string_map = {
@@ -43,11 +33,6 @@ static void DebugFlags(flags_t flags, std::map<flags_t, std::string> flags_strin
     }
     debugflags("  %s: %s\n", mask_name.c_str(), flag_status_display_string.c_str());
   }
-}
-
-void wlan::DebugDriverFeatureFlags(wlan_info_driver_feature_t flags) {
-  DebugFlags(flags, driver_feature_flags_string_map, "Driver Features", "Available",
-             "NOT Available");
 }
 
 void wlan::DebugSoftmacHardwareCapabilityFlags(wlan_softmac_hardware_capability_t flags) {

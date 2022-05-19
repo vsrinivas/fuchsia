@@ -5,7 +5,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_LOGGING_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_LOGGING_H_
 
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 
 #include <cstdint>
@@ -76,7 +75,6 @@ constexpr bool kBufferDebugEnabled = kLogLevel & kLogBuffer;
 #define debugflags(args...)  wlogf(wlan::kLogFlags, "[V:flags] ", args)
 // clang-format on
 
-void DebugDriverFeatureFlags(wlan_info_driver_feature_t flags);
 void DebugSoftmacHardwareCapabilityFlags(wlan_softmac_hardware_capability_t flags);
 
 #define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
