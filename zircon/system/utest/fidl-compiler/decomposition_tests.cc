@@ -113,13 +113,50 @@ TEST(DecompositionTests, DefaultAddedAtHead) {
   auto with_attribute = R"FIDL(
 @available(added=HEAD)
 library example;
+
+type Foo = struct {};
 )FIDL";
 
   auto without_attribute = R"FIDL(
 library example;
+
+type Foo = struct {};
 )FIDL";
 
+  ASSERT_EQUIVALENT(with_attribute, without_attribute, "1");
+  ASSERT_EQUIVALENT(with_attribute, without_attribute, "2");
   ASSERT_EQUIVALENT(with_attribute, without_attribute, "HEAD");
+}
+
+TEST(DecompositionTests, AbsentLibraryIsEmpty) {
+  auto fidl = R"FIDL(
+@available(added=2, removed=3)
+library example;
+
+type Foo = struct {};
+)FIDL";
+
+  auto v1 = R"FIDL(
+@available(added=1, removed=2)
+library example;
+)FIDL";
+
+  auto v2 = R"FIDL(
+@available(added=2, removed=3)
+library example;
+
+type Foo = struct {};
+)FIDL";
+
+  auto v3_to_head = R"FIDL(
+@available(added=3)
+library example;
+)FIDL";
+
+  ASSERT_EQUIVALENT(fidl, v1, "1");
+  ASSERT_EQUIVALENT(fidl, v2, "2");
+  ASSERT_EQUIVALENT(fidl, v3_to_head, "3");
+  ASSERT_EQUIVALENT(fidl, v3_to_head, "HEAD");
 }
 
 TEST(DecompositionTests, SplitByMembership) {

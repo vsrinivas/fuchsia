@@ -105,28 +105,9 @@ TEST(VersioningTests, GoodLibraryDefault) {
 library example;
 )FIDL";
 
-  {
+  for (auto version : {"1", "2", kMaxNumericVersion.c_str(), "HEAD"}) {
     TestLibrary library(source);
-    library.SelectVersion("example", "1");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", "2");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", kMaxNumericVersion);
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", "HEAD");
-    ASSERT_COMPILED(library);
-  }
-  {
-    TestLibrary library(source);
+    library.SelectVersion("example", version);
     ASSERT_COMPILED(library);
   }
 }
@@ -137,28 +118,9 @@ TEST(VersioningTests, GoodLibraryAddedAtHead) {
 library example;
 )FIDL";
 
-  {
+  for (auto version : {"1", "2", kMaxNumericVersion.c_str(), "HEAD"}) {
     TestLibrary library(source);
-    library.SelectVersion("example", "1");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", "2");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", kMaxNumericVersion);
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", "HEAD");
-    ASSERT_COMPILED(library);
-  }
-  {
-    TestLibrary library(source);
+    library.SelectVersion("example", version);
     ASSERT_COMPILED(library);
   }
 }
@@ -201,29 +163,10 @@ TEST(VersioningTests, GoodLibraryAddedAndRemoved) {
 library example;
 )FIDL";
 
-  {
+  for (auto version : {"1", "2", kMaxNumericVersion.c_str(), "HEAD"}) {
     TestLibrary library(source);
-    library.SelectVersion("example", "1");
+    library.SelectVersion("example", version);
     ASSERT_COMPILED(library);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", "2");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", kMaxNumericVersion);
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", "HEAD");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
-  }
-  {
-    TestLibrary library(source);
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
   }
 }
 
@@ -233,29 +176,10 @@ TEST(VersioningTests, GoodLibraryAddedAndDeprecatedAndRemoved) {
 library example;
 )FIDL";
 
-  {
+  for (auto version : {"1", "2", kMaxNumericVersion.c_str(), "HEAD"}) {
     TestLibrary library(source);
-    library.SelectVersion("example", "1");
+    library.SelectVersion("example", version);
     ASSERT_COMPILED(library);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", "2");
-    ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", kMaxNumericVersion);
-    ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
-  }
-  {
-    TestLibrary library(source);
-    library.SelectVersion("example", "HEAD");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
-  }
-  {
-    TestLibrary library(source);
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryNotAvailable);
   }
 }
 
@@ -887,7 +811,7 @@ TEST(VersioningTests, GoodAddedEqualsDeprecated) {
 library example;
 )FIDL");
   library.SelectVersion("example", "1");
-  ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
+  ASSERT_COMPILED(library);
 }
 
 TEST(VersioningTests, BadAddedGreaterThanDeprecated) {
@@ -947,7 +871,7 @@ library example;
 type Foo = struct {};
 )FIDL");
   library.SelectVersion("example", "4");
-  ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
+  ASSERT_COMPILED(library);
 
   auto foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(foo);
@@ -963,7 +887,7 @@ library example;
 type Foo = struct {};
 )FIDL");
   library.SelectVersion("example", "5");
-  ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
+  ASSERT_COMPILED(library);
 
   auto foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(foo);
@@ -1143,7 +1067,7 @@ library example;
 type Foo = struct {};
 )FIDL");
   library.SelectVersion("example", "4");
-  ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
+  ASSERT_COMPILED(library);
 
   auto foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(foo);
@@ -1181,11 +1105,86 @@ type Foo = struct {
   EXPECT_EQ(foo->members.size(), 1);
 }
 
-TEST(VersioningTests, GoodAnonymousLayoutInheritsFromMemberDirect) {
+TEST(VersioningTests, GoodComplexInheritance) {
   // The following libraries all define a struct Bar with effective availability
   // @available(added=2, deprecated=3, removed=4) in different ways.
 
-  auto direct = R"FIDL(
+  std::vector<const char*> sources;
+
+  // Direct annotation.
+  sources.push_back(R"FIDL(
+@available(added=1)
+library example;
+
+@available(added=2, deprecated=3, removed=4)
+type Bar = struct {};
+)FIDL");
+
+  // Fully inherit from library declaration.
+  sources.push_back(R"FIDL(
+@available(added=2, deprecated=3, removed=4)
+library example;
+
+type Bar = struct {};
+)FIDL");
+
+  // Partially inherit from library declaration.
+  sources.push_back(R"FIDL(
+@available(added=1, deprecated=3)
+library example;
+
+@available(added=2, removed=4)
+type Bar = struct {};
+)FIDL");
+
+  // Inherit from parent.
+  sources.push_back(R"FIDL(
+@available(added=1)
+library example;
+
+@available(added=2, deprecated=3, removed=4)
+type Foo = struct {
+    member @generated_name("Bar") struct {};
+};
+)FIDL");
+
+  // Inherit from member.
+  sources.push_back(R"FIDL(
+@available(added=1)
+library example;
+
+type Foo = struct {
+    @available(added=2, deprecated=3, removed=4)
+    member @generated_name("Bar") struct {};
+};
+)FIDL");
+
+  // Inherit from multiple, forward.
+  sources.push_back(R"FIDL(
+@available(added=2)
+library example;
+
+@available(deprecated=3)
+type Foo = struct {
+    @available(removed=4)
+    member @generated_name("Bar") struct {};
+};
+)FIDL");
+
+  // Inherit from multiple, backward.
+  sources.push_back(R"FIDL(
+@available(added=1, removed=4)
+library example;
+
+@available(deprecated=3)
+type Foo = struct {
+    @available(added=2)
+    member @generated_name("Bar") struct {};
+};
+)FIDL");
+
+  // Inherit from multiple, mixed.
+  sources.push_back(R"FIDL(
 @available(added=1)
 library example;
 
@@ -1194,9 +1193,10 @@ type Foo = struct {
     @available(deprecated=3, removed=4)
     member @generated_name("Bar") struct {};
 };
-)FIDL";
+)FIDL");
 
-  auto via_nested_layouts = R"FIDL(
+  // Inherit via nested layouts.
+  sources.push_back(R"FIDL(
 @available(added=1)
 library example;
 
@@ -1210,9 +1210,10 @@ type Foo = struct {
         };
     };
 };
-)FIDL";
+)FIDL");
 
-  auto via_nested_type_constructors = R"FIDL(
+  // Inherit via nested type constructors.
+  sources.push_back(R"FIDL(
 @available(added=1)
 library example;
 
@@ -1221,9 +1222,9 @@ type Foo = struct {
     @available(deprecated=3, removed=4)
     member1 vector<vector<vector<@generated_name("Bar") struct{}>>>;
 };
-)FIDL";
+)FIDL");
 
-  for (auto& source : {direct, via_nested_layouts, via_nested_type_constructors}) {
+  for (auto& source : sources) {
     {
       TestLibrary library(source);
       library.SelectVersion("example", "1");

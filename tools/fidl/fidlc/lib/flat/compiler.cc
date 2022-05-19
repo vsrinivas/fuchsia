@@ -53,8 +53,6 @@ bool Compiler::Compile() {
     if (!VerifyOpenInteractionsStep(this).Run())
       return false;
   }
-  if (!VerifyVersionSelectionStep(this).Run())
-    return false;
 
   if (!all_libraries_->Insert(std::move(library_)))
     return false;

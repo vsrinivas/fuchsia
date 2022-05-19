@@ -371,19 +371,4 @@ bool VerifyOpenInteractionsStep::IsAllowedComposition(types::Openness composing,
   }
 }
 
-void VerifyVersionSelectionStep::RunImpl() {
-  auto& platform = library()->platform.value();
-  auto version = version_selection()->Lookup(platform);
-  if (!library()->availability.range().Contains(version)) {
-    Fail(ErrLibraryNotAvailable, library()->arbitrary_name_span, library()->name, platform, version,
-         library()->availability.range());
-    return;
-  }
-  if (auto range = library()->availability.deprecated_range();
-      range && range.value().Contains(version)) {
-    Warn(WarnLibraryDeprecated, library()->arbitrary_name_span, library()->name, platform, version);
-    return;
-  }
-}
-
 }  // namespace fidl::flat

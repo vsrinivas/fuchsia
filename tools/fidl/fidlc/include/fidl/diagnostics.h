@@ -113,13 +113,6 @@ constexpr ErrorDef<SourceSpan> ErrProtocolComposedMultipleTimes(
     "protocol composed multiple times; previous was at {}");
 constexpr ErrorDef ErrNullableTableMember("Table members cannot be nullable");
 constexpr ErrorDef ErrNullableUnionMember("Union members cannot be nullable");
-constexpr ErrorDef<std::vector<std::string_view>, Platform, Version, VersionRange>
-    ErrLibraryNotAvailable(
-        "library '{}' is unavailable in the requested platform version {}:{}; "
-        "it is only available {}");
-constexpr WarningDef<std::vector<std::string_view>, Platform, Version> WarnLibraryDeprecated(
-    "library '{}' is deprecated in the requested platform version {}:{}, and "
-    "will be removed in a later version");
 
 // ---------------------------------------------------------------------------
 // ResolveStep

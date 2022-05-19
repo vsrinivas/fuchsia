@@ -80,14 +80,6 @@ class VerifyOpenInteractionsStep : public Compiler::Step {
   static bool IsAllowedComposition(types::Openness composing, types::Openness composed);
 };
 
-class VerifyVersionSelectionStep : public Compiler::Step {
- public:
-  using Step::Step;
-
- private:
-  void RunImpl() override;
-};
-
 }  // namespace fidl::flat
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VERIFY_STEPS_H_

@@ -363,8 +363,8 @@ be given multiple times for distinct platform identifiers. For example:
 
 If the version selection is missing a platform or has an unused platform
 (compared to the platforms the given libraries are versioned under), fidlc
-produces an error. If any library is deprecated/absent with repsect to the
-version selection, fidlc produces a warning/error.
+produces an error. If any library is deprecated/absent with respect to the
+version selection, fidlc produces a warning/error.[^3]
 
 ## Policy {#policy}
 
@@ -722,6 +722,12 @@ i.e. without taking action to migrate.
 
 [^2]: This document uses the syntax introduced by [RFC-0086: Updates to
     RFC-0050: FIDL Attributes Syntax][rfc-0086].
+
+[^3]: During implementation, these rules were omitted to simplify integration
+    with the build system. For the version selection, fidlc uses `HEAD` by
+    default and ignores unused platforms. For library declarations, the
+    availability has no effect apart from inheritance, so an absent library is
+    equivalent to an empty one, and there is no warning for deprecation.
 
 <!-- xrefs -->
 [rfc-0002]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
