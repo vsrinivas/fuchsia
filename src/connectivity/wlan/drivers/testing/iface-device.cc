@@ -4,7 +4,6 @@
 
 #include "iface-device.h"
 
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
@@ -115,11 +114,6 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
   }
   info->supported_phys_count = count;
 
-  mac_sublayer_support_t mac_sublayer;
-  QueryMacSublayerSupport(&mac_sublayer);
-  if (mac_sublayer.device.is_synthetic) {
-    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SYNTH;
-  }
   info->mac_role = role_;
   info->hardware_capability = 0;
   info->band_cap_count = 2;

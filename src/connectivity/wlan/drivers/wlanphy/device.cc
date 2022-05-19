@@ -5,7 +5,6 @@
 #include "device.h"
 
 #include <fidl/fuchsia.wlan.device/cpp/wire.h>
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
