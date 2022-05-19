@@ -2,6 +2,5 @@
     include: [ "//src/proc/tests/chromiumos/starmium_test.shard.cml" ],
     program: {
         binary: "data/tests/virtmagma_conformance_tests",
-        args: [ "--gtest_filter=-*.DeviceId:*.VendorId:*.BufferMap:*.FromC" ],
     },
 }
