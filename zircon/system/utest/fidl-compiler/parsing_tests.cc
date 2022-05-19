@@ -552,10 +552,7 @@ library example;
 type Empty = struct {};
 )FIDL");
 
-  ASSERT_COMPILED(library);
-  const auto& warnings = library.warnings();
-  ASSERT_EQ(warnings.size(), 1);
-  ASSERT_ERR(warnings[0], fidl::WarnBlankLinesWithinDocCommentBlock);
+  ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnBlankLinesWithinDocCommentBlock);
 }
 
 TEST(NewSyntaxTests, WarnCommentInsideDocCommentTest) {
@@ -568,10 +565,8 @@ library example;
 type Empty = struct {};
 )FIDL");
 
-  ASSERT_TRUE(library.Compile());
-  const auto& warnings = library.warnings();
-  ASSERT_GE(warnings.size(), 1);
-  ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
+  ASSERT_WARNED_TWICE_DURING_COMPILE(library, fidl::WarnCommentWithinDocCommentBlock,
+                                     fidl::WarnBlankLinesWithinDocCommentBlock);
 }
 
 TEST(ParsingTests, WarnDocCommentWithCommentBlankLineTest) {
@@ -585,11 +580,8 @@ library example;
 type Empty = struct {};
 )FIDL");
 
-  ASSERT_COMPILED(library);
-  const auto& warnings = library.warnings();
-  ASSERT_EQ(warnings.size(), 2);
-  ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
-  ASSERT_ERR(warnings[1], fidl::WarnBlankLinesWithinDocCommentBlock);
+  ASSERT_WARNED_TWICE_DURING_COMPILE(library, fidl::WarnCommentWithinDocCommentBlock,
+                                     fidl::WarnBlankLinesWithinDocCommentBlock);
 }
 
 TEST(ParsingTests, BadDocCommentNotAllowedOnParams) {
@@ -655,10 +647,7 @@ type Empty = struct {};
 /// bad
 )FIDL");
 
-  ASSERT_COMPILED(library);
-  const auto& warnings = library.warnings();
-  ASSERT_EQ(warnings.size(), 1);
-  ASSERT_ERR(warnings[0], fidl::WarnDocCommentMustBeFollowedByDeclaration);
+  ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnDocCommentMustBeFollowedByDeclaration);
 }
 
 TEST(ParsingTests, BadTrailingDocCommentInDeclTest) {

@@ -40,7 +40,7 @@ const u64 uint64 = 0;
 const f32 float32 = 0;
 const f64 float64 = 0;
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 
   EXPECT_EQ(ConstPrimitiveSubtype(library, "b"), types::PrimitiveSubtype::kBool);
   EXPECT_EQ(ConstPrimitiveSubtype(library, "i8"), types::PrimitiveSubtype::kInt8);
@@ -71,7 +71,7 @@ const uint64 fidl.uint64 = 0;
 const float32 fidl.float32 = 0;
 const float64 fidl.float64 = 0;
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 
   EXPECT_EQ(ConstPrimitiveSubtype(library, "bool"), types::PrimitiveSubtype::kBool);
   EXPECT_EQ(ConstPrimitiveSubtype(library, "int8"), types::PrimitiveSubtype::kInt8);

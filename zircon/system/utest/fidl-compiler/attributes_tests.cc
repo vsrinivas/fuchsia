@@ -394,12 +394,9 @@ protocol A {
 };
 
 )FIDL");
-  ASSERT_COMPILED(library);
-  const auto& warnings = library.warnings();
-  ASSERT_EQ(warnings.size(), 1);
-  ASSERT_ERR(warnings[0], fidl::WarnAttributeTypo);
-  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "duc");
-  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "doc");
+  ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnAttributeTypo);
+  EXPECT_SUBSTR(library.warnings()[0]->msg.c_str(), "duc");
+  EXPECT_SUBSTR(library.warnings()[0]->msg.c_str(), "doc");
 }
 
 // Ensures we detect typos early enough that we still report them, even if there
@@ -417,12 +414,13 @@ type Foo = struct {};
 type Foo = resource struct {};
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameOverlap);
-  const auto& warnings = library.warnings();
-  ASSERT_EQ(warnings.size(), 1);
-  ASSERT_ERR(warnings[0], fidl::WarnAttributeTypo);
-  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "availabe");
-  ASSERT_SUBSTR(warnings[0]->msg.c_str(), "available");
+  ASSERT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 1);
+  EXPECT_ERR(library.errors()[0], fidl::ErrNameOverlap);
+  ASSERT_EQ(library.warnings().size(), 1);
+  ASSERT_ERR(library.warnings()[0], fidl::WarnAttributeTypo);
+  EXPECT_SUBSTR(library.warnings()[0]->msg.c_str(), "availabe");
+  EXPECT_SUBSTR(library.warnings()[0]->msg.c_str(), "available");
 }
 
 // This tests our ability to treat warnings as errors.  It is here because this
@@ -441,7 +439,6 @@ protocol A {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::WarnAttributeTypo);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "duc");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "doc");
-  ASSERT_EQ(library.warnings().size(), 0);
 }
 
 TEST(AttributesTests, BadEmptyTransport) {
@@ -479,8 +476,6 @@ protocol A {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  ASSERT_EQ(library.errors().size(), 0);
-  ASSERT_EQ(library.warnings().size(), 0);
 }
 
 TEST(AttributesTests, GoodSyscallTransport) {
@@ -492,8 +487,6 @@ protocol A {
 };
 )FIDL");
   ASSERT_COMPILED(library);
-  ASSERT_EQ(library.errors().size(), 0);
-  ASSERT_EQ(library.warnings().size(), 0);
 }
 
 TEST(AttributesTests, BadMultipleTransports) {
@@ -880,7 +873,7 @@ library example;
 type MyStruct = struct {};
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
@@ -935,7 +928,7 @@ library example;
 type MyStruct = struct {};
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 }
 
 TEST(AttributesTests, GoodSingleArgumentIsNamedWithoutSchema) {
@@ -946,7 +939,7 @@ library example;
 type MyStruct = struct {};
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 }
 
 TEST(AttributesTests, GoodSingleSchemaArgument) {
@@ -961,7 +954,7 @@ type MyStruct = struct {};
       "value",
       fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
                                      fidl::flat::AttributeArgSchema::Optionality::kRequired));
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 }
 
 TEST(AttributesTests, GoodSingleSchemaArgumentWithInferredName) {
@@ -976,7 +969,7 @@ type MyStruct = struct {};
       "inferrable",
       fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
                                      fidl::flat::AttributeArgSchema::Optionality::kRequired));
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
@@ -1001,7 +994,7 @@ type MyOtherStruct = struct {};
       "value",
       fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
                                      fidl::flat::AttributeArgSchema::Optionality::kOptional));
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 }
 
 // If a schema is provided (ie, this is an "official" FIDL attribute), and it specifies that only
@@ -1060,7 +1053,7 @@ type MyOtherStruct = struct {};
       .AddArg("second", fidl::flat::AttributeArgSchema(
                             fidl::flat::ConstantValue::Kind::kString,
                             fidl::flat::AttributeArgSchema::Optionality::kRequired));
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 }
 
 TEST(AttributesTests, GoodMultipleSchemaArgumentsOptionalOnly) {
@@ -1092,7 +1085,7 @@ type MyStruct5 = struct {};
       .AddArg("second", fidl::flat::AttributeArgSchema(
                             fidl::flat::ConstantValue::Kind::kString,
                             fidl::flat::AttributeArgSchema::Optionality::kOptional));
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 }
 
 TEST(AttributesTests, GoodMultipleSchemaArgumentsRequiredAndOptional) {
@@ -1118,7 +1111,7 @@ type MyStruct3 = struct {};
       .AddArg("second", fidl::flat::AttributeArgSchema(
                             fidl::flat::ConstantValue::Kind::kString,
                             fidl::flat::AttributeArgSchema::Optionality::kOptional));
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 }
 
 TEST(AttributesTests, BadMultipleSchemaArgumentsRequiredMissing) {
@@ -1148,7 +1141,7 @@ library example;
 type MyStruct = struct {};
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
@@ -1197,7 +1190,7 @@ const baz bool = false;
 type MyStruct = struct {};
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
@@ -1283,7 +1276,7 @@ type MyStruct = struct {};
       .AddArg("uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64))
       .AddArg("float32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32))
       .AddArg("float64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64));
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
@@ -1522,7 +1515,7 @@ type MyStruct = struct {};
       .AddArg("uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64))
       .AddArg("float32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32))
       .AddArg("float64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64));
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
@@ -1755,7 +1748,7 @@ library example;
 type MyStruct = struct {};
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
@@ -1772,7 +1765,7 @@ library example;
 type MyStruct = struct {};
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);

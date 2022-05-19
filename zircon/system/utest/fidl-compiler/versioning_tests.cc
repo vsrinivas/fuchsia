@@ -237,21 +237,16 @@ library example;
     TestLibrary library(source);
     library.SelectVersion("example", "1");
     ASSERT_COMPILED(library);
-    ASSERT_EQ(library.warnings().size(), 0);
   }
   {
     TestLibrary library(source);
     library.SelectVersion("example", "2");
-    ASSERT_COMPILED(library);
-    ASSERT_EQ(library.warnings().size(), 1);
-    EXPECT_ERR(library.warnings()[0], fidl::WarnLibraryDeprecated);
+    ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
   }
   {
     TestLibrary library(source);
     library.SelectVersion("example", kMaxNumericVersion);
-    ASSERT_COMPILED(library);
-    ASSERT_EQ(library.warnings().size(), 1);
-    EXPECT_ERR(library.warnings()[0], fidl::WarnLibraryDeprecated);
+    ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
   }
   {
     TestLibrary library(source);
@@ -892,9 +887,7 @@ TEST(VersioningTests, GoodAddedEqualsDeprecated) {
 library example;
 )FIDL");
   library.SelectVersion("example", "1");
-  ASSERT_COMPILED(library);
-  ASSERT_EQ(library.warnings().size(), 1);
-  ASSERT_ERR(library.warnings()[0], fidl::WarnLibraryDeprecated);
+  ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
 }
 
 TEST(VersioningTests, BadAddedGreaterThanDeprecated) {
@@ -954,7 +947,7 @@ library example;
 type Foo = struct {};
 )FIDL");
   library.SelectVersion("example", "4");
-  ASSERT_COMPILED(library);
+  ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
 
   auto foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(foo);
@@ -970,7 +963,7 @@ library example;
 type Foo = struct {};
 )FIDL");
   library.SelectVersion("example", "5");
-  ASSERT_COMPILED(library);
+  ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
 
   auto foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(foo);
@@ -1150,7 +1143,7 @@ library example;
 type Foo = struct {};
 )FIDL");
   library.SelectVersion("example", "4");
-  ASSERT_COMPILED(library);
+  ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnLibraryDeprecated);
 
   auto foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(foo);
