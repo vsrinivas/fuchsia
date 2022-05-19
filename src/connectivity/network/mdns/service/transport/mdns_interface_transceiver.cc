@@ -165,14 +165,7 @@ int MdnsInterfaceTransceiver::SetOptionBindToDevice() {
 
 int MdnsInterfaceTransceiver::SetOptionSharePort() {
   int param = 1;
-  int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEADDR, &param, sizeof(param));
-  if (result < 0) {
-    FX_LOGS(ERROR) << "Failed to set socket option SO_REUSEADDR, " << strerror(errno);
-    return result;
-  }
-
-  param = 1;
-  result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEPORT, &param, sizeof(param));
+  int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEPORT, &param, sizeof(param));
   if (result < 0) {
     FX_LOGS(ERROR) << "Failed to set socket option SO_REUSEPORT, " << strerror(errno);
   }
