@@ -105,7 +105,7 @@ template("fidl_library") {
   action(lint_target_name) {
     visibility = [ ":*" ]
 
-    script = "//build/fidl/run_and_gen_stamp.sh"
+    script = "//build/scripts/run_and_stamp.sh"
 
     forward_variables_from(invoker,
                            [
@@ -113,11 +113,11 @@ template("fidl_library") {
                              "testonly",
                            ])
 
-    # run_and_gen_stamp.sh runs this tool, and touches lint_stamp_file if successful
-    tool_with_no_output = "//tools/fidl/fidlc:fidl-lint"
+    # run_and_stamp.sh runs this tool, and touches lint_stamp_file if successful
+    _tool_with_no_output = "//tools/fidl/fidlc:fidl-lint"
 
     # Construct the host toolchain version of the tool.
-    host_tool = "${tool_with_no_output}($host_toolchain)"
+    host_tool = "${_tool_with_no_output}($host_toolchain)"
 
     # Get the path to the executable.
     if (!defined(tool_output_name)) {

@@ -67,7 +67,7 @@ foreach(filename, standalone_libraries) {
 # to forget to remove it from standalone_libraries.
 action("verify_files_exist") {
   testonly = true
-  script = "stamp.sh"
+  script = "//build/scripts/no_op.sh"
   sources = standalone_libraries
   outputs = [ "$target_out_dir/files_in_standalone_libraries_exist.verified" ]
   args = [ rebase_path(outputs[0], root_build_dir) ]
