@@ -46,10 +46,10 @@ use crate::{
     },
     socket::{
         posix::{
-            ConnAddr, ConnIpAddr, ListenerAddr, ListenerIpAddr, PosixAddrState, PosixAddrVec,
-            PosixAddrVecIter, PosixSocketMapSpec,
+            ConnAddr, ConnIpAddr, ListenerAddr, ListenerIpAddr, PosixAddrState, PosixAddrVecIter,
+            PosixSocketMapSpec,
         },
-        BoundSocketMap, InsertError,
+        AddrVec, BoundSocketMap, InsertError,
     },
     BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
 };
@@ -139,7 +139,7 @@ struct UnboundSocketState<D> {
 fn iter_receiving_addrs<I: Ip, D: IpDeviceId, S>(
     addr: ConnIpAddr<Udp<I, D, S>>,
     device: D,
-) -> impl Iterator<Item = PosixAddrVec<Udp<I, D, S>>> {
+) -> impl Iterator<Item = AddrVec<Udp<I, D, S>>> {
     PosixAddrVecIter::with_device(addr, device)
 }
 
@@ -189,10 +189,10 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
             device,
         )
         .find_map(|addr| match addr {
-            PosixAddrVec::Listener(l) => {
+            AddrVec::Listen(l) => {
                 bound.get_listener_by_addr(&l).map(|state| LookupResult::Listener(state, l))
             }
-            PosixAddrVec::Connected(c) => {
+            AddrVec::Conn(c) => {
                 bound.get_conn_by_addr(&c).map(|state| LookupResult::Conn(state, c))
             }
         })
@@ -213,11 +213,11 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
             // For wildcard addresses, collect ALL local ports.
             all_addrs
                 .map(|addr| match addr {
-                    PosixAddrVec::Listener(ListenerAddr {
+                    AddrVec::Listen(ListenerAddr {
                         ip: ListenerIpAddr { addr: _, identifier },
                         device: _,
                     }) => *identifier,
-                    PosixAddrVec::Connected(ConnAddr {
+                    AddrVec::Conn(ConnAddr {
                         ip: ConnIpAddr { local_ip: _, local_identifier, remote: _ },
                         device: _,
                     }) => *local_identifier,
@@ -228,11 +228,11 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
             // local addresses, or all addresses.
             all_addrs
                 .filter_map(|addr| match addr {
-                    PosixAddrVec::Connected(ConnAddr {
+                    AddrVec::Conn(ConnAddr {
                         ip: ConnIpAddr { local_ip, local_identifier, remote: _ },
                         device: _,
                     }) => addrs.clone().any(|a| a == local_ip).then(|| *local_identifier),
-                    PosixAddrVec::Listener(ListenerAddr {
+                    AddrVec::Listen(ListenerAddr {
                         ip: ListenerIpAddr { addr, identifier: port },
                         device: _,
                     }) => match addr {
@@ -297,9 +297,9 @@ impl<I: Ip, D: IpDeviceId, S> PortAllocImpl for UdpConnectionState<I, D, S> {
 
         // A port is free if there are no sockets currently using it, and if
         // there are no sockets that are shadowing it.
-        PosixAddrVec::< _>::from(conn).iter_shadows().all(|a| match &a {
-            PosixAddrVec::Listener(l) => bound.get_listener_by_addr(&l).is_none(),
-            PosixAddrVec::Connected(c) => bound.get_conn_by_addr(&c).is_none(),
+        AddrVec::< _>::from(conn).iter_shadows().all(|a| match &a {
+            AddrVec::Listen(l) => bound.get_listener_by_addr(&l).is_none(),
+            AddrVec::Conn(c) => bound.get_conn_by_addr(&c).is_none(),
         } && bound.get_shadower_counts(&a) == 0)
     }
 }
@@ -1560,8 +1560,8 @@ mod tests {
         fn iter_conn_addrs(&self) -> impl Iterator<Item = &ConnAddr<Udp<I, D, S>>> {
             let Self { bound } = self;
             bound.iter_addrs().filter_map(|a| match a {
-                PosixAddrVec::Connected(c) => Some(c),
-                PosixAddrVec::Listener(_) => None,
+                AddrVec::Conn(c) => Some(c),
+                AddrVec::Listen(_) => None,
             })
         }
     }
@@ -1597,7 +1597,7 @@ mod tests {
     const LOCAL_PORT: NonZeroU16 = nonzero!(100u16);
     const REMOTE_PORT: NonZeroU16 = nonzero!(200u16);
 
-    fn conn_addr<I>(device: Option<DummyDeviceId>) -> PosixAddrVec<Udp<I, DummyDeviceId, ()>>
+    fn conn_addr<I>(device: Option<DummyDeviceId>) -> AddrVec<Udp<I, DummyDeviceId, ()>>
     where
         I: Ip + TestIpExt,
     {
@@ -1614,7 +1614,7 @@ mod tests {
         .into()
     }
 
-    fn local_listener<I>(device: Option<DummyDeviceId>) -> PosixAddrVec<Udp<I, DummyDeviceId, ()>>
+    fn local_listener<I>(device: Option<DummyDeviceId>) -> AddrVec<Udp<I, DummyDeviceId, ()>>
     where
         I: Ip + TestIpExt,
     {
@@ -1623,9 +1623,7 @@ mod tests {
             .into()
     }
 
-    fn wildcard_listener<I>(
-        device: Option<DummyDeviceId>,
-    ) -> PosixAddrVec<Udp<I, DummyDeviceId, ()>>
+    fn wildcard_listener<I>(device: Option<DummyDeviceId>) -> AddrVec<Udp<I, DummyDeviceId, ()>>
     where
         I: Ip + TestIpExt,
     {
@@ -1645,8 +1643,8 @@ mod tests {
     #[test_case(local_listener(None), [wildcard_listener(None)]; "local listener no device")]
     #[test_case(wildcard_listener(None), []; "wildcard listener no device")]
     fn test_udp_addr_vec_iter_shadows_conn<D: IpDeviceId, const N: usize>(
-        addr: PosixAddrVec<Udp<Ipv4, D, ()>>,
-        expected_shadows: [PosixAddrVec<Udp<Ipv4, D, ()>>; N],
+        addr: AddrVec<Udp<Ipv4, D, ()>>,
+        expected_shadows: [AddrVec<Udp<Ipv4, D, ()>>; N],
     ) {
         assert_eq!(addr.iter_shadows().collect::<HashSet<_>>(), HashSet::from(expected_shadows));
     }

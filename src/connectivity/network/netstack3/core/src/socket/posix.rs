@@ -14,7 +14,7 @@ use net_types::{ip::IpAddress, SpecifiedAddr};
 
 use crate::{
     data_structures::socketmap::{IterShadows, SocketMap, Tagged},
-    socket::{Bound, InsertError, RemoveResult, SocketMapAddrStateSpec, SocketMapSpec},
+    socket::{AddrVec, Bound, InsertError, RemoveResult, SocketMapAddrStateSpec, SocketMapSpec},
 };
 
 /// Describes the data types associated with types of network POSIX sockets.
@@ -112,28 +112,15 @@ pub(crate) struct ConnIpAddr<P: PosixSocketMapSpec> {
     pub(crate) remote: P::RemoteAddr,
 }
 
-#[derive(Derivative)]
-#[derivative(
-    Debug(bound = ""),
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = "")
-)]
-pub(crate) enum PosixAddrVec<P: PosixSocketMapSpec> {
-    Listener(ListenerAddr<P>),
-    Connected(ConnAddr<P>),
-}
-
-impl<P: PosixSocketMapSpec> From<ListenerAddr<P>> for PosixAddrVec<P> {
+impl<P: PosixSocketMapSpec> From<ListenerAddr<P>> for AddrVec<P> {
     fn from(listener: ListenerAddr<P>) -> Self {
-        PosixAddrVec::Listener(listener)
+        AddrVec::Listen(listener)
     }
 }
 
-impl<P: PosixSocketMapSpec> From<ConnAddr<P>> for PosixAddrVec<P> {
+impl<P: PosixSocketMapSpec> From<ConnAddr<P>> for AddrVec<P> {
     fn from(conn: ConnAddr<P>) -> Self {
-        PosixAddrVec::Connected(conn)
+        AddrVec::Conn(conn)
     }
 }
 
@@ -153,10 +140,10 @@ pub(crate) enum PosixIpAddrVec<P: PosixSocketMapSpec> {
 }
 
 impl<P: PosixSocketMapSpec> PosixIpAddrVec<P> {
-    fn with_device(self, device: Option<P::DeviceId>) -> PosixAddrVec<P> {
+    fn with_device(self, device: Option<P::DeviceId>) -> AddrVec<P> {
         match self {
-            PosixIpAddrVec::Listener(ip) => PosixAddrVec::Listener(ListenerAddr { ip, device }),
-            PosixIpAddrVec::Connected(ip) => PosixAddrVec::Connected(ConnAddr { ip, device }),
+            PosixIpAddrVec::Listener(ip) => AddrVec::Listen(ListenerAddr { ip, device }),
+            PosixIpAddrVec::Connected(ip) => AddrVec::Conn(ConnAddr { ip, device }),
         }
     }
 }
@@ -208,7 +195,7 @@ enum AddrVecIter<P: PosixSocketMapSpec> {
 pub(crate) struct PosixAddrVecIter<P: PosixSocketMapSpec>(AddrVecIter<P>);
 
 impl<P: PosixSocketMapSpec> Iterator for PosixAddrVecIter<P> {
-    type Item = PosixAddrVec<P>;
+    type Item = AddrVec<P>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let Self(it) = self;
@@ -233,7 +220,7 @@ impl<P: PosixSocketMapSpec> PosixAddrVecIter<P> {
 }
 
 impl<P: PosixSocketMapSpec> Iterator for AddrVecIter<P> {
-    type Item = PosixAddrVec<P>;
+    type Item = AddrVec<P>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -266,13 +253,13 @@ impl<P: PosixSocketMapSpec> Iterator for AddrVecIter<P> {
     }
 }
 
-impl<P: PosixSocketMapSpec> IterShadows for PosixAddrVec<P> {
+impl<P: PosixSocketMapSpec> IterShadows for AddrVec<P> {
     type IterShadows = PosixAddrVecIter<P>;
 
     fn iter_shadows(&self) -> Self::IterShadows {
         let (socket_ip_addr, device) = match self.clone() {
-            PosixAddrVec::Connected(ConnAddr { ip, device }) => (ip.into(), device),
-            PosixAddrVec::Listener(ListenerAddr { ip, device }) => (ip.into(), device),
+            AddrVec::Conn(ConnAddr { ip, device }) => (ip.into(), device),
+            AddrVec::Listen(ListenerAddr { ip, device }) => (ip.into(), device),
         };
         let mut iter = match device {
             Some(device) => AddrVecIter::with_device(socket_ip_addr, device),
@@ -311,7 +298,6 @@ impl<P: PosixSocketMapSpec> SocketMapSpec for P {
 
     type ConnAddr = ConnAddr<P>;
 
-    type AddrVec = PosixAddrVec<Self>;
     type AddrVecTag = PosixAddrVecTag;
 
     type ListenerId = P::ListenerId;
@@ -330,13 +316,13 @@ impl<P: PosixSocketMapSpec> SocketMapSpec for P {
 impl<A, St, I, P> SocketMapAddrStateSpec<A, St, I, P> for PosixAddrState<I>
 where
     P: PosixSocketMapSpec,
-    A: Clone + Into<PosixAddrVec<P>>,
+    A: Clone + Into<AddrVec<P>>,
     I: PartialEq,
 {
     fn check_for_conflicts(
         _new_state: &St,
         addr: &A,
-        socketmap: &SocketMap<PosixAddrVec<P>, Bound<P>>,
+        socketmap: &SocketMap<AddrVec<P>, Bound<P>>,
     ) -> Result<(), InsertError> {
         let dest = addr.clone().into();
         // Having a value present at a shadowed address is immediately
@@ -348,13 +334,12 @@ where
         // Likewise, the presence of a value that shadows the target address is
         // disqualifying.
         match &dest {
-            PosixAddrVec::Connected(ConnAddr { ip: _, device: None })
-            | PosixAddrVec::Listener(_) => {
+            AddrVec::Conn(ConnAddr { ip: _, device: None }) | AddrVec::Listen(_) => {
                 if socketmap.descendant_counts(&dest).len() != 0 {
                     return Err(InsertError::ShadowerExists);
                 }
             }
-            PosixAddrVec::Connected(ConnAddr { ip: _, device: Some(_) }) => {
+            AddrVec::Conn(ConnAddr { ip: _, device: Some(_) }) => {
                 // No need to check shadows here because there are no addresses
                 // that shadow a ConnAddr with a device.
                 debug_assert_eq!(socketmap.descendant_counts(&dest).len(), 0)
@@ -367,7 +352,7 @@ where
         // connected socket with no device is present, and the target is the
         // same IP/port with a device specified.
         match dest {
-            PosixAddrVec::Listener(ListenerAddr { ip, device: Some(_device) }) => {
+            AddrVec::Listen(ListenerAddr { ip, device: Some(_device) }) => {
                 let to_check = ListenerAddr { ip, device: None }.into();
                 if socketmap.descendant_counts(&to_check).any(|(tag, _): &(_, NonZeroUsize)| {
                     match tag {
@@ -378,8 +363,8 @@ where
                     return Err(InsertError::ShadowerExists);
                 }
             }
-            PosixAddrVec::Listener(ListenerAddr { ip: _, device: None }) => (),
-            PosixAddrVec::Connected(_) => (),
+            AddrVec::Listen(ListenerAddr { ip: _, device: None }) => (),
+            AddrVec::Conn(_) => (),
         }
         Ok(())
     }
@@ -392,8 +377,8 @@ where
 
     fn new_addr_state(_new_state: &St, addr: &A, id: I) -> Self {
         let device = match addr.clone().into() {
-            PosixAddrVec::Connected(ConnAddr { ip: _, device }) => device,
-            PosixAddrVec::Listener(ListenerAddr { ip: _, device }) => device,
+            AddrVec::Conn(ConnAddr { ip: _, device }) => device,
+            AddrVec::Listen(ListenerAddr { ip: _, device }) => device,
         };
         match device {
             Some(_) => Self::ExclusiveDevice(id),
@@ -403,8 +388,8 @@ where
 
     fn for_new_addr(self, new_addr: &A) -> Self {
         let new_device = match new_addr.clone().into() {
-            PosixAddrVec::Connected(ConnAddr { ip: _, device }) => device,
-            PosixAddrVec::Listener(ListenerAddr { ip: _, device }) => device,
+            AddrVec::Conn(ConnAddr { ip: _, device }) => device,
+            AddrVec::Listen(ListenerAddr { ip: _, device }) => device,
         };
         match (self, new_device) {
             (PosixAddrState::Exclusive(s), Some(_))
