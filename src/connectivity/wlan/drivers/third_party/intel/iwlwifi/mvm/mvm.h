@@ -2228,4 +2228,10 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
 bool iwl_mvm_enable_txq(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta, int queue, uint16_t ssn,
                         const struct iwl_trans_txq_scd_cfg* cfg, zx_duration_t wdg_timeout);
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// For rxmq.c
+//
+size_t iwl_mvm_create_packet(struct ieee80211_frame_header* hdr, size_t len, size_t crypt_len,
+                             struct wlan_rx_info* rx_info, struct iwl_rx_cmd_buffer* rxb);
+
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_

@@ -120,11 +120,13 @@ static inline zx_status_t iwl_mvm_check_pn(struct iwl_mvm* mvm, struct ieee80211
 // iwl_mvm_create_packet formats the packets for passing to mac80211.
 // Note: this is derived from iwl_mvm_create_skb(), but the Fuchsia version formats the packet
 // in-place.
-static size_t iwl_mvm_create_packet(struct ieee80211_frame_header* hdr, size_t len,
-                                    size_t crypt_len, struct ieee80211_rx_status* status,
-                                    struct iwl_rx_cmd_buffer* rxb) {
+size_t iwl_mvm_create_packet(struct ieee80211_frame_header* hdr, size_t len, size_t crypt_len,
+                             struct wlan_rx_info* rx_info, struct iwl_rx_cmd_buffer* rxb) {
+  ZX_ASSERT(rx_info);
   struct iwl_rx_packet* pkt = rxb_addr(rxb);
+  ZX_ASSERT(pkt);
   struct iwl_rx_mpdu_desc* desc = (void*)pkt->data;
+  ZX_ASSERT(desc);
   size_t hdrlen = ieee80211_get_header_len(hdr);
   size_t datalen = len - hdrlen;
   size_t padlen = 0;
@@ -165,7 +167,7 @@ static size_t iwl_mvm_create_packet(struct ieee80211_frame_header* hdr, size_t l
     if (padlen < 4 && ((hdrlen + padlen) % 4) == 0) {
       // There is padding equivalent to padding for 4-byte alignment, so we we indicate this to SME
       // using a flag instead of manually copying the packet contents.
-      status->rx_info.rx_flags |= WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
+      rx_info->rx_flags |= WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
     } else {
       datalen -= padlen;
       memmove((char*)hdr + hdrlen, (char*)hdr + hdrlen + padlen, datalen);
@@ -1550,7 +1552,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     }
 #endif  // NEEDS_PORTING
 
-  len = iwl_mvm_create_packet(hdr, len, crypt_len, &rx_status, rxb);
+  len = iwl_mvm_create_packet(hdr, len, crypt_len, &rx_status.rx_info, rxb);
   if (!iwl_mvm_reorder(mvm, queue, desc)) {
     iwl_mvm_pass_packet_to_mac80211(mvm, hdr, len, &rx_status, queue, sta);
   }

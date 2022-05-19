@@ -113,6 +113,67 @@ class MvmTest : public SingleApTest {
 
 TEST_F(MvmTest, GetMvm) { EXPECT_NE(mvm_, nullptr); }
 
+// In this test case, we expect the CCMP is removed.
+//
+// Before:
+//
+//   Frame Header
+//   CCMP
+//   Payload
+//
+// After:
+//
+//   Frame Header
+//   Payload
+//
+TEST_F(MvmTest, testCreatePacket) {
+  struct wlan_rx_info rx_info = {};
+
+  const size_t kMacPayloadLen = 60;
+  struct {
+    struct iwl_rx_mpdu_res_start rx_res;
+    struct ieee80211_frame_header frame;
+    uint8_t ccmp[fuchsia_wlan_ieee80211_CCMP_HDR_LEN];
+    uint8_t mac_payload[kMacPayloadLen];
+    uint32_t rx_pkt_status;
+  } __packed mpdu = {
+      .rx_res =
+          {
+              .byte_count = kMacPayloadLen,
+              .assist = 0,
+          },
+      .frame = {},
+      .ccmp =
+          {
+              0x01,
+              0x02,
+              0x03,
+              0x04,
+              0x05,
+              0x06,
+              0x07,
+              0x08,
+          },
+      .mac_payload =
+          {
+              0xff,
+              0xfe,
+              0xfd,
+              0xfc,
+          },
+      .rx_pkt_status = 0x0,
+  };
+  TestRxcb mpdu_rxcb(sim_trans_.iwl_trans()->dev, &mpdu, sizeof(mpdu));
+
+  size_t org_size =
+      sizeof(struct ieee80211_frame_header) + fuchsia_wlan_ieee80211_CCMP_HDR_LEN + kMacPayloadLen;
+  size_t new_size = iwl_mvm_create_packet(
+      &mpdu.frame, org_size, fuchsia_wlan_ieee80211_CCMP_HDR_LEN, &rx_info, &mpdu_rxcb);
+  EXPECT_EQ(new_size, org_size - fuchsia_wlan_ieee80211_CCMP_HDR_LEN);
+  EXPECT_EQ(mpdu.ccmp[0], 0xff);  // moved from mpdu.mac_payload[0]
+  EXPECT_EQ(mpdu.ccmp[3], 0xfc);  // moved from mpdu.mac_payload[3]
+}
+
 TEST_F(MvmTest, rxMpdu) {
   const int kExpChan = 40;
 

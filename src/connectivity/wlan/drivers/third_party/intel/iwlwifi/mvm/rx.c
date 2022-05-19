@@ -479,6 +479,8 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
   }
 #endif  // NEEDS_PORTING
 
+  res_len = iwl_mvm_create_packet(frame, res_len, crypt_len, &rx_info, rxb);
+
   // Send to MLME
   // TODO(43218): replace rxq->napi with interface instance so that we can map to mvmvif.
   wlan_rx_packet_t rx_packet = {
