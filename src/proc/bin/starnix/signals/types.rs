@@ -61,8 +61,8 @@ pub struct SignalState {
     /// signals there is only ever one instance of any given signal.
     queue: VecDeque<SignalInfo>,
 
-    /// Wait queue for signalfd. Signaled whenever a signal is added to the queue.
-    pub signalfd_wait: WaitQueue,
+    /// Wait queue for signalfd and sigtimedwait. Signaled whenever a signal is added to the queue.
+    pub signal_wait: WaitQueue,
 
     // See https://man7.org/linux/man-pages/man2/sigaltstack.2.html
     pub alt_stack: Option<sigaltstack_t>,
@@ -86,7 +86,7 @@ impl SignalState {
     pub fn enqueue(&mut self, siginfo: SignalInfo) {
         if siginfo.signal.is_real_time() || !self.has_queued(siginfo.signal) {
             self.queue.push_back(siginfo.clone());
-            self.signalfd_wait.notify_all();
+            self.signal_wait.notify_all();
         }
     }
 

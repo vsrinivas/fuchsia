@@ -373,7 +373,6 @@ impl WaitQueue {
     ///
     /// This function does not actually block the waiter. To block the waiter,
     /// call the [`Waiter::wait`] function on the waiter.
-    #[cfg(test)]
     pub fn wait_async(&mut self, waiter: &Arc<Waiter>) -> WaitKey {
         self.wait_async_mask(waiter, u32::MAX, WaitCallback::none())
     }

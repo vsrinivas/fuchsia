@@ -209,10 +209,15 @@ pub fn restore_from_signal_handler(current_task: &mut CurrentTask) -> Result<(),
 
 pub fn send_signal(task: &Task, siginfo: SignalInfo) {
     let mut task_state = task.write();
-    task_state.signals.enqueue(siginfo.clone());
 
     let action_is_masked = siginfo.signal.is_in_set(task_state.signals.mask);
     let action = action_for_signal(&siginfo, task.thread_group.signal_actions.get(siginfo.signal));
+    // Early exit here motivated by gvisor's SigtimedwaitTest.IgnoredUnmaskedSignal test.
+    if action == DeliveryAction::Ignore && !action_is_masked {
+        return;
+    }
+
+    task_state.signals.enqueue(siginfo.clone());
     drop(task_state);
 
     // SIGKILL is handled without waiting to the signal to be dequeued.

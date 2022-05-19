@@ -97,12 +97,12 @@ impl FileOps for SignalFd {
         if task_state.signals.is_any_allowed_by_mask(!self.mask) {
             waiter.wake_immediately(FdEvents::POLLIN.mask(), handler)
         } else {
-            task_state.signals.signalfd_wait.wait_async_mask(waiter, events.mask(), handler)
+            task_state.signals.signal_wait.wait_async_mask(waiter, events.mask(), handler)
         }
     }
 
     fn cancel_wait(&self, current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
-        current_task.write().signals.signalfd_wait.cancel_wait(key);
+        current_task.write().signals.signal_wait.cancel_wait(key);
     }
 
     fn query_events(&self, current_task: &CurrentTask) -> FdEvents {

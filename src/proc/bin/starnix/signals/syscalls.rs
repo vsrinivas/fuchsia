@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon as zx;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
@@ -166,6 +167,77 @@ pub fn sys_rt_sigsuspend(
     Ok(())
 }
 
+pub fn sys_rt_sigtimedwait(
+    current_task: &CurrentTask,
+    set_addr: UserRef<sigset_t>,
+    siginfo_addr: UserAddress,
+    timeout_addr: UserRef<timespec>,
+    sigset_size: usize,
+) -> Result<Signal, Errno> {
+    if sigset_size != std::mem::size_of::<sigset_t>() {
+        return error!(EINVAL);
+    }
+
+    let mut mask = sigset_t::default();
+    current_task.mm.read_object(set_addr, &mut mask)?;
+    let deadline = if timeout_addr.is_null() {
+        zx::Time::INFINITE
+    } else {
+        let mut timeout = timespec::default();
+        current_task.mm.read_object(timeout_addr, &mut timeout)?;
+        zx::Time::after(duration_from_timespec(timeout)?)
+    };
+
+    let signal = loop {
+        let waiter;
+        {
+            let signals = &mut current_task.write().signals;
+            if let Some(signal) = signals.take_next_where(|sig| sig.signal.is_in_set(mask)) {
+                if !siginfo_addr.is_null() {
+                    current_task.mm.write_memory(siginfo_addr, &signal.as_siginfo_bytes())?;
+                }
+                break signal;
+            }
+            waiter = Waiter::new();
+            signals.signal_wait.wait_async(&waiter);
+        }
+        waiter.wait_until(current_task, deadline).map_err(|e| {
+            if e == ETIMEDOUT {
+                EAGAIN
+            } else {
+                e
+            }
+        })?;
+    };
+    Ok(signal.signal)
+}
+
+pub fn sys_signalfd4(
+    current_task: &CurrentTask,
+    fd: FdNumber,
+    mask_addr: UserRef<sigset_t>,
+    mask_size: usize,
+    flags: u32,
+) -> Result<FdNumber, Errno> {
+    if fd.raw() != -1 {
+        not_implemented!("changing mask of a signalfd");
+        return error!(EINVAL);
+    }
+    if flags & !(SFD_CLOEXEC | SFD_NONBLOCK) != 0 {
+        return error!(EINVAL);
+    }
+    if mask_size != std::mem::size_of::<sigset_t>() {
+        return error!(EINVAL);
+    }
+
+    let mut mask: sigset_t = 0;
+    current_task.mm.read_object(mask_addr, &mut mask)?;
+    let signalfd = SignalFd::new(current_task.kernel(), mask, flags);
+    let flags = if flags & SFD_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
+    let fd = current_task.files.add_with_flags(signalfd, flags)?;
+    Ok(fd)
+}
+
 fn send_unchecked_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Result<(), Errno> {
     // 0 is a sentinel value used to do permission checks.
     let sentinel_signal = UncheckedSignal::from(0);
@@ -267,6 +339,21 @@ pub fn sys_kill(
     Ok(())
 }
 
+pub fn sys_tkill(
+    current_task: &CurrentTask,
+    tid: pid_t,
+    unchecked_signal: UncheckedSignal,
+) -> Result<(), Errno> {
+    if tid <= 0 {
+        return error!(EINVAL);
+    }
+    let target = current_task.get_task(tid).ok_or(errno!(ESRCH))?;
+    if !current_task.can_signal(&target, &unchecked_signal) {
+        return error!(EPERM);
+    }
+    send_unchecked_signal(&target, &unchecked_signal)
+}
+
 pub fn sys_tgkill(
     current_task: &CurrentTask,
     tgid: pid_t,
@@ -287,8 +374,7 @@ pub fn sys_tgkill(
         return error!(EPERM);
     }
 
-    send_unchecked_signal(&target, &unchecked_signal)?;
-    Ok(())
+    send_unchecked_signal(&target, &unchecked_signal)
 }
 
 pub fn sys_rt_sigreturn(current_task: &mut CurrentTask) -> Result<SyscallResult, Errno> {
@@ -546,32 +632,6 @@ pub fn sys_wait4(
     } else {
         Ok(0)
     }
-}
-
-pub fn sys_signalfd4(
-    current_task: &CurrentTask,
-    fd: FdNumber,
-    mask_addr: UserRef<sigset_t>,
-    mask_size: usize,
-    flags: u32,
-) -> Result<FdNumber, Errno> {
-    if fd.raw() != -1 {
-        not_implemented!("changing mask of a signalfd");
-        return error!(EINVAL);
-    }
-    if flags & !(SFD_CLOEXEC | SFD_NONBLOCK) != 0 {
-        return error!(EINVAL);
-    }
-    if mask_size != std::mem::size_of::<sigset_t>() {
-        return error!(EINVAL);
-    }
-
-    let mut mask: sigset_t = 0;
-    current_task.mm.read_object(mask_addr, &mut mask)?;
-    let signalfd = SignalFd::new(current_task.kernel(), mask, flags);
-    let flags = if flags & SFD_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
-    let fd = current_task.files.add_with_flags(signalfd, flags)?;
-    Ok(fd)
 }
 
 #[cfg(test)]
