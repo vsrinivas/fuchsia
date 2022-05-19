@@ -106,6 +106,7 @@ class SockScripter {
   SendBufferGenerator snd_buf_gen_;
   char recv_buf_[1024]{};
   ApiAbstraction* api_;
+  bool continue_after_error_ = false;
 };
 
 #endif  // SRC_CONNECTIVITY_NETWORK_TOOLS_SOCKSCRIPTER_SOCKSCRIPTER_H_

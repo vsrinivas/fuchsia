@@ -246,6 +246,7 @@ int usage(const char* name) {
           "    -p <proto> : returns 0 if the given socket-type has a parameter\n"
           "    -c : prints available commands (for bash completion)\n"
           "    -a <cmd> : returns 0 if the given command has a parameter\n"
+          "    -C : continue after socket operation errors\n"
           "\n"
           "  socket-type is one of the following:\n%s\n"
           "  socket-cmd is one of the following:\n%s\n"
@@ -290,7 +291,7 @@ std::ostream& operator<<(std::ostream& out, const Escaped& logged) {
 int SockScripter::Execute(int argc, char* const argv[]) {
   optind = 1;
   int opt;
-  while ((opt = getopt(argc, argv, "hsp:ca:")) != -1) {
+  while ((opt = getopt(argc, argv, "Chsp:ca:")) != -1) {
     switch (opt) {
       case 's':
         print_socket_types();
@@ -299,6 +300,9 @@ int SockScripter::Execute(int argc, char* const argv[]) {
         return check_socket_type_has_proto(optarg) ? 0 : 1;
       case 'c':
         return print_commands_list();
+      case 'C':
+        continue_after_error_ = true;
+        break;
       case 'a':
         return check_command_has_args(optarg);
       case 'h':
@@ -374,7 +378,7 @@ int SockScripter::Execute(int argc, char* const argv[]) {
           }
           for (int i = 0; i < cfg.repeat_count; i++) {
             auto handler = cmd.handler;
-            if (!(this->*(handler))(arg)) {
+            if (!(this->*(handler))(arg) && !continue_after_error_) {
               return -1;
             }
             usleep(1000 * cfg.delay_ms);
