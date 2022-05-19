@@ -29,6 +29,7 @@ pub struct DeviceCommand {
 pub enum DeviceSubcommand {
     Bind(BindCommand),
     Unbind(UnbindCommand),
+    Rebind(RebindCommand),
     LogLevel(LogLevelCommand),
 }
 
@@ -51,6 +52,21 @@ pub struct BindCommand {
 /// Unbinds the driver bound to the specified device.
 #[argh(subcommand, name = "unbind")]
 pub struct UnbindCommand {
+    /// the path of the device to unbind, relative to the /dev directory.
+    /// E.g. "sys/platform/pci/00:1f.6" or "class/usb-device/000"
+    #[argh(positional)]
+    pub device_path: String,
+}
+
+#[derive(FromArgs, Clone, PartialEq, Debug)]
+/// Unbinds the driver bound to a device and then attempts to bind a new driver.
+#[argh(subcommand, name = "rebind")]
+pub struct RebindCommand {
+    // TODO(surajmalhotra): Make this a URL once drivers are components.
+    /// the path of the driver to debug, e.g. "/system/driver/usb_video.so"
+    #[argh(positional)]
+    pub driver_path: String,
+
     /// the path of the device to unbind, relative to the /dev directory.
     /// E.g. "sys/platform/pci/00:1f.6" or "class/usb-device/000"
     #[argh(positional)]

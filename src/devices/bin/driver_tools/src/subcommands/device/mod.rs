@@ -5,9 +5,10 @@
 pub mod args;
 
 use {
-    anyhow::{format_err, Result},
+    anyhow::{format_err, Context, Result},
     args::{
-        BindCommand, DeviceCommand, DeviceSubcommand, LogLevel, LogLevelCommand, UnbindCommand,
+        BindCommand, DeviceCommand, DeviceSubcommand, LogLevel, LogLevelCommand, RebindCommand,
+        UnbindCommand,
     },
     fidl::endpoints::Proxy,
     fidl_fuchsia_device as fdev, fidl_fuchsia_io as fio, fuchsia_zircon_status as zx,
@@ -25,6 +26,15 @@ pub async fn device(cmd: DeviceCommand, dev: fio::DirectoryProxy) -> Result<()> 
             let device = connect_to_device(dev, device_path)?;
             device.schedule_unbind().await?.map_err(|err| format_err!("{:?}", err))?;
             println!("Unbound driver from {}", device_path);
+        }
+        DeviceSubcommand::Rebind(RebindCommand { ref device_path, ref driver_path }) => {
+            let device = connect_to_device(dev, device_path).context("Failed to get device")?;
+            device
+                .rebind(driver_path)
+                .await?
+                .map_err(|err| format_err!("{:?}", err))
+                .context("Failed to rebind")?;
+            println!("Rebind of {} to {} is complete", driver_path, device_path);
         }
         DeviceSubcommand::LogLevel(LogLevelCommand { ref device_path, log_level }) => {
             let device = connect_to_device(dev, device_path)?;
