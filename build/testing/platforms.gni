@@ -120,6 +120,12 @@ test_platforms = [
     device_type = "Astro"
   },
   {
+    testbed = "nelson_thermal"
+    cpu = "arm64"
+    pool = "fuchsia.tests.thermal"
+    device_type = "Nelson"
+  },
+  {
     testbed = "sherlock_thermal"
     cpu = "arm64"
     pool = "fuchsia.tests.thermal"
