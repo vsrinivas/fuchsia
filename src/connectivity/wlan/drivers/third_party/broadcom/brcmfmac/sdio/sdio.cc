@@ -1870,20 +1870,23 @@ static zx_status_t brcmf_sdio_send_tx_queue(struct brcmf_sdio* bus, uint32_t fra
 
   const uint8_t allowed_precedences = ~bus->flowcontrol;
 
-  cpp20::span<wlan::drivers::components::Frame> frames;
   const uint32_t allowed = static_cast<uint8_t>(bus->tx_max - bus->tx_seq);
   const uint32_t num_frames = std::min(frame_count, allowed);
+  // We shouldn't need to clear here but just to be safe.
+  bus->tx_queue->tx_frames.clear();
   {
     std::lock_guard<std::mutex> lock(bus->tx_queue->txq_lock);
-    frames = bus->tx_queue->tx_queue.pop(num_frames, allowed_precedences);
-    if (frames.empty()) {
-      return ZX_OK;
-    }
+    bus->tx_queue->tx_queue.pop(num_frames, allowed_precedences, &bus->tx_queue->tx_frames);
+  }
+  if (bus->tx_queue->tx_frames.empty()) {
+    return ZX_OK;
   }
 
   TRACE_DURATION("brcmfmac:isr", "sdio_tx_frames", "frame_count", TA_UINT32(num_frames), "allowed",
                  TA_UINT32(allowed));
-  return brcmf_sdio_tx_frames(bus, frames);
+  zx_status_t status = brcmf_sdio_tx_frames(bus, bus->tx_queue->tx_frames);
+  bus->tx_queue->tx_frames.clear();
+  return status;
 }
 
 static zx_status_t brcmf_sdio_tx_ctrlframe(struct brcmf_sdio* bus, uint8_t* frame, uint16_t len) {
@@ -2241,14 +2244,15 @@ static zx_status_t brcmf_sdio_get_tail_length(brcmf_bus* bus_if, uint16_t* tail_
   return ZX_OK;
 }
 
-
 static zx_status_t brcmf_sdio_bus_flush_txq(brcmf_bus* bus_if, int ifidx) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
 
+  wlan::drivers::components::FrameContainer frames;
   std::lock_guard lock(bus->tx_queue->txq_lock);
-  cpp20::span<wlan::drivers::components::Frame> frames = bus->tx_queue->tx_queue.pop_if(
-      [&](const wlan::drivers::components::Frame& frame) { return frame.PortId() == ifidx; });
+  bus->tx_queue->tx_queue.pop_if(
+      [&](const wlan::drivers::components::Frame& frame) { return frame.PortId() == ifidx; },
+      &frames);
 
   brcmf_proto_bcdc_txcomplete(sdiodev->drvr, frames, ZX_ERR_CANCELED);
 
@@ -2276,10 +2280,10 @@ static zx_status_t brcmf_sdio_bus_flush_buffers(brcmf_bus* bus_if) {
   }
   {
     // TX buffers are flushed by completing them with a status of ZX_ERR_UNAVAILABLE.
+    wlan::drivers::components::FrameContainer frames;
     std::lock_guard lock(bus->tx_queue->txq_lock);
     constexpr uint8_t kAllowAllPriorities = 0xFFu;
-    cpp20::span<wlan::drivers::components::Frame> frames =
-        bus->tx_queue->tx_queue.pop(bus->tx_queue->tx_queue.size(), kAllowAllPriorities);
+    bus->tx_queue->tx_queue.pop(bus->tx_queue->tx_queue.size(), kAllowAllPriorities, &frames);
     brcmf_proto_bcdc_txcomplete(sdiodev->drvr, frames, ZX_ERR_UNAVAILABLE);
   }
 
@@ -2378,13 +2382,15 @@ static zx_status_t brcmf_sdio_release_vmo(brcmf_bus* bus_if, uint8_t vmo_id) {
     std::lock_guard lock(bus->rx_tx_data.rx_space);
     bus->rx_tx_data.rx_space.EraseFramesWithVmoId(vmo_id);
   }
+  // Remove all frames in TX queue with a matching VMO id
+  wlan::drivers::components::FrameContainer frames;
   {
-    // Remove all frames in TX queue with a matching VMO id
     std::lock_guard lock(bus->tx_queue->txq_lock);
-    bus->tx_queue->tx_queue.pop_if([vmo_id](const wlan::drivers::components::Frame& frame) {
-      return frame.VmoId() == vmo_id;
-    });
+    bus->tx_queue->tx_queue.pop_if(
+        [vmo_id](const wlan::drivers::components::Frame& frame) { return frame.VmoId() == vmo_id; },
+        &frames);
   }
+  brcmf_proto_bcdc_txcomplete(sdiodev->drvr, frames, ZX_ERR_CANCELED);
 
   // Unregister VMO for both f1 and f2
   zx_handle_t vmo = ZX_HANDLE_INVALID;

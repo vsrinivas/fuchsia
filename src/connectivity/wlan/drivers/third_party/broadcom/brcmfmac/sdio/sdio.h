@@ -513,6 +513,7 @@ struct brcmf_tx_queue {
   wlan::drivers::components::PriorityQueue tx_queue __TA_GUARDED(txq_lock);
   size_t enqueue_count __TA_GUARDED(txq_lock) = 0;
   std::mutex txq_lock;
+  wlan::drivers::components::FrameContainer tx_frames;
 };
 
 struct brcmf_rx_glom {

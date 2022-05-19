@@ -40,14 +40,12 @@ bool PriorityQueue::push(Frame&& frame) {
   return true;
 }
 
-cpp20::span<Frame> PriorityQueue::pop(size_t count, uint8_t allowed_priorities) {
-  outgoing_.clear();
-
+void PriorityQueue::pop(size_t count, uint8_t allowed_priorities, FrameContainer* frames) {
   while (count > 0) {
     uint8_t priority = max_priority_;
     while ((allowed_priorities & (1 << priority)) == 0 || queues_[priority].empty()) {
       if (priority == 0) {
-        return cpp20::span<Frame>(outgoing_);
+        return;
       }
       --priority;
     }
@@ -56,7 +54,7 @@ cpp20::span<Frame> PriorityQueue::pop(size_t count, uint8_t allowed_priorities) 
 
     const size_t to_copy = std::min<size_t>(count, queue.size());
     for (size_t i = 0; i < to_copy; ++i) {
-      outgoing_.emplace_back(std::move(queue.front()));
+      frames->emplace_back(std::move(queue.front()));
       queue.pop_front();
     }
     count -= to_copy;
@@ -66,7 +64,6 @@ cpp20::span<Frame> PriorityQueue::pop(size_t count, uint8_t allowed_priorities) 
       --max_priority_;
     }
   }
-  return cpp20::span<Frame>(outgoing_);
 }
 
 // Pop any number of frames that match |predicate|. Frames will be evaluated, popped and returned in
@@ -75,15 +72,13 @@ cpp20::span<Frame> PriorityQueue::pop(size_t count, uint8_t allowed_priorities) 
 // path, only for rare cases where specific frames need to be popped or removed. Note that just as
 // for pop the frames returned from this method must be consumed before the next call to pop or
 // pop_if. See pop for more details.
-cpp20::span<Frame> PriorityQueue::pop_if(std::function<bool(const Frame&)>&& predicate) {
-  outgoing_.clear();
-
+void PriorityQueue::pop_if(std::function<bool(const Frame&)>&& predicate, FrameContainer* frames) {
   for (uint8_t priority = max_priority_; priority <= max_priority_; --priority) {
     auto& queue = queues_[priority];
     std::optional<int64_t> start_erase;
     for (int64_t i = 0; i < static_cast<int64_t>(queue.size()); ++i) {
       if (predicate(queue[i])) {
-        outgoing_.emplace_back(std::move(queue[i]));
+        frames->emplace_back(std::move(queue[i]));
         if (!start_erase.has_value()) {
           // We are starting a new erase sequence.
           start_erase = i;
@@ -112,6 +107,5 @@ cpp20::span<Frame> PriorityQueue::pop_if(std::function<bool(const Frame&)>&& pre
       --max_priority_;
     }
   }
-  return cpp20::span<Frame>(outgoing_);
 }
 }  // namespace wlan::drivers::components

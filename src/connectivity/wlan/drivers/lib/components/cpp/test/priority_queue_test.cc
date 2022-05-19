@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <wlan/drivers/components/frame.h>
+#include <wlan/drivers/components/frame_container.h>
 #include <wlan/drivers/components/priority_queue.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 
 using wlan::drivers::components::Frame;
+using wlan::drivers::components::FrameContainer;
 using wlan::drivers::components::PriorityQueue;
 
 constexpr size_t kQueueDepth = 2048;
@@ -17,10 +19,10 @@ uint8_t data[256] = {};
 Frame CreateTestFrame(uint8_t priority = 0) {
   constexpr uint8_t kVmoId = 13;
   constexpr size_t kVmoOffset = 0x0c00;
-  constexpr uint16_t kBufferId = 123;
   constexpr uint8_t kPortId = 7;
+  static uint16_t bufferId = 1;
 
-  Frame frame(nullptr, kVmoId, kVmoOffset, kBufferId, data, sizeof(data), kPortId);
+  Frame frame(nullptr, kVmoId, kVmoOffset, bufferId++, data, sizeof(data), kPortId);
   frame.SetPriority(priority);
   return frame;
 }
@@ -55,7 +57,8 @@ TEST(PriorityQueueTest, Pop) {
   queue.push(CreateTestFrame(1u));
   queue.push(CreateTestFrame(2u));
 
-  cpp20::span<Frame> frames = queue.pop(1, kAllPrioritiesAllowed);
+  FrameContainer frames;
+  queue.pop(1, kAllPrioritiesAllowed, &frames);
   ASSERT_EQ(frames.size(), 1u);
   // Even though it was queued last we expect the highest priority frame to be popped first, after
   // all that's what a priority queue does.
@@ -63,19 +66,22 @@ TEST(PriorityQueueTest, Pop) {
   EXPECT_EQ(queue.size(), 2u);
   EXPECT_FALSE(queue.empty());
 
-  frames = queue.pop(1, kAllPrioritiesAllowed);
+  frames.clear();
+  queue.pop(1, kAllPrioritiesAllowed, &frames);
   ASSERT_EQ(frames.size(), 1u);
   EXPECT_EQ(frames.front().Priority(), 1u);
   EXPECT_EQ(queue.size(), 1u);
   EXPECT_FALSE(queue.empty());
 
-  frames = queue.pop(1, kAllPrioritiesAllowed);
+  frames.clear();
+  queue.pop(1, kAllPrioritiesAllowed, &frames);
   ASSERT_EQ(frames.size(), 1u);
   EXPECT_EQ(frames.front().Priority(), 0u);
   EXPECT_EQ(queue.size(), 0u);
   EXPECT_TRUE(queue.empty());
 
-  frames = queue.pop(1, kAllPrioritiesAllowed);
+  frames.clear();
+  queue.pop(1, kAllPrioritiesAllowed, &frames);
   EXPECT_TRUE(frames.empty());
 }
 
@@ -86,7 +92,8 @@ TEST(PriorityQueueTest, PopMultiple) {
   queue.push(CreateTestFrame(1u));
   queue.push(CreateTestFrame(7u));
 
-  cpp20::span<Frame> frames = queue.pop(3u, kAllPrioritiesAllowed);
+  FrameContainer frames;
+  queue.pop(3u, kAllPrioritiesAllowed, &frames);
   ASSERT_EQ(frames.size(), 3u);
   EXPECT_EQ(frames[0].Priority(), 7u);
   EXPECT_EQ(frames[1].Priority(), 3u);
@@ -97,7 +104,8 @@ TEST(PriorityQueueTest, PopMultiple) {
   ASSERT_EQ(queue.size(), 2u);
 
   // Request more than available, should get as many as possible
-  frames = queue.pop(3u, kAllPrioritiesAllowed);
+  frames.clear();
+  queue.pop(3u, kAllPrioritiesAllowed, &frames);
   ASSERT_EQ(frames.size(), 2u);
   EXPECT_EQ(frames[0].Priority(), 4u);
   EXPECT_EQ(frames[1].Priority(), 2u);
@@ -110,10 +118,10 @@ TEST(PriorityQueueTest, EvictByPriority) {
 
   // Create a few test frames with varying priorities and store their buffer IDs so we can verify
   // the ordering later.
-  Frame frame5 = CreateTestFrame(3u);
-  Frame frame6 = CreateTestFrame(2u);
+  Frame frame5 = CreateTestFrame(4u);
+  Frame frame6 = CreateTestFrame(3u);
   Frame frame7 = CreateTestFrame(1u);
-  Frame frame8 = CreateTestFrame(4u);
+  Frame frame8 = CreateTestFrame(5u);
   // Store the buffer IDs before we move the frames.
   uint16_t buffer_id5 = frame5.BufferId();
   uint16_t buffer_id6 = frame6.BufferId();
@@ -131,7 +139,8 @@ TEST(PriorityQueueTest, EvictByPriority) {
   ASSERT_EQ(queue.size(), kQueueCapacity);
 
   // Clear queue by popping everything
-  cpp20::span<Frame> frames = queue.pop(queue.size(), kAllPrioritiesAllowed);
+  FrameContainer frames;
+  queue.pop(queue.size(), kAllPrioritiesAllowed, &frames);
 
   // Assert that the ordering of the popped frames is correct and that the correct frame was
   // evicted.
@@ -167,7 +176,8 @@ TEST(PriorityQueueTest, EvictOldestFirst) {
   ASSERT_EQ(queue.size(), kQueueCapacity);
 
   // Clear queue by popping everything
-  cpp20::span<Frame> frames = queue.pop(queue.size(), kAllPrioritiesAllowed);
+  FrameContainer frames;
+  queue.pop(queue.size(), kAllPrioritiesAllowed, &frames);
 
   // Assert that the ordering of the popped frames is correct and that the correct frame was
   // evicted.
@@ -211,7 +221,8 @@ TEST(PriorityQueueTest, SaturationBalance) {
     for (size_t streamTwo = 0; streamTwo < kPushesStreamTwoPerLoop; ++streamTwo) {
       queue.push(CreateTestFrame(kStreamTwoPriority));
     }
-    cpp20::span<Frame> frames = queue.pop(kPopsPerLoop, kAllPrioritiesAllowed);
+    FrameContainer frames;
+    queue.pop(kPopsPerLoop, kAllPrioritiesAllowed, &frames);
     for (const auto& frame : frames) {
       if (frame.Priority() == kStreamOnePriority) {
         ++stream_one_frames;
@@ -276,7 +287,8 @@ TEST_F(PopulatedQueueTestFixture, PopWithLimitedPriorities) {
 
   // Pop as many frames as we can with only a single priority
   size_t original_size = queue_.size();
-  cpp20::span<Frame> frames = queue_.pop(original_size, 0b0100'0000);
+  FrameContainer frames;
+  queue_.pop(original_size, 0b0100'0000, &frames);
   EXPECT_EQ(frames.size(), priority_counts_[6]);
   EXPECT_EQ(queue_.size(), original_size - priority_counts_[6]);
   for (auto& frame : frames) {
@@ -285,7 +297,8 @@ TEST_F(PopulatedQueueTestFixture, PopWithLimitedPriorities) {
 
   // Pop as many frames as we can with multiple priorities
   original_size = queue_.size();
-  frames = queue_.pop(original_size, 0b0000'1001);
+  frames.clear();
+  queue_.pop(original_size, 0b0000'1001, &frames);
   const size_t expected_num_frames = priority_counts_[0] + priority_counts_[3];
   ASSERT_EQ(frames.size(), expected_num_frames);
   EXPECT_EQ(queue_.size(), original_size - expected_num_frames);
@@ -306,11 +319,32 @@ TEST_F(PopulatedQueueTestFixture, PopWithLimitedPriorities) {
   // with the highest priority should be popped.
   ASSERT_GT(priority_counts_[7], 0u);
   ASSERT_EQ(priority_counts_[7], queue_.size(0b1000'0000));
-  frames = queue_.pop(priority_counts_[7] - 1, 0b1011'0000);
+  frames.clear();
+  queue_.pop(priority_counts_[7] - 1, 0b1011'0000, &frames);
   ASSERT_EQ(frames.size(), priority_counts_[7] - 1);
   for (auto& frame : frames) {
     EXPECT_EQ(frame.Priority(), 7u);
   }
+}
+
+TEST_F(PopulatedQueueTestFixture, PopAppends) {
+  FrameContainer frames;
+
+  const size_t first_pop_size = queue_.size() / 2;
+  ASSERT_GT(first_pop_size, 0);
+  queue_.pop(first_pop_size, kAllPrioritiesAllowed, &frames);
+  EXPECT_EQ(first_pop_size, frames.size());
+
+  const uint16_t first_buffer_id = frames.front().BufferId();
+
+  // Pop again and verify that frames were appended and that the frame container was not cleared.
+  const size_t second_pop_size = first_pop_size / 2;
+  ASSERT_GT(second_pop_size, 0);
+  queue_.pop(second_pop_size, kAllPrioritiesAllowed, &frames);
+  EXPECT_EQ(first_pop_size + second_pop_size, frames.size());
+
+  // Verify that the first frame is still at the beginning, ensuring that pop appends, not prepends.
+  EXPECT_EQ(first_buffer_id, frames.front().BufferId());
 }
 
 TEST(PriorityQueueTest, PopIfMatchesPriority) {
@@ -329,8 +363,8 @@ TEST(PriorityQueueTest, PopIfMatchesPriority) {
 
   const size_t queue_size = queue.size();
 
-  cpp20::span<Frame> frames =
-      queue.pop_if([](const Frame& frame) { return frame.Priority() == kPopWithPriority; });
+  FrameContainer frames;
+  queue.pop_if([](const Frame& frame) { return frame.Priority() == kPopWithPriority; }, &frames);
   ASSERT_EQ(frames.size(), 5u);
   EXPECT_EQ(queue.size(), queue_size - frames.size());
 
@@ -340,7 +374,9 @@ TEST(PriorityQueueTest, PopIfMatchesPriority) {
 
   // Now attempt to pop frames with the same priority that we popped using pop_if, there should be
   // none.
-  ASSERT_TRUE(queue.pop(100u, 1 << kPopWithPriority).empty());
+  frames.clear();
+  queue.pop(100u, 1 << kPopWithPriority, &frames);
+  ASSERT_TRUE(frames.empty());
 }
 
 TEST(PriorityQueueTest, PopIfEveryOtherFrame) {
@@ -361,7 +397,8 @@ TEST(PriorityQueueTest, PopIfEveryOtherFrame) {
   const size_t queue_size = queue.size();
 
   size_t counter = 0;
-  cpp20::span<Frame> frames = queue.pop_if([&](const Frame& frame) { return counter++ % 2 == 0; });
+  FrameContainer frames;
+  queue.pop_if([&](const Frame& frame) { return counter++ % 2 == 0; }, &frames);
   ASSERT_EQ(counter, queue_size);
   ASSERT_EQ(frames.size(), 5u);
   EXPECT_EQ(queue.size(), queue_size - frames.size());
@@ -387,7 +424,8 @@ TEST(PriorityQueueTest, PopIfEverything) {
 
   const size_t queue_size = queue.size();
 
-  cpp20::span<Frame> frames = queue.pop_if([](const Frame& frame) { return true; });
+  FrameContainer frames;
+  queue.pop_if([](const Frame& frame) { return true; }, &frames);
 
   ASSERT_EQ(queue_size, frames.size());
   EXPECT_TRUE(queue.empty());
@@ -398,6 +436,29 @@ TEST(PriorityQueueTest, PopIfEverything) {
   EXPECT_EQ(frames[2].Priority(), 6u);
   EXPECT_EQ(frames[3].Priority(), 5u);
   EXPECT_EQ(frames[4].Priority(), 5u);
+}
+
+TEST_F(PopulatedQueueTestFixture, PopIfAppends) {
+  FrameContainer frames;
+
+  const size_t first_pop_size = queue_.size() / 2;
+  ASSERT_GT(first_pop_size, 0);
+  size_t counter = 0;
+  queue_.pop_if([&](const Frame&) { return counter++ < first_pop_size; }, &frames);
+  EXPECT_EQ(first_pop_size, frames.size());
+
+  const uint16_t first_buffer_id = frames.front().BufferId();
+
+  // Pop again and verify that frames were appended and that the frame container was not cleared.
+  const size_t second_pop_size = first_pop_size / 2;
+  ASSERT_GT(second_pop_size, 0);
+  counter = 0;
+  queue_.pop_if([&](const Frame&) { return counter++ < second_pop_size; }, &frames);
+  EXPECT_EQ(first_pop_size + second_pop_size, frames.size());
+
+  // Verify that the first frame is still at the beginning, ensuring that pop_if appends, not
+  // prepends.
+  EXPECT_EQ(first_buffer_id, frames.front().BufferId());
 }
 
 }  // namespace
