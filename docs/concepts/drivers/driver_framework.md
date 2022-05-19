@@ -52,8 +52,8 @@ Every driver lives in a driver host, which runs as a Fuchsia component
 a Fuchsia system. Each driver host is a process, meaning it has its own address
 space and manages its own set of threads.
 
-After the driver manager matches and binds a driver to a node, it creates an
-instance of the driver in a driver host. The driver host then initializes the
+After the driver manager binds a driver to a node, it asks a driver host to
+create an instance of the driver. The driver host then initializes the
 driver. A driver's initialization involves calling the driver's start hook
 (the `Start()` function in the driver’s code) and handing the driver control of
 the node to which it’s bound.
