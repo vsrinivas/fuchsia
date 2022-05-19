@@ -272,18 +272,9 @@ bool VkReadbackTest::InitImage() {
     }
   }
 
-  vk::PhysicalDeviceMemoryProperties memory_props;
-  ctx_->physical_device().getMemoryProperties(&memory_props);
-
-  uint32_t memory_type = 0;
-  for (; memory_type < VK_MAX_MEMORY_TYPES; memory_type++) {
-    if ((memory_reqs.memoryTypeBits & (1 << memory_type)) &&
-        (memory_props.memoryTypes[memory_type].propertyFlags &
-         vk::MemoryPropertyFlagBits::eHostCoherent)) {
-      break;
-    }
-  }
-  if (memory_type >= VK_MAX_MEMORY_TYPES) {
+  vk::DeviceSize allocation_size = memory_reqs.size + bind_offset_;
+  uint32_t memory_type = FindReadableMemoryType(allocation_size, memory_reqs.memoryTypeBits);
+  if (memory_type == VK_MAX_MEMORY_TYPES) {
     RTN_MSG(false, "Can't find host mappable memory type for image.\n");
   }
 
@@ -306,7 +297,7 @@ bool VkReadbackTest::InitImage() {
   } else {
     mem_alloc_info.pNext = nullptr;
   }
-  mem_alloc_info.allocationSize = memory_reqs.size + bind_offset_;
+  mem_alloc_info.allocationSize = allocation_size;
   mem_alloc_info.memoryTypeIndex = memory_type;
 
   auto rv_device_memory =
@@ -343,6 +334,37 @@ bool VkReadbackTest::InitImage() {
   return true;
 }
 
+uint32_t VkReadbackTest::FindReadableMemoryType(vk::DeviceSize allocation_size,
+                                                uint32_t memory_type_bits) {
+  vk::PhysicalDeviceMemoryProperties device_memory_properties =
+      ctx_->physical_device().getMemoryProperties();
+  EXPECT_LE(device_memory_properties.memoryTypeCount, VK_MAX_MEMORY_TYPES);
+
+  uint32_t memory_type = 0;
+  for (; memory_type < device_memory_properties.memoryTypeCount; ++memory_type) {
+    if (!(memory_type_bits & (1 << memory_type)))
+      continue;
+
+    vk::MemoryType& memory_type_info = device_memory_properties.memoryTypes[memory_type];
+    EXPECT_LE(memory_type_info.heapIndex, VK_MAX_MEMORY_HEAPS);
+    if (device_memory_properties.memoryHeaps[memory_type_info.heapIndex].size < allocation_size)
+      continue;
+
+    vk::MemoryPropertyFlags memory_type_properties = memory_type_info.propertyFlags;
+
+    // Restrict ourselves to host-coherent memory so we don't need to use
+    // vkInvalidateMappedMemoryRanges() after mapping memory in Readback().
+    if (!(memory_type_properties & vk::MemoryPropertyFlagBits::eHostCoherent))
+      continue;
+
+    EXPECT_TRUE(memory_type_properties & vk::MemoryPropertyFlagBits::eHostVisible)
+        << "Host-coherent memory must always be host-visible";
+
+    return memory_type;
+  }
+  return VK_MAX_MEMORY_TYPES;
+}
+
 #ifdef __Fuchsia__
 bool VkReadbackTest::AllocateFuchsiaImportedMemory(uint32_t exported_memory_handle) {
   const auto& device = ctx_->device();
@@ -363,8 +385,10 @@ bool VkReadbackTest::AllocateFuchsiaImportedMemory(uint32_t exported_memory_hand
       &zircon_handle_props);
   RTN_IF_VK_ERR(false, result, "vkGetMemoryZirconHandlePropertiesFUCHSIA failed.\n");
 
-  // Find index of lowest set bit.
-  uint32_t memory_type = __builtin_ctz(zircon_handle_props.memoryTypeBits);
+  uint32_t memory_type = FindReadableMemoryType(vmo_size, zircon_handle_props.memoryTypeBits);
+  if (memory_type == VK_MAX_MEMORY_TYPES) {
+    RTN_MSG(false, "Can't find host mappable memory type for zircon VMO.\n");
+  }
 
   vk::ImportMemoryZirconHandleInfoFUCHSIA import_memory_handle_info;
   import_memory_handle_info.pNext = nullptr;

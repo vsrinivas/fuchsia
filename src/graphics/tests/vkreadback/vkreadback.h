@@ -66,6 +66,20 @@ class VkReadbackTest {
 
   bool FillCommandBuffer(vk::CommandBuffer& command_buffer, bool transition_image = true);
 
+  // Finds the first device memory type that can be read by the host.
+  //
+  // Returns VK_MAX_MEMORY_TYPES if no suitable memory type exists.
+  //
+  // `allocation_size` is the amount of memory that will be allocated. Only
+  // memory types whose backing heaps support allocations of the given size will
+  // be considered.
+  //
+  // `memory_type_bits` is a bit set of acceptable memory types. Bit i is set
+  // iff memory type i is an acceptable return value. This is intended to
+  // receive the value of a `memoryTypeBits` member in a structure such as
+  // VkMemoryRequirements.
+  uint32_t FindReadableMemoryType(vk::DeviceSize allocation_size, uint32_t memory_type_bits);
+
 #ifdef __Fuchsia__
   bool AllocateFuchsiaImportedMemory(uint32_t device_memory_handle);
   bool AssignExportedMemoryHandle();
