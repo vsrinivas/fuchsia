@@ -138,6 +138,7 @@ fuchsia_driver("platform-bus-x86-driver") {
     "//zircon/system/ulib/driver-unit-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/lazy_init",
     "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/zircon-internal",
@@ -203,7 +204,31 @@ bootfs_test("x86-board-bootfs-test") {
   deps = [ ":x86-board-test" ]
 }
 
+test("x86-ec-test-bin") {
+  output_name = "x86-ec-test"
+  sources = [
+    "acpi-dev/dev-ec-test.cc",
+    "acpi-dev/dev-ec.cc",
+  ]
+  deps = [
+    "//src/devices/board/lib/acpi/test:mock-acpi",
+    "//src/devices/testing/mock-ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//third_party/acpica",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("x86-ec-test") {
+  deps = [ ":x86-ec-test-bin" ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":x64-bind_test" ]
+  deps = [
+    ":x64-bind_test",
+    ":x86-ec-test",
+  ]
 }

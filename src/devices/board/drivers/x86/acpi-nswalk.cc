@@ -22,6 +22,7 @@
 #include <acpica/acpi.h>
 #include <fbl/auto_lock.h>
 
+#include "acpi-dev/dev-ec.h"
 #include "acpi-private.h"
 #include "acpi.h"
 #include "dev.h"
@@ -204,41 +205,42 @@ zx_status_t publish_acpi_devices(acpi::Manager* manager, zx_device_t* platform_b
   // Now walk the ACPI namespace looking for devices we understand, and publish
   // them.  For now, publish only the first PCI bus we encounter.
   // TODO(fxbug.dev/78349): remove this when all drivers are removed from the x86 board driver.
-  acpi_status = acpi->WalkNamespace(
-      ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
-      [acpi_root](ACPI_HANDLE object, uint32_t level, acpi::WalkDirection dir) -> acpi::status<> {
-        // We don't have anything useful to do during the ascent phase.  Just
-        // skip it.
-        if (dir == acpi::WalkDirection::Ascending) {
-          return acpi::ok();
-        }
+  acpi_status = acpi->WalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
+                                    [acpi_root, acpi](ACPI_HANDLE object, uint32_t level,
+                                                      acpi::WalkDirection dir) -> acpi::status<> {
+                                      // We don't have anything useful to do during the ascent
+                                      // phase.  Just skip it.
+                                      if (dir == acpi::WalkDirection::Ascending) {
+                                        return acpi::ok();
+                                      }
 
-        // We are descending.  Grab our object info.
-        acpi::UniquePtr<ACPI_DEVICE_INFO> info;
-        if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
-          return res.take_error();
-        } else {
-          info = std::move(res.value());
-        }
+                                      // We are descending.  Grab our object info.
+                                      acpi::UniquePtr<ACPI_DEVICE_INFO> info;
+                                      if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
+                                        return res.take_error();
+                                      } else {
+                                        info = std::move(res.value());
+                                      }
 
-        // Extract pointers to the hardware ID and the compatible ID if present.
-        // If there is no hardware ID, just skip the device.
-        const std::string_view hid = hid_from_acpi_devinfo(*info);
-        if (hid.empty()) {
-          return acpi::ok();
-        }
+                                      // Extract pointers to the hardware ID and the compatible ID
+                                      // if present. If there is no hardware ID, just skip the
+                                      // device.
+                                      const std::string_view hid = hid_from_acpi_devinfo(*info);
+                                      if (hid.empty()) {
+                                        return acpi::ok();
+                                      }
 
-        // Now, if we recognize the HID, go ahead and deal with publishing the
-        // device.
-        if (hid == LID_HID_STRING) {
-          lid_init(acpi_root, object);
-        } else if (hid == EC_HID_STRING) {
-          ec_init(acpi_root, object);
-        } else if (hid == GOOGLE_TBMC_HID_STRING) {
-          tbmc_init(acpi_root, object);
-        }
-        return acpi::ok();
-      });
+                                      // Now, if we recognize the HID, go ahead and deal with
+                                      // publishing the device.
+                                      if (hid == LID_HID_STRING) {
+                                        lid_init(acpi_root, object);
+                                      } else if (hid == EC_HID_STRING) {
+                                        acpi_ec::EcDevice::Create(acpi_root, acpi, object);
+                                      } else if (hid == GOOGLE_TBMC_HID_STRING) {
+                                        tbmc_init(acpi_root, object);
+                                      }
+                                      return acpi::ok();
+                                    });
 
   if (acpi_status.is_error()) {
     return ZX_ERR_BAD_STATE;

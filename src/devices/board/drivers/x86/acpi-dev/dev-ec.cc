@@ -1,619 +1,513 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/ddk/debug.h>
-#include <lib/ddk/driver.h>
+#include "src/devices/board/drivers/x86/acpi-dev/dev-ec.h"
+
 #include <lib/ddk/hw/inout.h>
-#include <lib/fit/defer.h>
-#include <stdio.h>
-#include <threads.h>
-#include <zircon/compiler.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
+#include <zircon/errors.h>
 
-#include "acpi-private.h"
-#include "dev.h"
-#include "errors.h"
+#include <ddktl/device.h>
 
-#define xprintf(fmt...) zxlogf(TRACE, fmt)
+namespace acpi_ec {
+namespace {
+class RealIoPort : public IoPortInterface {
+ public:
+  uint8_t inp(uint16_t port) override { return ::inp(port); }
 
-/* EC commands */
-#define EC_CMD_READ 0x80
-#define EC_CMD_WRITE 0x81
-#define EC_CMD_QUERY 0x84
+  void outp(uint16_t port, uint8_t value) override { ::outp(port, value); }
 
-/* EC status register bits */
-#define EC_SC_SCI_EVT (1 << 5)
-#define EC_SC_IBF (1 << 1)
-#define EC_SC_OBF (1 << 0)
+  zx_status_t Map(uint16_t port) override {
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+    return zx_ioports_request(get_root_resource(), port, 1);
+  }
 
-/* Thread signals */
-#define IRQ_RECEIVED ZX_EVENT_SIGNALED
-#define EC_THREAD_SHUTDOWN ZX_USER_SIGNAL_0
-#define EC_THREAD_SHUTDOWN_DONE ZX_USER_SIGNAL_1
+  ~RealIoPort() override = default;
+};
+}  // namespace
 
-typedef struct acpi_ec_device {
-  zx_device_t* zxdev;
-
-  ACPI_HANDLE acpi_handle;
-
-  // PIO addresses for EC device
-  uint16_t cmd_port;
-  uint16_t data_port;
-
-  // GPE for EC events
-  ACPI_HANDLE gpe_block;
-  UINT32 gpe;
-
-  // thread for processing events from the EC
-  thrd_t evt_thread;
-
-  zx_handle_t interrupt_event;
-
-  std::mutex lock_;
-
-  bool gpe_setup : 1;
-  bool thread_setup : 1;
-  bool ec_space_setup : 1;
-  bool use_global_lock : 1;
-} acpi_ec_device_t;
-
-static ACPI_STATUS get_ec_handle(ACPI_HANDLE, UINT32, void*, void**);
-static ACPI_STATUS get_ec_gpe_info(ACPI_HANDLE, ACPI_HANDLE*, UINT32*);
-static ACPI_STATUS get_ec_ports(ACPI_HANDLE, uint16_t*, uint16_t*);
-
-static ACPI_STATUS ec_space_setup_handler(ACPI_HANDLE Region, UINT32 Function, void* HandlerContext,
-                                          void** ReturnContext);
-static ACPI_STATUS ec_space_request_handler(UINT32 Function, ACPI_PHYSICAL_ADDRESS Address,
-                                            UINT32 BitWidth, UINT64* Value, void* HandlerContext,
-                                            void* RegionContext);
-
-static zx_status_t wait_for_interrupt(acpi_ec_device_t* dev);
-static zx_status_t execute_read_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t* val);
-static zx_status_t execute_write_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t val);
-static zx_status_t execute_query_op(acpi_ec_device_t* dev, uint8_t* val);
-
-static void acquire_lock(acpi_ec_device_t* dev, uint32_t* handle) __TA_NO_THREAD_SAFETY_ANALYSIS
-    __TA_ACQUIRE(dev->lock_) {
-  if (dev->use_global_lock) {
-    while (AcpiAcquireGlobalLock(0xFFFF, handle) != AE_OK)
-      ;
+zx_status_t EcDevice::Create(zx_device_t* parent, acpi::Acpi* acpi, ACPI_HANDLE handle) {
+  auto device = std::make_unique<EcDevice>(parent, acpi, handle, std::make_unique<RealIoPort>());
+  zx_status_t status = device->Init();
+  if (status == ZX_OK) {
+    // The DDK takes ownership of the device.
+    __UNUSED auto unused = device.release();
+    zxlogf(INFO, "initialised acpi-ec");
   } else {
-    dev->lock_.lock();
+    zxlogf(ERROR, "Failed to init acpi-ec: %s", zx_status_get_string(status));
   }
-}
-
-static void release_lock(acpi_ec_device_t* dev, uint32_t handle) __TA_NO_THREAD_SAFETY_ANALYSIS
-    __TA_RELEASE(dev->lock_) {
-  if (dev->use_global_lock) {
-    AcpiReleaseGlobalLock(handle);
-  } else {
-    dev->lock_.unlock();
-  }
-}
-
-static zx_status_t check_needs_global_lock(acpi_ec_device_t* dev) {
-  dev->use_global_lock = false;
-  ACPI_BUFFER buf = {
-      .Length = ACPI_ALLOCATE_BUFFER,
-      .Pointer = nullptr,
-  };
-  ACPI_STATUS status =
-      AcpiEvaluateObject(dev->acpi_handle, const_cast<ACPI_STRING>("_GLK"), nullptr, &buf);
-  if (status != AE_OK) {
-    if (status == AE_NOT_FOUND) {
-      // Not found means no global lock.
-      return ZX_OK;
-    }
-    zxlogf(ERROR, "EvaluateObject for _GLK failed: %d", status);
-    return acpi_to_zx_status(status);
-  }
-
-  ACPI_OBJECT* obj = static_cast<ACPI_OBJECT*>(buf.Pointer);
-  if (obj->Type != ACPI_TYPE_INTEGER) {
-    zxlogf(ERROR, "_GLK had wrong type: %d", obj->Type);
-    return ZX_ERR_WRONG_TYPE;
-  }
-  dev->use_global_lock = obj->Integer.Value != 0;
-  return ZX_OK;
-}
-
-// Execute the EC_CMD_READ operation.  Requires the ACPI global lock be held.
-static zx_status_t execute_read_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t* val)
-    __TA_REQUIRES(dev->lock_) {
-  // Issue EC command
-  outp(dev->cmd_port, EC_CMD_READ);
-
-  // Wait for EC to read the command so we can write the address
-  while (inp(dev->cmd_port) & EC_SC_IBF) {
-    zx_status_t status = wait_for_interrupt(dev);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  // Specify the address
-  outp(dev->data_port, addr);
-
-  // Wait for EC to read the address and write a response
-  while ((inp(dev->cmd_port) & (EC_SC_OBF | EC_SC_IBF)) != EC_SC_OBF) {
-    zx_status_t status = wait_for_interrupt(dev);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  // Read the response
-  *val = inp(dev->data_port);
-  return ZX_OK;
-}
-
-// Execute the EC_CMD_WRITE operation.  Requires the ACPI global lock be held.
-static zx_status_t execute_write_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t val)
-    __TA_REQUIRES(dev->lock_) {
-  // Issue EC command
-  outp(dev->cmd_port, EC_CMD_WRITE);
-
-  // Wait for EC to read the command so we can write the address
-  while (inp(dev->cmd_port) & EC_SC_IBF) {
-    zx_status_t status = wait_for_interrupt(dev);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  // Specify the address
-  outp(dev->data_port, addr);
-
-  // Wait for EC to read the address
-  while (inp(dev->cmd_port) & EC_SC_IBF) {
-    zx_status_t status = wait_for_interrupt(dev);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  // Write the data
-  outp(dev->data_port, val);
-
-  // Wait for EC to read the data
-  while (inp(dev->cmd_port) & EC_SC_IBF) {
-    zx_status_t status = wait_for_interrupt(dev);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  return ZX_OK;
-}
-
-// Execute the EC_CMD_QUERY operation.  Requires the ACPI global lock be held.
-static zx_status_t execute_query_op(acpi_ec_device_t* dev, uint8_t* event)
-    __TA_REQUIRES(dev->lock_) {
-  // Query EC command
-  outp(dev->cmd_port, EC_CMD_QUERY);
-
-  // Wait for EC to respond
-  while ((inp(dev->cmd_port) & (EC_SC_OBF | EC_SC_IBF)) != EC_SC_OBF) {
-    zx_status_t status = wait_for_interrupt(dev);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  *event = inp(dev->data_port);
-  return ZX_OK;
-}
-
-static ACPI_STATUS ec_space_setup_handler(ACPI_HANDLE Region, UINT32 Function, void* HandlerContext,
-                                          void** ReturnContext) {
-  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(HandlerContext);
-  *ReturnContext = dev;
-
-  if (Function == ACPI_REGION_ACTIVATE) {
-    xprintf("acpi-ec: Setting up EC region");
-    return AE_OK;
-  } else if (Function == ACPI_REGION_DEACTIVATE) {
-    xprintf("acpi-ec: Tearing down EC region");
-    return AE_OK;
-  } else {
-    return AE_SUPPORT;
-  }
-}
-
-static ACPI_STATUS ec_space_request_handler(UINT32 Function, ACPI_PHYSICAL_ADDRESS Address,
-                                            UINT32 BitWidth, UINT64* Value, void* HandlerContext,
-                                            void* RegionContext) {
-  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(HandlerContext);
-
-  if (BitWidth != 8 && BitWidth != 16 && BitWidth != 32 && BitWidth != 64) {
-    return AE_BAD_PARAMETER;
-  }
-  if (Address > UINT8_MAX || Address - 1 + BitWidth / 8 > UINT8_MAX) {
-    return AE_BAD_PARAMETER;
-  }
-
-  UINT32 global_lock = 0;
-  acquire_lock(dev, &global_lock);
-
-  // NB: The processing of the read/write ops below will generate interrupts,
-  // which will unfortunately cause spurious wakeups on the event thread.  One
-  // design that would avoid this is to have that thread responsible for
-  // processing these EC address space requests, but an attempt at an
-  // implementation failed due to apparent deadlocks against the Global Lock.
-
-  const size_t bytes = BitWidth / 8;
-  ACPI_STATUS status = AE_OK;
-  uint8_t* value_bytes = (uint8_t*)Value;
-  if (Function == ACPI_WRITE) {
-    for (size_t i = 0; i < bytes; ++i) {
-      zx_status_t zx_status =
-          execute_write_op(dev, static_cast<uint8_t>(Address + i), value_bytes[i]);
-      if (zx_status != ZX_OK) {
-        status = AE_ERROR;
-        goto finish;
-      }
-    }
-  } else {
-    *Value = 0;
-    for (size_t i = 0; i < bytes; ++i) {
-      zx_status_t zx_status =
-          execute_read_op(dev, static_cast<uint8_t>(Address + i), value_bytes + i);
-      if (zx_status != ZX_OK) {
-        status = AE_ERROR;
-        goto finish;
-      }
-    }
-  }
-
-finish:
-  release_lock(dev, global_lock);
   return status;
 }
 
-static zx_status_t wait_for_interrupt(acpi_ec_device_t* dev) {
-  uint32_t pending;
-  zx_status_t status = zx_object_wait_one(dev->interrupt_event, IRQ_RECEIVED | EC_THREAD_SHUTDOWN,
-                                          ZX_TIME_INFINITE, &pending);
+zx_status_t EcDevice::Init() {
+  // Do we need global lock?
+  zx::status<bool> use_glk = NeedsGlobalLock();
+  if (use_glk.is_error()) {
+    return use_glk.error_value();
+  }
+  use_global_lock_ = *use_glk;
+  inspect_.GetRoot().CreateBool("use-global-lock", use_global_lock_, &inspect_);
+
+  // Create event.
+  zx_status_t status = zx::event::create(0, &irq_);
   if (status != ZX_OK) {
-    printf("acpi-ec: thread wait failed: %d\n", status);
-    zx_object_signal(dev->interrupt_event, 0, EC_THREAD_SHUTDOWN_DONE);
     return status;
   }
+  // Find GPE info.
+  zx::status<std::pair<ACPI_HANDLE, uint32_t>> gpe_info = GetGpeInfo();
+  if (gpe_info.is_error()) {
+    return gpe_info.error_value();
+  }
+  gpe_info_ = *gpe_info;
 
-  if (pending & EC_THREAD_SHUTDOWN) {
-    zx_object_signal(dev->interrupt_event, 0, EC_THREAD_SHUTDOWN_DONE);
-    return ZX_ERR_STOP;
+  // Find I/O ports and map them.
+  zx::status<> io_status = SetupIo();
+  if (io_status.is_error()) {
+    return io_status.error_value();
   }
 
-  /* Clear interrupt */
-  zx_object_signal(dev->interrupt_event, IRQ_RECEIVED, 0);
-  return ZX_OK;
-}
-
-static int acpi_ec_thread(void* arg) {
-  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(arg);
-  UINT32 global_lock;
-
-  while (1) {
-    zx_status_t zx_status = wait_for_interrupt(dev);
-    if (zx_status != ZX_OK) {
-      goto exiting_without_lock;
-    }
-
-    acquire_lock(dev, &global_lock);
-
-    uint8_t status;
-    bool processed_evt = false;
-    while ((status = inp(dev->cmd_port)) & EC_SC_SCI_EVT) {
-      uint8_t event_code;
-      zx_status_t zx_status = execute_query_op(dev, &event_code);
-      if (zx_status != ZX_OK) {
-        goto exiting_with_lock;
-      }
-
-      if (event_code != 0) {
-        char method[5] = {0};
-        snprintf(method, sizeof(method), "_Q%02x", event_code);
-        xprintf("acpi-ec: Invoking method %s", method);
-        AcpiEvaluateObject(dev->acpi_handle, method, NULL, NULL);
-        xprintf("acpi-ec: Invoked method %s", method);
-      } else {
-        xprintf("acpi-ec: Spurious event?");
-      }
-
-      processed_evt = true;
-
-      /* Clear interrupt before we check EVT again, to prevent a spurious
-       * interrupt later.  There could be two sources of that spurious
-       * wakeup: Either we handled two events back-to-back, or we didn't
-       * wait for the OBF interrupt above. */
-      zx_object_signal(dev->interrupt_event, IRQ_RECEIVED, 0);
-    }
-
-    if (!processed_evt) {
-      xprintf("acpi-ec: Spurious wakeup, no evt: %#x", status);
-    }
-
-    release_lock(dev, global_lock);
+  // Set up GPE handler.
+  acpi::status<> gpe_status = acpi_->InstallGpeHandler(
+      gpe_info->first, gpe_info->second, ACPI_GPE_EDGE_TRIGGERED, EcDevice::GpeHandlerThunk, this);
+  if (gpe_status.is_error()) {
+    return gpe_status.zx_status_value();
   }
 
-exiting_with_lock:
-  release_lock(dev, global_lock);
-exiting_without_lock:
-  xprintf("acpi-ec: thread terminated");
-  return 0;
+  gpe_status = acpi_->EnableGpe(gpe_info->first, gpe_info->second);
+  if (gpe_status.is_error()) {
+    return gpe_status.zx_status_value();
+  }
+
+  // Start transaction thread -- some boards seem to call into the address space handler
+  // from AML bytecode when you call InstallAddressSpaceHandler(), so we need to do this first.
+  txn_thread_ = std::thread([this]() { TransactionThread(); });
+
+  // Install address space handler.
+  acpi::status<> addr_space_status = acpi_->InstallAddressSpaceHandler(
+      handle_, ACPI_ADR_SPACE_EC, EcDevice::AddressSpaceThunk, nullptr, this);
+  if (addr_space_status.is_error()) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Start query thread now that we're fully ready to service queries.
+  query_thread_ = std::thread([this]() { QueryThread(); });
+
+  status = DdkAdd(ddk::DeviceAddArgs("acpi-ec")
+                      .set_proto_id(ZX_PROTOCOL_MISC)
+                      .set_inspect_vmo(inspect_.DuplicateVmo()));
+  return status;
 }
 
-static uint32_t raw_ec_event_gpe_handler(ACPI_HANDLE gpe_dev, uint32_t gpe_num, void* ctx) {
-  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(ctx);
-  zx_object_signal(dev->interrupt_event, 0, IRQ_RECEIVED);
-  return ACPI_REENABLE_GPE;
+void EcDevice::DdkUnbind(ddk::UnbindTxn txn) {
+  irq_.signal(0, EcSignal::kEcShutdown);
+  acpi::status<> status = acpi_->DisableGpe(gpe_info_.first, gpe_info_.second);
+  if (status.is_error()) {
+    zxlogf(WARNING, "Failed to disable GPE: %d", status.status_value());
+  }
+  status = acpi_->RemoveGpeHandler(gpe_info_.first, gpe_info_.second, EcDevice::GpeHandlerThunk);
+  if (status.is_error()) {
+    zxlogf(WARNING, "Failed to remove GPE handler: %d", status.status_value());
+  }
+  status =
+      acpi_->RemoveAddressSpaceHandler(handle_, ACPI_ADR_SPACE_EC, EcDevice::AddressSpaceThunk);
+  if (status.is_error()) {
+    zxlogf(WARNING, "failed to remove address space handler: %d", status.status_value());
+  }
+  txn.Reply();
 }
 
-__UNUSED
-static ACPI_STATUS get_ec_handle(ACPI_HANDLE object, UINT32 nesting_level, void* context,
-                                 void** ret) {
-  *(ACPI_HANDLE*)context = object;
+void EcDevice::HandleGpe() {
+  uint8_t data = io_ports_->inp(cmd_port_);
+  zx_signals_t pending = 0;
+  zx_signals_t clear = 0;
+  // IBF:1 = EC is yet to read last byte we wrote, so we can't write another.
+  if ((data & EcStatus::kIbf)) {
+    clear |= EcSignal::kCanWrite;
+  } else {
+    pending |= EcSignal::kCanWrite;
+  }
+
+  // OBF:1 = EC has some data ready for us to read.
+  if ((data & EcStatus::kObf)) {
+    pending |= EcSignal::kCanRead;
+  } else {
+    clear |= EcSignal::kCanRead;
+  }
+
+  // SCI_EVT:1 = EC wants us to run a query command.
+  if ((data & EcStatus::kSciEvt)) {
+    pending |= EcSignal::kPendingEvent;
+  } else {
+    clear |= EcSignal::kPendingEvent;
+  }
+
+  irq_.signal(clear, pending);
+}
+
+ACPI_STATUS EcDevice::SpaceRequest(uint32_t function, ACPI_PHYSICAL_ADDRESS paddr, uint32_t width,
+                                   UINT64* value) {
+  if (width != 8 && width != 16 && width != 32 && width != 64) {
+    return AE_BAD_PARAMETER;
+  }
+  if (paddr > UINT8_MAX || paddr - 1 + (width / 8) > UINT8_MAX) {
+    return AE_BAD_PARAMETER;
+  }
+
+  uint8_t addr = paddr & UINT8_MAX;
+
+  uint8_t bytes = static_cast<uint8_t>(width / 8);
+  uint8_t* value_bytes = reinterpret_cast<uint8_t*>(value);
+
+  if (function == ACPI_WRITE) {
+    for (uint8_t i = 0; i < bytes; i++) {
+      zx_status_t status = Write(addr + i, value_bytes[i]);
+      if (status != ZX_OK) {
+        return AE_ERROR;
+      }
+    }
+  } else {
+    for (uint8_t i = 0; i < bytes; i++) {
+      zx::status<uint8_t> result = Read(addr + i);
+      if (result.is_error()) {
+        return AE_ERROR;
+      }
+      value_bytes[i] = *result;
+    }
+  }
+
   return AE_OK;
 }
 
-static ACPI_STATUS get_ec_gpe_info(ACPI_HANDLE ec_handle, ACPI_HANDLE* gpe_block, UINT32* gpe) {
-  acpi::UniquePtr<ACPI_OBJECT> gpe_obj;
-  {
-    ACPI_BUFFER buffer = {
-        .Length = ACPI_ALLOCATE_BUFFER,
-        .Pointer = NULL,
-    };
-    ACPI_STATUS status = AcpiEvaluateObject(ec_handle, (char*)"_GPE", NULL, &buffer);
-    gpe_obj.reset(static_cast<ACPI_OBJECT*>(buffer.Pointer));
-    if (status != AE_OK) {
-      return status;
+void EcDevice::TransactionThread() {
+  zx_signals_t pending = 0;
+  do {
+    zx::status<zx_signals_t> status = WaitForIrq(EcSignal::kTransactionReady);
+    if (status.is_error()) {
+      if (status.error_value() != ZX_ERR_CANCELED) {
+        zxlogf(ERROR, "irq wait failed: %s", status.status_string());
+      }
+      break;
+    }
+    irq_.signal(EcSignal::kTransactionReady, 0);
+
+    // Take the current transaction queue so we can operate on it.
+    std::vector<Transaction*> txns;
+    {
+      std::scoped_lock lock(transaction_lock_);
+      txns.swap(transaction_queue_);
+    }
+
+    // If we use the global lock, grab it before executing transactions.
+    uint32_t global_lock;
+    if (use_global_lock_) {
+      acpi::status<uint32_t> ret = acpi_->AcquireGlobalLock(0xffff);
+      if (ret.is_error()) {
+        zxlogf(ERROR, "failed to acquire global lock: %d", ret.status_value());
+        // Fail this batch of transactions.
+        for (auto txn : txns) {
+          txn->status = ret.zx_status_value();
+          sync_completion_signal(&txn->done);
+        }
+        continue;
+      }
+      global_lock = *ret;
+    }
+    for (auto txn : txns) {
+      txn->status = DoTransaction(txn);
+      sync_completion_signal(&txn->done);
+      finished_txns_.Add(1);
+    }
+
+    if (use_global_lock_) {
+      acpi::status<> ret = acpi_->ReleaseGlobalLock(global_lock);
+      if (ret.is_error()) {
+        zxlogf(ERROR, "failed to release global lock: %d", ret.status_value());
+        // Not a lot we can do here.
+      }
+    }
+
+  } while ((pending & kEcShutdown) == 0);
+}
+
+zx_status_t EcDevice::DoTransaction(Transaction* txn) {
+  // Clear "can write", so that we don't spuriously write data before the command has been received.
+  irq_.signal(EcSignal::kCanWrite, 0);
+  // Issue the command.
+  io_ports_->outp(cmd_port_, txn->op);
+  switch (txn->op) {
+    case EcCmd::kRead: {
+      // Wait until we can write the address.
+      zx::status<zx_signals_t> status = WaitForIrq(EcSignal::kCanWrite);
+      if (status.is_error()) {
+        return status.error_value();
+      }
+      irq_.signal(EcSignal::kCanWrite, 0);
+
+      // Specify the address
+      io_ports_->outp(data_port_, txn->addr);
+
+      // Wait until we can read the value.
+      status = WaitForIrq(EcSignal::kCanRead);
+      if (status.is_error()) {
+        return status.error_value();
+      }
+
+      irq_.signal(EcSignal::kCanRead, 0);
+
+      // Return the value.
+      txn->value = io_ports_->inp(data_port_);
+      break;
+    }
+    case EcCmd::kWrite: {
+      // Wait until we can write the address.
+      zx::status<zx_signals_t> status = WaitForIrq(EcSignal::kCanWrite);
+      if (status.is_error()) {
+        return status.error_value();
+      }
+      irq_.signal(EcSignal::kCanWrite, 0);
+
+      // Specify the address
+      io_ports_->outp(data_port_, txn->addr);
+
+      // Wait until we can write the value.
+      status = WaitForIrq(EcSignal::kCanWrite);
+      if (status.is_error()) {
+        return status.error_value();
+      }
+
+      irq_.signal(EcSignal::kCanWrite, 0);
+
+      // Specify the value
+      io_ports_->outp(data_port_, txn->value);
+
+      // Wait for EC to read the value.
+      status = WaitForIrq(EcSignal::kCanWrite);
+      if (status.is_error()) {
+        return status.error_value();
+      }
+      irq_.signal(EcSignal::kCanWrite, 0);
+
+      break;
+    }
+    case EcCmd::kQuery: {
+      // Wait for the EC to respond.
+      zx::status<zx_signals_t> status = WaitForIrq(EcSignal::kCanRead);
+      if (status.is_error()) {
+        return status.error_value();
+      }
+
+      irq_.signal(EcSignal::kCanRead, 0);
+
+      txn->value = io_ports_->inp(data_port_);
+      break;
     }
   }
 
-  auto cleanup = fit::defer([]() { xprintf("Failed to intepret EC GPE number"); });
+  return ZX_OK;
+}
+
+zx::status<zx_signals_t> EcDevice::WaitForIrq(zx_signals_t signals) {
+  zx_signals_t pending;
+  signals |= EcSignal::kEcShutdown;
+  zx_status_t status = irq_.wait_one(signals, zx::time::infinite(), &pending);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  if (pending & EcSignal::kEcShutdown) {
+    return zx::error(ZX_ERR_CANCELED);
+  }
+
+  return zx::ok(pending);
+}
+
+void EcDevice::QueryThread() {
+  while (true) {
+    zx::status<zx_signals_t> status = WaitForIrq(EcSignal::kPendingEvent);
+    if (status.is_error()) {
+      if (status.error_value() != ZX_ERR_CANCELED) {
+        zxlogf(ERROR, "irq wait failed: %s", status.status_string());
+      }
+      break;
+    }
+
+    uint8_t event;
+    while (io_ports_->inp(cmd_port_) & EcStatus::kSciEvt) {
+      zx::status<uint8_t> ret = Query();
+      if (ret.is_error()) {
+        break;
+      }
+      event = *ret;
+      if (event == 0) {
+        break;
+      }
+
+      char method[5] = {0};
+      snprintf(method, sizeof(method), "_Q%02x", event);
+      last_query_.Set(method);
+      // Don't care about return value.
+      __UNUSED auto status = acpi_->EvaluateObject(handle_, method, std::nullopt);
+    }
+
+    irq_.signal(EcSignal::kPendingEvent, 0);
+  }
+}
+
+zx_status_t EcDevice::Write(uint8_t addr, uint8_t val) {
+  Transaction txn{
+      .op = EcCmd::kWrite,
+      .addr = addr,
+      .value = val,
+  };
+  zx_status_t status = QueueTransactionAndWait(&txn);
+  return status;
+}
+
+zx::status<uint8_t> EcDevice::Read(uint8_t addr) {
+  Transaction txn{
+      .op = EcCmd::kRead,
+      .addr = addr,
+  };
+  zx_status_t status = QueueTransactionAndWait(&txn);
+  if (status == ZX_OK) {
+    return zx::ok(txn.value);
+  }
+  return zx::error(status);
+}
+
+zx::status<uint8_t> EcDevice::Query() {
+  Transaction txn{
+      .op = EcCmd::kQuery,
+  };
+  zx_status_t status = QueueTransactionAndWait(&txn);
+  if (status == ZX_OK) {
+    return zx::ok(txn.value);
+  }
+  return zx::error(status);
+}
+
+zx_status_t EcDevice::QueueTransactionAndWait(Transaction* txn) {
+  {
+    std::scoped_lock lock(transaction_lock_);
+    transaction_queue_.emplace_back(txn);
+    zx_status_t status = irq_.signal(0, EcSignal::kTransactionReady);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "failed to signal transaction ready");
+      return status;
+    }
+  }
+  sync_completion_wait(&txn->done, ZX_TIME_INFINITE);
+  return txn->status;
+}
+
+zx::status<bool> EcDevice::NeedsGlobalLock() {
+  acpi::status<acpi::UniquePtr<ACPI_OBJECT>> ret =
+      acpi_->EvaluateObject(handle_, "_GLK", std::nullopt);
+  if (ret.is_error()) {
+    if (ret.error_value() == AE_NOT_FOUND) {
+      // Not found means no global lock.
+      return zx::ok(false);
+    }
+    zxlogf(ERROR, "EvaluateObject for _GLK failed: %d", ret.error_value());
+    return zx::error(ret.zx_status_value());
+  }
+
+  auto obj = std::move(*ret);
+  if (obj->Type != ACPI_TYPE_INTEGER) {
+    zxlogf(ERROR, "_GLK had wrong type: %d", obj->Type);
+    return zx::error(ZX_ERR_WRONG_TYPE);
+  }
+  return zx::ok(obj->Integer.Value != 0);
+}
+
+zx::status<std::pair<ACPI_HANDLE, uint32_t>> EcDevice::GetGpeInfo() {
+  acpi::status<acpi::UniquePtr<ACPI_OBJECT>> ret =
+      acpi_->EvaluateObject(handle_, "_GPE", std::nullopt);
+  if (ret.is_error()) {
+    return zx::error(ret.zx_status_value());
+  }
+
+  ACPI_HANDLE block = nullptr;
+  uint32_t number = 0;
 
   /* According to section 12.11 of ACPI v6.1, a _GPE object on this device
    * evaluates to either an integer specifying bit in the GPEx_STS blocks
    * to use, or a package specifying which GPE block and which bit inside
    * that block to use. */
-  if (gpe_obj->Type == ACPI_TYPE_INTEGER) {
-    *gpe_block = NULL;
-    *gpe = static_cast<uint32_t>(gpe_obj->Integer.Value);
-  } else if (gpe_obj->Type == ACPI_TYPE_PACKAGE) {
-    if (gpe_obj->Package.Count != 2) {
-      return AE_BAD_DATA;
+  if (ret->Type == ACPI_TYPE_INTEGER) {
+    number = static_cast<uint32_t>(ret->Integer.Value);
+  } else if (ret->Type == ACPI_TYPE_PACKAGE) {
+    if (ret->Package.Count != 2) {
+      return zx::error(ZX_ERR_WRONG_TYPE);
     }
-    ACPI_OBJECT* block_obj = &gpe_obj->Package.Elements[0];
-    ACPI_OBJECT* gpe_num_obj = &gpe_obj->Package.Elements[1];
+    ACPI_OBJECT* block_obj = &ret->Package.Elements[0];
+    ACPI_OBJECT* gpe_num_obj = &ret->Package.Elements[1];
     if (block_obj->Type != ACPI_TYPE_LOCAL_REFERENCE) {
-      return AE_BAD_DATA;
+      return zx::error(ZX_ERR_WRONG_TYPE);
     }
     if (gpe_num_obj->Type != ACPI_TYPE_INTEGER) {
-      return AE_BAD_DATA;
+      return zx::error(ZX_ERR_WRONG_TYPE);
     }
-    *gpe_block = block_obj->Reference.Handle;
-    *gpe = static_cast<uint32_t>(gpe_num_obj->Integer.Value);
+    block = block_obj->Reference.Handle;
+    number = static_cast<uint32_t>(gpe_num_obj->Integer.Value);
   } else {
-    return AE_BAD_DATA;
+    return zx::error(ZX_ERR_WRONG_TYPE);
   }
 
-  cleanup.cancel();
-  return AE_OK;
+  return zx::ok(std::make_pair(block, number));
 }
 
-struct ec_ports_callback_ctx {
-  uint16_t* data_port;
-  uint16_t* cmd_port;
-  unsigned int resource_num;
-};
+zx::status<> EcDevice::SetupIo() {
+  size_t resource_count = 0;
+  acpi::status<> ret = acpi_->WalkResources(
+      handle_, "_CRS", [this, &resource_count](ACPI_RESOURCE* rsrc) -> acpi::status<> {
+        if (rsrc->Type == ACPI_RESOURCE_TYPE_END_TAG) {
+          return acpi::ok();
+        }
 
-static ACPI_STATUS get_ec_ports_callback(ACPI_RESOURCE* Resource, void* Context) {
-  struct ec_ports_callback_ctx* ctx = static_cast<ec_ports_callback_ctx*>(Context);
+        /* The spec says there will be at most 3 resources */
+        if (resource_count >= 3) {
+          return acpi::error(AE_BAD_DATA);
+        }
+        /* The third resource only exists on HW-Reduced platforms, which
+         * we don't support at the moment. */
+        if (resource_count == 2) {
+          return acpi::error(AE_NOT_IMPLEMENTED);
+        }
 
-  if (Resource->Type == ACPI_RESOURCE_TYPE_END_TAG) {
-    return AE_OK;
-  }
+        /* The two resources we're expecting are both address regions.
+         * First the data one, then the command one.  We assume they're
+         * single IO ports. */
+        if (rsrc->Type != ACPI_RESOURCE_TYPE_IO) {
+          return acpi::error(AE_SUPPORT);
+        }
+        if (rsrc->Data.Io.Maximum != rsrc->Data.Io.Minimum) {
+          return acpi::error(AE_SUPPORT);
+        }
 
-  /* The spec says there will be at most 3 resources */
-  if (ctx->resource_num >= 3) {
-    return AE_BAD_DATA;
-  }
-  /* The third resource only exists on HW-Reduced platforms, which we don't
-   * support at the moment. */
-  if (ctx->resource_num == 2) {
-    xprintf("RESOURCE TYPE %d", Resource->Type);
-    return AE_NOT_IMPLEMENTED;
-  }
+        uint16_t port = rsrc->Data.Io.Minimum;
+        if (resource_count == 0) {
+          data_port_ = port;
+        } else {
+          cmd_port_ = port;
+        }
 
-  /* The two resources we're expecting are both address regions.  First the
-   * data one, then the command one.  We assume they're single IO ports. */
-  if (Resource->Type != ACPI_RESOURCE_TYPE_IO) {
-    return AE_SUPPORT;
-  }
-  if (Resource->Data.Io.Maximum != Resource->Data.Io.Minimum) {
-    return AE_SUPPORT;
-  }
+        resource_count++;
+        return acpi::ok();
+      });
 
-  uint16_t port = Resource->Data.Io.Minimum;
-  if (ctx->resource_num == 0) {
-    *ctx->data_port = port;
-  } else {
-    *ctx->cmd_port = port;
-  }
-
-  ctx->resource_num++;
-  return AE_OK;
-}
-
-static ACPI_STATUS get_ec_ports(ACPI_HANDLE ec_handle, uint16_t* data_port, uint16_t* cmd_port) {
-  struct ec_ports_callback_ctx ctx = {
-      .data_port = data_port,
-      .cmd_port = cmd_port,
-      .resource_num = 0,
-  };
-
-  return AcpiWalkResources(ec_handle, (char*)"_CRS", get_ec_ports_callback, &ctx);
-}
-
-static void acpi_ec_release(void* ctx) {
-  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(ctx);
-
-  if (dev->ec_space_setup) {
-    AcpiRemoveAddressSpaceHandler(dev->acpi_handle, ACPI_ADR_SPACE_EC, ec_space_request_handler);
-  }
-
-  if (dev->gpe_setup) {
-    AcpiDisableGpe(dev->gpe_block, dev->gpe);
-    AcpiRemoveGpeHandler(dev->gpe_block, dev->gpe, raw_ec_event_gpe_handler);
-  }
-
-  if (dev->interrupt_event != ZX_HANDLE_INVALID) {
-    if (dev->thread_setup) {
-      /* Shutdown the EC thread */
-      zx_object_signal(dev->interrupt_event, 0, EC_THREAD_SHUTDOWN);
-      zx_object_wait_one(dev->interrupt_event, EC_THREAD_SHUTDOWN_DONE, ZX_TIME_INFINITE, NULL);
-      thrd_join(dev->evt_thread, NULL);
-    }
-
-    zx_handle_close(dev->interrupt_event);
-  }
-
-  free(dev);
-}
-
-static void acpi_ec_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
-                            uint8_t suspend_reason) {
-  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(ctx);
-
-  if (suspend_reason != DEVICE_SUSPEND_REASON_MEXEC) {
-    device_suspend_reply(dev->zxdev, ZX_OK, requested_state);
-    return;
-  }
-
-  AcpiRemoveAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_EC, ec_space_request_handler);
-  dev->ec_space_setup = false;
-
-  AcpiDisableGpe(dev->gpe_block, dev->gpe);
-  AcpiRemoveGpeHandler(dev->gpe_block, dev->gpe, raw_ec_event_gpe_handler);
-  dev->gpe_setup = false;
-
-  zx_object_signal(dev->interrupt_event, 0, EC_THREAD_SHUTDOWN);
-  zx_object_wait_one(dev->interrupt_event, EC_THREAD_SHUTDOWN_DONE, ZX_TIME_INFINITE, NULL);
-  thrd_join(dev->evt_thread, NULL);
-  zx_handle_close(dev->interrupt_event);
-  dev->interrupt_event = ZX_HANDLE_INVALID;
-  device_suspend_reply(dev->zxdev, ZX_OK, requested_state);
-}
-
-static zx_protocol_device_t acpi_ec_device_proto = [] {
-  zx_protocol_device_t ops = {};
-  ops.version = DEVICE_OPS_VERSION;
-  ops.release = acpi_ec_release;
-  ops.suspend = acpi_ec_suspend;
-  return ops;
-}();
-
-zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
-  xprintf("acpi-ec: init");
-
-  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(calloc(1, sizeof(acpi_ec_device_t)));
-  if (!dev) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  dev->acpi_handle = acpi_handle;
-
-  check_needs_global_lock(dev);
-
-  zx_status_t err = zx_event_create(0, &dev->interrupt_event);
-  if (err != ZX_OK) {
-    xprintf("acpi-ec: Failed to create event: %d", err);
-    acpi_ec_release(dev);
-    return err;
-  }
-
-  int ret;
-
-  ACPI_STATUS status = get_ec_gpe_info(acpi_handle, &dev->gpe_block, &dev->gpe);
-  if (status != AE_OK) {
-    xprintf("acpi-ec: Failed to decode GPE info: %d", status);
-    goto acpi_error;
-  }
-
-  status = get_ec_ports(acpi_handle, &dev->data_port, &dev->cmd_port);
-  if (status != AE_OK) {
-    xprintf("acpi-ec: Failed to decode comm info: %d", status);
-    goto acpi_error;
-  }
-
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  status = zx_ioports_request(get_root_resource(), dev->data_port, 1);
+  zx_status_t status = io_ports_->Map(data_port_);
   if (status != ZX_OK) {
-    xprintf("acpi-ec: Failed to map ec data port: %d", status);
-    goto acpi_error;
+    zxlogf(ERROR, "acpi-ec: Failed to map ec data port: %s", zx_status_get_string(status));
+    return zx::error(status);
   }
-  status = zx_ioports_request(get_root_resource(), dev->cmd_port, 1);
+  status = io_ports_->Map(cmd_port_);
   if (status != ZX_OK) {
-    xprintf("acpi-ec: Failed to map ec cmd port: %d", status);
-    goto acpi_error;
+    zxlogf(ERROR, "acpi-ec: Failed to map ec cmd port: %s", zx_status_get_string(status));
+    return zx::error(status);
   }
 
-  /* Setup GPE handling */
-  status = AcpiInstallGpeHandler(dev->gpe_block, dev->gpe, ACPI_GPE_EDGE_TRIGGERED,
-                                 raw_ec_event_gpe_handler, dev);
-  if (status != AE_OK) {
-    xprintf("acpi-ec: Failed to install GPE %d: %x", dev->gpe, status);
-    goto acpi_error;
-  }
-  status = AcpiEnableGpe(dev->gpe_block, dev->gpe);
-  if (status != AE_OK) {
-    xprintf("acpi-ec: Failed to enable GPE %d: %x", dev->gpe, status);
-    AcpiRemoveGpeHandler(dev->gpe_block, dev->gpe, raw_ec_event_gpe_handler);
-    goto acpi_error;
-  }
-  dev->gpe_setup = true;
-
-  status = AcpiInstallAddressSpaceHandler(dev->acpi_handle, ACPI_ADR_SPACE_EC,
-                                          ec_space_request_handler, ec_space_setup_handler, dev);
-  if (status != AE_OK) {
-    xprintf("acpi-ec: Failed to install ec space handler");
-    acpi_ec_release(dev);
-    return acpi_to_zx_status(status);
-  }
-  dev->ec_space_setup = true;
-
-  /* TODO(teisenbe): This thread should ideally be at a high priority, since
-     it takes the ACPI global lock which is shared with SMM. */
-  ret = thrd_create_with_name(&dev->evt_thread, acpi_ec_thread, dev, "acpi-ec-evt");
-  if (ret != thrd_success) {
-    xprintf("acpi-ec: Failed to create thread");
-    acpi_ec_release(dev);
-    return ZX_ERR_INTERNAL;
-  }
-  dev->thread_setup = true;
-
-  {
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "acpi-ec";
-    args.ctx = dev;
-    args.ops = &acpi_ec_device_proto;
-    args.proto_id = ZX_PROTOCOL_MISC;
-
-    status = device_add(parent, &args, &dev->zxdev);
-  }
-  if (status != ZX_OK) {
-    xprintf("acpi-ec: could not add device! err=%d", status);
-    acpi_ec_release(dev);
-    return status;
-  }
-
-  printf("acpi-ec: initialized\n");
-  return ZX_OK;
-
-acpi_error:
-  acpi_ec_release(dev);
-  return acpi_to_zx_status(status);
+  return zx::make_status(ret.zx_status_value());
 }
+
+}  // namespace acpi_ec
