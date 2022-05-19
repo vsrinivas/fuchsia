@@ -5,12 +5,20 @@ library fuchsia.thermal;
 
 /// A value to indicate which type of subsystem an Actor connection represents. The Controller may
 /// leverage this extra information to thermally limit only specific subsystems as needed.
+@available(
+        deprecated=7,
+        removed=8,
+        note="fuchsia.thermal.Controller and supporting protocols/types replaced by fuchsia.thermal.ClientStateWatcher")
 type ActorType = strict enum {
     UNSPECIFIED = 1;
     AUDIO = 2;
 };
 
 /// Error codes for the thermal protocol.
+@available(
+        deprecated=7,
+        removed=8,
+        note="fuchsia.thermal.Controller and supporting protocols/types replaced by fuchsia.thermal.ClientStateWatcher")
 type Error = strict enum {
     /// The component encountered an unspecified error while performing the operation.
     INTERNAL = 1;
@@ -21,6 +29,10 @@ type Error = strict enum {
 
 /// The maximum number of trip points that may be specified in the `trip_points` vector argument to
 /// `Subscribe`.
+@available(
+        deprecated=7,
+        removed=8,
+        note="fuchsia.thermal.Controller and supporting protocols/types replaced by fuchsia.thermal.ClientStateWatcher")
 const MAX_TRIP_POINT_COUNT uint32 = 100;
 
 /// The maximum value of the normalized thermal load. This value bounds the width (and therefore
@@ -34,6 +46,10 @@ const MAX_THERMAL_LOAD uint32 = 100;
 ///
 /// See [fuchsia.thermal/Controller.Subscribe] for the relationship between trip points and thermal
 /// states.
+@available(
+        deprecated=7,
+        removed=8,
+        note="fuchsia.thermal.Controller and supporting protocols/types replaced by fuchsia.thermal.ClientStateWatcher")
 type TripPoint = struct {
     /// The trip point will be deactivated when thermal load drops below this value.
     deactivate_below uint32;
@@ -44,6 +60,10 @@ type TripPoint = struct {
 
 /// A protocol providing the API for a client service to subscribe to receive thermal state updates.
 @discoverable
+@available(
+        deprecated=7,
+        removed=8,
+        note="fuchsia.thermal.Controller and supporting protocols/types replaced by fuchsia.thermal.ClientStateWatcher")
 protocol Controller {
     /// Subscribes with the Controller to receive thermal state changes on the specified
     /// [fuchsia.thermal/Actor] proxy handle.
@@ -77,6 +97,10 @@ protocol Controller {
 };
 
 /// The protocol to receive thermal state updates from the fuchsia.thermal/Controller.
+@available(
+        deprecated=7,
+        removed=8,
+        note="fuchsia.thermal.Controller and supporting protocols/types replaced by fuchsia.thermal.ClientStateWatcher")
 protocol Actor {
     /// Sets the Actor's thermal state.
     ///
