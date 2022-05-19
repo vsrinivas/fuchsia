@@ -9,6 +9,7 @@ enum/member fuchsia.component/Error.COLLECTION_NOT_FOUND 9
 enum/member fuchsia.component/Error.INSTANCE_ALREADY_EXISTS 6
 enum/member fuchsia.component/Error.INSTANCE_CANNOT_RESOLVE 8
 enum/member fuchsia.component/Error.INSTANCE_CANNOT_START 7
+enum/member fuchsia.component/Error.INSTANCE_CANNOT_UNRESOLVE 13
 enum/member fuchsia.component/Error.INSTANCE_DIED 11
 enum/member fuchsia.component/Error.INSTANCE_NOT_FOUND 5
 enum/member fuchsia.component/Error.INTERNAL 1

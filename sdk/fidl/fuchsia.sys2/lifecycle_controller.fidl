@@ -28,6 +28,15 @@ protocol LifecycleController {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
     }) -> (struct {}) error fuchsia.component.Error;
 
+    /// Unresolves the component designated by the provided relative moniker
+    /// relative to the component to which the protocol is scoped.
+    ///
+    /// The function returns once the component successfully unresolves, or the
+    /// operation fails.
+    Unresolve(struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    }) -> (struct {}) error fuchsia.component.Error;
+
     /// Creates a child component instance dynamically. This method is equivalent to
     /// fuchsia.component/Realm.CreateChild. See its documentation for more details.
     ///

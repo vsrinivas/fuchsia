@@ -156,6 +156,7 @@ template("component_manager") {
     "src/model/actions/shutdown.rs",
     "src/model/actions/start.rs",
     "src/model/actions/stop.rs",
+    "src/model/actions/unresolve.rs",
     "src/model/addable_directory.rs",
     "src/model/component.rs",
     "src/model/context.rs",

@@ -688,6 +688,9 @@ impl ManagedRealm {
                                     fidl_fuchsia_component::Error::InstanceCannotResolve => {
                                         Err(zx::Status::UNAVAILABLE)
                                     }
+                                    fidl_fuchsia_component::Error::InstanceCannotUnresolve => {
+                                        Err(zx::Status::UNAVAILABLE)
+                                    }
                                     fidl_fuchsia_component::Error::InstanceNotFound => {
                                         Err(zx::Status::NOT_FOUND)
                                     }

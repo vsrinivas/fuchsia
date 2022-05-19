@@ -59,12 +59,13 @@ mod resolve;
 pub mod shutdown;
 pub mod start;
 mod stop;
+mod unresolve;
 
 // Re-export the actions
 pub use {
     destroy_child::DestroyChildAction, discover::DiscoverAction, purge::PurgeAction,
     purge_child::PurgeChildAction, resolve::ResolveAction, shutdown::ShutdownAction,
-    start::StartAction, stop::StopAction,
+    start::StartAction, stop::StopAction, unresolve::UnresolveAction,
 };
 
 use {
@@ -102,6 +103,7 @@ pub trait Action: Send + Sync + 'static {
 pub enum ActionKey {
     Discover,
     Resolve,
+    Unresolve,
     Start,
     Stop,
     Shutdown,
@@ -477,7 +479,6 @@ pub(crate) mod test_utils {
             InstanceState::Resolved(ref s) => match s.get_child(instanced_moniker) {
                 Some(child) => {
                     let child_execution = child.lock_execution().await;
-                    println!("{}", child_execution.runtime.is_some());
                     child_execution.runtime.is_none()
                 }
                 None => false,
@@ -495,6 +496,16 @@ pub(crate) mod test_utils {
         matches!(*state, InstanceState::Purged)
             && execution.runtime.is_none()
             && execution.is_shut_down()
+    }
+
+    pub async fn is_resolved(component: &ComponentInstance) -> bool {
+        let state = component.lock_state().await;
+        matches!(*state, InstanceState::Resolved(_))
+    }
+
+    pub async fn is_discovered(component: &ComponentInstance) -> bool {
+        let state = component.lock_state().await;
+        matches!(*state, InstanceState::Discovered)
     }
 
     pub async fn is_unresolved(component: &ComponentInstance) -> bool {

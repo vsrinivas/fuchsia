@@ -30,6 +30,7 @@ pub fn event_name(event_type: &fsys::EventType) -> String {
         fsys::EventType::Discovered => "discovered",
         fsys::EventType::Destroyed => "destroyed",
         fsys::EventType::Resolved => "resolved",
+        fsys::EventType::Unresolved => "unresolved",
         fsys::EventType::Started => "started",
         fsys::EventType::Stopped => "stopped",
         fsys::EventType::Running => "running",
@@ -432,6 +433,7 @@ create_event!(Purged, purged);
 create_event!(Discovered, discovered);
 create_event!(Destroyed, destroyed);
 create_event!(Resolved, resolved);
+create_event!(Unresolved, unresolved);
 create_event!(Started, started);
 create_event!(
     event_type: Stopped,

@@ -5,7 +5,7 @@
 use {
     crate::framework::RealmCapabilityHost,
     crate::model::{
-        component::{ComponentInstance, StartReason, WeakComponentInstance},
+        component::{ComponentInstance, InstanceState, StartReason, WeakComponentInstance},
         error::ModelError,
         model::Model,
         storage::admin_protocol::StorageAdmin,
@@ -62,7 +62,6 @@ impl LifecycleController {
     ) -> Result<Arc<ComponentInstance>, fcomponent::Error> {
         let abs_moniker = self.construct_moniker(moniker)?;
         let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
-
         model.look_up(&abs_moniker).await.map_err(|e| match e {
             e @ ModelError::ResolverError { .. } | e @ ModelError::ComponentInstanceError {
                 err: ComponentInstanceError::ResolveFailed { .. }
@@ -93,6 +92,32 @@ impl LifecycleController {
                 fcomponent::Error::Internal
             }
         })
+    }
+
+    // If the component exists and is resolved, unresolve it.
+    async fn unresolve_component(&self, moniker: &str) -> Result<(), fcomponent::Error> {
+        let abs_moniker = self.construct_moniker(&moniker)?;
+        let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
+        if let Some(component) = model.find(&abs_moniker).await {
+            if {
+                let state = component.lock_state().await;
+                matches!(*state, InstanceState::Resolved(_))
+            } {
+                component.unresolve().await.map_err(|e: ModelError| {
+                    debug!(
+                        "lifecycle controller failed to unresolve the component instance {}: {:?}",
+                        moniker, e
+                    );
+                    return fcomponent::Error::InstanceCannotUnresolve;
+                })?;
+            }
+        }
+        Ok(())
+    }
+
+    async fn unresolve(&self, moniker: String) -> Result<(), fcomponent::Error> {
+        self.unresolve_component(&moniker).await?;
+        Ok(())
     }
 
     async fn resolve(&self, moniker: String) -> Result<(), fcomponent::Error> {
@@ -196,6 +221,12 @@ impl LifecycleController {
                         .send(&mut res)
                         .unwrap_or_else(|e| warn!("response send failed: {}", e));
                 }
+                fsys::LifecycleControllerRequest::Unresolve { moniker, responder } => {
+                    let mut res = self.unresolve(moniker).await;
+                    responder
+                        .send(&mut res)
+                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
+                }
                 fsys::LifecycleControllerRequest::Start { moniker, responder } => {
                     let mut res = self.start(moniker).await;
                     responder
@@ -251,7 +282,10 @@ impl LifecycleController {
 mod tests {
     use {
         super::*,
-        crate::model::testing::test_helpers::{TestEnvironmentBuilder, TestModelResult},
+        crate::model::{
+            actions::test_utils::{is_discovered, is_resolved},
+            testing::test_helpers::{ActionsTest, TestEnvironmentBuilder, TestModelResult},
+        },
         cm_rust::{
             CapabilityPath, DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource,
             ExposeTarget, StorageDecl, StorageDirectorySource,
@@ -339,7 +373,56 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn lifecycle_stop_test() {
+    async fn lifecycle_controller_unresolve_component_test() {
+        let components = vec![
+            (
+                "root",
+                ComponentDeclBuilder::new()
+                    .add_child(cm_rust::ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fdecl::StartupMode::Eager,
+                        environment: None,
+                        on_terminate: None,
+                    })
+                    .build(),
+            ),
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .add_child(cm_rust::ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fdecl::StartupMode::Eager,
+                        environment: None,
+                        on_terminate: None,
+                    })
+                    .build(),
+            ),
+            ("b", ComponentDeclBuilder::new().build()),
+        ];
+
+        let test = ActionsTest::new("root", components, None).await;
+
+        let lifecycle_controller =
+            LifecycleController::new(Arc::downgrade(&test.model), vec![].into());
+
+        lifecycle_controller.resolve(".".to_string()).await.unwrap();
+        let component_a = test.model.look_up(&vec!["a"].into()).await.unwrap();
+        let component_b = test.model.look_up(&vec!["a", "b"].into()).await.unwrap();
+        assert!(is_resolved(&component_a).await);
+        assert!(is_resolved(&component_b).await);
+
+        lifecycle_controller.unresolve_component(".").await.unwrap();
+        assert!(is_discovered(&component_a).await);
+        assert!(is_discovered(&component_b).await);
+
+        // No error if component doesn't exist.
+        lifecycle_controller.unresolve_component("./nonesuch").await.unwrap();
+    }
+
+    #[fuchsia::test]
+    async fn lifecycle_already_started_test() {
         let components = vec![("root", ComponentDeclBuilder::new().build())];
 
         let test_model_result =

@@ -89,6 +89,7 @@ async fn has_running_child(
             // Variants that are not returned by the `ListChildren` method.
             | fcomponent::Error::InstanceAlreadyExists
             | fcomponent::Error::InstanceCannotResolve
+            | fcomponent::Error::InstanceCannotUnresolve
             | fcomponent::Error::InstanceCannotStart
             | fcomponent::Error::InstanceNotFound
             | fcomponent::Error::Internal

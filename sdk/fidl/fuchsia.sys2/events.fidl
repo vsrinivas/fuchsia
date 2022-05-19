@@ -66,6 +66,9 @@ type EventType = strict enum {
     /// could use to defer the launch of the component. This allows, e.g., a debugger to
     /// perform some setup before any processes are created.
     DEBUG_STARTED = 11;
+
+    /// An instance was unresolved successfully.
+    UNRESOLVED = 12;
 };
 
 /// Describes the result of a state transition.
@@ -124,6 +127,9 @@ type EventErrorPayload = flexible union {
 
     /// Payload for DebugStarted events
    11: debug_started DebugStartedError;
+
+    /// Payload for Unresolved events.
+   12: unresolved UnresolvedError;
 };
 
 /// Error payload for DirectoryReady events
@@ -152,6 +158,9 @@ type PurgedError = table {};
 
 /// Error payload for Resolved events.
 type ResolvedError = table {};
+
+/// Error payload for Unresolved events.
+type UnresolvedError = table {};
 
 /// Error payload for Running events.
 type RunningError = table {
@@ -205,6 +214,9 @@ type EventPayload = flexible resource union {
 
     /// Payload for DebugStarted events
    11: debug_started DebugStartedPayload;
+
+    /// Payload for Unresolved events
+   12: unresolved UnresolvedPayload;
 };
 
 /// Payload for DirectoryReady events
@@ -243,6 +255,9 @@ type DestroyedPayload = table {};
 
 /// Payload for Resolved events.
 type ResolvedPayload = table {};
+
+/// Payload for Unresolved events.
+type UnresolvedPayload = table {};
 
 /// Payload for Running events.
 type RunningPayload = table {

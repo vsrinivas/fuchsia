@@ -39,6 +39,15 @@ pub enum ComponentInstanceError {
         #[source]
         err: ClonableError,
     },
+    // The capability routing static analyzer never produces this error subtype, so we don't need
+    // to serialize it.
+    #[cfg_attr(feature = "serde", serde(skip))]
+    #[error("Failed to unresolve `{}`: {}", moniker, err)]
+    UnresolveFailed {
+        moniker: AbsoluteMoniker,
+        #[source]
+        err: ClonableError,
+    },
 }
 
 impl ComponentInstanceError {
@@ -60,6 +69,10 @@ impl ComponentInstanceError {
 
     pub fn resolve_failed(moniker: AbsoluteMoniker, err: impl Into<anyhow::Error>) -> Self {
         Self::ResolveFailed { moniker, err: err.into().into() }
+    }
+
+    pub fn unresolve_failed(moniker: AbsoluteMoniker, err: impl Into<anyhow::Error>) -> Self {
+        Self::UnresolveFailed { moniker, err: err.into().into() }
     }
 }
 

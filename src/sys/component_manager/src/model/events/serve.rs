@@ -265,6 +265,9 @@ fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult
         EventType::Resolved => {
             fsys::EventResult::Payload(fsys::EventPayload::Resolved(fsys::ResolvedPayload::EMPTY))
         }
+        EventType::Unresolved => fsys::EventResult::Payload(fsys::EventPayload::Unresolved(
+            fsys::UnresolvedPayload::EMPTY,
+        )),
         EventType::Started => {
             fsys::EventResult::Payload(fsys::EventPayload::Started(fsys::StartedPayload::EMPTY))
         }
@@ -279,6 +282,7 @@ fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventRes
         EventType::Discovered => fsys::EventErrorPayload::Discovered(fsys::DiscoveredError::EMPTY),
         EventType::Destroyed => fsys::EventErrorPayload::Destroyed(fsys::DestroyedError::EMPTY),
         EventType::Resolved => fsys::EventErrorPayload::Resolved(fsys::ResolvedError::EMPTY),
+        EventType::Unresolved => fsys::EventErrorPayload::Unresolved(fsys::UnresolvedError::EMPTY),
         EventType::Started => fsys::EventErrorPayload::Started(fsys::StartedError::EMPTY),
         EventType::Stopped => fsys::EventErrorPayload::Stopped(fsys::StoppedError::EMPTY),
         _ => fsys::EventErrorPayload::unknown(999, Default::default()),

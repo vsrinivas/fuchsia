@@ -178,6 +178,8 @@ events!([
     /// Similar to the Started event, except the payload will carry an eventpair
     /// that the subscriber could use to defer the launch of the component.
     (DebugStarted, debug_started),
+    /// A component instance was unresolved.
+    (Unresolved, unresolved),
 ]);
 
 impl Into<CapabilityName> for EventType {
@@ -210,6 +212,7 @@ pub enum EventErrorPayload {
     Discovered,
     Destroyed,
     Resolved,
+    Unresolved,
     Started,
     Stopped,
     Running { started_timestamp: zx::Time },
@@ -237,6 +240,7 @@ impl fmt::Debug for EventErrorPayload {
             | EventErrorPayload::Discovered
             | EventErrorPayload::Destroyed
             | EventErrorPayload::Resolved
+            | EventErrorPayload::Unresolved
             | EventErrorPayload::Started
             | EventErrorPayload::Stopped
             | EventErrorPayload::Running { .. }
@@ -303,6 +307,7 @@ pub enum EventPayload {
         config: Option<ConfigFields>,
         package_dir: Option<fio::DirectoryProxy>,
     },
+    Unresolved,
     Started {
         component: WeakComponentInstance,
         runtime: RuntimeInfo,
@@ -376,6 +381,7 @@ impl fmt::Debug for EventPayload {
             EventPayload::Stopped { status } => formatter.field("status", status).finish(),
             EventPayload::Purged
             | EventPayload::Discovered
+            | EventPayload::Unresolved
             | EventPayload::Destroyed
             | EventPayload::Running { .. }
             | EventPayload::DebugStarted { .. } => formatter.finish(),
@@ -535,7 +541,8 @@ impl fmt::Display for Event {
                     | EventPayload::Destroyed
                     | EventPayload::Resolved { .. }
                     | EventPayload::Running { .. }
-                    | EventPayload::DebugStarted { .. } => "".to_string(),
+                    | EventPayload::DebugStarted { .. }
+                    | EventPayload::Unresolved => "".to_string(),
                 };
                 format!("[{}] '{}' {}", self.event_type().to_string(), self.target_moniker, payload)
             }

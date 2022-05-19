@@ -31,4 +31,6 @@ type Error = strict enum {
     INSTANCE_DIED = 11;
     /// The requested resource does not exist.
     RESOURCE_NOT_FOUND = 12;
+    /// Failed to unresolve the component.
+    INSTANCE_CANNOT_UNRESOLVE = 13;
 };

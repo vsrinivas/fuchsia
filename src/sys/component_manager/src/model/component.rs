@@ -6,7 +6,7 @@ use {
     crate::model::{
         actions::{
             shutdown, start, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction,
-            ResolveAction, StartAction, StopAction,
+            ResolveAction, StartAction, StopAction, UnresolveAction,
         },
         context::{ModelContext, WeakModelContext},
         environment::Environment,
@@ -415,7 +415,7 @@ impl ComponentInstance {
         self.actions.lock().await
     }
 
-    /// Gets the context, if it exists, or returns a '`ContextNotFound` error.
+    /// Gets the context, if it exists, or returns a `ContextNotFound` error.
     pub fn try_get_context(&self) -> Result<Arc<ModelContext>, ModelError> {
         self.context.upgrade()
     }
@@ -469,6 +469,13 @@ impl ComponentInstance {
     /// occurs.
     pub async fn resolve(self: &Arc<Self>) -> Result<Component, ModelError> {
         ActionSet::register(self.clone(), ResolveAction::new()).await
+    }
+
+    /// Unresolves the component using an UnresolveAction. The component will be shut down, then
+    /// reset to the Discovered state without being destroyed. An Unresolved event is dispatched on
+    /// success or error.
+    pub async fn unresolve(self: &Arc<Self>) -> Result<(), ModelError> {
+        ActionSet::register(self.clone(), UnresolveAction::new()).await
     }
 
     /// Locks on the instance and execution state of the component and creates a FIDL
@@ -1218,6 +1225,12 @@ impl ExecutionState {
         self.shut_down
     }
 
+    /// Enables the component to restart after being shut down. Used by the UnresolveAction.
+    /// Use of this function is strongly discouraged.
+    pub fn reset_shut_down(&mut self) {
+        self.shut_down = false;
+    }
+
     /// Scope server_end to `runtime` of this state. This ensures that the channel
     /// will be kept alive as long as runtime is set to Some(...). If it is
     /// None when this method is called, this operation is a no-op and the channel
@@ -1255,7 +1268,6 @@ impl InstanceState {
             | (Self::Discovered, Self::New)
             | (Self::Resolved(_), Self::Resolved(_))
             | (Self::Resolved(_), Self::New)
-            | (Self::Resolved(_), Self::Discovered)
             | (Self::Purged, Self::Purged)
             | (Self::Purged, Self::New)
             | (Self::Purged, Self::Discovered)
@@ -1270,7 +1282,7 @@ impl InstanceState {
 }
 
 impl fmt::Debug for InstanceState {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
             Self::New => "New",
             Self::Discovered => "Discovered",
@@ -1993,7 +2005,7 @@ pub mod tests {
     use {
         super::*,
         crate::model::{
-            actions::ShutdownAction,
+            actions::{test_utils::is_discovered, ShutdownAction},
             events::{registry::EventSubscription, stream::EventStream},
             hooks::EventType,
             starter::Starter,
@@ -2019,6 +2031,7 @@ pub mod tests {
         futures::lock::Mutex,
         moniker::AbsoluteMoniker,
         routing_test_helpers::component_id_index::make_index_file,
+        std::panic,
         std::{boxed::Box, collections::HashMap, sync::Arc, task::Poll},
     };
 
@@ -2606,6 +2619,41 @@ pub mod tests {
     }
 
     #[fuchsia::test]
+    async fn unresolve_test() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_eager_child("c").add_eager_child("d").build()),
+            ("c", component_decl_with_test_runner()),
+            ("d", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+
+        // Resolve each component.
+        test.look_up(vec![].into()).await;
+        let component_a = test.look_up(vec!["a"].into()).await;
+        let component_b = test.look_up(vec!["a", "b"].into()).await;
+        let component_c = test.look_up(vec!["a", "b", "c"].into()).await;
+        let component_d = test.look_up(vec!["a", "b", "d"].into()).await;
+
+        // Just unresolve component a and children
+        assert_matches!(component_a.unresolve().await, Ok(()));
+        assert!(is_discovered(&component_a).await);
+        assert!(is_discovered(&component_b).await);
+        assert!(is_discovered(&component_c).await);
+        assert!(is_discovered(&component_d).await);
+
+        // Error to try to unresolve an already unresolved component.
+        assert_matches!(
+            component_a.unresolve().await,
+            Err(ModelError::ComponentInstanceError {
+                err: ComponentInstanceError::UnresolveFailed { .. }
+            })
+        );
+        assert!(is_discovered(&component_a).await);
+    }
+
+    #[fuchsia::test]
     async fn realm_instance_id() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_eager_child("a").build()),
@@ -3120,6 +3168,11 @@ pub mod tests {
         is.set(InstanceState::Purged);
         assert_matches!(is, InstanceState::Purged);
 
+        // Resolved --> Discovered.
+        let mut is = new_resolved().await;
+        is.set(InstanceState::Discovered);
+        assert_matches!(is, InstanceState::Discovered);
+
         // Resolved --> Purged.
         let mut is = new_resolved().await;
         is.set(InstanceState::Purged);
@@ -3159,9 +3212,8 @@ pub mod tests {
         p2r(InstanceState::Purged, new_resolved().await),
         p2d(InstanceState::Purged, InstanceState::Discovered),
         p2n(InstanceState::Purged, InstanceState::New),
-        // Resolved !-> {Resolved, Discovered, New}.
+        // Resolved !-> {Resolved, New}.
         r2r(new_resolved().await, new_resolved().await),
-        r2d(new_resolved().await, InstanceState::Discovered),
         r2n(new_resolved().await, InstanceState::New),
         // Discovered !-> {Discovered, New}.
         d2d(InstanceState::Discovered, InstanceState::Discovered),

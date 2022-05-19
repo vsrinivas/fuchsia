@@ -557,6 +557,7 @@ async fn create_child(
             match e {
                 // Variants that may be returned by the `CreateChild` method.
                 fcomponent::Error::InstanceCannotResolve => fntr::Error::ComponentNotFound,
+                fcomponent::Error::InstanceCannotUnresolve => fntr::Error::ComponentNotFound,
                 fcomponent::Error::InvalidArguments => fntr::Error::InvalidArguments,
                 fcomponent::Error::CollectionNotFound
                 | fcomponent::Error::InstanceAlreadyExists
@@ -619,6 +620,7 @@ async fn destroy_child(
             | fcomponent::Error::AccessDenied
             | fcomponent::Error::InstanceAlreadyExists
             | fcomponent::Error::InstanceCannotResolve
+            | fcomponent::Error::InstanceCannotUnresolve
             | fcomponent::Error::InstanceCannotStart
             | fcomponent::Error::Internal
             | fcomponent::Error::ResourceNotFound

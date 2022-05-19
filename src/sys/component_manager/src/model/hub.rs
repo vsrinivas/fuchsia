@@ -153,6 +153,7 @@ impl Hub {
                 EventType::Destroyed,
                 EventType::Started,
                 EventType::Resolved,
+                EventType::Unresolved,
                 EventType::Stopped,
             ],
             Arc::downgrade(self) as Weak<dyn Hook>,
@@ -626,6 +627,24 @@ impl Hub {
         Ok(())
     }
 
+    async fn on_unresolved_async(
+        &self,
+        target_moniker: &InstancedAbsoluteMoniker,
+        _component_url: String,
+    ) -> Result<(), ModelError> {
+        let mut instance_map = self.instances.lock().await;
+
+        // The component has been unresolved. Remove the resolved directory from the hub.
+        let res = instance_map.get_mut(target_moniker);
+        if let Some(instance) = res {
+            if instance.has_resolved_directory {
+                instance.directory.remove_node("resolved")?;
+                instance.has_resolved_directory = false;
+            }
+        }
+        Ok(())
+    }
+
     async fn on_purged_async(
         &self,
         target_moniker: &InstancedAbsoluteMoniker,
@@ -739,6 +758,9 @@ impl Hook for Hub {
             Ok(EventPayload::Discovered) => {
                 self.on_discovered_async(target_moniker, event.component_url.to_string()).await?;
             }
+            Ok(EventPayload::Unresolved) => {
+                self.on_unresolved_async(target_moniker, event.component_url.to_string()).await?;
+            }
             Ok(EventPayload::Destroyed) => {
                 self.on_destroyed_async(target_moniker).await?;
             }
@@ -792,6 +814,7 @@ mod tests {
                 },
             },
         },
+        assert_matches::assert_matches,
         cm_rust::{
             self, CapabilityName, CapabilityPath, ComponentDecl, ConfigChecksum, ConfigDecl,
             ConfigField, ConfigNestedValueType, ConfigValueSource, ConfigValueType, DependencyType,
@@ -1194,6 +1217,63 @@ mod tests {
             format!("{}_resolved", root_component_url),
             read_file(&hub_proxy, "resolved/resolved_url").await
         );
+    }
+    #[fuchsia::test]
+    #[should_panic]
+    async fn hub_resolved_directory_exists() {
+        let root_component_url = "test:///root".to_string();
+        let (_model, builtin_environment, hub_proxy) = start_component_manager_with_hub(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root",
+                decl: ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .use_(UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: DependencyType::Strong,
+                        source: UseSource::Framework,
+                        source_name: "hub".into(),
+                        target_path: CapabilityPath::try_from("/hub").unwrap(),
+                        rights: *routing::rights::READ_RIGHTS,
+                        subdir: Some("resolved".into()),
+                    }))
+                    .build(),
+                config: None,
+                host_fn: None,
+                runtime_host_fn: None,
+            }],
+        )
+        .await;
+
+        let resolved_dir = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("resolved"),
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+        assert_eq!(vec!["expose", "resolved_url", "use"], list_directory(&resolved_dir).await);
+        assert_eq!(
+            format!("{}_resolved", root_component_url),
+            read_file(&hub_proxy, "resolved/resolved_url").await
+        );
+
+        // Call on_unresolved_async() as if the component was unresolved and reset to
+        // DiscoveredState.
+        let guard = &builtin_environment.lock().await;
+        let hub = guard.hub.as_ref().unwrap();
+        let new_url = "test:///foo".to_string();
+        let moniker = InstancedAbsoluteMoniker::parse_str("/").unwrap();
+        assert_matches!(hub.on_unresolved_async(&moniker, new_url).await, Ok(()));
+
+        // Confirm that the resolved directory was deleted.
+        let resolved_dir2 = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("resolved"),
+            fio::OpenFlags::RIGHT_READABLE,
+        )
+        .expect("Failed to open directory");
+        // The directory existed when on_discovered_async() was called, so was deleted. Listing
+        // it will induce a panic which this test expects.
+        list_directory(&resolved_dir2).await;
     }
 
     #[fuchsia::test]

@@ -40,6 +40,12 @@ impl Action for ResolveAction {
 }
 
 async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, ModelError> {
+    {
+        let execution = component.lock_execution().await;
+        if execution.is_shut_down() {
+            return Err(ModelError::instance_shut_down(component.abs_moniker.clone()));
+        }
+    }
     // Ensure `Resolved` is dispatched after `Discovered`.
     ActionSet::register(component.clone(), DiscoverAction::new()).await?;
     let result = async move {
@@ -113,5 +119,65 @@ async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, Mod
             component.hooks.dispatch(&event).await?;
             Err(e)
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use {
+        crate::model::{
+            actions::test_utils::{is_executing, is_resolved, is_stopped},
+            actions::{ActionSet, ResolveAction, ShutdownAction, StartAction, StopAction},
+            component::StartReason,
+            error::ModelError,
+            testing::test_helpers::{component_decl_with_test_runner, ActionsTest},
+        },
+        assert_matches::assert_matches,
+        cm_rust_testing::ComponentDeclBuilder,
+    };
+
+    /// Check unresolve for _nonrecursive_ case. The system has a root with the child `a` and `a`
+    /// has descendants as shown in the diagram below.
+    ///  a
+    ///   \
+    ///    b
+    ///
+    /// Also tests UnresolveAction on InstanceState::Discovered.
+    #[fuchsia::test]
+    async fn resolve_action_test() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", component_decl_with_test_runner()),
+        ];
+        // Resolve and start the components.
+        let test = ActionsTest::new("root", components, None).await;
+        let component_root = test.look_up(vec![].into()).await;
+        let component_a = test.start(vec!["a"].into()).await;
+        assert!(is_executing(&component_a).await);
+        assert!(is_resolved(&component_root).await);
+        assert!(is_resolved(&component_a).await);
+
+        // Stop, then it's ok to resolve again.
+        ActionSet::register(component_a.clone(), StopAction::new(false, true)).await.unwrap();
+        assert!(is_resolved(&component_a).await);
+        assert!(is_stopped(&component_root, &"a:0".into()).await);
+
+        ActionSet::register(component_a.clone(), ResolveAction::new()).await.unwrap();
+        assert!(is_resolved(&component_a).await);
+        assert!(is_stopped(&component_root, &"a:0".into()).await);
+
+        // Start it again then shut it down.
+        ActionSet::register(component_a.clone(), StartAction::new(StartReason::Debug))
+            .await
+            .unwrap();
+        ActionSet::register(component_a.clone(), ShutdownAction::new()).await.unwrap();
+
+        // Error to resolve a shut-down component.
+        assert_matches!(
+            ActionSet::register(component_a.clone(), ResolveAction::new()).await,
+            Err(ModelError::InstanceShutDown { .. })
+        );
+        assert!(is_resolved(&component_a).await);
+        assert!(is_stopped(&component_root, &"a:0".into()).await);
     }
 }

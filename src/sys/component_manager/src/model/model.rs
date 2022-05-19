@@ -121,6 +121,33 @@ impl Model {
         Some(cur)
     }
 
+    /// Finds a resolved component matching the absolute moniker, if such a component exists.
+    /// This function has no side-effects.
+    pub async fn find_resolved(
+        &self,
+        find_abs_moniker: &AbsoluteMoniker,
+    ) -> Option<Arc<ComponentInstance>> {
+        let mut cur = self.root.clone();
+        for moniker in find_abs_moniker.path().iter() {
+            cur = {
+                let state = cur.lock_state().await;
+                match &*state {
+                    InstanceState::Resolved(r) => match r.get_live_child(moniker) {
+                        Some(c) => c,
+                        _ => return None,
+                    },
+                    _ => return None,
+                }
+            };
+        }
+        // Found the moniker, the last child in the chain of resolved parents. Is it resolved?
+        let state = cur.lock_state().await;
+        match &*state {
+            InstanceState::Resolved(_) => Some(cur.clone()),
+            _ => None,
+        }
+    }
+
     /// Starts root, starting the component tree.
     pub async fn start(self: &Arc<Model>) {
         // Normally the Discovered event is dispatched when an instance is added as a child, but
@@ -151,10 +178,15 @@ impl Model {
 #[cfg(test)]
 pub mod tests {
     use {
-        crate::{
-            model::actions::ShutdownAction,
-            model::testing::test_helpers::{TestEnvironmentBuilder, TestModelResult},
+        crate::model::{
+            actions::test_utils::is_discovered,
+            actions::{ActionSet, ShutdownAction, UnresolveAction},
+            testing::test_helpers::{
+                component_decl_with_test_runner, ActionsTest, TestEnvironmentBuilder,
+                TestModelResult,
+            },
         },
+        assert_matches::assert_matches,
         cm_rust_testing::ComponentDeclBuilder,
         fidl_fuchsia_component_decl as fdecl,
     };
@@ -204,5 +236,57 @@ pub mod tests {
             TestEnvironmentBuilder::new().set_components(components).build().await;
 
         model.start().await;
+    }
+
+    #[fuchsia::test]
+    async fn find_resolved_test() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_eager_child("c").add_eager_child("d").build()),
+            ("c", component_decl_with_test_runner()),
+            ("d", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+
+        // Not resolved, so not found.
+        assert_matches!(test.model.find_resolved(&vec!["a"].into()).await, None);
+        assert_matches!(test.model.find_resolved(&vec!["a", "b"].into()).await, None);
+        assert_matches!(test.model.find_resolved(&vec!["a", "b", "c"].into()).await, None);
+        assert_matches!(test.model.find_resolved(&vec!["a", "b", "d"].into()).await, None);
+
+        // Resolve each component.
+        test.look_up(vec![].into()).await;
+        let component_a = test.look_up(vec!["a"].into()).await;
+        let component_b = test.look_up(vec!["a", "b"].into()).await;
+        let component_c = test.look_up(vec!["a", "b", "c"].into()).await;
+        let component_d = test.look_up(vec!["a", "b", "d"].into()).await;
+
+        // Now they can all be found.
+        assert_matches!(test.model.find_resolved(&vec!["a"].into()).await, Some(_));
+        assert_eq!(
+            test.model.find_resolved(&vec!["a"].into()).await.unwrap().component_url,
+            "test:///a",
+        );
+        assert_matches!(test.model.find_resolved(&vec!["a", "b"].into()).await, Some(_));
+        assert_matches!(test.model.find_resolved(&vec!["a", "b", "c"].into()).await, Some(_));
+        assert_matches!(test.model.find_resolved(&vec!["a", "b", "d"].into()).await, Some(_));
+        assert_matches!(test.model.find_resolved(&vec!["a", "b", "nonesuch"].into()).await, None);
+
+        // Unresolve, recursively.
+        ActionSet::register(component_a.clone(), UnresolveAction::new())
+            .await
+            .expect("unresolve failed");
+
+        // Unresolved recursively, so children in Discovered state.
+        assert!(is_discovered(&component_a).await);
+        assert!(is_discovered(&component_b).await);
+        assert!(is_discovered(&component_c).await);
+        assert!(is_discovered(&component_d).await);
+
+        assert_matches!(test.model.find_resolved(&vec!["a"].into()).await, None);
+        assert_matches!(test.model.find_resolved(&vec!["a", "b"].into()).await, None);
+        assert_matches!(test.model.find_resolved(&vec!["a", "b", "c"].into()).await, None);
+        assert_matches!(test.model.find_resolved(&vec!["a", "b", "d"].into()).await, None);
     }
 }
