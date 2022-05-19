@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_storage_blackout_minfs_fsck") {
+ffx_plugin("ffx_storage_blackout_minfs_tree") {
   version = "0.1.0"
   edition = "2018"
   args_sources = [ "src/args.rs" ]
@@ -17,8 +17,8 @@ ffx_plugin("ffx_storage_blackout_minfs_fsck") {
   ]
 }
 
-rustc_binary("blackout-minfs-fsck-target-bin") {
-  output_name = "blackout_minfs_fsck_target_bin"
+rustc_binary("blackout-minfs-tree-target-bin") {
+  output_name = "blackout_minfs_tree_target_bin"
   with_unit_tests = true
   testonly = true
   edition = "2018"
@@ -41,18 +41,18 @@ rustc_binary("blackout-minfs-fsck-target-bin") {
   sources = [ "src/target.rs" ]
 }
 
-fuchsia_component("blackout-minfs-fsck-target-component") {
+fuchsia_component("blackout-minfs-tree-target-component") {
   testonly = true
-  deps = [ ":blackout-minfs-fsck-target-bin" ]
-  manifest = "meta/blackout_minfs_fsck_target.cml"
+  deps = [ ":blackout-minfs-tree-target-bin" ]
+  manifest = "meta/blackout_minfs_tree_target.cml"
 }
 
-fuchsia_package("blackout-minfs-fsck-target") {
+fuchsia_package("blackout-minfs-tree-target") {
   testonly = true
-  deps = [ ":blackout-minfs-fsck-target-component" ]
+  deps = [ ":blackout-minfs-tree-target-component" ]
 }
 
-group("minfs-fsck") {
+group("minfs-tree") {
   testonly = true
-  public_deps = [ ":blackout-minfs-fsck-target" ]
+  public_deps = [ ":blackout-minfs-tree-target" ]
 }

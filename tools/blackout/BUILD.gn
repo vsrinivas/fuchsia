@@ -8,7 +8,7 @@ group("blackout") {
   testonly = true
   public_deps = [
     "blobfs-checkerboard",
-    "minfs-fsck",
+    "minfs-tree",
   ]
 }
 
@@ -22,7 +22,7 @@ ffx_plugin("ffx_storage_blackout") {
     "blackout-host/ffx:ffx_storage_blackout_step",
     "blackout-integration:ffx_storage_blackout_integration",
     "blobfs-checkerboard:ffx_storage_blackout_blobfs_checkerboard",
-    "minfs-fsck:ffx_storage_blackout_minfs_fsck",
+    "minfs-tree:ffx_storage_blackout_minfs_tree",
   ]
 }
 

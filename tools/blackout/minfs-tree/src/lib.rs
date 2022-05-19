@@ -4,11 +4,11 @@
 
 use {
     anyhow::Result, blackout_host::TestEnv, ffx_core::ffx_plugin,
-    ffx_storage_blackout_minfs_fsck_args::MinfsFsckCommand, std::time::Duration,
+    ffx_storage_blackout_minfs_tree_args::MinfsTreeCommand, std::time::Duration,
 };
 
 #[ffx_plugin("storage_dev")]
-pub async fn minfs_fsck(cmd: MinfsFsckCommand) -> Result<()> {
+pub async fn minfs_tree(cmd: MinfsTreeCommand) -> Result<()> {
     let opts = blackout_host::CommonOpts {
         block_device: cmd.block_device,
         seed: cmd.seed,
@@ -17,7 +17,7 @@ pub async fn minfs_fsck(cmd: MinfsFsckCommand) -> Result<()> {
         run_until_failure: cmd.run_until_failure,
     };
     let mut test =
-        TestEnv::new("blackout-minfs-fsck-target", "blackout-minfs-fsck-target-component", opts)
+        TestEnv::new("blackout-minfs-tree-target", "blackout-minfs-tree-target-component", opts)
             .await;
     test.setup_step()
         .load_step(Duration::from_secs(30))

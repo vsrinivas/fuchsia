@@ -8,7 +8,7 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/blackout_minfs_fsck_target_bin",
+        binary: "bin/blackout_minfs_tree_target_bin",
         lifecycle: { stop_event: "notify" },
     },
     capabilities: [

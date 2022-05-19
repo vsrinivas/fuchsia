@@ -14,10 +14,10 @@ use {
 };
 
 #[derive(Copy, Clone)]
-struct MinfsFsck;
+struct MinfsTree;
 
 #[async_trait]
-impl Test for MinfsFsck {
+impl Test for MinfsTree {
     async fn setup(&self, block_device: String, _seed: u64) -> Result<()> {
         log::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
@@ -78,7 +78,7 @@ impl Test for MinfsFsck {
 
 #[fuchsia::main]
 async fn main() -> Result<()> {
-    let server = TestServer::new(MinfsFsck)?;
+    let server = TestServer::new(MinfsTree)?;
     server.serve().await;
 
     Ok(())

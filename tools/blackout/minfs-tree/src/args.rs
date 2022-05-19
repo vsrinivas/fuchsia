@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// Run a power-failure test on minfs. Load pattern: generate, move, and delete random directory
+/// trees.
 #[ffx_core::ffx_command()]
 #[derive(argh::FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "minfs-fsck", description = "Run a power-failure test on minfs")]
-pub struct MinfsFsckCommand {
+#[argh(subcommand, name = "minfs-tree")]
+pub struct MinfsTreeCommand {
     /// the block device on the target device to use for testing. WARNING: the test can (and likely
     /// will!) format this device. Don't use a main system partition!
     #[argh(positional)]
