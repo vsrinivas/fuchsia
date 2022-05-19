@@ -119,9 +119,6 @@ struct IsResource : public std::false_type {
 //                  |T| is unbounded.
 // |kHasPointer|    is a boolean specifying if the structure contains pointer
 //                  indirections, hence requires linearization when sending.
-// |kType|          is a fidl_type_t* pointing to the corresponding coding table,
-//                  if any. If the encoding/decoding of |T| can be elided,
-//                  |kType| is NULL.
 //
 // Additionally, if |T| is a transactional message:
 //
@@ -137,6 +134,9 @@ struct TypeTraits {};
 // Const-ness is not significant for determining TypeTraits.
 template <typename T>
 struct TypeTraits<const T> : public TypeTraits<T> {};
+
+template <typename T>
+struct DeprecatedCTypeTraits;
 
 // String
 class StringView;

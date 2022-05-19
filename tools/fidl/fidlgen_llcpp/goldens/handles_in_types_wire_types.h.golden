@@ -402,17 +402,22 @@ template <>
 struct IsResource<::test_handlesintypes::wire::HandlesInTypes>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_handlesintypes::wire::HandlesInTypes> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_handlesintypes::wire::HandlesInTypes> {
   static constexpr const fidl_type_t* kType =
       &::test_handlesintypes::wire::test_handlesintypes_HandlesInTypesTable;
+};
+
+template <>
+struct TypeTraits<::test_handlesintypes::wire::HandlesInTypes> {
   static constexpr uint32_t kMaxNumHandles = 4294967295;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 96;
   static constexpr uint32_t kPrimarySizeV1 = 104;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -589,15 +594,13 @@ struct IsResource<::test_handlesintypes::wire::TableWithHandle>
 
 template <>
 struct TypeTraits<::test_handlesintypes::wire::TableWithHandle> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_handlesintypes::wire::test_handlesintypes_TableWithHandleTable;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -715,15 +718,13 @@ struct IsResource<::test_handlesintypes::wire::UnionWithHandle>
 
 template <>
 struct TypeTraits<::test_handlesintypes::wire::UnionWithHandle> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_handlesintypes::wire::test_handlesintypes_UnionWithHandleTable;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 

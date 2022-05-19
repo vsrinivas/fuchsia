@@ -44,17 +44,22 @@ struct SuperFooRequest {
 }  // namespace test_inheritance
 namespace fidl {
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::wire::test_inheritance_SuperFooTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -113,17 +118,22 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_inheritance::wire::SuperFooRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_inheritance::wire::SuperFooRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::wire::test_inheritance_SuperFooRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_inheritance::wire::SuperFooRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
 

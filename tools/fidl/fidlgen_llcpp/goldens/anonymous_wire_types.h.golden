@@ -1084,17 +1084,22 @@ struct internal::WireCodingTraits<::test_anonymous::wire::Op,
                      RecursionDepth<IsRecursive> recursion_depth) {}
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_anonymous::wire::TableData> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_anonymous::wire::TableData> {
   static constexpr const fidl_type_t* kType =
       &::test_anonymous::wire::test_anonymous_TableDataTable;
+};
+
+template <>
+struct TypeTraits<::test_anonymous::wire::TableData> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1149,18 +1154,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_anonymous::wire::SomeProtocolSomeMethodRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_anonymous::wire::
           test_anonymous_SomeProtocolSomeMethodRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 3;
   static constexpr uint32_t kPrimarySize = 32;
   static constexpr uint32_t kPrimarySizeV1 = 40;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 48;
   static constexpr uint32_t kMaxOutOfLineV1 = 72;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1237,17 +1248,22 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_anonymous::wire::OverrideTest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_anonymous::wire::OverrideTest> {
   static constexpr const fidl_type_t* kType =
       &::test_anonymous::wire::test_anonymous_OverrideTestTable;
+};
+
+template <>
+struct TypeTraits<::test_anonymous::wire::OverrideTest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 6;
   static constexpr uint32_t kPrimarySize = 40;
   static constexpr uint32_t kPrimarySizeV1 = 56;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1334,18 +1350,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_anonymous::wire::SomeProtocolSomeMethodResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_anonymous::wire::
           test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1408,18 +1430,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_anonymous::wire::SomeProtocolSomeMethodTopResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_anonymous::wire::
           test_anonymous_SomeProtocolSomeMethodTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1484,15 +1512,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_anonymous::wire::TableMember> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_anonymous::wire::test_anonymous_TableMemberTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 3;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 48;
   static constexpr uint32_t kMaxOutOfLineV1 = 64;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1602,15 +1628,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_anonymous::wire::FunctionApplication> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_anonymous::wire::test_anonymous_FunctionApplicationTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 8;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1768,15 +1792,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_anonymous::wire::UnionMember> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_anonymous::wire::test_anonymous_UnionMemberTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1900,15 +1922,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_anonymous::wire::Expression> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_anonymous::wire::test_anonymous_ExpressionTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 6;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2076,16 +2096,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodResult> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_anonymous::wire::
-          test_anonymous_SomeProtocol_SomeMethod_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 

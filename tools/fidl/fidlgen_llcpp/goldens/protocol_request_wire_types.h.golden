@@ -88,18 +88,24 @@ template <>
 struct IsResource<::test_protocolrequest::wire::ParentTakeChildRequestRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::wire::
           test_protocolrequest_ParentTakeChildRequestRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -173,18 +179,24 @@ template <>
 struct IsResource<::test_protocolrequest::wire::ParentTakeChildRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocolrequest::wire::ParentTakeChildRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::wire::
           test_protocolrequest_ParentTakeChildRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequest> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -255,18 +267,24 @@ template <>
 struct IsResource<::test_protocolrequest::wire::ParentGetChildTopResponse>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocolrequest::wire::ParentGetChildTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocolrequest::wire::ParentGetChildTopResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::wire::
           test_protocolrequest_ParentGetChildTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_protocolrequest::wire::ParentGetChildTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -339,19 +357,25 @@ struct IsResource<
     ::test_protocolrequest::wire::ParentGetChildRequestTopResponse>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocolrequest::wire::ParentGetChildRequestTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::wire::
           test_protocolrequest_ParentGetChildRequestTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocolrequest::wire::ParentGetChildRequestTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 

@@ -42,17 +42,22 @@ constexpr ::test_dependent::wire::MyBits kBitsMember =
 }  // namespace test_importedconstvalues
 namespace fidl {
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_importedconstvalues::wire::MyStruct> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_importedconstvalues::wire::MyStruct> {
   static constexpr const fidl_type_t* kType =
       &::test_importedconstvalues::wire::test_importedconstvalues_MyStructTable;
+};
+
+template <>
+struct TypeTraits<::test_importedconstvalues::wire::MyStruct> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 

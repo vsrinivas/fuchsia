@@ -41,17 +41,22 @@ struct ByteAndBytes {
 }  // namespace test_byteandbytes
 namespace fidl {
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_byteandbytes::wire::ByteAndBytes> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_byteandbytes::wire::ByteAndBytes> {
   static constexpr const fidl_type_t* kType =
       &::test_byteandbytes::wire::test_byteandbytes_ByteAndBytesTable;
+};
+
+template <>
+struct TypeTraits<::test_byteandbytes::wire::ByteAndBytes> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 56;
   static constexpr uint32_t kPrimarySizeV1 = 56;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
 

@@ -702,6 +702,7 @@ type TypeShape struct {
 	MaxHandles          int  `json:"max_handles"`
 	MaxOutOfLine        int  `json:"max_out_of_line"`
 	HasPadding          bool `json:"has_padding"`
+	HasEnvelope         bool `json:"has_envelope"`
 	HasFlexibleEnvelope bool `json:"has_flexible_envelope"`
 }
 

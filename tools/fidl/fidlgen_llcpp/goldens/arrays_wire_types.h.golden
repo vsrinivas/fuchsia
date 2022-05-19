@@ -663,17 +663,22 @@ struct StructLargeArray {
 }  // namespace test_arrays
 namespace fidl {
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_arrays::wire::StructSmallArray> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_arrays::wire::StructSmallArray> {
   static constexpr const fidl_type_t* kType =
       &::test_arrays::wire::test_arrays_StructSmallArrayTable;
+};
+
+template <>
+struct TypeTraits<::test_arrays::wire::StructSmallArray> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -731,17 +736,22 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_arrays::wire::StructLargeArray> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_arrays::wire::StructLargeArray> {
   static constexpr const fidl_type_t* kType =
       &::test_arrays::wire::test_arrays_StructLargeArrayTable;
+};
+
+template <>
+struct TypeTraits<::test_arrays::wire::StructLargeArray> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 400;
   static constexpr uint32_t kPrimarySizeV1 = 400;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -801,15 +811,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_arrays::wire::TableSmallArray> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_arrays::wire::test_arrays_TableSmallArrayTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -913,15 +921,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_arrays::wire::TableLargeArray> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_arrays::wire::test_arrays_TableLargeArrayTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 408;
   static constexpr uint32_t kMaxOutOfLineV1 = 416;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1025,15 +1031,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_arrays::wire::UnionSmallArray> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_arrays::wire::test_arrays_UnionSmallArrayTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1161,15 +1165,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_arrays::wire::UnionLargeArray> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_arrays::wire::test_arrays_UnionLargeArrayTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 400;
   static constexpr uint32_t kMaxOutOfLineV1 = 400;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 

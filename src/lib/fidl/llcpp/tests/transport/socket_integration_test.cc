@@ -48,6 +48,7 @@ struct fidl::TypeTraits<TwoWayRequest> {
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
 };
 
 template <bool IsRecursive>
@@ -79,6 +80,7 @@ struct fidl::TypeTraits<TwoWayResponse> {
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kResponse;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
 };
 
 template <bool IsRecursive>

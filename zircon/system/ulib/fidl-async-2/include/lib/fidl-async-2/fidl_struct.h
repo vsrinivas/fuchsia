@@ -205,8 +205,8 @@ class FidlStruct {
  private:
   void reset_internal(const FidlCStruct* to_copy_and_own_handles) {
     if (ptr_) {
-      if (fidl::TypeTraits<FidlLlcppStruct>::kType != nullptr) {
-        fidl_close_handles(fidl::TypeTraits<FidlLlcppStruct>::kType, ptr_, nullptr);
+      if (fidl::DeprecatedCTypeTraits<FidlLlcppStruct>::kType != nullptr) {
+        fidl_close_handles(fidl::DeprecatedCTypeTraits<FidlLlcppStruct>::kType, ptr_, nullptr);
       }
     }
     if (to_copy_and_own_handles) {

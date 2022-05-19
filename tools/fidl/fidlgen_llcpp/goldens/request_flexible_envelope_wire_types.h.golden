@@ -257,19 +257,25 @@ struct ProtocolRequestFlexibleResponseStrictRequest {
 }  // namespace test_requestflexibleenvelope
 namespace fidl {
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_requestflexibleenvelope::wire::
-                      ProtocolRequestStrictResponseFlexibleRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_requestflexibleenvelope::wire::
+                                 ProtocolRequestStrictResponseFlexibleRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_requestflexibleenvelope::wire::
           test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestStrictResponseFlexibleRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -339,19 +345,26 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_requestflexibleenvelope::wire::
-                      ProtocolRequestFlexibleResponseStrictTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_requestflexibleenvelope::wire::
+        ProtocolRequestFlexibleResponseStrictTopResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_requestflexibleenvelope::wire::
           test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestFlexibleResponseStrictTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -423,19 +436,26 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_requestflexibleenvelope::wire::
-                      ProtocolRequestStrictResponseFlexibleTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_requestflexibleenvelope::wire::
+        ProtocolRequestStrictResponseFlexibleTopResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_requestflexibleenvelope::wire::
           test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestStrictResponseFlexibleTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -507,19 +527,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_requestflexibleenvelope::wire::
-                      ProtocolRequestFlexibleResponseStrictRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_requestflexibleenvelope::wire::
+                                 ProtocolRequestFlexibleResponseStrictRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_requestflexibleenvelope::wire::
           test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestFlexibleResponseStrictRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -591,16 +617,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_requestflexibleenvelope::wire::StrictFoo> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_requestflexibleenvelope::wire::
-          test_requestflexibleenvelope_StrictFooTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -748,16 +771,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_requestflexibleenvelope::wire::FlexibleFoo> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_requestflexibleenvelope::wire::
-          test_requestflexibleenvelope_FlexibleFooTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 

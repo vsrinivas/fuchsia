@@ -390,18 +390,24 @@ struct SandwichUnionSize24Alignment8 {
 }  // namespace test_unionsandwich
 namespace fidl {
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize8Alignment4> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_unionsandwich::wire::SandwichUnionSize8Alignment4> {
   static constexpr const fidl_type_t* kType =
       &::test_unionsandwich::wire::
           test_unionsandwich_SandwichUnionSize8Alignment4Table;
+};
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize8Alignment4> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 32;
   static constexpr uint32_t kPrimarySizeV1 = 40;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -495,18 +501,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize36Alignment4> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_unionsandwich::wire::SandwichUnionSize36Alignment4> {
   static constexpr const fidl_type_t* kType =
       &::test_unionsandwich::wire::
           test_unionsandwich_SandwichUnionSize36Alignment4Table;
+};
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize36Alignment4> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 32;
   static constexpr uint32_t kPrimarySizeV1 = 40;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 32;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -603,18 +615,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize12Alignment4> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_unionsandwich::wire::SandwichUnionSize12Alignment4> {
   static constexpr const fidl_type_t* kType =
       &::test_unionsandwich::wire::
           test_unionsandwich_SandwichUnionSize12Alignment4Table;
+};
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize12Alignment4> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 32;
   static constexpr uint32_t kPrimarySizeV1 = 40;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -711,18 +729,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_unionsandwich::wire::StructSize16Alignment8> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_unionsandwich::wire::StructSize16Alignment8> {
   static constexpr const fidl_type_t* kType =
       &::test_unionsandwich::wire::
           test_unionsandwich_StructSize16Alignment8Table;
+};
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::StructSize16Alignment8> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -794,18 +818,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize24Alignment8> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_unionsandwich::wire::SandwichUnionSize24Alignment8> {
   static constexpr const fidl_type_t* kType =
       &::test_unionsandwich::wire::
           test_unionsandwich_SandwichUnionSize24Alignment8Table;
+};
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize24Alignment8> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 32;
   static constexpr uint32_t kPrimarySizeV1 = 40;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 16;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -904,15 +934,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_unionsandwich::wire::UnionSize8Alignment4> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_unionsandwich::wire::test_unionsandwich_UnionSize8Alignment4Table;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1038,16 +1066,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_unionsandwich::wire::UnionSize36Alignment4> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_unionsandwich::wire::
-          test_unionsandwich_UnionSize36Alignment4Table;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 32;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1178,16 +1203,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_unionsandwich::wire::UnionSize12Alignment4> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_unionsandwich::wire::
-          test_unionsandwich_UnionSize12Alignment4Table;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1318,16 +1340,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_unionsandwich::wire::UnionSize24Alignment8> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_unionsandwich::wire::
-          test_unionsandwich_UnionSize24Alignment8Table;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 16;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 

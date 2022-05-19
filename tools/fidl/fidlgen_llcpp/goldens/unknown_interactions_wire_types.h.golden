@@ -159,19 +159,25 @@ struct ExampleFlexibleTwoWayTopResponse {
 }  // namespace test_unknowninteractions
 namespace fidl {
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_unknowninteractions::wire::
           test_unknowninteractions_Example_FlexibleTwoWay_ResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -240,19 +246,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_unknowninteractions::wire::
           test_unknowninteractions_ExampleFlexibleTwoWayTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -323,16 +335,13 @@ struct ::fidl::internal::WireCodingTraits<
 template <>
 struct TypeTraits<
     ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_unknowninteractions::wire::
-          test_unknowninteractions_Example_FlexibleTwoWay_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 

@@ -164,6 +164,7 @@ struct TypeTraits<{{ .WireTransactionalRequest }}> {
   static constexpr uint32_t kMaxOutOfLine = {{ .Request.TypeShapeV2.MaxOutOfLine }};
   static constexpr uint32_t kMaxOutOfLineV1 = {{ .Request.TypeShapeV1.MaxOutOfLine }};
   static constexpr bool kHasFlexibleEnvelope = {{ .Request.TypeShapeV2.HasFlexibleEnvelope }};
+  static constexpr bool kHasEnvelope = {{ .Request.TypeShapeV2.HasEnvelope }};
   static constexpr bool kHasPointer = {{ .Request.TypeShapeV2.HasPointer }};
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -191,6 +192,7 @@ struct TypeTraits<{{ .WireRequest }}> {
   static constexpr uint32_t kMaxOutOfLine = {{ .Request.TypeShapeV2.MaxOutOfLine }};
   static constexpr uint32_t kMaxOutOfLineV1 = {{ .Request.TypeShapeV1.MaxOutOfLine }};
   static constexpr bool kHasFlexibleEnvelope = {{ .Request.TypeShapeV2.HasFlexibleEnvelope }};
+  static constexpr bool kHasEnvelope = {{ .Request.TypeShapeV2.HasEnvelope }};
   static constexpr bool kHasPointer = {{ .Request.TypeShapeV2.HasPointer }};
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -245,6 +247,7 @@ struct TypeTraits<{{ .WireTransactionalEvent }}> {
   static constexpr uint32_t kMaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};
   static constexpr uint32_t kMaxOutOfLineV1 = {{ .Response.TypeShapeV1.MaxOutOfLine }};
   static constexpr bool kHasFlexibleEnvelope = {{ .Response.TypeShapeV2.HasFlexibleEnvelope }};
+  static constexpr bool kHasEnvelope = {{ .Request.TypeShapeV2.HasEnvelope }};
   static constexpr bool kHasPointer = {{ .Response.TypeShapeV2.HasPointer }};
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -272,6 +275,7 @@ struct TypeTraits<{{ .WireEvent }}> {
   static constexpr uint32_t kMaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};
   static constexpr uint32_t kMaxOutOfLineV1 = {{ .Response.TypeShapeV1.MaxOutOfLine }};
   static constexpr bool kHasFlexibleEnvelope = {{ .Response.TypeShapeV2.HasFlexibleEnvelope }};
+  static constexpr bool kHasEnvelope = {{ .Request.TypeShapeV2.HasEnvelope }};
   static constexpr bool kHasPointer = {{ .Response.TypeShapeV2.HasPointer }};
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -317,6 +321,7 @@ struct TypeTraits<{{ .WireTransactionalResponse }}> {
   {{- else }}
     nullptr;
   {{- end }}
+  static constexpr bool kHasResponseBody = {{ if .ResponseArgs }}true{{ else }}false{{ end }};
   static constexpr uint32_t kMaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
   static constexpr uint32_t kMaxDepth = {{ .Response.TypeShapeV2.Depth }};
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN({{ .Response.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t));
@@ -324,6 +329,7 @@ struct TypeTraits<{{ .WireTransactionalResponse }}> {
   static constexpr uint32_t kMaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};
   static constexpr uint32_t kMaxOutOfLineV1 = {{ .Response.TypeShapeV1.MaxOutOfLine }};
   static constexpr bool kHasFlexibleEnvelope = {{ .Response.TypeShapeV2.HasFlexibleEnvelope }};
+  static constexpr bool kHasEnvelope = {{ .Request.TypeShapeV2.HasEnvelope }};
   static constexpr bool kHasPointer = {{ .Response.TypeShapeV2.HasPointer }};
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -344,6 +350,7 @@ struct TypeTraits<{{ .WireResponse }}> {
   {{- else }}
     nullptr;
   {{- end }}
+  static constexpr bool kHasResponseBody = {{ if .ResponseArgs }}true{{ else }}false{{ end }};
   static constexpr uint32_t kMaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
   static constexpr uint32_t kMaxDepth = {{ .Response.TypeShapeV2.Depth }};
   static constexpr uint32_t kPrimarySize = {{ .Response.TypeShapeV2.InlineSize }};
@@ -351,6 +358,7 @@ struct TypeTraits<{{ .WireResponse }}> {
   static constexpr uint32_t kMaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};
   static constexpr uint32_t kMaxOutOfLineV1 = {{ .Response.TypeShapeV1.MaxOutOfLine }};
   static constexpr bool kHasFlexibleEnvelope = {{ .Response.TypeShapeV2.HasFlexibleEnvelope }};
+  static constexpr bool kHasEnvelope = {{ .Request.TypeShapeV2.HasEnvelope }};
   static constexpr bool kHasPointer = {{ .Response.TypeShapeV2.HasPointer }};
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;

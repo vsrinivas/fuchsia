@@ -1635,6 +1635,10 @@
                     "$ref": "#/definitions/count",
                     "description": "Maximum depth of this declaration"
                 },
+                "has_envelope": {
+                    "description": "Flag indicating if this declaration contains envelopes (in unions or tables)",
+                    "type": "boolean"
+                },
                 "has_flexible_envelope": {
                     "description": "Flag indicating if this declaration contains flexible envelopes (in unions or tables)",
                     "type": "boolean"
@@ -1663,6 +1667,7 @@
                 "max_handles",
                 "max_out_of_line",
                 "has_padding",
+                "has_envelope",
                 "has_flexible_envelope"
             ],
             "type": "object"

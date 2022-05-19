@@ -217,6 +217,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 48;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -247,6 +248,7 @@ struct TypeTraits<
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 48;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;

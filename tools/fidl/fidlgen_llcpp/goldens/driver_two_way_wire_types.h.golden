@@ -46,17 +46,22 @@ struct TwoWayAddRequest {
 }  // namespace test_drivertwoway
 namespace fidl {
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_drivertwoway::wire::test_drivertwoway_TwoWayAddTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 2;
   static constexpr uint32_t kPrimarySizeV1 = 2;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -115,17 +120,22 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_drivertwoway::wire::TwoWayAddRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_drivertwoway::wire::TwoWayAddRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_drivertwoway::wire::test_drivertwoway_TwoWayAddRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_drivertwoway::wire::TwoWayAddRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 

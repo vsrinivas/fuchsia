@@ -2661,6 +2661,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -2682,6 +2683,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneW
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -2710,6 +2712,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -2731,6 +2734,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoW
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -2752,6 +2756,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -2759,6 +2764,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -2773,6 +2779,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -2780,6 +2787,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::Two
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -2808,6 +2816,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -2829,6 +2838,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoW
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -2850,6 +2860,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -2857,6 +2868,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -2871,6 +2883,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -2878,6 +2891,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::Two
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -2907,6 +2921,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::M
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -2928,6 +2943,7 @@ struct TypeTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -2956,6 +2972,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::M
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 40;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -2977,6 +2994,7 @@ struct TypeTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 40;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3006,6 +3024,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3027,6 +3046,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneW
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3055,6 +3075,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3076,6 +3097,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoW
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3097,6 +3119,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_imported_ImportTablePayloadTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -3104,6 +3127,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3118,6 +3142,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_imported_ImportTablePayloadTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -3125,6 +3150,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::Two
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3153,6 +3179,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3174,6 +3201,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoW
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3195,6 +3223,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_imported_ComposedProtocolTwoWayNamedComposedWithErrorTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -3202,6 +3231,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3216,6 +3246,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_imported_ComposedProtocolTwoWayNamedComposedWithErrorTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -3223,6 +3254,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::Two
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3252,6 +3284,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::M
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3273,6 +3306,7 @@ struct TypeTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnName
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3301,6 +3335,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::M
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 40;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3322,6 +3357,7 @@ struct TypeTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnName
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 40;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3351,6 +3387,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3372,6 +3409,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneW
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3400,6 +3438,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3421,6 +3460,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoW
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3442,6 +3482,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_imported_ImportTablePayloadTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -3449,6 +3490,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3463,6 +3505,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_imported_ImportTablePayloadTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -3470,6 +3513,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::Two
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3498,6 +3542,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3519,6 +3564,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoW
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3540,6 +3586,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_MainProtocolTwoWayImportWithErrorTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -3547,6 +3594,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3561,6 +3609,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_MainProtocolTwoWayImportWithErrorTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -3568,6 +3617,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::Two
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3597,6 +3647,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::M
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3618,6 +3669,7 @@ struct TypeTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImpo
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3646,6 +3698,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::M
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 40;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3667,6 +3720,7 @@ struct TypeTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImpo
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 40;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3696,6 +3750,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3717,6 +3772,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneW
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3745,6 +3801,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3766,6 +3823,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoW
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3787,6 +3845,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_LocalTablePayloadTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -3794,6 +3853,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3808,6 +3868,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_LocalTablePayloadTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -3815,6 +3876,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::Two
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3843,6 +3905,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3864,6 +3927,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoW
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -3885,6 +3949,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_MainProtocolTwoWayLocalWithErrorTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -3892,6 +3957,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3906,6 +3972,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_MainProtocolTwoWayLocalWithErrorTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -3913,6 +3980,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::Two
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3942,6 +4010,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::M
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3963,6 +4032,7 @@ struct TypeTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLoca
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -3991,6 +4061,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::M
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 40;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -4012,6 +4083,7 @@ struct TypeTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLoca
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 40;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -4041,6 +4113,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -4062,6 +4135,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneW
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -4090,6 +4164,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -4111,6 +4186,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoW
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -4132,6 +4208,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -4139,6 +4216,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -4153,6 +4231,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -4160,6 +4239,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::Two
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -4188,6 +4268,7 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts:
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -4209,6 +4290,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoW
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -4230,6 +4312,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_MainProtocolTwoWayAnonWithErrorTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -4237,6 +4320,7 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -4251,6 +4335,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocollayouts::test_protocollayouts_MainProtocolTwoWayAnonWithErrorTopResponseTable;
+  static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -4258,6 +4343,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::Two
   static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -4287,6 +4373,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::M
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -4308,6 +4395,7 @@ struct TypeTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -4336,6 +4424,7 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::M
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 40;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -4357,6 +4446,7 @@ struct TypeTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 40;
   static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;

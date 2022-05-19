@@ -858,19 +858,25 @@ struct DenyEachBindingOnlyDenyDartTopResponse {
 }  // namespace test_bindingsdenylist
 namespace fidl {
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -937,19 +943,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_OnlyAppearsInImportingLibraryTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1014,19 +1026,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1095,19 +1113,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_bindingsdenylist::wire::
-                      DenyEachBindingOnlyDenySyzkallerTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_bindingsdenylist::wire::
+                                 DenyEachBindingOnlyDenySyzkallerTopResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::wire::
+                      DenyEachBindingOnlyDenySyzkallerTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1176,19 +1200,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1255,19 +1285,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1337,19 +1373,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1418,19 +1460,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_bindingsdenylist::wire::
-                      DenyEachBindingOnlyDenyLibfuzzerTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_bindingsdenylist::wire::
+                                 DenyEachBindingOnlyDenyLibfuzzerTopResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::wire::
+                      DenyEachBindingOnlyDenyLibfuzzerTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1499,19 +1547,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1577,19 +1631,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1659,19 +1719,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1738,19 +1804,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1820,19 +1892,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1901,19 +1979,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1979,19 +2063,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -2060,19 +2150,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -2137,19 +2233,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
           test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -2217,15 +2319,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_bindingsdenylist::wire::OnlyLlcpp> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_bindingsdenylist::wire::test_bindingsdenylist_OnlyLlcppTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2352,16 +2452,13 @@ struct ::fidl::internal::WireCodingTraits<
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_bindingsdenylist::wire::
-          test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2525,16 +2622,13 @@ struct ::fidl::internal::WireCodingTraits<
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_bindingsdenylist::wire::
-          test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2692,16 +2786,13 @@ struct ::fidl::internal::WireCodingTraits<
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_bindingsdenylist::wire::
-          test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2865,16 +2956,13 @@ struct ::fidl::internal::WireCodingTraits<
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_bindingsdenylist::wire::
-          test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -3031,16 +3119,13 @@ struct ::fidl::internal::WireCodingTraits<
 template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_bindingsdenylist::wire::
-          test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 

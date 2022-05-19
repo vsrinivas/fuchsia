@@ -70,17 +70,22 @@ struct EmptyProtocolReceiveRequest {
 }  // namespace test_emptystruct
 namespace fidl {
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_emptystruct::wire::Empty> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_emptystruct::wire::Empty> {
   static constexpr const fidl_type_t* kType =
       &::test_emptystruct::wire::test_emptystruct_EmptyTable;
+};
+
+template <>
+struct TypeTraits<::test_emptystruct::wire::Empty> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -139,17 +144,23 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_emptystruct::wire::EmptyProtocolSendRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_emptystruct::wire::EmptyProtocolSendRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_emptystruct::wire::test_emptystruct_EmptyProtocolSendRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_emptystruct::wire::EmptyProtocolSendRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -209,19 +220,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_emptystruct::wire::
           test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -288,19 +305,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_emptystruct::wire::
           test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -364,18 +387,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_emptystruct::wire::
           test_emptystruct_EmptyProtocolReceiveRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 

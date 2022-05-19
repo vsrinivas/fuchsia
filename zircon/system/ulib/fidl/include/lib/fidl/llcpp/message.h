@@ -49,24 +49,6 @@ struct AllowUnownedInputRef {};
 template <typename Transport>
 class UnownedEncodedMessageBase;
 
-template <typename FidlType>
-bool ContainsEnvelope() {
-  // TODO(fxbug.dev/100320) Remove this usage of the coding tables.
-  const fidl_type_t* type = fidl::TypeTraits<FidlType>::kType;
-  if (type == nullptr) {
-    return false;
-  }
-  switch (type->type_tag()) {
-    case kFidlTypeTable:
-    case kFidlTypeXUnion:
-      return true;
-    case kFidlTypeStruct:
-      return type->coded_struct().contains_envelope;
-    default:
-      ZX_PANIC("unexpected top-level type");
-  }
-}
-
 }  // namespace internal
 
 // |OutgoingMessage| represents a FIDL message on the write path.
@@ -225,8 +207,7 @@ class OutgoingMessage : public ::fidl::Status {
   void Encode(fidl::internal::WireFormatVersion wire_format_version, FidlType* data) {
     is_transactional_ = fidl::IsFidlTransactionalMessage<FidlType>::value;
 
-    EncodeImpl(wire_format_version, fidl::TypeTraits<FidlType>::kType, data,
-               internal::TopLevelCodingTraits<FidlType>::inline_size,
+    EncodeImpl(wire_format_version, data, internal::TopLevelCodingTraits<FidlType>::inline_size,
                internal::MakeTopLevelEncodeFn<FidlType>());
   }
 
@@ -256,9 +237,9 @@ class OutgoingMessage : public ::fidl::Status {
     CallImplForCallerProvidedBuffer(
         internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
         internal::TopLevelCodingTraits<FidlType>::inline_size,
-        internal::ContainsEnvelope<FidlType>(), internal::MakeTopLevelDecodeFn<FidlType>(),
-        fidl::TypeTraits<FidlType>::kType, result_bytes, result_byte_capacity, result_handles,
-        reinterpret_cast<fidl_handle_metadata_t*>(result_handle_metadata),
+        fidl::TypeTraits<FidlType>::kHasEnvelope, internal::MakeTopLevelDecodeFn<FidlType>(),
+        fidl::TypeTraits<FidlType>::kHasResponseBody, result_bytes, result_byte_capacity,
+        result_handles, reinterpret_cast<fidl_handle_metadata_t*>(result_handle_metadata),
         ZX_CHANNEL_MAX_MSG_HANDLES, std::move(options));
   }
 
@@ -275,8 +256,8 @@ class OutgoingMessage : public ::fidl::Status {
     CallImplForTransportProvidedBuffer(
         internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
         internal::TopLevelCodingTraits<FidlType>::inline_size,
-        internal::ContainsEnvelope<FidlType>(), internal::MakeTopLevelDecodeFn<FidlType>(),
-        fidl::TypeTraits<FidlType>::kType, out_bytes, out_num_bytes, std::move(options));
+        fidl::TypeTraits<FidlType>::kHasEnvelope, internal::MakeTopLevelDecodeFn<FidlType>(),
+        fidl::TypeTraits<FidlType>::kHasResponseBody, out_bytes, out_num_bytes, std::move(options));
   }
 
   // Makes a call and returns the response read from the transport, without
@@ -296,9 +277,8 @@ class OutgoingMessage : public ::fidl::Status {
   OutgoingMessage(fidl_outgoing_msg_t msg, uint32_t handle_capacity)
       : ::fidl::Status(::fidl::Status::Ok()), message_(msg), handle_capacity_(handle_capacity) {}
 
-  void EncodeImpl(fidl::internal::WireFormatVersion wire_format_version,
-                  const fidl_type_t* message_type, void* data, size_t inline_size,
-                  fidl::internal::TopLevelEncodeFn encode_fn);
+  void EncodeImpl(fidl::internal::WireFormatVersion wire_format_version, void* data,
+                  size_t inline_size, fidl::internal::TopLevelEncodeFn encode_fn);
 
   uint32_t iovec_capacity() const { return iovec_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
@@ -314,14 +294,13 @@ class OutgoingMessage : public ::fidl::Status {
 
   void DecodeImplForCall(size_t inline_size, bool contains_envelope,
                          internal::TopLevelDecodeFn decode_fn,
-                         const internal::CodingConfig& coding_config,
-                         const fidl_type_t* response_type, uint8_t* bytes,
+                         const internal::CodingConfig& coding_config, uint8_t* bytes,
                          uint32_t* in_out_num_bytes, fidl_handle_t* handles,
                          fidl_handle_metadata_t* handle_metadata, uint32_t num_handles);
 
   void CallImplForCallerProvidedBuffer(internal::AnyUnownedTransport transport, size_t inline_size,
                                        bool contains_envelope, internal::TopLevelDecodeFn decode_fn,
-                                       const fidl_type_t* response_type, uint8_t* result_bytes,
+                                       bool has_response_body, uint8_t* result_bytes,
                                        uint32_t result_byte_capacity, fidl_handle_t* result_handles,
                                        fidl_handle_metadata_t* result_handle_metadata,
                                        uint32_t result_handle_capacity, CallOptions options);
@@ -329,7 +308,7 @@ class OutgoingMessage : public ::fidl::Status {
   void CallImplForTransportProvidedBuffer(internal::AnyUnownedTransport transport,
                                           size_t inline_size, bool contains_envelope,
                                           internal::TopLevelDecodeFn decode_fn,
-                                          const fidl_type_t* response_type, uint8_t** out_bytes,
+                                          bool has_response_body, uint8_t** out_bytes,
                                           uint32_t* out_num_bytes, CallOptions options);
 
   fidl::IncomingMessage CallImpl(internal::AnyUnownedTransport transport,
@@ -737,8 +716,7 @@ class UnownedEncodedMessageBase {
                             ::fitx::result<::fidl::Error, ::fidl::BufferSpan> backing_buffer,
                             fidl_handle_t* handles, fidl_handle_metadata_t* handle_metadata,
                             uint32_t handle_capacity, bool is_transactional, void* value,
-                            const fidl_type_t* fidl_type, size_t inline_size,
-                            TopLevelEncodeFn encode_fn)
+                            size_t inline_size, TopLevelEncodeFn encode_fn)
       : message_(backing_buffer.is_ok()
                      ? ::fidl::OutgoingMessage::Create_InternalMayBreak(
                            ::fidl::OutgoingMessage::InternalIovecConstructorArgs{
@@ -756,7 +734,7 @@ class UnownedEncodedMessageBase {
         wire_format_version_(wire_format_version) {
     if (message_.ok()) {
       ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.EncodeImpl(wire_format_version, fidl_type, value, inline_size, encode_fn);
+      message_.EncodeImpl(wire_format_version, value, inline_size, encode_fn);
     }
   }
 
@@ -828,7 +806,6 @@ class UnownedEncodedMessage final
                 UnownedEncodedMessageHandleContainer::handle_metadata_storage_.data()),
             UnownedEncodedMessageHandleContainer::kNumHandles,
             fidl::IsFidlTransactionalMessage<FidlType>::value, value,
-            fidl::TypeTraits<FidlType>::kType,
             internal::TopLevelCodingTraits<FidlType>::inline_size,
             internal::MakeTopLevelEncodeFn<FidlType>()) {}
 
@@ -915,7 +892,8 @@ class DecodedMessage<FidlType, Transport,
   explicit DecodedMessage(::fidl::IncomingMessage&& msg)
       : Base(Base::template IsTransactional<IsFidlTransactionalMessage<FidlType>::value>(),
              std::move(msg), internal::TopLevelCodingTraits<FidlType>::inline_size,
-             internal::ContainsEnvelope<FidlType>(), internal::MakeTopLevelDecodeFn<FidlType>()) {}
+             fidl::TypeTraits<FidlType>::kHasEnvelope, internal::MakeTopLevelDecodeFn<FidlType>()) {
+  }
 
   ~DecodedMessage() {
     if constexpr (::fidl::IsResource<FidlType>::value) {

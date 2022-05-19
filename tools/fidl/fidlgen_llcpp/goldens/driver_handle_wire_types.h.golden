@@ -336,19 +336,25 @@ struct IsResource<
     ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_driverhandle::wire::
           test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> {
   static constexpr uint32_t kMaxNumHandles = 2;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 48;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -420,17 +426,22 @@ template <>
 struct IsResource<::test_driverhandle::wire::ServerEndWrapper>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_driverhandle::wire::ServerEndWrapper> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_driverhandle::wire::ServerEndWrapper> {
   static constexpr const fidl_type_t* kType =
       &::test_driverhandle::wire::test_driverhandle_ServerEndWrapperTable;
+};
+
+template <>
+struct TypeTraits<::test_driverhandle::wire::ServerEndWrapper> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -501,17 +512,22 @@ template <>
 struct IsResource<::test_driverhandle::wire::ClientEndWrapper>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_driverhandle::wire::ClientEndWrapper> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_driverhandle::wire::ClientEndWrapper> {
   static constexpr const fidl_type_t* kType =
       &::test_driverhandle::wire::test_driverhandle_ClientEndWrapperTable;
+};
+
+template <>
+struct TypeTraits<::test_driverhandle::wire::ClientEndWrapper> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -583,15 +599,13 @@ struct IsResource<::test_driverhandle::wire::T> : public std::true_type {};
 
 template <>
 struct TypeTraits<::test_driverhandle::wire::T> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_driverhandle::wire::test_driverhandle_TTable;
   static constexpr uint32_t kMaxNumHandles = 2;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 48;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 

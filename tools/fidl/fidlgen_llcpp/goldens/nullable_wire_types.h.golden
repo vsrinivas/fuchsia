@@ -207,17 +207,22 @@ struct SimpleProtocolAddRequest {
 }  // namespace test_nullable
 namespace fidl {
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_nullable::wire::StructWithNullableVector> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_nullable::wire::StructWithNullableVector> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::wire::test_nullable_StructWithNullableVectorTable;
+};
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableVector> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
 
@@ -281,17 +286,22 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_nullable::wire::StructWithNullableUnion> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_nullable::wire::StructWithNullableUnion> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::wire::test_nullable_StructWithNullableUnionTable;
+};
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableUnion> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -352,17 +362,22 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_nullable::wire::StructWithNullableStruct> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_nullable::wire::StructWithNullableStruct> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::wire::test_nullable_StructWithNullableStructTable;
+};
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableStruct> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
 
@@ -422,17 +437,22 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_nullable::wire::StructWithNullableString> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_nullable::wire::StructWithNullableString> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::wire::test_nullable_StructWithNullableStringTable;
+};
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableString> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
 
@@ -495,17 +515,22 @@ template <>
 struct IsResource<::test_nullable::wire::StructWithNullableRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_nullable::wire::StructWithNullableRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_nullable::wire::StructWithNullableRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::wire::test_nullable_StructWithNullableRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableRequest> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -575,17 +600,23 @@ template <>
 struct IsResource<::test_nullable::wire::StructWithNullableProtocol>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_nullable::wire::StructWithNullableProtocol> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_nullable::wire::StructWithNullableProtocol> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::wire::test_nullable_StructWithNullableProtocolTable;
+};
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableProtocol> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -655,17 +686,22 @@ template <>
 struct IsResource<::test_nullable::wire::StructWithNullableHandle>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_nullable::wire::StructWithNullableHandle> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_nullable::wire::StructWithNullableHandle> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::wire::test_nullable_StructWithNullableHandleTable;
+};
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableHandle> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -730,17 +766,23 @@ struct ::fidl::internal::WireCodingTraits<
 };
 #endif  // __Fuchsia__
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_nullable::wire::SimpleProtocolAddTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_nullable::wire::SimpleProtocolAddTopResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::wire::test_nullable_SimpleProtocolAddTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_nullable::wire::SimpleProtocolAddTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -799,17 +841,22 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_nullable::wire::SimpleProtocolAddRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_nullable::wire::SimpleProtocolAddRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::wire::test_nullable_SimpleProtocolAddRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_nullable::wire::SimpleProtocolAddRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -881,17 +928,22 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_nullable::wire::Int32Wrapper> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_nullable::wire::Int32Wrapper> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::wire::test_nullable_Int32WrapperTable;
+};
+
+template <>
+struct TypeTraits<::test_nullable::wire::Int32Wrapper> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -949,15 +1001,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_nullable::wire::SimpleUnion> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_nullable::wire::test_nullable_SimpleUnionTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 

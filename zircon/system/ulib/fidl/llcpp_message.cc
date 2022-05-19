@@ -169,9 +169,8 @@ bool OutgoingMessage::BytesMatch(const OutgoingMessage& other) const {
          byte_index == 0 && other_byte_index == 0;
 }
 
-void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_version,
-                                 const fidl_type_t* message_type, void* data, size_t inline_size,
-                                 fidl::internal::TopLevelEncodeFn encode_fn) {
+void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_version, void* data,
+                                 size_t inline_size, fidl::internal::TopLevelEncodeFn encode_fn) {
   if (!ok()) {
     return;
   }
@@ -215,16 +214,12 @@ void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOption
 
 void OutgoingMessage::DecodeImplForCall(size_t inline_size, bool contains_envelope,
                                         internal::TopLevelDecodeFn decode_fn,
-                                        const internal::CodingConfig& coding_config,
-                                        const fidl_type_t* response_type, uint8_t* bytes,
+                                        const internal::CodingConfig& coding_config, uint8_t* bytes,
                                         uint32_t* in_out_num_bytes, fidl_handle_t* handles,
                                         fidl_handle_metadata_t* handle_metadata,
                                         uint32_t num_handles) {
   fidl_message_header_t& header = reinterpret_cast<fidl_message_header_t&>(*bytes);
-  if (response_type == nullptr) {
-    // TODO(fxbug.dev/100320) Remove this usage of the coding tables.
-    return;
-  } else if (unlikely(*in_out_num_bytes <= sizeof(fidl_message_header_t))) {
+  if (unlikely(*in_out_num_bytes <= sizeof(fidl_message_header_t))) {
     SetStatus(fidl::Status::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
                                         "non-nullptr response_type must be larger than 16 bytes"));
     return;
@@ -250,7 +245,7 @@ void OutgoingMessage::DecodeImplForCall(size_t inline_size, bool contains_envelo
 
 void OutgoingMessage::CallImplForTransportProvidedBuffer(
     internal::AnyUnownedTransport transport, size_t inline_size, bool contains_envelope,
-    internal::TopLevelDecodeFn decode_fn, const fidl_type_t* response_type, uint8_t** out_bytes,
+    internal::TopLevelDecodeFn decode_fn, bool has_response_body, uint8_t** out_bytes,
     uint32_t* out_num_bytes, CallOptions options) {
   if (status() != ZX_OK) {
     return;
@@ -279,14 +274,16 @@ void OutgoingMessage::CallImplForTransportProvidedBuffer(
     return;
   }
 
-  DecodeImplForCall(inline_size, contains_envelope, decode_fn,
-                    *transport.vtable()->encoding_configuration, response_type, *out_bytes,
-                    out_num_bytes, result_handles, result_handle_metadata, result_num_handles);
+  if (has_response_body) {
+    DecodeImplForCall(inline_size, contains_envelope, decode_fn,
+                      *transport.vtable()->encoding_configuration, *out_bytes, out_num_bytes,
+                      result_handles, result_handle_metadata, result_num_handles);
+  }
 }
 
 void OutgoingMessage::CallImplForCallerProvidedBuffer(
     internal::AnyUnownedTransport transport, size_t inline_size, bool contains_envelope,
-    internal::TopLevelDecodeFn decode_fn, const fidl_type_t* response_type, uint8_t* result_bytes,
+    internal::TopLevelDecodeFn decode_fn, bool has_response_body, uint8_t* result_bytes,
     uint32_t result_byte_capacity, fidl_handle_t* result_handles,
     fidl_handle_metadata_t* result_handle_metadata, uint32_t result_handle_capacity,
     CallOptions options) {
@@ -319,9 +316,11 @@ void OutgoingMessage::CallImplForCallerProvidedBuffer(
     return;
   }
 
-  DecodeImplForCall(inline_size, contains_envelope, decode_fn,
-                    *transport.vtable()->encoding_configuration, response_type, result_bytes,
-                    &actual_num_bytes, result_handles, result_handle_metadata, actual_num_handles);
+  if (has_response_body) {
+    DecodeImplForCall(inline_size, contains_envelope, decode_fn,
+                      *transport.vtable()->encoding_configuration, result_bytes, &actual_num_bytes,
+                      result_handles, result_handle_metadata, actual_num_handles);
+  }
 }
 
 IncomingMessage OutgoingMessage::CallImpl(internal::AnyUnownedTransport transport,

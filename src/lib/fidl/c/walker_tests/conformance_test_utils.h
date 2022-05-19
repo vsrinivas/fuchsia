@@ -104,7 +104,7 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
   uint32_t actual_handles;
   const char* error_msg = nullptr;
   zx_status_t status =
-      fidl_encode_etc(fidl::TypeTraits<FidlType>::kType, llcpp_decoded.PrimaryObject(),
+      fidl_encode_etc(fidl::DeprecatedCTypeTraits<FidlType>::kType, llcpp_decoded.PrimaryObject(),
                       static_cast<uint32_t>(copied_bytes.size()), handle_dispositions,
                       std::size(handle_dispositions), &actual_handles, &error_msg);
   // The decoded message is consumed by |fidl_encode_etc|, and handles are moved

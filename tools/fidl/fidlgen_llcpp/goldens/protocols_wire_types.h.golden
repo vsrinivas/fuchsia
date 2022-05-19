@@ -1087,19 +1087,25 @@ template <>
 struct IsResource<::test_protocols::wire::WithProtocolEndsServerEndsTopResponse>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1174,18 +1180,24 @@ template <>
 struct IsResource<::test_protocols::wire::WithProtocolEndsServerEndsRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::WithProtocolEndsServerEndsRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::WithProtocolEndsServerEndsRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithProtocolEndsServerEndsRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::WithProtocolEndsServerEndsRequest> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1258,19 +1270,25 @@ template <>
 struct IsResource<::test_protocols::wire::WithProtocolEndsClientEndsTopResponse>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1345,18 +1363,24 @@ template <>
 struct IsResource<::test_protocols::wire::WithProtocolEndsClientEndsRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::WithProtocolEndsClientEndsRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::WithProtocolEndsClientEndsRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithProtocolEndsClientEndsRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::WithProtocolEndsClientEndsRequest> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1424,19 +1448,25 @@ struct ::fidl::internal::WireCodingTraits<
 };
 #endif  // __Fuchsia__
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 24;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1529,19 +1559,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1614,19 +1650,25 @@ template <>
 struct IsResource<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1702,19 +1744,25 @@ struct IsResource<
     ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1782,19 +1830,25 @@ struct ::fidl::internal::WireCodingTraits<
 };
 #endif  // __Fuchsia__
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -1863,19 +1917,25 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -1943,18 +2003,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -2021,20 +2087,27 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::
+        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
+};
+
 template <>
 struct TypeTraits<
     ::test_protocols::wire::
         WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2114,20 +2187,27 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::
+        WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+};
+
 template <>
 struct TypeTraits<
     ::test_protocols::wire::
         WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2202,20 +2282,27 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::
+        WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+};
+
 template <>
 struct TypeTraits<
     ::test_protocols::wire::
         WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2288,20 +2375,27 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::
+        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+};
+
 template <>
 struct TypeTraits<
     ::test_protocols::wire::
         WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2378,19 +2472,26 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::
-                      WithAndWithoutRequestResponseOnWithResponseRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::
+        WithAndWithoutRequestResponseOnWithResponseRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::
+                      WithAndWithoutRequestResponseOnWithResponseRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2459,20 +2560,27 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::
+        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
+};
+
 template <>
 struct TypeTraits<
     ::test_protocols::wire::
         WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2549,18 +2657,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::TransitionalRequestTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::TransitionalRequestTopResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_TransitionalRequestTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::TransitionalRequestTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -2621,17 +2735,23 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::TransitionalRequestRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::TransitionalRequestRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::test_protocols_TransitionalRequestRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::TransitionalRequestRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -2690,17 +2810,23 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::TransitionalOneWayRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::TransitionalOneWayRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::test_protocols_TransitionalOneWayRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::TransitionalOneWayRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -2759,17 +2885,22 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::TransitionalEventRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_protocols::wire::TransitionalEventRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::test_protocols_TransitionalEventRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::TransitionalEventRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -2828,18 +2959,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::MethodWithUnionUnionMethodRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_MethodWithUnionUnionMethodRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -2902,18 +3039,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::SyscallProtocolMethodCRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::SyscallProtocolMethodCRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_SyscallProtocolMethodCRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::SyscallProtocolMethodCRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -2992,17 +3135,22 @@ template <>
 struct IsResource<::test_protocols::wire::ProtocolEnds>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::ProtocolEnds> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<::test_protocols::wire::ProtocolEnds> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::test_protocols_ProtocolEndsTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::ProtocolEnds> {
   static constexpr uint32_t kMaxNumHandles = 4;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -3122,19 +3270,25 @@ struct IsResource<
     ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 4;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -3212,19 +3366,25 @@ struct IsResource<
     ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest> {
   static constexpr uint32_t kMaxNumHandles = 4;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -3295,17 +3455,23 @@ struct ::fidl::internal::WireCodingTraits<
 };
 #endif  // __Fuchsia__
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::ManyParametersFifteenRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::ManyParametersFifteenRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::test_protocols_ManyParametersFifteenRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::ManyParametersFifteenRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 15;
   static constexpr uint32_t kPrimarySizeV1 = 15;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -3553,19 +3719,25 @@ struct IsResource<
     ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -3647,19 +3819,25 @@ struct IsResource<
     ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -3737,19 +3915,25 @@ struct IsResource<
     ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -3829,18 +4013,24 @@ template <>
 struct IsResource<::test_protocols::wire::HandleRightsProtocolAnEventRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::HandleRightsProtocolAnEventRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::HandleRightsProtocolAnEventRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_HandleRightsProtocolAnEventRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::HandleRightsProtocolAnEventRequest> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -3909,19 +4099,25 @@ struct ::fidl::internal::WireCodingTraits<
 };
 #endif  // __Fuchsia__
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -3991,18 +4187,24 @@ template <>
 struct IsResource<::test_protocols::wire::ChannelProtocolTakeHandleRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::ChannelProtocolTakeHandleRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_ChannelProtocolTakeHandleRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -4075,19 +4277,25 @@ struct IsResource<
     ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<
+struct DeprecatedCTypeTraits<
     ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -4163,18 +4371,24 @@ template <>
 struct IsResource<::test_protocols::wire::ChannelProtocolMutateSocketRequest>
     : public std::true_type {};
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::ChannelProtocolMutateSocketRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_ChannelProtocolMutateSocketRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -4243,18 +4457,24 @@ struct ::fidl::internal::WireCodingTraits<
 };
 #endif  // __Fuchsia__
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::ChannelProtocolMethodBTopResponse> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::ChannelProtocolMethodBTopResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_ChannelProtocolMethodBTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::ChannelProtocolMethodBTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -4316,18 +4536,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::ChannelProtocolMethodBRequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::ChannelProtocolMethodBRequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_ChannelProtocolMethodBRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::ChannelProtocolMethodBRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -4401,18 +4627,24 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::ChannelProtocolMethodARequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::ChannelProtocolMethodARequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::
           test_protocols_ChannelProtocolMethodARequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::ChannelProtocolMethodARequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -4486,17 +4718,23 @@ struct ::fidl::internal::WireCodingTraits<
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_protocols::wire::ChannelProtocolEventARequest> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
+struct DeprecatedCTypeTraits<
+    ::test_protocols::wire::ChannelProtocolEventARequest> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::wire::test_protocols_ChannelProtocolEventARequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocols::wire::ChannelProtocolEventARequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
 
@@ -4572,16 +4810,13 @@ struct ::fidl::internal::WireCodingTraits<
 template <>
 struct TypeTraits<
     ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -4741,16 +4976,13 @@ struct IsResource<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>
 
 template <>
 struct TypeTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -4907,16 +5139,13 @@ struct ::fidl::internal::WireCodingTraits<
 template <>
 struct TypeTraits<
     ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -5071,15 +5300,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_protocols::wire::TheUnion> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::test_protocols_TheUnionTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
@@ -5202,16 +5429,13 @@ struct ::fidl::internal::WireCodingTraits<
 
 template <>
 struct TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult> {
-  // TODO(fxbug.dev/100320) Remove coding tables from TypeTraits.
-  static constexpr const fidl_type_t* kType =
-      &::test_protocols::wire::
-          test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
