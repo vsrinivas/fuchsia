@@ -13,7 +13,6 @@ use {
     std::vec::Vec,
 };
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99061)
 #[allow(clippy::mut_from_ref)] // TODO(fxbug.dev/95027)
 /// BufferSource is a contiguous range of memory which may have some special properties (such as
 /// being contained within a special memory region that can be used for block transactions, e.g.
@@ -24,6 +23,11 @@ pub trait BufferSource: Any + std::fmt::Debug + Send + Sync {
     fn size(&self) -> usize;
     /// Returns a mutable slice covering |range| in the BufferSource.
     /// Panics if |range| exceeds |self.size()|.
+    ///
+    /// # Safety
+    ///
+    /// This method is unsound if called with overlapping ranges. The caller (BufferAllocator) is
+    /// responsible for ensuring that ranges are not shared across allocations.
     unsafe fn sub_slice(&self, range: &Range<usize>) -> &mut [u8];
     fn as_any(&self) -> &dyn Any;
     fn into_any(self: Box<Self>) -> Box<dyn Any>;
