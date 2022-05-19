@@ -1,8 +1,9 @@
 {
+    include: [ "syslog/client.shard.cml" ],
     children: [
         {
             name: "ui",
-            url: "fuchsia-pkg://fuchsia.com/ui#meta/ui_with_root_presenter.cm",
+            url: "fuchsia-pkg://fuchsia.com/ui_headless#meta/ui_headless.cm",
             environment: "#full-resolver-env",
         },
     ],

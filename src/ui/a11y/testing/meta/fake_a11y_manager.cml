@@ -9,7 +9,6 @@
             protocol: [
                 "fuchsia.accessibility.Magnifier",
                 "fuchsia.accessibility.semantics.SemanticsManager",
-                "fuchsia.accessibility.semantics.SemanticTree",
 
                 // Allows clients to control the GFX clip space transform directly.
                 "test.accessibility.Magnifier",
@@ -26,7 +25,6 @@
             protocol: [
                 "fuchsia.accessibility.Magnifier",
                 "fuchsia.accessibility.semantics.SemanticsManager",
-                "fuchsia.accessibility.semantics.SemanticTree",
                 "test.accessibility.Magnifier",
             ],
             from: "self",

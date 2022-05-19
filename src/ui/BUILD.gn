@@ -35,34 +35,66 @@ group("tests") {
   ]
 }
 
-fuchsia_component("ui-component") {
-  component_name = "ui"
-  manifest = "meta/ui.cml"
-}
-
+# Deprecated. Please use ui_core_shard instead.
 core_shard("ui-core-shard") {
   shard_file = "meta/ui.core_shard.cml"
 }
 
-fuchsia_package("ui_pkg") {
-  package_name = "ui"
-
-  deps = [ ":ui-component" ]
+core_shard("ui_core_shard") {
+  shard_file = "meta/ui.core_shard.cml"
 }
 
-fuchsia_component("ui-with-root-presenter-component") {
-  component_name = "ui-with-root-presenter"
-  manifest = "meta/ui_with_root_presenter.cml"
-}
-
-core_shard("ui-with-root-presenter-core-shard") {
+core_shard("ui_with_root_presenter_core_shard") {
   shard_file = "meta/ui_with_root_presenter.core_shard.cml"
 }
 
-fuchsia_package("ui_with_root_presenter_pkg") {
+# TODO(b/215402056): Include Scenic for Root Presenter until Input Pipeline
+# supports required FIDL services like FactoryResetCountdown. Otherwise
+# remove this dep.
+core_shard("ui_headless_core_shard") {
+  shard_file = "meta/ui_with_root_presenter.core_shard.cml"
+}
+
+# core_shard("ui_headless_core_shard") {
+#   shard_file = "meta/ui_headless.core_shard.cml"
+# }
+
+fuchsia_component("ui_component") {
+  component_name = "ui"
+  manifest = "meta/ui.cml"
+}
+
+fuchsia_component("ui_with_root_presenter_component") {
+  component_name = "ui_with_root_presenter"
+  manifest = "meta/ui_with_root_presenter.cml"
+}
+
+# TODO(b/215402056): Include Scenic for Root Presenter until Input Pipeline
+# supports required FIDL services like FactoryResetCountdown. Otherwise
+# remove this dep.
+fuchsia_component("ui_headless_component") {
+  component_name = "ui_with_root_presenter"
+  manifest = "meta/ui_with_root_presenter.cml"
+}
+
+# fuchsia_component("ui_headless_component") {
+#   component_name = "ui_headless"
+#   manifest = "meta/ui_headless.cml"
+# }
+
+fuchsia_package("ui_pkg") {
   package_name = "ui"
 
-  deps = [ ":ui-with-root-presenter-component" ]
+  deps = [
+    ":ui_component",
+    ":ui_with_root_presenter_component",
+  ]
+}
+
+fuchsia_package("ui_headless_pkg") {
+  package_name = "ui"
+
+  deps = [ ":ui_headless_component" ]
 }
 
 # Deprecated. Please use runtime_with_scene_manager instead.
@@ -70,13 +102,25 @@ group("workstation") {
   deps = [ ":runtime_with_scene_manager" ]
 }
 
+# runtime is the set of package dependencies desired for the construction of any
+# product that includes UI.
+group("runtime") {
+  deps = [
+    ":ui_pkg",
+    "a11y",
+    "bin/text:text_manager",
+    "scenic",
+    "//src/graphics/bundles:vulkan",
+    "//src/sys/activity",
+  ]
+}
+
 # runtime_with_scene_manager is the set of package dependencies typically
 # desired for the construction of a product that includes UI and scene manager
 # (as opposed to root presenter).
 group("runtime_with_scene_manager") {
   deps = [
-    ":ui_pkg",
-    "a11y",
+    ":runtime",
     "bin/scene_manager",
   ]
 }
@@ -86,19 +130,23 @@ group("runtime_with_scene_manager") {
 # presenter (as opposed to scene manager).
 group("runtime_with_root_presenter") {
   deps = [
-    ":ui_with_root_presenter_pkg",
-    "a11y",
+    ":runtime",
     "bin/input-pipeline",
     "bin/input-pipeline:configs",
     "bin/root_presenter",
     "bin/root_presenter:configs",
-    "scenic",
-    "//src/graphics/bundles:vulkan",
-    "//src/sys/activity",
 
     # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to
     # text_manager.
     "bin/text:ime_service",
-    "bin/text:text_manager",
   ]
+}
+
+# runtime_headless is the set of package dependencies desired for the construction
+# of any product that includes headless UI (button input and a11y features only).
+group("runtime_headless") {
+  # TODO(b/215402056): Include Scenic for Root Presenter until Input Pipeline
+  # supports required FIDL services like FactoryResetCountdown. Otherwise
+  # remove this dep.
+  deps = [ ":runtime_with_root_presenter" ]
 }

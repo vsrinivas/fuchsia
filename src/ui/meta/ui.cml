@@ -97,7 +97,6 @@
         {
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
-                "fuchsia.accessibility.semantics.SemanticTree",
                 "fuchsia.accessibility.tts.EngineRegistry",
                 "fuchsia.accessibility.tts.TtsManager",
             ],
