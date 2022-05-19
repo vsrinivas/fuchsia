@@ -213,8 +213,10 @@ type ResultFlags = strict bits {
     DISCONTINUITY = 1;
 };
 
+alias ObjectId = zx.koid;
+
 type BufferRange = struct {
-    buffer_id zx.koid;
+    buffer_id ObjectId;
     offset uint64;
     size uint64;
 };
@@ -224,15 +226,22 @@ alias ContextId = uint32;
 /// If a system driver error occurs, or if the client sends a message that the client should have
 /// known is invalid, the connection will be closed and a zx.status sent via epitaph.
 protocol Primary {
-    /// Imports an object for use in the system driver.
+    /// DEPRECATED.
     ImportObject(resource struct {
         object zx.handle;
         object_type ObjectType;
     });
 
+    /// Imports an object for use in the system driver.
+    ImportObject2(resource struct {
+        object zx.handle;
+        object_type ObjectType;
+        object_id ObjectId;
+    });
+
     /// Destroys the object with `object_id` within this connection.
     ReleaseObject(struct {
-        object_id zx.koid;
+        object_id ObjectId;
         object_type ObjectType;
     });
 
@@ -257,8 +266,8 @@ protocol Primary {
         context_id uint32;
         command_buffer CommandBuffer2;
         resources vector<BufferRange>:MAX;
-        wait_semaphores vector<zx.koid>:MAX;
-        signal_semaphores vector<zx.koid>:MAX;
+        wait_semaphores vector<ObjectId>:MAX;
+        signal_semaphores vector<ObjectId>:MAX;
     });
 
     /// Submits command buffers for execution on the GPU, with associated `resources`.
@@ -270,8 +279,8 @@ protocol Primary {
         context_id ContextId;
         resources vector<BufferRange>:MAX;
         command_buffers vector<CommandBuffer>:MAX;
-        wait_semaphores vector<zx.koid>:MAX;
-        signal_semaphores vector<zx.koid>:MAX;
+        wait_semaphores vector<ObjectId>:MAX;
+        signal_semaphores vector<ObjectId>:MAX;
         flags CommandBufferFlags;
     });
 
@@ -281,7 +290,7 @@ protocol Primary {
     ExecuteImmediateCommands(struct {
         context_id ContextId;
         command_data bytes:MAX_IMMEDIATE_COMMANDS_DATA_SIZE;
-        semaphores vector<zx.koid>:MAX;
+        semaphores vector<ObjectId>:MAX;
     });
 
     /// Incurs a round-trip to the system driver, used to ensure all previous messages have been
@@ -292,7 +301,7 @@ protocol Primary {
     /// address space at `gpu_va`.  `flags` is a set of flags from MapFlags that specify how the
     /// GPU can access the buffer.
     MapBufferGpu(struct {
-        buffer_id zx.koid;
+        buffer_id ObjectId;
         gpu_va uint64;
         page_offset uint64;
         page_count uint64;
@@ -302,14 +311,14 @@ protocol Primary {
     /// Releases the mapping at `gpu_va` from the GPU for the given `buffer_id`.
     /// Buffers will also be implicitly unmapped when released.
     UnmapBufferGpu(struct {
-        buffer_id zx.koid;
+        buffer_id ObjectId;
         gpu_va uint64;
     });
 
     /// Perform an operation on a range of the buffer, starting at `offset` and `length` bytes
     /// long.
     BufferRangeOp(struct {
-        buffer_id zx.koid;
+        buffer_id ObjectId;
         op BufferOp;
         offset uint64;
         length uint64;
@@ -393,7 +402,7 @@ protocol Primary {
     /// EnablePerformanceCounterAccess before calling this method.
     RemovePerformanceCounterBufferFromPool(struct {
         pool_id PerfCountPoolId;
-        buffer_id zx.koid;
+        buffer_id ObjectId;
     });
 
     /// Triggers dumping of the performance counters into a buffer pool. May fail silently if there
@@ -427,7 +436,7 @@ protocol PerformanceCounterEvents {
     /// when the reads are completed.
     -> OnPerformanceCounterReadCompleted(struct {
         trigger_id uint32;
-        buffer_id zx.koid;
+        buffer_id ObjectId;
         buffer_offset uint32;
         timestamp zx.time;
         flags ResultFlags;

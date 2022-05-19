@@ -12,7 +12,7 @@
 
 namespace magma {
 
-bool ZirconPlatformSemaphore::duplicate_handle(uint32_t* handle_out) {
+bool ZirconPlatformSemaphore::duplicate_handle(uint32_t* handle_out) const {
   zx::event duplicate;
   zx_status_t status = event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate);
   if (status < 0)

@@ -52,7 +52,15 @@ class ZirconPlatformBuffer : public PlatformBuffer {
   // PlatformBuffer implementation
   uint64_t size() const override { return size_; }
 
-  uint64_t id() const override { return koid_; }
+  void set_local_id(uint64_t id) override {
+    DASSERT(id);
+    DASSERT(!local_id_);
+    local_id_ = id;
+  }
+
+  uint64_t koid() const { return koid_; }
+
+  uint64_t id() const override { return local_id_ ? local_id_ : koid_; }
 
   zx_handle_t handle() const { return vmo_.get(); }
 
@@ -112,6 +120,7 @@ class ZirconPlatformBuffer : public PlatformBuffer {
   uint64_t size_;
   uint64_t padding_size_ = 0;
   uint64_t koid_;
+  uint64_t local_id_ = 0;
   void* virt_addr_{};
   uint32_t map_count_ = 0;
   std::shared_ptr<MappingAddressRange> parent_vmar_ =

@@ -19,7 +19,8 @@ std::unique_ptr<MagmaSystemBuffer> MagmaSystemBuffer::Create(
   if (!platform_buffer->duplicate_handle(&duplicate_handle))
     return DRETP(nullptr, "failed to get duplicate_handle");
 
-  msd_buffer_unique_ptr_t msd_buf = MsdBufferUniquePtr(msd_buffer_import(duplicate_handle));
+  msd_buffer_unique_ptr_t msd_buf =
+      MsdBufferUniquePtr(msd_buffer_import(duplicate_handle, platform_buffer->id()));
   if (!msd_buf)
     return DRETP(nullptr, "Failed to import newly allocated buffer into the MSD Implementation");
 

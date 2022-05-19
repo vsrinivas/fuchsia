@@ -173,6 +173,31 @@ magma_status_t PrimaryWrapper::ImportObject(zx::handle handle,
   return magma::FromZxStatus(status).get();
 }
 
+magma_status_t PrimaryWrapper::ImportObject(zx::handle handle,
+                                            magma::PlatformObject::Type object_type,
+                                            uint64_t object_id) {
+  uint64_t size = 0;
+
+  if (object_type == magma::PlatformObject::BUFFER) {
+    zx::unowned_vmo vmo(handle.get());
+    zx_status_t status = vmo->get_size(&size);
+    if (status != ZX_OK)
+      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "get_size failed: %d", status);
+  }
+
+  std::lock_guard<std::mutex> lock(flow_control_mutex_);
+  FlowControl(size);
+
+  auto wire_object_type = static_cast<fuchsia_gpu_magma::wire::ObjectType>(object_type);
+
+  zx_status_t status =
+      client_->ImportObject2(std::move(handle), wire_object_type, object_id).status();
+  if (status == ZX_OK) {
+    UpdateFlowControl(size);
+  }
+  return magma::FromZxStatus(status).get();
+}
+
 magma_status_t PrimaryWrapper::ReleaseObject(uint64_t object_id,
                                              magma::PlatformObject::Type object_type) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
@@ -496,6 +521,17 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   magma_status_t ImportObject(uint32_t handle, PlatformObject::Type object_type) override {
     DLOG("ZirconPlatformConnectionClient: ImportObject");
     magma_status_t result = client_.ImportObject(zx::handle(handle), object_type);
+
+    if (result != MAGMA_STATUS_OK)
+      return DRET_MSG(result, "failed to write to channel");
+
+    return MAGMA_STATUS_OK;
+  }
+
+  magma_status_t ImportObject(uint32_t handle, PlatformObject::Type object_type,
+                              uint64_t object_id) override {
+    DLOG("ZirconPlatformConnectionClient: ImportObject");
+    magma_status_t result = client_.ImportObject(zx::handle(handle), object_type, object_id);
 
     if (result != MAGMA_STATUS_OK)
       return DRET_MSG(result, "failed to write to channel");

@@ -361,12 +361,13 @@ class TestConnection {
     ASSERT_EQ(kExpectedStatus, magma_import(connection_, kInvalidHandle, &buffer));
   }
 
-  void BufferImport(uint32_t handle, uint64_t id) {
+  void BufferImport(uint32_t handle, uint64_t exported_id) {
     ASSERT_TRUE(connection_);
 
     magma_buffer_t buffer;
     ASSERT_EQ(MAGMA_STATUS_OK, magma_import(connection_, handle, &buffer));
-    EXPECT_EQ(magma_get_buffer_id(buffer), id);
+    EXPECT_EQ(magma_get_buffer_id(buffer), exported_id);
+
     magma_release_buffer(connection_, buffer);
   }
 
@@ -375,9 +376,9 @@ class TestConnection {
       GTEST_SKIP();  // TODO(fxbug.dev/13278)
 
     uint32_t handle;
-    uint64_t id;
-    test1->BufferExport(&handle, &id);
-    test2->BufferImport(handle, id);
+    uint64_t exported_id;
+    test1->BufferExport(&handle, &exported_id);
+    test2->BufferImport(handle, exported_id);
   }
 
   static magma_status_t wait_all(std::vector<magma_poll_item_t>& items, int64_t timeout_ns) {
@@ -625,20 +626,21 @@ class TestConnection {
     magma_release_semaphore(connection_, semaphore);
   }
 
-  void SemaphoreImport(magma_handle_t handle, uint64_t expected_id) {
+  void SemaphoreImport(magma_handle_t handle, uint64_t exported_id) {
     ASSERT_TRUE(connection_);
 
     magma_semaphore_t semaphore;
     ASSERT_EQ(magma_import_semaphore(connection_, handle, &semaphore), MAGMA_STATUS_OK);
-    EXPECT_EQ(magma_get_semaphore_id(semaphore), expected_id);
+    EXPECT_EQ(magma_get_semaphore_id(semaphore), exported_id);
+
     magma_release_semaphore(connection_, semaphore);
   }
 
   static void SemaphoreImportExport(TestConnection* test1, TestConnection* test2) {
     magma_handle_t handle;
-    uint64_t id;
-    test1->SemaphoreExport(&handle, &id);
-    test2->SemaphoreImport(handle, id);
+    uint64_t exported_id;
+    test1->SemaphoreExport(&handle, &exported_id);
+    test2->SemaphoreImport(handle, exported_id);
   }
 
   void ImmediateCommands() {

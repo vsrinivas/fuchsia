@@ -200,7 +200,7 @@ class Test {
     auto platform_semaphore = magma::PlatformSemaphore::Create();
     uint32_t handle;
     platform_semaphore->duplicate_handle(&handle);
-    connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE);
+    connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE, platform_semaphore->id());
 
     magma_arm_mali_atom atom;
     atom.size = sizeof(atom);

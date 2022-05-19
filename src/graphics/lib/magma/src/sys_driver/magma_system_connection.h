@@ -33,7 +33,8 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
 
   ~MagmaSystemConnection() override;
 
-  magma::Status ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override;
+  magma::Status ImportObject(uint32_t handle, magma::PlatformObject::Type object_type,
+                             uint64_t client_id) override;
   magma::Status ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type) override;
   magma::Status CreateContext(uint32_t context_id) override;
   magma::Status DestroyContext(uint32_t context_id) override;
@@ -69,7 +70,7 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
 
   // Create a buffer from the handle and add it to the map,
   // on success |id_out| contains the id to be used to query the map
-  magma::Status ImportBuffer(uint32_t handle, uint64_t* id_out);
+  magma::Status ImportBuffer(uint32_t handle, uint64_t id);
   // This removes the reference to the shared_ptr in the map
   // other instances remain valid until deleted
   // Returns false if no buffer with the given |id| exists in the map
@@ -91,6 +92,7 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
   }
 
  private:
+  // TODO(fxbug.dev/100552) - disallow importing an ID multiple times.
   struct BufferReference {
     uint64_t refcount = 1;
     std::shared_ptr<MagmaSystemBuffer> buffer;

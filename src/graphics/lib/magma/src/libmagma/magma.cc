@@ -94,8 +94,9 @@ magma_status_t magma_create_buffer(magma_connection_t connection, uint64_t size,
   if (!platform_buffer->duplicate_handle(&handle))
     return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
 
-  magma_status_t result = magma::PlatformConnectionClient::cast(connection)
-                              ->ImportObject(handle, magma::PlatformObject::BUFFER);
+  magma_status_t result =
+      magma::PlatformConnectionClient::cast(connection)
+          ->ImportObject(handle, magma::PlatformObject::BUFFER, platform_buffer->id());
   if (result != MAGMA_STATUS_OK)
     return DRET_MSG(result, "ImportObject failed");
 
@@ -165,8 +166,9 @@ magma_status_t magma_import(magma_connection_t connection, uint32_t buffer_handl
   if (!platform_buffer->duplicate_handle(&handle))
     return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
 
-  magma_status_t result = magma::PlatformConnectionClient::cast(connection)
-                              ->ImportObject(handle, magma::PlatformObject::BUFFER);
+  magma_status_t result =
+      magma::PlatformConnectionClient::cast(connection)
+          ->ImportObject(handle, magma::PlatformObject::BUFFER, platform_buffer->id());
   if (result != MAGMA_STATUS_OK)
     return DRET_MSG(result, "ImportObject failed");
 
@@ -295,8 +297,9 @@ magma_status_t magma_create_semaphore(magma_connection_t connection,
   if (!semaphore->duplicate_handle(&handle))
     return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
 
-  magma_status_t result = magma::PlatformConnectionClient::cast(connection)
-                              ->ImportObject(handle, magma::PlatformObject::SEMAPHORE);
+  magma_status_t result =
+      magma::PlatformConnectionClient::cast(connection)
+          ->ImportObject(handle, magma::PlatformObject::SEMAPHORE, semaphore->id());
   if (result != MAGMA_STATUS_OK)
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to ImportObject");
 
@@ -434,8 +437,9 @@ magma_status_t magma_import_semaphore(magma_connection_t connection, uint32_t se
   if (!platform_semaphore->duplicate_handle(&handle))
     return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
 
-  magma_status_t result = magma::PlatformConnectionClient::cast(connection)
-                              ->ImportObject(handle, magma::PlatformObject::SEMAPHORE);
+  magma_status_t result =
+      magma::PlatformConnectionClient::cast(connection)
+          ->ImportObject(handle, magma::PlatformObject::SEMAPHORE, platform_semaphore->id());
   if (result != MAGMA_STATUS_OK)
     return DRET_MSG(result, "ImportObject failed: %d", result);
 

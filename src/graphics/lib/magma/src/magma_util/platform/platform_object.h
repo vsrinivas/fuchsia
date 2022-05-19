@@ -13,11 +13,16 @@ class PlatformObject {
  public:
   enum Type { SEMAPHORE = 10, BUFFER = 11 };
 
-  // returns a unique, immutable id for the underlying object
-  virtual uint64_t id() = 0;
+  // Sets an ID that is attached only to this PlatformObject instance, not the underlying
+  // object. Can only be set once and must be non-zero.
+  virtual void set_local_id(uint64_t id) = 0;
+
+  // Returns the local ID if set; otherwise returns an ID that uniquely identifies the underlying
+  // memory object.
+  virtual uint64_t id() const = 0;
 
   // on success, duplicate of the underlying handle which is owned by the caller
-  virtual bool duplicate_handle(uint32_t* handle_out) = 0;
+  virtual bool duplicate_handle(uint32_t* handle_out) const = 0;
 
   // Returns the id for the given handle
   static bool IdFromHandle(uint32_t handle, uint64_t* id_out);

@@ -447,9 +447,11 @@ class TestMsdIntelDevice : public testing::Test {
 
   class FakeSemaphore : public magma::PlatformSemaphore {
    public:
-    uint64_t id() override { return 1; }
+    void set_local_id(uint64_t id) override {}
 
-    bool duplicate_handle(uint32_t* handle_out) override { return kEnableDeviceThread; }
+    uint64_t id() const override { return 1; }
+
+    bool duplicate_handle(uint32_t* handle_out) const override { return kEnableDeviceThread; }
 
     void Signal() override {
       signal_sem_->Signal();

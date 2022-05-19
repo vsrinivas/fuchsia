@@ -133,12 +133,12 @@ magma::Status MagmaSystemConnection::EnablePerformanceCounterAccess(
   return MAGMA_STATUS_OK;
 }
 
-magma::Status MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out) {
+magma::Status MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t id) {
   auto buffer = magma::PlatformBuffer::Import(handle);
   if (!buffer)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "failed to import buffer");
 
-  uint64_t id = buffer->id();
+  buffer->set_local_id(id);
 
   auto iter = buffer_map_.find(id);
   if (iter != buffer_map_.end()) {
@@ -148,9 +148,8 @@ magma::Status MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_
 
   BufferReference ref;
   ref.buffer = MagmaSystemBuffer::Create(std::move(buffer));
-
   buffer_map_.insert({id, ref});
-  *id_out = id;
+
   return MAGMA_STATUS_OK;
 }
 
@@ -255,38 +254,39 @@ void MagmaSystemConnection::SetNotificationCallback(msd_connection_notification_
 }
 
 magma::Status MagmaSystemConnection::ImportObject(uint32_t handle,
-                                                  magma::PlatformObject::Type object_type) {
+                                                  magma::PlatformObject::Type object_type,
+                                                  uint64_t client_id) {
+  if (!client_id)
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "client_id must be non zero");
+
   auto device = device_.lock();
   if (!device)
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to lock device");
 
   switch (object_type) {
-    case magma::PlatformObject::BUFFER: {
-      uint64_t id;
-      return ImportBuffer(handle, &id);
-    }
+    case magma::PlatformObject::BUFFER:
+      return ImportBuffer(handle, client_id);
 
     case magma::PlatformObject::SEMAPHORE: {
-      uint64_t id;
-      if (!magma::PlatformObject::IdFromHandle(handle, &id))
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "failed to get semaphore id for handle");
-
-      // Always import the handle to to ensure it gets closed
+      // Always import the handle to ensure it gets closed
       auto platform_sem = magma::PlatformSemaphore::Import(handle);
+      if (!platform_sem)
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "failed to import platform semaphore");
 
-      auto iter = semaphore_map_.find(id);
+      platform_sem->set_local_id(client_id);
+
+      auto iter = semaphore_map_.find(client_id);
       if (iter != semaphore_map_.end()) {
         iter->second.refcount++;
         return MAGMA_STATUS_OK;
       }
 
       auto semaphore = MagmaSystemSemaphore::Create(std::move(platform_sem));
-      if (!semaphore)
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to import platform semaphore");
+      DASSERT(semaphore);
 
       SemaphoreReference ref;
       ref.semaphore = std::move(semaphore);
-      semaphore_map_.insert(std::make_pair(id, ref));
+      semaphore_map_.insert(std::make_pair(client_id, ref));
     } break;
     default:
       return DRET(MAGMA_STATUS_INVALID_ARGS);

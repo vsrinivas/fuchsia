@@ -54,7 +54,7 @@ class TestMsd {
     if (!platform_buf->duplicate_handle(&duplicate_handle))
       return DRETF(false, "couldn't duplicate handle");
 
-    msd_buffer_t* buffer = msd_buffer_import(duplicate_handle);
+    msd_buffer_t* buffer = msd_buffer_import(duplicate_handle, platform_buf->id());
     if (!buffer)
       return DRETF(false, "msd_buffer_import failed");
 
@@ -79,7 +79,7 @@ TEST(MsdBuffer, ImportAndDestroy) {
   uint32_t duplicate_handle;
   ASSERT_TRUE(platform_buf->duplicate_handle(&duplicate_handle));
 
-  auto msd_buffer = msd_buffer_import(duplicate_handle);
+  auto msd_buffer = msd_buffer_import(duplicate_handle, platform_buf->id());
   ASSERT_NE(msd_buffer, nullptr);
 
   msd_buffer_destroy(msd_buffer);
@@ -125,7 +125,7 @@ TEST(MsdBuffer, MapAndUnmap) {
     ASSERT_TRUE(buffer_handle);
 
     EXPECT_TRUE(platform_buf->duplicate_handle(&raw_handle));
-    buffer = msd_buffer_import(raw_handle);
+    buffer = msd_buffer_import(raw_handle, platform_buf->id());
     ASSERT_TRUE(buffer);
   }
 
@@ -207,7 +207,7 @@ TEST(MsdBuffer, MapAndAutoUnmap) {
     ASSERT_TRUE(buffer_handle);
 
     EXPECT_TRUE(platform_buf->duplicate_handle(&raw_handle));
-    buffer = msd_buffer_import(raw_handle);
+    buffer = msd_buffer_import(raw_handle, platform_buf->id());
     ASSERT_TRUE(buffer);
   }
 

@@ -135,8 +135,11 @@ class MsdMockBufferManager {
   MsdMockBufferManager() {}
   virtual ~MsdMockBufferManager() {}
 
-  virtual MsdMockBuffer* CreateBuffer(uint32_t handle) {
+  virtual MsdMockBuffer* CreateBuffer(uint32_t handle, uint64_t client_id) {
     auto platform_buf = magma::PlatformBuffer::Import(handle);
+
+    platform_buf->set_local_id(client_id);
+
     return new MsdMockBuffer(std::move(platform_buf));
   }
 

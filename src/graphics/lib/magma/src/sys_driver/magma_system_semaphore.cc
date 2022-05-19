@@ -22,7 +22,7 @@ std::unique_ptr<MagmaSystemSemaphore> MagmaSystemSemaphore::Create(
     return DRETP(nullptr, "failed to get duplicate handle");
 
   msd_semaphore_t* msd_semaphore;
-  magma_status_t status = msd_semaphore_import(handle, &msd_semaphore);
+  magma_status_t status = msd_semaphore_import(handle, platform_semaphore->id(), &msd_semaphore);
   if (status != MAGMA_STATUS_OK)
     return DRETP(nullptr, "msd_semaphore_import failed: %d", status);
 

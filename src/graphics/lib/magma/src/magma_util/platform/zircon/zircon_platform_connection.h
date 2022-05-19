@@ -126,6 +126,8 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
 
   void ImportObject(ImportObjectRequestView request,
                     ImportObjectCompleter::Sync& _completer) override;
+  void ImportObject2(ImportObject2RequestView request,
+                     ImportObject2Completer::Sync& _completer) override;
   void ReleaseObject(ReleaseObjectRequestView request,
                      ReleaseObjectCompleter::Sync& _completer) override;
   void CreateContext(CreateContextRequestView request,

@@ -149,8 +149,8 @@ class CommandBufferHelper {
       uint32_t duplicate_handle;
       success = buffer->platform_buffer()->duplicate_handle(&duplicate_handle);
       DASSERT(success);
-      uint64_t id;
-      success = connection_->ImportBuffer(duplicate_handle, &id).ok();
+      uint64_t id = buffer->platform_buffer()->id();
+      success = connection_->ImportBuffer(duplicate_handle, id).ok();
       DASSERT(success);
       resources_.push_back(connection_->LookupBuffer(id).get());
       success = buffer->platform_buffer()->duplicate_handle(&duplicate_handle);
@@ -169,8 +169,8 @@ class CommandBufferHelper {
       uint32_t duplicate_handle;
       success = buffer->platform_buffer()->duplicate_handle(&duplicate_handle);
       DASSERT(success);
-      uint64_t id;
-      success = connection_->ImportBuffer(duplicate_handle, &id).ok();
+      uint64_t id = buffer->platform_buffer()->id();
+      success = connection_->ImportBuffer(duplicate_handle, id).ok();
       DASSERT(success);
       resources_.push_back(connection_->LookupBuffer(id).get());
       success = buffer->platform_buffer()->duplicate_handle(&duplicate_handle);
@@ -192,7 +192,10 @@ class CommandBufferHelper {
       success = semaphore->duplicate_handle(&duplicate_handle);
       DASSERT(success);
       wait_semaphores_.push_back(semaphore);
-      success = connection_->ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE).ok();
+      success =
+          connection_
+              ->ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE, semaphore->id())
+              .ok();
       DASSERT(success);
       abi_wait_semaphore_ids()[i] = semaphore->id();
       msd_wait_semaphores_.push_back(
@@ -208,7 +211,10 @@ class CommandBufferHelper {
       success = semaphore->duplicate_handle(&duplicate_handle);
       DASSERT(success);
       signal_semaphores_.push_back(semaphore);
-      success = connection_->ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE).ok();
+      success =
+          connection_
+              ->ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE, semaphore->id())
+              .ok();
       DASSERT(success);
       abi_signal_semaphore_ids()[i] = semaphore->id();
       msd_signal_semaphores_.push_back(

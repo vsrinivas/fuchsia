@@ -11,7 +11,7 @@
 
 class MsdVsiBuffer {
  public:
-  static std::unique_ptr<MsdVsiBuffer> Import(uint32_t handle);
+  static std::unique_ptr<MsdVsiBuffer> Import(uint32_t handle, uint64_t client_id);
   static std::unique_ptr<MsdVsiBuffer> Create(uint64_t size, const char* name);
 
   magma::PlatformBuffer* platform_buffer() {

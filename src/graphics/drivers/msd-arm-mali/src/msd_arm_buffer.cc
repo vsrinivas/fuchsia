@@ -20,10 +20,12 @@ MsdArmBuffer::~MsdArmBuffer() {
   DASSERT(gpu_mappings_.size() == mapping_count);
 }
 
-std::unique_ptr<MsdArmBuffer> MsdArmBuffer::Import(uint32_t handle) {
+std::unique_ptr<MsdArmBuffer> MsdArmBuffer::Import(uint32_t handle, uint64_t client_id) {
   auto platform_buf = magma::PlatformBuffer::Import(handle);
   if (!platform_buf)
     return DRETP(nullptr, "MsdArmBuffer::Create: Could not create platform buffer from token");
+
+  platform_buf->set_local_id(client_id);
 
   return std::unique_ptr<MsdArmBuffer>(new MsdArmBuffer(std::move(platform_buf)));
 }
@@ -111,8 +113,8 @@ bool MsdArmBuffer::EnsureRegionFlushed(uint64_t start_bytes, uint64_t end_bytes)
 
 //////////////////////////////////////////////////////////////////////////////
 
-msd_buffer_t* msd_buffer_import(uint32_t handle) {
-  auto buffer = MsdArmBuffer::Import(handle);
+msd_buffer_t* msd_buffer_import(uint32_t handle, uint64_t client_id) {
+  auto buffer = MsdArmBuffer::Import(handle, client_id);
   if (!buffer)
     return DRETP(nullptr, "MsdArmBuffer::Create failed");
   return new MsdArmAbiBuffer(std::move(buffer));

@@ -276,8 +276,12 @@ class TestNonHardwareMsdArmDevice {
       bool WaitAsync(magma::PlatformPort* port, uint64_t* key_out) override {
         return real_semaphore_->WaitAsync(port, key_out);
       }
-      uint64_t id() override { return real_semaphore_->id(); }
-      bool duplicate_handle(uint32_t* handle_out) override {
+
+      void set_local_id(uint64_t id) override {}
+
+      uint64_t id() const override { return real_semaphore_->id(); }
+
+      bool duplicate_handle(uint32_t* handle_out) const override {
         return real_semaphore_->duplicate_handle(handle_out);
       }
 

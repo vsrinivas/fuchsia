@@ -79,10 +79,11 @@ msd_context_t* msd_connection_create_context(msd_connection_t* dev) {
 
 void msd_context_destroy(msd_context_t* ctx) { delete MsdMockContext::cast(ctx); }
 
-msd_buffer_t* msd_buffer_import(uint32_t handle) {
+msd_buffer_t* msd_buffer_import(uint32_t handle, uint64_t client_id) {
   if (!g_bufmgr)
     g_bufmgr.reset(new MsdMockBufferManager());
-  return g_bufmgr->CreateBuffer(handle);
+
+  return g_bufmgr->CreateBuffer(handle, client_id);
 }
 
 void msd_buffer_destroy(msd_buffer_t* buf) {
@@ -116,9 +117,11 @@ MsdMockBufferManager* MsdMockBufferManager::ScopedMockBufferManager::get() {
 
 MsdMockContext::~MsdMockContext() { connection_->DestroyContext(this); }
 
-magma_status_t msd_semaphore_import(uint32_t handle, msd_semaphore_t** semaphore_out) {
-  *semaphore_out =
-      reinterpret_cast<msd_semaphore_t*>(magma::PlatformSemaphore::Import(handle).release());
+magma_status_t msd_semaphore_import(uint32_t handle, uint64_t client_id,
+                                    msd_semaphore_t** semaphore_out) {
+  auto semaphore = magma::PlatformSemaphore::Import(handle);
+  semaphore->set_local_id(client_id);
+  *semaphore_out = reinterpret_cast<msd_semaphore_t*>(semaphore.release());
   DASSERT(*semaphore_out);
   return MAGMA_STATUS_OK;
 }

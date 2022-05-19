@@ -15,7 +15,7 @@ TEST(MsdSemaphore, ImportAndDestroy) {
   ASSERT_TRUE(semaphore->duplicate_handle(&duplicate_handle));
 
   msd_semaphore_t* msd_sem = nullptr;
-  EXPECT_EQ(MAGMA_STATUS_OK, msd_semaphore_import(duplicate_handle, &msd_sem));
+  EXPECT_EQ(MAGMA_STATUS_OK, msd_semaphore_import(duplicate_handle, semaphore->id(), &msd_sem));
 
   ASSERT_NE(msd_sem, nullptr);
 

@@ -11,10 +11,12 @@
 MsdIntelBuffer::MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf)
     : platform_buf_(std::move(platform_buf)) {}
 
-std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Import(uint32_t handle) {
+std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Import(uint32_t handle, uint64_t client_id) {
   auto platform_buf = magma::PlatformBuffer::Import(handle);
   if (!platform_buf)
     return DRETP(nullptr, "MsdIntelBuffer::Create: Could not create platform buffer from token");
+
+  platform_buf->set_local_id(client_id);
 
   return std::unique_ptr<MsdIntelBuffer>(new MsdIntelBuffer(std::move(platform_buf)));
 }
@@ -29,8 +31,8 @@ std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Create(uint64_t size, const char
 
 //////////////////////////////////////////////////////////////////////////////
 
-msd_buffer_t* msd_buffer_import(uint32_t handle) {
-  auto buffer = MsdIntelBuffer::Import(handle);
+msd_buffer_t* msd_buffer_import(uint32_t handle, uint64_t client_id) {
+  auto buffer = MsdIntelBuffer::Import(handle, client_id);
   if (!buffer)
     return DRETP(nullptr, "MsdIntelBuffer::Create failed");
   return new MsdIntelAbiBuffer(std::move(buffer));

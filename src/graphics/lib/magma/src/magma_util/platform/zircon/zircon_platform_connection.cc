@@ -179,10 +179,40 @@ void ZirconPlatformConnection::ImportObject(ImportObjectRequestView request,
       return;
     }
   }
+
+  uint64_t id;
+  if (!magma::PlatformObject::IdFromHandle(request->object.get(), &id)) {
+    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
+    return;
+  }
+
   FlowControl(size);
 
   if (!delegate_->ImportObject(request->object.release(),
-                               static_cast<PlatformObject::Type>(request->object_type)))
+                               static_cast<PlatformObject::Type>(request->object_type), id))
+    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
+}
+
+void ZirconPlatformConnection::ImportObject2(ImportObject2RequestView request,
+                                             ImportObject2Completer::Sync& completer) {
+  DLOG("ZirconPlatformConnection: ImportObject2");
+  auto object_type = static_cast<PlatformObject::Type>(request->object_type);
+
+  uint64_t size = 0;
+
+  if (object_type == magma::PlatformObject::BUFFER) {
+    zx::unowned_vmo vmo(request->object.get());
+    zx_status_t status = vmo->get_size(&size);
+    if (status != ZX_OK) {
+      SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
+      return;
+    }
+  }
+  FlowControl(size);
+
+  if (!delegate_->ImportObject(request->object.release(),
+                               static_cast<PlatformObject::Type>(request->object_type),
+                               request->object_id))
     SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
 }
 

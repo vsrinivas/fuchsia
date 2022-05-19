@@ -18,7 +18,7 @@ class GpuMapping;
 // This can only be accessed on the connection thread.
 class MsdArmBuffer {
  public:
-  static std::unique_ptr<MsdArmBuffer> Import(uint32_t handle);
+  static std::unique_ptr<MsdArmBuffer> Import(uint32_t handle, uint64_t client_id);
   static std::unique_ptr<MsdArmBuffer> Create(uint64_t size, const char* name);
 
   ~MsdArmBuffer();

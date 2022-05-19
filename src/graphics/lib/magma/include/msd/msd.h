@@ -108,14 +108,15 @@ void msd_connection_release_buffer(struct msd_connection_t* connection,
 // Creates a buffer that owns the provided handle
 // The resulting msd_buffer_t is owned by the caller and must be destroyed
 // Returns NULL on failure.
-struct msd_buffer_t* msd_buffer_import(uint32_t handle);
+struct msd_buffer_t* msd_buffer_import(uint32_t handle, uint64_t client_id);
 
 // Destroys |buf|
 // This releases buf's reference to the underlying platform buffer
 void msd_buffer_destroy(struct msd_buffer_t* buf);
 
 // Imports the given handle as a semaphore.
-magma_status_t msd_semaphore_import(uint32_t handle, struct msd_semaphore_t** semaphore_out);
+magma_status_t msd_semaphore_import(uint32_t handle, uint64_t client_id,
+                                    struct msd_semaphore_t** semaphore_out);
 
 // Releases the given semaphore.
 void msd_semaphore_release(struct msd_semaphore_t* semaphore);

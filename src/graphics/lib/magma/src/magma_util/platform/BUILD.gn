@@ -28,6 +28,7 @@ source_set("buffer_header") {
   public_configs = [ ":platform_include_config" ]
   public_deps = [
     ":handle",
+    ":object",
     "//src/graphics/lib/magma/include:magma",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//src/graphics/lib/magma/src/magma_util:status",

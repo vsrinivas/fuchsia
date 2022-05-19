@@ -58,6 +58,10 @@ source_set("magma_system_tests") {
     "//sdk/lib/fit",
     "//third_party/googletest:gtest",
   ]
+
+  if (is_fuchsia) {
+    deps += [ "$magma_build_root/src/magma_util/platform/zircon:buffer" ]
+  }
 }
 
 if (is_fuchsia) {

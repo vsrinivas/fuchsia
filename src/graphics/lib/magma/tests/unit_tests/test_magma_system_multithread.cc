@@ -71,9 +71,8 @@ class TestMultithread {
       uint32_t handle;
       EXPECT_TRUE(batch_buffer->duplicate_handle(&handle));
 
-      uint64_t id;
-      EXPECT_TRUE(connection->ImportBuffer(handle, &id));
-      EXPECT_EQ(id, batch_buffer->id());
+      uint64_t id = batch_buffer->id();
+      EXPECT_TRUE(connection->ImportBuffer(handle, id));
 
       InitBatchBufferIntel(batch_buffer.get());
 

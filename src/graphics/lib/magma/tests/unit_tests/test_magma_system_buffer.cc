@@ -12,9 +12,9 @@ class MsdMockBufferManager_Create : public MsdMockBufferManager {
  public:
   MsdMockBufferManager_Create() : has_created_buffer_(false), has_destroyed_buffer_(false) {}
 
-  MsdMockBuffer* CreateBuffer(uint32_t handle) {
+  MsdMockBuffer* CreateBuffer(uint32_t handle, uint64_t client_id) {
     has_created_buffer_ = true;
-    return MsdMockBufferManager::CreateBuffer(handle);
+    return MsdMockBufferManager::CreateBuffer(handle, client_id);
   }
 
   void DestroyBuffer(MsdMockBuffer* buf) {
@@ -55,12 +55,11 @@ TEST(MagmaSystemBuffer, Create) {
     uint32_t duplicate_handle;
     ASSERT_TRUE(buf->duplicate_handle(&duplicate_handle));
 
-    uint64_t id;
-    EXPECT_TRUE(connection->ImportBuffer(duplicate_handle, &id));
+    EXPECT_TRUE(connection->ImportBuffer(duplicate_handle, buf->id()));
     EXPECT_TRUE(bufmgr->has_created_buffer());
     EXPECT_FALSE(bufmgr->has_destroyed_buffer());
 
-    EXPECT_TRUE(connection->ReleaseBuffer(id));
+    EXPECT_TRUE(connection->ReleaseBuffer(buf->id()));
   }
   EXPECT_TRUE(bufmgr->has_created_buffer());
   EXPECT_TRUE(bufmgr->has_destroyed_buffer());

@@ -12,11 +12,12 @@
 #include "magma_util/macros.h"
 #include "magma_util/status.h"
 #include "platform_handle.h"
+#include "platform_object.h"
 
 namespace magma {
 
 // In general only the const functions in this class must be implemented in a threadsafe way
-class PlatformBuffer {
+class PlatformBuffer : public PlatformObject {
  public:
   class MappingAddressRange {
    public:
@@ -55,12 +56,6 @@ class PlatformBuffer {
 
   // Returns the size of the buffer.
   virtual uint64_t size() const = 0;
-
-  // Returns a unique, immutable id for the underlying memory object.
-  virtual uint64_t id() const = 0;
-
-  // On success, duplicate of the underlying handle which is owned by the caller.
-  virtual bool duplicate_handle(uint32_t* handle_out) const = 0;
 
   // Creates a duplicate handle whose lifetime can be tracked with HasChildren.
   virtual bool CreateChild(uint32_t* handle_out) = 0;

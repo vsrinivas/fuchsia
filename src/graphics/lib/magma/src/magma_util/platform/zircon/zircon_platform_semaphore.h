@@ -17,9 +17,17 @@ class ZirconPlatformSemaphore : public PlatformSemaphore {
  public:
   ZirconPlatformSemaphore(zx::event event, uint64_t koid) : event_(std::move(event)), koid_(koid) {}
 
-  uint64_t id() override { return koid_; }
+  void set_local_id(uint64_t id) override {
+    DASSERT(id);
+    DASSERT(!local_id_);
+    local_id_ = id;
+  }
 
-  bool duplicate_handle(uint32_t* handle_out) override;
+  uint64_t koid() const { return koid_; }
+
+  uint64_t id() const override { return local_id_ ? local_id_ : koid_; }
+
+  bool duplicate_handle(uint32_t* handle_out) const override;
 
   void Reset() override {
     event_.signal(zx_signal(), 0);
@@ -48,6 +56,7 @@ class ZirconPlatformSemaphore : public PlatformSemaphore {
  private:
   zx::event event_;
   uint64_t koid_;
+  uint64_t local_id_ = 0;
 };
 
 }  // namespace magma
