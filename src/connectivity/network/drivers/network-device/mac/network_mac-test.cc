@@ -61,10 +61,17 @@ class MacDeviceTest : public ::testing::Test {
         return zx::error(status);
       }
     }
-    zx_status_t status = device_->Bind(loop_->dispatcher(), std::move(server_end));
-    if (status != ZX_OK) {
+    if (zx_status_t status = device_->Bind(loop_->dispatcher(), std::move(server_end));
+        status != ZX_OK) {
       return zx::error(status);
     }
+
+    // Every time a new client is bound, we're going to get signaled for a
+    // configuration change.
+    if (zx_status_t status = impl_.WaitConfigurationChanged(); status != ZX_OK) {
+      return zx::error(status);
+    }
+
     return zx::ok(fidl::BindSyncClient(std::move(client_end)));
   }
 
