@@ -16,7 +16,7 @@ fx test //src/ui/tools/print-input-report
 From the host command line:
 
 ```
-fx shell run fuchsia-pkg://fuchsia.com/print-input-report#meta/print-input-report.cmx descriptor /dev/class/input-report/002
+fx shell print-input-report descriptor /dev/class/input-report/002
 ```
 
 ## Get more help
@@ -24,5 +24,5 @@ fx shell run fuchsia-pkg://fuchsia.com/print-input-report#meta/print-input-repor
 The invocation below will print usage.
 
 ```
-fx shell run fuchsia-pkg://fuchsia.com/print-input-report#meta/print-input-report.cmx
+fx shell print-input-report
 ```

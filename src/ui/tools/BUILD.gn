@@ -6,22 +6,18 @@ import("//build/components.gni")
 
 group("scenic") {
   deps = [
-    ":gltf_export",
     ":input",
     ":present_view",
     ":print_input",
-    ":scenic-snapshot-viewer",
     ":screencap",
   ]
 }
 
 group("tools") {
   deps = [
-    ":gltf_export",
     ":input",
     ":present_view",
     ":print_input",
-    ":scenic-snapshot-viewer",
     ":screencap",
     "paper_shader_compiler",
     "print-input-report",
@@ -41,18 +37,12 @@ group("tests") {
   ]
 }
 
-fuchsia_shell_package("scenic-snapshot-viewer") {
-  manifest = "scenic_snapshot_viewer/meta/scenic_snapshot_viewer.cmx"
-  deps = [ "scenic_snapshot_viewer" ]
-}
-
 # Component shell tools can be run as shell command or as components via a
 # component URI. The following list contains the names of such components that
 # follow the pattern:
 # name/meta/name.cmx contains the component manifest
 # name is the name of a subdirectory that builds the output binary `name`
 component_shell_tools = [
-  "gltf_export",
   "present_view",
   "screencap",
 ]

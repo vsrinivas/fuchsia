@@ -34,13 +34,6 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("tiles-flatland-tests-component") {
-  testonly = true
+fuchsia_unittest_package("tiles-flatland-tests") {
   deps = [ ":bin_test" ]
-  manifest = "meta/tiles-flatland-tests.cmx"
-  component_name = "tiles-flatland-tests"
-}
-
-fuchsia_test_package("tiles-flatland-tests") {
-  test_components = [ ":tiles-flatland-tests-component" ]
 }
