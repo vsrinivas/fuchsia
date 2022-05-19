@@ -86,16 +86,19 @@ impl BlockDevice {
     }
 }
 
+pub async fn get_block_device(class_path: String) -> Result<Option<BlockDevice>, Error> {
+    let block_channel = connect_to_service(&class_path).await?;
+    let result = block_device_get_info(block_channel).await.context("Getting block device info")?;
+    Ok(result.map(|(topo_path, size)| BlockDevice { topo_path, class_path, size }))
+}
+
 pub async fn get_block_devices() -> Result<Vec<BlockDevice>, Error> {
     let block_dir = Path::new("/dev/class/block");
     let mut devices = Vec::new();
     for entry in fs::read_dir(block_dir)? {
         let name = entry?.path().to_str().unwrap().to_owned();
-        let block_channel = connect_to_service(&name).await?;
-        let result =
-            block_device_get_info(block_channel).await.context("Getting block device info")?;
-        if let Some((topo_path, size)) = result {
-            devices.push(BlockDevice { topo_path, class_path: name, size });
+        if let Some(bd) = get_block_device(name.clone()).await? {
+            devices.push(bd);
         } else {
             println!("Bad disk: {:?}", name);
         }

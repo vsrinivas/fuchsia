@@ -14,10 +14,11 @@ use carnelian::{
         facets::{RiveFacet, TextFacet, TextFacetOptions, TextHorizontalAlignment},
         scene::{Scene, SceneBuilder},
     },
-    App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, LocalBoxFuture,
-    MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    App, AppAssistant, AppAssistantPtr, AppSender, MessageTarget, Point, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::{point2, size2};
+use fidl_fuchsia_boot::ArgumentsMarker;
 use fuchsia_async::{self as fasync};
 use fuchsia_watch::PathEvent;
 use fuchsia_zircon::Event;
@@ -33,7 +34,7 @@ use menu::{Key, MenuButtonType, MenuEvent, MenuState, MenuStateMachine};
 
 pub mod installer;
 use installer::{
-    find_install_source, get_block_devices, get_bootloader_type, paver_connect,
+    find_install_source, get_block_device, get_block_devices, get_bootloader_type, paver_connect,
     set_active_configuration, BlockDevice, BootloaderType,
 };
 
@@ -97,12 +98,17 @@ impl InstallationPaths {
 struct InstallerAppAssistant {
     app_sender: AppSender,
     display_rotation: DisplayRotation,
+    automated: bool,
 }
 
 impl InstallerAppAssistant {
-    fn new(app_sender: AppSender) -> Self {
+    fn new(app_sender: AppSender, automated: bool) -> Self {
         let args: Args = argh::from_env();
-        Self { app_sender, display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0) }
+        Self {
+            app_sender,
+            display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0),
+            automated,
+        }
     }
 }
 
@@ -118,6 +124,7 @@ impl AppAssistant for InstallerAppAssistant {
             view_key,
             file,
             INSTALLER_HEADLINE,
+            self.automated,
         )?))
     }
 
@@ -199,6 +206,8 @@ struct InstallerViewAssistant {
     view_key: ViewKey,
     file: Option<rive::File>,
     render_resources: Option<RenderResources>,
+    automated: bool,
+    prev_state: MenuState,
 }
 
 impl InstallerViewAssistant {
@@ -207,6 +216,7 @@ impl InstallerViewAssistant {
         view_key: ViewKey,
         file: Option<rive::File>,
         heading: &'static str,
+        automated: bool,
     ) -> Result<InstallerViewAssistant, Error> {
         InstallerViewAssistant::setup(app_sender, view_key)?;
 
@@ -221,6 +231,8 @@ impl InstallerViewAssistant {
             view_key,
             file,
             render_resources: None,
+            automated,
+            prev_state: MenuState::Warning,
         })
     }
 
@@ -326,6 +338,25 @@ impl ViewAssistant for InstallerViewAssistant {
         let render_resources = self.render_resources.as_mut().unwrap();
         render_resources.scene.render(_render_context, ready_event, context)?;
         context.request_render();
+
+        if self.automated && self.menu_state_machine.get_state() != self.prev_state {
+            self.prev_state = self.menu_state_machine.get_state();
+            match self.menu_state_machine.get_state() {
+                MenuState::SelectInstall | MenuState::SelectDisk | MenuState::Warning => {
+                    println!(
+                        "installer: {:?}, proceeding to next screen",
+                        self.menu_state_machine.get_state()
+                    );
+                    self.app_sender.queue_message(
+                        MessageTarget::View(self.view_key),
+                        make_message(InstallerMessages::MenuEnter),
+                    );
+                }
+                MenuState::Progress => println!("Install in progress"),
+                MenuState::Error => println!("install failed :("),
+            }
+        }
+
         Ok(())
     }
 
@@ -359,20 +390,6 @@ impl ViewAssistant for InstallerViewAssistant {
             self.handle_installer_message(message);
         }
     }
-}
-
-fn make_app_assistant_fut(
-    app_sender: &AppSender,
-) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
-    let f = async move {
-        let assistant = Box::new(InstallerAppAssistant::new(app_sender.clone()));
-        Ok::<AppAssistantPtr, Error>(assistant)
-    };
-    Box::pin(f)
-}
-
-fn make_app_assistant() -> AssistantCreatorFunc {
-    Box::new(make_app_assistant_fut)
 }
 
 fn menu_builder(
@@ -728,24 +745,78 @@ async fn do_install(
     Ok(())
 }
 
-fn main() -> Result<(), Error> {
-    println!("workstation installer: started.");
-    // Before we give control to carnelian, wait until a display driver is bound.
-    fuchsia_async::LocalExecutor::new()
-        .context("Creating executor")?
-        .run_singlethreaded(async move {
-            let mut stream = fuchsia_watch::watch("/dev/class/display-controller")
-                .await
-                .context("Starting watch")?;
-            while let Some(element) = stream.next().await {
-                match element {
-                    PathEvent::Added(_, _) | PathEvent::Existing(_, _) => return Ok(()),
+/// Wait for a display to become available.
+async fn wait_for_display() -> Result<(), Error> {
+    let mut stream =
+        fuchsia_watch::watch("/dev/class/display-controller").await.context("Starting watch")?;
+    while let Some(element) = stream.next().await {
+        match element {
+            PathEvent::Added(_, _) | PathEvent::Existing(_, _) => return Ok(()),
+            _ => {}
+        }
+    }
+    Err(anyhow!("Didn't find a display device"))
+}
+
+/// Check to see if we're doing a non-interactive installs.
+/// Non-interactive installs are very limited and will likely only work on systems with a single
+/// disk.
+/// They are intended to be used in end-to-end tests.
+async fn check_is_interactive() -> Result<bool, Error> {
+    let proxy = fuchsia_component::client::connect_to_protocol::<ArgumentsMarker>()
+        .context("Connecting to boot arguments service")?;
+    let automated =
+        proxy.get_bool("installer.non-interactive", false).await.context("Getting bool")?;
+    println!(
+        "workstation installer: {}doing automated install.",
+        if automated { "" } else { "not " }
+    );
+
+    if automated {
+        wait_for_install_disk().await.context("Waiting for install disk")?;
+    }
+    Ok(automated)
+}
+
+/// Wait for an installation source to become present on the system.
+async fn wait_for_install_disk() -> Result<(), Error> {
+    let mut stream = fuchsia_watch::watch("/dev/class/block").await.context("Starting watch")?;
+    let bootloader_type = get_bootloader_type().await?;
+    let mut devices = vec![];
+    while let Some(element) = stream.next().await {
+        match element {
+            PathEvent::Added(path, _) | PathEvent::Existing(path, _) => {
+                match get_block_device(path.to_str().unwrap().to_owned()).await {
+                    Ok(Some(bd)) => {
+                        devices.push(bd);
+                        if let Ok(_) = find_install_source(&devices, bootloader_type).await {
+                            return Ok(());
+                        }
+                    }
                     _ => {}
                 }
             }
-            Err(anyhow!("Didn't find anything"))
-        })
-        .context("Watching for display controller device")?;
+            _ => {}
+        }
+    }
+    Err(anyhow!("Didn't find an install disk"))
+}
 
-    App::run(make_app_assistant())
+fn main() -> Result<(), Error> {
+    println!("workstation installer: started.");
+
+    // Before we give control to carnelian, wait until a display driver is bound.
+    let (display_result, interactive_result) =
+        fuchsia_async::LocalExecutor::new().context("Creating executor")?.run_singlethreaded(
+            async move { futures::join!(wait_for_display(), check_is_interactive()) },
+        );
+    display_result.context("Waiting for display controller")?;
+    let automated = interactive_result.context("Fetching installer boot arguments")?;
+
+    App::run(Box::new(move |app_sender: &AppSender| {
+        Box::pin(async move {
+            let assistant = Box::new(InstallerAppAssistant::new(app_sender.clone(), automated));
+            Ok::<AppAssistantPtr, Error>(assistant)
+        })
+    }))
 }

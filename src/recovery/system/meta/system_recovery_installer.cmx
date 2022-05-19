@@ -21,6 +21,7 @@
             "root-ssl-certificates"
         ],
         "services": [
+            "fuchsia.boot.Arguments",
             "fuchsia.fshost.BlockWatcher",
             "fuchsia.paver.Paver",
             "fuchsia.process.Launcher",
