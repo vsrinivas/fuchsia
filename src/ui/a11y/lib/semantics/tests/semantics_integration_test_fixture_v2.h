@@ -87,11 +87,8 @@ class SemanticsIntegrationTestV2
   sys::ServiceDirectory* svc() { return realm_exposed_services_.get(); }
   zx_koid_t view_ref_koid() const { return view_ref_koid_; }
 
-  // Launches the test client by connecting to fuchsia.ui.app.ViewProvider protocol.
-  // This method should only be invoked if this protocol has been exposed from
-  // the root of the test realm. After establishing a connection, this method
-  // listens for the client is_rendering signal and calls |on_is_rendering| when it arrives.
-  void LaunchClient(std::string debug_name);
+  // Initializes the scene, and waits for the client view to render.
+  void SetupScene();
 
   // Recursively traverses the node hierarchy, rooted at |node|, to find the first descendant
   // with |label|.

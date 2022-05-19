@@ -36,6 +36,8 @@ class FlutterSemanticsTests : public SemanticsIntegrationTestV2 {
   void SetUp() override {
     SemanticsIntegrationTestV2::SetUp();
 
+    SetupScene();
+
     view_manager()->SetSemanticsEnabled(true);
     RunLoopUntil([&] {
       auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);

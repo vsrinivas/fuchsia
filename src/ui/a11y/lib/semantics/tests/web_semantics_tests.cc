@@ -179,9 +179,11 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public LocalComponen
               bindings_.AddBinding(this, std::move(request), dispatcher_);
             })) == ZX_OK);
     mock_handles_.emplace_back(std::move(mock_handles));
+
+    LoadHtml();
   }
 
-  void LoadHtml(std::string html) {
+  void LoadHtml() {
     // Load the web page.
     FX_LOGS(INFO) << "Loading web page";
     navigation_controller_->LoadUrl("about:blank", fuchsia::web::LoadUrlParams(), [](auto result) {
@@ -194,7 +196,7 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public LocalComponen
 
     FX_LOGS(INFO) << "Running javascript to inject html";
     web_frame_->ExecuteJavaScript(
-        {"*"}, BufferFromString(fxl::StringPrintf("document.write(`%s`);", html.c_str())),
+        {"*"}, BufferFromString(fxl::StringPrintf("document.write(`%s`);", html_.c_str())),
         [](auto result) {
           if (result.is_err()) {
             FX_LOGS(FATAL) << "Error while executing JavaScript: "
@@ -209,6 +211,7 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public LocalComponen
   void CreateViewWithViewRef(zx::eventpair token,
                              fuchsia::ui::views::ViewRefControl view_ref_control,
                              fuchsia::ui::views::ViewRef view_ref) override {
+    FX_LOGS(INFO) << "CreateViewWithViewRef()";
     web_frame_->CreateViewWithViewRef(scenic::ToViewToken(std::move(token)),
                                       std::move(view_ref_control), std::move(view_ref));
   }
@@ -224,6 +227,15 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public LocalComponen
     FX_LOGS(ERROR) << "CreateView2() is not implemented.";
   }
 
+  // Set the html loaded into the web frame.
+  // Only valid before |Start()| has been called.
+  void set_html(std::string html) {
+    FX_CHECK(mock_handles_.empty());
+    FX_CHECK(html_.empty());
+    FX_CHECK(!html.empty());
+    html_ = html;
+  }
+
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
   std::vector<std::unique_ptr<LocalComponentHandles>> mock_handles_{};
@@ -235,6 +247,7 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public LocalComponen
   fuchsia::ui::views::ViewToken view_token_;
   fuchsia::web::ContextPtr web_context_;
   fuchsia::web::FramePtr web_frame_;
+  std::string html_;
 };
 
 class WebSemanticsTest : public SemanticsIntegrationTestV2 {
@@ -385,9 +398,12 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
                   << " in tree with koid: " << view_ref_koid();
   }
 
-  void LoadHtml(const std::string html) {
+  void LoadHtml(std::string html) {
     FX_LOGS(INFO) << "Loading html: " << html;
-    web_view_proxy()->LoadHtml(html);
+    web_view_proxy()->set_html(html);
+
+    SetupScene();
+
     RunLoopUntil([this] {
       auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
       return node != nullptr;

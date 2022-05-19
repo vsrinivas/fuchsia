@@ -80,14 +80,6 @@ void SemanticsIntegrationTestV2::SetUp() {
 
   // Initialize ui test realm.
   BuildRealm();
-
-  // Launch client view, and wait until it's attached to proceed with the test.
-  ui_test_manager_->InitializeScene();
-  RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsRendering(); });
-
-  auto view_ref_koid = ui_test_manager_->ClientViewRefKoid();
-  ASSERT_TRUE(view_ref_koid.has_value());
-  view_ref_koid_ = *view_ref_koid;
 }
 
 void SemanticsIntegrationTestV2::BuildRealm() {
@@ -111,6 +103,15 @@ void SemanticsIntegrationTestV2::BuildRealm() {
   ui_test_manager_->BuildRealm();
 
   realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
+}
+
+void SemanticsIntegrationTestV2::SetupScene() {
+  ui_test_manager_->InitializeScene();
+  RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsRendering(); });
+
+  auto view_ref_koid = ui_test_manager_->ClientViewRefKoid();
+  ASSERT_TRUE(view_ref_koid.has_value());
+  view_ref_koid_ = *view_ref_koid;
 }
 
 const Node* SemanticsIntegrationTestV2::FindNodeWithLabel(const Node* node, zx_koid_t view_ref_koid,
