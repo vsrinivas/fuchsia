@@ -380,6 +380,25 @@ fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TransferRing::TakePendingTRBs
   return retval;
 }
 
+fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TransferRing::Resynchronize(uint64_t frame_id) {
+  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> retval;
+  if (!IsIsochronous()) {
+    zxlogf(ERROR, "Resynchronize should only be callled for Isochronous");
+    return retval;
+  }
+
+  fbl::AutoLock l(&mutex_);
+  while (!pending_trbs_.is_empty()) {
+    if (static_cast<Isoch*>(pending_trbs_.front().trb)->FrameID() >= frame_id) {
+      break;
+    }
+    auto trb = pending_trbs_.pop_front();
+    dequeue_trb_ = trb->trb;
+    retval.push_back(std::move(trb));
+  }
+  return retval;
+}
+
 zx_status_t TransferRing::AllocateTRB(TRB** trb, State* state) {
   fbl::AutoLock l(&mutex_);
   if (state) {

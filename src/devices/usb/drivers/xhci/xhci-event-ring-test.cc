@@ -351,6 +351,11 @@ fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TransferRing::TakePendingTRBs
   return empty;
 }
 
+fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TransferRing::Resynchronize(uint64_t frame_id) {
+  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> empty;
+  return empty;
+}
+
 TRBPromise UsbXhci::DeviceOffline(uint32_t slot, TRB* continuation) {
   return fpromise::make_error_promise(ZX_ERR_NOT_SUPPORTED);
 }

@@ -663,7 +663,7 @@ struct EndpointContext {
   DEF_SUBFIELD(a, 9, 8, Mult);
 
   DEF_SUBFIELD(b, 5, 3, EP_TYPE);
-  // CErr shall always be set to 3.
+  // According to Section 4.8.2, CErr shall always be set to 3 or 0 for Isochronous endpoints.
   DEF_SUBFIELD(b, 2, 1, CErr);
   DEF_SUBBIT(dequeue_pointer_a, 0, DCS);
   void Init(EndpointType type, CRCR dequeue_pointer, uint16_t max_packet_size = 8,
@@ -675,7 +675,7 @@ struct EndpointContext {
     set_DCS(static_cast<bool>(dequeue_pointer.RCS()));
     set_MAX_PACKET_SIZE(max_packet_size);
     set_AVG_TRB_LENGTH(avg_trb_length);
-    set_CErr(3);
+    set_CErr((type == EndpointType::IsochIn || type == EndpointType::IsochOut) ? 0 : 3);
   }
   void Deinit() {
     a = 0;

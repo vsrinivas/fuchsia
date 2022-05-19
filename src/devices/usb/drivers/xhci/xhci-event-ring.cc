@@ -582,9 +582,14 @@ zx_status_t EventRing::HandleIRQ() {
             trb = ring->PhysToVirt(erdp_virt_->ptr);
           }
           if (completion->CompletionCode() == CommandCompletionEvent::MissedServiceError) {
-            if (!trb) {
-              break;
+            // Resynchronize (4.11.2.5.2)
+            // Advance until resynchronized or ring is exhausted
+            auto completions = ring->Resynchronize(hci_->UsbHciGetCurrentFrame());
+            l.release();
+            for (auto& completion : completions) {
+              completion.request->Complete(ZX_ERR_IO, 0);
             }
+            break;
           }
 
           zx_status_t status = ZX_ERR_IO;
@@ -601,26 +606,6 @@ zx_status_t EventRing::HandleIRQ() {
               }
             }
             status = ring->CompleteTRB(first_trb, &context);
-            if (status == ZX_ERR_IO && ring->IsIsochronous()) {
-              // Out-of-order callback on isochronous ring.
-              // This is a very special case where a transfer fails
-              // and the HCI ends up missing several intervening TRBs
-              // because we couldn't fill the ring fast enough.
-              // As a workaround; we complete TRBs up to and including
-              // the failed TRB, and update the dequeue pointer
-              // to point to the last known transaction.
-              // Section 4.10.3.2 says that controllers should give us a valid
-              // pointer during the missed service event, but in practice; they all
-              // just return zero.
-              auto completions = ring->TakePendingTRBsUntil(trb);
-              l.release();
-              for (auto cb = completions.begin(); cb != completions.end(); cb++) {
-                cb->request->Complete(ZX_ERR_IO, 0);
-              }
-              ring->ResetShortCount();
-              context->request->Complete(ZX_ERR_IO, 0);
-              break;
-            }
           }
           if (completion->CompletionCode() == CommandCompletionEvent::StallError) {
             ring->set_stall(true);

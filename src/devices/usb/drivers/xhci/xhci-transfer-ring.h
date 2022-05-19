@@ -108,6 +108,7 @@ class TransferRing {
   zx_status_t CompleteTRB(TRB* trb, std::unique_ptr<TRBContext>* context);
   fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TakePendingTRBs();
   fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TakePendingTRBsUntil(TRB* end);
+  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> Resynchronize(uint64_t frame_id);
 
   std::unique_ptr<TRBContext> AllocateContext() {
     fbl::AutoLock _(&mutex_);
