@@ -36,6 +36,11 @@ std::optional<PipelineStage::Packet> PipelineStage::Read(Fixed start_frame, int6
   // Once a frame has been consumed, it cannot be locked again, we cannot travel backwards in time.
   FX_CHECK(!next_readable_frame_ || start_frame >= *next_readable_frame_);
 
+  // Advance until `start_frame`.
+  if (start_frame > Fixed(0) && (!next_readable_frame_ || *next_readable_frame_ < start_frame)) {
+    Advance(start_frame);
+  }
+
   // Check if we can reuse the cached packet.
   if (auto out_packet = ReadFromCachedPacket(start_frame, frame_count)) {
     return out_packet;

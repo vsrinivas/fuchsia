@@ -100,17 +100,12 @@ void CustomStage::AdvanceImpl(Fixed frame) {
 }
 
 std::optional<PipelineStage::Packet> CustomStage::ReadImpl(Fixed start_frame, int64_t frame_count) {
-  // `CustomStage` always produces data on integrally-aligned frames.
-  start_frame = Fixed(start_frame.Floor());
-
-  // Advance until `start_frame`.
-  if (next_frame_to_process_ < start_frame) {
-    Advance(start_frame);
-  }
-
   // `ReadImpl` should not be called until we've `Advance`'d past the last cached packet. Also see
   // comments in `PipelineStage::MakeCachedPacket` for more information.
   FX_CHECK(!output_);
+
+  // `CustomStage` always produces data on integrally-aligned frames.
+  start_frame = Fixed(start_frame.Floor());
 
   // Skip frames that were already processed. This is needed when the source stream contains gaps.
   // For example, given a sequence of calls:

@@ -324,7 +324,8 @@ TEST_P(PipelineStageTest, OnePacketPartialConsume) {
     if (UseCaching()) {
       ExpectAdvanceCalls({});
     } else {
-      ExpectAdvanceCalls({Fixed(60)});
+      // Skipping to frame 50 results in an additional `Advance` call.
+      ExpectAdvanceCalls({Fixed(50), Fixed(60)});
     }
   }
 
@@ -494,11 +495,10 @@ TEST_P(PipelineStageTest, FractionalFrames) {
       ExpectPacket(packet, Fixed(1) + ffl::FromRatio(5, 10), Fixed(51) + ffl::FromRatio(5, 10),
                    payload + kFormat.bytes_per_frame());
     }
-    // When caching, we don't see any `Advance` calls until we consume the entire first packet.
     if (UseCaching()) {
-      ExpectAdvanceCalls({});
+      ExpectAdvanceCalls({Fixed(1) + ffl::FromRatio(6, 10)});
     } else {
-      ExpectAdvanceCalls({Fixed(51) + ffl::FromRatio(5, 10)});
+      ExpectAdvanceCalls({Fixed(1) + ffl::FromRatio(6, 10), Fixed(51) + ffl::FromRatio(5, 10)});
     }
   }
 
@@ -514,7 +514,7 @@ TEST_P(PipelineStageTest, FractionalFrames) {
     if (UseCaching()) {
       ExpectAdvanceCalls({});
     } else {
-      ExpectAdvanceCalls({Fixed(90) + ffl::FromRatio(5, 10)});
+      ExpectAdvanceCalls({Fixed(60) + ffl::FromRatio(6, 10), Fixed(90) + ffl::FromRatio(5, 10)});
     }
   }
 
@@ -526,7 +526,11 @@ TEST_P(PipelineStageTest, FractionalFrames) {
       ExpectPacket(packet, Fixed(99) + ffl::FromRatio(5, 10), Fixed(100) + ffl::FromRatio(5, 10),
                    payload + 99 * kFormat.bytes_per_frame());
     }
-    ExpectAdvanceCalls({Fixed(100) + ffl::FromRatio(5, 10)});
+    if (UseCaching()) {
+      ExpectAdvanceCalls({Fixed(100) + ffl::FromRatio(5, 10)});
+    } else {
+      ExpectAdvanceCalls({Fixed(99) + ffl::FromRatio(6, 10), Fixed(100) + ffl::FromRatio(5, 10)});
+    }
   }
 
   {
