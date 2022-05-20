@@ -55,6 +55,8 @@ GTEST_FILTER="$GTEST_FILTER:BinderLibTest.LocalGetExtension"
 GTEST_FILTER="$GTEST_FILTER:BinderLibTest.RemoteGetExtension"
 GTEST_FILTER="$GTEST_FILTER:BinderLibTest.CheckHandleZeroBinderHighBitsZeroCookie"
 GTEST_FILTER="$GTEST_FILTER:BinderLibTest.FreedBinder"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.BufRejected"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.WeakRejected"
 
 # Start the actual test.
 /vendor/data/nativetest64/binderLibTest/binderLibTest "--gtest_filter=${GTEST_FILTER}"

@@ -759,6 +759,8 @@ enum Command {
     /// references to the specified binder object. The object may still have references within the
     /// owning process.
     ReleaseRef(LocalBinderObject),
+    /// Notifies a binder thread that the last processed command contained an error.
+    Error(i32),
     /// Commands a binder thread to start processing an incoming transaction from another binder
     /// process.
     Transaction(Transaction),
@@ -781,6 +783,7 @@ impl Command {
         match self {
             Command::AcquireRef(..) => binder_driver_return_protocol_BR_ACQUIRE,
             Command::ReleaseRef(..) => binder_driver_return_protocol_BR_RELEASE,
+            Command::Error(..) => binder_driver_return_protocol_BR_ERROR,
             Command::Transaction(..) => binder_driver_return_protocol_BR_TRANSACTION,
             Command::Reply(..) => binder_driver_return_protocol_BR_REPLY,
             Command::TransactionComplete => binder_driver_return_protocol_BR_TRANSACTION_COMPLETE,
@@ -811,6 +814,21 @@ impl Command {
                         weak_ref_addr: obj.weak_ref_addr.ptr() as u64,
                         strong_ref_addr: obj.strong_ref_addr.ptr() as u64,
                     },
+                )
+            }
+            Command::Error(error_val) => {
+                #[repr(C, packed)]
+                #[derive(AsBytes)]
+                struct ErrorData {
+                    command: binder_driver_return_protocol,
+                    error_val: i32,
+                }
+                if buffer.length < std::mem::size_of::<ErrorData>() {
+                    return error!(ENOMEM);
+                }
+                mm.write_object(
+                    UserRef::new(buffer.address),
+                    &ErrorData { command: self.driver_return_code(), error_val: *error_val },
                 )
             }
             Command::Transaction(transaction) | Command::Reply(transaction) => {
@@ -1577,6 +1595,7 @@ impl BinderDriver {
                     }
                     Command::AcquireRef(..)
                     | Command::ReleaseRef(..)
+                    | Command::Error(..)
                     | Command::FailedReply
                     | Command::DeadReply
                     | Command::DeadBinder(..) => {}
@@ -1900,7 +1919,8 @@ impl BinderDriver {
 /// This type differentiates between these strategies.
 #[derive(Debug, Eq, PartialEq)]
 enum TransactionError {
-    /// The transaction payload was malformed, return an error from the ioctl.
+    /// The transaction payload was malformed. Send a [`Command::Error`] command to the issuing
+    /// thread.
     Malformed(Errno),
     /// The transaction payload was correctly formed, but either the recipient, or a handle embedded
     /// in the transaction, is invalid. Send a [`Command::FailedReply`] command to the issuing
@@ -1915,17 +1935,16 @@ impl TransactionError {
     /// Dispatches the error, by potentially queueing a command to `binder_thread` and/or returning
     /// an error.
     fn dispatch(self, binder_thread: &Arc<BinderThread>) -> Result<(), Errno> {
-        match self {
-            TransactionError::Malformed(err) => Err(err),
-            TransactionError::Failure => {
-                binder_thread.write().enqueue_command(Command::FailedReply);
-                Ok(())
+        binder_thread.write().enqueue_command(match self {
+            TransactionError::Malformed(err) => {
+                // Negate the value, as the binder runtime assumes error values are already
+                // negative.
+                Command::Error(-err.value())
             }
-            TransactionError::Dead => {
-                binder_thread.write().enqueue_command(Command::DeadReply);
-                Ok(())
-            }
-        }
+            TransactionError::Failure => Command::FailedReply,
+            TransactionError::Dead => Command::DeadReply,
+        });
+        Ok(())
     }
 }
 
@@ -2584,6 +2603,35 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn transaction_translation_fails_on_invalid_object_type() {
+        let (_kernel, task) = create_kernel_and_task();
+        let driver = BinderDriver::new();
+        let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
+        let receiver_proc = driver.create_process(2);
+
+        let mut transaction_data = Vec::new();
+        transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_WEAK_HANDLE,
+            flags: 0,
+            cookie: 0,
+            __bindgen_anon_1.handle: 42,
+        }));
+
+        let transaction_ref_error = driver
+            .translate_handles(
+                &task,
+                &sender_proc,
+                &sender_thread,
+                &receiver_proc,
+                &[0 as binder_uintptr_t],
+                &mut transaction_data,
+            )
+            .expect_err("translate handles unexpectedly succeeded");
+
+        assert_eq!(transaction_ref_error, TransactionError::Malformed(errno!(EINVAL)));
+    }
+
+    #[fuchsia::test]
     fn transaction_drop_references_on_failed_transaction() {
         let (_kernel, task) = create_kernel_and_task();
         let driver = BinderDriver::new();
@@ -2907,5 +2955,26 @@ mod tests {
         });
 
         assert_eq!(expected_transaction_data, transaction_data);
+    }
+
+    #[fuchsia::test]
+    fn transaction_error_dispatch() {
+        let driver = BinderDriver::new();
+        let (_proc, thread) = driver.create_process_and_thread(1);
+
+        TransactionError::Malformed(errno!(EINVAL)).dispatch(&thread).expect("no error");
+        assert_eq!(
+            thread.write().command_queue.pop_front().expect("command"),
+            Command::Error(-EINVAL.value())
+        );
+
+        TransactionError::Failure.dispatch(&thread).expect("no error");
+        assert_eq!(
+            thread.write().command_queue.pop_front().expect("command"),
+            Command::FailedReply
+        );
+
+        TransactionError::Dead.dispatch(&thread).expect("no error");
+        assert_eq!(thread.write().command_queue.pop_front().expect("command"), Command::DeadReply);
     }
 }
