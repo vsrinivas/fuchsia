@@ -3188,21 +3188,6 @@ void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* m
   }
   mac_info->supported_phys_count = count;
 
-  // driver_features
-  discovery_support_t discovery_support;
-  ath10k_pci_mac_query_discovery_support(ar, &discovery_support);
-  if (discovery_support.scan_offload.supported) {
-    mac_info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
-  }
-  if (discovery_support.probe_response_offload.supported) {
-    mac_info->driver_features |= WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD;
-  }
-  mac_sublayer_support_t mac_sublayer_support;
-  ath10k_pci_mac_query_mac_sublayer_support(ar, &mac_sublayer_support);
-  if (mac_sublayer_support.rate_selection_offload.supported) {
-    mac_info->driver_features |= WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION;
-  }
-
   // caps
   mac_info->hardware_capability = WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SHORT_PREAMBLE |
                                   WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SPECTRUM_MGMT |

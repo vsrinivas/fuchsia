@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.hardware.wlan.softmac;
 
-using fuchsia.hardware.wlan.phyinfo;
 using fuchsia.hardware.wlan.associnfo;
 using fuchsia.wlan.common;
 using fuchsia.wlan.internal;
@@ -57,9 +56,6 @@ type WlanSoftmacInfo = struct {
     supported_phys_list
             array<fuchsia.wlan.common.WlanPhyType, fuchsia.wlan.common.MAX_SUPPORTED_PHY_TYPES>;
     supported_phys_count uint8;
-
-    /// Bitmask indicating enabled WlanInfoDriverFeature values.
-    driver_features fuchsia.hardware.wlan.phyinfo.WlanInfoDriverFeature;
 
     /// Bitmask indicating enabled WlanInfoHardwareCapability values.
     hardware_capability fuchsia.wlan.common.WlanSoftmacHardwareCapability;

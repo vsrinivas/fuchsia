@@ -189,9 +189,6 @@ TEST_F(WlanSoftmacDeviceTest, Query) {
   EXPECT_EQ(8, info.band_cap_list[1].basic_rate_count);
   EXPECT_EQ(12, info.band_cap_list[1].basic_rate_list[0]);  // 6 Mbps
   EXPECT_EQ(165, info.band_cap_list[1].operating_channel_list[24]);
-  EXPECT_EQ(info.driver_features & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD,
-            WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD);
-  EXPECT_EQ(info.driver_features & WLAN_INFO_DRIVER_FEATURE_MFP, WLAN_INFO_DRIVER_FEATURE_MFP);
 }
 
 TEST_F(WlanSoftmacDeviceTest, DiscoveryFeatureQuery) {
@@ -348,9 +345,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
   fp_send_cmd original_send_cmd;
 
  protected:
-  bool IsValidChannel(const wlan_channel_t* channel) {
-    return device_->IsValidChannel(channel);
-  }
+  bool IsValidChannel(const wlan_channel_t* channel) { return device_->IsValidChannel(channel); }
 
   zx_status_t SetChannel(const wlan_channel_t* channel) {
     return device_->WlanSoftmacSetChannel(channel);

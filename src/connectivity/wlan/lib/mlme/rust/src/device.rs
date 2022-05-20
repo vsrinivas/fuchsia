@@ -606,7 +606,6 @@ pub(crate) mod test_utils {
             buffer::{BufferProvider, FakeBufferProvider},
             error::Error,
         },
-        banjo_fuchsia_hardware_wlan_phyinfo::*,
         banjo_fuchsia_wlan_common as banjo_common,
         banjo_fuchsia_wlan_ieee80211::*,
         banjo_fuchsia_wlan_internal as banjo_wlan_internal,
@@ -1080,7 +1079,6 @@ pub(crate) mod test_utils {
             mac_role: banjo_common::WlanMacRole::CLIENT,
             supported_phys_list,
             supported_phys_count,
-            driver_features: WlanInfoDriverFeature(0),
             hardware_capability: 0,
             band_cap_list,
             band_cap_count,
@@ -1176,7 +1174,6 @@ mod tests {
     use {
         super::*,
         crate::ddk_converter::{self, cssid_from_ssid_unchecked},
-        banjo_fuchsia_hardware_wlan_phyinfo::*,
         banjo_fuchsia_wlan_ieee80211::*,
         banjo_fuchsia_wlan_internal as banjo_internal,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
@@ -1386,7 +1383,6 @@ mod tests {
         let info = dev.wlan_softmac_info();
         assert_eq!(info.sta_addr, [7u8; 6]);
         assert_eq!(info.mac_role, banjo_common::WlanMacRole::CLIENT);
-        assert_eq!(info.driver_features, WlanInfoDriverFeature(0));
         assert_eq!(info.hardware_capability, 0);
         assert_eq!(info.band_cap_count, 2);
     }

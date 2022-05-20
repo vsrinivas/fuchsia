@@ -9,7 +9,6 @@ fidl("fuchsia.hardware.wlan.softmac") {
   sources = [ "softmac.fidl" ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.wlan.associnfo",
-    "//sdk/banjo/fuchsia.hardware.wlan.phyinfo",
     "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.internal",

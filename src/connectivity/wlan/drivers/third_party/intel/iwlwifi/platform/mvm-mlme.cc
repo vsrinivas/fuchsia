@@ -159,16 +159,6 @@ zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info) {
 
   memcpy(info->sta_addr, nvm_data->hw_addr, sizeof(info->sta_addr));
   info->mac_role = mvmvif->mac_role;
-  discovery_support_t discovery_support;
-  mac_query_discovery_support(&discovery_support);
-  if (discovery_support.scan_offload.supported) {
-    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_DFS;
-  }
-  security_support_t security_support;
-  mac_query_security_support(&security_support);
-  if (security_support.mfp.supported) {
-    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_MFP;
-  }
 
   // Fill out a minimal set of wlan device capabilities
   size_t count = 0;

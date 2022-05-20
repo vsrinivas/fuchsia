@@ -5,7 +5,6 @@
 use {
     anyhow::{format_err, Error},
     banjo_fuchsia_hardware_wlan_associnfo as banjo_wlan_associnfo,
-    banjo_fuchsia_hardware_wlan_phyinfo as banjo_wlan_phyinfo,
     banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
     banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
@@ -122,13 +121,12 @@ pub fn device_info_from_wlan_softmac_info(
     for band_cap in &info.band_cap_list[0..info.band_cap_count as usize] {
         bands.push(convert_ddk_band_cap(band_cap)?);
     }
-    let driver_features = convert_driver_features(&info.driver_features);
     Ok(fidl_mlme::DeviceInfo {
         sta_addr,
         role,
         bands,
-        driver_features,
         qos_capable: false,
+        driver_features: Vec::new(),
         softmac_hardware_capability,
     })
 }
@@ -229,40 +227,6 @@ fn convert_ddk_band_cap(
         None
     };
     Ok(fidl_mlme::BandCapability { band, basic_rates, operating_channels, ht_cap, vht_cap })
-}
-
-fn convert_driver_features(
-    features: &banjo_wlan_phyinfo::WlanInfoDriverFeature,
-) -> Vec<fidl_common::DriverFeature> {
-    // Add features supported at the MLME level.
-    let mut out = vec![
-        fidl_common::DriverFeature::SaeSmeAuth,
-        // TODO(fxbug.dev/41640): Remove this flag once FullMAC drivers no longer needs SME.
-        // This flag tells SME that SoftMAC drivers need SME to derive association capabilities.
-        fidl_common::DriverFeature::TempSoftmac,
-    ];
-    if (*features & banjo_wlan_phyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD).0 != 0 {
-        out.push(fidl_common::DriverFeature::ScanOffload);
-    }
-    if (*features & banjo_wlan_phyinfo::WlanInfoDriverFeature::RATE_SELECTION).0 != 0 {
-        out.push(fidl_common::DriverFeature::RateSelection);
-    }
-    if (*features & banjo_wlan_phyinfo::WlanInfoDriverFeature::SYNTH).0 != 0 {
-        out.push(fidl_common::DriverFeature::Synth);
-    }
-    if (*features & banjo_wlan_phyinfo::WlanInfoDriverFeature::TX_STATUS_REPORT).0 != 0 {
-        out.push(fidl_common::DriverFeature::TxStatusReport);
-    }
-    if (*features & banjo_wlan_phyinfo::WlanInfoDriverFeature::DFS).0 != 0 {
-        out.push(fidl_common::DriverFeature::Dfs);
-    }
-    if (*features & banjo_wlan_phyinfo::WlanInfoDriverFeature::PROBE_RESP_OFFLOAD).0 != 0 {
-        out.push(fidl_common::DriverFeature::ProbeRespOffload);
-    }
-    if (*features & banjo_wlan_phyinfo::WlanInfoDriverFeature::MFP).0 != 0 {
-        out.push(fidl_common::DriverFeature::Mfp);
-    }
-    out
 }
 
 pub fn cssid_from_ssid_unchecked(ssid: &Vec<u8>) -> banjo_ieee80211::CSsid {
@@ -425,10 +389,6 @@ mod tests {
         assert_eq!(device_info.sta_addr, wlan_softmac_info.sta_addr);
         assert_eq!(device_info.role, fidl_common::WlanMacRole::Client);
         assert_eq!(device_info.bands.len(), 2);
-        assert_eq!(
-            device_info.driver_features,
-            vec![fidl_common::DriverFeature::SaeSmeAuth, fidl_common::DriverFeature::TempSoftmac]
-        );
     }
 
     #[test]
@@ -494,29 +454,5 @@ mod tests {
         let support_fidl = convert_ddk_spectrum_management_support(support_ddk)
             .expect("Failed to convert spectrum management support");
         assert_eq!(support_fidl.dfs.supported, support_ddk.dfs.supported);
-    }
-
-    #[test]
-    fn test_convert_driver_features() {
-        let features = banjo_wlan_phyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD
-            | banjo_wlan_phyinfo::WlanInfoDriverFeature::RATE_SELECTION
-            | banjo_wlan_phyinfo::WlanInfoDriverFeature::SYNTH
-            | banjo_wlan_phyinfo::WlanInfoDriverFeature::TX_STATUS_REPORT
-            | banjo_wlan_phyinfo::WlanInfoDriverFeature::DFS
-            | banjo_wlan_phyinfo::WlanInfoDriverFeature::PROBE_RESP_OFFLOAD;
-        let converted_features = convert_driver_features(&features);
-        assert_eq!(
-            converted_features,
-            vec![
-                fidl_common::DriverFeature::SaeSmeAuth,
-                fidl_common::DriverFeature::TempSoftmac,
-                fidl_common::DriverFeature::ScanOffload,
-                fidl_common::DriverFeature::RateSelection,
-                fidl_common::DriverFeature::Synth,
-                fidl_common::DriverFeature::TxStatusReport,
-                fidl_common::DriverFeature::Dfs,
-                fidl_common::DriverFeature::ProbeRespOffload,
-            ]
-        )
     }
 }

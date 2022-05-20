@@ -111,7 +111,6 @@ struct MockDevice : public DeviceInterface {
     }
     wlan_softmac_info.supported_phys_count = count;
 
-    wlan_softmac_info.driver_features = 0;
     wlan_softmac_info.band_cap_count = 2;
     wlan_softmac_info.band_cap_list[0] = test_utils::FakeBandCapability(WLAN_BAND_TWO_GHZ);
     wlan_softmac_info.band_cap_list[1] = test_utils::FakeBandCapability(WLAN_BAND_FIVE_GHZ);

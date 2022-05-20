@@ -113,7 +113,6 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
     ++count;
   }
   info->supported_phys_count = count;
-
   info->mac_role = role_;
   info->hardware_capability = 0;
   info->band_cap_count = 2;
