@@ -30,6 +30,7 @@ pub mod diagnostics;
 mod error;
 pub mod output;
 mod stream_util;
+mod trace;
 
 /// Timeout for draining logs.
 const LOG_TIMEOUT_DURATION: Duration = Duration::from_secs(10);
@@ -41,6 +42,7 @@ use {
         ArtifactType, CaseId, DirectoryArtifactType, RunReporter, SuiteId, SuiteReporter, Timestamp,
     },
     stream_util::StreamUtil,
+    trace::duration,
 };
 
 #[derive(Debug, Clone)]
@@ -153,6 +155,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
     log_opts: diagnostics::LogCollectionOptions,
     cancel_fut: F,
 ) -> Result<Outcome, RunTestSuiteError> {
+    duration!("collect_suite");
     let mut test_cases = HashMap::new();
     let mut test_case_reporters = HashMap::new();
     let mut test_cases_in_progress = HashSet::new();
@@ -742,6 +745,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
     };
 
     let handle_run_events_fut = async move {
+        duration!("run_events");
         loop {
             let events = run_controller_ref.get_events().named("run_event").await?;
             if events.len() == 0 {
@@ -801,10 +805,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                                                     anyhow!("Missing profile file handle")
                                                 })?
                                                 .into_proxy()?;
-                                            debug!(
-                                                "Reading run profile \"{}\"",
-                                                debug_data.name.unwrap_or_default()
-                                            );
+                                            debug!("Reading run profile \"{:?}\"", debug_data.name);
                                             read_file_to_writer(&file, &mut output).await
                                         })
                                     })

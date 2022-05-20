@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::cancel::OrCancel,
+    crate::{cancel::OrCancel, trace::duration},
     anyhow::Error,
     diagnostics_data::{LogsData, Severity},
     fidl_fuchsia_test_manager::LogsIteratorOption,
@@ -72,12 +72,14 @@ where
     W: Write,
     F: Future,
 {
+    duration!("collect_logs");
     let timeout_options = LogTimeoutOptions {
         timeout_fut: timeout_options.timeout_fut.map(|_| ()).shared(),
         time_between_logs: timeout_options.time_between_logs,
     };
     let mut restricted_logs = vec![];
     while let Some(mut log) = next_log_or_timeout(&mut stream, &timeout_options).await? {
+        duration!("process_single_log");
         let is_restricted = options.is_restricted_log(&log);
         let should_display = options.should_display(&log);
         if !should_display && !is_restricted {

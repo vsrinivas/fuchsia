@@ -73,6 +73,7 @@ struct Args {
 
 #[fuchsia::main]
 async fn main() {
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
     let args = argh::from_env();
 
     let Args {

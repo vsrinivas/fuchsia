@@ -6,6 +6,7 @@ use crate::output::{
     noop::NoopDirectoryWriter, ArtifactType, DirectoryArtifactType, DynArtifact,
     DynDirectoryArtifact, EntityId, EntityInfo, ReportedOutcome, Reporter, Timestamp,
 };
+use crate::trace::duration;
 use async_trait::async_trait;
 use fuchsia_async as fasync;
 use log::error;
@@ -92,6 +93,7 @@ impl<W: 'static + Write + Send + Sync> ShellWriterView<W> {
 
 impl<W: 'static + Write + Send + Sync> Write for ShellWriterHandle<W> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
+        duration!("shell_write");
         // find the last newline in the buffer. In case multiple lines are written as once,
         // we should write once to the inner writer and add our prefix only once. This helps
         // avoid spamming the output with prefixes in case many lines are present.
