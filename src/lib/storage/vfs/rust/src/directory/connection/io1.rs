@@ -19,11 +19,7 @@ use crate::{
 use {
     anyhow::Error,
     fidl::{endpoints::ServerEnd, Handle},
-    fidl_fuchsia_io as fio,
-    fuchsia_zircon::{
-        sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},
-        Status,
-    },
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::{channel::oneshot, future::BoxFuture, select, StreamExt},
     std::{convert::TryInto as _, default::Default, sync::Arc},
 };
@@ -66,7 +62,7 @@ pub trait DerivedConnection: Send + Sync {
         mode: u32,
         name: &str,
         path: &Path,
-    ) -> Result<Arc<dyn DirectoryEntry>, Status>;
+    ) -> Result<Arc<dyn DirectoryEntry>, zx::Status>;
 
     fn handle_request(
         &mut self,
@@ -187,10 +183,7 @@ where
             }
             fio::DirectoryRequest::CloseDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::CloseDeprecated");
-                let status = match self.directory.close() {
-                    Ok(()) => Status::OK,
-                    Err(e) => e,
-                };
+                let status: zx::Status = self.directory.close().into();
                 responder.send(status.into_raw())?;
                 return Ok(ConnectionState::Closed);
             }
@@ -212,7 +205,7 @@ where
             fio::DirectoryRequest::GetAttr { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetAttr");
                 let (mut attrs, status) = match self.directory.get_attrs().await {
-                    Ok(attrs) => (attrs, ZX_OK),
+                    Ok(attrs) => (attrs, zx::Status::OK.into_raw()),
                     Err(status) => (
                         fio::NodeAttributes {
                             mode: 0,
@@ -240,11 +233,11 @@ where
             }
             fio::DirectoryRequest::GetFlags { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetFlags");
-                responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
+                responder.send(zx::Status::OK.into_raw(), self.flags & GET_FLAGS_VISIBLE)?;
             }
             fio::DirectoryRequest::SetFlags { flags: _, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::SetFlags");
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+                responder.send(zx::Status::NOT_SUPPORTED.into_raw())?;
             }
             fio::DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Open");
@@ -283,14 +276,12 @@ where
             }
             fio::DirectoryRequest::AdvisoryLock { request: _, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::AdvisoryLock");
-                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
             fio::DirectoryRequest::ReadDirents { max_bytes, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::ReadDirents");
-                self.handle_read_dirents(max_bytes, |status, entries| {
-                    responder.send(status.into_raw(), entries)
-                })
-                .await?;
+                let (status, entries) = self.handle_read_dirents(max_bytes).await;
+                responder.send(status.into_raw(), entries.as_slice())?;
             }
             fio::DirectoryRequest::Enumerate { options, iterator, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Enumerate");
@@ -300,24 +291,22 @@ where
             fio::DirectoryRequest::Rewind { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Rewind");
                 self.seek = Default::default();
-                responder.send(ZX_OK)?;
+                responder.send(zx::Status::OK.into_raw())?;
             }
             fio::DirectoryRequest::Link { src, dst_parent_token, dst, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Link");
-                self.handle_link(&src, dst_parent_token, dst, |status| {
-                    responder.send(status.into_raw())
-                })
-                .await?;
+                let status: zx::Status = self.handle_link(&src, dst_parent_token, dst).await.into();
+                responder.send(status.into_raw())?;
             }
             fio::DirectoryRequest::Watch { mask, options, watcher, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Watch");
-                if options != 0 {
-                    responder.send(ZX_ERR_INVALID_ARGS)?;
+                let status = if options != 0 {
+                    zx::Status::INVALID_ARGS
                 } else {
-                    self.handle_watch(mask, watcher.try_into()?, |status| {
-                        responder.send(status.into_raw())
-                    })?;
-                }
+                    let watcher = watcher.try_into()?;
+                    self.handle_watch(mask, watcher).into()
+                };
+                responder.send(status.into_raw())?;
             }
             fio::DirectoryRequest::QueryFilesystem { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");
@@ -327,22 +316,22 @@ where
                 }
             }
             fio::DirectoryRequest::Unlink { name: _, options: _, responder } => {
-                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
             fio::DirectoryRequest::GetToken { responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
+                responder.send(zx::Status::NOT_SUPPORTED.into_raw(), None)?;
             }
             fio::DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
-                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
             fio::DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+                responder.send(zx::Status::NOT_SUPPORTED.into_raw())?;
             }
             fio::DirectoryRequest::SyncDeprecated { responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+                responder.send(zx::Status::NOT_SUPPORTED.into_raw())?;
             }
             fio::DirectoryRequest::Sync { responder } => {
-                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
         }
         Ok(ConnectionState::Alive)
@@ -373,7 +362,7 @@ where
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
-            send_on_open_with_error(flags, server_end, Status::BAD_HANDLE);
+            send_on_open_with_error(flags, server_end, zx::Status::BAD_HANDLE);
             return;
         }
 
@@ -398,11 +387,11 @@ where
         };
         if path.is_dot() {
             if flags.intersects(fio::OpenFlags::NOT_DIRECTORY) {
-                send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
+                send_on_open_with_error(flags, server_end, zx::Status::INVALID_ARGS);
                 return;
             }
             if flags.intersects(fio::OpenFlags::CREATE_IF_ABSENT) {
-                send_on_open_with_error(flags, server_end, Status::ALREADY_EXISTS);
+                send_on_open_with_error(flags, server_end, zx::Status::ALREADY_EXISTS);
                 return;
             }
         }
@@ -412,94 +401,68 @@ where
         directory.open(self.scope.clone(), flags, mode, path, server_end);
     }
 
-    async fn handle_read_dirents<R>(
-        &mut self,
-        max_bytes: u64,
-        responder: R,
-    ) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
-    {
-        if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
-            return responder(Status::BAD_HANDLE, &[]);
-        }
-
-        let done_or_err =
-            match self.directory.read_dirents(&self.seek, read_dirents::Sink::new(max_bytes)).await
-            {
-                Ok((new_pos, sealed)) => {
-                    self.seek = new_pos;
-                    sealed.open().downcast::<read_dirents::Done>()
-                }
-                Err(status) => return responder(status, &[]),
-            };
-
-        match done_or_err {
-            Ok(done) => responder(done.status, &done.buf),
-            Err(_) => {
-                debug_assert!(
-                    false,
-                    "`read_dirents()` returned a `dirents_sink::Sealed` instance that is not \
-                     an instance of the `read_dirents::Done`.  This is a bug in the \
-                     `read_dirents()` implementation."
-                );
-                responder(Status::NOT_SUPPORTED, &[])
+    async fn handle_read_dirents(&mut self, max_bytes: u64) -> (zx::Status, Vec<u8>) {
+        async {
+            if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+                return Err(zx::Status::BAD_HANDLE);
             }
+
+            let (new_pos, sealed) =
+                self.directory.read_dirents(&self.seek, read_dirents::Sink::new(max_bytes)).await?;
+            self.seek = new_pos;
+            let read_dirents::Done { buf, status } = *sealed
+                .open()
+                .downcast::<read_dirents::Done>()
+                .map_err(|_: Box<dyn std::any::Any>| {
+                    #[cfg(debug)]
+                    panic!(
+                        "`read_dirents()` returned a `dirents_sink::Sealed`
+                        instance that is not an instance of the \
+                        `read_dirents::Done`. This is a bug in the \
+                        `read_dirents()` implementation."
+                    );
+                    zx::Status::NOT_SUPPORTED
+                })?;
+            Ok((status, buf))
         }
+        .await
+        .unwrap_or_else(|status| (status, Vec::new()))
     }
 
-    async fn handle_link<R>(
+    async fn handle_link(
         &self,
         source_name: &str,
         target_parent_token: Handle,
         target_name: String,
-        responder: R,
-    ) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(Status) -> Result<(), fidl::Error>,
-    {
+    ) -> Result<(), zx::Status> {
         if source_name.contains('/') || target_name.contains('/') {
-            return responder(Status::INVALID_ARGS);
+            return Err(zx::Status::INVALID_ARGS);
         }
 
         let token_registry = match self.scope.token_registry() {
-            None => return responder(Status::NOT_SUPPORTED),
+            None => return Err(zx::Status::NOT_SUPPORTED),
             Some(registry) => registry,
         };
 
         if !self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
-            return responder(Status::BAD_HANDLE);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
-        let target_parent = match token_registry.get_container(target_parent_token) {
-            Err(status) => return responder(status),
-            Ok(None) => return responder(Status::NOT_FOUND),
-            Ok(Some(entry)) => entry,
+        let target_parent = match token_registry.get_container(target_parent_token)? {
+            None => return Err(zx::Status::NOT_FOUND),
+            Some(entry) => entry,
         };
 
-        match target_parent.link(target_name, self.directory.clone().into_any(), source_name).await
-        {
-            Ok(()) => responder(Status::OK),
-            Err(status) => responder(status),
-        }
+        target_parent.link(target_name, self.directory.clone().into_any(), source_name).await
     }
 
-    fn handle_watch<R>(
+    fn handle_watch(
         &mut self,
         mask: fio::WatchMask,
         watcher: DirectoryWatcher,
-        responder: R,
-    ) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(Status) -> Result<(), fidl::Error>,
-    {
+    ) -> Result<(), zx::Status> {
         let directory = self.directory.clone();
-        responder(
-            directory
-                .register_watcher(self.scope.clone(), mask, watcher)
-                .err()
-                .unwrap_or(Status::OK),
-        )
+        directory.register_watcher(self.scope.clone(), mask, watcher)
     }
 }
 
@@ -662,7 +625,7 @@ mod tests {
                 s,
                 info: None,
             }))
-            if Status::from_raw(s) == Status::NOT_FOUND
+            if zx::Status::from_raw(s) == zx::Status::NOT_FOUND
         );
         assert_matches!(
             event_stream.try_next().await,

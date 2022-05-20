@@ -332,7 +332,7 @@ impl VmoFileConnection {
         // If the connection has been closed by the peer or due some error we still need to call
         // the `updated` callback, unless the `Close` message have been used.
         // `ConnectionState::Closed` is handled above.
-        let _ = self.handle_close(|_status| Ok(())).await;
+        let _: Result<(), zx::Status> = self.handle_close().await;
     }
 
     /// Returns `NodeInfo` for the VMO file.
@@ -381,18 +381,19 @@ impl VmoFileConnection {
             fio::FileRequest::CloseDeprecated { responder } => {
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.  TODO We may want to send it in an epitaph.
-                let _ = self.handle_close(|status| responder.send(status.into_raw())).await;
+                let status = match self.handle_close().await {
+                    Ok(()) => zx::Status::OK,
+                    Err(status) => status,
+                };
+                responder.send(status.into_raw())?;
+
                 return Ok(ConnectionState::Closed);
             }
             fio::FileRequest::Close { responder } => {
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.
-                let _ = self
-                    .handle_close(|status| {
-                        let result: Result<(), zx::Status> = status.into();
-                        responder.send(&mut result.map_err(|status| status.into_raw()))
-                    })
-                    .await;
+                let result = self.handle_close().await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
                 return Ok(ConnectionState::Closed);
             }
             fio::FileRequest::Describe { responder } => match self.get_node_info().await {
@@ -415,10 +416,8 @@ impl VmoFileConnection {
                 responder.send(&mut Ok(()))?;
             }
             fio::FileRequest::GetAttr { responder } => {
-                self.handle_get_attr(|status, mut attrs| {
-                    responder.send(status.into_raw(), &mut attrs)
-                })
-                .await?;
+                let (status, mut attrs) = self.handle_get_attr().await;
+                responder.send(status.into_raw(), &mut attrs)?;
             }
             fio::FileRequest::SetAttr { flags: _, attributes: _, responder } => {
                 // According to https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/
@@ -435,101 +434,70 @@ impl VmoFileConnection {
                 todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
             fio::FileRequest::ReadDeprecated { count, responder } => {
-                self.handle_read(count, |status, content| {
-                    responder.send(status.into_raw(), content)
-                })
-                .await?;
+                let (status, data) = match self.handle_read(count).await {
+                    Ok(data) => (zx::Status::OK, data),
+                    Err(status) => (status, Vec::new()),
+                };
+                responder.send(status.into_raw(), &data)?;
             }
             fio::FileRequest::Read { count, responder } => {
-                self.handle_read(count, |status, content| {
-                    if status == zx::Status::OK {
-                        responder.send(&mut Ok(content.to_vec()))
-                    } else {
-                        responder.send(&mut Err(status.into_raw()))
-                    }
-                })
-                .await?;
+                let result = self.handle_read(count).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::ReadAtDeprecated { count, offset, responder } => {
-                self.handle_read_at(offset, count, |status, content| {
-                    responder.send(status.into_raw(), content)
-                })
-                .await?;
+                let (status, data) = match self.handle_read_at(offset, count).await {
+                    Ok(data) => (zx::Status::OK, data),
+                    Err(status) => (status, Vec::new()),
+                };
+                responder.send(status.into_raw(), &data)?;
             }
             fio::FileRequest::ReadAt { count, offset, responder } => {
-                self.handle_read_at(offset, count, |status, content| {
-                    if status == zx::Status::OK {
-                        responder.send(&mut Ok(content.to_vec()))
-                    } else {
-                        responder.send(&mut Err(status.into_raw()))
-                    }
-                })
-                .await?;
+                let result = self.handle_read_at(offset, count).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::WriteDeprecated { data, responder } => {
-                self.handle_write(&data, |status, actual| {
-                    responder.send(status.into_raw(), actual)
-                })
-                .await?;
+                let (status, count) = match self.handle_write(&data).await {
+                    Ok(count) => (zx::Status::OK, count),
+                    Err(status) => (status, 0),
+                };
+                responder.send(status.into_raw(), count)?;
             }
             fio::FileRequest::Write { data, responder } => {
-                self.handle_write(&data, |status, actual| {
-                    if status == zx::Status::OK {
-                        responder.send(&mut Ok(actual))
-                    } else {
-                        responder.send(&mut Err(status.into_raw()))
-                    }
-                })
-                .await?;
+                let result = self.handle_write(&data).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::WriteAtDeprecated { offset, data, responder } => {
-                self.handle_write_at(offset, &data, |status, actual| {
-                    // Seems like our API is not really designed for 128 bit machines. If data
-                    // contains more than 16EB, we may not be returning the correct number here.
-                    responder.send(status.into_raw(), actual as u64)
-                })
-                .await?;
+                let (status, count) = match self.handle_write_at(offset, &data).await {
+                    Ok(count) => (zx::Status::OK, count),
+                    Err(status) => (status, 0),
+                };
+                responder.send(status.into_raw(), count)?;
             }
             fio::FileRequest::WriteAt { offset, data, responder } => {
-                self.handle_write_at(offset, &data, |status, actual| {
-                    // Seems like our API is not really designed for 128 bit machines. If data
-                    // contains more than 16EB, we may not be returning the correct number here.
-                    if status == zx::Status::OK {
-                        responder.send(&mut Ok(actual as u64))
-                    } else {
-                        responder.send(&mut Err(status.into_raw()))
-                    }
-                })
-                .await?;
+                let result = self.handle_write_at(offset, &data).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::SeekDeprecated { offset, start, responder } => {
-                self.handle_seek(offset, start, |status, offset| {
-                    responder.send(status.into_raw(), offset)
-                })
-                .await?;
+                let (status, offset) = match self.handle_seek(offset, start).await {
+                    Ok(offset) => (zx::Status::OK, offset),
+                    Err(status) => (status, self.seek),
+                };
+                responder.send(status.into_raw(), offset)?;
             }
             fio::FileRequest::Seek { origin, offset, responder } => {
-                self.handle_seek(offset, origin, |status, offset| {
-                    if status == zx::Status::OK {
-                        responder.send(&mut Ok(offset))
-                    } else {
-                        responder.send(&mut Err(status.into_raw()))
-                    }
-                })
-                .await?;
+                let result = self.handle_seek(offset, origin).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::TruncateDeprecatedUseResize { length, responder } => {
-                self.handle_truncate(length, |status| responder.send(status.into_raw())).await?;
+                let status = match self.handle_truncate(length).await {
+                    Ok(()) => zx::Status::OK,
+                    Err(status) => status,
+                };
+                responder.send(status.into_raw())?;
             }
             fio::FileRequest::Resize { length, responder } => {
-                self.handle_truncate(length, |status| {
-                    if status == zx::Status::OK {
-                        responder.send(&mut Ok(()))
-                    } else {
-                        responder.send(&mut Err(status.into_raw()))
-                    }
-                })
-                .await?;
+                let result = self.handle_truncate(length).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::GetFlags { responder } => {
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
@@ -541,21 +509,15 @@ impl VmoFileConnection {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             fio::FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags, responder } => {
-                self.handle_get_buffer(flags, |buffer| match buffer {
-                    Err(status) => responder.send(status.into_raw(), None),
-                    Ok(mut buffer) => responder.send(ZX_OK, Some(&mut buffer)),
-                })
-                .await?;
+                let (status, mut buffer) = match self.handle_get_buffer(flags).await {
+                    Ok(buffer) => (zx::Status::OK, Some(buffer)),
+                    Err(status) => (status, None),
+                };
+                responder.send(status.into_raw(), buffer.as_mut())?;
             }
             fio::FileRequest::GetBackingMemory { flags, responder } => {
-                self.handle_get_buffer(flags, |buffer| {
-                    responder.send(
-                        &mut buffer
-                            .map(|Buffer { vmo, size: _ }| vmo)
-                            .map_err(zx::Status::into_raw),
-                    )
-                })
-                .await?;
+                let result = self.handle_get_buffer(flags).await.map(|Buffer { vmo, size: _ }| vmo);
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
@@ -584,39 +546,34 @@ impl VmoFileConnection {
         Self::create_connection(self.scope.clone(), self.file.clone(), flags, server_end);
     }
 
-    async fn handle_close<R>(&mut self, responder: R) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(zx::Status) -> Result<(), fidl::Error>,
-    {
-        let status = {
-            let state = &mut *self.file.state().await;
-            match state {
-                VmoFileState::Uninitialized => {
-                    debug_assert!(false, "`handle_close` called for a file with no connections");
-                    zx::Status::INTERNAL
-                }
-                VmoFileState::Initialized { connection_count, .. } => {
-                    *connection_count -= 1;
-
-                    zx::Status::OK
-                }
+    async fn handle_close(&mut self) -> Result<(), zx::Status> {
+        let state = &mut *self.file.state().await;
+        match state {
+            VmoFileState::Uninitialized => {
+                debug_assert!(false, "`handle_close` called for a file with no connections");
+                Err(zx::Status::INTERNAL)
             }
-        };
+            VmoFileState::Initialized { connection_count, .. } => {
+                *connection_count -= 1;
 
-        responder(status)
+                Ok(())
+            }
+        }
     }
 
-    async fn handle_get_attr<R>(&mut self, responder: R) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(zx::Status, fio::NodeAttributes) -> Result<(), fidl::Error>,
-    {
-        let (status, size, capacity) = update_initialized_state! {
+    async fn handle_get_attr(&mut self) -> (zx::Status, fio::NodeAttributes) {
+        let result = update_initialized_state! {
             match *self.file.state().await;
-            error: "handle_get_attr" => (zx::Status::INTERNAL, 0, 0);
-            { size, capacity, .. } => (zx::Status::OK, size, capacity)
+            error: "handle_get_attr" => Err(zx::Status::INTERNAL);
+            { size, capacity, .. } => Ok((size, capacity))
         };
 
-        responder(
+        let (status, size, capacity) = match result {
+            Ok((size, capacity)) => (zx::Status::OK, size, capacity),
+            Err(status) => (status, 0, 0),
+        };
+
+        (
             status,
             fio::NodeAttributes {
                 mode: fio::MODE_TYPE_FILE
@@ -635,285 +592,178 @@ impl VmoFileConnection {
         )
     }
 
-    /// Read `count` bytes at the current seek value from the underlying VMO.  The content is sent
-    /// as an iterator to the provided responder. It increases the current seek position by the
-    /// actual number of bytes written. If an error occurs, an error code is sent to the responder
-    /// with an empty iterator, and this function returns `Ok(())`. If the responder returns an
-    /// error when used (including in the successful case), this function returns that error
-    /// directly.
-    async fn handle_read<R>(&mut self, count: u64, responder: R) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(zx::Status, &[u8]) -> Result<(), fidl::Error>,
-    {
-        let actual = self.handle_read_at(self.seek, count, responder).await?;
-        self.seek += actual;
-        Ok(())
+    async fn handle_read(&mut self, count: u64) -> Result<Vec<u8>, zx::Status> {
+        let bytes = self.handle_read_at(self.seek, count).await?;
+        let count = bytes.len().try_into().unwrap();
+        self.seek = self.seek.checked_add(count).unwrap();
+        Ok(bytes)
     }
 
-    /// Read `count` bytes at `offset` from the underlying VMO. The content is sent as an iterator
-    /// to the provided responder. If an error occurs, an error code is sent to the responder with
-    /// an empty iterator, and this function returns `Ok(0)`. If the responder returns an error
-    /// when used (including in the successful case), this function returns that error directly.
-    async fn handle_read_at<R>(
-        &mut self,
-        offset: u64,
-        count: u64,
-        responder: R,
-    ) -> Result<u64, fidl::Error>
-    where
-        R: FnOnce(zx::Status, &[u8]) -> Result<(), fidl::Error>,
-    {
+    async fn handle_read_at(&mut self, offset: u64, count: u64) -> Result<Vec<u8>, zx::Status> {
         if !self.flags.intersects(fio::OpenFlags::RIGHT_READABLE) {
-            responder(zx::Status::BAD_HANDLE, &[])?;
-            return Ok(0);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
-        assert_eq_size!(usize, u64);
-
-        let (status, count, content) = update_initialized_state! {
+        update_initialized_state! {
             match &*self.file.state().await;
-            error: "handle_read_at" => (zx::Status::INTERNAL, 0, vec![]);
+            error: "handle_read_at" => return Err(zx::Status::INTERNAL);
             { vmo, size, .. } => {
-                if offset >= *size {
-                    break (zx::Status::OK, 0, vec![]);
-                }
+                match size.checked_sub(offset) {
+                    None => Ok(Vec::new()),
+                    Some(rem) => {
+                        let count = core::cmp::min(count, rem);
 
-                let count = core::cmp::min(count, *size - offset);
+                        assert_eq_size!(usize, u64);
+                        let count = count.try_into().unwrap();
 
-                let mut buffer = Vec::with_capacity(count as usize);
-                buffer.resize(count as usize, 0);
-
-                match vmo.read(&mut buffer, offset) {
-                    Ok(()) => (zx::Status::OK, count, buffer),
-                    Err(status) => (status, 0, vec![]),
+                        let mut buffer = vec![0; count];
+                        vmo.read(&mut buffer, offset)?;
+                        Ok(buffer)
+                    }
                 }
             }
-        };
-
-        responder(status, &content)?;
-        Ok(count)
+        }
     }
 
-    /// Write `content` at the current seek position into the underlying VMO.  The file should have
-    /// enough `capacity` to cover all the bytes that are written.  When not enough bytes are
-    /// available only the overlap is written.  When the seek position is already beyond the
-    /// `capacity`, an `OUT_OF_RANGE` error is provided to the `responder`.  The seek position is
-    /// increased by the number of bytes written. On an error, the error code is sent to
-    /// `responder`, and this function returns `Ok(())`. If the responder returns an error, this
-    /// function forwards that error back to the caller.
-    // Strictly speaking, we do not need to use a callback here, but we do need it in the
-    // handle_read() case above, so, for consistency, handle_write() has the same interface.
-    async fn handle_write<R>(&mut self, content: &[u8], responder: R) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(zx::Status, u64) -> Result<(), fidl::Error>,
-    {
-        let actual = self.handle_write_at(self.seek, content, responder).await?;
+    async fn handle_write(&mut self, content: &[u8]) -> Result<u64, zx::Status> {
+        let actual = self.handle_write_at(self.seek, content).await?;
         self.seek += actual;
-        Ok(())
+        Ok(actual)
     }
 
-    /// Write `content` at `offset` in the buffer associated with the connection. The file should
-    /// have enough `capacity` to cover all the bytes that are written.  When not enough bytes are
-    /// available only the overlap is written.  When `offset` is beyond the `capacity`, an
-    /// `OUT_OF_RANGE` error is provided to the `responder`. On a successful write, the number of
-    /// bytes written is sent to `responder` and also returned from this function. On an error, the
-    /// error code is sent to `responder`, and this function returns `Ok(0)`. If the responder
-    /// returns an error, this function forwards that error back to the caller.
-    // Strictly speaking, we do not need to use a callback here, but we do need it in the
-    // handle_read_at() case above, so, for consistency, handle_write_at() has the same interface.
-    async fn handle_write_at<R>(
+    async fn handle_write_at(
         &mut self,
         offset: u64,
         mut content: &[u8],
-        responder: R,
-    ) -> Result<u64, fidl::Error>
-    where
-        R: FnOnce(zx::Status, u64) -> Result<(), fidl::Error>,
-    {
+    ) -> Result<u64, zx::Status> {
         if !self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
-            responder(zx::Status::BAD_HANDLE, 0)?;
-            return Ok(0);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
-        assert_eq_size!(usize, u64);
-
-        let (status, actual) = update_initialized_state! {
+        update_initialized_state! {
             match &mut *self.file.state().await;
-            error: "handle_write_at" => (zx::Status::INTERNAL, 0);
+            error: "handle_write_at" => return Err(zx::Status::INTERNAL);
             { vmo, vmo_size, size, capacity, .. } => {
-                let effective_capacity = core::cmp::max(*size, *capacity);
+                let capacity = core::cmp::max(*size, *capacity);
+                match capacity.checked_sub(offset) {
+                    None => return Err(zx::Status::OUT_OF_RANGE),
+                    Some(capacity) => {
+                        assert_eq_size!(usize, u64);
+                        let capacity = capacity.try_into().unwrap();
 
-                if offset >= effective_capacity {
-                    break (zx::Status::OUT_OF_RANGE, 0);
-                }
-
-                let mut actual = content.len() as u64;
-                if effective_capacity - offset < actual {
-                    actual = effective_capacity - offset;
-                    content = &content[0..actual as usize];
-                }
-
-                if *size <= offset + actual {
-                    let new_size = offset + actual;
-                    if *vmo_size < new_size {
-                        if let Err(status) = vmo.set_size(new_size) {
-                            break (status, 0);
+                        if content.len() > capacity {
+                            content = &content[..capacity];
                         }
-                        // As VMO sizes are rounded, we do not really know the current size of the
-                        // VMO after the `set_size` call.  We need an additional `get_size`, if we
-                        // want to be aware of the exact size.  We can probably do our own
-                        // rounding, but it seems more fragile.  Hopefully, this extra syscall will
-                        // be invisible, as it should not happen too frequently.  It will be at
-                        // least offset by 4 more syscalls that happen for every `write_at` FIDL
-                        // call.
-                        *vmo_size = match vmo.get_size() {
-                            Ok(size) => size,
-                            Err(status) => break (status, 0),
-                        };
-                    }
-                    if let Err(status) = vmo.set_content_size(&new_size) {
-                        break (status, 0);
-                    }
-                    *size = offset + actual;
-                }
 
-                match vmo.write(&content, offset) {
-                    Ok(()) => (zx::Status::OK, actual),
-                    Err(status) => (status, 0),
+                        let len = content.len().try_into().unwrap();
+                        let end = offset + len;
+                        if end > *size {
+                            if end > *vmo_size {
+                                vmo.set_size(end)?;
+                                // As VMO sizes are rounded, we do not really know the current size
+                                // of the VMO after the `set_size` call.  We need an additional
+                                // `get_size`, if we want to be aware of the exact size.  We can
+                                // probably do our own rounding, but it seems more fragile.
+                                // Hopefully, this extra syscall will be invisible, as it should not
+                                // happen too frequently.  It will be at least offset by 4 more
+                                // syscalls that happen for every `write_at` FIDL call.
+                                *vmo_size = vmo.get_size()?;
+                            }
+                            vmo.set_content_size(&end)?;
+                            *size = end;
+                        }
+                        vmo.write(content, offset)?;
+                        Ok(len)
+                    }
                 }
             }
-        };
-
-        responder(status, actual)?;
-        Ok(actual)
+        }
     }
 
     /// Move seek position to byte `offset` relative to the origin specified by `start.  Calls
     /// `responder` with an updated seek position, on success.
-    async fn handle_seek<R>(
+    async fn handle_seek(
         &mut self,
         offset: i64,
-        start: fio::SeekOrigin,
-        responder: R,
-    ) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(zx::Status, u64) -> Result<(), fidl::Error>,
-    {
+        origin: fio::SeekOrigin,
+    ) -> Result<u64, zx::Status> {
         if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
-            responder(zx::Status::BAD_HANDLE, 0)?;
-            return Ok(());
+            return Err(zx::Status::BAD_HANDLE);
         }
 
-        let (status, seek) = update_initialized_state! {
+        update_initialized_state! {
             match *self.file.state().await;
-            error: "handle_seek" => (zx::Status::INTERNAL, 0);
+            error: "handle_seek" => return Err(zx::Status::INTERNAL);
             { size, .. } => {
-                let new_offset = |current: u64, offset: i64| -> Result<u64, zx::Status> {
-                    // Panic if we've ever managed to overflow an int64.
-                    let current: i64 = current.try_into().unwrap();
-                    current
-                        .checked_add(offset)
-                        .ok_or(zx::Status::OUT_OF_RANGE)?
-                        .try_into()
-                        .map_err(|_| zx::Status::OUT_OF_RANGE)
-                };
-
-                match match start {
-                    fio::SeekOrigin::Start => new_offset(0, offset),
-                    fio::SeekOrigin::Current => new_offset(self.seek, offset),
-                    fio::SeekOrigin::End => new_offset(size, offset)
-                } {
-                    Ok(val) => {
-                        self.seek = val;
-                        (zx::Status::OK, val)
-                    }
-                    Err(err) => {
-                        break (err, self.seek);
+                // There is an undocumented constraint that the seek offset can never exceed 63
+                // bits. See https://fxbug.dev/100754.
+                let origin: i64 = match origin {
+                    fio::SeekOrigin::Start => 0,
+                    fio::SeekOrigin::Current => self.seek,
+                    fio::SeekOrigin::End => size,
+                }.try_into().unwrap();
+                match origin.checked_add(offset) {
+                    None => Err(zx::Status::OUT_OF_RANGE),
+                    Some(offset) => {
+                        let offset = offset.try_into().map_err(|std::num::TryFromIntError { .. }| zx::Status::OUT_OF_RANGE)?;
+                        self.seek = offset;
+                        Ok(offset)
                     }
                 }
             }
-        };
-
-        responder(status, seek)?;
-        Ok(())
+        }
     }
 
-    /// Truncate to `length` the buffer associated with the connection. The corresponding pseudo
-    /// file should have a size `capacity`. If after the truncation the seek position would be
-    /// beyond the new end of the buffer, it is set to the end of the buffer. On a successful
-    /// truncate, [`zx::Status::OK`] is sent to `responder`. On an error, the error code is sent to
-    /// `responder`, and this function returns `Ok(())`. If the responder returns an error, this
-    /// function forwards that error back to the caller.
-    async fn handle_truncate<R>(&mut self, length: u64, responder: R) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(zx::Status) -> Result<(), fidl::Error>,
-    {
+    async fn handle_truncate(&mut self, length: u64) -> Result<(), zx::Status> {
         if !self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
-            return responder(zx::Status::BAD_HANDLE);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
-        match Self::truncate_vmo(&mut *self.file.state().await, length, &mut self.seek) {
-            Ok(()) => responder(zx::Status::OK),
-            Err(status) => responder(status),
-        }
+        Self::truncate_vmo(&mut *self.file.state().await, length, &mut self.seek)
     }
 
-    async fn handle_get_buffer<R>(
-        &mut self,
-        flags: fio::VmoFlags,
-        responder: R,
-    ) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(Result<Buffer, zx::Status>) -> Result<(), fidl::Error>,
-    {
-        responder(
-            async {
-                let () = get_buffer_validate_flags(flags, self.flags)?;
+    async fn handle_get_buffer(&mut self, flags: fio::VmoFlags) -> Result<Buffer, zx::Status> {
+        let () = get_buffer_validate_flags(flags, self.flags)?;
 
-                // The only sharing mode we support that disallows the VMO size to change currently
-                // is VMO_FLAG_PRIVATE (`get_as_private`), so we require that to be set explicitly.
-                if flags.contains(fio::VmoFlags::WRITE)
-                    && !flags.contains(fio::VmoFlags::PRIVATE_CLONE)
-                {
-                    return Err(zx::Status::NOT_SUPPORTED);
+        // The only sharing mode we support that disallows the VMO size to change currently
+        // is VMO_FLAG_PRIVATE (`get_as_private`), so we require that to be set explicitly.
+        if flags.contains(fio::VmoFlags::WRITE) && !flags.contains(fio::VmoFlags::PRIVATE_CLONE) {
+            return Err(zx::Status::NOT_SUPPORTED);
+        }
+
+        // Disallow opening as both writable and executable. In addition to improving W^X
+        // enforcement, this also eliminates any inconstiencies related to clones that use
+        // SNAPSHOT_AT_LEAST_ON_WRITE since in that case, we cannot satisfy both requirements.
+        if flags.contains(fio::VmoFlags::EXECUTE) && flags.contains(fio::VmoFlags::WRITE) {
+            return Err(zx::Status::NOT_SUPPORTED);
+        }
+
+        update_initialized_state! {
+            match &*self.file.state().await;
+            error: "handle_get_buffer" => Err(zx::Status::INTERNAL);
+            { vmo, size, .. } => {
+                let () = vmo.set_content_size(&size)?;
+
+                // Logic here matches fuchsia.io requirements and matches what works for memfs.
+                // Shared requests are satisfied by duplicating an handle, and private shares are
+                // child VMOs.
+                //
+                // Minfs and blobfs may require customization.  In particular, they may want to
+                // track not just number of connections to a file, but also the number of
+                // outstanding child VMOs.  While it is possible with the `init_vmo`
+                // model currently implemented, it is very likely that adding another customization
+                // callback here will make the implementation of those files systems easier.
+                let vmo_rights = vmo_flags_to_rights(flags);
+                // Unless private sharing mode is specified, we always default to shared.
+                let vmo = if flags.contains(fio::VmoFlags::PRIVATE_CLONE) {
+                    Self::get_as_private(&vmo, vmo_rights, *size)
                 }
-
-                // Disallow opening as both writable and executable. In addition to improving W^X
-                // enforcement, this also eliminates any inconstiencies related to clones that use
-                // SNAPSHOT_AT_LEAST_ON_WRITE since in that case, we cannot satisfy both requirements.
-                if flags.contains(fio::VmoFlags::EXECUTE) && flags.contains(fio::VmoFlags::WRITE) {
-                    return Err(zx::Status::NOT_SUPPORTED);
-                }
-
-                update_initialized_state! {
-                    match &*self.file.state().await;
-                    error: "handle_get_buffer" => Err(zx::Status::INTERNAL);
-                    { vmo, size, .. } => {
-                        let () = vmo.set_content_size(&size)?;
-
-                        // Logic here matches fuchsia.io requirements and matches what works for memfs.
-                        // Shared requests are satisfied by duplicating an handle, and private shares are
-                        // child VMOs.
-                        //
-                        // Minfs and blobfs may require customization.  In particular, they may want to
-                        // track not just number of connections to a file, but also the number of
-                        // outstanding child VMOs.  While it is possible with the `init_vmo`
-                        // model currently implemented, it is very likely that adding another customization
-                        // callback here will make the implementation of those files systems easier.
-                        let vmo_rights = vmo_flags_to_rights(flags);
-                        // Unless private sharing mode is specified, we always default to shared.
-                        let vmo = if flags.contains(fio::VmoFlags::PRIVATE_CLONE) {
-                            Self::get_as_private(&vmo, vmo_rights, *size)
-                        }
-                        else {
-                            Self::get_as_shared(&vmo, vmo_rights)
-                        }?;
-                            Ok(Buffer{vmo, size: *size})
-                    }
-                }
+                else {
+                    Self::get_as_shared(&vmo, vmo_rights)
+                }?;
+                    Ok(Buffer{vmo, size: *size})
             }
-            .await,
-        )
+        }
     }
 
     fn get_as_shared(vmo: &zx::Vmo, mut rights: zx::Rights) -> Result<zx::Vmo, zx::Status> {

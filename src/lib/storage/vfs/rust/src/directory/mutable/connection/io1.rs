@@ -28,8 +28,7 @@ use {
     anyhow::{bail, Error},
     either::{Either, Left, Right},
     fidl::{endpoints::ServerEnd, Handle},
-    fidl_fuchsia_io as fio,
-    fuchsia_zircon::Status,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::{channel::oneshot, future::BoxFuture},
     std::sync::Arc,
 };
@@ -102,15 +101,15 @@ impl DerivedConnection for MutableConnection {
         mode: u32,
         name: &str,
         path: &Path,
-    ) -> Result<Arc<dyn DirectoryEntry>, Status> {
+    ) -> Result<Arc<dyn DirectoryEntry>, zx::Status> {
         if !flags.intersects(fio::OpenFlags::CREATE) {
-            return Err(Status::NOT_FOUND);
+            return Err(zx::Status::NOT_FOUND);
         }
 
         let type_ = NewEntryType::from_flags_and_mode(flags, mode, path.is_dir())?;
 
         let entry_constructor = match scope.entry_constructor() {
-            None => return Err(Status::NOT_SUPPORTED),
+            None => return Err(zx::Status::NOT_SUPPORTED),
             Some(constructor) => constructor,
         };
 
@@ -156,34 +155,35 @@ impl MutableConnection {
     ) -> Result<Either<ConnectionState, fio::DirectoryRequest>, Error> {
         match request {
             fio::DirectoryRequest::Unlink { name, options, responder } => {
-                self.handle_unlink(name, options, |status| {
-                    responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
-                })
-                .await?;
+                let result = self.handle_unlink(name, options).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::DirectoryRequest::GetToken { responder } => {
-                self.handle_get_token(|status, token| responder.send(status.into_raw(), token))?;
+                let (status, token) = match self.handle_get_token() {
+                    Ok(token) => (zx::Status::OK, Some(token)),
+                    Err(status) => (status, None),
+                };
+                responder.send(status.into_raw(), token)?;
             }
             fio::DirectoryRequest::Rename { src, dst_parent_token, dst, responder } => {
-                self.handle_rename(src, Handle::from(dst_parent_token), dst, |status| {
-                    responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
-                })
-                .await?;
+                let result = self.handle_rename(src, Handle::from(dst_parent_token), dst).await;
+                responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::DirectoryRequest::SetAttr { flags, attributes, responder } => {
                 let status = match self.handle_setattr(flags, attributes).await {
-                    Ok(()) => Status::OK,
+                    Ok(()) => zx::Status::OK,
                     Err(status) => status,
                 };
                 responder.send(status.into_raw())?;
             }
             fio::DirectoryRequest::SyncDeprecated { responder } => {
                 responder.send(
-                    self.base.directory.sync().await.err().unwrap_or(Status::OK).into_raw(),
+                    self.base.directory.sync().await.err().unwrap_or(zx::Status::OK).into_raw(),
                 )?;
             }
             fio::DirectoryRequest::Sync { responder } => {
-                responder.send(&mut self.base.directory.sync().await.map_err(Status::into_raw))?;
+                responder
+                    .send(&mut self.base.directory.sync().await.map_err(zx::Status::into_raw))?;
             }
             // TODO(https:/fxbug.dev/77623): which other io2 methods need to be implemented here?
             _ => {
@@ -199,9 +199,9 @@ impl MutableConnection {
         &mut self,
         flags: fio::NodeAttributeFlags,
         attributes: fio::NodeAttributes,
-    ) -> Result<(), Status> {
+    ) -> Result<(), zx::Status> {
         if !self.base.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
-            return Err(Status::BAD_HANDLE);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
         // TODO(jfsulliv): Consider always permitting attributes to be deferrable. The risk with
@@ -209,25 +209,20 @@ impl MutableConnection {
         self.base.directory.set_attrs(flags, attributes).await
     }
 
-    async fn handle_unlink<R>(
+    async fn handle_unlink(
         &mut self,
         name: String,
         options: fio::UnlinkOptions,
-        responder: R,
-    ) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(Status) -> Result<(), fidl::Error>,
-    {
+    ) -> Result<(), zx::Status> {
         if !self.base.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
-            return responder(Status::BAD_HANDLE);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
         if name.is_empty() || name.contains('/') || name == "." || name == ".." {
-            return responder(Status::INVALID_ARGS);
+            return Err(zx::Status::INVALID_ARGS);
         }
 
-        match self
-            .base
+        self.base
             .directory
             .clone()
             .unlink(
@@ -238,76 +233,51 @@ impl MutableConnection {
                     .unwrap_or(false),
             )
             .await
-        {
-            Ok(()) => responder(Status::OK),
-            Err(status) => responder(status),
-        }
     }
 
-    fn handle_get_token<R>(&self, responder: R) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(Status, Option<Handle>) -> Result<(), fidl::Error>,
-    {
+    fn handle_get_token(&self) -> Result<Handle, zx::Status> {
         if !self.base.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
-            return responder(Status::BAD_HANDLE, None);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
         let token_registry = match self.base.scope.token_registry() {
-            None => return responder(Status::NOT_SUPPORTED, None),
+            None => return Err(zx::Status::NOT_SUPPORTED),
             Some(registry) => registry,
         };
 
-        let token = {
-            let dir_as_reg_client = self.base.directory.clone().into_token_registry_client();
-            match token_registry.get_token(dir_as_reg_client) {
-                Err(status) => return responder(status, None),
-                Ok(token) => token,
-            }
-        };
-
-        responder(Status::OK, Some(token))
+        let token =
+            token_registry.get_token(self.base.directory.clone().into_token_registry_client())?;
+        Ok(token)
     }
 
-    async fn handle_rename<R>(
+    async fn handle_rename(
         &self,
         src: String,
         dst_parent_token: Handle,
         dst: String,
-        responder: R,
-    ) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(Status) -> Result<(), fidl::Error>,
-    {
+    ) -> Result<(), zx::Status> {
         if !self.base.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
-            return responder(Status::BAD_HANDLE);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
-        let src = match Path::validate_and_split(src) {
-            Ok(src) => src,
-            Err(status) => return responder(status),
-        };
-        let dst = match Path::validate_and_split(dst) {
-            Ok(dst) => dst,
-            Err(status) => return responder(status),
-        };
+        let src = Path::validate_and_split(src)?;
+        let dst = Path::validate_and_split(dst)?;
 
         if !src.is_single_component() || !dst.is_single_component() {
-            return responder(Status::INVALID_ARGS);
+            return Err(zx::Status::INVALID_ARGS);
         }
 
         let token_registry = match self.base.scope.token_registry() {
-            None => return responder(Status::NOT_SUPPORTED),
+            None => return Err(zx::Status::NOT_SUPPORTED),
             Some(registry) => registry,
         };
 
-        let dst_parent = match token_registry.get_container(dst_parent_token) {
-            Err(status) => return responder(status),
-            Ok(None) => return responder(Status::NOT_FOUND),
-            Ok(Some(entry)) => entry,
+        let dst_parent = match token_registry.get_container(dst_parent_token)? {
+            None => return Err(zx::Status::NOT_FOUND),
+            Some(entry) => entry,
         };
 
-        match self
-            .base
+        self.base
             .directory
             .clone()
             .into_mutable_directory()
@@ -319,10 +289,6 @@ impl MutableConnection {
                 dst,
             )
             .await
-        {
-            Ok(()) => responder(Status::OK),
-            Err(status) => responder(status),
-        }
     }
 
     fn prepare_connection(
@@ -350,7 +316,7 @@ impl MutableConnection {
 
         if flags.intersects(fio::OpenFlags::DESCRIBE) {
             let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
-            control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info))?;
+            control_handle.send_on_open_(zx::Status::OK.into_raw(), Some(&mut info))?;
         }
 
         Ok((Self::new(scope, directory, flags), requests))
@@ -439,7 +405,7 @@ mod tests {
             &'a self,
             _pos: &'a TraversalPosition,
             _sink: Box<dyn dirents_sink::Sink>,
-        ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
+        ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), zx::Status> {
             panic!("Not implemented");
         }
 
@@ -448,11 +414,11 @@ mod tests {
             _scope: ExecutionScope,
             _mask: fio::WatchMask,
             _watcher: DirectoryWatcher,
-        ) -> Result<(), Status> {
+        ) -> Result<(), zx::Status> {
             panic!("Not implemented");
         }
 
-        async fn get_attrs(&self) -> Result<fio::NodeAttributes, Status> {
+        async fn get_attrs(&self) -> Result<fio::NodeAttributes, zx::Status> {
             panic!("Not implemented");
         }
 
@@ -460,7 +426,7 @@ mod tests {
             panic!("Not implemented");
         }
 
-        fn close(&self) -> Result<(), Status> {
+        fn close(&self) -> Result<(), zx::Status> {
             self.fs.handle_event(MutableDirectoryAction::Close)
         }
     }
@@ -472,7 +438,7 @@ mod tests {
             path: String,
             _source_dir: Arc<dyn Any + Send + Sync>,
             _source_name: &str,
-        ) -> Result<(), Status> {
+        ) -> Result<(), zx::Status> {
             self.fs.handle_event(MutableDirectoryAction::Link { id: self.id, path })
         }
 
@@ -480,7 +446,7 @@ mod tests {
             self: Arc<Self>,
             name: &str,
             _must_be_directory: bool,
-        ) -> Result<(), Status> {
+        ) -> Result<(), zx::Status> {
             self.fs.handle_event(MutableDirectoryAction::Unlink {
                 id: self.id,
                 name: name.to_string(),
@@ -491,7 +457,7 @@ mod tests {
             &self,
             flags: fio::NodeAttributeFlags,
             attrs: fio::NodeAttributes,
-        ) -> Result<(), Status> {
+        ) -> Result<(), zx::Status> {
             self.fs.handle_event(MutableDirectoryAction::SetAttr { id: self.id, flags, attrs })
         }
 
@@ -499,7 +465,7 @@ mod tests {
             &*self.fs
         }
 
-        async fn sync(&self) -> Result<(), Status> {
+        async fn sync(&self) -> Result<(), zx::Status> {
             self.fs.handle_event(MutableDirectoryAction::Sync)
         }
     }
@@ -525,7 +491,7 @@ mod tests {
             MockFilesystem { cur_id: Mutex::new(0), scope, events: Arc::downgrade(events) }
         }
 
-        pub fn handle_event(&self, event: MutableDirectoryAction) -> Result<(), Status> {
+        pub fn handle_event(&self, event: MutableDirectoryAction) -> Result<(), zx::Status> {
             self.events.upgrade().map(|x| x.0.lock().unwrap().push(event));
             Ok(())
         }
@@ -557,7 +523,7 @@ mod tests {
             src_name: Path,
             dst_dir: Arc<Any + Sync + Send + 'static>,
             dst_name: Path,
-        ) -> Result<(), Status> {
+        ) -> Result<(), zx::Status> {
             let src_dir = src_dir.downcast::<MockDirectory>().unwrap();
             let dst_dir = dst_dir.downcast::<MockDirectory>().unwrap();
             self.handle_event(MutableDirectoryAction::Rename {
@@ -583,7 +549,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_rename() {
-        use fuchsia_zircon::Event;
+        use zx::Event;
 
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
@@ -596,7 +562,7 @@ mod tests {
             .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
 
         let (status, token) = proxy2.get_token().await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         let status = proxy.rename("src", Event::from(token.unwrap()), "dest").await.unwrap();
         assert!(status.is_ok());
@@ -636,7 +602,7 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         let events = events.0.lock().unwrap();
         assert_eq!(
@@ -662,10 +628,10 @@ mod tests {
             .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
 
         let (status, token) = proxy2.get_token().await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         let status = proxy.link("src", token.unwrap(), "dest").await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Link { id: 1, path: "dest".to_owned() },]);
     }
@@ -696,7 +662,7 @@ mod tests {
         let (_dir, proxy) = fs
             .clone()
             .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
-        let () = proxy.sync().await.unwrap().map_err(Status::from_raw).unwrap();
+        let () = proxy.sync().await.unwrap().map_err(zx::Status::from_raw).unwrap();
         let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Sync]);
     }
@@ -708,7 +674,7 @@ mod tests {
         let (_dir, proxy) = fs
             .clone()
             .make_connection(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
-        let () = proxy.close().await.unwrap().map_err(Status::from_raw).unwrap();
+        let () = proxy.close().await.unwrap().map_err(zx::Status::from_raw).unwrap();
         let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Close]);
     }

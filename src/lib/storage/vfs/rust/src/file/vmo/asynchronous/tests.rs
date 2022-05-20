@@ -294,7 +294,7 @@ fn read_write_no_read_flag() {
 }
 
 #[test]
-/// When the `init_vmo` createa a VMO that is larger then the specified capacity of the file, the
+/// When the `init_vmo` creates a VMO that is larger then the specified capacity of the file, the
 /// user will be able to access all of the allocated bytes.  More details in
 /// [`file::vmo::asynchronous::NewVmo::capacity`].
 fn read_returns_more_than_capacity() {
