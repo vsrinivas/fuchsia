@@ -50,7 +50,7 @@ enum/member fuchsia.ui.input/InputMethodAction.PREVIOUS 7
 enum/member fuchsia.ui.input/InputMethodAction.SEARCH 3
 enum/member fuchsia.ui.input/InputMethodAction.SEND 4
 enum/member fuchsia.ui.input/InputMethodAction.UNSPECIFIED 0
-strict enum fuchsia.ui.input/InputMethodAction uint32
+flexible enum fuchsia.ui.input/InputMethodAction uint32
 protocol/member fuchsia.ui.input/InputMethodEditor.DispatchKey3(fuchsia.ui.input3/KeyEvent event) -> (bool handled)
 protocol/member fuchsia.ui.input/InputMethodEditor.Hide()
 protocol/member fuchsia.ui.input/InputMethodEditor.InjectInput(fuchsia.ui.input/InputEvent event)
@@ -90,7 +90,7 @@ enum/member fuchsia.ui.input/KeyboardType.DATETIME 3
 enum/member fuchsia.ui.input/KeyboardType.NUMBER 1
 enum/member fuchsia.ui.input/KeyboardType.PHONE 2
 enum/member fuchsia.ui.input/KeyboardType.TEXT 0
-strict enum fuchsia.ui.input/KeyboardType uint32
+flexible enum fuchsia.ui.input/KeyboardType uint32
 struct/member fuchsia.ui.input/MediaButtonsDescriptor.buttons uint32
 struct fuchsia.ui.input/MediaButtonsDescriptor
 table/member fuchsia.ui.input/MediaButtonsEvent.camera_disable bool

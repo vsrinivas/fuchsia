@@ -4,14 +4,14 @@
 library fuchsia.ui.input;
 using fuchsia.ui.input3;
 
-type KeyboardType = strict enum {
+type KeyboardType = flexible enum {
     TEXT = 0;
     NUMBER = 1;
     PHONE = 2;
     DATETIME = 3;
 };
 
-type InputMethodAction = strict enum {
+type InputMethodAction = flexible enum {
     UNSPECIFIED = 0;
     NONE = 1;
     GO = 2;
