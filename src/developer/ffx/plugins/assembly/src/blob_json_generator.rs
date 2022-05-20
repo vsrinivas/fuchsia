@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::operations::size_check::BlobJsonEntry;
+use crate::operations::size_check_package::BlobJsonEntry;
 use crate::util::read_config;
 use anyhow::Result;
 use assembly_images_config::BlobFSLayout;

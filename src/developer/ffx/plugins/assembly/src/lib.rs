@@ -40,9 +40,16 @@ pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
         OperationClass::Product(args) => {
             operations::product::assemble(args).context("Product Assembly")
         }
-        OperationClass::SizeCheck(args) => {
-            operations::size_check::verify_budgets(args).context("Size checker")
-        }
+        OperationClass::SizeCheck(args) => match args.op_class {
+            SizeCheckOperationClass::Package(args) => {
+                operations::size_check_package::verify_package_budgets(args)
+                    .context("Package size checker")
+            }
+            SizeCheckOperationClass::Product(args) => {
+                operations::size_check_product::verify_product_budgets(args)
+                    .context("Product size checker")
+            }
+        },
     }
     .map_err(flatten_error_sources)
 }

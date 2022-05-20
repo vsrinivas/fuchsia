@@ -186,12 +186,30 @@ pub struct ConfigDataArgs {
     pub changes: Vec<ConfigDataChange>,
 }
 
-/// measure package sizes and verify they fit in the specified budgets.
-/// Exit status is 2 when one or more budgets are exceeded, and 1 when
-/// a failure prevented the budget verification to happen.
+/// Perform size checks (on packages or product based on the sub-command).
 #[derive(Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "size-check")]
 pub struct SizeCheckArgs {
+    #[argh(subcommand)]
+    pub op_class: SizeCheckOperationClass,
+}
+
+/// The set of operations available under `ffx assembly size-check`.
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand)]
+pub enum SizeCheckOperationClass {
+    /// Check that the set of all blobs included in the product fit in the blobfs capacity.
+    Product(ProductSizeCheckArgs),
+    /// Check that package sets are not over their allocated budgets.
+    Package(PackageSizeCheckArgs),
+}
+
+/// Measure package sizes and verify they fit in the specified budgets.
+/// Exit status is 2 when one or more budgets are exceeded, and 1 when
+/// a failure prevented the budget verification to happen.
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "package")]
+pub struct PackageSizeCheckArgs {
     /// path to a JSON file containing the list of size budgets.
     /// Each size budget has a `name`, a `size` which is the maximum
     /// number of bytes, and `packages` a list of path to manifest files.
@@ -214,6 +232,23 @@ pub struct SizeCheckArgs {
     /// path where to write the verbose JSON output.
     #[argh(option)]
     pub verbose_json_output: Option<PathBuf>,
+}
+
+/// (Not implemented yet) Check that the set of all blobs included in the product
+/// fit in the blobfs capacity.
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "product")]
+pub struct ProductSizeCheckArgs {
+    /// path to assembly_manifest.json.
+    #[argh(option)]
+    pub assembly_manifest: PathBuf,
+    /// path to the bast assembly_manifest.json which will be used to compare with the current
+    /// assembly_manifest.json to produce a diff.
+    #[argh(option)]
+    pub base_assembly_manifest: Option<PathBuf>,
+    /// whether to show the verbose output.
+    #[argh(switch, short = 'v')]
+    pub verbose: bool,
 }
 
 fn default_blobfs_layout() -> BlobFSLayout {
