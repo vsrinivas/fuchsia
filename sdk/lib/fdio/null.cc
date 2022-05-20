@@ -8,13 +8,13 @@
 
 fdio::~fdio() = default;
 
-zx::status<fdio_ptr> fdio::open(const char* path, fuchsia_io::wire::OpenFlags flags,
+zx::status<fdio_ptr> fdio::open(std::string_view path, fuchsia_io::wire::OpenFlags flags,
                                 uint32_t mode) {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t fdio::add_inotify_filter(const char* path, uint32_t mask, uint32_t watch_descriptor,
-                                     zx::socket socket) {
+zx_status_t fdio::add_inotify_filter(std::string_view path, uint32_t mask,
+                                     uint32_t watch_descriptor, zx::socket socket) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

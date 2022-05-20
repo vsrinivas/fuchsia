@@ -154,4 +154,11 @@ TEST(UnistdTest, ReadAndWriteWithNegativeOffsets) {
   ASSERT_EQ(EINVAL, errno, "%s", strerror(errno));
 }
 
+TEST(UnistdTest, OpenMaxPath) {
+  std::string max_path = "/";
+  max_path.append(PATH_MAX - 1, 'a');
+  EXPECT_EQ(-1, open(max_path.c_str(), O_RDONLY));
+  EXPECT_EQ(errno, ENAMETOOLONG, "%s", strerror(errno));
+}
+
 }  // namespace

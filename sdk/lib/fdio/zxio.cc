@@ -312,20 +312,16 @@ zx_status_t zxio::shutdown(int how, int16_t* out_code) {
   return zxio_shutdown(&zxio_storage().io, options);
 }
 
-zx::status<fdio_ptr> remote::open(const char* path, fio::wire::OpenFlags flags, uint32_t mode) {
-  size_t length;
-  zx_status_t status = fdio_validate_path(path, &length);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-
+zx::status<fdio_ptr> remote::open(std::string_view path, fio::wire::OpenFlags flags,
+                                  uint32_t mode) {
   zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
 
-  status = zxio_open_async(&zxio_storage().io, static_cast<uint32_t>(flags), mode, path, length,
-                           endpoints->server.channel().release());
+  zx_status_t status =
+      zxio_open_async(&zxio_storage().io, static_cast<uint32_t>(flags), mode, path.data(),
+                      path.length(), endpoints->server.channel().release());
   if (status != ZX_OK) {
     return zx::error(status);
   }

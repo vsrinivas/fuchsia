@@ -11,6 +11,7 @@
 #include <lib/fdio/private.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/vfs.h>
+#include <lib/stdcompat/string_view.h>
 #include <lib/zxio/posix_mode.h>
 #include <lib/zxio/types.h>
 #include <poll.h>
@@ -167,19 +168,16 @@ static uint32_t zxio_flags_to_fdio(fio::wire::OpenFlags flags) {
   return result;
 }
 
-// Possibly return an owned fdio_t corresponding to either the root,
-// the cwd, or, for the ...at variants, dirfd. In the absolute path
-// case, *path is also adjusted.
-fdio_ptr fdio_iodir(const char** path, int dirfd) {
-  bool root = *path[0] == '/';
+fdio_ptr fdio_iodir(int dirfd, std::string_view& in_out_path) {
+  bool root = cpp20::starts_with(in_out_path, '/');
   if (root) {
     // Since we are sending a request to the root handle, the
-    // rest of the path should be canonicalized as a relative
+    // rest of the in_out_path should be canonicalized as a relative
     // path (relative to this root handle).
-    while (**path == '/') {
-      (*path)++;
-      if (**path == 0) {
-        *path = ".";
+    while (cpp20::starts_with(in_out_path, '/')) {
+      in_out_path.remove_prefix(1);
+      if (in_out_path.empty()) {
+        in_out_path = std::string_view(".");
       }
     }
   }
@@ -203,17 +201,21 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32
   if (path[0] == '\0') {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
-  fdio_ptr iodir = fdio_iodir(&path, dirfd);
+
+  fdio_internal::PathBuffer clean_buffer;
+  bool has_ending_slash;
+  bool cleaned = CleanPath(path, &clean_buffer, &has_ending_slash);
+  if (!cleaned) {
+    return zx::error(ZX_ERR_BAD_PATH);
+  }
+
+  std::string_view clean = clean_buffer;
+
+  fdio_ptr iodir = fdio_iodir(dirfd, clean);
   if (iodir == nullptr) {
     return zx::error(ZX_ERR_BAD_HANDLE);
   }
 
-  fdio_internal::PathBuffer clean;
-  bool has_ending_slash;
-  bool cleaned = CleanPath(path, &clean, &has_ending_slash);
-  if (!cleaned) {
-    return zx::error(ZX_ERR_BAD_PATH);
-  }
   // Emulate EISDIR behavior from
   // http://pubs.opengroup.org/onlinepubs/9699919799/functions/open.html
   bool flags_incompatible_with_directory =
@@ -237,7 +239,7 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32
   if (zx_flags & fio::wire::OpenFlags::kNodeReference) {
     zx_flags &= fio::wire::kOpenFlagsAllowedWithNodeReference;
   }
-  return iodir->open(clean.c_str(), zx_flags, mode);
+  return iodir->open(clean, zx_flags, mode);
 }
 
 // Open |path| from the |dirfd| directory, enforcing the POSIX EISDIR error condition. Specifically,
@@ -333,36 +335,34 @@ zx::status<fdio_ptr> opendir_containing_at(int dirfd, const char* path, NameBuff
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  fdio_ptr iodir = fdio_iodir(&path, dirfd);
+  fdio_internal::PathBuffer clean_buffer;
+  bool is_dir;
+  bool cleaned = fdio_internal::CleanPath(path, &clean_buffer, &is_dir);
+  if (!cleaned) {
+    return zx::error(ZX_ERR_BAD_PATH);
+  }
+  std::string_view clean = clean_buffer;
+
+  fdio_ptr iodir = fdio_iodir(dirfd, clean);
   if (iodir == nullptr) {
     return zx::error(ZX_ERR_BAD_HANDLE);
   }
 
-  fdio_internal::PathBuffer clean;
-  bool is_dir;
-  bool cleaned = fdio_internal::CleanPath(path, &clean, &is_dir);
-  if (!cleaned) {
-    return zx::error(ZX_ERR_BAD_PATH);
+  // Split the clean path into everything up to the last slash and the last component.
+  std::string_view name = clean;
+  std::string_view base;
+  auto last_slash = clean.rfind('/');
+  if (last_slash != std::string_view::npos) {
+    name.remove_prefix(last_slash + 1);
+    base = clean.substr(0, last_slash);
   }
 
-  // Find the last '/'; copy everything after it.
-  size_t i = 0;
-  for (i = clean.length() - 1; i > 0; i--) {
-    if (clean[i] == '/') {
-      clean[i] = 0;
-      i++;
-      break;
-    }
-  }
-
-  // clean[i] is now the start of the name
-  size_t namelen = clean.length() - i;
-  if (namelen + (is_dir ? 1 : 0) > NAME_MAX) {
+  if (name.length() + (is_dir ? 1 : 0) > NAME_MAX) {
     return zx::error(ZX_ERR_BAD_PATH);
   }
 
   // Copy the trailing 'name' to out.
-  out->Append(clean.data() + i, namelen);
+  out->Append(name);
   if (is_dir_out) {
     *is_dir_out = is_dir;
   } else if (is_dir) {
@@ -374,12 +374,11 @@ zx::status<fdio_ptr> opendir_containing_at(int dirfd, const char* path, NameBuff
     out->Append('/');
   }
 
-  if (i == 0 && clean[i] != '/') {
-    clean[0] = '.';
-    clean[1] = 0;
+  if (base.empty() && !cpp20::starts_with(name, '/')) {
+    base = ".";
   }
 
-  return iodir->open(clean.c_str(), fdio_flags_to_zxio(O_RDONLY | O_DIRECTORY), 0);
+  return iodir->open(base, fdio_flags_to_zxio(O_RDONLY | O_DIRECTORY), 0);
 }
 
 }  // namespace fdio_internal

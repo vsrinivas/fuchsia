@@ -72,7 +72,10 @@ struct Errno {
 zx_status_t fdio_wait(const fdio_ptr& io, uint32_t events, zx::time deadline,
                       uint32_t* out_pending);
 
-fdio_ptr fdio_iodir(const char** path, int dirfd);
+// Possibly return an owned fdio_t corresponding to either the root,
+// the cwd, or, for the ...at variants, dirfd. In the absolute path
+// case, in_out_path is also adjusted.
+fdio_ptr fdio_iodir(int dirfd, std::string_view& in_out_path);
 
 zx::status<fdio_ptr> fdio_synchronous_datagram_socket_create(
     zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client);
@@ -149,11 +152,11 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   // Waits for a |fuchsia.io/Node.OnOpen| event on channel.
   static zx::status<fdio_ptr> create_with_on_open(fidl::ClientEnd<fuchsia_io::Node> node);
 
-  virtual zx::status<fdio_ptr> open(const char* path, fuchsia_io::wire::OpenFlags flags,
+  virtual zx::status<fdio_ptr> open(std::string_view path, fuchsia_io::wire::OpenFlags flags,
                                     uint32_t mode);
   virtual zx_status_t clone(zx_handle_t* out_handle) = 0;
-  virtual zx_status_t add_inotify_filter(const char* path, uint32_t mask, uint32_t watch_descriptor,
-                                         zx::socket socket);
+  virtual zx_status_t add_inotify_filter(std::string_view path, uint32_t mask,
+                                         uint32_t watch_descriptor, zx::socket socket);
 
   // |unwrap| releases the underlying handle if applicable.  The caller must ensure there are no
   // concurrent operations on |io|.

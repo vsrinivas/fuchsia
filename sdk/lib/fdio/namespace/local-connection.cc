@@ -66,12 +66,13 @@ struct local_connection : public base {
 
   // Expects a canonical path (no ..) with no leading
   // slash and no trailing slash
-  zx::status<fdio_ptr> open(const char* path, fio::wire::OpenFlags flags, uint32_t mode) override {
+  zx::status<fdio_ptr> open(std::string_view path, fio::wire::OpenFlags flags,
+                            uint32_t mode) override {
     auto& dir = local_dir();
     return dir.fs->Open(fbl::RefPtr(dir.vn), path, flags, mode);
   }
 
-  zx_status_t add_inotify_filter(const char* path, uint32_t mask, uint32_t watch_descriptor,
+  zx_status_t add_inotify_filter(std::string_view path, uint32_t mask, uint32_t watch_descriptor,
                                  zx::socket socket) override {
     auto& dir = local_dir();
     return dir.fs->AddInotifyFilter(fbl::RefPtr(dir.vn), path, mask, watch_descriptor,

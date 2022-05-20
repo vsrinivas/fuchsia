@@ -189,6 +189,6 @@ TEST(ChrootTest, CannotEscapeWithDotDot) {
   EXPECT_STREQ(
       "chdir(/tmp/chroot1) SUCCESS\n"
       "chroot(/tmp/chroot1) SUCCESS\n"
-      "access returned -1, errno=22\n",
+      "access returned -1, errno=2\n",
       result.c_str());
 }

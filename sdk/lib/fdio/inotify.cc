@@ -189,12 +189,6 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
   if (pathname[0] == '\0') {
     return ERRNO(ENOENT);
   }
-
-  fdio_ptr iodir = fdio_iodir(&pathname, AT_FDCWD);
-  if (iodir == nullptr) {
-    return ERRNO(EBADF);
-  }
-
   // canonicalize path and clean it on client-side.
   fdio_internal::PathBuffer buffer;
   bool has_ending_slash;
@@ -202,7 +196,13 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
   if (!cleaned) {
     return ERRNO(ENAMETOOLONG);
   }
-  std::string cleanpath(buffer);
+  std::string_view cleanpath(buffer);
+
+  fdio_ptr iodir = fdio_iodir(AT_FDCWD, cleanpath);
+  if (iodir == nullptr) {
+    return ERRNO(EBADF);
+  }
+
   // TODO: Only include events which we will support initially.
   constexpr uint32_t allowed_events =
       IN_ACCESS | IN_MODIFY | IN_ATTRIB | IN_CLOSE_WRITE | IN_CLOSE_NOWRITE | IN_CLOSE | IN_OPEN |
@@ -237,8 +237,10 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
     return ERROR(status);
   }
 
+  std::string cleanpath_copy(cleanpath);
+
   // Check if filter already exists and simply needs modification.
-  auto res = inotify->filepath_to_filter->emplace(cleanpath, std::move(wd));
+  auto res = inotify->filepath_to_filter->emplace(cleanpath_copy, std::move(wd));
 
   if (!res.second) {  // filter already present.
     uint32_t old_mask = res.first->second->mask;
@@ -251,12 +253,12 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
     inotify->watch_descriptors->erase(old_watch_descriptor);
 
     // Update filter.
-    inotify->filepath_to_filter->insert({cleanpath, std::move(wd)});
+    inotify->filepath_to_filter->insert({cleanpath_copy, std::move(wd)});
   }
   // Update watch_descriptor to filepath mapping.
-  inotify->watch_descriptors->insert({watch_descriptor_to_use, cleanpath});
+  inotify->watch_descriptors->insert({watch_descriptor_to_use, std::move(cleanpath_copy)});
 
-  status = iodir->add_inotify_filter(cleanpath.c_str(), mask, watch_descriptor_to_use,
+  status = iodir->add_inotify_filter(cleanpath, mask, watch_descriptor_to_use,
                                      std::move(dup_server_socket_per_filter));
   if (status != ZX_OK) {
     return ERROR(status);
