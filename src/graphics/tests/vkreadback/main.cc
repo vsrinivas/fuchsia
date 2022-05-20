@@ -87,14 +87,13 @@ TEST(Vulkan, ReadbackLoopWithFenceWaitOnSeparateThread) {
   for (int i = 0; i < kFenceCount; i++) {
     auto [fence_result, fence] = device.createFenceUnique(fence_info);
     ASSERT_EQ(fence_result, vk::Result::eSuccess);
+    const bool transition_image = (i == 0);
+    EXPECT_TRUE(readback_test.Submit(fence.get(), transition_image));
     {
       std::unique_lock<std::mutex> lock(mutex);
-      const bool transition_image = (i == 0);
-      EXPECT_TRUE(readback_test.Submit(fence.get(), transition_image));
       fences.push(std::move(fence));
-      cond_var.notify_one();
     }
-
+    cond_var.notify_one();
     EXPECT_TRUE(readback_test.Wait());
   }
 
