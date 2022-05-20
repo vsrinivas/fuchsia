@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/internal/convert.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 
@@ -53,6 +54,9 @@ fuchsia::component::decl::Ref ConvertToFidl(Ref ref) {
   }
   if (auto _ = cpp17_get_if<ParentRef>(&ref)) {
     return fuchsia::component::decl::Ref::WithParent(fuchsia::component::decl::ParentRef());
+  }
+  if (auto _ = cpp17_get_if<FrameworkRef>(&ref)) {
+    return fuchsia::component::decl::Ref::WithFramework(fuchsia::component::decl::FrameworkRef());
   }
 
   ZX_PANIC("ConvertToFidl(Ref) reached unreachable block!");
