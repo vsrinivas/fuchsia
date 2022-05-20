@@ -4,6 +4,15 @@
 library fuchsia.virtualization;
 using zx;
 
+type GuestStatus = strict enum {
+    NOT_STARTED = 1;
+    STARTED = 2;
+};
+type GuestInfo = table {
+    /// The current guest status.
+    1: guest_status GuestStatus;
+};
+
 @discoverable
 protocol GuestManager {
     /// Launch a new guest instance
@@ -28,6 +37,12 @@ protocol GuestManager {
     /// Returns an interface that can be used to access the host vsock endpoint.
     GetHostVsockEndpoint(resource struct {
         endpoint server_end:HostVsockEndpoint;
+    });
+
+    /// Query guest info
+    @transitional
+    GetGuestInfo() -> (resource struct {
+        guest_config GuestInfo;
     });
 };
 
