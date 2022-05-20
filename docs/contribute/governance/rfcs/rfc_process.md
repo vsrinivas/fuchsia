@@ -49,18 +49,15 @@ agreement and must be socialized with the project using the RFC process.
 
 The following kinds of changes must use the RFC process:
 
- * *Changing the project roadmap.* The project roadmap describes changes that
-   have broad impact across the system, often touching a large fraction of the
-   system or crossing boundaries between subsystems.
-
  * *Adding constraints on future development.* Some decisions, once made,
    constrain the future development of the system. We need to be careful when
    making such decisions because they can be difficult to revise later.
 
  * *Making project policy.* Project policies have broad impact across the
-   system, often affecting contributors throughout the project. For example,
-   changing the set of supported languages impacts everyone who needs to debug
-   and understand the system, even if not everyone uses the new language.
+   system, often affecting contributors throughout the project. Examples
+   include: changing the set of supported languages (impacts everyone who needs
+   to debug and understand the system), deprecating a widely-used API, and
+   changing testing requirements for a broad class of code changes.
 
  * *Changing the system architecture.* The system architecture describes how the
    system fits together as a whole. Changing the system architecture, by
