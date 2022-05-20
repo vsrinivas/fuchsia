@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+using fuchsia.driver.framework;
 using fuchsia.pci;
 using fuchsia.pci.massstorage;
 
@@ -9,4 +10,8 @@ fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PCI_CLASS == fuchsia.pci.BIND_PCI_CLASS.MASS_STORAGE;
 fuchsia.BIND_PCI_SUBCLASS == fuchsia.pci.massstorage.BIND_PCI_SUBCLASS.NVMEM;
 fuchsia.BIND_PCI_INTERFACE == 2;
-fuchsia.BIND_COMPOSITE == 1;
+if fuchsia.BIND_COMPOSITE == 1 {
+	true;
+} else {
+	fuchsia.driver.framework.dfv2 == true;
+}

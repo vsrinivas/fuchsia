@@ -10,6 +10,7 @@ driver_bind_rules("nvme_bind") {
   header_output = "nvme_bind.h"
   tests = "bind_tests.json"
   deps = [
+    "//src/devices/bind/fuchsia.driver.framework",
     "//src/devices/bind/fuchsia.pci",
     "//src/devices/bind/fuchsia.pci.massstorage",
   ]
