@@ -214,7 +214,36 @@ struct BinderProcess {
 /// released.
 #[derive(Debug)]
 struct TransactionRefs {
+    // The process whose handle table `handles` belong to.
+    proc: Weak<BinderProcess>,
+    // The handles to decrement their strong reference count.
     handles: Vec<Handle>,
+}
+
+impl TransactionRefs {
+    /// Creates a new `TransactionRef` which operates on `target_proc`'s handle table.
+    fn new(target_proc: &Arc<BinderProcess>) -> Self {
+        TransactionRefs { proc: Arc::downgrade(target_proc), handles: Vec::new() }
+    }
+
+    /// Schedule `handle` to have its strong reference count decremented when this `TransactionRef`
+    /// is dropped.
+    fn push(&mut self, handle: Handle) {
+        self.handles.push(handle)
+    }
+}
+
+impl Drop for TransactionRefs {
+    fn drop(&mut self) {
+        if let Some(proc) = self.proc.upgrade() {
+            let mut handles = proc.handles.lock();
+            for handle in &self.handles {
+                // Ignore the error because there is little we can do about it.
+                // Panicking would be wrong, in case the client issued an extra strong decrement.
+                let _: Result<(), Errno> = handles.dec_strong(handle.object_index());
+            }
+        }
+    }
 }
 
 impl BinderProcess {
@@ -594,13 +623,11 @@ impl HandleTable {
     }
 
     /// Retrieves a reference to a binder object at index `idx`.
-    fn get(&self, idx: usize) -> Result<Arc<BinderObject>, Errno> {
-        let object_ref = self.table.get(idx).ok_or_else(|| errno!(ENOENT))?;
+    fn get(&self, idx: usize) -> Option<Arc<BinderObject>> {
+        let object_ref = self.table.get(idx)?;
         match object_ref {
-            BinderObjectRef::WeakRef { weak_ref, .. } => {
-                weak_ref.upgrade().ok_or_else(|| errno!(ENOENT))
-            }
-            BinderObjectRef::StrongRef { strong_ref, .. } => Ok(strong_ref.clone()),
+            BinderObjectRef::WeakRef { weak_ref, .. } => weak_ref.upgrade(),
+            BinderObjectRef::StrongRef { strong_ref, .. } => Some(strong_ref.clone()),
         }
     }
 
@@ -739,6 +766,9 @@ enum Command {
     Reply(Transaction),
     /// Notifies a binder thread that a transaction has completed.
     TransactionComplete,
+    /// The transaction was well formed but failed. Possible causes are a non-existant handle, no
+    /// more memory available to allocate a buffer.
+    FailedReply,
     /// Notifies the initiator of a transaction that the recipient is dead.
     DeadReply,
     /// Notifies a binder process that a binder object has died.
@@ -754,6 +784,7 @@ impl Command {
             Command::Transaction(..) => binder_driver_return_protocol_BR_TRANSACTION,
             Command::Reply(..) => binder_driver_return_protocol_BR_REPLY,
             Command::TransactionComplete => binder_driver_return_protocol_BR_TRANSACTION_COMPLETE,
+            Command::FailedReply => binder_driver_return_protocol_BR_FAILED_REPLY,
             Command::DeadReply => binder_driver_return_protocol_BR_DEAD_REPLY,
             Command::DeadBinder(..) => binder_driver_return_protocol_BR_DEAD_BINDER,
         }
@@ -800,13 +831,7 @@ impl Command {
                     },
                 )
             }
-            Command::TransactionComplete => {
-                if buffer.length < std::mem::size_of::<binder_driver_return_protocol>() {
-                    return error!(ENOMEM);
-                }
-                mm.write_object(UserRef::new(buffer.address), &self.driver_return_code())
-            }
-            Command::DeadReply => {
+            Command::TransactionComplete | Command::FailedReply | Command::DeadReply => {
                 if buffer.length < std::mem::size_of::<binder_driver_return_protocol>() {
                     return error!(ENOMEM);
                 }
@@ -956,7 +981,6 @@ impl Handle {
 
     /// Returns the underlying object index the handle represents, panicking if the handle was the
     /// special `0` handle.
-    #[cfg(test)]
     pub fn object_index(&self) -> usize {
         match self {
             Handle::SpecialServiceManager => {
@@ -1217,10 +1241,12 @@ impl BinderDriver {
             binder_driver_command_protocol_BC_TRANSACTION => {
                 let data = cursor.read_object::<binder_transaction_data>()?;
                 self.handle_transaction(current_task, binder_proc, binder_thread, data)
+                    .or_else(|err| err.dispatch(binder_thread))
             }
             binder_driver_command_protocol_BC_REPLY => {
                 let data = cursor.read_object::<binder_transaction_data>()?;
                 self.handle_reply(current_task, binder_proc, binder_thread, data)
+                    .or_else(|err| err.dispatch(binder_thread))
             }
             _ => {
                 tracing::error!("binder received unknown RW command: 0x{:08x}", command);
@@ -1306,20 +1332,7 @@ impl BinderDriver {
         buffer_ptr: UserAddress,
     ) -> Result<(), Errno> {
         // Drop the temporary references held during the transaction.
-        {
-            let transaction_refs = binder_proc.transaction_refs.lock().remove(&buffer_ptr);
-            let mut handle_table = binder_proc.handles.lock();
-            if let Some(transaction_refs) = transaction_refs {
-                for handle in transaction_refs.handles {
-                    match handle {
-                        Handle::SpecialServiceManager => {}
-                        Handle::Object { index } => {
-                            let _: Result<(), Errno> = handle_table.dec_strong(index);
-                        }
-                    }
-                }
-            }
-        }
+        binder_proc.transaction_refs.lock().remove(&buffer_ptr);
 
         // Reclaim the memory.
         let mut shared_memory_lock = binder_proc.shared_memory.lock();
@@ -1340,7 +1353,9 @@ impl BinderDriver {
                 not_implemented!("death notification for service manager");
                 return Ok(());
             }
-            Handle::Object { index } => binder_proc.handles.lock().get(index)?,
+            Handle::Object { index } => {
+                binder_proc.handles.lock().get(index).ok_or_else(|| errno!(ENOENT))?
+            }
         };
         if let Some(owner) = proxy.owner.upgrade() {
             owner.death_subscribers.lock().push((Arc::downgrade(binder_proc), cookie));
@@ -1372,7 +1387,9 @@ impl BinderDriver {
                 not_implemented!("clear death notification for service manager");
                 return Ok(());
             }
-            Handle::Object { index } => binder_proc.handles.lock().get(index)?,
+            Handle::Object { index } => {
+                binder_proc.handles.lock().get(index).ok_or_else(|| errno!(ENOENT))?
+            }
         };
         if let Some(owner) = proxy.owner.upgrade() {
             let mut death_subscribers = owner.death_subscribers.lock();
@@ -1394,7 +1411,7 @@ impl BinderDriver {
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
         data: binder_transaction_data,
-    ) -> Result<(), Errno> {
+    ) -> Result<(), TransactionError> {
         // SAFETY: Transactions can only refer to handles.
         let handle = unsafe { data.target.handle }.into();
 
@@ -1408,14 +1425,10 @@ impl BinderDriver {
                 )
             }
             Handle::Object { index } => {
-                let object = binder_proc.handles.lock().get(index)?;
-                if let Some(owner) = object.owner.upgrade() {
-                    (FlatBinderObject::Local { object: object.local.clone() }, owner)
-                } else {
-                    // The binder object is dead, send an error to the caller.
-                    binder_thread.write().enqueue_command(Command::DeadReply);
-                    return Ok(());
-                }
+                let object =
+                    binder_proc.handles.lock().get(index).ok_or(TransactionError::Failure)?;
+                let owner = object.owner.upgrade().ok_or(TransactionError::Dead)?;
+                (FlatBinderObject::Local { object: object.local.clone() }, owner)
             }
         };
 
@@ -1479,12 +1492,16 @@ impl BinderDriver {
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
         data: binder_transaction_data,
-    ) -> Result<(), Errno> {
+    ) -> Result<(), TransactionError> {
         // Find the process and thread that initiated the transaction. This reply is for them.
         let (target_proc, target_thread) = {
             let (peer_pid, peer_tid) = binder_thread.read().transaction_caller()?;
-            let target_proc = self.find_process(peer_pid)?;
-            let target_thread = target_proc.thread_pool.read().find_thread(peer_tid)?;
+            let target_proc = self.find_process(peer_pid).map_err(|_| TransactionError::Dead)?;
+            let target_thread = target_proc
+                .thread_pool
+                .read()
+                .find_thread(peer_tid)
+                .map_err(|_| TransactionError::Dead)?;
             (target_proc, target_thread)
         };
 
@@ -1560,6 +1577,7 @@ impl BinderDriver {
                     }
                     Command::AcquireRef(..)
                     | Command::ReleaseRef(..)
+                    | Command::FailedReply
                     | Command::DeadReply
                     | Command::DeadBinder(..) => {}
                 }
@@ -1592,7 +1610,7 @@ impl BinderDriver {
         source_thread: &Arc<BinderThread>,
         target_proc: &Arc<BinderProcess>,
         data: &binder_transaction_data,
-    ) -> Result<(UserBuffer, UserBuffer), Errno> {
+    ) -> Result<(UserBuffer, UserBuffer), TransactionError> {
         // Get the shared memory of the target process.
         let mut shared_memory_lock = target_proc.shared_memory.lock();
         let shared_memory = shared_memory_lock.as_mut().ok_or_else(|| errno!(ENOMEM))?;
@@ -1653,15 +1671,16 @@ impl BinderDriver {
         target_proc: &Arc<BinderProcess>,
         offsets: &[binder_uintptr_t],
         transaction_data: &mut [u8],
-    ) -> Result<TransactionRefs, Errno> {
-        let mut handles = Vec::new();
+    ) -> Result<TransactionRefs, TransactionError> {
+        let mut transaction_refs = TransactionRefs::new(target_proc);
+
         for offset in offsets {
             // Bounds-check the offset.
             let object_end = offset
                 .checked_add(std::mem::size_of::<flat_binder_object>() as u64)
                 .ok_or_else(|| errno!(EINVAL))? as usize;
             if object_end > transaction_data.len() {
-                return error!(EINVAL);
+                return error!(EINVAL)?;
             }
             // SAFETY: The pointer to `flat_binder_object` is within the bounds of the slice.
             let object_ptr = unsafe {
@@ -1685,7 +1704,11 @@ impl BinderDriver {
                             })
                         }
                         Handle::Object { index } => {
-                            let proxy = source_proc.handles.lock().get(index)?;
+                            let proxy = source_proc
+                                .handles
+                                .lock()
+                                .get(index)
+                                .ok_or(TransactionError::Failure)?;
                             if std::ptr::eq(Arc::as_ptr(target_proc), proxy.owner.as_ptr()) {
                                 // The binder object belongs to the receiving process, so convert it
                                 // from a handle to a local object.
@@ -1703,7 +1726,7 @@ impl BinderDriver {
 
                                 // Tie this handle's strong reference to be held as long as this
                                 // buffer.
-                                handles.push(new_handle);
+                                transaction_refs.push(new_handle);
 
                                 struct_with_union_into_bytes!(flat_binder_object {
                                     hdr.type_: BINDER_TYPE_HANDLE,
@@ -1739,7 +1762,7 @@ impl BinderDriver {
                     let handle = target_proc.handles.lock().insert_for_transaction(object);
 
                     // Tie this handle's strong reference to be held as long as this buffer.
-                    handles.push(handle);
+                    transaction_refs.push(handle);
 
                     // Translate the `flat_binder_object` to refer to the handle.
                     struct_with_union_into_bytes!(flat_binder_object {
@@ -1772,7 +1795,7 @@ impl BinderDriver {
                 }
                 _ => {
                     tracing::error!("unknown object type {}", flat_object.hdr.type_);
-                    return error!(EINVAL);
+                    return error!(EINVAL)?;
                 }
             };
 
@@ -1789,7 +1812,9 @@ impl BinderDriver {
                 .copy_from_slice(&patched[..]);
             };
         }
-        Ok(TransactionRefs { handles })
+
+        // We made it to the end successfully. No need to run the drop guard.
+        Ok(transaction_refs)
     }
 
     fn get_vmo(&self, length: usize) -> Result<zx::Vmo, Errno> {
@@ -1866,6 +1891,50 @@ impl BinderDriver {
     }
 }
 
+/// An error processing a binder transaction/reply.
+///
+/// Some errors, like a malformed transaction request, should be propagated as the return value of
+/// an ioctl. Other errors, like a dead recipient or invalid binder handle, should be propagated
+/// through a command read by the binder thread.
+///
+/// This type differentiates between these strategies.
+#[derive(Debug, Eq, PartialEq)]
+enum TransactionError {
+    /// The transaction payload was malformed, return an error from the ioctl.
+    Malformed(Errno),
+    /// The transaction payload was correctly formed, but either the recipient, or a handle embedded
+    /// in the transaction, is invalid. Send a [`Command::FailedReply`] command to the issuing
+    /// thread.
+    Failure,
+    /// The transaction payload was correctly formed, but either the recipient, or a handle embedded
+    /// in the transaction, is dead. Send a [`Command::DeadReply`] command to the issuing thread.
+    Dead,
+}
+
+impl TransactionError {
+    /// Dispatches the error, by potentially queueing a command to `binder_thread` and/or returning
+    /// an error.
+    fn dispatch(self, binder_thread: &Arc<BinderThread>) -> Result<(), Errno> {
+        match self {
+            TransactionError::Malformed(err) => Err(err),
+            TransactionError::Failure => {
+                binder_thread.write().enqueue_command(Command::FailedReply);
+                Ok(())
+            }
+            TransactionError::Dead => {
+                binder_thread.write().enqueue_command(Command::DeadReply);
+                Ok(())
+            }
+        }
+    }
+}
+
+impl From<Errno> for TransactionError {
+    fn from(errno: Errno) -> TransactionError {
+        TransactionError::Malformed(errno)
+    }
+}
+
 pub struct BinderFs(());
 impl FileSystemOps for BinderFs {}
 
@@ -1936,10 +2005,7 @@ mod tests {
     fn fail_to_retrieve_non_existing_handle() {
         let driver = BinderDriver::new();
         let binder_proc = driver.create_process(1);
-        assert_eq!(
-            binder_proc.handles.lock().get(3).expect_err("unexpectedly succeeded"),
-            errno!(ENOENT),
-        );
+        assert!(binder_proc.handles.lock().get(3).is_none());
     }
 
     #[fuchsia::test]
@@ -1969,11 +2035,7 @@ mod tests {
         proc_2.handles.lock().dec_strong(handle.object_index()).expect("dec_strong");
 
         // The handle should now have been dropped.
-        proc_2
-            .handles
-            .lock()
-            .get(handle.object_index())
-            .expect_err("handle should have been dropped");
+        assert!(proc_2.handles.lock().get(handle.object_index()).is_none());
     }
 
     #[fuchsia::test]
@@ -2013,7 +2075,10 @@ mod tests {
         // Drop the weak reference. The handle should now be gone, even though the underlying object
         // is still alive (another process could have references to it).
         proc_2.handles.lock().dec_weak(handle.object_index()).expect("dec_weak");
-        proc_2.handles.lock().get(handle.object_index()).expect_err("handle should be dropped");
+        assert!(
+            proc_2.handles.lock().get(handle.object_index()).is_none(),
+            "handle should be dropped"
+        );
     }
 
     #[fuchsia::test]
@@ -2192,7 +2257,7 @@ mod tests {
         drop(object);
 
         // Our weak reference won't keep the object alive.
-        handle_table.get(handle.object_index()).expect_err("object should be dead");
+        assert!(handle_table.get(handle.object_index()).is_none(), "object should be dead");
 
         // Remove from our table.
         handle_table.dec_weak(handle.object_index()).expect("dec_weak 0");
@@ -2490,6 +2555,82 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn transaction_translation_fails_on_invalid_handle() {
+        let (_kernel, task) = create_kernel_and_task();
+        let driver = BinderDriver::new();
+        let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
+        let receiver_proc = driver.create_process(2);
+
+        let mut transaction_data = Vec::new();
+        transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_HANDLE,
+            flags: 0,
+            cookie: 0,
+            __bindgen_anon_1.handle: 42,
+        }));
+
+        let transaction_ref_error = driver
+            .translate_handles(
+                &task,
+                &sender_proc,
+                &sender_thread,
+                &receiver_proc,
+                &[0 as binder_uintptr_t],
+                &mut transaction_data,
+            )
+            .expect_err("translate handles unexpectedly succeeded");
+
+        assert_eq!(transaction_ref_error, TransactionError::Failure);
+    }
+
+    #[fuchsia::test]
+    fn transaction_drop_references_on_failed_transaction() {
+        let (_kernel, task) = create_kernel_and_task();
+        let driver = BinderDriver::new();
+        let (sender_proc, sender_thread) = driver.create_process_and_thread(1);
+        let receiver_proc = driver.create_process(2);
+
+        let binder_object = LocalBinderObject {
+            weak_ref_addr: UserAddress::from(0x0000000000000010),
+            strong_ref_addr: UserAddress::from(0x0000000000000100),
+        };
+
+        let mut transaction_data = Vec::new();
+        transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_BINDER,
+            flags: 0,
+            cookie: binder_object.strong_ref_addr.ptr() as u64,
+            __bindgen_anon_1.binder: binder_object.weak_ref_addr.ptr() as u64,
+        }));
+        transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
+            hdr.type_: BINDER_TYPE_HANDLE,
+            flags: 0,
+            cookie: 0,
+            __bindgen_anon_1.handle: 42,
+        }));
+
+        driver
+            .translate_handles(
+                &task,
+                &sender_proc,
+                &sender_thread,
+                &receiver_proc,
+                &[
+                    0 as binder_uintptr_t,
+                    std::mem::size_of::<flat_binder_object>() as binder_uintptr_t,
+                ],
+                &mut transaction_data,
+            )
+            .expect_err("translate handles unexpectedly succeeded");
+
+        // Ensure that the handle created in the receiving process is not present.
+        assert!(
+            receiver_proc.handles.lock().get(0).is_none(),
+            "handle present when it should have been dropped"
+        );
+    }
+
+    #[fuchsia::test]
     fn process_state_cleaned_up_after_binder_fd_closed() {
         let (_kernel, current_task) = create_kernel_and_task();
         let binder_dev = BinderDev::new();
@@ -2560,11 +2701,10 @@ mod tests {
         client_proc.handles.lock().dec_strong(handle.object_index()).expect("dec_strong");
 
         // Confirm that now the handle has been removed from the table.
-        client_proc
-            .handles
-            .lock()
-            .get(handle.object_index())
-            .expect_err("handle should have been dropped");
+        assert!(
+            client_proc.handles.lock().get(handle.object_index()).is_none(),
+            "handle should have been dropped"
+        );
 
         // Now the binder object representation should also be gone.
         assert!(weak_object.upgrade().is_none(), "object should be dead");
