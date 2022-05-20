@@ -34,6 +34,7 @@ executable("data_provider_unittest_exe") {
   sources = [ "data_provider_unittest.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.logger",

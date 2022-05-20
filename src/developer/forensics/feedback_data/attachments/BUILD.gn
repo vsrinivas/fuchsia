@@ -11,8 +11,8 @@ source_set("attachment_providers") {
   sources = [
     "inspect.cc",
     "inspect.h",
-    "kernel_log_ptr.cc",
-    "kernel_log_ptr.h",
+    "kernel_log.cc",
+    "kernel_log.h",
     "screenshot_ptr.cc",
     "screenshot_ptr.h",
     "system_log.cc",

@@ -11,7 +11,7 @@
 
 #include "src/developer/forensics/feedback/redactor_factory.h"
 #include "src/developer/forensics/feedback_data/attachments/inspect.h"
-#include "src/developer/forensics/feedback_data/attachments/kernel_log_ptr.h"
+#include "src/developer/forensics/feedback_data/attachments/kernel_log.h"
 #include "src/developer/forensics/feedback_data/attachments/static_attachments.h"
 #include "src/developer/forensics/feedback_data/attachments/system_log.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
@@ -34,6 +34,9 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       attachment_allowlist_(attachment_allowlist),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
       inspect_data_budget_(inspect_data_budget),
+      kernel_log_(dispatcher_, services_,
+                  std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1)),
+                  redactor_),
       system_log_(dispatcher_, services_, &clock_, redactor_, kActiveLoggingPeriod),
       inspect_(dispatcher_, services_,
                std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1)),
@@ -58,6 +61,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       // Somewhat risky, but the AnnotationManager depends on a bunch of stuff and this constructor
       // is intended for tests.
       static_attachments_({}),
+      kernel_log_(dispatcher_, services_, nullptr, redactor_),
       system_log_(dispatcher_, services_, &clock_, redactor_, zx::sec(30)),
       inspect_(dispatcher_, services_, nullptr, std::nullopt) {}
 
@@ -118,9 +122,12 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
 ::fpromise::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKey& key,
                                                                      const zx::duration timeout) {
   if (key == kAttachmentLogKernel) {
-    return CollectKernelLog(dispatcher_, services_,
-                            MakeCobaltTimeout(cobalt::TimedOutData::kKernelLog, timeout),
-                            redactor_);
+    return kernel_log_.Get(timeout).and_then([this](AttachmentValue& log) {
+      if (log.HasError() && log.Error() == Error::kTimeout) {
+        cobalt_->LogOccurrence(cobalt::TimedOutData::kKernelLog);
+      }
+      return ::fpromise::ok(std::move(log));
+    });
   } else if (key == kAttachmentLogSystem) {
     return system_log_.Get(timeout).and_then([this](AttachmentValue& log) {
       if (log.HasError() && log.Error() == Error::kTimeout) {
@@ -147,11 +154,6 @@ void Datastore::DropStaticAttachment(const AttachmentKey& key, const Error error
   }
 
   static_attachments_.insert_or_assign(key, AttachmentValue(error));
-}
-
-fit::Timeout Datastore::MakeCobaltTimeout(cobalt::TimedOutData data, const zx::duration timeout) {
-  return fit::Timeout(timeout,
-                      /*action=*/[cobalt = cobalt_, data] { cobalt->LogOccurrence(data); });
 }
 
 }  // namespace feedback_data

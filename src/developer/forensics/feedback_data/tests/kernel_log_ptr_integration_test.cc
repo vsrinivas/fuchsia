@@ -20,7 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback_data/attachments/kernel_log_ptr.h"
+#include "src/developer/forensics/feedback_data/attachments/kernel_log.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -32,26 +32,24 @@ using testing::UnorderedElementsAreArray;
 
 class CollectKernelLogTest : public gtest::TestWithEnvironmentFixture {
  public:
-  CollectKernelLogTest() : executor_(dispatcher()) {}
-
-  void SetUp() override {
+  CollectKernelLogTest() : executor_(dispatcher()) {
     environment_services_ = sys::ServiceDirectory::CreateFromNamespace();
     redactor_ = std::unique_ptr<RedactorBase>(new IdentityRedactor(inspect::BoolProperty()));
   }
 
   void SetRedactor(std::unique_ptr<RedactorBase> redactor) { redactor_ = std::move(redactor); }
 
-  ::fpromise::result<AttachmentValue> GetKernelLog(const zx::duration timeout = zx::sec(10)) {
-    ::fpromise::result<AttachmentValue> result;
-    bool done = false;
-    executor_.schedule_task(CollectKernelLog(dispatcher(), environment_services_,
-                                             fit::Timeout(timeout), redactor_.get())
-                                .then([&result, &done](::fpromise::result<AttachmentValue>& res) {
-                                  result = std::move(res);
-                                  done = true;
-                                }));
-    RunLoopUntil([&done] { return done; });
-    return result;
+  AttachmentValue GetKernelLog(const zx::duration timeout = zx::sec(10)) {
+    KernelLog kernel_log(dispatcher(), environment_services_, nullptr, redactor_.get());
+    ::fpromise::result<AttachmentValue> attachment(::fpromise::error());
+    executor_.schedule_task(kernel_log.Get(timeout)
+                                .and_then([&attachment](AttachmentValue& result) {
+                                  attachment = ::fpromise::ok(std::move(result));
+                                })
+                                .or_else([] { FX_LOGS(FATAL) << "Unreachable branch"; }));
+
+    RunLoopUntil([&attachment] { return attachment.is_ok(); });
+    return attachment.take_value();
   }
 
  protected:
@@ -77,12 +75,10 @@ TEST_F(CollectKernelLogTest, Succeed_BasicCase) {
       fxl::StringPrintf("<<GetLogTest_Succeed_BasicCase: %zu>>", zx_clock_get_monotonic()));
   SendToKernelLog(output);
 
-  ::fpromise::result<AttachmentValue> result = GetKernelLog();
-  ASSERT_TRUE(result.is_ok());
-  AttachmentValue logs = result.take_value();
+  const auto log = GetKernelLog();
 
-  ASSERT_TRUE(logs.HasValue());
-  EXPECT_THAT(logs.Value(), testing::HasSubstr(output));
+  ASSERT_TRUE(log.HasValue());
+  EXPECT_THAT(log.Value(), testing::HasSubstr(output));
 }
 
 TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
@@ -92,19 +88,15 @@ TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
       fxl::StringPrintf("<<GetLogTest_Succeed_TwoRetrievals: %zu>>", zx_clock_get_monotonic()));
   SendToKernelLog(output);
 
-  ::fpromise::result<AttachmentValue> result = GetKernelLog();
-  ASSERT_TRUE(result.is_ok());
-  AttachmentValue logs = result.take_value();
+  const auto log1 = GetKernelLog();
 
-  ASSERT_TRUE(logs.HasValue());
-  EXPECT_THAT(logs.Value(), testing::HasSubstr(output));
+  ASSERT_TRUE(log1.HasValue());
+  EXPECT_THAT(log1.Value(), testing::HasSubstr(output));
 
-  ::fpromise::result<AttachmentValue> second_result = GetKernelLog();
-  ASSERT_TRUE(second_result.is_ok());
-  AttachmentValue second_logs = second_result.take_value();
+  const auto log2 = GetKernelLog();
 
-  ASSERT_TRUE(second_logs.HasValue());
-  EXPECT_THAT(second_logs.Value(), testing::HasSubstr(output));
+  ASSERT_TRUE(log2.HasValue());
+  EXPECT_THAT(log2.Value(), testing::HasSubstr(output));
 }
 
 class SimpleRedactor : public RedactorBase {
@@ -126,12 +118,10 @@ TEST_F(CollectKernelLogTest, Succeed_Redacts) {
       fxl::StringPrintf("<<GetLogTest_Succeed_BasicCase: %zu>>", zx_clock_get_monotonic()));
   SendToKernelLog(output);
 
-  ::fpromise::result<AttachmentValue> result = GetKernelLog();
-  ASSERT_TRUE(result.is_ok());
-  AttachmentValue logs = result.take_value();
+  const auto log = GetKernelLog();
 
-  ASSERT_TRUE(logs.HasValue());
-  EXPECT_THAT(logs.Value(), testing::HasSubstr("<REDACTED>"));
+  ASSERT_TRUE(log.HasValue());
+  EXPECT_THAT(log.Value(), testing::HasSubstr("<REDACTED>"));
 }
 
 }  // namespace
