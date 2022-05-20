@@ -788,7 +788,7 @@ impl CurrentTask {
         let resolved_elf = resolve_executable(self, executable, path.clone(), argv, environ)?;
         if let Err(err) = self.finish_exec(path, resolved_elf) {
             // TODO(tbodt): Replace this panic with a log and force a SIGSEGV.
-            panic!("{:?} unrecoverable error in exec: {}", self, err);
+            panic!("{:?} unrecoverable error in exec: {:?}", self, err);
         }
         Ok(())
     }

@@ -1939,7 +1939,7 @@ impl TransactionError {
             TransactionError::Malformed(err) => {
                 // Negate the value, as the binder runtime assumes error values are already
                 // negative.
-                Command::Error(-err.value())
+                Command::Error(-(err.value() as i32))
             }
             TransactionError::Failure => Command::FailedReply,
             TransactionError::Dead => Command::DeadReply,
@@ -2965,7 +2965,7 @@ mod tests {
         TransactionError::Malformed(errno!(EINVAL)).dispatch(&thread).expect("no error");
         assert_eq!(
             thread.write().command_queue.pop_front().expect("command"),
-            Command::Error(-EINVAL.value())
+            Command::Error(-(EINVAL.value() as i32))
         );
 
         TransactionError::Failure.dispatch(&thread).expect("no error");

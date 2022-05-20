@@ -193,7 +193,7 @@ async fn wait_for_init_file(
         match current_task.lookup_path(&mut context, root, startup_file_path.as_bytes()) {
             Ok(_) => break,
             Err(error) if error == ENOENT => continue,
-            Err(error) => return Err(anyhow::Error::new(error)),
+            Err(error) => return Err(anyhow::Error::from(error)),
         }
     }
     Ok(())

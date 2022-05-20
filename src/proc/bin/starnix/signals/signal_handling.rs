@@ -294,14 +294,14 @@ fn action_for_signal(siginfo: &SignalInfo, sigaction: sigaction_t) -> DeliveryAc
 /// This only happens if a syscall was interrupted and returned `-ERESTARTSYS`, and if the signal
 /// action that interrupted the syscall had the `SA_RESTART` flag set.
 fn prepare_to_restart_syscall(current_task: &mut CurrentTask, sigaction: &sigaction_t) {
-    if current_task.registers.rax != (-ERESTARTSYS.value()) as u64 {
+    if current_task.registers.rax != ERESTARTSYS.return_value() {
         // The syscall did not request to be restarted.
         return;
     }
 
     if (sigaction.sa_flags & SA_RESTART as u64) == 0 {
         // The signal action does not support restarts. The syscall should return -EINTR.
-        current_task.registers.rax = (-EINTR.value()) as u64;
+        current_task.registers.rax = EINTR.return_value();
         return;
     }
 
@@ -385,7 +385,7 @@ mod tests {
         // `rdi`, `rsi`, `rdx`, `r10`, `r8`, `r9`, should be the syscall arguments;
         // `orig_rax` should hold the syscall number;
         // and the instruction pointer should be 2 bytes after the syscall instruction.
-        current_task.registers.rax = -ERESTARTSYS.value() as u64;
+        current_task.registers.rax = ERESTARTSYS.return_value();
         current_task.registers.rdi = SYSCALL_ARGS.0;
         current_task.registers.rsi = SYSCALL_ARGS.1;
         current_task.registers.rdx = SYSCALL_ARGS.2;
@@ -459,7 +459,7 @@ mod tests {
         // `rdi`, `rsi`, `rdx`, `r10`, `r8`, `r9`, should be the syscall arguments;
         // `orig_rax` should hold the syscall number;
         // and the instruction pointer should be 2 bytes after the syscall instruction.
-        current_task.registers.rax = -ERESTARTSYS.value() as u64;
+        current_task.registers.rax = ERESTARTSYS.return_value();
         current_task.registers.rdi = SYSCALL_ARGS.0;
         current_task.registers.rsi = SYSCALL_ARGS.1;
         current_task.registers.rdx = SYSCALL_ARGS.2;
@@ -484,7 +484,7 @@ mod tests {
         assert_ne!(current_task.registers.rdx, SYSCALL_ARGS.2);
 
         // Simulate another syscall being interrupted.
-        current_task.registers.rax = -ERESTARTSYS.value() as u64;
+        current_task.registers.rax = ERESTARTSYS.return_value();
         current_task.registers.rdi = SYSCALL2_ARGS.0;
         current_task.registers.rsi = SYSCALL2_ARGS.1;
         current_task.registers.rdx = SYSCALL2_ARGS.2;
@@ -568,7 +568,7 @@ mod tests {
         // `rdi`, `rsi`, `rdx`, `r10`, `r8`, `r9`, should be the syscall arguments;
         // `orig_rax` should hold the syscall number;
         // and the instruction pointer should be 2 bytes after the syscall instruction.
-        current_task.registers.rax = -ERESTARTSYS.value() as u64;
+        current_task.registers.rax = ERESTARTSYS.return_value();
         current_task.registers.rdi = SYSCALL_ARGS.0;
         current_task.registers.rsi = SYSCALL_ARGS.1;
         current_task.registers.rdx = SYSCALL_ARGS.2;
@@ -602,7 +602,7 @@ mod tests {
         // The state of the task is now such that when switching back to userspace, the instruction
         // pointer will point at the original syscall instruction, with the arguments correctly
         // restored into the registers.
-        assert_eq!(current_task.registers.rax, -EINTR.value() as u64);
+        assert_eq!(current_task.registers.rax, EINTR.return_value());
         assert_eq!(current_task.registers.rip, (SYSCALL_INSTRUCTION_ADDRESS + 2u64).ptr() as u64);
     }
 

@@ -183,9 +183,9 @@ pub fn check_unmapped(current_task: &CurrentTask, addr: UserAddress) {
     buf.resize(*PAGE_SIZE as usize, 0u8);
     match current_task.mm.read_memory(addr, &mut buf) {
         Ok(()) => panic!("read page: page @ {:?} should be unmapped", addr),
-        Err(err) if err.value() == crate::types::uapi::EFAULT as i32 => {}
+        Err(err) if err.value() == crate::types::uapi::EFAULT => {}
         Err(err) => {
-            panic!("read page: expected EFAULT reading page @ {:?} but got {:} instead", addr, err)
+            panic!("read page: expected EFAULT reading page @ {:?} but got {:?} instead", addr, err)
         }
     }
 }

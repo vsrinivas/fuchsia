@@ -168,11 +168,11 @@ fn run_exception_loop(
                     Err(errno) => {
                         strace!(
                             current_task,
-                            "!-> {} ({}ms)",
+                            "!-> {:?} ({}ms)",
                             errno,
                             (zx::Time::get_monotonic() - start_time).into_millis()
                         );
-                        current_task.registers.rax = (-errno.value()) as u64;
+                        current_task.registers.rax = errno.return_value();
                     }
                 }
             }

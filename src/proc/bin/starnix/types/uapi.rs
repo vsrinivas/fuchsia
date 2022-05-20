@@ -22,6 +22,8 @@ pub type off_t = uapi::__kernel_off_t;
 pub type pid_t = uapi::__kernel_pid_t;
 pub type uid_t = uapi::__kernel_uid_t;
 
+pub const ENOTSUP: u32 = uapi::EOPNOTSUPP;
+
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct utsname_t {
