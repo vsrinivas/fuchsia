@@ -49,14 +49,12 @@ const zx::duration kScreenshotTimeout = zx::sec(10);
 
 }  // namespace
 
-DataProvider::DataProvider(async_dispatcher_t* dispatcher,
-                           std::shared_ptr<sys::ServiceDirectory> services,
-                           timekeeper::Clock* clock, RedactorBase* redactor,
-                           const bool is_first_instance,
-                           const std::set<std::string>& annotation_allowlist,
-                           const AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
-                           feedback::AnnotationManager* annotation_manager, Datastore* datastore,
-                           InspectDataBudget* inspect_data_budget)
+DataProvider::DataProvider(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    timekeeper::Clock* clock, RedactorBase* redactor, const bool is_first_instance,
+    const std::set<std::string>& annotation_allowlist, const AttachmentKeys& attachment_allowlist,
+    cobalt::Logger* cobalt, feedback::AnnotationManager* annotation_manager,
+    AttachmentManager* attachment_manager, InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
       services_(services),
       metadata_(dispatcher_, clock, redactor, is_first_instance, annotation_allowlist,
@@ -64,7 +62,7 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       annotation_manager_(annotation_manager),
       annotation_metrics_(cobalt_),
-      datastore_(datastore),
+      attachment_manager_(attachment_manager),
       executor_(dispatcher_),
       inspect_data_budget_(inspect_data_budget) {}
 
@@ -74,6 +72,10 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
     annotation_metrics_.LogMetrics(annotations);
     return ::fpromise::ok(std::move(annotations));
   });
+}
+
+::fpromise::promise<Attachments> DataProvider::GetAttachments(const zx::duration timeout) {
+  return attachment_manager_->GetAttachments(timeout);
 }
 
 void DataProvider::GetAnnotations(fuchsia::feedback::GetAnnotationsParameters params,
@@ -102,7 +104,7 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
 
   const uint64_t timer_id = cobalt_->StartTimer();
   auto promise =
-      ::fpromise::join_promises(GetAnnotations(timeout), datastore_->GetAttachments(timeout))
+      ::fpromise::join_promises(GetAnnotations(timeout), GetAttachments(timeout))
           .and_then([this, channel = std::move(channel)](
                         std::tuple<::fpromise::result<feedback::Annotations>,
                                    ::fpromise::result<Attachments>>& results) mutable {

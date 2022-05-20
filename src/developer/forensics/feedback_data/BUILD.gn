@@ -9,6 +9,32 @@ visibility = [ "//src/developer/forensics/*" ]
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("attachment_manager") {
+  sources = [
+    "attachment_manager.cc",
+    "attachment_manager.h",
+  ]
+
+  public_deps = [
+    ":inspect_budget",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/feedback:redactor_factory",
+    "//src/developer/forensics/feedback_data/attachments",
+    "//src/developer/forensics/feedback_data/attachments:inspect",
+    "//src/developer/forensics/feedback_data/attachments:kernel_log",
+    "//src/developer/forensics/feedback_data/attachments:system_log",
+    "//src/developer/forensics/utils/redact",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/zx",
+  ]
+
+  deps = [
+    ":constants",
+    "//sdk/lib/syslog/cpp",
+  ]
+}
+
 source_set("config") {
   sources = [
     "config.cc",
@@ -54,6 +80,7 @@ source_set("data_provider") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback/annotations",
+    "//src/developer/forensics/feedback_data/attachments",
     "//src/developer/forensics/utils/cobalt",
     "//src/developer/forensics/utils/redact",
     "//src/lib/timekeeper:system",
@@ -63,8 +90,8 @@ source_set("data_provider") {
   ]
 
   deps = [
+    ":attachment_manager",
     ":constants",
-    ":datastore",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -95,34 +122,6 @@ source_set("data_provider_controller") {
   deps = [
     ":constants",
     "//src/lib/files",
-  ]
-}
-
-source_set("datastore") {
-  sources = [
-    "datastore.cc",
-    "datastore.h",
-  ]
-
-  public_deps = [
-    ":inspect_budget",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/feedback:redactor_factory",
-    "//src/developer/forensics/feedback_data/attachments",
-    "//src/developer/forensics/feedback_data/attachments:inspect",
-    "//src/developer/forensics/feedback_data/attachments:kernel_log",
-    "//src/developer/forensics/feedback_data/attachments:system_log",
-    "//src/developer/forensics/utils:previous_boot_file",
-    "//src/developer/forensics/utils/cobalt",
-    "//src/developer/forensics/utils/redact",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/zx",
-  ]
-
-  deps = [
-    ":constants",
-    "//sdk/lib/syslog/cpp",
   ]
 }
 

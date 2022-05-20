@@ -31,7 +31,7 @@ class Metadata {
   //
   // |missing_non_platform_annotations| indicates whether some non-platform annotations are
   // missing, i.e. whether clients tried to insert more non-platform annotations than the maximum
-  // number of non-platform annotations the Datastore can hold.
+  // number of non-platform annotations the AttachmentManager can hold.
   std::string MakeMetadata(const ::fpromise::result<feedback::Annotations>& annotations,
                            const ::fpromise::result<Attachments>& attachments,
                            const std::string& snapshot_uuid, bool missing_non_platform_annotations);

@@ -30,11 +30,11 @@ FeedbackData::FeedbackData(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       inspect_node_manager_(inspect_root),
       inspect_data_budget_(options.limit_inspect_data, &inspect_node_manager_, cobalt_),
-      datastore_(dispatcher_, services_, cobalt_, redactor, options.config.attachment_allowlist,
-                 &inspect_data_budget_),
+      attachment_manager_(dispatcher_, services_, cobalt, redactor,
+                          options.config.attachment_allowlist, &inspect_data_budget_),
       data_provider_(dispatcher_, services_, clock_, redactor, options.is_first_instance,
                      options.config.annotation_allowlist, options.config.attachment_allowlist,
-                     cobalt_, annotation_manager, &datastore_, &inspect_data_budget_),
+                     cobalt_, annotation_manager, &attachment_manager_, &inspect_data_budget_),
       data_provider_controller_() {
   if (options.spawn_system_log_recorder) {
     SpawnSystemLogRecorder();
@@ -136,8 +136,8 @@ void FeedbackData::DeletePreviousBootLogsAt(zx::duration uptime,
       [this, previous_boot_logs_file] {
         FX_LOGS(INFO) << "Deleting previous boot logs after 24 hours of device uptime";
 
-        datastore_.DropStaticAttachment(feedback_data::kAttachmentLogSystemPrevious,
-                                        Error::kCustom);
+        attachment_manager_.DropStaticAttachment(feedback_data::kAttachmentLogSystemPrevious,
+                                                 Error::kCustom);
         files::DeletePath(previous_boot_logs_file, /*recursive=*/true);
       },
       // The previous boot logs are deleted after |uptime| of device uptime, not component uptime.

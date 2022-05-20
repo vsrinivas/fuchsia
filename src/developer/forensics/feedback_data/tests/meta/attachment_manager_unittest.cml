@@ -9,7 +9,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/datastore_unittest_exe",
+        binary: "bin/attachment_manager_unittest_exe",
     },
     use: [
         {

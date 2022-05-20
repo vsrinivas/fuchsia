@@ -183,7 +183,7 @@ TEST_F(DataRegisterTest, Upsert_NoUpdatesOnEmptyAnnotations) {
 
   Upsert(std::move(data2));
 
-  // We check that the DataRegister's namespaced annotations and Datastore's non-platform
+  // We check that the DataRegister's namespaced annotations and AttachmentManager's non-platform
   // annotations are still the same.
   EXPECT_THAT(data_register_->Get(), UnorderedElementsAreArray({
                                          Pair("namespace.k", "v"),

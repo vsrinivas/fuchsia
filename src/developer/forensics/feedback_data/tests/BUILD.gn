@@ -10,6 +10,41 @@ visibility = [ ":*" ]
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
+executable("attachment_manager_unittest_exe") {
+  testonly = true
+
+  sources = [ "attachment_manager_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.intl",
+    "//sdk/lib/fit-promise",
+    "//src/developer/forensics/feedback_data:attachment_manager",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/feedback_data/attachments",
+    "//src/developer/forensics/testing:gmatchers",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:log_message",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:channel_control",
+    "//src/developer/forensics/testing/stubs:cobalt",
+    "//src/developer/forensics/testing/stubs:device_id_provider",
+    "//src/developer/forensics/testing/stubs:diagnostics",
+    "//src/developer/forensics/testing/stubs:product_info_provider",
+    "//src/developer/forensics/utils:logs",
+    "//src/developer/forensics/utils:time",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
 executable("config_unittest_exe") {
   testonly = true
 
@@ -80,41 +115,6 @@ executable("data_provider_controller_unittest_exe") {
     "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-  ]
-}
-
-executable("datastore_unittest_exe") {
-  testonly = true
-
-  sources = [ "datastore_unittest.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.hwinfo",
-    "//sdk/fidl/fuchsia.intl",
-    "//sdk/lib/fit-promise",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data:datastore",
-    "//src/developer/forensics/feedback_data/attachments",
-    "//src/developer/forensics/testing:gmatchers",
-    "//src/developer/forensics/testing:gpretty_printers",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:log_message",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:channel_control",
-    "//src/developer/forensics/testing/stubs:cobalt",
-    "//src/developer/forensics/testing/stubs:device_id_provider",
-    "//src/developer/forensics/testing/stubs:diagnostics",
-    "//src/developer/forensics/testing/stubs:product_info_provider",
-    "//src/developer/forensics/utils:logs",
-    "//src/developer/forensics/utils:time",
-    "//src/developer/forensics/utils/cobalt",
-    "//src/lib/files",
-    "//src/lib/fxl",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -326,6 +326,14 @@ resource("test_image") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
+fuchsia_component("attachment_manager_unittest") {
+  testonly = true
+
+  manifest = "meta/attachment_manager_unittest.cml"
+
+  deps = [ ":attachment_manager_unittest_exe" ]
+}
+
 fuchsia_unittest_component("config_unittest") {
   deps = [
     ":config_unittest_exe",
@@ -349,14 +357,6 @@ fuchsia_unittest_component("data_provider_controller_unittest") {
     ":data_provider_controller_unittest_exe",
     "//src/sys/test_runners:tmp_storage",
   ]
-}
-
-fuchsia_component("datastore_unittest") {
-  testonly = true
-
-  manifest = "meta/datastore_unittest.cml"
-
-  deps = [ ":datastore_unittest_exe" ]
 }
 
 fuchsia_unittest_component("default_annotations_unittest") {
@@ -422,10 +422,10 @@ fuchsia_unittest_component("system_log_unittest") {
 ###############################################################################
 fuchsia_test_package("feedback-data-tests") {
   test_components = [
+    ":attachment_manager_unittest",
     ":config_unittest",
     ":data_provider_unittest",
     ":data_provider_controller_unittest",
-    ":datastore_unittest",
     ":default_annotations_unittest",
     ":inspect_data_budget_unittest",
     ":inspect_unittest",

@@ -2,78 +2,48 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/datastore.h"
+#include "src/developer/forensics/feedback_data/attachment_manager.h"
 
 #include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <utility>
 
-#include "src/developer/forensics/feedback/redactor_factory.h"
-#include "src/developer/forensics/feedback_data/attachments/inspect.h"
-#include "src/developer/forensics/feedback_data/attachments/kernel_log.h"
 #include "src/developer/forensics/feedback_data/attachments/static_attachments.h"
-#include "src/developer/forensics/feedback_data/attachments/system_log.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
-#include "src/developer/forensics/utils/cobalt/metrics.h"
-#include "src/developer/forensics/utils/previous_boot_file.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
 namespace feedback_data {
 
-Datastore::Datastore(async_dispatcher_t* dispatcher,
-                     std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
-                     RedactorBase* redactor, const AttachmentKeys& attachment_allowlist,
-                     InspectDataBudget* inspect_data_budget)
-    : dispatcher_(dispatcher),
-      services_(services),
-      cobalt_(cobalt),
-      redactor_(redactor),
-      attachment_allowlist_(attachment_allowlist),
-      static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
-      inspect_data_budget_(inspect_data_budget),
-      attachment_metrics_(cobalt_),
-      kernel_log_(dispatcher_, services_,
+AttachmentManager::AttachmentManager(async_dispatcher_t* dispatcher,
+                                     std::shared_ptr<sys::ServiceDirectory> services,
+                                     cobalt::Logger* cobalt, RedactorBase* redactor,
+                                     const AttachmentKeys& allowlist,
+                                     InspectDataBudget* inspect_data_budget)
+    : allowlist_(allowlist),
+      static_attachments_(feedback_data::GetStaticAttachments(allowlist_)),
+      attachment_metrics_(cobalt),
+      kernel_log_(dispatcher, services,
                   std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1)),
-                  redactor_),
-      system_log_(dispatcher_, services_, &clock_, redactor_, kActiveLoggingPeriod),
-      inspect_(dispatcher_, services_,
+                  redactor),
+      system_log_(dispatcher, services, &clock_, redactor, kActiveLoggingPeriod),
+      inspect_(dispatcher, services,
                std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1)),
-               inspect_data_budget_->SizeInBytes()) {
-  if (attachment_allowlist_.empty()) {
+               inspect_data_budget->SizeInBytes()) {
+  if (allowlist_.empty()) {
     FX_LOGS(WARNING)
         << "Attachment allowlist is empty, no platform attachments will be collected or returned";
   }
 }
 
-Datastore::Datastore(async_dispatcher_t* dispatcher,
-                     std::shared_ptr<sys::ServiceDirectory> services,
-                     const char* limit_data_flag_path)
-    : dispatcher_(dispatcher),
-      services_(services),
-      // Somewhat risky, but the Cobalt's constructor sets up a bunch of stuff and this constructor
-      // is intended for tests.
-      cobalt_(nullptr),
-      // Somewhat risky, but redaction isn't needed in tests that use this constructor.
-      redactor_(nullptr),
-      attachment_allowlist_({}),
-      // Somewhat risky, but the AnnotationManager depends on a bunch of stuff and this constructor
-      // is intended for tests.
-      static_attachments_({}),
-      attachment_metrics_(cobalt_),
-      kernel_log_(dispatcher_, services_, nullptr, redactor_),
-      system_log_(dispatcher_, services_, &clock_, redactor_, zx::sec(30)),
-      inspect_(dispatcher_, services_, nullptr, std::nullopt) {}
-
-::fpromise::promise<Attachments> Datastore::GetAttachments(const zx::duration timeout) {
-  if (attachment_allowlist_.empty()) {
+::fpromise::promise<Attachments> AttachmentManager::GetAttachments(const zx::duration timeout) {
+  if (allowlist_.empty()) {
     return ::fpromise::make_result_promise<Attachments>(::fpromise::error());
   }
 
   std::vector<::fpromise::promise<Attachment>> attachments;
-  for (const auto& key : attachment_allowlist_) {
+  for (const auto& key : allowlist_) {
     attachments.push_back(BuildAttachment(key, timeout));
   }
 
@@ -115,16 +85,16 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       });
 }
 
-::fpromise::promise<Attachment> Datastore::BuildAttachment(const AttachmentKey& key,
-                                                           const zx::duration timeout) {
+::fpromise::promise<Attachment> AttachmentManager::BuildAttachment(const AttachmentKey& key,
+                                                                   const zx::duration timeout) {
   return BuildAttachmentValue(key, timeout)
       .and_then([key](AttachmentValue& value) -> ::fpromise::result<Attachment> {
         return ::fpromise::ok(Attachment(key, value));
       });
 }
 
-::fpromise::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKey& key,
-                                                                     const zx::duration timeout) {
+::fpromise::promise<AttachmentValue> AttachmentManager::BuildAttachmentValue(
+    const AttachmentKey& key, const zx::duration timeout) {
   if (key == kAttachmentLogKernel) {
     return kernel_log_.Get(timeout);
   } else if (key == kAttachmentLogSystem) {
@@ -137,7 +107,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   return ::fpromise::make_result_promise<AttachmentValue>(::fpromise::error());
 }
 
-void Datastore::DropStaticAttachment(const AttachmentKey& key, const Error error) {
+void AttachmentManager::DropStaticAttachment(const AttachmentKey& key, const Error error) {
   if (static_attachments_.find(key) == static_attachments_.end()) {
     return;
   }

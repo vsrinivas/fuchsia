@@ -157,12 +157,13 @@ class DataProviderTest : public UnitTestFixture {
     }
     annotation_manager_ =
         std::make_unique<feedback::AnnotationManager>(dispatcher(), allowlist, startup_annotations);
-    datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), &redactor_,
-                                             attachment_allowlist, inspect_data_budget_.get());
+    attachment_manager_ =
+        std::make_unique<AttachmentManager>(dispatcher(), services(), cobalt_.get(), &redactor_,
+                                            attachment_allowlist, inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), &clock_, &redactor_, /*is_first_instance=*/true,
         annotation_allowlist, attachment_allowlist, cobalt_.get(), annotation_manager_.get(),
-        datastore_.get(), inspect_data_budget_.get());
+        attachment_manager_.get(), inspect_data_budget_.get());
   }
 
   void SetUpScenicServer(std::unique_ptr<stubs::ScenicBase> server) {
@@ -221,7 +222,7 @@ class DataProviderTest : public UnitTestFixture {
   std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
   std::unique_ptr<cobalt::Logger> cobalt_;
   IdentityRedactor redactor_{inspect::BoolProperty()};
-  std::unique_ptr<Datastore> datastore_;
+  std::unique_ptr<AttachmentManager> attachment_manager_;
 
  protected:
   std::unique_ptr<DataProvider> data_provider_;
