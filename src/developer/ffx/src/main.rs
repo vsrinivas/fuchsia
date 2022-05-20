@@ -125,7 +125,18 @@ impl Injection {
         let res = loop {
             select! {
                 res = open_remote_control_fut => {
-                    break(res?);
+                    match res {
+                        Err(e) => {
+                            // Getting here is most likely the result of a PEER_CLOSED error, which
+                            // may be because the target_proxy closure has propagated faster than
+                            // the error (which can happen occasionally). To counter this, wait for
+                            // the target proxy to complete, as it will likely only need to be
+                            // polled once more (open_remote_control_fut partially depends on it).
+                            target_proxy_fut.await?;
+                            return Err(e.into());
+                        }
+                        Ok(r) => break(r),
+                    }
                 }
                 res = target_proxy_fut => {
                     res?
