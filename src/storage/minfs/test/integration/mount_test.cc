@@ -60,7 +60,10 @@ class MountTestTemplate : public testing::Test {
     ASSERT_FALSE(bcache_or->is_read_only);
     bcache_ = std::move(bcache_or->bcache);
 
-    ASSERT_EQ(zx::channel::create(0, &root_client_end_, &root_server_end_), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_EQ(endpoints.status_value(), ZX_OK);
+    root_client_end_ = std::move(endpoints->client);
+    root_server_end_ = std::move(endpoints->server);
     ASSERT_EQ(loop_.StartThread("minfs test dispatcher"), ZX_OK);
   }
 
@@ -97,32 +100,34 @@ class MountTestTemplate : public testing::Test {
                                .fvm_data_slices = fs_management::MkfsOptions().fvm_data_slices};
   }
 
-  const zx::channel& root_client_end() { return root_client_end_; }
+  fidl::UnownedClientEnd<fuchsia_io::Directory> root_client_end() { return root_client_end_; }
 
-  zx::channel clone_root_client_end() {
-    zx::channel clone_root_client_end, clone_root_server_end;
-    ZX_ASSERT(zx::channel::create(0, &clone_root_client_end, &clone_root_server_end) == ZX_OK);
-    ZX_ASSERT(fidl::WireCall<fio::Node>(zx::unowned_channel(root_client_end()))
-                  ->Clone(fio::wire::OpenFlags::kCloneSameRights, std::move(clone_root_server_end))
+  fidl::ClientEnd<fuchsia_io::Directory> clone_root_client_end() {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    EXPECT_EQ(endpoints.status_value(), ZX_OK);
+    auto [clone_root_client_end, clone_root_server_end] = std::move(*endpoints);
+    ZX_ASSERT(fidl::WireCall(root_client_end())
+                  ->Clone(fio::wire::OpenFlags::kCloneSameRights,
+                          fidl::ServerEnd<fuchsia_io::Node>(clone_root_server_end.TakeChannel()))
                   .ok());
-    return clone_root_client_end;
+    return std::move(clone_root_client_end);
   }
 
   fbl::unique_fd clone_root_as_fd() {
-    zx::channel clone_client_end = clone_root_client_end();
+    fidl::ClientEnd<fuchsia_io::Directory> clone_client_end = clone_root_client_end();
     fbl::unique_fd root_fd;
-    EXPECT_EQ(fdio_fd_create(clone_client_end.release(), root_fd.reset_and_get_address()), ZX_OK);
+    EXPECT_EQ(
+        fdio_fd_create(clone_client_end.TakeChannel().release(), root_fd.reset_and_get_address()),
+        ZX_OK);
     EXPECT_TRUE(root_fd.is_valid());
     return root_fd;
   }
-
-  zx::channel& root_server_end() { return root_server_end_; }
 
   async::Loop& loop() { return loop_; }
 
   zx_status_t MountAndServe() {
     auto fs_or = minfs::MountAndServe(mount_options(), loop().dispatcher(), bcache(),
-                                      std::move(root_server_end()), [this]() { loop().Quit(); });
+                                      std::move(root_server_end_), [this]() { loop().Quit(); });
     if (fs_or.is_error()) {
       return fs_or.error_value();
     }
@@ -135,8 +140,8 @@ class MountTestTemplate : public testing::Test {
   std::optional<storage::RamDisk> ramdisk_;
   std::string ramdisk_path_;
   std::unique_ptr<minfs::Bcache> bcache_ = nullptr;
-  zx::channel root_client_end_;
-  zx::channel root_server_end_;
+  fidl::ClientEnd<fuchsia_io::Directory> root_client_end_;
+  fidl::ServerEnd<fuchsia_io::Directory> root_server_end_;
   std::unique_ptr<fs::ManagedVfs> fs_;
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 };

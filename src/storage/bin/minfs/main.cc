@@ -53,8 +53,9 @@ int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& opti
     FX_LOGS(WARNING) << "Unmounted";
   };
 
-  auto fs_or = MountAndServe(options, loop.dispatcher(), std::move(bcache),
-                             zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)),
+  fidl::ServerEnd<fuchsia_io::Directory> root(
+      zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
+  auto fs_or = MountAndServe(options, loop.dispatcher(), std::move(bcache), std::move(root),
                              std::move(on_unmount));
   if (fs_or.is_error()) {
     if (options.verbose) {

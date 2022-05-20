@@ -56,11 +56,10 @@ zx::status<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockD
   return zx::ok(std::move(result));
 }
 
-zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mount_options,
-                                                          async_dispatcher_t* dispatcher,
-                                                          std::unique_ptr<minfs::Bcache> bcache,
-                                                          zx::channel mount_channel,
-                                                          fit::closure on_unmount) {
+zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(
+    const MountOptions& mount_options, async_dispatcher_t* dispatcher,
+    std::unique_ptr<minfs::Bcache> bcache, fidl::ServerEnd<fuchsia_io::Directory> root,
+    fit::closure on_unmount) {
   TRACE_DURATION("minfs", "MountAndServe");
 
   auto fs_or = Minfs::Create(dispatcher, std::move(bcache), mount_options);
@@ -103,7 +102,7 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
   outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
                      fbl::MakeRefCounted<AdminService>(fs->dispatcher(), *fs));
 
-  zx_status_t status = fs->ServeDirectory(std::move(outgoing), std::move(mount_channel));
+  zx_status_t status = fs->ServeDirectory(std::move(outgoing), std::move(root));
   if (status != ZX_OK) {
     return zx::error(status);
   }

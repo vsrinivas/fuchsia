@@ -58,11 +58,10 @@ zx::status<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockD
 // This function does not start the async_dispatcher_t object owned by |vfs|;
 // requests will not be dispatched if that async_dispatcher_t object is not
 // active.
-zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& options,
-                                                          async_dispatcher_t* dispatcher,
-                                                          std::unique_ptr<minfs::Bcache> bcache,
-                                                          zx::channel mount_channel,
-                                                          fit::closure on_unmount);
+zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(
+    const MountOptions& options, async_dispatcher_t* dispatcher,
+    std::unique_ptr<minfs::Bcache> bcache, fidl::ServerEnd<fuchsia_io::Directory> root,
+    fit::closure on_unmount);
 
 #endif  // __Fuchsia__
 
