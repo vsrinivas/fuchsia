@@ -6,7 +6,6 @@ import("//build/config.gni")
 
 group("a11y") {
   deps = [
-    ":config",
     "bin/a11y_manager:a11y-manager",
     "lib",
   ]
@@ -19,10 +18,4 @@ group("tests") {
     "bin/a11y_manager/tests",
     "lib:tests",
   ]
-}
-
-config_data("config") {
-  for_pkg = "sysmgr"
-  outputs = [ "a11y.config" ]
-  sources = [ "services.config" ]
 }
