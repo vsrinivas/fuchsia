@@ -25,6 +25,10 @@ Fuchsia currently supports the following sanitizers:
 *    [AddressSanitizer][llvm-asan]{:.external} (ASan) detects instances of
      out-of-bounds access, use after free / return / scope, and double free.
 *    [LeakSanitizer][llvm-lsan]{:.external} (LSan) detects memory leaks.
+     LeakSanitizer works like a conservative garbage collector in checking
+     for leaks. Any allocations that are not reachable from reference roots
+     (stacks of threads, registers of threads, global variables and
+     thread-local variables) are treated as leaked.
 *    [ThreadSanitizer][llvm-tsan]{:.external} (TSan) detects data races (host-only).
 *    [UndefinedBehaviorSanitizer][llvm-ubsan]{:.external} (UBSan) detects
      specific issues of relying on undefined program behavior.
