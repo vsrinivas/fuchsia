@@ -240,7 +240,7 @@ TEST_F(ControllerTest, GetKbdDescriptorTest) {
   ASSERT_TRUE(response->descriptor.has_keyboard());
   ASSERT_TRUE(response->descriptor.keyboard().has_input());
   ASSERT_TRUE(response->descriptor.keyboard().input().has_keys3());
-  ASSERT_EQ(response->descriptor.keyboard().input().keys3().count(), 106);
+  ASSERT_EQ(response->descriptor.keyboard().input().keys3().count(), 104);
 
   ASSERT_TRUE(response->descriptor.keyboard().has_output());
   ASSERT_TRUE(response->descriptor.keyboard().output().has_leds());

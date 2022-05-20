@@ -9,7 +9,6 @@
 #include <lib/ddk/driver.h>
 #include <zircon/syscalls.h>
 
-#include <map>
 #include <sstream>
 
 #include <ddktl/device.h>
@@ -28,9 +27,6 @@ namespace i8042 {
 namespace finput = fuchsia_hardware_input::wire;
 
 namespace {
-
-inline const std::map<uint8_t, fuchsia_input::wire::Key> kUndefinedExtendedUsageMap = {
-    {0x58, fuchsia_input::wire::Key::kAssistant}, {0x5e, fuchsia_input::wire::Key::kPower}};
 
 constexpr uint16_t kIrqPort1 = 0x1;
 constexpr uint16_t kIrqPort2 = 0xc;
@@ -279,17 +275,6 @@ void I8042Device::GetDescriptor(GetDescriptorRequestView request,
       }
     }
 
-    // Add implementation specific keys. If needed, can be passed in from metadata
-    for (auto const& [scancode, key] : kUndefinedExtendedUsageMap) {
-      keys3.push_back(key);
-
-      if (keys3.size() >= fuchsia_input_report::wire::kKeyboardMaxNumKeys) {
-        zxlogf(ERROR, "Too many keys!");
-        completer.Reply({});
-        return;
-      }
-    }
-
     fidl::VectorView<fuchsia_input::wire::Key> fidl_keys3(allocator, keys3.size());
     size_t idx = 0;
     for (const auto& key : keys3) {
@@ -390,13 +375,8 @@ void I8042Device::ProcessScancode(zx::time timestamp, uint8_t code) {
   } else {
     key = kSet1UsageMap[code];
   }
-  if (!key) {
-    auto it = kUndefinedExtendedUsageMap.find(code);
-    if (it == kUndefinedExtendedUsageMap.end()) {
-      return;
-    }
-    key = it->second;
-  }
+  if (!key)
+    return;
 
   if (key_up) {
     RemoveKey(*key);
