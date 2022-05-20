@@ -603,12 +603,10 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         pids.remove_task(task.id);
 
         if task.id == self.leader() {
-            let exit_status = task.read().exit_status.clone();
-            #[cfg(not(test))]
-            let exit_status =
-                exit_status.expect("a process should not be exiting without an exit status");
-            #[cfg(test)]
-            let exit_status = exit_status.unwrap_or(ExitStatus::Exit(0));
+            let exit_status = task.read().exit_status.clone().unwrap_or_else(|| {
+                log::error!("Process {:?} exiting without an exit code.", task.id);
+                ExitStatus::Exit(u8::MAX)
+            });
             self.zombie_leader = Some(ZombieProcess {
                 pid: self.leader(),
                 pgid: self.process_group.leader,
