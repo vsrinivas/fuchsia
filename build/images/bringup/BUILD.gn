@@ -59,11 +59,11 @@ assemble_system("bringup_non_fastboot") {
   image_name = "bringup"
   if (custom_signing_script != "") {
     zbi_signing_script = custom_signing_script
-    deps = custom_signing_script_deps
+    zbi_signing_script_deps = [ "//build/images/custom_signing:deps" ]
   } else if (use_vboot) {
     zbi_signing_script = vboot_action.script
     zbi_signing_args = vboot_action.args
-    deps = vboot_action.deps
+    zbi_signing_script_deps = vboot_action.deps
     inputs = vboot_action.inputs
   }
 
@@ -148,11 +148,11 @@ assemble_system("bringup_fastboot") {
   if (custom_signing_script != "") {
     rebased_script = rebase_path(custom_signing_script, root_build_dir)
     zbi_signing_args += [ "-s ${rebased_script}" ]
-    deps = custom_signing_script_deps
+    zbi_signing_script_deps = [ "//build/images/custom_signing:deps" ]
   } else if (use_vboot) {
     rebased_script = rebase_path(vboot_action.script, root_build_dir)
     zbi_signing_args += [ "-s ${rebased_script}" ] + vboot_action.args
-    deps = vboot_action.deps
+    zbi_signing_script_deps = vboot_action.deps
     inputs = vboot_action.inputs
   }
 

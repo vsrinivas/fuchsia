@@ -205,6 +205,9 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #   zbi_signing_args (optional)
 #     [list of strings] Arguments to pass to the signing script.
 #
+#   zbi_signing_script_deps (optional)
+#      [list of labels] Dependencies needed by the signing script.
+#
 template("assemble_system") {
   assert(defined(invoker.base_packages), "Need to define base_packages")
   assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
@@ -785,6 +788,11 @@ template("assemble_system") {
       ":${labels.images_config}",
       ":${labels.product_assembler}",
     ]
+
+    # Set the deps needed in order to run the zbi_signing_script
+    if (defined(invoker.zbi_signing_script_deps)) {
+      deps += invoker.zbi_signing_script_deps
+    }
 
     inputs = [
       files.images_config,
