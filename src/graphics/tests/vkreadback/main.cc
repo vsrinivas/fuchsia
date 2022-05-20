@@ -2,20 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
 #include <condition_variable>
+#include <cstdint>
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <vector>
 
 #include <gtest/gtest.h>
-#include <vulkan/vulkan.h>
 
 #include "src/graphics/tests/common/utils.h"
+#include "src/graphics/tests/vkreadback/vkreadback.h"
 #include "src/lib/fxl/test/test_settings.h"
-#include "vkreadback.h"
 
-inline constexpr int64_t ms_to_ns(int64_t ms) { return ms * 1000000ull; }
+#include <vulkan/vulkan.hpp>
+
+namespace {
+
+constexpr int64_t ms_to_ns(int64_t ms) { return ms * 1000000ll; }
+
+}  // namespace
 
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {
@@ -33,33 +39,34 @@ TEST(Vulkan, Readback) {
   ASSERT_TRUE(test.Readback());
 }
 
-TEST(Vulkan, ManyReadback) {
-  std::vector<std::unique_ptr<VkReadbackTest>> tests;
-  constexpr uint32_t kReps = 75;
-  for (uint32_t i = 0; i < kReps; i++) {
-    tests.emplace_back(std::make_unique<VkReadbackTest>());
-    ASSERT_TRUE(tests.back()->Initialize(VK_API_VERSION_1_1));
-    ASSERT_TRUE(tests.back()->Exec());
+TEST(Vulkan, ReadbackMultiple) {
+  std::vector<std::unique_ptr<VkReadbackTest>> readback_tests;
+  constexpr int kReadbackCount = 75;
+  for (int i = 0; i < kReadbackCount; i++) {
+    auto readback_test = std::make_unique<VkReadbackTest>();
+    ASSERT_TRUE(readback_test->Initialize(VK_API_VERSION_1_1));
+    ASSERT_TRUE(readback_test->Exec());
+    readback_tests.push_back(std::move(readback_test));
   }
-  for (auto& test : tests) {
-    ASSERT_TRUE(test->Readback());
+  for (auto& readback_test : readback_tests) {
+    ASSERT_TRUE(readback_test->Readback());
   }
 }
 
-TEST(Vulkan, ReadbackLoopWithFenceWaitThread) {
-  VkReadbackTest test;
-  ASSERT_TRUE(test.Initialize(VK_API_VERSION_1_1));
+TEST(Vulkan, ReadbackLoopWithFenceWaitOnSeparateThread) {
+  VkReadbackTest readback_test;
+  ASSERT_TRUE(readback_test.Initialize(VK_API_VERSION_1_1));
 
   std::mutex mutex;
   std::condition_variable cond_var;
-  std::queue<vk::Fence> fences;
+  std::queue<vk::UniqueFence> fences;
 
-  constexpr uint32_t kCounter = 500;
-  const vk::Device device = test.vulkan_device();
+  constexpr int kFenceCount = 500;
+  const vk::Device device = readback_test.vulkan_device();
 
-  std::thread thread([&] {
-    for (uint32_t i = 0; i < kCounter; i++) {
-      vk::Fence fence = {};
+  std::thread fence_waiting_thread([&mutex, &cond_var, &fences, &device] {
+    for (int i = 0; i < kFenceCount; i++) {
+      vk::UniqueFence fence;
 
       while (!fence) {
         std::unique_lock<std::mutex> lock(mutex);
@@ -67,35 +74,33 @@ TEST(Vulkan, ReadbackLoopWithFenceWaitThread) {
           cond_var.wait(lock);
           continue;
         }
-        fence = fences.front();
+        fence = std::move(fences.front());
         fences.pop();
       }
 
       EXPECT_EQ(vk::Result::eSuccess,
-                device.waitForFences(1, &fence, true /* waitAll */, ms_to_ns(1000)));
-      device.destroyFence(fence, nullptr /* allocator */);
+                device.waitForFences(*fence, /* waitAll= */ true, ms_to_ns(1000)));
     }
   });
 
   const vk::FenceCreateInfo fence_info{};
-  for (uint32_t i = 0; i < kCounter; i++) {
-    vk::Fence fence{};
-    auto rv_fence = device.createFence(&fence_info, nullptr /* allocator */, &fence);
-    ASSERT_EQ(rv_fence, vk::Result::eSuccess);
+  for (int i = 0; i < kFenceCount; i++) {
+    auto [fence_result, fence] = device.createFenceUnique(fence_info);
+    ASSERT_EQ(fence_result, vk::Result::eSuccess);
     {
       std::unique_lock<std::mutex> lock(mutex);
-      fences.push(fence);
       const bool transition_image = (i == 0);
-      EXPECT_TRUE(test.Submit(fence, transition_image));
+      EXPECT_TRUE(readback_test.Submit(fence.get(), transition_image));
+      fences.push(std::move(fence));
       cond_var.notify_one();
     }
 
-    EXPECT_TRUE(test.Wait());
+    EXPECT_TRUE(readback_test.Wait());
   }
 
-  thread.join();
+  fence_waiting_thread.join();
 
-  EXPECT_TRUE(test.Readback());
+  EXPECT_TRUE(readback_test.Readback());
 }
 
 TEST(Vulkan, ReadbackLoopWithFenceWait) {
@@ -104,83 +109,73 @@ TEST(Vulkan, ReadbackLoopWithFenceWait) {
 
   const vk::Device device = test.vulkan_device();
 
-  vk::Fence fence{};
+  auto [fence_result, fence] = device.createFenceUnique(vk::FenceCreateInfo{});
+  ASSERT_EQ(fence_result, vk::Result::eSuccess);
 
-  {
-    vk::FenceCreateInfo fence_info{};
-    auto rv_fence = device.createFence(&fence_info, nullptr /* allocator */, &fence);
-    ASSERT_EQ(rv_fence, vk::Result::eSuccess);
-  }
-
-  constexpr uint32_t kCounter = 500;
-  for (uint32_t i = 0; i < kCounter; i++) {
+  constexpr int kIterationCount = 500;
+  for (int i = 0; i < kIterationCount; i++) {
     {
       const bool transition_image = (i == 0);
-      EXPECT_TRUE(test.Submit(fence, transition_image));
+      EXPECT_TRUE(test.Submit(*fence, transition_image));
     }
 
     EXPECT_EQ(vk::Result::eSuccess,
-              device.waitForFences(1, &fence, true /* waitAll */, ms_to_ns(1000)));
+              device.waitForFences(*fence, /* waitAll= */ true, ms_to_ns(1000)));
 
-    device.resetFences(1, &fence);
+    device.resetFences(*fence);
 
     EXPECT_TRUE(test.Readback());
   }
-
-  device.destroyFence(fence, nullptr /* allocator */);
 }
 
 TEST(Vulkan, ReadbackLoopWithTimelineWait) {
-  VkReadbackTest test;
+  VkReadbackTest readback_test;
 
-  ASSERT_TRUE(test.Initialize(VK_API_VERSION_1_2));
-  auto timeline_semaphore_support = test.timeline_semaphore_support();
+  ASSERT_TRUE(readback_test.Initialize(VK_API_VERSION_1_2));
+  auto timeline_semaphore_support = readback_test.timeline_semaphore_support();
 
   if (timeline_semaphore_support == VulkanExtensionSupportState::kNotSupported) {
     fprintf(stderr, "Timeline semaphore feature not supported. Test skipped.\n");
     GTEST_SKIP();
   }
 
-  const vk::Device device = test.vulkan_device();
+  const vk::Device device = readback_test.vulkan_device();
 
-  vk::Semaphore semaphore{};
-
+  vk::UniqueSemaphore semaphore{};
   {
     // Initialize a timeline semaphore with initial value of 0.
-    auto type_create_info =
-        vk::SemaphoreTypeCreateInfo().setSemaphoreType(vk::SemaphoreType::eTimeline);
-    auto create_info = vk::SemaphoreCreateInfo().setPNext(&type_create_info);
-    ASSERT_EQ(vk::Result::eSuccess,
-              device.createSemaphore(&create_info, nullptr /* allocator */, &semaphore));
+    vk::StructureChain<vk::SemaphoreCreateInfo, vk::SemaphoreTypeCreateInfo> create_info;
+    create_info.get<vk::SemaphoreTypeCreateInfo>().semaphoreType = vk::SemaphoreType::eTimeline;
+    auto create_semaphore_result = device.createSemaphoreUnique(create_info.get());
+    ASSERT_EQ(vk::Result::eSuccess, create_semaphore_result.result);
+    semaphore = std::move(create_semaphore_result.value);
   }
 
-  constexpr uint32_t kCounter = 500;
-  for (uint32_t i = 0; i < kCounter; i++) {
-    uint64_t timeline_value = 1 + i;
+  constexpr int kSemaphoreUpdateCount = 500;
+  for (int i = 0; i < kSemaphoreUpdateCount; i++) {
+    const uint64_t timeline_value = 1 + i;
 
     {
       // Every time we submit commands to VkQueue, the value of the timeline
       // semaphore will increment by 1.
       const bool transition_image = (i == 0);
-      EXPECT_TRUE(test.Submit(semaphore, timeline_value, transition_image));
+      EXPECT_TRUE(readback_test.Submit(*semaphore, timeline_value, transition_image));
     }
 
     {
       // Wait until the timeline semaphore value is updated.
-      auto wait_info = vk::SemaphoreWaitInfo()
-                           .setSemaphoreCount(1)
-                           .setPSemaphores(&semaphore)
-                           .setPValues(&timeline_value);
+      vk::SemaphoreWaitInfo wait_info(vk::SemaphoreWaitFlags{}, *semaphore, timeline_value);
 
       // We'll use Vulkan 1.2 core API only if it is supported; otherwise we
       // use Vulkan 1.1 with extension instead. Ditto for below.
       vk::Result wait_result = vk::Result::eErrorInitializationFailed;
       switch (timeline_semaphore_support) {
         case VulkanExtensionSupportState::kSupportedInCore:
-          wait_result = device.waitSemaphores(&wait_info, ms_to_ns(1000));
+          wait_result = device.waitSemaphores(wait_info, ms_to_ns(1000));
           break;
         case VulkanExtensionSupportState::kSupportedAsExtensionOnly:
-          wait_result = device.waitSemaphoresKHR(&wait_info, ms_to_ns(1000), test.vulkan_loader());
+          wait_result =
+              device.waitSemaphoresKHR(wait_info, ms_to_ns(1000), readback_test.vulkan_loader());
           break;
         case VulkanExtensionSupportState::kNotSupported:
           __builtin_unreachable();
@@ -191,13 +186,14 @@ TEST(Vulkan, ReadbackLoopWithTimelineWait) {
 
     {
       // Verify that the timeline semaphore counter has been updated.
-      vk::ResultValue<unsigned long> counter_result(vk::Result::eErrorInitializationFailed, 0u);
+      vk::ResultValue<uint64_t> counter_result(vk::Result::eErrorInitializationFailed, 0u);
       switch (timeline_semaphore_support) {
         case VulkanExtensionSupportState::kSupportedInCore:
-          counter_result = device.getSemaphoreCounterValue(semaphore);
+          counter_result = device.getSemaphoreCounterValue(*semaphore);
           break;
         case VulkanExtensionSupportState::kSupportedAsExtensionOnly:
-          counter_result = device.getSemaphoreCounterValueKHR(semaphore, test.vulkan_loader());
+          counter_result =
+              device.getSemaphoreCounterValueKHR(*semaphore, readback_test.vulkan_loader());
           break;
         case VulkanExtensionSupportState::kNotSupported:
           __builtin_unreachable();
@@ -207,8 +203,6 @@ TEST(Vulkan, ReadbackLoopWithTimelineWait) {
       EXPECT_EQ(counter_result.value, timeline_value);
     }
 
-    EXPECT_TRUE(test.Readback());
+    EXPECT_TRUE(readback_test.Readback());
   }
-
-  device.destroySemaphore(semaphore, nullptr /* allocator */);
 }
