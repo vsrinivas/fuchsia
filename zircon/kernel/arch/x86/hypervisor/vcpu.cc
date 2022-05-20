@@ -1034,6 +1034,19 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     return ZX_ERR_BAD_STATE;
   }
 
+  auto defer = fit::defer(gBootOptions->x86_disable_spec_mitigations ? [] {} : [] {
+    // Spectre V2: Ensure that code executed in the VM guest cannot influence
+    // indirect branch prediction in the host.
+    //
+    // TODO(fxbug.dev/33667): We may be able to avoid the IBPB here; the kernel
+    // is either built with a retpoline or has Enhanced IBRS enabled. We
+    // currently execute an IBPB on contessxt-switch to a new aspace. The IBPB is
+    // currently only here to protect hypervisor user threads.
+    if (x86_cpu_has_ibpb()) {
+      arch::IssueIbpb(arch::BootCpuidIo{}, hwreg::X86MsrIo{});
+    }
+  });
+
   zx_status_t status;
   do {
     // If the thread was killed or suspended, then we should exit with an error.
@@ -1091,17 +1104,9 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     SaveGuestExtendedRegisters(current_thread);
 
     if (!gBootOptions->x86_disable_spec_mitigations) {
-      // Spectre V2: Ensure that code executed in the VM guest cannot influence either
-      // return address predictions or indirect branch prediction in the host.
-      //
-      // TODO(fxbug.dev/33667): We may be able to avoid the IBPB here; the kernel is either
-      // built with a retpoline or has Enhanced IBRS enabled. We currently execute an
-      // IBPB on context-switch to a new aspace. The IBPB is currently only here to
-      // protect hypervisor user threads.
+      // Spectre V2: Ensure that code executed in the VM guest cannot influence
+      // return address prediction in the host.
       x86_ras_fill();
-      if (x86_cpu_has_ibpb()) {
-        arch::IssueIbpb(arch::BootCpuidIo{}, hwreg::X86MsrIo{});
-      }
     }
 
     if (status != ZX_OK) {
