@@ -177,17 +177,18 @@ __EXPORT void device_get_fragments(zx_device_t* dev, composite_device_fragment_t
 
 __EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* dev, const char* name,
                                                   uint32_t proto_id, void* out) {
-  if (!strcmp("sysmem", name) && proto_id == ZX_PROTOCOL_SYSMEM) {
-    FDF_LOGL(INFO, dev->logger(), "Returning fake sysmem fragment");
-    *static_cast<sysmem_protocol_t*>(out) = *dev->driver()->sysmem().protocol();
-    return ZX_OK;
-  }
   // TODO(fxbug.dev/93678): Fully support composite devices.
   FDF_LOGL(WARNING, dev->logger(),
            "DFv2 currently only supports primary fragment. Driver requests fragment %s but we are "
            "returning the primary",
            name);
-  return dev->GetProtocol(proto_id, out);
+  zx_status_t status = dev->GetProtocol(proto_id, out);
+  if (status != ZX_OK && proto_id == ZX_PROTOCOL_SYSMEM) {
+    FDF_LOGL(INFO, dev->logger(), "Returning fake sysmem fragment");
+    *static_cast<sysmem_protocol_t*>(out) = *dev->driver()->sysmem().protocol();
+    return ZX_OK;
+  }
+  return status;
 }
 
 __EXPORT zx_status_t device_get_fragment_metadata(zx_device_t* dev, const char* name, uint32_t type,
