@@ -99,6 +99,8 @@ class FilesystemMounter {
                                          fuchsia_fs_startup::wire::StartOptions options,
                                          const std::string& fs_name);
 
+  static std::string GetDevicePath(const zx::channel& block_device);
+
   FsManager& fshost_;
   const fshost_config::Config& config_;
   bool data_mounted_ = false;

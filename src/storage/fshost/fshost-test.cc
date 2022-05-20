@@ -165,7 +165,7 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
   manager.Shutdown([](zx_status_t status) { EXPECT_EQ(status, ZX_OK); });
   manager.WaitForShutdown();
 
-  EXPECT_FALSE(manager.TakeMountPointServerEnd(FsManager::MountPoint::kData, {}).has_value());
+  EXPECT_FALSE(manager.TakeMountPointServerEnd(FsManager::MountPoint::kData).has_value());
 }
 
 TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
@@ -177,7 +177,7 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(manager.Initialize({}, {}, config, watcher), ZX_OK);
 
-  std::optional endpoints_or = manager.TakeMountPointServerEnd(FsManager::MountPoint::kData, {});
+  std::optional endpoints_or = manager.TakeMountPointServerEnd(FsManager::MountPoint::kData);
   ASSERT_TRUE(endpoints_or.has_value());
   auto [export_root, server_end] = std::move(endpoints_or.value());
   server_end.Close(ZX_ERR_INTERNAL);

@@ -74,14 +74,11 @@ zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t
                          fs_flags);
 }
 
-zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, const char* binary,
-                                                const fs_management::MountOptions& options,
-                                                zx::channel block_device_client, uint32_t fs_flags,
-                                                fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client) {
+std::string FilesystemMounter::GetDevicePath(const zx::channel& block_device) {
   std::string device_path;
-  if (auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(
-                                       block_device_client.borrow()))
-                        ->GetTopologicalPath();
+  if (auto result =
+          fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(block_device.borrow()))
+              ->GetTopologicalPath();
       result.status() != ZX_OK) {
     FX_LOGS(WARNING) << "Unable to get device topological path (FIDL error): "
                      << zx_status_get_string(result.status());
@@ -91,8 +88,16 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
   } else {
     device_path = result->result.response().path.get();
   }
+  return device_path;
+}
 
-  std::optional endpoints_or = fshost_.TakeMountPointServerEnd(point, device_path);
+zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, const char* binary,
+                                                const fs_management::MountOptions& options,
+                                                zx::channel block_device_client, uint32_t fs_flags,
+                                                fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client) {
+  std::string device_path = GetDevicePath(block_device_client);
+
+  std::optional endpoints_or = fshost_.TakeMountPointServerEnd(point);
   if (!endpoints_or.has_value()) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
@@ -135,6 +140,8 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
     return zx::error(result.status());
   }
 
+  fshost_.RegisterDevicePath(point, device_path);
+
   return zx::ok();
 }
 
@@ -152,6 +159,8 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
   }
 
   if (format == fs_management::kDiskFormatFxfs) {
+    std::string device_path = GetDevicePath(block_device);
+
     // TODO(fxbug.dev/99591): Statically route the crypt service.
     auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
     if (crypt_client_or.is_error()) {
@@ -166,6 +175,8 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
         status.is_error()) {
       return status.error_value();
     }
+
+    fshost_.RegisterDevicePath(FsManager::MountPoint::kData, device_path);
   } else {
     if (auto result = MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
                                       std::move(block_device), FS_SVC, {});

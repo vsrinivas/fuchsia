@@ -95,6 +95,7 @@ FsManager::~FsManager() {
     });
   }
   sync_completion_wait(&shutdown_, ZX_TIME_INFINITE);
+  global_loop_->Shutdown();
 }
 
 zx_status_t FsManager::Initialize(
@@ -145,6 +146,11 @@ zx_status_t FsManager::Initialize(
   pkgfs_server_end_ = std::move(pkgfs_endpoints_or->server);
 
   for (const auto& point : mount_points) {
+    if (config.data_filesystem_format() == "fxfs") {
+      // Fxfs launches as a component so doesn't have a mount node.
+      continue;
+    }
+
     zx::status endpoints_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
     if (endpoints_or.is_error()) {
       return endpoints_or.status_value();
@@ -243,8 +249,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsManager::GetFsDir() {
   return zx::ok(std::move(endpoints->client));
 }
 
-std::optional<FsManager::MountPointEndpoints> FsManager::TakeMountPointServerEnd(
-    MountPoint point, std::string_view device_path) {
+std::optional<FsManager::MountPointEndpoints> FsManager::TakeMountPointServerEnd(MountPoint point) {
   // Hold the shutdown lock for the entire duration of the install to avoid racing with shutdown on
   // adding/removing the remote mount.
   std::lock_guard guard(shutdown_lock_);
@@ -265,42 +270,43 @@ std::optional<FsManager::MountPointEndpoints> FsManager::TakeMountPointServerEnd
   fidl::ServerEnd<fuchsia_io::Directory> server_end =
       std::exchange(node->second.server_end, std::nullopt).value();
 
-  // At this point the export root isn't serving, so in order to get the fs_id, we queue an open
-  // request, then queue a query request on that channel, setting up an async callback that will
-  // set the device path whenever the filesystem starts responding.
-  //
-  // Retrieving the device path and setting it for a particular filesystem is best-effort, so any
-  // failures are logged but otherwise ignored.
-  if (!device_path.empty()) {
-    zx::status root_or = fs_management::FsRootHandle(node->second.export_root.borrow());
-    if (root_or.is_error()) {
-      FX_PLOGS(WARNING, root_or.status_value()) << "Failed to get root handle for mount point";
-    }
-    fidl::WireClient<fuchsia_io::Directory> root_client(std::move(*root_or),
-                                                        global_loop_->dispatcher());
-    root_client->QueryFilesystem().ThenExactlyOnce(
-        [this,
-         device_path](fidl::WireUnownedResult<fuchsia_io::Directory::QueryFilesystem>& query_res) {
-          if (!query_res.ok()) {
-            FX_PLOGS(WARNING, query_res.status()) << "QueryFilesystem call failed (fidl error)";
-            return;
-          }
-          if (query_res->s != ZX_OK) {
-            FX_PLOGS(WARNING, query_res->s) << "QueryFilesystem call failed";
-            return;
-          }
-          std::lock_guard guard(device_paths_lock_);
-          if (!device_paths_.try_emplace(query_res->info->fs_id, device_path).second) {
-            FX_LOGS(WARNING) << "Device path entry for fs id " << query_res->info->fs_id
-                             << " already exists; not inserting " << device_path;
-          }
-        });
-  }
-
   return FsManager::MountPointEndpoints{
       .export_root = node->second.export_root,
       .server_end = std::move(server_end),
   };
+}
+
+void FsManager::RegisterDevicePath(MountPoint point, std::string_view device_path) {
+  // Retrieving the device path and setting it for a particular filesystem is best-effort, so any
+  // failures are logged but otherwise ignored.
+  if (device_path.empty())
+    return;
+
+  std::lock_guard guard(shutdown_lock_);
+  if (shutdown_called_) {
+    FX_LOGS(INFO) << "Not registering device path for " << MountPointPath(point)
+                  << " after shutdown";
+    return;
+  }
+
+  zx::status root_or = GetRoot(point);
+  if (root_or.is_error()) {
+    FX_PLOGS(WARNING, root_or.status_value()) << "Failed to get root handle for mount point";
+    return;
+  }
+  if (auto result = fidl::WireCall(*root_or)->QueryFilesystem(); !result.ok()) {
+    FX_PLOGS(WARNING, result.status()) << "QueryFilesystem call failed (fidl error)";
+    return;
+  } else if (result->s != ZX_OK) {
+    FX_PLOGS(WARNING, result->s) << "QueryFilesystem call failed";
+    return;
+  } else {
+    std::lock_guard guard(device_paths_lock_);
+    if (!device_paths_.try_emplace(result->info->fs_id, device_path).second) {
+      FX_LOGS(WARNING) << "Device path entry for fs id " << result->info->fs_id
+                       << " already exists; not inserting " << device_path;
+    }
+  }
 }
 
 std::optional<fidl::ServerEnd<fuchsia_io::Directory>> FsManager::TakePkgfsServerEnd() {
@@ -535,6 +541,19 @@ zx::status<std::string> FsManager::GetDevicePath(uint64_t fs_id) {
     return zx::error(ZX_ERR_NOT_FOUND);
   else
     return zx::ok(iter->second);
+}
+
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsManager::GetRoot(MountPoint point) {
+  auto node = mount_nodes_.find(point);
+  if (node == mount_nodes_.end()) {
+    if (point == MountPoint::kData) {
+      // The data mount has been mounted via a component in which case we can get to the service
+      // root through our local namespace.
+      return service::Connect<fuchsia_io::Directory>("/data_root");
+    }
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+  return fs_management::FsRootHandle(node->second.export_root.borrow());
 }
 
 }  // namespace fshost

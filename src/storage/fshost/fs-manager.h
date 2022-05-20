@@ -60,13 +60,13 @@ class FsManager {
     fidl::ServerEnd<fuchsia_io::Directory> server_end;
   };
   // Takes the server end of the specified mount point to send to a hosted filesystem. This channel
-  // pair will have been collecting queued requests since fshost was started. If applicable, it
-  // asynchronously registers a device path for the mount point, based on the fs_id it gets from
-  // QueryFilesystem once the filesystem starts serving.
+  // pair will have been collecting queued requests since fshost was started.
   //
   // This can only be called once per mount point, any calls beyond that will return std::nullopt.
-  std::optional<MountPointEndpoints> TakeMountPointServerEnd(MountPoint point,
-                                                             std::string_view device_path);
+  std::optional<MountPointEndpoints> TakeMountPointServerEnd(MountPoint point);
+
+  // Registers the device path for the given mount point.
+  void RegisterDevicePath(MountPoint point, std::string_view device_path);
 
   // Takes the server end reserved for pkgfs. This channel pair will have been collecting queued
   // requests since fshost was started.
@@ -128,6 +128,9 @@ class FsManager {
   zx_status_t DetachMount(std::string_view name);
 
   zx::status<std::string> GetDevicePath(uint64_t fs_id);
+
+  // Returns the filesystem root for the given mount point.
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetRoot(MountPoint point);
 
  private:
   class MountedFilesystem {
