@@ -23,6 +23,7 @@ func TestParseNetworkConformanceCaseEnd(t *testing.T) {
 		ExpectedOutcome: "Success",
 		ActualOutcome:   "!FAILED!",
 		DurationMillis:  1234,
+		LogFile:         "/path/to/log/file.txt",
 	}
 	bytes, err := json.Marshal(wantCaseEnd)
 	if err != nil {

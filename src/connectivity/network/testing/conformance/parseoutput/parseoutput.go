@@ -49,6 +49,7 @@ type CaseEnd struct {
 	ExpectedOutcome string         `json:"expected_outcome"`
 	ActualOutcome   string         `json:"actual_outcome"`
 	DurationMillis  int64          `json:"duration_millis"`
+	LogFile         string         `json:"log_file,omitempty"`
 }
 
 // Given a line from test output, if that line represents the end of a

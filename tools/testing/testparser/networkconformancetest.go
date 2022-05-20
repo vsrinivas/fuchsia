@@ -6,6 +6,7 @@ package testparser
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/parseoutput"
@@ -50,6 +51,12 @@ func parseNetworkConformanceTest(lines [][]byte) []runtests.TestCaseResult {
 			),
 			Duration: time.Millisecond * time.Duration(parsedCaseEnd.DurationMillis),
 			Format:   parseoutput.NetworkConformanceFormatName,
+		}
+
+		if parsedCaseEnd.LogFile != "" {
+			dir, f := filepath.Split(parsedCaseEnd.LogFile)
+			result.OutputDir = dir
+			result.OutputFiles = []string{f}
 		}
 
 		if parsedCaseEnd.ActualOutcome == parsedCaseEnd.ExpectedOutcome {
