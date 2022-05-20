@@ -41,6 +41,7 @@ pub enum MlmeRequest {
     Associate(fidl_mlme::AssociateRequest),
     AssocResponse(fidl_mlme::AssociateResponse),
     Connect(fidl_mlme::ConnectRequest),
+    Reconnect(fidl_mlme::ReconnectRequest),
     Deauthenticate(fidl_mlme::DeauthenticateRequest),
     Eapol(fidl_mlme::EapolRequest),
     SetKeys(fidl_mlme::SetKeysRequest),

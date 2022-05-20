@@ -266,7 +266,19 @@ impl ClientMlme {
                 self.on_sme_get_minstrel_stats(responder, &req.peer_addr)
             }
             other_message => match &mut self.sta {
-                None => Err(Error::Status(format!("No client sta."), zx::Status::BAD_STATE)),
+                None => {
+                    if let MlmeMsg::ReconnectReq { req, .. } = other_message {
+                        self.ctx.device.mlme_control_handle().send_connect_conf(
+                            &mut fidl_mlme::ConnectConfirm {
+                                peer_sta_address: req.peer_sta_address,
+                                result_code: fidl_ieee80211::StatusCode::DeniedNoAssociationExists,
+                                association_id: 0,
+                                association_ies: vec![],
+                            },
+                        )?;
+                    }
+                    Err(Error::Status(format!("No client sta."), zx::Status::BAD_STATE))
+                }
                 Some(sta) => Ok(sta
                     .bind(
                         &mut self.ctx,
@@ -1062,8 +1074,19 @@ impl<'a> BoundClient<'a> {
 
     fn send_connect_conf_failure(&mut self, result_code: fidl_ieee80211::StatusCode) {
         self.sta.connect_timeout.take();
+        let bssid = self.sta.connect_req.selected_bss.bssid.0;
+        self.send_connect_conf_failure_with_bssid(bssid, result_code);
+    }
+
+    /// Send ConnectConf failure with BSSID specified.
+    /// The connect timeout is not cleared as this method may be called with a foreign BSSID.
+    fn send_connect_conf_failure_with_bssid(
+        &mut self,
+        bssid: [u8; 6],
+        result_code: fidl_ieee80211::StatusCode,
+    ) {
         let mut connect_conf = fidl_mlme::ConnectConfirm {
-            peer_sta_address: self.sta.connect_req.selected_bss.bssid.0,
+            peer_sta_address: bssid,
             result_code,
             association_id: 0,
             association_ies: vec![],
@@ -1455,6 +1478,7 @@ mod tests {
             let state =
                 States::from(wlan_statemachine::testing::new_state(Associated(Association {
                     aid: 42,
+                    assoc_resp_ies: vec![],
                     controlled_port_open: true,
                     ap_ht_op: None,
                     ap_vht_op: None,
@@ -3297,6 +3321,33 @@ mod tests {
             fidl_mlme::ConnectConfirm {
                 peer_sta_address: BSSID.0,
                 result_code: fidl_ieee80211::StatusCode::RejectedSequenceTimeout,
+                association_id: 0,
+                association_ies: vec![],
+            },
+        );
+    }
+
+    #[test]
+    fn mlme_reconnect_no_sta() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+        let (control_handle, _) = fake_control_handle(&exec);
+
+        let reconnect_req = fidl_mlme::ReconnectRequest { peer_sta_address: [1, 2, 3, 4, 5, 6] };
+        let result = me.handle_mlme_msg(fidl_mlme::MlmeRequest::ReconnectReq {
+            req: reconnect_req,
+            control_handle,
+        });
+        assert_variant!(result, Err(Error::Status(_, zx::Status::BAD_STATE)));
+
+        // Verify a connect confirm message was sent
+        let msg = m.fake_device.next_mlme_msg::<fidl_mlme::ConnectConfirm>().expect("expect msg");
+        assert_eq!(
+            msg,
+            fidl_mlme::ConnectConfirm {
+                peer_sta_address: [1, 2, 3, 4, 5, 6],
+                result_code: fidl_ieee80211::StatusCode::DeniedNoAssociationExists,
                 association_id: 0,
                 association_ies: vec![],
             },

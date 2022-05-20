@@ -134,6 +134,7 @@ fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl:
         MlmeRequest::Associate(mut req) => proxy.associate_req(&mut req),
         MlmeRequest::AssocResponse(mut resp) => proxy.associate_resp(&mut resp),
         MlmeRequest::Connect(mut req) => proxy.connect_req(&mut req),
+        MlmeRequest::Reconnect(mut req) => proxy.reconnect_req(&mut req),
         MlmeRequest::Deauthenticate(mut req) => proxy.deauthenticate_req(&mut req),
         MlmeRequest::Eapol(mut req) => proxy.eapol_req(&mut req),
         MlmeRequest::SetKeys(mut req) => proxy.set_keys_req(&mut req),

@@ -40,10 +40,10 @@ use {
     zerocopy::{AsBytes, ByteSlice},
 };
 
-/// Reassociation timeout in Beacon periods.
-/// If no association response was received from he BSS within this time window, an association is
+/// Reconnect timeout in Beacon periods.
+/// If no association response was received from the BSS within this time window, an association is
 /// considered to have failed.
-const REASSOC_TIMEOUT_BCN_PERIODS: u16 = 10;
+const RECONNECT_TIMEOUT_BCN_PERIODS: u16 = 10;
 
 /// Number of beacon intervals which beacon is not seen before we declare BSS as lost
 pub const DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT: u32 = 100;
@@ -219,12 +219,46 @@ impl Authenticating {
     }
 }
 
+#[derive(Debug)]
+pub struct Authenticated;
+
+impl Authenticated {
+    fn on_sme_reconnect(
+        &self,
+        sta: &mut BoundClient<'_>,
+        req: fidl_mlme::ReconnectRequest,
+    ) -> Result<EventId, ()> {
+        if req.peer_sta_address == sta.sta.connect_req.selected_bss.bssid.0 {
+            match sta.send_assoc_req_frame() {
+                Ok(()) => {
+                    // Setting timeout in term of beacon period allows us to adjust the realtime
+                    // timeout in hw-sim, where we set a longer duration in case of a slowbot.
+                    let duration = sta.sta.beacon_period() * RECONNECT_TIMEOUT_BCN_PERIODS;
+                    Ok(sta.ctx.timer.schedule_after(duration, TimedEvent::Reassociating))
+                }
+                Err(e) => {
+                    error!("Error sending association request frame: {}", e);
+                    sta.send_connect_conf_failure(fidl_ieee80211::StatusCode::RefusedTemporarily);
+                    Err(())
+                }
+            }
+        } else {
+            info!("received reconnect request for a different BSSID, ignoring");
+            sta.send_connect_conf_failure_with_bssid(
+                req.peer_sta_address,
+                fidl_ieee80211::StatusCode::NotInSameBss,
+            );
+            Err(())
+        }
+    }
+}
+
 /// Client has sent an association request frame to the AP.
 /// At this point, client is waiting for an association response frame from the AP.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Associating {
-    /// This field is only populated when MLME is reassociating after a disassociation.
-    reassoc_timeout: Option<EventId>,
+    /// This field is only populated when MLME is reconnecting after a disassociation.
+    reconnect_timeout: Option<EventId>,
 }
 
 impl Associating {
@@ -327,6 +361,7 @@ impl Associating {
 
         Ok(Association {
             aid: assoc_resp_hdr.aid,
+            assoc_resp_ies: elements.to_vec(),
             controlled_port_open,
             ap_ht_op,
             ap_vht_op,
@@ -449,6 +484,7 @@ pub struct StatusCheckTimeout {
 #[derive(Debug)]
 pub struct Association {
     pub aid: mac::Aid,
+    pub assoc_resp_ies: Vec<u8>,
 
     /// Represents an 802.1X controlled port.
     /// A closed controlled port only processes EAP frames while an open one processes any frames.
@@ -482,33 +518,11 @@ pub struct Associated(pub Association);
 impl Associated {
     /// Processes an inbound disassociation frame.
     /// This always results in an MLME-DISASSOCIATE.indication message to MLME's SME peer.
-    ///
-    /// Furthermore, MLME will automatically try to reassociate.
-    /// Return Ok(()) if association request was sent successfully.
-    /// Otherwise an Err(()) is returned and a CONNECT.confirm message to its SME peer.
-    /// TODO(fxbug.dev/96011): When there's reconnect API, wait for reconnect req to reassociate.
-    fn on_disassoc_frame(
-        &mut self,
-        sta: &mut BoundClient<'_>,
-        disassoc_hdr: &mac::DisassocHdr,
-    ) -> Result<EventId, ()> {
+    fn on_disassoc_frame(&mut self, sta: &mut BoundClient<'_>, disassoc_hdr: &mac::DisassocHdr) {
         self.pre_leaving_associated_state(sta);
         let reason_code = fidl_ieee80211::ReasonCode::from_primitive(disassoc_hdr.reason_code.0)
             .unwrap_or(fidl_ieee80211::ReasonCode::UnspecifiedReason);
         sta.send_disassoc_ind(reason_code, LocallyInitiated(false));
-        match sta.send_assoc_req_frame() {
-            Ok(()) => {
-                // Setting timeout in term of beacon period allows us to adjust the realtime
-                // timeout in hw-sim, where we set a longer duration in case of a slowbot.
-                let duration = sta.sta.beacon_period() * REASSOC_TIMEOUT_BCN_PERIODS;
-                Ok(sta.ctx.timer.schedule_after(duration, TimedEvent::Reassociating))
-            }
-            Err(e) => {
-                error!("Error sending association request frame: {}", e);
-                sta.send_connect_conf_failure(fidl_ieee80211::StatusCode::RefusedTemporarily);
-                Err(())
-            }
-        }
     }
 
     /// Sends an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
@@ -834,8 +848,11 @@ statemachine!(
     Associated => Joined,
 
     // Disassociation:
-    Associating => Joined,
-    Associated => Associating,
+    Associating => Authenticated, // Or failure to (re)associate
+    Associated => Authenticated,
+
+    // Reassociation:
+    Authenticated => Associating,
 );
 
 impl States {
@@ -991,7 +1008,7 @@ impl States {
                 // buggy Access Points.
                 mac::MgmtBody::Disassociation { disassoc_hdr, .. } => {
                     state.on_disassoc_frame(sta, &disassoc_hdr);
-                    state.transition_to(Joined).into()
+                    state.transition_to(Authenticated).into()
                 }
                 _ => state.into(),
             },
@@ -1008,12 +1025,8 @@ impl States {
                         state.transition_to(Joined).into()
                     }
                     mac::MgmtBody::Disassociation { disassoc_hdr, .. } => {
-                        match state.on_disassoc_frame(sta, &disassoc_hdr) {
-                            Ok(timeout) => state
-                                .transition_to(Associating { reassoc_timeout: Some(timeout) })
-                                .into(),
-                            Err(()) => state.transition_to(Joined).into(),
-                        }
+                        state.on_disassoc_frame(sta, &disassoc_hdr);
+                        state.transition_to(Authenticated).into()
                     }
                     mac::MgmtBody::Action { action_hdr, elements, .. } => match action_hdr.action {
                         mac::ActionCategory::BLOCK_ACK => {
@@ -1084,17 +1097,14 @@ impl States {
             }
             TimedEvent::Reassociating => match self {
                 States::Associating(mut state) => {
-                    if state.reassoc_timeout != Some(event_id) {
+                    if state.reconnect_timeout != Some(event_id) {
                         return state.into();
                     }
-                    state.reassoc_timeout.take();
+                    state.reconnect_timeout.take();
                     sta.send_connect_conf_failure(
                         fidl_ieee80211::StatusCode::RejectedSequenceTimeout,
                     );
-                    if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid().0) {
-                        error!("Connect Timeout: clear_connect_context failed: {}", e);
-                    }
-                    state.transition_to(Joined).into()
+                    state.transition_to(Authenticated).into()
                 }
                 _ => self,
             },
@@ -1124,6 +1134,13 @@ impl States {
                     state.on_sme_deauthenticate(sta);
                     state.into()
                 }
+                MlmeMsg::ReconnectReq { req, .. } => {
+                    sta.send_connect_conf_failure_with_bssid(
+                        req.peer_sta_address,
+                        fidl_ieee80211::StatusCode::DeniedNoAssociationExists,
+                    );
+                    state.into()
+                }
                 _ => state.into(),
             },
             States::Authenticating(mut state) => match msg {
@@ -1141,12 +1158,37 @@ impl States {
                     state.on_sme_deauthenticate(sta);
                     state.transition_to(Joined).into()
                 }
+                MlmeMsg::ReconnectReq { req, .. } => {
+                    sta.send_connect_conf_failure_with_bssid(
+                        req.peer_sta_address,
+                        fidl_ieee80211::StatusCode::DeniedNoAssociationExists,
+                    );
+                    state.into()
+                }
+                _ => state.into(),
+            },
+            States::Authenticated(state) => match msg {
+                MlmeMsg::ReconnectReq { req, .. } => match state.on_sme_reconnect(sta, req) {
+                    Ok(timeout) => {
+                        state.transition_to(Associating { reconnect_timeout: Some(timeout) }).into()
+                    }
+                    Err(()) => state.into(),
+                },
                 _ => state.into(),
             },
             States::Associating(mut state) => match msg {
                 MlmeMsg::DeauthenticateReq { .. } => {
                     state.on_sme_deauthenticate(sta);
                     state.transition_to(Joined).into()
+                }
+                MlmeMsg::ReconnectReq { req, .. } => {
+                    if req.peer_sta_address != sta.sta.connect_req.selected_bss.bssid.0 {
+                        sta.send_connect_conf_failure_with_bssid(
+                            req.peer_sta_address,
+                            fidl_ieee80211::StatusCode::NotInSameBss,
+                        );
+                    }
+                    state.into()
                 }
                 _ => state.into(),
             },
@@ -1167,6 +1209,17 @@ impl States {
                     state.on_sme_deauthenticate(sta, req);
                     state.transition_to(Joined).into()
                 }
+                MlmeMsg::ReconnectReq { req, .. } => {
+                    if req.peer_sta_address != sta.sta.connect_req.selected_bss.bssid.0 {
+                        sta.send_connect_conf_failure_with_bssid(
+                            req.peer_sta_address,
+                            fidl_ieee80211::StatusCode::NotInSameBss,
+                        );
+                    } else {
+                        sta.send_connect_conf_success(state.0.aid, &state.0.assoc_resp_ies[..]);
+                    }
+                    state.into()
+                }
                 _ => state.into(),
             },
         }
@@ -1176,7 +1229,7 @@ impl States {
     fn is_frame_class_permitted(&self, class: mac::FrameClass) -> bool {
         match self {
             States::Joined(_) | States::Authenticating(_) => class == mac::FrameClass::Class1,
-            States::Associating(_) => class <= mac::FrameClass::Class2,
+            States::Authenticated(_) | States::Associating(_) => class <= mac::FrameClass::Class2,
             States::Associated(_) => class <= mac::FrameClass::Class3,
         }
     }
@@ -1388,6 +1441,7 @@ mod tests {
         Association {
             controlled_port_open: false,
             aid: 0,
+            assoc_resp_ies: vec![],
             ap_ht_op: None,
             ap_vht_op: None,
             lost_bss_counter: LostBssCounter::start(
@@ -2166,6 +2220,38 @@ mod tests {
     }
 
     #[test]
+    fn state_transitions_joined_state_reconnect_denied() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut state = States::from(statemachine::testing::new_state(Joined));
+
+        // (sme->mlme) Send a reconnect request
+        let (control_handle, _) = fake_control_handle(&exec);
+        let reconnect_req = fidl_mlme::MlmeRequest::ReconnectReq {
+            req: fidl_mlme::ReconnectRequest { peer_sta_address: [1, 2, 3, 4, 5, 6] },
+            control_handle,
+        };
+        state = state.handle_mlme_msg(&mut sta, reconnect_req);
+
+        assert_variant!(state, States::Joined(_), "not in joined state");
+
+        // Verify MLME-CONNECT.confirm message was sent.
+        let msg = m.fake_device.next_mlme_msg::<fidl_mlme::ConnectConfirm>().expect("expect msg");
+        assert_eq!(
+            msg,
+            fidl_mlme::ConnectConfirm {
+                peer_sta_address: [1, 2, 3, 4, 5, 6],
+                result_code: fidl_ieee80211::StatusCode::DeniedNoAssociationExists,
+                association_id: 0,
+                association_ies: vec![],
+            }
+        );
+    }
+
+    #[test]
     fn state_transitions_authing_success() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
@@ -2307,6 +2393,39 @@ mod tests {
     }
 
     #[test]
+    fn state_transitions_authing_state_reconnect_denied() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut state =
+            States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
+
+        // (sme->mlme) Send a reconnect request
+        let (control_handle, _) = fake_control_handle(&exec);
+        let reconnect_req = fidl_mlme::MlmeRequest::ReconnectReq {
+            req: fidl_mlme::ReconnectRequest { peer_sta_address: [1, 2, 3, 4, 5, 6] },
+            control_handle,
+        };
+        state = state.handle_mlme_msg(&mut sta, reconnect_req);
+
+        assert_variant!(state, States::Authenticating(_), "not in authenticating state");
+
+        // Verify MLME-CONNECT.confirm message was sent.
+        let msg = m.fake_device.next_mlme_msg::<fidl_mlme::ConnectConfirm>().expect("expect msg");
+        assert_eq!(
+            msg,
+            fidl_mlme::ConnectConfirm {
+                peer_sta_address: [1, 2, 3, 4, 5, 6],
+                result_code: fidl_ieee80211::StatusCode::DeniedNoAssociationExists,
+                association_id: 0,
+                association_ies: vec![],
+            }
+        );
+    }
+
+    #[test]
     fn state_transitions_associng_success() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
@@ -2405,7 +2524,70 @@ mod tests {
     }
 
     #[test]
-    fn state_transitions_assoced_disassoc_reassoc_success() {
+    fn state_transitions_associng_reconnect_no_op() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx_with_bss();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut state = States::from(statemachine::testing::new_state(Associating::default()));
+
+        assert!(m.fake_device.bss_cfg.is_some());
+        // (sme->mlme) Send a reconnect request
+        let (control_handle, _) = fake_control_handle(&exec);
+        let reconnect_req = fidl_mlme::MlmeRequest::ReconnectReq {
+            req: fidl_mlme::ReconnectRequest { peer_sta_address: BSSID.0 },
+            control_handle,
+        };
+        state = state.handle_mlme_msg(&mut sta, reconnect_req);
+        assert_variant!(state, States::Associating(_), "not in associating state");
+        assert!(m.fake_device.bss_cfg.is_some());
+
+        // Verify no connect conf is sent
+        m.fake_device
+            .next_mlme_msg::<fidl_mlme::ConnectConfirm>()
+            .expect_err("unexpected Connect.confirm");
+    }
+
+    #[test]
+    fn state_transitions_associng_reconnect_denied() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx_with_bss();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut state = States::from(statemachine::testing::new_state(Associating::default()));
+
+        assert!(m.fake_device.bss_cfg.is_some());
+        // (sme->mlme) Send a reconnect request
+        let (control_handle, _) = fake_control_handle(&exec);
+        let sus_bssid = [b's', b'u', b's', b'r', b'e', b'q'];
+        let reconnect_req = fidl_mlme::MlmeRequest::ReconnectReq {
+            req: fidl_mlme::ReconnectRequest { peer_sta_address: sus_bssid },
+            control_handle,
+        };
+        state = state.handle_mlme_msg(&mut sta, reconnect_req);
+        assert_variant!(state, States::Associating(_), "not in associating state");
+        assert!(m.fake_device.bss_cfg.is_some());
+
+        // Verify a connect conf was sent
+        let connect_conf = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ConnectConfirm>()
+            .expect("error reading Connect.confirm");
+        assert_eq!(
+            connect_conf,
+            fidl_mlme::ConnectConfirm {
+                peer_sta_address: sus_bssid,
+                result_code: fidl_ieee80211::StatusCode::NotInSameBss,
+                association_id: 0,
+                association_ies: vec![],
+            }
+        );
+    }
+
+    #[test]
+    fn state_transitions_assoced_disassoc_connect_success() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
@@ -2429,7 +2611,7 @@ mod tests {
             4, 0, // Reason Code
         ];
         state = state.on_mac_frame(&mut sta, &disassoc[..], MockWlanRxInfo::default().into());
-        assert_variant!(state, States::Associating(_), "not in associating state");
+        assert_variant!(state, States::Authenticated(_), "not in auth'd state");
         assert!(m.fake_device.bss_cfg.is_some());
 
         // Verify a disassoc ind was sent
@@ -2445,6 +2627,15 @@ mod tests {
                 locally_initiated: false,
             }
         );
+
+        // (sme->mlme) Send a reconnect request
+        let (control_handle, _) = fake_control_handle(&exec);
+        let reconnect_req = fidl_mlme::MlmeRequest::ReconnectReq {
+            req: fidl_mlme::ReconnectRequest { peer_sta_address: BSSID.0 },
+            control_handle,
+        };
+        state = state.handle_mlme_msg(&mut sta, reconnect_req);
+        assert_variant!(state, States::Associating(_), "not in associating state");
 
         // Verify associate request frame was sent
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
@@ -2500,7 +2691,7 @@ mod tests {
     }
 
     #[test]
-    fn state_transitions_assoced_disassoc_reassoc_timeout() {
+    fn state_transitions_assoced_disassoc_reconnect_timeout() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
@@ -2524,7 +2715,7 @@ mod tests {
             4, 0, // Reason Code
         ];
         state = state.on_mac_frame(&mut sta, &disassoc[..], MockWlanRxInfo::default().into());
-        assert_variant!(state, States::Associating(_), "not in associating state");
+        assert_variant!(state, States::Authenticated(_), "not in auth'd state");
         assert!(m.fake_device.bss_cfg.is_some());
 
         // Verify a disassoc ind was sent
@@ -2533,16 +2724,25 @@ mod tests {
             .next_mlme_msg::<fidl_mlme::DisassociateIndication>()
             .expect("error reading Disassociate.ind");
 
+        // (sme->mlme) Send a reconnect request
+        let (control_handle, _) = fake_control_handle(&exec);
+        let reconnect_req = fidl_mlme::MlmeRequest::ReconnectReq {
+            req: fidl_mlme::ReconnectRequest { peer_sta_address: BSSID.0 },
+            control_handle,
+        };
+        state = state.handle_mlme_msg(&mut sta, reconnect_req);
+        assert_variant!(state, States::Associating(_), "not in associating state");
+
         // Verify an event was queued up in the timer.
         let (event, id) = assert_variant!(drain_timeouts(&mut m.time_stream).get(&TimedEventClass::Reassociating), Some(ids) => {
             assert_eq!(ids.len(), 1);
             ids[0].clone()
         });
 
-        // Notify reassociating timeout
+        // Notify reconnecting timeout
         let state = state.on_timed_event(&mut sta, event, id);
-        assert_variant!(state, States::Joined(_), "not in joined state");
-        assert!(m.fake_device.bss_cfg.is_none());
+        assert_variant!(state, States::Authenticated(_), "not in auth'd state");
+        assert!(m.fake_device.bss_cfg.is_some());
 
         // Verify a connect conf was sent
         let connect_conf = m
@@ -2558,6 +2758,105 @@ mod tests {
                 association_ies: vec![],
             }
         );
+    }
+
+    #[test]
+    fn state_transitions_assoced_disassoc_reconnect_denied() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx_with_bss();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut state =
+            States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
+
+        assert!(m.fake_device.bss_cfg.is_some());
+        // Disassociation: Associated > Associating
+        #[rustfmt::skip]
+        let disassoc = vec![
+            // Mgmt Header:
+            0b1010_00_00, 0b00000000, // Frame Control
+            0, 0, // Duration
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
+            3, 3, 3, 3, 3, 3, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0x10, 0, // Sequence Control
+            // Deauth Header:
+            4, 0, // Reason Code
+        ];
+        state = state.on_mac_frame(&mut sta, &disassoc[..], MockWlanRxInfo::default().into());
+        assert_variant!(state, States::Authenticated(_), "not in auth'd state");
+        assert!(m.fake_device.bss_cfg.is_some());
+
+        // Verify a disassoc ind was sent
+        let _disassoc_ind = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::DisassociateIndication>()
+            .expect("error reading Disassociate.ind");
+
+        // (sme->mlme) Send a reconnect request with a different BSSID
+        let (control_handle, _) = fake_control_handle(&exec);
+        let sus_bssid = [b's', b'u', b's', b'r', b'e', b'q'];
+        let reconnect_req = fidl_mlme::MlmeRequest::ReconnectReq {
+            req: fidl_mlme::ReconnectRequest { peer_sta_address: sus_bssid },
+            control_handle,
+        };
+        state = state.handle_mlme_msg(&mut sta, reconnect_req);
+        assert_variant!(state, States::Authenticated(_), "not in auth'd state");
+
+        // Verify a connect conf was sent
+        let connect_conf = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ConnectConfirm>()
+            .expect("error reading Connect.confirm");
+        assert_eq!(
+            connect_conf,
+            fidl_mlme::ConnectConfirm {
+                peer_sta_address: sus_bssid,
+                result_code: fidl_ieee80211::StatusCode::NotInSameBss,
+                association_id: 0,
+                association_ies: vec![],
+            }
+        );
+    }
+
+    #[test]
+    fn state_transitions_assoced_reconnect_no_op() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx_with_bss();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let association = Association {
+            aid: 42,
+            assoc_resp_ies: vec![
+                // Basic Rates
+                0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,
+            ],
+            ..empty_association(&mut sta)
+        };
+        let mut state = States::from(statemachine::testing::new_state(Associated(association)));
+
+        assert!(m.fake_device.bss_cfg.is_some());
+
+        // (sme->mlme) Send a reconnect request
+        let (control_handle, _) = fake_control_handle(&exec);
+        let reconnect_req = fidl_mlme::MlmeRequest::ReconnectReq {
+            req: fidl_mlme::ReconnectRequest { peer_sta_address: BSSID.0 },
+            control_handle,
+        };
+        state = state.handle_mlme_msg(&mut sta, reconnect_req);
+        assert_variant!(state, States::Associated(_), "not in associated state");
+        assert!(m.fake_device.bss_cfg.is_some());
+
+        // Verify a successful connect conf is sent
+        let connect_conf = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ConnectConfirm>()
+            .expect("error reading Connect.confirm");
+        assert_eq!(connect_conf.peer_sta_address, BSSID.0);
+        assert_eq!(connect_conf.result_code, fidl_ieee80211::StatusCode::Success);
+        assert_eq!(connect_conf.association_id, 42);
     }
 
     #[test]

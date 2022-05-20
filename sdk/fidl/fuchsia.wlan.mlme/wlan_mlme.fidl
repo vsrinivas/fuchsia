@@ -113,6 +113,10 @@ type ConnectConfirm = struct {
     association_ies vector<uint8>:MAX;
 };
 
+type ReconnectRequest = struct {
+    peer_sta_address ieee80211.MacAddr;
+};
+
 // MLME-JOIN.request (IEEE Std 802.11-2016, 6.3.4.2)
 
 type JoinRequest = struct {
@@ -568,6 +572,9 @@ protocol MLME {
     });
     -> ConnectConf(struct {
         resp ConnectConfirm;
+    });
+    ReconnectReq(struct {
+        req ReconnectRequest;
     });
     JoinReq(struct {
         req JoinRequest;

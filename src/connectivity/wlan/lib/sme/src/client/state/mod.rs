@@ -588,9 +588,13 @@ impl Associated {
         };
         // For SoftMAC, don't send associate request because MLME will automatically reassociate.
         // TODO(fxbug.dev/96011): This will be the case until we define and implement Reconnect API.
-        if let fidl_common::MacImplementationType::Fullmac =
+        if let fidl_common::MacImplementationType::Softmac =
             context.mac_sublayer_support.device.mac_implementation_type
         {
+            let req = fidl_mlme::ReconnectRequest { peer_sta_address: cmd.bss.bssid.0 };
+            context.mlme_sink.send(MlmeRequest::Reconnect(req));
+        } else {
+            // TODO(fxbug.dev/96011): FullMAC is not migrated yet and still sends AssociateRequest to reassociate.
             send_mlme_assoc_req(cmd.bss.bssid.clone(), &self.protection_ie, &context.mlme_sink);
         }
         Associating { cfg: self.cfg, cmd, protection_ie: self.protection_ie }
@@ -1615,6 +1619,55 @@ mod tests {
     }
 
     #[test]
+    fn disconnect_reported_on_disassoc_ind_then_reconnect_successfully() {
+        let mut h = TestHelper::new();
+        // TODO(fxbug.dev/96668) - Once FullMAC is transitioned to using Connect API, setting this
+        //                         flag will no longer be necessary.
+        h.context.mac_sublayer_support.device.mac_implementation_type =
+            fidl_common::MacImplementationType::Softmac;
+        let (cmd, mut connect_txn_stream) = connect_command_one();
+        let bss = cmd.bss.clone();
+        let state = link_up_state(cmd);
+
+        let deauth_ind = MlmeEvent::DisassociateInd {
+            ind: fidl_mlme::DisassociateIndication {
+                peer_sta_address: [0, 0, 0, 0, 0, 0],
+                reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
+                locally_initiated: true,
+            },
+        };
+
+        let state = state.on_mlme_event(deauth_ind, &mut h.context);
+        let info = assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
+        );
+        assert!(info.is_sme_reconnecting);
+        assert_eq!(
+            info.disconnect_source,
+            fidl_sme::DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DisassociateIndication,
+                reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
+            })
+        );
+
+        // Check that reconnect is attempted
+        assert_variant!(h.mlme_stream.try_next(), Ok(Some(MlmeRequest::Reconnect(req))) => {
+            assert_eq!(req.peer_sta_address, bss.bssid.0);
+        });
+
+        // (mlme->sme) Send a ConnectConf
+        let connect_conf = create_connect_conf(bss.bssid, fidl_ieee80211::StatusCode::Success);
+        let _state = state.on_mlme_event(connect_conf, &mut h.context);
+
+        // User should be notified that we are reconnected
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect })) => {
+            assert_eq!(result, ConnectResult::Success);
+            assert!(is_reconnect);
+        });
+    }
+
+    #[test]
     fn associate_happy_path_unprotected() {
         let mut h = TestHelper::new();
 
@@ -2508,7 +2561,7 @@ mod tests {
     }
 
     #[test]
-    fn disconnect_reported_on_disassoc_ind_then_reconnect_successfully() {
+    fn disconnect_reported_on_disassoc_ind_then_reconnect_successfully_legacy_code_path() {
         let mut h = TestHelper::new();
         let (cmd, mut connect_txn_stream) = connect_command_one();
         let bss = cmd.bss.clone();

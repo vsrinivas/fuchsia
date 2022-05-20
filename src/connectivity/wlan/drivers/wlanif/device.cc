@@ -341,6 +341,11 @@ void Device::ConnectReq(wlan_mlme::ConnectRequest req) {
   lerror("ConnectConf is not implemented\n");
 }
 
+void Device::ReconnectReq(wlan_mlme::ReconnectRequest req) {
+  // TODO(fxbug.dev/96011) - implement this
+  lerror("ReconnectReq is not implemented\n");
+}
+
 void Device::JoinReq(wlan_mlme::JoinRequest req) {
   eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
 

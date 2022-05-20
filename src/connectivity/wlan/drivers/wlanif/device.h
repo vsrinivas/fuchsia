@@ -59,6 +59,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   // MLME implementation (::fuchsia::wlan::mlme -> wlan_fullmac_impl)
   void StartScan(::fuchsia::wlan::mlme::ScanRequest req) override;
   void ConnectReq(::fuchsia::wlan::mlme::ConnectRequest req) override;
+  void ReconnectReq(::fuchsia::wlan::mlme::ReconnectRequest req) override;
   void JoinReq(::fuchsia::wlan::mlme::JoinRequest req) override;
   void AuthenticateReq(::fuchsia::wlan::mlme::AuthenticateRequest req) override;
   void AuthenticateResp(::fuchsia::wlan::mlme::AuthenticateResponse resp) override;
