@@ -426,28 +426,54 @@ zx::status<> CheckSuperblock(const Superblock& info, block_client::BlockDevice* 
 zx::status<> CheckSuperblock(const Superblock& info, uint32_t max_blocks) {
 #endif
   DumpInfo(info);
+
+  // We validate the checksum first, but still validate the version before aborting since the
+  // checksum was added in Minfs version 8/0 (maj/min).
+  bool bad_checksum;
+  {
+    Superblock chksum_info;
+    memcpy(&chksum_info, &info, sizeof(chksum_info));
+    chksum_info.checksum = 0;
+    uint32_t checksum =
+        crc32(0, reinterpret_cast<const uint8_t*>(&chksum_info), sizeof(chksum_info));
+    bad_checksum = (info.checksum != checksum);
+    if (bad_checksum) {
+      FX_LOGS(ERROR) << "bad checksum: " << info.checksum << ". Expected: " << checksum;
+    }
+  }
+
   if ((info.magic0 != kMinfsMagic0) || (info.magic1 != kMinfsMagic1)) {
     FX_LOGS(ERROR) << "bad magic: " << std::setfill('0') << std::setw(8) << info.magic0
                    << ". Minfs magic: " << std::setfill(' ') << std::setw(8) << kMinfsMagic0;
     return zx::error(ZX_ERR_WRONG_TYPE);
   }
+
   if (info.major_version != kMinfsCurrentMajorVersion) {
     FX_LOGS(ERROR) << "FS major version: " << std::setfill('0') << std::setw(8) << std::hex
                    << info.major_version << ". Driver major version: " << std::setw(8)
                    << kMinfsCurrentMajorVersion;
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
+
+  if (bad_checksum) {
+    // Abort processing other fields if the checksum failed (we already logged an error above).
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+  }
+
   if ((info.block_size != kMinfsBlockSize) || (info.inode_size != kMinfsInodeSize)) {
     FX_LOGS(ERROR) << "bsz/isz " << info.block_size << "/" << info.inode_size << " unsupported";
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
 
-  Superblock chksum_info;
-  memcpy(&chksum_info, &info, sizeof(chksum_info));
-  chksum_info.checksum = 0;
-  uint32_t checksum = crc32(0, reinterpret_cast<const uint8_t*>(&chksum_info), sizeof(chksum_info));
-  if (info.checksum != checksum) {
-    FX_LOGS(ERROR) << "bad checksum: " << info.checksum << ". Expected: " << checksum;
+  if (info.alloc_block_count > info.block_count) {
+    FX_LOGS(ERROR) << "Number of allocated blocks (" << info.alloc_block_count
+                   << ") exceeds total number of blocks (" << info.block_count << ")!";
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+  }
+
+  if (info.alloc_inode_count > info.inode_count) {
+    FX_LOGS(ERROR) << "Number of allocated inodes (" << info.alloc_inode_count
+                   << ") exceeds total number of inodes (" << info.inode_count << ")!";
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
 

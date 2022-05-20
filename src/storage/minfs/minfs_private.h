@@ -302,14 +302,19 @@ class Minfs :
   // functions is preferred.
   [[nodiscard]] zx::status<> ReadDat(blk_t bno, void* data);
 
-  // Adds |dirty_bytes| number of bytes to metrics. Also marks whether those
-  // bytes needs allocation or not.
-  zx::status<> AddDirtyBytes(uint64_t dirty_bytes, bool allocated) __TA_EXCLUDES(hash_lock_);
+  // Adds |dirty_bytes| number of bytes to metrics.
+  void AddDirtyBytes(uint64_t dirty_bytes);
 
   // Subtracts |dirty_bytes| number of bytes to from dirty bytes metrics.
-  void SubtractDirtyBytes(uint64_t dirty_bytes, bool allocated) __TA_EXCLUDES(hash_lock_);
+  void SubtractDirtyBytes(uint64_t dirty_bytes);
 
 #ifdef __Fuchsia__
+
+  // Return true if the all outstanding block reservations are backed by persistent storage
+  // (i.e. the volume has already been extended to cover all reservations).
+  // Requires a Transaction to ensure the transaction lock is held.
+  [[nodiscard]] bool AllReservationsBacked(const Transaction&) const;
+
   // Acquire a copy of the collected metrics.
   [[nodiscard]] zx_status_t GetMetrics(fuchsia_minfs::wire::Metrics* out) const {
     metrics_.CopyToFidl(out);

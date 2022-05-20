@@ -91,38 +91,16 @@ zx::status<> Minfs::ContinueTransaction(size_t reserve_blocks,
   return zx::ok();
 }
 
-zx::status<> Minfs::AddDirtyBytes(uint64_t dirty_bytes, bool allocated) {
-  if (!allocated) {
-    fbl::AutoLock lock(&hash_lock_);
-    // We need to allocate the block. Make sure that we have
-    // enough space.
-    uint32_t blocks_needed = static_cast<uint32_t>(BlocksReserved());
-    uint32_t local_blocks_available = Info().block_count - Info().alloc_block_count;
-    if (blocks_needed > local_blocks_available) {
-      uint64_t free_fvm_bytes = 0;
-      // Calculate how much free space the volume can be extended by if it's backed by the FVM.
-      if (Info().flags & kMinfsFlagFVM) {
-        zx::status<fs_inspect::VolumeData::SizeInfo> size_info =
-            fs_inspect::VolumeData::GetSizeInfoFromDevice(*bc_->device());
-        if (size_info.is_ok()) {
-          free_fvm_bytes = size_info->available_space_bytes;
-        } else {
-          FX_LOGS(WARNING) << "Unable to determine FVM free space: " << size_info.status_string();
-        }
-      }
-      uint64_t blocks_available = local_blocks_available + (free_fvm_bytes / Info().BlockSize());
-      if (blocks_needed > blocks_available) {
-        FX_LOGS_FIRST_N(WARNING, 10) << "Minfs::AddDirtyBytes can't find any free blocks.";
-        return zx::error(ZX_ERR_NO_SPACE);
-      }
-    }
-  }
-  metrics_.dirty_bytes += dirty_bytes;
-
-  return zx::ok();
+bool Minfs::AllReservationsBacked(const Transaction&) const {
+  // Fsck should ensure we reformat the device should this assertion fire.
+  ZX_ASSERT(Info().block_count >= Info().alloc_block_count);
+  uint32_t blocks_available = Info().block_count - Info().alloc_block_count;
+  return BlocksReserved() <= blocks_available;
 }
 
-void Minfs::SubtractDirtyBytes(uint64_t dirty_bytes, bool allocated) {
+void Minfs::AddDirtyBytes(uint64_t dirty_bytes) { metrics_.dirty_bytes += dirty_bytes; }
+
+void Minfs::SubtractDirtyBytes(uint64_t dirty_bytes) {
   ZX_ASSERT(dirty_bytes <= metrics_.dirty_bytes.load());
   metrics_.dirty_bytes -= dirty_bytes;
 }

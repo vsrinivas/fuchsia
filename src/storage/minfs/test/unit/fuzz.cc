@@ -63,6 +63,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         }
         ZX_ASSERT(fs.Info().alloc_block_count == 2);
         ZX_ASSERT(fs.Info().alloc_inode_count == 2);
+        fs.FsckAtEndOfTransaction();  // Asserts on Fsck failure.
         return 0;
       }
       case Operation::kCreate: {
