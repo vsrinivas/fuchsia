@@ -105,12 +105,13 @@ type Disk struct {
 
 // Instance is a live emulator instance.
 type Instance struct {
-	cmd      *exec.Cmd
-	piped    *exec.Cmd
-	stdin    *bufio.Writer
-	stdout   *bufio.Reader
-	stderr   *bufio.Reader
-	emulator Emulator
+	cmd            *exec.Cmd
+	piped          *exec.Cmd
+	stdin          *bufio.Writer
+	stdout         *bufio.Reader
+	stderr         *bufio.Reader
+	emulator       Emulator
+	logDestination io.Writer
 }
 
 // DistributionParams is passed to UnpackFrom().
@@ -342,8 +343,9 @@ func (d *Distribution) create(
 	fmt.Printf("Running %s %s\n", args[0], args[1:])
 
 	i := &Instance{
-		cmd:      makeCmd(args),
-		emulator: d.Emulator,
+		cmd:            makeCmd(args),
+		emulator:       d.Emulator,
+		logDestination: os.Stdout,
 	}
 	// QEMU looks in the cwd for some specially named files, in particular
 	// multiboot.bin, so avoid picking those up accidentally. See
@@ -674,7 +676,7 @@ func (i *Instance) Wait() (*os.ProcessState, error) {
 			case <-stop:
 				return
 			default:
-				fmt.Println(scanner.Text())
+				fmt.Fprintln(i.logDestination, scanner.Text())
 			}
 		}
 		if err := scanner.Err(); err != nil {
@@ -851,4 +853,8 @@ func (i *Instance) CaptureLinesContaining(msg string, stop string) ([]string, er
 			return res, nil
 		}
 	}
+}
+
+func (i *Instance) SetLogDestination(dest io.Writer) {
+	i.logDestination = dest
 }

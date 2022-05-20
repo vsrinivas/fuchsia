@@ -6,7 +6,9 @@ package emulator
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -48,5 +50,32 @@ func TestCheckForLogMessage(t *testing.T) {
 	i = Instance{stdout: fakeReader}
 	if err := i.WaitForLogMessages([]string{logLines[4], logLines[2]}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSetLogDestination(t *testing.T) {
+	testStr := `line 1
+line 2
+line 3
+`
+	// Creating a no-op exec.Cmd so that i.Wait() can wait for it to complete
+	cmd := exec.Command("true")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	i := Instance{
+		stdout: bufio.NewReader(strings.NewReader(testStr)),
+		cmd:    cmd,
+	}
+
+	var buf bytes.Buffer
+	i.SetLogDestination(&buf)
+
+	if _, err := i.Wait(); err != nil {
+		t.Fatal(err)
+	}
+	if buf.String() != testStr {
+		t.Fatalf("got buf.String() = %q, wanted %q", buf.String(), testStr)
 	}
 }
