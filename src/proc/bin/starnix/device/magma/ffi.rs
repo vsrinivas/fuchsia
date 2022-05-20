@@ -102,6 +102,17 @@ pub fn device_import(
     Ok(client_channel)
 }
 
+/// Releases a magma device.
+///
+/// # Parameters
+///  - `control`: The control message that contains the device to release.
+///
+/// SAFETY: Makes an FFI call to populate the fields of `response`. The FFI function is expected to
+/// handle an invalid device id.
+pub fn device_release(control: virtio_magma_device_release_ctrl_t) {
+    unsafe { magma_device_release(control.device) };
+}
+
 /// `WireDescriptor` matches the struct used by libmagma_linux to encode some fields of the magma
 /// command descriptor.
 #[repr(C)]
