@@ -999,6 +999,7 @@ config("Wno-implicit-fallthrough") {
     "//zircon/third_party/uapp/dash",
     "//zircon/third_party/ulib/boringssl",
     "//zircon/third_party/ulib/lz4",
+    "//zircon/tools/lz4",
   ]
 }
 

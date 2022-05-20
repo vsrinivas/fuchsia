@@ -17,14 +17,10 @@ zx_host_tool("lz4") {
 
   deps = [ "//zircon/third_party/ulib/lz4" ]
 
-  # The zircon toolchains in the Fuchsia build add
-  # warn-implicit-fallthrough as a default config.
-  if (zircon_toolchain != false) {
-    configs -= [ "//build/config/zircon:warn-implicit-fallthrough" ]
-  }
-
   defines = [ "XXH_NAMESPACE=LZ4_" ]
   include_dirs = [ "$lz4_lib" ]
+
+  configs += [ "//build/config:Wno-implicit-fallthrough" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
