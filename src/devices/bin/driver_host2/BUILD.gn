@@ -24,7 +24,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
+    "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_cpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp",
     "//sdk/lib/driver2:llcpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",

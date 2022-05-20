@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.component.runner/cpp/wire.h>
 #include <fidl/fuchsia.component/cpp/wire.h>
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
-#include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.driver.host/cpp/wire.h>
 #include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/client.h>
@@ -40,10 +40,10 @@ std::optional<fuchsia_component_decl::wire::Offer> CreateCompositeDirOffer(
 class Node;
 
 class DriverComponent : public fidl::WireServer<fuchsia_component_runner::ComponentController>,
-                        public fidl::WireAsyncEventHandler<fuchsia_driver_framework::Driver>,
+                        public fidl::WireAsyncEventHandler<fuchsia_driver_host::Driver>,
                         public fbl::DoublyLinkedListable<std::unique_ptr<DriverComponent>> {
  public:
-  explicit DriverComponent(fidl::ClientEnd<fuchsia_driver_framework::Driver> driver,
+  explicit DriverComponent(fidl::ClientEnd<fuchsia_driver_host::Driver> driver,
                            async_dispatcher_t* dispatcher, std::string_view url);
   ~DriverComponent();
 
@@ -92,7 +92,7 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
   // and drop its end of the channel when it is finished.
   // When the other end of this channel is dropped, DriverComponent will
   // signal to ComponentFramework that the component has stopped.
-  fidl::WireSharedClient<fuchsia_driver_framework::Driver> driver_;
+  fidl::WireSharedClient<fuchsia_driver_host::Driver> driver_;
 
   // This represents the Driver Component within the Component Framework.
   // When this is closed with an epitath it signals to the Component Framework
@@ -105,18 +105,18 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
 
 class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<DriverHostComponent>> {
  public:
-  DriverHostComponent(fidl::ClientEnd<fuchsia_driver_framework::DriverHost> driver_host,
+  DriverHostComponent(fidl::ClientEnd<fuchsia_driver_host::DriverHost> driver_host,
                       async_dispatcher_t* dispatcher,
                       fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts);
 
-  zx::status<fidl::ClientEnd<fuchsia_driver_framework::Driver>> Start(
+  zx::status<fidl::ClientEnd<fuchsia_driver_host::Driver>> Start(
       fidl::ClientEnd<fuchsia_driver_framework::Node> client_end, const Node& node,
       fuchsia_component_runner::wire::ComponentStartInfo start_info);
 
   zx::status<uint64_t> GetProcessKoid();
 
  private:
-  fidl::WireSharedClient<fuchsia_driver_framework::DriverHost> driver_host_;
+  fidl::WireSharedClient<fuchsia_driver_host::DriverHost> driver_host_;
 };
 
 enum class Collection {

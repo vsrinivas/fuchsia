@@ -5,7 +5,7 @@
 #include "src/devices/bin/driver_manager/driver_runner.h"
 
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
-#include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.driver.host/cpp/wire.h>
 #include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <fidl/fuchsia.process/cpp/wire.h>
 #include <lib/async/cpp/task.h>
@@ -29,8 +29,8 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 
-namespace fdata = fuchsia_data;
 namespace fdf = fuchsia_driver_framework;
+namespace fdh = fuchsia_driver_host;
 namespace fdi = fuchsia_driver_index;
 namespace fio = fuchsia_io;
 namespace fprocess = fuchsia_process;
@@ -211,7 +211,7 @@ std::optional<fdecl::wire::Offer> CreateCompositeDirOffer(fidl::AnyArena& arena,
   return fdecl::wire::Offer::WithDirectory(arena, dir.Build());
 }
 
-DriverComponent::DriverComponent(fidl::ClientEnd<fdf::Driver> driver,
+DriverComponent::DriverComponent(fidl::ClientEnd<fdh::Driver> driver,
                                  async_dispatcher_t* dispatcher, std::string_view url)
     : driver_(std::move(driver), dispatcher, this), url_(url) {}
 
@@ -266,15 +266,15 @@ void DriverComponent::StopDriver() {
 }
 
 DriverHostComponent::DriverHostComponent(
-    fidl::ClientEnd<fdf::DriverHost> driver_host, async_dispatcher_t* dispatcher,
+    fidl::ClientEnd<fdh::DriverHost> driver_host, async_dispatcher_t* dispatcher,
     fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts)
     : driver_host_(std::move(driver_host), dispatcher,
                    fidl::ObserveTeardown([this, driver_hosts] { driver_hosts->erase(*this); })) {}
 
-zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
+zx::status<fidl::ClientEnd<fdh::Driver>> DriverHostComponent::Start(
     fidl::ClientEnd<fdf::Node> client_end, const Node& node,
     frunner::wire::ComponentStartInfo start_info) {
-  auto endpoints = fidl::CreateEndpoints<fdf::Driver>();
+  auto endpoints = fidl::CreateEndpoints<fdh::Driver>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
@@ -1132,10 +1132,10 @@ zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost()
     return create.take_error();
   }
 
-  auto client_end = service::ConnectAt<fdf::DriverHost>(endpoints->client);
+  auto client_end = service::ConnectAt<fdh::DriverHost>(endpoints->client);
   if (client_end.is_error()) {
     LOGF(ERROR, "Failed to connect to service '%s': %s",
-         fidl::DiscoverableProtocolName<fdf::DriverHost>, client_end.status_string());
+         fidl::DiscoverableProtocolName<fdh::DriverHost>, client_end.status_string());
     return client_end.take_error();
   }
 

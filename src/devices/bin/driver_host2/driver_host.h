@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST2_DRIVER_HOST_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST2_DRIVER_HOST_H_
 
-#include <fidl/fuchsia.driver.framework/cpp/fidl.h>
+#include <fidl/fuchsia.driver.host/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/driver2/record.h>
 #include <lib/fdf/cpp/dispatcher.h>
@@ -19,7 +19,7 @@
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
-class Driver : public fidl::Server<fuchsia_driver_framework::Driver>,
+class Driver : public fidl::Server<fuchsia_driver_host::Driver>,
                public fbl::RefCounted<Driver>,
                public fbl::DoublyLinkedListable<fbl::RefPtr<Driver>> {
  public:
@@ -29,7 +29,7 @@ class Driver : public fidl::Server<fuchsia_driver_framework::Driver>,
   ~Driver() override;
 
   const std::string& url() const { return url_; }
-  void set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver> binding);
+  void set_binding(fidl::ServerBindingRef<fuchsia_driver_host::Driver> binding);
 
   void Stop(StopRequest& request, StopCompleter::Sync& completer) override;
 
@@ -42,14 +42,14 @@ class Driver : public fidl::Server<fuchsia_driver_framework::Driver>,
   void* library_;
   const DriverRecordV1* record_;
   std::optional<void*> opaque_;
-  std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Driver>> binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_driver_host::Driver>> binding_;
 
   // The initial dispatcher passed to the driver.
   // This must be shutdown by before this driver object is destructed.
   fdf::Dispatcher initial_dispatcher_;
 };
 
-class DriverHost : public fidl::Server<fuchsia_driver_framework::DriverHost> {
+class DriverHost : public fidl::Server<fuchsia_driver_host::DriverHost> {
  public:
   // DriverHost does not take ownership of `loop`, and `loop` must outlive
   // DriverHost.
@@ -59,7 +59,7 @@ class DriverHost : public fidl::Server<fuchsia_driver_framework::DriverHost> {
   zx::status<> PublishDriverHost(component::OutgoingDirectory& outgoing_directory);
 
  private:
-  // fidl::Server<fuchsia_driver_framework::DriverHost>
+  // fidl::Server<fuchsia_driver_host::DriverHost>
   void Start(StartRequest& request, StartCompleter::Sync& completer) override;
 
   void GetProcessKoid(GetProcessKoidRequest& request,

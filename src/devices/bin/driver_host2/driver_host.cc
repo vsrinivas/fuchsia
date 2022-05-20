@@ -26,6 +26,7 @@ using namespace fuchsia_driver_framework;
 
 namespace fio = fuchsia_io;
 namespace frunner = fuchsia_component_runner;
+namespace fdh = fuchsia_driver_host;
 
 namespace {
 
@@ -98,7 +99,7 @@ Driver::~Driver() {
   dlclose(library_);
 }
 
-void Driver::set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver> binding) {
+void Driver::set_binding(fidl::ServerBindingRef<fdh::Driver> binding) {
   binding_.emplace(std::move(binding));
 }
 
@@ -161,13 +162,13 @@ fpromise::promise<inspect::Inspector> DriverHost::Inspect() {
 }
 
 zx::status<> DriverHost::PublishDriverHost(component::OutgoingDirectory& outgoing_directory) {
-  const auto service = [this](fidl::ServerEnd<fdf::DriverHost> request) {
+  const auto service = [this](fidl::ServerEnd<fdh::DriverHost> request) {
     fidl::BindServer(loop_.dispatcher(), std::move(request), this);
   };
-  auto status = outgoing_directory.AddProtocol<fdf::DriverHost>(std::move(service));
+  auto status = outgoing_directory.AddProtocol<fdh::DriverHost>(std::move(service));
   if (status.is_error()) {
     LOGF(ERROR, "Failed to add directory entry '%s': %s",
-         fidl::DiscoverableProtocolName<fdf::DriverHost>, status.status_string());
+         fidl::DiscoverableProtocolName<fdh::DriverHost>, status.status_string());
   }
 
   return status;
@@ -343,7 +344,7 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
       LOGF(INFO, "Started '%s'", driver->url().data());
 
       auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info,
-                                    fidl::ServerEnd<fuchsia_driver_framework::Driver> server) {
+                                    fidl::ServerEnd<fdh::Driver> server) {
         if (!info.is_user_initiated()) {
           LOGF(WARNING, "Unexpected stop of driver '%s': %s", driver->url().data(),
                info.FormatDescription().data());

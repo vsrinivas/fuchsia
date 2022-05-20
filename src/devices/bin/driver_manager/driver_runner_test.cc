@@ -6,7 +6,7 @@
 
 #include <fuchsia/component/cpp/fidl_test_base.h>
 #include <fuchsia/component/decl/cpp/fidl.h>
-#include <fuchsia/driver/framework/cpp/fidl_test_base.h>
+#include <fuchsia/driver/host/cpp/fidl_test_base.h>
 #include <fuchsia/io/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -23,6 +23,7 @@
 
 namespace fdata = fuchsia_data;
 namespace fdf = fuchsia::driver::framework;
+namespace fdh = fuchsia::driver::host;
 namespace fio = fuchsia::io;
 namespace fprocess = fuchsia_process;
 namespace frunner = fuchsia_component_runner;
@@ -133,7 +134,7 @@ class TestDirectory : public fio::testing::Directory_TestBase {
   OpenHandler open_handler_;
 };
 
-class TestDriver : public fdf::testing::Driver_TestBase {
+class TestDriver : public fdh::testing::Driver_TestBase {
  public:
   TestDriver(fdf::NodePtr node) : node_(std::move(node)) {}
 
@@ -158,15 +159,15 @@ class TestDriver : public fdf::testing::Driver_TestBase {
   }
 };
 
-class TestDriverHost : public fdf::testing::DriverHost_TestBase {
+class TestDriverHost : public fdh::testing::DriverHost_TestBase {
  public:
   using StartHandler = fit::function<void(fdf::DriverStartArgs start_args,
-                                          fidl::InterfaceRequest<fdf::Driver> driver)>;
+                                          fidl::InterfaceRequest<fdh::Driver> driver)>;
 
   void SetStartHandler(StartHandler start_handler) { start_handler_ = std::move(start_handler); }
 
  private:
-  void Start(fdf::DriverStartArgs start_args, fidl::InterfaceRequest<fdf::Driver> driver) override {
+  void Start(fdf::DriverStartArgs start_args, fidl::InterfaceRequest<fdh::Driver> driver) override {
     start_handler_(std::move(start_args), std::move(driver));
   }
 
@@ -270,7 +271,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
       driver_host_dir_.Bind(std::move(exposed_dir));
     });
     driver_host_dir_.SetOpenHandler([this](std::string path, auto object) {
-      EXPECT_EQ(fdf::DriverHost::Name_, path);
+      EXPECT_EQ(fdh::DriverHost::Name_, path);
       EXPECT_EQ(ZX_OK, driver_host_binding_.Bind(object.TakeChannel(), dispatcher()));
     });
   }
@@ -352,7 +353,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(RunLoopUntilIdle());
   }
 
-  TestDriver* BindDriver(fidl::InterfaceRequest<fdf::Driver> request, fdf::NodePtr node) {
+  TestDriver* BindDriver(fidl::InterfaceRequest<fdh::Driver> request, fdf::NodePtr node) {
     auto driver = std::make_unique<TestDriver>(std::move(node));
     auto driver_ptr = driver.get();
     driver_bindings_.AddBinding(driver_ptr, std::move(request), dispatcher(),
@@ -375,8 +376,8 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   TestDirectory driver_dir_{dispatcher()};
   TestDriverHost driver_host_;
   fidl::Binding<fcomponent::Realm> realm_binding_{&realm_};
-  fidl::Binding<fdf::DriverHost> driver_host_binding_{&driver_host_};
-  fidl::BindingSet<fdf::Driver> driver_bindings_;
+  fidl::Binding<fdh::DriverHost> driver_host_binding_{&driver_host_};
+  fidl::BindingSet<fdh::Driver> driver_bindings_;
 
   inspect::Inspector inspector_;
   sys::testing::ComponentContextProvider provider_{dispatcher()};
@@ -1210,7 +1211,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_CloseSecondDriver) {
   ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   fdf::NodePtr second_node;
-  fidl::InterfaceRequest<fdf::Driver> second_request;
+  fidl::InterfaceRequest<fdh::Driver> second_request;
   driver_host().SetStartHandler(
       [this, &second_node, &second_request](fdf::DriverStartArgs start_args, auto request) {
         second_request = std::move(request);

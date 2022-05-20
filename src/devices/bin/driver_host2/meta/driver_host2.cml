@@ -16,7 +16,7 @@
         lifecycle: { stop_event: "notify" },
     },
     capabilities: [
-        { protocol: "fuchsia.driver.framework.DriverHost" },
+        { protocol: "fuchsia.driver.host.DriverHost" },
     ],
     use: [
         {
@@ -25,7 +25,7 @@
     ],
     expose: [
         {
-            protocol: "fuchsia.driver.framework.DriverHost",
+            protocol: "fuchsia.driver.host.DriverHost",
             from: "self",
         },
     ],

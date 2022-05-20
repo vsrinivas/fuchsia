@@ -10,7 +10,6 @@ using fuchsia.url;
 using zx;
 
 const MAX_NAMESPACE_COUNT uint32 = fuchsia.component.runner.MAX_NAMESPACE_COUNT;
-const MAX_CAPABILITY_COUNT uint8 = 64;
 
 /// Arguments for starting a driver.
 type DriverStartArgs = resource table {
@@ -50,43 +49,4 @@ type DriverStartArgs = resource table {
     // TODO(https://fxbug.dev/94716) add link to reference for the contents
     /// Configuration passed to the driver.
     7: config zx.handle:VMO;
-};
-
-/// Protocol through which a driver's lifecycle can be managed.
-///
-/// The Driver Runner will call Stop() on this protocol to indicate that the
-/// Driver Host should stop the Driver. The Driver Host should close the
-/// server end of the channel with an epitath to signal that the driver has
-/// been stopped.
-///
-/// EPITAPH
-///
-/// This protocol sends a FIDL epitaph to indicate that the driver instance
-/// has been terminated correctly. The Driver Host must send an epitaph of
-/// ZX_OK in order to indicate the Driver was Stopped correctly.
-/// Not sending an epitaph, or sending an error, will cause Driver Runner
-/// to log an error.
-protocol Driver {
-
-    /// Request that the Driver is Stopped.
-    ///
-    /// After stopping the driver instance, the server should close this
-    /// connection with an epitath. This signals that the Driver has been
-    /// stopped.
-    Stop();
-};
-
-/// Protocol through which a driver host can be managed.
-@discoverable
-protocol DriverHost {
-    /// Start a driver within a driver host.
-    Start(resource struct {
-        start_args DriverStartArgs;
-        driver server_end:Driver;
-    });
-
-    /// Returns the process KOID of the driver host.
-    GetProcessKoid() -> (struct {
-        koid uint64;
-    }) error zx.status;
 };
