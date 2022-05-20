@@ -44,7 +44,7 @@ fuchsia_component("vkcontext_cmp") {
     "//src/lib/vulkan/validation_layers",
   ]
 
-  manifest = "meta/vkcontext.cmx"
+  manifest = "meta/vkcontext.cml"
 }
 
 fuchsia_test_package("vkcontext-pkg") {
