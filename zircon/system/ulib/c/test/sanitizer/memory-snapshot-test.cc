@@ -587,7 +587,7 @@ TEST_F(SuspendedThreadTest, MemorySnapshotStartArgOnSuspendedThread) {
   std::unique_ptr<int> transfer_ptr(new int(kTransferData));
   auto thread_entry = [](void* arg) -> int {
     std::unique_ptr<int> transfer_ptr(reinterpret_cast<int*>(arg));
-    assert(*transfer_ptr == kTransferData && "Failed to get the expected data");
+    ZX_ASSERT(*transfer_ptr == kTransferData && "Failed to get the expected data");
     return 0;
   };
   ASSERT_EQ(thrd_create(&thread_, thread_entry, transfer_ptr.get()), thrd_success);
@@ -651,9 +651,9 @@ void* __sanitizer_before_thread_create_hook(thrd_t thread, bool /*detached*/, co
   // Use a plain handle here rather than initializing a zx::task so we don't close the initialized
   // task on its destructor.
   zx_handle_t task = thrd_get_zx_handle(thread);
-  assert(zx_task_suspend_token(task, SuspendedThreadTest::gSuspendToken->reset_and_get_address()) ==
-             ZX_OK &&
-         "Failed to suspend new thread.");
+  zx_status_t status =
+      zx_task_suspend_token(task, SuspendedThreadTest::gSuspendToken->reset_and_get_address());
+  ZX_ASSERT(status == ZX_OK && "Failed to suspend new thread.");
   return SuspendedThreadTest::gSuspendToken;
 }
 
@@ -661,8 +661,8 @@ void __sanitizer_thread_create_hook(void* hook, thrd_t th, int error) {
   // Either `hook` and `gSuspendHook` are both nullptr because we are not running the
   // MemorySnapshotStartArgOnSuspendedThread test, or they are both the same non-zero value since we
   // are running the MemorySnapshotStartArgOnSuspendedThread test.
-  assert(hook == SuspendedThreadTest::gSuspendToken && "Thread was not suspended correctly");
-  assert(error == thrd_success && "Thread was not created correctly");
+  ZX_ASSERT(hook == SuspendedThreadTest::gSuspendToken && "Thread was not suspended correctly");
+  ZX_ASSERT(error == thrd_success && "Thread was not created correctly");
 }
 
 // Override this definition because the default one will check that `hook` is `null`, which it won't
