@@ -19,6 +19,8 @@
 #include <sys/ioctl.h>
 
 #include <algorithm>
+#include <optional>
+#include <type_traits>
 #include <vector>
 
 #include <netpacket/packet.h>
@@ -34,7 +36,7 @@ namespace fnet = fuchsia_net;
 
 namespace {
 
-// A helper structure to keep a socket address and the variants allocations in stack.
+// A helper structure to keep a socket address and the variants allocations on the stack.
 struct SocketAddress {
   zx_status_t LoadSockAddr(const struct sockaddr* addr, size_t addr_len) {
     // Address length larger than sockaddr_storage causes an error for API compatibility only.
@@ -47,12 +49,13 @@ struct SocketAddress {
           return ZX_ERR_INVALID_ARGS;
         }
         const auto& s = *reinterpret_cast<const struct sockaddr_in*>(addr);
-        address_ = fnet::wire::SocketAddress::WithIpv4(
-            fidl::ObjectView<fnet::wire::Ipv4SocketAddress>::FromExternal(&storage_.ipv4));
-        static_assert(sizeof(storage_.ipv4.address.addr) == sizeof(s.sin_addr.s_addr),
+        fnet::wire::Ipv4SocketAddress address = {
+            .port = ntohs(s.sin_port),
+        };
+        static_assert(sizeof(address.address.addr) == sizeof(s.sin_addr.s_addr),
                       "size of IPv4 addresses should be the same");
-        memcpy(storage_.ipv4.address.addr.data(), &s.sin_addr.s_addr, sizeof(s.sin_addr.s_addr));
-        storage_.ipv4.port = ntohs(s.sin_port);
+        memcpy(address.address.addr.data(), &s.sin_addr.s_addr, sizeof(s.sin_addr.s_addr));
+        storage_ = address;
         return ZX_OK;
       }
       case AF_INET6: {
@@ -60,15 +63,16 @@ struct SocketAddress {
           return ZX_ERR_INVALID_ARGS;
         }
         const auto& s = *reinterpret_cast<const struct sockaddr_in6*>(addr);
-        address_ = fnet::wire::SocketAddress::WithIpv6(
-            fidl::ObjectView<fnet::wire::Ipv6SocketAddress>::FromExternal(&storage_.ipv6));
-        static_assert(decltype(storage_.ipv6.address.addr)::size() ==
-                          std::size(decltype(s.sin6_addr.s6_addr){}),
-                      "size of IPv6 addresses should be the same");
+        fnet::wire::Ipv6SocketAddress address = {
+            .port = ntohs(s.sin6_port),
+            .zone_index = s.sin6_scope_id,
+        };
+        static_assert(
+            decltype(address.address.addr)::size() == std::size(decltype(s.sin6_addr.s6_addr){}),
+            "size of IPv6 addresses should be the same");
         std::copy(std::begin(s.sin6_addr.s6_addr), std::end(s.sin6_addr.s6_addr),
-                  storage_.ipv6.address.addr.begin());
-        storage_.ipv6.port = ntohs(s.sin6_port);
-        storage_.ipv6.zone_index = s.sin6_scope_id;
+                  address.address.addr.begin());
+        storage_ = address;
         return ZX_OK;
       }
       default:
@@ -76,20 +80,44 @@ struct SocketAddress {
     }
   }
 
-  fnet::wire::SocketAddress address() { return address_; }
+  // Helpers from the reference documentation for std::visit<>, to allow
+  // visit-by-overload of the std::variant<> below:
+  template <class... Ts>
+  struct overloaded : Ts... {
+    using Ts::operator()...;
+  };
+  // explicit deduction guide (not needed as of C++20)
+  template <class... Ts>
+  overloaded(Ts...) -> overloaded<Ts...>;
+
+  template <typename F>
+  std::invoke_result_t<F, fnet::wire::SocketAddress> WithFIDL(F fn) {
+    return fn([this]() -> fnet::wire::SocketAddress {
+      if (storage_.has_value()) {
+        return std::visit(
+            overloaded{
+                [](fnet::wire::Ipv4SocketAddress& ipv4) {
+                  return fnet::wire::SocketAddress::WithIpv4(
+                      fidl::ObjectView<fnet::wire::Ipv4SocketAddress>::FromExternal(&ipv4));
+                },
+                [](fnet::wire::Ipv6SocketAddress& ipv6) {
+                  return fnet::wire::SocketAddress::WithIpv6(
+                      fidl::ObjectView<fnet::wire::Ipv6SocketAddress>::FromExternal(&ipv6));
+                },
+            },
+            storage_.value());
+      }
+      return {};
+    }());
+  }
 
  private:
-  fnet::wire::SocketAddress address_;
-  union U {
-    fnet::wire::Ipv4SocketAddress ipv4;
-    fnet::wire::Ipv6SocketAddress ipv6;
-
-    U() { memset(this, 0x00, sizeof(U)); }
-  } storage_;
+  std::optional<std::variant<fnet::wire::Ipv4SocketAddress, fnet::wire::Ipv6SocketAddress>>
+      storage_;
 };
 
 // A helper structure to keep a packet info and any members' variants
-// allocations in stack.
+// allocations on the stack.
 struct PacketInfo {
   zx_status_t LoadSockAddr(const sockaddr* addr, size_t addr_len) {
     // Address length larger than sockaddr_storage causes an error for API compatibility only.
@@ -102,38 +130,54 @@ struct PacketInfo {
           return ZX_ERR_INVALID_ARGS;
         }
         const auto& s = *reinterpret_cast<const sockaddr_ll*>(addr);
-        packet_info_.protocol = ntohs(s.sll_protocol);
-        packet_info_.interface_id = s.sll_ifindex;
+        protocol_ = ntohs(s.sll_protocol);
+        interface_id_ = s.sll_ifindex;
         switch (s.sll_halen) {
           case 0:
-            packet_info_.addr =
-                fpacketsocket::wire::HardwareAddress::WithNone(fpacketsocket::wire::Empty());
-            break;
-          case ETH_ALEN:
-            packet_info_.addr = fpacketsocket::wire::HardwareAddress::WithEui48(
-                fidl::ObjectView<fnet::wire::MacAddress>::FromExternal(&eui48_storage_));
-            static_assert(decltype(eui48_storage_.octets)::size() == ETH_ALEN,
+            eui48_storage_.reset();
+            return ZX_OK;
+          case ETH_ALEN: {
+            fnet::wire::MacAddress address;
+            static_assert(decltype(address.octets)::size() == ETH_ALEN,
                           "eui48 address must have the same size as ETH_ALEN");
             static_assert(sizeof(s.sll_addr) == ETH_ALEN + 2);
-            std::copy_n(s.sll_addr, ETH_ALEN, eui48_storage_.octets.begin());
-            break;
+            memcpy(address.octets.data(), s.sll_addr, ETH_ALEN);
+            eui48_storage_ = address;
+            return ZX_OK;
+          }
           default:
             return ZX_ERR_NOT_SUPPORTED;
         }
-        return ZX_OK;
       }
       default:
         return ZX_ERR_INVALID_ARGS;
     }
   }
 
-  fidl::ObjectView<fpacketsocket::wire::PacketInfo> address() {
-    return fidl::ObjectView<fpacketsocket::wire::PacketInfo>::FromExternal(&packet_info_);
+  template <typename F>
+  std::invoke_result_t<F, fidl::ObjectView<fpacketsocket::wire::PacketInfo>> WithFIDL(F fn) {
+    auto packet_info = [this]() -> fpacketsocket::wire::PacketInfo {
+      return {
+          .protocol = protocol_,
+          .interface_id = interface_id_,
+          .addr =
+              [this]() {
+                if (eui48_storage_.has_value()) {
+                  return fpacketsocket::wire::HardwareAddress::WithEui48(
+                      fidl::ObjectView<fnet::wire::MacAddress>::FromExternal(
+                          &eui48_storage_.value()));
+                }
+                return fpacketsocket::wire::HardwareAddress::WithNone({});
+              }(),
+      };
+    }();
+    return fn(fidl::ObjectView<fpacketsocket::wire::PacketInfo>::FromExternal(&packet_info));
   }
 
  private:
-  fpacketsocket::wire::PacketInfo packet_info_;
-  fnet::wire::MacAddress eui48_storage_;
+  decltype(fpacketsocket::wire::PacketInfo::protocol) protocol_;
+  decltype(fpacketsocket::wire::PacketInfo::interface_id) interface_id_;
+  std::optional<fnet::wire::MacAddress> eui48_storage_;
 };
 
 int16_t ParseSocketLevelControlMessage(fsocket::wire::SocketSendControlData& fidl_socket, int type,
@@ -1208,7 +1252,8 @@ struct BaseNetworkSocket : public BaseSocket<T> {
       return status;
     }
 
-    auto response = client()->Bind(fidl_addr.address());
+    auto response = fidl_addr.WithFIDL(
+        [this](fnet::wire::SocketAddress address) { return client()->Bind(address); });
     status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -1245,7 +1290,8 @@ struct BaseNetworkSocket : public BaseSocket<T> {
       return status;
     }
 
-    auto response = client()->Connect(fidl_addr.address());
+    auto response = fidl_addr.WithFIDL(
+        [this](fnet::wire::SocketAddress address) { return client()->Connect(address); });
     status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -2146,8 +2192,9 @@ struct base_socket_with_event : public zxio {
 
     // TODO(https://fxbug.dev/58503): Use better representation of nullable union when
     // available. Currently just using a default-initialized union with an invalid tag.
-    auto response = zxio_socket_with_event().client->SendMsg(addr.address(), vec, cdata,
-                                                             to_sendmsg_flags(flags));
+    auto response = addr.WithFIDL([&](auto address) {
+      return zxio_socket_with_event().client->SendMsg(address, vec, cdata, to_sendmsg_flags(flags));
+    });
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
