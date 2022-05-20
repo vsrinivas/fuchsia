@@ -87,6 +87,10 @@ declare_args() {
   # Extra sdk() archive labels to be uploaded to the artifacts store. This is
   # an extension mechanism for SDK bits outside of the main repository.
   sdk_archive_labels = []
+
+  # This is a product build (vs. sdk).  If a product is set (fx set <product>.)
+  # this is true (should be set in bringup.gni)
+  product_build = false
 }
 
 if (host_os == "mac") {
@@ -1159,14 +1163,14 @@ group("default") {
     "//build/images:packages",
     "//build/input:build_only",
     "//build/zircon/zbi_tests",
-    "//sdk",
   ]
 
   # SDK-only builds must not attempt to build images.
-  if (bootfs_only || base_package_labels + cache_package_labels +
-                     universe_package_labels != []) {
+  if (product_build) {
     deps += [ "//build/images:default-images" ]
     deps += [ "//:drivers-check" ]
+  } else {
+    deps += [ "//sdk" ]
   }
 }
 
