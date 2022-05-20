@@ -16,11 +16,41 @@ use {
         ResetRequest, ResetRequestStream,
     },
     fidl_fuchsia_tpm_cr50::TryAuthResponse,
+    fuchsia_async::{self as fasync, DurationExt},
+    fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*},
-    log::error,
+    log::{error, info, warn},
     std::cell::{RefCell, RefMut},
+    std::collections::VecDeque,
     std::sync::Arc,
 };
+
+/// Retry threshold for fast retrys for failed |CommitOperation|.
+/// After this threshold is reached the retry timeout will be extended
+/// from |COMMIT_RETRY_MIN_DELAY_MS| to |COMMIT_RETRY_MAX_DELAY_MS|.
+/// Note the first retry is always tried instantly.
+const COMMIT_FAILURE_FAST_RETRY_THRESHOLD: u64 = 3;
+/// Minimum delay between retry attempts for |CommitOperation| after
+/// one instant retry.
+const COMMIT_RETRY_MIN_DELAY_MS: zx::Duration = zx::Duration::from_millis(1000);
+/// Maximum delay between retry attempts for |CommitOperation| after
+/// |COMMIT_FAILURE_FAST_RETRY_THRESHOLD| is reached. This means in the
+/// case of a persistent disk failure CredentialManager will retry the
+/// last |CommitOperation| once every 5 seconds.
+const COMMIT_RETRY_MAX_DELAY_MS: zx::Duration = zx::Duration::from_millis(5000);
+
+/// There are a small finite set of distinct disk write operations
+/// the CredentialManager can perform for any given PinWeaver operation.
+/// This defines all possible mutable operations that can be performed.
+#[derive(Debug)]
+enum CommitOperation {
+    /// Delete |cred_metadata| at a given |label|
+    DeleteMetadata { label: Label },
+    /// Write |cred_metadata| to disk with a given |label|
+    WriteMetadata { label: Label, cred_metadata: CredentialMetadata },
+    /// Sync the state of the |hash_tree| to disk.
+    WriteHashTree,
+}
 
 /// The |CredentialManager| is responsible for adding, removing and checking
 /// credentials. It communicates over the |PinWeaverProxy| to the `cr50_agent`
@@ -42,6 +72,7 @@ where
     lookup_table: RefCell<LT>,
     hash_tree_storage: HS,
     diagnostics: Arc<D>,
+    pending_commits: RefCell<VecDeque<CommitOperation>>,
 }
 
 impl<PW, LT, HS, D> CredentialManager<PW, LT, HS, D>
@@ -67,6 +98,7 @@ where
             lookup_table: RefCell::new(lookup_table),
             hash_tree_storage,
             diagnostics,
+            pending_commits: RefCell::new(VecDeque::new()),
         }
     }
 
@@ -122,6 +154,7 @@ where
                 );
             }
         }
+        self.drain_pending_commits().await;
         Ok(())
     }
 
@@ -135,6 +168,65 @@ where
                 self.diagnostics.incoming_reset_outcome(IncomingResetMethod::Reset, resp);
             }
         }
+        Ok(())
+    }
+
+    /// PinWeaver operations follow the following state mutating pattern:
+    /// 1. Disk state is read.
+    /// 2. Chip state is mutated.
+    /// 3. Disk state is mutated.
+    /// Chip state and disk state must remain consistent. If 2 completes
+    /// successfully but 3 fails, pinweaver includes a log replay mechanism
+    /// that allows the disk state to be resynchonized to the chip state,
+    /// but only for a single operation. To ensure state can be resynchronized
+    /// we must only allow a single operation that has been written to the chip
+    /// but not yet written to disk.
+    async fn drain_pending_commits(&self) -> () {
+        while let Some(next_commit) = self.pending_commits().pop_front() {
+            let mut retry_count: u64 = 0;
+            while let Err(err) = self.attempt_commit(&next_commit).await {
+                // Limit log spamming on retries.
+                if retry_count < COMMIT_FAILURE_FAST_RETRY_THRESHOLD {
+                    warn!(
+                        "Failed to commit disk operation: {:?} with error {:?} retry_count: {}",
+                        next_commit, err, retry_count
+                    );
+                }
+                if retry_count >= 1 {
+                    if retry_count < COMMIT_FAILURE_FAST_RETRY_THRESHOLD {
+                        fasync::Timer::new(COMMIT_RETRY_MIN_DELAY_MS.after_now()).await;
+                    } else {
+                        fasync::Timer::new(COMMIT_RETRY_MAX_DELAY_MS.after_now()).await;
+                    }
+                }
+                retry_count += 1;
+            }
+            if retry_count >= 1 {
+                info!(
+                    "Commit disk operation: {:?} eventually succeeded after: {} retries.",
+                    next_commit, retry_count
+                );
+            }
+        }
+    }
+
+    /// Attempts to execute a pending commit operation. On failure
+    /// returns an appropriate CredentialError.
+    async fn attempt_commit(
+        &self,
+        commit_operation: &CommitOperation,
+    ) -> Result<(), CredentialError> {
+        match commit_operation {
+            CommitOperation::DeleteMetadata { label } => {
+                self.lookup_table().delete(&label).await?;
+            }
+            CommitOperation::WriteMetadata { label, cred_metadata } => {
+                self.lookup_table().write(&label, cred_metadata.clone()).await?
+            }
+            CommitOperation::WriteHashTree => {
+                self.hash_tree_storage.store(&self.hash_tree.borrow())?;
+            }
+        };
         Ok(())
     }
 
@@ -201,20 +293,13 @@ where
         let h_aux = self.hash_tree().get_auxiliary_hashes_flattened(&label)?;
         let mac = self.hash_tree().get_leaf_hash(&label)?.clone();
         pinweaver.remove_leaf(&label, mac, h_aux).await?;
-        self.lookup_table().delete(&label).await?;
+        self.pending_commits().push_back(CommitOperation::DeleteMetadata { label: label.clone() });
         self.hash_tree().delete_leaf(&label)?;
-        // TODO(fxb/98758): If the storage write fails here the persistent state will be different
-        // to the in-memory state. We should report a clear error and probably retry the file
-        // system operation to work around a transient file system issue.
-        let store_result = self.hash_tree_storage.store(&self.hash_tree.borrow());
+        self.pending_commits().push_back(CommitOperation::WriteHashTree);
         // Note: For consistency with `add_credential` we record the new credential count after the
         // store event, and even if the store event failed
         self.diagnostics.credential_count(self.hash_tree().populated_size());
-        if let Err(err) = store_result {
-            Err(CredentialError::from(err))
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 
     /// Reset resets the state of the credential manager calling ResetTree and
@@ -265,8 +350,9 @@ where
         cred_metadata: CredentialMetadata,
     ) -> Result<(), CredentialError> {
         self.hash_tree().update_leaf_hash(&label, mac)?;
-        self.lookup_table().write(&label, cred_metadata).await?;
-        self.hash_tree_storage.store(&self.hash_tree.borrow())?;
+        self.pending_commits()
+            .push_back(CommitOperation::WriteMetadata { label: label.clone(), cred_metadata });
+        self.pending_commits().push_back(CommitOperation::WriteHashTree);
         Ok(())
     }
 
@@ -275,9 +361,14 @@ where
         self.hash_tree.borrow_mut()
     }
 
-    /// Convenience function that returns a Refmut to the |lookup_table|.
+    /// Convenience function that returns a RefMut to the |lookup_table|.
     fn lookup_table(&self) -> RefMut<'_, LT> {
         self.lookup_table.borrow_mut()
+    }
+
+    /// Convenience function that returns a RefMut to the |pending_commits|.
+    fn pending_commits(&self) -> RefMut<'_, VecDeque<CommitOperation>> {
+        self.pending_commits.borrow_mut()
     }
 }
 
@@ -295,7 +386,6 @@ mod test {
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_identity_credential::{CredentialError as CE, ManagerMarker},
         fidl_fuchsia_tpm_cr50::{TryAuthFailed, TryAuthRateLimited, TryAuthSuccess},
-        fuchsia_async as fasync,
         tempfile::TempDir,
     };
 
@@ -374,25 +464,30 @@ mod test {
             })
             .await
             .expect("added credential");
+        test.cm.drain_pending_commits().await;
         test.diag.assert_events(&[
-            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::CredentialCount(1),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
         ]);
     }
 
     #[fuchsia::test]
-    async fn test_add_credential_lookup_table_write_fail() {
+    async fn test_add_credential_lookup_table_write_fail_succeeds_on_retry() {
         let mut params = TestParams::default();
         params
             .pinweaver
             .expect_insert_leaf()
             .times(1)
             .returning(|_, _, _| Ok((Mac::default(), CredentialMetadata::default())));
-        params
-            .lookup_table
-            .expect_write()
-            .times(1)
-            .returning(|_, _| Err(LookupTableError::Unknown));
+        let mut call_count = 0;
+        params.lookup_table.expect_write().times(2).returning(move |_, _| {
+            if call_count == 0 {
+                call_count += 1;
+                Err(LookupTableError::Unknown)
+            } else {
+                Ok(())
+            }
+        });
         let test = TestHarness::create(params).await;
         let result = test
             .cm
@@ -407,8 +502,12 @@ mod test {
                 ..fcred::AddCredentialParams::EMPTY
             })
             .await;
-        assert_matches!(result, Err(CredentialError::InternalError));
-        test.diag.assert_events(&[]);
+        assert_matches!(result, Ok(_));
+        test.cm.drain_pending_commits().await;
+        test.diag.assert_events(&[
+            Event::CredentialCount(1),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+        ]);
     }
 
     #[fuchsia::test]
@@ -485,9 +584,10 @@ mod test {
             })
             .await
             .expect("check credential");
+        test.cm.drain_pending_commits().await;
         test.diag.assert_events(&[
-            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::CredentialCount(1),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
         ]);
     }
@@ -537,9 +637,10 @@ mod test {
             })
             .await;
         assert_matches!(result, Err(CredentialError::TooManyAttempts));
+        test.cm.drain_pending_commits().await;
         test.diag.assert_events(&[
-            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::CredentialCount(1),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
         ]);
     }
 
@@ -590,9 +691,10 @@ mod test {
             })
             .await;
         assert_matches!(result, Err(CredentialError::InvalidSecret));
+        test.cm.drain_pending_commits().await;
         test.diag.assert_events(&[
-            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::CredentialCount(1),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
         ]);
     }
@@ -625,11 +727,12 @@ mod test {
             .expect("added credential");
         let result = test.cm.remove_credential(label).await;
         assert_matches!(result, Ok(()));
+        test.cm.drain_pending_commits().await;
         test.diag.assert_events(&[
-            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::CredentialCount(1),
-            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::CredentialCount(0),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
         ]);
     }
 
@@ -663,11 +766,13 @@ mod test {
             })
             .await
             .expect("added credential");
+        test.cm.drain_pending_commits().await;
         let result = test.cm.remove_credential(label).await;
+        test.cm.drain_pending_commits().await;
         assert_matches!(result, Err(CredentialError::InternalError));
         test.diag.assert_events(&[
-            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::CredentialCount(1),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
         ]);
     }
 
@@ -718,9 +823,9 @@ mod test {
 
         test.cm.handle_requests_for_stream(request_stream).await;
         test.diag.assert_events(&[
-            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::CredentialCount(1),
             Event::IncomingManagerOutcome(IncomingManagerMethod::AddCredential, Ok(())),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
             Event::IncomingManagerOutcome(
                 IncomingManagerMethod::RemoveCredential,
                 Err(CE::InvalidLabel),
