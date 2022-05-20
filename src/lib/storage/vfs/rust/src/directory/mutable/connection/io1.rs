@@ -185,8 +185,33 @@ impl MutableConnection {
                 responder
                     .send(&mut self.base.directory.sync().await.map_err(zx::Status::into_raw))?;
             }
-            // TODO(https:/fxbug.dev/77623): which other io2 methods need to be implemented here?
-            _ => {
+            fio::DirectoryRequest::SetFlags { flags, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: flags={:?}", flags);
+            }
+            fio::DirectoryRequest::UpdateAttributes { attributes, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
+            }
+            request @ (fio::DirectoryRequest::AddInotifyFilter { .. }
+            | fio::DirectoryRequest::AdvisoryLock { .. }
+            | fio::DirectoryRequest::Clone { .. }
+            | fio::DirectoryRequest::Close { .. }
+            | fio::DirectoryRequest::CloseDeprecated { .. }
+            | fio::DirectoryRequest::Describe { .. }
+            | fio::DirectoryRequest::Describe2 { .. }
+            | fio::DirectoryRequest::Enumerate { .. }
+            | fio::DirectoryRequest::GetAttr { .. }
+            | fio::DirectoryRequest::GetAttributes { .. }
+            | fio::DirectoryRequest::GetFlags { .. }
+            | fio::DirectoryRequest::Link { .. }
+            | fio::DirectoryRequest::Open { .. }
+            | fio::DirectoryRequest::Open2 { .. }
+            | fio::DirectoryRequest::QueryFilesystem { .. }
+            | fio::DirectoryRequest::ReadDirents { .. }
+            | fio::DirectoryRequest::Reopen { .. }
+            | fio::DirectoryRequest::Rewind { .. }
+            | fio::DirectoryRequest::Watch { .. }) => {
                 // Since we haven't handled the request, we return the original request so that
                 // it can be consumed by the base handler instead.
                 return Ok(Right(request));
