@@ -46,6 +46,8 @@ rustc_library("input-synthesis") {
     "//third_party/rust_crates:test-case",
   ]
 
+  test_deps = [ "//third_party/rust_crates:pretty_assertions" ]
+
   sources = [
     "src/legacy_backend.rs",
     "src/lib.rs",

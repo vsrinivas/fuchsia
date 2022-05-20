@@ -384,6 +384,7 @@ mod tests {
     // However, we can (and do) validate derive_key_sequence().
 
     use super::{derive_key_sequence, KeyboardReport, Usages};
+    use pretty_assertions::assert_eq;
 
     macro_rules! reports {
         ( $( [ $( $usages:expr ),* ] ),* $( , )? ) => {
@@ -524,6 +525,26 @@ mod tests {
                 [Usages::HidUsageKeyLeftShift],
                 [Usages::HidUsageKeyL, Usages::HidUsageKeyLeftShift],
                 [Usages::HidUsageKey1, Usages::HidUsageKeyLeftShift],
+                [],
+            ]
+        );
+    }
+
+    #[test]
+    fn tab_and_newline() {
+        assert_eq!(
+            derive_key_sequence(&keymaps::US_QWERTY, "\tHello\n"),
+            reports![
+                [Usages::HidUsageKeyTab],
+                [Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyH, Usages::HidUsageKeyLeftShift],
+                [],
+                [Usages::HidUsageKeyE],
+                [Usages::HidUsageKeyL],
+                [],
+                [Usages::HidUsageKeyL],
+                [Usages::HidUsageKeyO],
+                [Usages::HidUsageKeyEnter],
                 [],
             ]
         );
