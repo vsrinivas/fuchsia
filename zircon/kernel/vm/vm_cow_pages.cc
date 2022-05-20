@@ -2105,22 +2105,17 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
   out->num_pages = 0;
 
   // Helper to find contiguous runs of pages in a page list and add them to the output pages.
-  auto collect_pages = [out, pf_flags](VmCowPages* cow, uint64_t offset, uint64_t max_len,
-                                       bool skip_loaned) {
+  auto collect_pages = [out, pf_flags](VmCowPages* cow, uint64_t offset, uint64_t max_len) {
     DEBUG_ASSERT(max_len > 0);
 
     AssertHeld(cow->lock_);
     cow->page_list_.ForEveryPageAndGapInRange(
-        [out, cow, pf_flags, skip_loaned](const VmPageOrMarker* page, uint64_t off) {
+        [out, cow, pf_flags](const VmPageOrMarker* page, uint64_t off) {
           if (page->IsMarker()) {
             // Never pre-map in zero pages.
             return ZX_ERR_STOP;
           }
           vm_page_t* p = page->Page();
-          if (skip_loaned && pmm_is_loaned(p)) {
-            // We were asked to skip loaned pages and we found a loaned page.
-            return ZX_ERR_STOP;
-          }
           AssertHeld(cow->lock_);
           cow->UpdateOnAccessLocked(p, pf_flags);
           out->add_page(p->paddr());
@@ -2171,11 +2166,6 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       // will allow extending the DIRTY request to also include other consecutive markers /
       // non-dirty pages in the entire lookup range. This is an optimization to reduce the number of
       // DIRTY page requests generated overall.
-      //
-      // Note that in the case where dirty transitions are not trapped and pages are directly marked
-      // dirty, this will not mark any extra pages dirty beyond out->num_pages, since we will stop
-      // at a marker or a gap or a loaned page, similar to how out->num_pages is updated by
-      // collect_pages below.
       zx_status_t status =
           PrepareForWriteLocked(page_request, offset, max_out_pages * PAGE_SIZE, &dirty_len);
       if (status != ZX_OK) {
@@ -2186,8 +2176,15 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
         return status;
       }
 
-      // PrepareForWriteLocked was successful, so we should have some dirty pages.
-      DEBUG_ASSERT(dirty_len > 0);
+      // PrepareForWriteLocked was successful, so we should have some dirty pages, and they should
+      // be within the requested range.
+      DEBUG_ASSERT(dirty_len >= PAGE_SIZE);
+      DEBUG_ASSERT(dirty_len <= max_out_pages * PAGE_SIZE);
+      // PrepareForWriteLocked returned successfully, so we know that pages in the range [offset,
+      // offset + dirty_len) have been dirtied. We need to clip the maximum range collect_pages
+      // iterates over below to dirty_len, so that only pages that have been prepared for the write
+      // (by marking dirty) are returned.
+      max_out_pages = dirty_len / PAGE_SIZE;
     }
 
     // This is writable if either of these conditions is true:
@@ -2201,11 +2198,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     UpdateOnAccessLocked(p, pf_flags);
     out->add_page(p->paddr());
     if (max_out_pages > 1) {
-      // skip_loaned is passed in as true if dirty_len is non-zero. dirty_len can only be non-zero
-      // if we called PrepareForWriteLocked above. PrepareForWriteLocked terminates if it encounters
-      // a loaned page, so collect_pages should not collect any loaned pages either.
-      collect_pages(this, offset + PAGE_SIZE, (max_out_pages - 1) * PAGE_SIZE,
-                    /*skip_loaned=*/dirty_len > 0);
+      collect_pages(this, offset + PAGE_SIZE, (max_out_pages - 1) * PAGE_SIZE);
     }
 
     // If dirtiness was applicable i.e. we reached here after calling PrepareForWriteLocked, we
@@ -2332,8 +2325,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // grabbing any additional pages if visible.
     out->add_page(p->paddr());
     if (visible_length > PAGE_SIZE) {
-      collect_pages(page_owner, owner_offset + PAGE_SIZE, visible_length - PAGE_SIZE,
-                    /*skip_loaned=*/false);
+      collect_pages(page_owner, owner_offset + PAGE_SIZE, visible_length - PAGE_SIZE);
     }
     LTRACEF("read only faulting in page %p, pa %#" PRIxPTR " from parent\n", p, p->paddr());
     return ZX_OK;

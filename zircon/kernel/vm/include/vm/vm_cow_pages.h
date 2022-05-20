@@ -829,18 +829,21 @@ class VmCowPages final
   void UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyState dirty_state,
                               bool is_pending_add = false) TA_REQ(lock_);
 
-  // Prepares the specified range for a write, forwarding a DIRTY page request to the page source if
-  // pages are clean and need to transition to dirty, in which case ZX_ERR_SHOULD_WAIT will be
-  // returned and the caller should wait on |page_request|. If no page requests need to be
-  // generated, i.e. the pages are already dirty, or if they do not require the dirty transition to
-  // be trapped, ZX_OK is returned.
+  // Tries to prepare the range [offset, offset + len) for writing by marking pages dirty or
+  // verifying that they are already dirty. It is possible for only some or none of the pages in the
+  // range to be dirtied at the end of this call. |dirty_len_out| will return the (page-aligned)
+  // length starting at |offset| that contains dirty pages, either already dirty before making the
+  // call or dirtied during the call. In other words, the range [offset, offset + dirty_len_out)
+  // will be dirty when this call returns, i.e. prepared for the write to proceed, where
+  // |dirty_len_out| <= |len|.
+  //
+  // This function will forward a DIRTY page request to the page source if pages are not already
+  // dirty and need to transition to dirty, in which case ZX_ERR_SHOULD_WAIT will be returned and
+  // the caller should wait on |page_request|. If no page requests need to be generated, i.e. the
+  // pages are already dirty, or if they do not require the dirty transition to be trapped, ZX_OK is
+  // returned.
   //
   // |offset| and |len| should be page-aligned.
-  //
-  // |dirty_len_out| will return the (page-aligned) length starting at |offset| that contains dirty
-  // pages, either already dirty before making the call or dirtied during the call. In other words,
-  // the range [offset, offset + dirty_len_out) will be dirty when this call returns, where
-  // |dirty_len_out| <= |len|.
   zx_status_t PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len,
                                     uint64_t* dirty_len_out) TA_REQ(lock_);
 
