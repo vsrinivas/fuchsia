@@ -82,9 +82,8 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   // each of those blocks.
   zx::status<> WalkFileBlocks(size_t offset, size_t length, WalkWriteBlockHandlerType& handler);
 
-  // Marks blocks of |length| starting at file |offset| as pending for a given |transaction|.
-  zx::status<> MarkRequiredBlocksPending(size_t offset, size_t length,
-                                         const Transaction& transaction);
+  // Marks blocks of |length| starting at file |offset| as pending.
+  zx::status<> MarkRequiredBlocksPending(size_t offset, size_t length);
 
   bool IsDirty() const final;
 
