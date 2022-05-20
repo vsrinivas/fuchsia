@@ -131,11 +131,17 @@ type TargetQuery = table {
     /// - Target IP (any that have been seen).
     /// - Serial number (partial matches okay).
     ///
-    /// IPv6 and IPv4 addresses are both acceptable queries. However, an IPv6
-    /// address should not contain square brackets, and if it is a link-local
-    /// address, it should not contain the interface name. For example, an address
-    /// like "fe80::f00d%qemu" isn't valid, but "fe80::f00d" is. Any IPv4
-    /// address is also a valid query.
+    /// IPv6 and IPv4 addresses are both acceptable queries. If the address being
+    /// queried is ipv6 and includes a port number, the address (and
+    /// scope id if present) must be enclosed in square brackets. Scope and port
+    /// number are both optional, but may be present.
+    ///
+    /// If a port number is specified, it will match only with targets with
+    /// that same port number (with no port set on the target being treated as
+    /// the default ssh port, 22).
+    ///
+    /// Specifying 0 for the port will match specifically with hosts with
+    /// no port specified.
     1: string_matcher string:255;
 };
 

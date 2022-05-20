@@ -308,7 +308,7 @@ impl TargetQuery {
             }
             Self::AddrPort((addr, port)) => {
                 let no_port_and_zero = *port == 0 && t.ssh_port.is_none();
-                let ports_equal = t.ssh_port == Some(*port);
+                let ports_equal = t.ssh_port.unwrap_or(22) == *port;
                 (no_port_and_zero || ports_equal) && Self::Addr(*addr).match_info(t)
             }
             Self::Addr(addr) => t.addresses.iter().any(|a| {
@@ -1067,7 +1067,7 @@ mod tests {
     }
 
     #[test]
-    fn test_target_query_from_socketaddr_zero_port() {
+    fn test_target_query_from_socketaddr_both_zero_port() {
         let tq = TargetQuery::from("127.0.0.1:0");
         let ti = TargetInfo {
             addresses: vec![("127.0.0.1".parse::<IpAddr>().unwrap(), 0).into()],
@@ -1078,6 +1078,76 @@ mod tests {
             matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && None == ti.ssh_port && port == 0)
         );
         assert!(tq.match_info(&ti));
+    }
+
+    #[test]
+    fn test_target_query_from_socketaddr_zero_port_to_standard_ssh_port_fails() {
+        let tq = TargetQuery::from("127.0.0.1:0");
+        let ti = TargetInfo {
+            addresses: vec![("127.0.0.1".parse::<IpAddr>().unwrap(), 0).into()],
+            ssh_port: Some(22),
+            ..Default::default()
+        };
+        assert!(
+            matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && Some(22) == ti.ssh_port && port == 0)
+        );
+        assert!(!tq.match_info(&ti));
+    }
+
+    #[test]
+    fn test_target_query_from_socketaddr_standard_port_to_no_port() {
+        let tq = TargetQuery::from("127.0.0.1:22");
+        let ti = TargetInfo {
+            addresses: vec![("127.0.0.1".parse::<IpAddr>().unwrap(), 0).into()],
+            ssh_port: None,
+            ..Default::default()
+        };
+        assert!(
+            matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && None == ti.ssh_port && port == 22)
+        );
+        assert!(tq.match_info(&ti));
+    }
+
+    #[test]
+    fn test_target_query_from_socketaddr_both_standard_port() {
+        let tq = TargetQuery::from("127.0.0.1:22");
+        let ti = TargetInfo {
+            addresses: vec![("127.0.0.1".parse::<IpAddr>().unwrap(), 0).into()],
+            ssh_port: Some(22),
+            ..Default::default()
+        };
+        assert!(
+            matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && Some(22) == ti.ssh_port && port == 22)
+        );
+        assert!(tq.match_info(&ti));
+    }
+
+    #[test]
+    fn test_target_query_from_socketaddr_random_port_no_target_port_fails() {
+        let tq = TargetQuery::from("127.0.0.1:2342");
+        let ti = TargetInfo {
+            addresses: vec![("127.0.0.1".parse::<IpAddr>().unwrap(), 0).into()],
+            ssh_port: None,
+            ..Default::default()
+        };
+        assert!(
+            matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && None == ti.ssh_port && port == 2342)
+        );
+        assert!(!tq.match_info(&ti));
+    }
+
+    #[test]
+    fn test_target_query_from_socketaddr_zero_port_to_random_target_port_fails() {
+        let tq = TargetQuery::from("127.0.0.1:0");
+        let ti = TargetInfo {
+            addresses: vec![("127.0.0.1".parse::<IpAddr>().unwrap(), 0).into()],
+            ssh_port: Some(2223),
+            ..Default::default()
+        };
+        assert!(
+            matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && Some(2223) == ti.ssh_port && port == 0)
+        );
+        assert!(!tq.match_info(&ti));
     }
 
     #[test]
