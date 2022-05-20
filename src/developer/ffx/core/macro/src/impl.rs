@@ -581,7 +581,7 @@ fn generate_proxy_from_selector(
                 }
             }?;
 
-            timeout::timeout(std::time::Duration::from_secs(10), __remote_factory.connect(#selector, #server_end.into_channel())
+            timeout::timeout(std::time::Duration::from_secs(15), __remote_factory.connect(#selector, #server_end.into_channel())
             .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
                 fidl_result
                 .map(|_| ())
