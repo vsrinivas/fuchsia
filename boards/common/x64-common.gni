@@ -66,7 +66,6 @@ board_package_labels += [
   "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen",
   "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan",
   "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config",
-  "//src/media/codec/codecs/vaapi:codec_runner_intel_gen_prebuilt",
 ]
 
 board_core_realm_shards += [ "//src/power/thermd:thermd-core-shard" ]
