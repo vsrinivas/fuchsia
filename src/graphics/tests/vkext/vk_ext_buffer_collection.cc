@@ -128,11 +128,11 @@ class VulkanExtensionTest : public testing::Test {
   fuchsia::sysmem::BufferCollectionInfo_2 AllocateSysmemCollection(
       std::optional<fuchsia::sysmem::BufferCollectionConstraints> constraints,
       fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
-  void InitializeDirectImage(vk::BufferCollectionFUCHSIA collection,
+  bool InitializeDirectImage(vk::BufferCollectionFUCHSIA collection,
                              vk::ImageCreateInfo image_create_info);
-  // Returns the memory type index.
-  uint32_t InitializeDirectImageMemory(vk::BufferCollectionFUCHSIA collection,
-                                       uint32_t expected_count = 1);
+  // Returns the memory type index if it succeeds; otherwise returns std::nullopt.
+  std::optional<uint32_t> InitializeDirectImageMemory(vk::BufferCollectionFUCHSIA collection,
+                                                      uint32_t expected_count = 1);
   void CheckLinearSubresourceLayout(VkFormat format, uint32_t width);
   void ValidateBufferProperties(const VkMemoryRequirements &requirements,
                                 const vk::BufferCollectionFUCHSIA collection,
@@ -293,7 +293,7 @@ void VulkanExtensionTest::CheckLinearSubresourceLayout(VkFormat format, uint32_t
       break;
 
     default:
-      EXPECT_TRUE(false);
+      ADD_FAILURE();
       break;
   }
 
@@ -374,7 +374,7 @@ fuchsia::sysmem::BufferCollectionInfo_2 VulkanExtensionTest::AllocateSysmemColle
   return buffer_collection_info;
 }
 
-void VulkanExtensionTest::InitializeDirectImage(vk::BufferCollectionFUCHSIA collection,
+bool VulkanExtensionTest::InitializeDirectImage(vk::BufferCollectionFUCHSIA collection,
                                                 vk::ImageCreateInfo image_create_info) {
   VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
       .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
@@ -391,12 +391,16 @@ void VulkanExtensionTest::InitializeDirectImage(vk::BufferCollectionFUCHSIA coll
   image_create_info.pNext = &image_format_fuchsia;
 
   auto [result, vk_image] = ctx_->device()->createImageUnique(image_create_info, nullptr);
-  EXPECT_EQ(result, vk::Result::eSuccess);
+  if (result != vk::Result::eSuccess) {
+    ADD_FAILURE() << "vkCreateImage() failed: " << vk::to_string(result);
+    return false;
+  }
   vk_image_ = std::move(vk_image);
+  return true;
 }
 
-uint32_t VulkanExtensionTest::InitializeDirectImageMemory(vk::BufferCollectionFUCHSIA collection,
-                                                          uint32_t expected_count) {
+std::optional<uint32_t> VulkanExtensionTest::InitializeDirectImageMemory(
+    vk::BufferCollectionFUCHSIA collection, uint32_t expected_count) {
   const vk::Device &device = *ctx_->device();
   VkMemoryRequirements requirements;
   vkGetImageMemoryRequirements(device, *vk_image_, &requirements);
@@ -413,11 +417,17 @@ uint32_t VulkanExtensionTest::InitializeDirectImageMemory(vk::BufferCollectionFU
 
   auto [result, vk_device_memory] =
       ctx_->device()->allocateMemoryUnique(alloc_info.get<vk::MemoryAllocateInfo>());
-  EXPECT_EQ(result, vk::Result::eSuccess);
+  if (result != vk::Result::eSuccess) {
+    ADD_FAILURE() << "allocateMemoryUnique() failed: " << vk::to_string(result);
+    return std::nullopt;
+  }
   vk_device_memory_ = std::move(vk_device_memory);
 
-  EXPECT_EQ(vk::Result::eSuccess,
-            ctx_->device()->bindImageMemory(*vk_image_, *vk_device_memory_, 0u));
+  auto bind_result = ctx_->device()->bindImageMemory(*vk_image_, *vk_device_memory_, 0u);
+  if (bind_result != vk::Result::eSuccess) {
+    ADD_FAILURE() << "vkBindImageMemory() failed: " << vk::to_string(bind_result);
+    return std::nullopt;
+  }
   return memory_type;
 }
 
@@ -496,13 +506,19 @@ bool VulkanExtensionTest::Exec(
 
   EXPECT_EQ(1u, buffer_collection_info.buffer_count);
 
-  InitializeDirectImage(*collection, image_create_info);
+  if (!InitializeDirectImage(*collection, image_create_info)) {
+    ADD_FAILURE() << "InitializeDirectImage() failed";
+    return false;
+  }
 
   if (linear) {
     CheckLinearSubresourceLayout(format, width);
   }
 
-  InitializeDirectImageMemory(*collection);
+  if (!InitializeDirectImageMemory(*collection)) {
+    ADD_FAILURE() << "InitializeDirectImageMemory() failed";
+    return false;
+  }
 
   return true;
 }
@@ -755,13 +771,13 @@ TEST_P(VulkanImageExtensionTest, MultiImageFormatEntrypoint) {
   UniqueBufferCollection collection =
       CreateVkBufferCollectionForImage(std::move(vulkan_token), constraints);
 
-  InitializeDirectImage(*collection, image_create_info);
+  ASSERT_TRUE(InitializeDirectImage(*collection, image_create_info));
 
   if (linear) {
     CheckLinearSubresourceLayout(kDefaultFormat, kDefaultWidth);
   }
 
-  InitializeDirectImageMemory(*collection);
+  ASSERT_TRUE(InitializeDirectImageMemory(*collection));
 }
 
 TEST_P(VulkanImageExtensionTest, R8) {
@@ -785,13 +801,13 @@ TEST_P(VulkanImageExtensionTest, R8) {
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::R8,
             sysmem_collection_info.settings.image_format_constraints.pixel_format.type);
 
-  InitializeDirectImage(*collection, image_create_info);
+  ASSERT_TRUE(InitializeDirectImage(*collection, image_create_info));
 
   if (linear) {
     CheckLinearSubresourceLayout(VK_FORMAT_R8_UNORM, kDefaultWidth);
   }
 
-  InitializeDirectImageMemory(*collection);
+  ASSERT_TRUE(InitializeDirectImageMemory(*collection));
 
   vk::BufferCollectionPropertiesFUCHSIA properties;
   EXPECT_EQ(vk::Result::eSuccess, ctx_->device()->getBufferCollectionPropertiesFUCHSIA(
@@ -817,13 +833,13 @@ TEST_P(VulkanImageExtensionTest, R8G8) {
   UniqueBufferCollection collection =
       CreateVkBufferCollectionForImage(std::move(vulkan_token), constraints);
 
-  InitializeDirectImage(*collection, image_create_info);
+  ASSERT_TRUE(InitializeDirectImage(*collection, image_create_info));
 
   if (linear) {
     CheckLinearSubresourceLayout(VK_FORMAT_R8G8_UNORM, kDefaultWidth);
   }
 
-  InitializeDirectImageMemory(*collection);
+  ASSERT_TRUE(InitializeDirectImageMemory(*collection));
 }
 
 TEST_P(VulkanImageExtensionTest, R8ToL8) {
@@ -850,13 +866,13 @@ TEST_P(VulkanImageExtensionTest, R8ToL8) {
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::L8,
             sysmem_collection_info.settings.image_format_constraints.pixel_format.type);
 
-  InitializeDirectImage(*collection, image_create_info);
+  ASSERT_TRUE(InitializeDirectImage(*collection, image_create_info));
 
   if (linear) {
     CheckLinearSubresourceLayout(VK_FORMAT_R8_UNORM, kDefaultWidth);
   }
 
-  InitializeDirectImageMemory(*collection);
+  ASSERT_TRUE(InitializeDirectImageMemory(*collection));
 
   vk::BufferCollectionPropertiesFUCHSIA properties;
   EXPECT_EQ(vk::Result::eSuccess, ctx_->device()->getBufferCollectionPropertiesFUCHSIA(
@@ -887,13 +903,13 @@ TEST_P(VulkanImageExtensionTest, NonPackedImage) {
   constraints.image_format_constraints[0].min_bytes_per_row = 1024;
   auto sysmem_collection_info = AllocateSysmemCollection(constraints, std::move(sysmem_token));
 
-  InitializeDirectImage(*collection, image_create_info);
+  ASSERT_TRUE(InitializeDirectImage(*collection, image_create_info));
 
   if (linear) {
     CheckLinearSubresourceLayout(VK_FORMAT_R8_UNORM, kDefaultWidth);
   }
 
-  InitializeDirectImageMemory(*collection);
+  ASSERT_TRUE(InitializeDirectImageMemory(*collection));
 
   vk::BufferCollectionPropertiesFUCHSIA properties;
   EXPECT_EQ(vk::Result::eSuccess, ctx_->device()->getBufferCollectionPropertiesFUCHSIA(
@@ -915,13 +931,13 @@ TEST_P(VulkanImageExtensionTest, ImageCpuAccessible) {
                                        vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuReadOften |
                                            vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuWriteOften);
 
-  InitializeDirectImage(*collection, image_create_info);
+  ASSERT_TRUE(InitializeDirectImage(*collection, image_create_info));
 
   if (linear) {
     CheckLinearSubresourceLayout(kDefaultFormat, kDefaultWidth);
   }
 
-  InitializeDirectImageMemory(*collection);
+  ASSERT_TRUE(InitializeDirectImageMemory(*collection));
   {
     // Check that all memory types are host visible.
     vk::BufferCollectionPropertiesFUCHSIA properties;
@@ -1037,8 +1053,8 @@ TEST_P(VulkanImageExtensionTest, ProtectedOptionalCompatible) {
 
     // Use |image_create_info| for both because |image_create_info2| may not have the right flags
     // set.
-    InitializeDirectImage(*collection1, image_create_info);
-    InitializeDirectImage(*collection2, image_create_info);
+    ASSERT_TRUE(InitializeDirectImage(*collection1, image_create_info));
+    ASSERT_TRUE(InitializeDirectImage(*collection2, image_create_info));
   }
 }
 
@@ -1254,7 +1270,7 @@ TEST_P(VulkanImageExtensionTest, MultiFormat) {
   EXPECT_EQ(result, vk::Result::eSuccess);
   vk_image_ = std::move(vk_image);
 
-  InitializeDirectImageMemory(*collections[0], kExpectedImageCount);
+  ASSERT_TRUE(InitializeDirectImageMemory(*collections[0], kExpectedImageCount));
 }
 
 TEST_P(VulkanImageExtensionTest, MaxBufferCountCheck) {
@@ -1517,7 +1533,7 @@ TEST_F(VulkanExtensionTest, LinearOptimalCompatible) {
     if (i == 0)
       CheckLinearSubresourceLayout(kDefaultFormat, kDefaultWidth);
 
-    InitializeDirectImageMemory(*collections[i], 1);
+    ASSERT_TRUE(InitializeDirectImageMemory(*collections[i], 1));
 
     vk_device_memory_ = {};
   }
@@ -1676,9 +1692,11 @@ TEST_F(VulkanExtensionTest, ImportAliasing) {
         vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuReadOften |
             vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuWriteOften);
 
-    InitializeDirectImage(*collection, image_create_info);
+    ASSERT_TRUE(InitializeDirectImage(*collection, image_create_info));
 
-    uint32_t memoryTypeIndex = InitializeDirectImageMemory(*collection);
+    std::optional<uint32_t> init_img_memory_result = InitializeDirectImageMemory(*collection);
+    ASSERT_TRUE(init_img_memory_result);
+    uint32_t memoryTypeIndex = init_img_memory_result.value();
     bool src_is_coherent = IsMemoryTypeCoherent(memoryTypeIndex);
 
     src_image1 = std::move(vk_image_);
@@ -1686,8 +1704,8 @@ TEST_F(VulkanExtensionTest, ImportAliasing) {
 
     WriteLinearImage(src_memory1.get(), src_is_coherent, kDefaultWidth, kSrcHeight, kPattern);
 
-    InitializeDirectImage(*collection, image_create_info);
-    InitializeDirectImageMemory(*collection);
+    ASSERT_TRUE(InitializeDirectImage(*collection, image_create_info));
+    ASSERT_TRUE(InitializeDirectImageMemory(*collection));
 
     // src2 is alias of src1
     src_image2 = std::move(vk_image_);
@@ -1715,9 +1733,11 @@ TEST_F(VulkanExtensionTest, ImportAliasing) {
         vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuReadOften |
             vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuWriteOften);
 
-    InitializeDirectImage(*collection, image_create_info);
+    ASSERT_TRUE(InitializeDirectImage(*collection, image_create_info));
 
-    uint32_t memoryTypeIndex = InitializeDirectImageMemory(*collection);
+    std::optional<uint32_t> init_img_memory_result = InitializeDirectImageMemory(*collection);
+    ASSERT_TRUE(init_img_memory_result);
+    uint32_t memoryTypeIndex = init_img_memory_result.value();
     dst_is_coherent = IsMemoryTypeCoherent(memoryTypeIndex);
 
     dst_image = std::move(vk_image_);
@@ -1849,6 +1869,18 @@ class VulkanFormatTest : public VulkanExtensionTest,
 // Test that any fast clears are resolved by a foreign queue transition.
 TEST_P(VulkanFormatTest, FastClear) {
   ASSERT_TRUE(Initialize());
+  // This test reuqests a sysmem image with linear tiling and color attachment
+  // usage, which is not supported by FEMU. So we skip this test on FEMU.
+  //
+  // TODO(fxbug.com/100837): Instead of skipping the test on specific platforms,
+  // we should check if the features needed (i.e. tiled image of specific
+  // formats, or linear image with some specific usages) are supported by all
+  // the sysmem clients. Sysmem should send better error messages and we could
+  // use this to determine if the test should be skipped due to unsupported
+  // platforms.
+  if (UseVirtualGpu()) {
+    GTEST_SKIP();
+  }
 
   constexpr bool kUseProtectedMemory = false;
   constexpr bool kUseLinear = false;
@@ -1904,9 +1936,11 @@ TEST_P(VulkanFormatTest, FastClear) {
 
     sysmem_collection = AllocateSysmemCollection(constraints, std::move(local_token));
 
-    InitializeDirectImage(*collection, image_create_info);
+    ASSERT_TRUE(InitializeDirectImage(*collection, image_create_info));
 
-    uint32_t memoryTypeIndex = InitializeDirectImageMemory(*collection);
+    std::optional<uint32_t> init_img_memory_result = InitializeDirectImageMemory(*collection);
+    ASSERT_TRUE(init_img_memory_result);
+    uint32_t memoryTypeIndex = init_img_memory_result.value();
     src_is_coherent = IsMemoryTypeCoherent(memoryTypeIndex);
 
     image = std::move(vk_image_);
