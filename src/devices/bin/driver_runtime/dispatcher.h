@@ -448,7 +448,7 @@ class Dispatcher : public async_dispatcher_t,
 class DispatcherCoordinator {
  public:
   // We default to one thread, and start additional threads when blocking dispatchers are created.
-  DispatcherCoordinator() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+  DispatcherCoordinator() : config_(MakeConfig()), loop_(&config_) {
     loop_.StartThread("fdf-dispatcher-0");
   }
 
@@ -483,6 +483,12 @@ class DispatcherCoordinator {
   }
 
  private:
+  static constexpr async_loop_config_t MakeConfig() {
+    async_loop_config_t config = kAsyncLoopConfigNoAttachToCurrentThread;
+    config.irq_support = true;
+    return config;
+  }
+
   // Tracks the dispatchers owned by a driver.
   class DriverState : public fbl::WAVLTreeContainable<std::unique_ptr<DriverState>> {
    public:
@@ -564,6 +570,7 @@ class DispatcherCoordinator {
   // threads if this number exceeds |number_threads_|.
   uint32_t dispatcher_threads_needed_ __TA_GUARDED(&lock_) = 1;
 
+  async_loop_config_t config_;
   async::Loop loop_;
 };
 

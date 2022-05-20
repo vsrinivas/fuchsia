@@ -4,6 +4,7 @@
 
 #include "src/devices/bin/driver_runtime/dispatcher.h"
 
+#include <lib/async/cpp/irq.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/task.h>
 #include <lib/fdf/arena.h>
@@ -14,6 +15,7 @@
 #include <lib/fit/defer.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/zx/event.h>
+#include <lib/zx/interrupt.h>
 #include <zircon/errors.h>
 
 #include <thread>
@@ -1418,6 +1420,45 @@ TEST_F(DispatcherTest, WaitSynchronized) {
   // The order of observing these completions does not matter.
   ASSERT_OK(sync_completion_wait(&completion2, ZX_TIME_INFINITE));
   ASSERT_OK(sync_completion_wait(&completion1, ZX_TIME_INFINITE));
+}
+
+TEST_F(DispatcherTest, Irq) {
+  libsync::Completion completion;
+  auto destructed_handler = [&](fdf_dispatcher_t* dispatcher) { completion.Signal(); };
+
+  driver_context::PushDriver(CreateFakeDriver());
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto fdf_dispatcher = fdf::Dispatcher::Create(0, destructed_handler);
+  ASSERT_FALSE(fdf_dispatcher.is_error());
+
+  async_dispatcher_t* dispatcher = fdf_dispatcher->async_dispatcher();
+  ASSERT_NOT_NULL(dispatcher);
+
+  zx::interrupt irq_object;
+  ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(0), 0, ZX_INTERRUPT_VIRTUAL, &irq_object));
+
+  async::Irq irq;
+  irq.set_object(irq_object.get());
+
+  libsync::Completion irq_signal;
+  irq.set_handler([&](async_dispatcher_t* dispatcher_arg, async::Irq* irq_arg, zx_status_t status,
+                      const zx_packet_interrupt_t* interrupt) {
+    irq_signal.Signal();
+    ASSERT_EQ(irq_arg, &irq);
+    ASSERT_EQ(ZX_OK, status);
+  });
+  ASSERT_EQ(ZX_OK, irq.Begin(dispatcher));
+  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, irq.Begin(dispatcher));
+
+  irq_object.trigger(0, zx::time());
+  ASSERT_OK(irq_signal.Wait());
+
+  ASSERT_OK(irq.Cancel());
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, irq.Cancel());
+
+  fdf_dispatcher->ShutdownAsync();
+  ASSERT_OK(completion.Wait(zx::time::infinite()));
 }
 
 //
