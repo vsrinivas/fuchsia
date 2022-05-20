@@ -279,13 +279,8 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
 
  private:
   // Helper methods to configure the test realm.
-  void AddBaseRealmComponent();
-  void ConfigureTestSubrealm();
   void ConfigureClientSubrealm();
-  void ConfigureSceneOwner();
-  void ConfigureInput();
   void ConfigureAccessibility();
-  void ConfigureScenic();
   void RouteConfigData();
 
   // Helper method to route a set of services from the specified source to the
@@ -300,8 +295,13 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   void OnFocusChange(fuchsia::ui::focus::FocusChain focus_chain,
                      OnFocusChangeCallback callback) override;
 
+  // Helper method to determine the component url used to instantiate the base
+  // UI realm.
+  std::string CalculateBaseRealmUrl();
+
   Config config_;
-  component_testing::RealmBuilder realm_builder_ = component_testing::RealmBuilder::Create();
+  component_testing::RealmBuilder realm_builder_ =
+      component_testing::RealmBuilder::CreateFromRelativeUrl(CalculateBaseRealmUrl());
   std::shared_ptr<component_testing::RealmRoot> realm_root_;
   fuchsia::ui::observation::test::RegistrySyncPtr observer_registry_;
   fuchsia::ui::observation::geometry::ProviderPtr geometry_provider_;

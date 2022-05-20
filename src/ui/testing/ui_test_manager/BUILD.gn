@@ -17,6 +17,7 @@ source_set("ui_test_manager") {
     ":a11y_deps",
     ":test_realms",
     "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility.scene",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.input.injection",
     "//sdk/fidl/fuchsia.logger",

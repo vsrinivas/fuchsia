@@ -7,15 +7,7 @@
     ],
     offer: [
         {
-            directory: "config",
-            from: "parent",
-            as: "config-data",
-            to: "#root-presenter",
-            subdir: "data",
-        },
-        {
             protocol: [
-                "fuchsia.accessibility.Magnifier",
                 "fuchsia.logger.LogSink",
                 "fuchsia.tracing.provider.Registry",
             ],

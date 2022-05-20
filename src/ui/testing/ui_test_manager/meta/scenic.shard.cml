@@ -46,13 +46,6 @@
     ],
     offer: [
         {
-            directory: "config",
-            from: "parent",
-            as: "config-data",
-            to: "#scenic",
-            subdir: "data",
-        },
-        {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [

@@ -5,6 +5,7 @@
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
 #include <fuchsia/accessibility/cpp/fidl.h>
+#include <fuchsia/accessibility/scene/cpp/fidl.h>
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/input/injection/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
@@ -44,6 +45,7 @@ using component_testing::LocalComponent;
 using component_testing::LocalComponentHandles;
 using component_testing::ParentRef;
 using component_testing::Protocol;
+using component_testing::RealmBuilder;
 using component_testing::Ref;
 using component_testing::Route;
 
@@ -57,10 +59,16 @@ constexpr auto kSceneManagerSceneWithInputUrl = "#meta/scene_manager_scene_with_
 // System component urls.
 constexpr auto kFakeA11yManagerUrl = "#meta/fake-a11y-manager.cm";
 
-constexpr auto kTestRealmName = "test-realm";
 constexpr auto kClientSubrealmName = "client-subrealm";
 
+// Component names.
+// NOTE: These names must match the names in meta/*.cml.
 constexpr auto kA11yManagerName = "a11y-manager";
+constexpr auto kScenicName = "scenic";
+constexpr auto kRootPresenterName = "root-presenter";
+constexpr auto kSceneManagerName = "scene-manager";
+constexpr auto kInputPipelineName = "input-pipeline";
+constexpr auto kTextManagerName = "text-manager";
 
 // Contents of config file used to force scenic to use flatland.
 constexpr auto kUseFlatlandScenicConfig = R"(
@@ -97,10 +105,146 @@ std::optional<fuchsia::ui::observation::geometry::ViewDescriptor> ViewDescriptor
   return fidl::Clone(*it);
 }
 
+// Returns the name of the scene owner component (if any).
+std::string SceneOwnerName(const UITestManager::Config& config) {
+  if (!config.scene_owner) {
+    return "";
+  }
+
+  switch (*config.scene_owner) {
+    case UITestManager::SceneOwnerType::ROOT_PRESENTER:
+      return kRootPresenterName;
+    case UITestManager::SceneOwnerType::SCENE_MANAGER:
+      return kSceneManagerName;
+    default:
+      return "";
+  }
+}
+
+// Returns the name of the input owner component (if any).
+std::string InputOwnerName(const UITestManager::Config& config) {
+  if (!config.use_input) {
+    return "";
+  }
+
+  switch (*config.scene_owner) {
+    case UITestManager::SceneOwnerType::ROOT_PRESENTER:
+      return kInputPipelineName;
+    case UITestManager::SceneOwnerType::SCENE_MANAGER:
+      return kSceneManagerName;
+    default:
+      return "";
+  }
+}
+
+// List of scenic services available in the test realm.
+std::vector<std::string> ScenicServices(const UITestManager::Config& config) {
+  if (config.use_flatland) {
+    // Note that we expose FlatlandDisplay to the client subrealm for now, since
+    // we only have in-tree test clients at the moment. Once UITestManager is
+    // used for out-of-tree tests, we'll want to add a flag to
+    // UITestManager::Config to control whether we expose internal-only APIs to
+    // the client subrealm.
+    return {fuchsia::ui::observation::test::Registry::Name_,
+            fuchsia::ui::composition::Allocator::Name_, fuchsia::ui::composition::Flatland::Name_,
+            fuchsia::ui::composition::FlatlandDisplay::Name_, fuchsia::ui::scenic::Scenic::Name_};
+  } else {
+    return {fuchsia::ui::observation::test::Registry::Name_,
+            fuchsia::ui::focus::FocusChainListenerRegistry::Name_,
+            fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::views::ViewRefInstalled::Name_};
+  }
+}
+
+// List of a11y services available in the test realm.
+std::vector<std::string> AccessibilityServices(const UITestManager::Config& config) {
+  if (!config.accessibility_owner) {
+    return {};
+  }
+
+  return {fuchsia::accessibility::semantics::SemanticsManager::Name_,
+          fuchsia::accessibility::Magnifier::Name_};
+}
+
+// List of scene owner services available in the test realm.
+std::vector<std::string> SceneOwnerServices(const UITestManager::Config& config) {
+  if (!config.scene_owner)
+    return {};
+
+  if (config.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
+    return {fuchsia::ui::accessibility::view::Registry::Name_,
+            fuchsia::ui::pointerinjector::configuration::Setup::Name_,
+            fuchsia::ui::policy::Presenter::Name_};
+  } else if (config.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
+    return {fuchsia::session::scene::Manager::Name_,
+            fuchsia::ui::accessibility::view::Registry::Name_};
+  }
+
+  return {};
+}
+
+// List of input services available in the test realm.
+std::vector<std::string> InputServices(const UITestManager::Config& config) {
+  if (!config.use_input) {
+    return {};
+  }
+
+  if (config.scene_owner) {
+    return {fuchsia::input::injection::InputDeviceRegistry::Name_,
+            fuchsia::ui::policy::DeviceListenerRegistry::Name_};
+  } else {
+    return {fuchsia::ui::pointerinjector::Registry::Name_};
+  }
+}
+
+// Returns a mapping from ui service name to the component that vends the
+// service.
+std::map<std::string, std::string> GetServiceToComponentMap(UITestManager::Config config) {
+  std::map<std::string, std::string> service_to_component;
+
+  for (const auto& service : ScenicServices(config)) {
+    service_to_component[service] = kScenicName;
+  }
+
+  for (const auto& service : AccessibilityServices(config)) {
+    service_to_component[service] = kA11yManagerName;
+  }
+
+  for (const auto& service : SceneOwnerServices(config)) {
+    service_to_component[service] = SceneOwnerName(config);
+  }
+
+  for (const auto& service : InputServices(config)) {
+    service_to_component[service] = InputOwnerName(config);
+  }
+
+  // Include text services only for flatland x scene manager tests.
+  if (config.use_flatland) {
+    service_to_component[fuchsia::ui::input::ImeService::Name_] = kTextManagerName;
+    service_to_component[fuchsia::ui::input3::Keyboard::Name_] = kTextManagerName;
+  }
+
+  return service_to_component;
+}
+
 }  // namespace
 
 UITestManager::UITestManager(UITestManager::Config config)
     : config_(config), focus_chain_listener_binding_(this) {}
+
+std::string UITestManager::CalculateBaseRealmUrl() {
+  if (config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
+    return config_.use_input ? kRootPresenterSceneWithInputUrl : kRootPresenterSceneUrl;
+  } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
+    return config_.use_input ? kSceneManagerSceneWithInputUrl : kSceneManagerSceneUrl;
+  } else {
+    // If we have exhausted all potential scene owner options, then scene_owner
+    // should be std::nullopt.
+    FX_CHECK(!config_.scene_owner) << "Unrecognized scene owner";
+
+    // If no scene owner is specified, use the scenic-only realm.
+    return kScenicOnlyUrl;
+  }
+}
 
 void UITestManager::RouteServices(std::vector<std::string> services, Ref source,
                                   std::vector<Ref> targets) {
@@ -122,27 +266,6 @@ component_testing::Realm UITestManager::AddSubrealm() {
   return realm_builder_.AddChildRealm(kClientSubrealmName);
 }
 
-void UITestManager::AddBaseRealmComponent() {
-  std::string url = "";
-
-  // If no scene owner is specified, then use the base scenic realm.
-  if (!config_.scene_owner) {
-    url = kScenicOnlyUrl;
-  } else if (config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
-    url = config_.use_input ? kRootPresenterSceneWithInputUrl : kRootPresenterSceneUrl;
-  } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
-    url = config_.use_input ? kSceneManagerSceneWithInputUrl : kSceneManagerSceneUrl;
-  }
-
-  realm_builder_.AddChild(kTestRealmName, url);
-}
-
-void UITestManager::ConfigureTestSubrealm() {
-  // Route default system services to test subrealm.
-  RouteServices(DefaultSystemServices(), /* source = */ ParentRef(),
-                /* targets = */ {ChildRef{kTestRealmName}});
-}
-
 void UITestManager::ConfigureClientSubrealm() {
   if (!has_client_subrealm_) {
     return;
@@ -156,39 +279,21 @@ void UITestManager::ConfigureClientSubrealm() {
   RouteServices(config_.exposed_client_services, /* source = */ ChildRef{kClientSubrealmName},
                 /* targets = */ {ParentRef()});
 
-  // Route requested services from ui realm to client subrealm.
-  RouteServices(config_.ui_to_client_services, /* source = */ ChildRef{kTestRealmName},
-                /* targets = */ {ChildRef{kClientSubrealmName}});
+  // Route services client requested from ui subrealm.
+  auto service_to_component = GetServiceToComponentMap(config_);
+  for (const auto& service : config_.ui_to_client_services) {
+    auto it = service_to_component.find(service);
+    FX_CHECK(it != service_to_component.end())
+        << "Service is not available for the specified realm configuration: " << service;
 
-  // Route requested services from client subrealm to ui realm.
-  RouteServices(config_.client_to_ui_services, /* source = */ ChildRef{kClientSubrealmName},
-                /* targets = */ {ChildRef{kTestRealmName}});
-
-  if (config_.accessibility_owner) {
-    RouteServices({fuchsia::accessibility::semantics::SemanticsManager::Name_},
-                  /* source = */ ChildRef{kA11yManagerName},
-                  /* target = */ {ChildRef{kClientSubrealmName}});
+    RouteServices({service}, /* source = */ ChildRef{it->second},
+                  /* targets = */ {ChildRef{kClientSubrealmName}});
   }
 
-  // If the user specifies a view provider, they must also supply a view
-  // provider in their subrealm.
-  RouteServices({fuchsia::ui::app::ViewProvider::Name_},
-                /* source = */ ChildRef{kClientSubrealmName}, /* targets = */ {ParentRef()});
-}
-
-void UITestManager::ConfigureSceneOwner() {
-  if (!config_.scene_owner) {
-    return;
-  }
-
-  if (config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
-    RouteServices(
-        {fuchsia::ui::policy::Presenter::Name_, fuchsia::ui::accessibility::view::Registry::Name_},
-        /* source = */ ChildRef{kTestRealmName}, /* targets = */ {ParentRef()});
-  } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
-    RouteServices({fuchsia::session::scene::Manager::Name_,
-                   fuchsia::ui::accessibility::view::Registry::Name_},
-                  /* source = */ ChildRef{kTestRealmName}, /* targets = */ {ParentRef()});
+  // Route ViewProvider to parent if the client specifies a scene owner.
+  if (config_.scene_owner) {
+    RouteServices({fuchsia::ui::app::ViewProvider::Name_},
+                  /* source = */ ChildRef{kClientSubrealmName}, /* targets = */ {ParentRef()});
   }
 }
 
@@ -209,94 +314,53 @@ void UITestManager::ConfigureAccessibility() {
                 /* source = */ ChildRef{kA11yManagerName},
                 /* target = */ {ParentRef()});
 
-  if (config_.scene_owner && !config_.use_flatland) {
-    RouteServices({fuchsia::accessibility::Magnifier::Name_},
-                  /* source = */ ChildRef{kA11yManagerName},
-                  /* target = */ {ChildRef{kTestRealmName}});
-  }
-}
-
-void UITestManager::ConfigureInput() {
-  if (!config_.use_input) {
-    return;
-  }
-
-  // Infer that input pipeline owns input if root presenter or scene mnaager
-  // owns the scene.
   if (config_.scene_owner) {
-    RouteServices({fuchsia::ui::pointerinjector::configuration::Setup::Name_,
-                   fuchsia::input::injection::InputDeviceRegistry::Name_,
-                   fuchsia::ui::policy::DeviceListenerRegistry::Name_},
-                  /* source = */ ChildRef{kTestRealmName},
-                  /* targets = */ {ParentRef()});
-    if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
-      RouteServices({test::inputsynthesis::Mouse::Name_, test::inputsynthesis::Text::Name_,
-                     fuchsia::ui::input::ImeService::Name_, fuchsia::ui::input3::Keyboard::Name_},
-                    /* source = */ ChildRef{kTestRealmName},
-                    /* targets = */ {ParentRef()});
+    if (config_.use_flatland) {
+      RouteServices({fuchsia::accessibility::scene::Provider::Name_},
+                    /* source = */ ChildRef{kA11yManagerName},
+                    /* target = */ {ChildRef{SceneOwnerName(config_)}});
+    } else {
+      RouteServices({fuchsia::accessibility::Magnifier::Name_},
+                    /* source = */ ChildRef{kA11yManagerName},
+                    /* target = */ {ChildRef{SceneOwnerName(config_)}});
     }
-  } else {
-    RouteServices({fuchsia::ui::pointerinjector::Registry::Name_},
-                  /* source = */ ChildRef{kTestRealmName},
-                  /* targets = */ {ParentRef()});
   }
-}
-
-void UITestManager::ConfigureScenic() {
-  RouteServices(
-      {fuchsia::ui::composition::Allocator::Name_, fuchsia::ui::composition::Flatland::Name_,
-       fuchsia::ui::composition::FlatlandDisplay::Name_,
-       fuchsia::ui::focus::FocusChainListenerRegistry::Name_, fuchsia::ui::scenic::Scenic::Name_,
-       fuchsia::ui::observation::test::Registry::Name_,
-       fuchsia::ui::views::ViewRefInstalled::Name_},
-      /* source = */ ChildRef{kTestRealmName}, /* targets = */ {ParentRef()});
 }
 
 void UITestManager::RouteConfigData() {
   auto config_directory_contents = component_testing::DirectoryContents();
-  bool directory_has_contents = false;
+  std::vector<Ref> targets;
 
   // Override scenic's Override "i_can_haz_flatland" if necessary.
   if (config_.use_flatland) {
-    directory_has_contents = true;
-    config_directory_contents.AddFile("data/scenic_config", kUseFlatlandScenicConfig);
+    config_directory_contents.AddFile("scenic_config", kUseFlatlandScenicConfig);
+    targets.push_back(ChildRef{kScenicName});
   }
 
   // Supply a default display rotation.
+  std::string scene_owner_name = SceneOwnerName(config_);
   if (config_.scene_owner) {
-    directory_has_contents = true;
-    config_directory_contents.AddFile("data/display_rotation",
-                                      std::to_string(config_.display_rotation));
+    config_directory_contents.AddFile("display_rotation", std::to_string(config_.display_rotation));
+    targets.push_back(ChildRef{scene_owner_name});
   }
 
-  if (directory_has_contents) {
-    realm_builder_.RouteReadOnlyDirectory("config", {ChildRef{kTestRealmName}},
+  if (!targets.empty()) {
+    realm_builder_.RouteReadOnlyDirectory("config-data", std::move(targets),
                                           std::move(config_directory_contents));
   }
 }
 
 void UITestManager::BuildRealm() {
-  AddBaseRealmComponent();
-
-  // Add routes to/from the test realm and client subrealm (if applicable).
-  ConfigureTestSubrealm();
-
-  // Route API to present scene root to ui test manager.
-  // Note that ui test manger mediates scene setup, so clients do not use these
-  // APIs directly.
-  ConfigureSceneOwner();
-
-  // Expose input APIs out of the realm.
-  ConfigureInput();
-
   // Set up a11y manager, if requested, and route semantics manager service to
   // client subrealm.
+  //
+  // NOTE: We opt to configure accessibility dynamically, rather then in the
+  // .cml for the base realms, because there are three different a11y
+  // configurations (fake, real, none), which can each apply to scenes
+  // with/without input. The a11y service routing is also different for gfx and
+  // flatland, so it would be unwieldy to create a separate static declaration
+  // for every a11y configuration tested.
   ConfigureAccessibility();
-
-  // Route base scenic services to client subrealm.
-  // We also expose these services to parent, so that the ui test manager can
-  // use them for scene setup and monitoring.
-  ConfigureScenic();
 
   // Route config data directories to appropriate recipients (currently, scenic,
   // scene manager, and root presenter are the only use cases for config files.

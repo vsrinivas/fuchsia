@@ -254,7 +254,8 @@ class TouchInputBase
     config.use_input = true;
     config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
     config.exposed_client_services = {test::touch::TestAppLauncher::Name_};
-    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_,
+                                    fuchsia::accessibility::semantics::SemanticsManager::Name_};
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
     // Assemble realm.
