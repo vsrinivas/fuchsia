@@ -1,5 +1,6 @@
 enum/member fuchsia.input/Key.A 458756
 enum/member fuchsia.input/Key.APOSTROPHE 458804
+enum/member fuchsia.input/Key.ASSISTANT 4294901761
 enum/member fuchsia.input/Key.B 458757
 enum/member fuchsia.input/Key.BACKSLASH 458801
 enum/member fuchsia.input/Key.BACKSPACE 458794
@@ -85,6 +86,7 @@ enum/member fuchsia.input/Key.P 458771
 enum/member fuchsia.input/Key.PAGE_DOWN 458830
 enum/member fuchsia.input/Key.PAGE_UP 458827
 enum/member fuchsia.input/Key.PAUSE 458824
+enum/member fuchsia.input/Key.POWER 4294901762
 enum/member fuchsia.input/Key.PRINT_SCREEN 458822
 enum/member fuchsia.input/Key.Q 458772
 enum/member fuchsia.input/Key.R 458773
