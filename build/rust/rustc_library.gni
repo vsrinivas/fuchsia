@@ -83,6 +83,11 @@ import("//build/rust/rustc_test.gni")
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
 #     '--cfg feature="XXX"'
 #
+#   rustenv (optional)
+#     A list of environment variables that will be set when running the rust
+#     compiler. These can be accessed at compile time with
+#     [`std::env!`](https://doc.rust-lang.org/stable/std/macro.env.html)
+#
 #   output_dir (optional)
 #     Directory that the resulting library should be placed in.
 #     See: `gn help output_dir`
@@ -189,6 +194,7 @@ template("rustc_library") {
                              "features",
                              "inputs",
                              "sources",
+                             "rustenv",
                            ])
 
     # Avoid walking into data_deps when checking component manifest expected includes.

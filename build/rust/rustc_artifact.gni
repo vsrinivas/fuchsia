@@ -44,6 +44,11 @@ import("//build/toolchain/rbe.gni")
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
 #     '--cfg feature="XXX"'
 #
+#   rustenv (optional)
+#     A list of environment variables that will be set when running the rust
+#     compiler. These can be accessed at compile time with
+#     [`std::env!`](https://doc.rust-lang.org/stable/std/macro.env.html)
+#
 #   configs (optional)
 #     A list of config labels applying to this target.
 #
@@ -120,6 +125,7 @@ template("rustc_artifact") {
     clippy(_clippy_name) {
       configs = _configs
       forward_variables_from(invoker.pass_through, [ "testonly" ])
+      forward_variables_from(invoker, [ "rustenv" ])
       rustflags = _rustflags
       sources = invoker.sources
       deps = invoker.deps
@@ -129,6 +135,9 @@ template("rustc_artifact") {
   } else {
     if (defined(invoker.clippy_crate_type)) {
       not_needed(invoker, [ "clippy_crate_type" ])
+    }
+    if (defined(invoker.rustenv)) {
+      not_needed(invoker, [ "rustenv" ])
     }
     not_needed([ "_clippy_name" ])
   }
@@ -218,6 +227,11 @@ template("rustc_artifact") {
       # Opting out of strict sources check requires that the package is present
       # in a global allow-list.
       deps += [ "//build/rust:disable_strict_sources_check_allowlist" ]
+    }
+
+    rustenv = []
+    if (defined(invoker.rustenv)) {
+      rustenv += invoker.rustenv
     }
 
     # Clippy target is a gen dep if it's not included in the group

@@ -24,6 +24,9 @@ template("clippy") {
   }
 
   action(target_name) {
+    # Some clippy targets leak the output dir, but these aren't run remotely, nor are they depended
+    # on by anything which does. So just opt out all clippy targets.
+    no_output_dir_leaks = false
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -60,6 +63,12 @@ template("clippy") {
     }
     args += [
       "--",
+      "env",
+    ]
+    if (defined(invoker.rustenv)) {
+      args += invoker.rustenv
+    }
+    args += [
       "$rebased_rustc_prefix/clippy-driver",
       rebase_path(invoker.crate_root, root_build_dir),
       "--sysroot=$rebased_rust_sysroot",

@@ -68,6 +68,11 @@ import("//build/toolchain/restat.gni")
 #     and should only be changed when absolutely necessary
 #     (such as in the case of generated code).
 #
+#   rustenv (optional)
+#     A list of environment variables that will be set when running the rust
+#     compiler. These can be accessed at compile time with
+#     [`std::env!`](https://doc.rust-lang.org/stable/std/macro.env.html)
+#
 #   output_dir (optional)
 #     Directory that the resulting macro should be placed in.
 #     See: `gn help output_dir`
@@ -168,6 +173,7 @@ template("rustc_macro") {
                                "enforce_source_listing",
                                "inputs",
                                "sources",
+                               "rustenv",
                              ])
 
       deps = []

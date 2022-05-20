@@ -11,10 +11,6 @@ base_epoch_file = "$target_out_dir/epoch.json"
 source_dir = "//" + rebase_path("src", "//")
 rebased_epoch_file = rebase_path(base_epoch_file, source_dir)
 
-config("env") {
-  rustenv = [ "EPOCH_PATH=$rebased_epoch_file" ]
-}
-
 generate_epoch("epoch.json") {
   output_file = "$base_epoch_file"
 }
@@ -23,8 +19,7 @@ rustc_binary("bin") {
   name = "system_updater"
   with_unit_tests = true
   edition = "2018"
-  configs += [ ":env" ]
-  disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
+  rustenv = [ "EPOCH_PATH=$rebased_epoch_file" ]
 
   deps = [
     "//garnet/lib/rust/io_util",
